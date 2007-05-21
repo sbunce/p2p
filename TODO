@@ -1,0 +1,59 @@
+BUGS AND NECESSARY FEATURES
+
+-If the download directory is missing and a download is started the directory
+is not created and the RAM starts getting sucked up because nothing is getting
+written to disk.
+
+-The percent complete algorithm doesn't work with random block requests. Make it so
+the percentage only updates when a request for a block is received that's higher than
+the last.
+
+-gui::searchInfoRefresh() is not removing more than one entry per tick.
+
+-clientIndex::initialFillBuffer() needs to be able to determine the starting
+block count on downloads resumed on startup.
+
+-There should be a check for the delimiter in the index files.
+Filenames can have a delimiter in them and mess things up.
+
+-Small packet size is wasting a lot of speed. Hypothesis is that the total time 
+waiting between request of data and data transmission is greater the smaller
+the packet size. 4096 = 1000kB/s vs 65535 = 2200kB/s.
+
+-Client has no control of how many connections it will try to make.
+
+
+POSSIBLE FEATURES
+
+-Add a check to make sure the client is not requesting the same blocks over
+and over(trying to waste bandwidth to degrate serving capability).
+
+-Have the serverIndex poll to check for new files added to share.
+
+-Come up with a indexing scheme for search.db(it'll get big).
+
+-Reduce control data size by encoding file and fileBlock numbers. Also, perhaps
+negotiate control data size for each download.
+
+-There should be information in the gui statusbar for protocol overhead.
+
+
+IDEAS
+
+-Make a superBlock class that can tell the clientBuffer what blocks it needs. Get
+rid of the BST in favor of two parallel arrays. One array for the fileBlock and the
+other just a bunch of bools that says if the block has been gotten. Each superBlock
+should have a superBlock number it can determine it's block numbers from
+(superBlockNumber * BUFFER_FACTOR). To solve the problem of putting high block numbers
+in a small array just use modulo. Have a function in each superBlock that a block
+number can be passed to which will return whether the superBlock needs it or not. Try
+not to have too much logic in the superBlocks because that space for the logic will
+be dupilicated on each instantiation of the superBlock.
+
+Have the clientBuffer manage these superBlocks such that it will instantiate a new one
+before the old one is completed. This needs to be done because some servers will be slower
+at returning a full fileBlock. Have this buffer of superBlocks crank itself up until
+it hits a cap or it isn't receiving too many duplicate blocks. This buffer can be 
+potentially made really large(1MB?)
+
+
