@@ -124,11 +124,6 @@ void clientIndex::initialFillBuffer(std::vector<clientBuffer> & sendBuffer)
 			//fill the bufferSubElement
 			clientBuffer temp_cb;
 			temp_cb.messageDigest = messageDigest;
-			temp_cb.server_IP = server_IP;
-			temp_cb.socketfd = -1;
-			temp_cb.file_ID = file_ID;
-
-//DEBUG, add in function to determine blockcount after resuming download
 			temp_cb.blockCount = 0 * global::BUFFER_SIZE;
 			temp_cb.fileSize = fileSize;
 			temp_cb.fileName = fileName;
@@ -136,6 +131,12 @@ void clientIndex::initialFillBuffer(std::vector<clientBuffer> & sendBuffer)
 			temp_cb.lastBlock = fileSize/(global::BUFFER_SIZE - global::CONTROL_SIZE);
 			temp_cb.lastBlockSize = temp_cb.fileSize % (global::BUFFER_SIZE - global::CONTROL_SIZE) + global::CONTROL_SIZE;
 
+			clientBuffer::serverElement temp_se;
+			temp_se.server_IP = server_IP;
+			temp_se.socketfd = -1;
+			temp_se.file_ID = file_ID;
+
+			temp_cb.Server.push_back(temp_se);
 			sendBuffer.push_back(temp_cb);
 		}
 
@@ -150,7 +151,7 @@ void clientIndex::initialFillBuffer(std::vector<clientBuffer> & sendBuffer)
 	}//end lock scope
 }
 
-int clientIndex::startDownload(std::string messageDigest, std::string server_IP, std::string file_ID, std::string fileSize, std::string fileName)
+int clientIndex::startDownload(exploration::infoBuffer info)
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(Mutex);
@@ -171,7 +172,7 @@ int clientIndex::startDownload(std::string messageDigest, std::string server_IP,
 
 		while(getline(fin, temp) && !entryFound){
 			//check all entries for duplicate
-			if(temp.substr(temp.find_last_of(global::DELIMITER) + 1) == fileName){
+			if(temp.substr(temp.find_last_of(global::DELIMITER) + 1) == info.fileName){
 				entryFound = true;
 #ifdef DEBUG
 				std::cout << "error: clientIndex::startDownload(): file is already downloading" << std::endl;
@@ -184,12 +185,15 @@ int clientIndex::startDownload(std::string messageDigest, std::string server_IP,
 		if(!entryFound){
 			//write the share index file
 			std::ostringstream entry_s;
-			entry_s << messageDigest << global::DELIMITER << fileName << global::DELIMITER << fileSize << global::DELIMITER << server_IP << global::DELIMITER << file_ID << "\n";
-			std::string entry = entry_s.str();
+			entry_s << info.messageDigest << global::DELIMITER << info.fileName << global::DELIMITER << info.fileSize_bytes << global::DELIMITER;
+
+			for(int x=0; x<info.IP.size(); x++){
+				entry_s << info.IP.at(x) << global::DELIMITER << info.file_ID.at(x) << "\n";
+			}
 
 			std::ofstream fout(indexName.c_str(), std::ios::app);
 			if(fout.is_open()){
-				fout.write(entry.c_str(), entry.length());
+				fout.write(entry_s.str().c_str(), entry_s.str().length());
 				fout.close();
 			}
 			else{

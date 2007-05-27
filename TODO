@@ -1,5 +1,12 @@
 BUGS AND NECESSARY FEATURES
 
+-clientIndex code to resume a download is broken.
+
+-get rid of all for loops where items are being accessed by myVector.at(x), it's
+horribly inefficient.
+
+-replace bucket = bucket.substr( junk with bucket.erase(start, offset).
+
 -If the download directory is missing and a download is started the directory
 is not created and the RAM starts getting sucked up because nothing is getting
 written to disk.
@@ -55,5 +62,4 @@ before the old one is completed. This needs to be done because some servers will
 at returning a full fileBlock. Have this buffer of superBlocks crank itself up until
 it hits a cap or it isn't receiving too many duplicate blocks. This buffer can be 
 potentially made really large(1MB?)
-
 

@@ -5,7 +5,7 @@
 #include "sha.h"
 
 #define DEBUG
-#define DEBUG_VERBOSE
+//#define DEBUG_VERBOSE
 
 namespace global //"global" namespace ;-)
 {
@@ -16,12 +16,13 @@ namespace global //"global" namespace ;-)
 	//#define UNRELIABLE_CLIENT
 	const int UNRELIABLE_CLIENT_PERCENT = 10;
 
-	const int BUFFER_SIZE = 4096;   //how big packets can be(bytes, maximum 65535)
-	const int CONTROL_SIZE = 32;    //how much of the packet is control data(bytes)
-	const int BUFFER_FACTOR = 128;  //how far out out of order requests can be made(fileBlock buffer)
-	const int MAX_CONNECTIONS = 50; //maximum number of connections to server/from client
-	const int P2P_PORT = 6969;      //port client connects to and server receives on
-	const int GUI_TICK = 50;        //time(in milliseconds) between gui updates
+	const int BUFFER_SIZE = 4096;    //how big packets can be(bytes, maximum 65535)
+	const int CONTROL_SIZE = 32;     //how much of the packet is control data(bytes)
+	const int SUPERBLOCK_SIZE = 128; //how many fileBlocks are kept in a superBlock
+	const int SUPERBUFFER_SIZE = 4;  //how many superBlocks are kept in the clientBuffer
+	const int MAX_CONNECTIONS = 50;  //maximum number of connections to server/from client
+	const int P2P_PORT = 6969;       //port client connects to and server receives on
+	const int GUI_TICK = 50;         //time(in milliseconds) between gui updates
 
 	const std::string P_SBL = "SBL"; //request from client to server for fileBlock
 	const std::string P_BLS = "BLS"; //response from server to client with fileBlock attached

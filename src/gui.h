@@ -6,6 +6,7 @@
 
 //std
 #include <string>
+#include <vector>
 
 #include "client.h"
 #include "server.h"
@@ -89,5 +90,8 @@ private:
 	client Client;
 	server Server;
 	exploration Exploration;
+
+	//holds the information from the last search
+	std::vector<exploration::infoBuffer> searchInfo;
 };
 #endif

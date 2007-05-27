@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "clientBuffer.h"
+#include "exploration.h"
 #include "globals.h"
 
 class clientIndex
@@ -23,14 +24,14 @@ public:
 	startDownload     - returns false if the download is already in progress
 
 	download.index format
-	<server ip>:<file_ID>:<fileSize>:<fileName>
-	example:
-	127.0.0.1:2:0:39088132:some movie.mpeg
+	<messageDigest>:<fileName>:<fileSize>:<server info>
+	<server info> = <server IP>:<file_ID>:<server info>
+	<server info> = <server IP>:<file_ID>
 	*/
 	void downloadComplete(std::string messageDigest_in);
 	std::string getFilePath(std::string messageDigest_in);
 	void initialFillBuffer(std::vector<clientBuffer> & sendBuffer);
-	int startDownload(std::string messageDigest, std::string server_IP, std::string file_ID, std::string fileSize, std::string fileName);
+	int startDownload(exploration::infoBuffer info);
 
 private:
 	std::string indexName;         //the name of the download index file

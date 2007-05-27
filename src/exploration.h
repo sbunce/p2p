@@ -16,18 +16,26 @@ public:
 	public:
 		std::string messageDigest;
 		std::string fileName;
-		std::string IP;
-		std::string file_ID;
 		std::string fileSize_bytes;
 		std::string fileSize;
+
+		//information unique to the server, these vectors are parallel
+		std::vector<std::string> IP;
+		std::vector<std::string> file_ID;
 	};
 
 	exploration();
 	/*
 	getSearchResults - retrieves the search results
-	search           - searches search DB and populates searchResults
 	*/
 	void getSearchResults(std::vector<infoBuffer> & info);
+	/*
+	search - searches search DB and populates searchResults
+	search.db file format:
+	<SHA_hash>|<fileName>|<fileSize>|<serverInfo>
+	<serverInfo> = <server_IP>|<file_ID(remote)>|<serverInfo><nothing>
+	<nothing> = no more to the record
+	*/
 	void search(std::string searchWord);
 
 private:

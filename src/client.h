@@ -18,9 +18,9 @@
 #include <string>
 #include <vector>
 
-#include "bst.h"
 #include "clientIndex.h"
 #include "clientBuffer.h"
+#include "exploration.h"
 #include "globals.h"
 
 class client
@@ -32,7 +32,6 @@ public:
 	public:
 		std::string messageDigest;
 		std::string IP;
-		std::string file_ID;
 		std::string fileName;
 		std::string fileSize;
 		std::string speed;
@@ -41,18 +40,18 @@ public:
 
 	client();
 	/*
-	cancelDownload  - removes a download from sendBuffer(cancels download)
-	getDownloadInfo - returns download info for all files in sendBuffer
-	                - returns false if no downloads
-	getTotalSpeed   - returns the total download speed
-	start           - start the client thread
-	startDownload   - start a new download
+	terminateDownload  - removes a download from sendBuffer and disconnects all sockets associated with it
+	getDownloadInfo    - returns download info for all files in sendBuffer
+	                   - returns false if no downloads
+	getTotalSpeed      - returns the total download speed
+	start              - start the client thread
+	startDownload      - start a new download
 	*/
-	void cancelDownload(std::string messageDigest_in);
+	void terminateDownload(std::string messageDigest_in);
 	bool getDownloadInfo(std::vector<infoBuffer> & downloadInfo);
 	std::string getTotalSpeed();
 	void start();
-	bool startDownload(std::string messageDigest, std::string server_IP, std::string file_ID, std::string fileName, std::string fileSize);
+	bool startDownload(exploration::infoBuffer info);
 
 private:
 	//networking related

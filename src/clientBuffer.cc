@@ -1,27 +1,20 @@
 //std
-#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <time.h>
 
 #include "clientBuffer.h"
 
 clientBuffer::clientBuffer()
 {
-	requestLast = false;
+	downloadComplete = false;
+
 	averageSeconds = 3;
 	downloadSpeed = 0;
-	BF_offset = 0;
-	ready = true;
-	lowestRequest = 0;
-	highestRequest = 0;
-
-	//seed random number generator
-	std::srand(time(0));
+	currentSuperBlock = 0;
 }
 
-int clientBuffer::addToTree(std::string & bucket)
+int clientBuffer::addBlock(std::string & bucket)
 {
 	//find position of delimiters
 	int first = bucket.find_first_of(",");
@@ -31,7 +24,7 @@ int clientBuffer::addToTree(std::string & bucket)
 	//get control data
 	std::string command = bucket.substr(0, first);
 	std::string file_ID = bucket.substr(first+1, (second - 1) - first);
-	std::string fileBlock = bucket.substr(second+1, (third - 1) - second);
+	std::string blockNumber = bucket.substr(second+1, (third - 1) - second);
 
 #ifdef UNRELIABLE_CLIENT
 	//this exists for debug purposes, 1% chance of "dropping" a packet
@@ -39,7 +32,7 @@ int clientBuffer::addToTree(std::string & bucket)
 	if(random < global::UNRELIABLE_CLIENT_PERCENT - 1){
 		std::cout << "testing: client::addToTree(): OOPs! I dropped fileBlock " << fileBlock << std::endl;
 
-		if(atoi(fileBlock.c_str()) == lastBlock){
+		if(atoi(blockNumber.c_str()) == lastBlock){
 			bucket.clear();
 		}
 		else{
@@ -50,28 +43,22 @@ int clientBuffer::addToTree(std::string & bucket)
 	}
 #endif
 
-	//check for a valid block received
-	if((atoi(fileBlock.c_str()) < lowestRequest || atoi(fileBlock.c_str()) > highestRequest) && !requestLast){
-#ifdef DEBUG_VERBOSE
-		std::cout << "info: clientBuffer::addToTree() detected invalid block from server" << std::endl;
-#endif
-		//exit out, missing block will be located when the end of this superblock is reached
-		return 0;
-	}
-
-	//prepare data to put in tree
-	bst::treeNode * node = new bst::treeNode;
-	node->key = atoi(fileBlock.c_str());
+	//prepare fileBlock to be added to a superBlock
+	std::string * fileBlock = new std::string;
 	if(bucket.size() >= global::BUFFER_SIZE){
-		node->data = bucket.substr(global::CONTROL_SIZE, global::BUFFER_SIZE - global::CONTROL_SIZE);
+		*fileBlock = bucket.substr(global::CONTROL_SIZE, global::BUFFER_SIZE - global::CONTROL_SIZE);
 		bucket = bucket.substr(global::BUFFER_SIZE);
 	}
 	else{ //last block encountered
-		node->data = bucket.substr(global::CONTROL_SIZE, bucket.size() - global::CONTROL_SIZE);
+		*fileBlock = bucket.substr(global::CONTROL_SIZE, bucket.size() - global::CONTROL_SIZE);
 		bucket.clear();
 	}
 
-	tree.addNode(node);
+	for(std::deque<superBlock>::iterator iter = superBuffer.begin(); iter != superBuffer.end(); iter++){
+		if(iter->addBlock(atoi(blockNumber.c_str()), fileBlock)){
+			break;
+		}
+	}
 }
 
 void clientBuffer::calculateSpeed()
@@ -119,115 +106,123 @@ void clientBuffer::calculateSpeed()
 	downloadSpeed = totalBytes / (averageSeconds - 2);
 }
 
-bool clientBuffer::completed()
+bool clientBuffer::complete()
 {
-	findMissing();
-
-	if(request.empty()){ //download complete, no missing blocks
-		//write the tree to file
-		writeTree();
-
-#ifdef DEBUG_VERBOSE
-	std::cout << "info: clientBuffer::completed(): last super block complete" << std::endl;
-#endif
-		return true;
-	}
-	else{ //download not complete, fileBlock's missing in last superBlock
-#ifdef DEBUG_VERBOSE
-		std::cout << "info: clientBuffer::completed(): missing block(s) found in last super block" << std::endl;
-#endif
-
-		/*
-		If missing blocks found the blockCount would have been decremented. Prepare
-		to send another request by marking ready to be true.
-		*/
-		ready = true;
-		return false;
-	}
+	return downloadComplete;
 }
 
-int clientBuffer::generateRequests()
+int clientBuffer::getRequest()
 {
-	//fill buffer
-	for(int x=(BF_offset * global::BUFFER_FACTOR); x<(BF_offset * global::BUFFER_FACTOR) + global::BUFFER_FACTOR; x++){
-		//check to see if this is the last request buffer
-		if(x == lastBlock){
-			requestLast = true;
-			break;
-		}
-
-		request.push_back(x);
-	}
-
-	//store the lowest and highest blocks
-	//we will only accept blocks in this range in addToTree()
-	lowestRequest = request.front();
-	highestRequest = request.back();
-
-	//randomize buffer
-	int random, temp;
-	for(int x=0; x<request.size(); x++){
-		random = rand() % request.size();
-		temp = request.at(random);
-		request.at(random) = request.at(x);
-		request.at(x) = temp;
-	}
-
-	//increment BF_offset for next generateRequests run
-	BF_offset++;
-}
-
-void clientBuffer::findMissing()
-{
-	tree.findMissing(request, lowestRequest, highestRequest);
-
-	//if no blocks missing this won't change blockCount
-	blockCount -= request.size();
-}
-
-int clientBuffer::getBlockRequestNumber()
-{
-	if(request.empty()){
-		findMissing();
-
-		//request the last block if it's the only block left to request
-		if(requestLast && request.empty()){
-			request.push_back(lastBlock);
-		}
-		else{
-			//if no missing requests generate new requests
-			if(request.empty()){
-				writeTree();
-				generateRequests();
-			}
-		}
-	}
-
 	calculateSpeed();
 
-	int blockNum = request.back();
-	request.pop_back();
-	return blockNum;
+	//download just started, add the first superBlock
+	if(currentSuperBlock == 0){
+		superBlock SB(currentSuperBlock++, lastBlock);
+		superBuffer.push_back(SB);
+	}
+
+	//write out the oldest superBlocks if they're complete
+	while(superBuffer.back().complete()){
+
+		writeSuperBlock(superBuffer.back().container);
+		superBuffer.pop_back();
+
+		if(superBuffer.empty()){
+			break;
+		}
+	}	
+
+	//create another superBlock if the buffer is empty and download not completed
+	if(superBuffer.empty() && currentSuperBlock <= lastSuperBlock){
+		superBlock SB(currentSuperBlock++, lastBlock);
+		superBuffer.push_front(SB);
+	}
+
+	//save blockCount for percent complete calculation
+	blockCount = superBuffer.front().getRequest();
+
+	return blockCount;
 }
 
-/*
-This function will make sense when multi-source implemented.
-*/
-bool clientBuffer::hasSocket(int socketfd_in)
+bool clientBuffer::hasSocket(int socketfd)
 {
-	return (socketfd_in == socketfd);
+	for(std::list<serverElement>::iterator iter = Server.begin(); iter != Server.end(); iter++){
+		if(iter->socketfd == socketfd){
+			return true;
+		}
+	}
+
+	return false;
 }
 
-void clientBuffer::writeTree()
+void clientBuffer::processBuffer(int socketfd, char recvBuff[], int nbytes)
+{
+	//fill the bucket
+	for(std::list<serverElement>::iterator iter = Server.begin(); iter != Server.end(); iter++){
+
+		//add the buffer to the right bucket
+		if(iter->socketfd == socketfd){
+			iter->bucket.append(recvBuff, nbytes);
+#ifdef DEBUG_VERBOSE
+			std::cout << "info: bucket.size(): " << iter->bucket.size() << std::endl;
+#endif
+		}
+
+		//disconnect the server if it's being nasty!
+		if(iter->bucket.size() > 3*global::BUFFER_SIZE){
+#ifdef DEBUG
+			std::cout << "error: client::processBuffer() detected buffer overrun from " << iter->server_IP << std::endl;
+#endif
+			invalidSockets.push_back(iter->socketfd);
+			Server.erase(iter);
+		}
+
+		//if full block received write to tree and ready another request
+		if(iter->bucket.size() % global::BUFFER_SIZE == 0){
+			addBlock(iter->bucket);
+			iter->ready = true;
+		}
+
+		if(iter->lastRequest){
+
+			//check for zero in case the last block was exactly BUFFER_SIZE
+			if(iter->bucket.size() != 0){
+				//add last partial block to tree
+				if(iter->bucket.size() == lastBlockSize){
+					addBlock(iter->bucket);
+					iter->lastRequest = false;
+				}
+				else{ //full block not yet received
+					break;
+				}
+			}
+
+			//write out the oldest superBlocks if they're complete
+			while(superBuffer.back().complete()){
+
+				writeSuperBlock(superBuffer.back().container);
+				superBuffer.pop_back();
+
+				if(superBuffer.empty()){
+					downloadComplete = true;
+					break;
+				}
+			}	
+
+		}
+	}
+}
+
+void clientBuffer::writeSuperBlock(std::string * container[])
 {
 	std::ofstream fout(filePath.c_str(), std::ios::app);
 
 	if(fout.is_open()){
 
-		while(!tree.empty()){
-			std::string * data = &tree.getLowestData();
-			fout.write(data->c_str(), data->size());
-			tree.deleteLastLowest();
+		for(int x=0; x<global::SUPERBLOCK_SIZE; x++){
+			if(container[x] != 0){
+				fout.write(container[x]->c_str(), container[x]->size());
+			}
 		}
 
 		fout.close();

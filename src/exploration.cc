@@ -67,16 +67,19 @@ void exploration::search(std::string searchWord)
 			}
 			else{ //found result
 
-				std::string server_IP = *iter++;
-				std::string file_ID = *iter++;
-				std::string fileSize_bytes = *iter;
-				float fileSize = atoi(fileSize_bytes.c_str());
-				
+				infoBuffer info;
+
+				std::string fileSize_bytes = *iter++;
+
+				while(iter != tokens.end()){
+					info.IP.push_back(*iter++);
+					info.file_ID.push_back(*iter++);
+				}
+
 				//convert fileSize from Bytes to megaBytes
+				float fileSize = atoi(fileSize_bytes.c_str());
 				fileSize = fileSize / 1024 / 1024;
-
 				std::ostringstream fileSize_s;
-
 				if(fileSize < 1){
 					fileSize_s << std::setprecision(2) << fileSize << " mB";
 				}
@@ -84,13 +87,10 @@ void exploration::search(std::string searchWord)
 					fileSize_s << (int)fileSize << " mB";
 				}
 
-				infoBuffer info;
 				info.messageDigest = messageDigest;
 				info.fileName = fileName;
-				info.fileSize = fileSize_s.str();
 				info.fileSize_bytes = fileSize_bytes;
-				info.IP = server_IP;
-				info.file_ID = file_ID;
+				info.fileSize = fileSize_s.str();
 
 				searchResults.push_back(info);
 			}

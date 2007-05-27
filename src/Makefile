@@ -1,8 +1,8 @@
 CC = g++ -c
 CCL = g++
 
-OBJECTS = main.o bst.o client.o clientBuffer.o clientIndex.o \
-	exploration.o gui.o gui_about.o hash.o server.o serverIndex.o sha.o
+OBJECTS = main.o client.o clientBuffer.o clientIndex.o exploration.o gui.o \
+	gui_about.o hash.o server.o serverIndex.o sha.o superBlock.o
 
 LINKER_OPTIONS = `pkg-config gtkmm-2.4 --cflags --libs` \
 	-lboost_thread -D_REENTRANT -lboost_filesystem 
@@ -14,46 +14,39 @@ main: $(OBJECTS)
 main.o: main.cc gui.o
 	$(CC) main.cc `pkg-config gtkmm-2.4 --cflags`
 
-bst.o: bst.cc bst.h globals.h
-	$(CC) bst.cc
-
-client.o: client.cc client.h globals.h clientBuffer.o clientIndex.o
+client.o: client.cc client.h clientBuffer.o clientIndex.o exploration.o globals.h 
 	$(CC) client.cc
 
-clientBuffer.o: clientBuffer.cc clientBuffer.h globals.h bst.o hash.o
+clientBuffer.o: clientBuffer.cc clientBuffer.h exploration.o hash.o superBlock.o globals.h
 	$(CC) clientBuffer.cc
 
-clientIndex.o: clientIndex.cc clientIndex.h globals.h
+clientIndex.o: clientIndex.cc clientIndex.h exploration.o globals.h
 	$(CC) clientIndex.cc
 
 exploration.o: exploration.cc exploration.h globals.h
 	$(CC) exploration.cc
 
-gui.o: gui.cc gui.h globals.h client.o gui_about.o server.o
+gui.o: gui.cc gui.h client.o exploration.o gui_about.o server.o globals.h
 	$(CC) gui.cc `pkg-config gtkmm-2.4 --cflags`
 
 gui_about.o: gui_about.cc gui_about.h globals.h
 	$(CC) gui_about.cc `pkg-config gtkmm-2.4 --cflags`
 
-hash.o: hash.cc hash.h globals.h sha.o
+hash.o: hash.cc hash.h sha.o globals.h
 	$(CC) hash.cc
 
-server.o: server.cc server.h globals.h serverIndex.o
+server.o: server.cc server.h serverIndex.o globals.h
 	$(CC) server.cc
 
 serverIndex.o: serverIndex.cc serverIndex.h globals.h
 	$(CC) serverIndex.cc
 
-sha.o: sha.cc sha.h
+sha.o: sha.cc sha.h globals.h
 	$(CC) sha.cc
+
+superBlock.o: superBlock.cc superBlock.h globals.h
+	$(CC) superBlock.cc
 
 clean:
 	rm -v *.o
 
-#builds a program to test out the binary search tree
-bst_test: bst.cc bst_test.cc
-	$(CCL) bst.cc bst_test.cc  -o bst_test
-
-#builds a program to test out SHA2 hashing
-sha_test: sha.cc sha_test.cc
-	$(CCL) sha.cc sha_test.cc -o sha_test

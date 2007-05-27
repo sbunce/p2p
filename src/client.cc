@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
+#include <list>
 #include <sstream>
 
 #include "client.h"
@@ -13,19 +14,24 @@ client::client()
 	ClientIndex.initialFillBuffer(sendBuffer);
 }
 
-void client::cancelDownload(std::string messageDigest_in)
+void client::terminateDownload(std::string messageDigest_in)
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(sendBufferMutex);
 
 	//find the file and remove it from the sendBuffer
 	for(std::vector<clientBuffer>::iterator iter = sendBuffer.begin(); iter < sendBuffer.end(); iter++){
+
 		if(messageDigest_in == iter->messageDigest){
 
-			//get rid of the download entry in the download index
-			ClientIndex.downloadComplete(iter->messageDigest);
-			disconnect(iter->socketfd);
+			//disconnect all sockets associated with the download
+			for(std::list<clientBuffer::serverElement>::iterator subIter = iter->Server.begin(); subIter != iter->Server.end(); subIter++){
+				disconnect(subIter->socketfd);
+			}
+
+			//get rid of the clientBuffer
 			sendBuffer.erase(iter);
+			ClientIndex.downloadComplete(iter->messageDigest);
 		}
 	}
 
@@ -56,15 +62,15 @@ bool client::getDownloadInfo(std::vector<infoBuffer> & downloadInfo)
 	}
 
 	//process sendQueue
-	for(int x=0; x<sendBuffer.size(); x++){
+	for(std::vector<clientBuffer>::iterator iter = sendBuffer.begin(); iter != sendBuffer.end(); iter++){
 		//calculate the percent complete
-		float bytesDownloaded = sendBuffer.at(x).blockCount * (global::BUFFER_SIZE - global::CONTROL_SIZE);
-		float fileSize = sendBuffer.at(x).fileSize;
+		float bytesDownloaded = iter->blockCount * (global::BUFFER_SIZE - global::CONTROL_SIZE);
+		float fileSize = iter->fileSize;
 		float percent = (bytesDownloaded / fileSize) * 100;
 		int percentComplete = int(percent);
 
 		//convert fileSize from Bytes to megaBytes
-		fileSize = sendBuffer.at(x).fileSize / 1024 / 1024;
+		fileSize = iter->fileSize / 1024 / 1024;
 		std::ostringstream fileSize_s;
 
 		if(fileSize < 1){
@@ -75,18 +81,19 @@ bool client::getDownloadInfo(std::vector<infoBuffer> & downloadInfo)
 		}
 
 		//convert the download speed to kiloBytes
-		int downloadSpeed = sendBuffer.at(x).downloadSpeed / 1024;
+		int downloadSpeed = iter->downloadSpeed / 1024;
 		std::ostringstream downloadSpeed_s;
 		downloadSpeed_s << downloadSpeed << " kB/s";
 
-		std::ostringstream file_ID_s;
-		file_ID_s << sendBuffer.at(x).file_ID;
-
 		infoBuffer info;
-		info.messageDigest = sendBuffer.at(x).messageDigest;
-		info.IP = sendBuffer.at(x).server_IP;
-		info.file_ID = file_ID_s.str();
-		info.fileName = sendBuffer.at(x).fileName;
+		info.messageDigest = iter->messageDigest;
+
+		//get all IP's
+		for(std::list<clientBuffer::serverElement>::iterator subIter = iter->Server.begin(); subIter != iter->Server.end(); subIter++){
+			info.IP += subIter->server_IP;
+		}
+
+		info.fileName = iter->fileName;
 		info.fileSize = fileSize_s.str();
 		info.speed = downloadSpeed_s.str();
 		info.percentComplete = percentComplete;
@@ -130,51 +137,10 @@ int client::processBuffer(int socketfd, char recvBuff[], int nbytes)
 		//found the right bucket
 		if(iter->hasSocket(socketfd)){
 
-			//fill the bucket
-			std::string received(recvBuff, nbytes);
-			iter->bucket += received;
+			iter->processBuffer(socketfd, recvBuff, nbytes);
 
-#ifdef DEBUG_VERBOSE
-			std::cout << "info: bucket.size(): " << iter->bucket.size() << std::endl;
-#endif
-
-			//disconnect the server if it's being nasty!
-			if(iter->bucket.size() > 3*global::BUFFER_SIZE){
-#ifdef DEBUG
-				std::cout << "error: client::processBuffer() detected buffer overrun from " << iter->server_IP << std::endl;
-#endif
-				disconnect(iter->socketfd);
-				removeCompleted(iter->messageDigest);
-			}
-
-			//if full block received write to tree and prepare another request
-			if(iter->bucket.size() % global::BUFFER_SIZE == 0){
-				iter->addToTree(iter->bucket);
-				iter->ready = true;
-			}
-
-			/*
-			Check for completed download. The (blockCount - 1) is because blockCount
-			is incremented after every request, making the final block request when
-			(blockCount - 1) == lastBlock.
-			*/
-			if(iter->blockCount - 1 == iter->lastBlock){
-
-				//check for zero in case the last block was exactly BUFFER_SIZE
-				if(iter->bucket.size() != 0){
-					//add last partial block to tree
-					if(iter->bucket.size() == iter->lastBlockSize){
-						iter->addToTree(iter->bucket);
-std::cout << "added last block" << std::endl;
-					}
-					else{ //full block not yet received
-						break;
-					}
-				}
-
-				if(iter->completed()){
-					removeCompleted(iter->messageDigest);
-				}
+			if(iter->complete()){
+				terminateDownload(iter->messageDigest);
 			}
 
 			break;
@@ -232,33 +198,6 @@ void client::start_thread()
 	}
 }
 
-void client::removeCompleted(std::string messageDigest)
-{
-	//just in case something unexpected happens and we're told to remove from an empty buffer
-	if(!sendBuffer.empty()){
-
-		for(std::vector<clientBuffer>::iterator iter = sendBuffer.begin(); iter < sendBuffer.end(); iter++){
-
-			if(iter->messageDigest == messageDigest){
-				//get rid of the download entry in the download index
-				ClientIndex.downloadComplete(iter->messageDigest);
-
-				//disconnect from server
-				disconnect(iter->socketfd);
-
-				sendBuffer.erase(iter);
-
-				break;
-			}
-		}
-	}
-	else{
-#ifdef DEBUG
-		std::cout << "error: client::removeCompleted was called when send buffer empty" << std::endl;
-#endif
-	}
-}
-
 void client::sendPendingRequests()
 {
 	{//begin lock scope
@@ -266,12 +205,16 @@ void client::sendPendingRequests()
 
 	//process sendQueue
 	for(std::vector<clientBuffer>::iterator iter = sendBuffer.begin(); iter < sendBuffer.end(); iter++){
-		if(iter->ready){
-			//send request
-			sendRequest(iter->server_IP, iter->socketfd, iter->file_ID, iter->getBlockRequestNumber());
+		for(std::list<clientBuffer::serverElement>::iterator subIter = iter->Server.begin(); subIter != iter->Server.end(); subIter++){
+			if(subIter->ready){
 
-			iter->ready = false;
-			iter->blockCount++;
+				int request = iter->getRequest();
+				sendRequest(subIter->server_IP, subIter->socketfd, subIter->file_ID, request);
+				subIter->ready = false;
+				if(request == iter->lastBlock){
+					subIter->lastRequest = true;
+				}
+			}
 		}
 	}
 
@@ -336,24 +279,33 @@ int client::sendRequest(std::string server_IP, int & socketfd, int file_ID, int 
 	return 0;
 }
 
-bool client::startDownload(std::string messageDigest, std::string server_IP, std::string file_ID, std::string fileName, std::string fileSize)
+bool client::startDownload(exploration::infoBuffer info)
 {
-	if(ClientIndex.startDownload(messageDigest, server_IP, file_ID, fileSize, fileName) < 0){
+	if(ClientIndex.startDownload(info) < 0){
 		return false;
 	}
 
 	//fill bufferSubElement
 	clientBuffer temp_cb;
-	temp_cb.messageDigest = messageDigest;
-	temp_cb.server_IP = server_IP;
-	temp_cb.socketfd = -1;
-	temp_cb.fileName = fileName;
-	temp_cb.filePath = ClientIndex.getFilePath(messageDigest);
-	temp_cb.file_ID = atoi(file_ID.c_str());
+	temp_cb.messageDigest = info.messageDigest;
+	temp_cb.fileName = info.fileName;
+	temp_cb.filePath = ClientIndex.getFilePath(info.messageDigest);
 	temp_cb.blockCount = 0;
-	temp_cb.fileSize = atoi(fileSize.c_str());
-	temp_cb.lastBlock = atoi(fileSize.c_str())/(global::BUFFER_SIZE - global::CONTROL_SIZE);
-	temp_cb.lastBlockSize = temp_cb.fileSize % (global::BUFFER_SIZE - global::CONTROL_SIZE) + global::CONTROL_SIZE;
+	temp_cb.fileSize = atoi(info.fileSize_bytes.c_str());
+	temp_cb.lastBlock = atoi(info.fileSize_bytes.c_str())/(global::BUFFER_SIZE - global::CONTROL_SIZE);
+	temp_cb.lastBlockSize = atoi(info.fileSize_bytes.c_str()) % (global::BUFFER_SIZE - global::CONTROL_SIZE) + global::CONTROL_SIZE;
+	temp_cb.lastSuperBlock = temp_cb.lastBlock / global::SUPERBLOCK_SIZE;
+
+	for(int x=0; x<info.IP.size(); x++){
+		clientBuffer::serverElement temp_se;
+		temp_se.server_IP = info.IP.at(x);
+		temp_se.socketfd = -1;
+		temp_se.ready = true;
+		temp_se.file_ID = atoi(info.file_ID.at(x).c_str());
+		temp_se.lastRequest = false;
+
+		temp_cb.Server.push_back(temp_se);
+	}
 
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(sendBufferMutex);

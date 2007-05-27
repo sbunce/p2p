@@ -195,7 +195,7 @@ void gui::cancelDownload()
 			Glib::ustring messageDigest_retrieved;
 			row.get_value(0, messageDigest_retrieved);
 
-			Client.cancelDownload(messageDigest_retrieved);
+			Client.terminateDownload(messageDigest_retrieved);
 		}
 	}
 }
@@ -211,16 +211,15 @@ void gui::downloadFile()
 
 			Glib::ustring messageDigest_retrieved;
 			row.get_value(0, messageDigest_retrieved);
-			Glib::ustring server_IP_retrieved;
-			row.get_value(4, server_IP_retrieved);
-			Glib::ustring file_ID_retrieved;
-			row.get_value(5, file_ID_retrieved);
-			Glib::ustring fileName_retrieved;
-			row.get_value(1, fileName_retrieved);
-			Glib::ustring fileSize_bytes_retrieved;
-			row.get_value(3, fileSize_bytes_retrieved);
 
-			Client.startDownload(messageDigest_retrieved, server_IP_retrieved, file_ID_retrieved, fileName_retrieved, fileSize_bytes_retrieved);
+			for(std::vector<exploration::infoBuffer>::iterator iter2 = searchInfo.begin(); iter2 != searchInfo.end(); iter2++){
+				if(iter2->messageDigest == messageDigest_retrieved){
+					Client.startDownload(*iter2);
+					break;
+				}
+			}
+
+
 		}
 	}
 }
@@ -273,7 +272,6 @@ void gui::downloadInfoSetup()
 	Gtk::TreeModel::ColumnRecord column;
 	Gtk::TreeModelColumn<Glib::ustring> messageDigest_t;
 	Gtk::TreeModelColumn<Glib::ustring> server_IP_t;
-	Gtk::TreeModelColumn<Glib::ustring> file_ID_t;
 	Gtk::TreeModelColumn<Glib::ustring> fileName_t;
 	Gtk::TreeModelColumn<Glib::ustring> fileSize_t;
 	Gtk::TreeModelColumn<Glib::ustring> downloadSpeed_t;
@@ -281,7 +279,6 @@ void gui::downloadInfoSetup()
 
 	column.add(messageDigest_t);
 	column.add(server_IP_t);
-	column.add(file_ID_t);
 	column.add(fileName_t);
 	column.add(fileSize_t);
 	column.add(downloadSpeed_t);
@@ -321,7 +318,6 @@ bool gui::downloadInfoRefresh()
 	for(int x=0; x<info.size(); x++){
 		std::string messageDigest = info.at(x).messageDigest;
 		std::string server_IP = info.at(x).IP;
-		std::string file_ID = info.at(x).file_ID;
 		std::string fileName = info.at(x).fileName;
 		std::string fileSize = info.at(x).fileSize;
 		std::string downloadSpeed = info.at(x).speed;
@@ -331,7 +327,6 @@ bool gui::downloadInfoRefresh()
 		Gtk::TreeModel::ColumnRecord column;
 		Gtk::TreeModelColumn<Glib::ustring> messageDigest_t;
 		Gtk::TreeModelColumn<Glib::ustring> server_IP_t;
-		Gtk::TreeModelColumn<Glib::ustring> file_ID_t;
 		Gtk::TreeModelColumn<Glib::ustring> fileName_t;
 		Gtk::TreeModelColumn<Glib::ustring> fileSize_t;
 		Gtk::TreeModelColumn<Glib::ustring> downloadSpeed_t;
@@ -339,7 +334,6 @@ bool gui::downloadInfoRefresh()
 
 		column.add(messageDigest_t);
 		column.add(server_IP_t);
-		column.add(file_ID_t);
 		column.add(fileName_t);
 		column.add(fileSize_t);
 		column.add(downloadSpeed_t);
@@ -370,7 +364,6 @@ bool gui::downloadInfoRefresh()
 
 			row[messageDigest_t] = messageDigest;
 			row[server_IP_t] = server_IP;
-			row[file_ID_t] = file_ID;
 			row[fileName_t] = fileName;
 			row[fileSize_t] = fileSize;
 			row[downloadSpeed_t] = downloadSpeed;
@@ -558,16 +551,12 @@ void gui::searchInfoSetup()
 	Gtk::TreeModelColumn<Glib::ustring> messageDigest;
 	Gtk::TreeModelColumn<Glib::ustring> fileName_t;
 	Gtk::TreeModelColumn<Glib::ustring> fileSize_t;
-	Gtk::TreeModelColumn<Glib::ustring> fileSize_bytes_t;
 	Gtk::TreeModelColumn<Glib::ustring> server_IP_t;
-	Gtk::TreeModelColumn<Glib::ustring> file_ID;
 
 	column.add(messageDigest);
 	column.add(fileName_t);
 	column.add(fileSize_t);
-	column.add(fileSize_bytes_t);
 	column.add(server_IP_t);
-	column.add(file_ID);
 
 	searchList = Gtk::ListStore::create(column);
 	searchView->set_model(searchList);
@@ -578,8 +567,7 @@ void gui::searchInfoSetup()
 	searchView->append_column("  Server IP  ", server_IP_t);
 
 	//signal for clicks on downloadsView
-	searchView->signal_button_press_event().connect(sigc::mem_fun(*this, 
-		&gui::searchClick), false);
+	searchView->signal_button_press_event().connect(sigc::mem_fun(*this, &gui::searchClick), false);
 
 	//menu that pops up when right click happens
 	Gtk::Menu::MenuList & menuList = searchPopupMenu.items();
@@ -590,32 +578,30 @@ void gui::searchInfoSetup()
 bool gui::searchInfoRefresh()
 {
 	//update upload info
-	std::vector<exploration::infoBuffer> info;
-	Exploration.getSearchResults(info);
+	Exploration.getSearchResults(searchInfo);
 
-	for(int x=0; x<info.size(); x++){
-		std::string messageDigest = info.at(x).messageDigest;
-		std::string fileName = info.at(x).fileName;
-		std::string fileSize = info.at(x).fileSize;
-		std::string fileSize_bytes = info.at(x).fileSize_bytes;
-		std::string server_IP = info.at(x).IP;
-		std::string file_ID = info.at(x).file_ID;
+	for(int x=0; x<searchInfo.size(); x++){
+		std::string messageDigest = searchInfo.at(x).messageDigest;
+		std::string fileName = searchInfo.at(x).fileName;
+		std::string fileSize = searchInfo.at(x).fileSize;
+		std::string fileSize_bytes = searchInfo.at(x).fileSize_bytes;
+
+		std::string server_IP;
+		for(std::vector<std::string>::iterator iter = searchInfo.at(x).IP.begin(); iter != searchInfo.at(x).IP.end(); iter++){
+			server_IP += *iter + ", ";
+		}
 
 		//set up column
 		Gtk::TreeModel::ColumnRecord column;
 		Gtk::TreeModelColumn<Glib::ustring> messageDigest_t;
 		Gtk::TreeModelColumn<Glib::ustring> fileName_t;
 		Gtk::TreeModelColumn<Glib::ustring> fileSize_t;
-		Gtk::TreeModelColumn<Glib::ustring> fileSize_bytes_t;
 		Gtk::TreeModelColumn<Glib::ustring> server_IP_t;
-		Gtk::TreeModelColumn<Glib::ustring> file_ID_t;
 
 		column.add(messageDigest_t);
 		column.add(fileName_t);
 		column.add(fileSize_t);
-		column.add(fileSize_bytes_t);
 		column.add(server_IP_t);
-		column.add(file_ID_t);
 
 		//iterate through all the rows
 		bool foundEntry = false;
@@ -640,9 +626,7 @@ bool gui::searchInfoRefresh()
 			row[messageDigest_t] = messageDigest;
 			row[fileName_t] = fileName;
 			row[fileSize_t] = fileSize;
-			row[fileSize_bytes_t] = fileSize_bytes;
 			row[server_IP_t] = server_IP;
-			row[file_ID_t] = file_ID;
 		}
 	}
 
@@ -657,8 +641,8 @@ bool gui::searchInfoRefresh()
 
 		//loop through the upload info and check if we have an entry for upload
 		bool searchInfoFound = false;
-		for(int x=0; x<info.size(); x++){
-			std::string messageDigest = info.at(x).messageDigest;
+		for(int x=0; x<searchInfo.size(); x++){
+			std::string messageDigest = searchInfo.at(x).messageDigest;
 
 			//check if messageDigest matches row
 			if(messageDigest_retrieved == messageDigest){
@@ -673,7 +657,7 @@ bool gui::searchInfoRefresh()
 		}
 
 		//if no info exists at all remove the last entry remaining
-		if(info.size() == 0){
+		if(searchInfo.size() == 0){
 			searchList->clear();
 			break;
 		}
