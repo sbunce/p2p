@@ -16,8 +16,9 @@ clientIndex::clientIndex()
 	downloadDirectory = global::CLIENT_DOWNLOAD_DIRECTORY;
 }
 
-void clientIndex::downloadComplete(std::string messageDigest_in)
+void clientIndex::terminateDownload(std::string messageDigest_in)
 {
+std::cout << "messageDigest_in: " << messageDigest_in << std::endl;
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(Mutex);
 
@@ -101,6 +102,8 @@ std::string clientIndex::getFilePath(std::string messageDigest_in)
 
 void clientIndex::initialFillBuffer(std::vector<clientBuffer> & sendBuffer)
 {
+	namespace fs = boost::filesystem;
+
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(Mutex);
 
@@ -115,28 +118,33 @@ void clientIndex::initialFillBuffer(std::vector<clientBuffer> & sendBuffer)
 			boost::tokenizer<boost::char_separator<char> > tokens(temp, sep);
 			boost::tokenizer<boost::char_separator<char> >::iterator iter = tokens.begin();
 
-			std::string messageDigest = *iter++;
-			std::string fileName = *iter++;
-			int fileSize = atoi((*iter++).c_str());
-			std::string server_IP = *iter++;
-			int file_ID = atoi((*iter).c_str());
-
-			//fill the bufferSubElement
 			clientBuffer temp_cb;
-			temp_cb.messageDigest = messageDigest;
-			temp_cb.blockCount = 0 * global::BUFFER_SIZE;
-			temp_cb.fileSize = fileSize;
-			temp_cb.fileName = fileName;
-			temp_cb.filePath = downloadDirectory + fileName;
-			temp_cb.lastBlock = fileSize/(global::BUFFER_SIZE - global::CONTROL_SIZE);
+			temp_cb.messageDigest = *iter++;
+			temp_cb.fileName = *iter++;
+			temp_cb.fileSize = atoi((*iter++).c_str());
+
+			//determine current download status
+			fs::path filePath = fs::system_complete(fs::path(global::CLIENT_DOWNLOAD_DIRECTORY + temp_cb.fileName, fs::native));
+			int currentBytes = fs::file_size(filePath);
+			temp_cb.blockCount = currentBytes / (global::BUFFER_SIZE - global::CONTROL_SIZE);
+
+			temp_cb.lastBlock = temp_cb.fileSize/(global::BUFFER_SIZE - global::CONTROL_SIZE);
 			temp_cb.lastBlockSize = temp_cb.fileSize % (global::BUFFER_SIZE - global::CONTROL_SIZE) + global::CONTROL_SIZE;
+			temp_cb.lastSuperBlock = temp_cb.lastBlock / global::SUPERBLOCK_SIZE;
 
-			clientBuffer::serverElement temp_se;
-			temp_se.server_IP = server_IP;
-			temp_se.socketfd = -1;
-			temp_se.file_ID = file_ID;
+			//determine current superBlock
+			temp_cb.currentSuperBlock = currentBytes / ( (global::BUFFER_SIZE - global::CONTROL_SIZE) * global::SUPERBLOCK_SIZE );
 
-			temp_cb.Server.push_back(temp_se);
+			while(iter != tokens.end()){
+				clientBuffer::serverElement temp_se;
+				temp_se.server_IP = *iter++;
+				temp_se.file_ID = atoi((*iter++).c_str());
+				temp_se.socketfd = -1;
+				temp_se.ready = true;
+				temp_se.lastRequest = false;
+				temp_cb.Server.push_back(temp_se);
+			}
+
 			sendBuffer.push_back(temp_cb);
 		}
 

@@ -17,7 +17,6 @@ superBlock::superBlock(int superBlockNumber_in, int lastBlock_in)
 
 	if(maxBlock > lastBlock_in){
 		maxBlock = lastBlock_in;
-std::cout << "maxBlock: " << maxBlock << std::endl;
 	}
 }
 

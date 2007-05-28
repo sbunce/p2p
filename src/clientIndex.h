@@ -17,18 +17,18 @@ class clientIndex
 public:
 	clientIndex();
 	/*
-	downloadComplete  - removes the download entry from the download index
-	getFilePath       - gets the filePath based on the server_IP and file_ID
-	                  - precondition - make sure the download was started!
-	initialFillBuffer - returns the necessary elements to fill the client sendBuffer
-	startDownload     - returns false if the download is already in progress
+	terminateDownload  - removes the download entry from the download index
+	getFilePath        - gets the filePath based on the server_IP and file_ID
+	                   - precondition - make sure the download was started!
+	initialFillBuffer  - returns the necessary elements to fill the client sendBuffer
+	startDownload      - returns false if the download is already in progress
 
 	download.index format
 	<messageDigest>:<fileName>:<fileSize>:<server info>
 	<server info> = <server IP>:<file_ID>:<server info>
 	<server info> = <server IP>:<file_ID>
 	*/
-	void downloadComplete(std::string messageDigest_in);
+	void terminateDownload(std::string messageDigest_in);
 	std::string getFilePath(std::string messageDigest_in);
 	void initialFillBuffer(std::vector<clientBuffer> & sendBuffer);
 	int startDownload(exploration::infoBuffer info);

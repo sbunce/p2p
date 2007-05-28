@@ -11,7 +11,6 @@ clientBuffer::clientBuffer()
 
 	averageSeconds = 3;
 	downloadSpeed = 0;
-	currentSuperBlock = 0;
 }
 
 int clientBuffer::addBlock(std::string & bucket)
@@ -30,13 +29,13 @@ int clientBuffer::addBlock(std::string & bucket)
 	//this exists for debug purposes, 1% chance of "dropping" a packet
 	int random = rand() % 100;
 	if(random < global::UNRELIABLE_CLIENT_PERCENT - 1){
-		std::cout << "testing: client::addToTree(): OOPs! I dropped fileBlock " << fileBlock << std::endl;
+		std::cout << "testing: client::addToTree(): OOPs! I dropped fileBlock " << blockNumber << std::endl;
 
 		if(atoi(blockNumber.c_str()) == lastBlock){
 			bucket.clear();
 		}
 		else{
-			bucket = bucket.substr(global::BUFFER_SIZE);
+			bucket.erase(0, global::BUFFER_SIZE);
 		}
 
 		return 0;
@@ -47,7 +46,7 @@ int clientBuffer::addBlock(std::string & bucket)
 	std::string * fileBlock = new std::string;
 	if(bucket.size() >= global::BUFFER_SIZE){
 		*fileBlock = bucket.substr(global::CONTROL_SIZE, global::BUFFER_SIZE - global::CONTROL_SIZE);
-		bucket = bucket.substr(global::BUFFER_SIZE);
+		bucket.erase(0, global::BUFFER_SIZE);
 	}
 	else{ //last block encountered
 		*fileBlock = bucket.substr(global::CONTROL_SIZE, bucket.size() - global::CONTROL_SIZE);

@@ -30,8 +30,8 @@ void client::terminateDownload(std::string messageDigest_in)
 			}
 
 			//get rid of the clientBuffer
+			ClientIndex.terminateDownload(iter->messageDigest);
 			sendBuffer.erase(iter);
-			ClientIndex.downloadComplete(iter->messageDigest);
 		}
 	}
 
@@ -44,12 +44,14 @@ void client::disconnect(int socketfd)
 	std::cout << "info: client disconnecting socket number " << socketfd << std::endl;
 #endif
 
-	close(socketfd);
+	if(socketfd != -1){
+		close(socketfd);
 
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(readfdsMutex);
-	FD_CLR(socketfd, &readfds);
-	}//end lock scope
+		{//begin lock scope
+		boost::mutex::scoped_lock lock(readfdsMutex);
+		FD_CLR(socketfd, &readfds);
+		}//end lock scope
+	}
 }
 
 bool client::getDownloadInfo(std::vector<infoBuffer> & downloadInfo)
@@ -156,11 +158,10 @@ void client::start()
 void client::start_thread()
 {
 	char recvBuff[global::BUFFER_SIZE];  //the receive buffer
-   int nbytes;                  //how many bytes received in one shot
+   int nbytes;                          //how many bytes received in one shot
 
-	//used to get the address of the server
-	sockaddr_in addr;
-	socklen_t len = sizeof(addr);
+	//how long select() waits before returning(unless data received)
+	timeval tv;
 
 	//main client receive loop
 	while(true){
@@ -171,8 +172,7 @@ void client::start_thread()
 		them(POSIX.1-2001 allows this). This work-around doesn't adversely effect
 		other operating systems.
 		*/
-		timeval tv;
-		tv.tv_sec = 2;
+		tv.tv_sec = 1;
 		tv.tv_usec = 0;
 
 		{//begin lock scope
@@ -190,7 +190,6 @@ void client::start_thread()
 					disconnect(x);
 				}
 				else{
-					getpeername(x, (struct sockaddr*)&addr, &len);
 					processBuffer(x, recvBuff, nbytes);
 				}
 			}
@@ -285,7 +284,6 @@ bool client::startDownload(exploration::infoBuffer info)
 		return false;
 	}
 
-	//fill bufferSubElement
 	clientBuffer temp_cb;
 	temp_cb.messageDigest = info.messageDigest;
 	temp_cb.fileName = info.fileName;
@@ -295,6 +293,7 @@ bool client::startDownload(exploration::infoBuffer info)
 	temp_cb.lastBlock = atoi(info.fileSize_bytes.c_str())/(global::BUFFER_SIZE - global::CONTROL_SIZE);
 	temp_cb.lastBlockSize = atoi(info.fileSize_bytes.c_str()) % (global::BUFFER_SIZE - global::CONTROL_SIZE) + global::CONTROL_SIZE;
 	temp_cb.lastSuperBlock = temp_cb.lastBlock / global::SUPERBLOCK_SIZE;
+	temp_cb.currentSuperBlock = 0;
 
 	for(int x=0; x<info.IP.size(); x++){
 		clientBuffer::serverElement temp_se;

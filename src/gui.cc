@@ -294,9 +294,9 @@ void gui::downloadInfoSetup()
 	downloadsView->append_column("  Download Speed  ", downloadSpeed_t);
 
 	//display percentage progress bar
-	Gtk::CellRendererProgress* cell = new Gtk::CellRendererProgress;
+	Gtk::CellRendererProgress * cell = new Gtk::CellRendererProgress;
 	int cols_count = downloadsView->append_column("  Percent Complete  ", *cell);
-	Gtk::TreeViewColumn* pColumn = downloadsView->get_column(cols_count - 1);
+	Gtk::TreeViewColumn * pColumn = downloadsView->get_column(cols_count - 1);
 	pColumn->add_attribute(cell->property_value(), percentComplete_t);
 
 	//signal for clicks on downloadsView
@@ -677,6 +677,7 @@ bool gui::updateStatusBar()
 		status = "  Download Speed: " + Client.getTotalSpeed() + " Upload Speed: " + Server.getTotalSpeed();
 	}
 
+	statusbar->pop();
 	statusbar->push(status);
 
 	return true;

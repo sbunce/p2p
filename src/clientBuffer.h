@@ -36,6 +36,7 @@ public:
 	int lastBlock;             //the last block number
 	int lastBlockSize;         //holds the exact size of the last fileBlock(in bytes)
 	int lastSuperBlock;        //holds the number of the last superBlock
+	int currentSuperBlock;     //what superBlock clientBuffer is currently on
 
 
 	std::vector<int> invalidSockets; //sockets clientBuffer wants disconnected(abusive/slow/etc)
@@ -62,7 +63,6 @@ private:
 	bool downloadComplete;
 
 	int averageSeconds;    //seconds to average download speed over(n - 2 seconds)
-	int currentSuperBlock; //what superBlock clientBuffer is currently on
 
 	/*
 	This will grow to SUPERBUFFER_SIZE if there are missing blocks in a superBlock.
