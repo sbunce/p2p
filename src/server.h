@@ -21,14 +21,11 @@
 class server
 {
 public:
-	//false while files are being indexed/hashed
-	bool indexing;
-
 	//used to pass information to user interface
 	class infoBuffer
 	{
 	public:
-		std::string IP;
+		std::string client_IP;
 		std::string file_ID;
 		std::string fileName;
 		std::string fileSize;
@@ -71,9 +68,13 @@ public:
 	*/
 	bool getUploadInfo(std::vector<infoBuffer> & uploadInfo);
 	std::string getTotalSpeed();
+	const bool & isIndexing();
 	void start();
 
 private:
+	//false while files are being indexed/hashed
+	bool indexing;
+
 	//networking related
 	int maxConnections; //maximum connections allowed
 	int numConnections; //how many are currently connected

@@ -18,6 +18,9 @@ superBlock::superBlock(int superBlockNumber_in, int lastBlock_in)
 	if(maxBlock > lastBlock_in){
 		maxBlock = lastBlock_in;
 	}
+
+std::cout << "minBlock: " << minBlock << "\n";
+std::cout << "maxBlock: " << maxBlock << "\n";
 }
 
 superBlock::~superBlock()
@@ -47,10 +50,19 @@ bool superBlock::addBlock(int blockNumber, std::string * fileBlock)
 	}
 }
 
+bool superBlock::allRequested()
+{
+	/*
+	After sequential requests are done linear searches are done for missing blocks.
+	Because of this nextRequest stays one above maxBlock when all requests have 
+	been returned once. Refer to getRequest() to see why this works.
+	*/
+	return nextRequest > maxBlock;
+}
+
 bool superBlock::complete()
 {
 	if(nextRequest > maxBlock){
-		//only check for missing blocks after all blocks have been requested
 		findMissing();
 		return missingBlocks.empty();
 	}
@@ -69,11 +81,13 @@ int superBlock::getRequest()
 		return nextRequest++;
 	}
 	else{
-#ifdef DEBUG
+
+		findMissing();
+
 		if(missingBlocks.empty()){
-			std::cout << "error: superBlock::getRequest() called when it needed no blocks" << std::endl;
+			std::cout << "info: superBlock::getRequest() called when it needed no blocks" << std::endl;
+			return -1;
 		}
-#endif
 
 		int blockNumber = missingBlocks.front();
 		missingBlocks.pop_front();
@@ -83,9 +97,15 @@ int superBlock::getRequest()
 
 void superBlock::findMissing()
 {
-	for(int x=0; x<maxBlock - minBlock; x++){
-		if(container[x] == 0){
-			 missingBlocks.push_back((superBlockNumber * global::SUPERBLOCK_SIZE) + x);
+	/*
+	Don't check for missing blocks if missing blocks are already known. This way
+	duplicates in missingBlocks don't have to be checked for.
+	*/
+	if(missingBlocks.empty()){
+		for(int x=0; x<=maxBlock - minBlock; x++){
+			if(container[x] == 0){
+				 missingBlocks.push_back((superBlockNumber * global::SUPERBLOCK_SIZE) + x);
+			}
 		}
 	}
 }

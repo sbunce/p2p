@@ -4,6 +4,7 @@
 #include <gtk/gtkimagemenuitem.h>
 
 //std
+#include <algorithm>
 #include <ctime>
 #include <iostream>
 #include <sstream>
@@ -129,7 +130,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	vbox2->pack_start(*menubar, Gtk::PACK_SHRINK, 0);
 	vbox2->pack_start(*notebook1);
 	vbox2->pack_start(*statusbar, Gtk::PACK_SHRINK, 0);
-	window->set_title(("simple p2p"));
+	window->set_title(("simple-p2p"));
 	window->resize(800, 600);
 	window->set_modal(false);
 	window->property_window_position().set_value(Gtk::WIN_POS_NONE);
@@ -187,10 +188,10 @@ void gui::cancelDownload()
 {
 	Glib::RefPtr<Gtk::TreeView::Selection> refSelection = downloadsView->get_selection();
 	if(refSelection){
-		Gtk::TreeModel::iterator iter = refSelection->get_selected();
+		Gtk::TreeModel::iterator iter0 = refSelection->get_selected();
 
-		if(iter){
-			Gtk::TreeModel::Row row = *iter;
+		if(iter0){
+			Gtk::TreeModel::Row row = *iter0;
 
 			Glib::ustring messageDigest_retrieved;
 			row.get_value(0, messageDigest_retrieved);
@@ -204,17 +205,17 @@ void gui::downloadFile()
 {
 	Glib::RefPtr<Gtk::TreeView::Selection> refSelection = searchView->get_selection();
 	if(refSelection){
-		Gtk::TreeModel::iterator iter = refSelection->get_selected();
+		Gtk::TreeModel::iterator iter0 = refSelection->get_selected();
 
-		if(iter){
-			Gtk::TreeModel::Row row = *iter;
+		if(iter0){
+			Gtk::TreeModel::Row row = *iter0;
 
 			Glib::ustring messageDigest_retrieved;
 			row.get_value(0, messageDigest_retrieved);
 
-			for(std::vector<exploration::infoBuffer>::iterator iter2 = searchInfo.begin(); iter2 != searchInfo.end(); iter2++){
-				if(iter2->messageDigest == messageDigest_retrieved){
-					Client.startDownload(*iter2);
+			for(std::vector<exploration::infoBuffer>::iterator iter1 = searchInfo.begin(); iter1 != searchInfo.end(); iter1++){
+				if(iter1->messageDigest == messageDigest_retrieved){
+					Client.startDownload(*iter1);
 					break;
 				}
 			}
@@ -315,14 +316,7 @@ bool gui::downloadInfoRefresh()
 	std::vector<client::infoBuffer> info;
 	Client.getDownloadInfo(info);
 
-	for(int x=0; x<info.size(); x++){
-		std::string messageDigest = info.at(x).messageDigest;
-		std::string server_IP = info.at(x).IP;
-		std::string fileName = info.at(x).fileName;
-		std::string fileSize = info.at(x).fileSize;
-		std::string downloadSpeed = info.at(x).speed;
-		int percentComplete = info.at(x).percentComplete;
-
+	for(std::vector<client::infoBuffer>::iterator iter0 = info.begin(); iter0 != info.end(); iter0++){
 		//set up column
 		Gtk::TreeModel::ColumnRecord column;
 		Gtk::TreeModelColumn<Glib::ustring> messageDigest_t;
@@ -342,17 +336,17 @@ bool gui::downloadInfoRefresh()
 		//iterate through all the rows
 		bool foundEntry = false;
 		Gtk::TreeModel::Children children = downloadList->children();
-		for(Gtk::TreeModel::Children::iterator iter = children.begin(); iter != children.end(); ++iter){
- 			Gtk::TreeModel::Row row = *iter;
+		for(Gtk::TreeModel::Children::iterator iter1 = children.begin(); iter1 != children.end(); iter1++){
+ 			Gtk::TreeModel::Row row = *iter1;
 
 			//get the file_ID and fileName to check for existing download
 			Glib::ustring messageDigest_retrieved;
 			row.get_value(0, messageDigest_retrieved);
 
 			//see if there is already an entry for the file in the download list
-			if(messageDigest_retrieved == messageDigest){
-				row[downloadSpeed_t] = downloadSpeed;
-				row[percentComplete_t] = percentComplete;
+			if(messageDigest_retrieved == iter0->messageDigest){
+				row[downloadSpeed_t] = iter0->speed;
+				row[percentComplete_t] = iter0->percentComplete;
 
 				foundEntry = true;
 				break;
@@ -362,19 +356,25 @@ bool gui::downloadInfoRefresh()
 		if(!foundEntry){
 			Gtk::TreeModel::Row row = *(downloadList->append());
 
-			row[messageDigest_t] = messageDigest;
-			row[server_IP_t] = server_IP;
-			row[fileName_t] = fileName;
-			row[fileSize_t] = fileSize;
-			row[downloadSpeed_t] = downloadSpeed;
-			row[percentComplete_t] = percentComplete;
+			row[messageDigest_t] = iter0->messageDigest;
+			row[server_IP_t] = iter0->server_IP;
+			row[fileName_t] = iter0->fileName;
+			row[fileSize_t] = iter0->fileSize;
+			row[downloadSpeed_t] = iter0->speed;
+			row[percentComplete_t] = iter0->percentComplete;
 		}
 	}
 
 	//get rid of rows without corresponding downloadInfo(finished downloads)
 	Gtk::TreeModel::Children children = downloadList->children();
-	for(Gtk::TreeModel::Children::iterator iter = children.begin(); iter != children.end(); ++iter){
-	 	Gtk::TreeModel::Row row = *iter;
+
+	//if no download info exists at all remove all rows(all downloads complete)
+	if(info.size() == 0){
+		downloadList->clear();
+	}
+
+	for(Gtk::TreeModel::Children::iterator iter0 = children.begin(); iter0 != children.end(); iter0++){
+	 	Gtk::TreeModel::Row row = *iter0;
 
 		//get the file_ID and fileName to check for existing download
 		Glib::ustring messageDigest_retrieved;
@@ -382,24 +382,16 @@ bool gui::downloadInfoRefresh()
 
 		//loop through the download info and check if we have an entry for download
 		bool downloadFound = false;
-		for(int x=0; x<info.size(); x++){
-			std::string messageDigest = info.at(x).messageDigest;
-
+		for(std::vector<client::infoBuffer>::iterator iter1 = info.begin(); iter1 != info.end(); iter1++){
 			//check if server_IP and file_ID match the row
-			if(messageDigest_retrieved == messageDigest){
+			if(messageDigest_retrieved == iter1->messageDigest){
 				downloadFound = true;
 			}
 		}
 
 		//if download info wasn't found for row delete it(download completed)
 		if(!downloadFound){
-			downloadList->erase(iter);
-			break;
-		}
-
-		//if no download info exists at all remove all rows(all downloads complete)
-		if(info.size() == 0){
-			downloadList->clear();
+			downloadList->erase(iter0);
 			break;
 		}
 	}
@@ -447,14 +439,7 @@ bool gui::uploadInfoRefresh()
 	std::vector<server::infoBuffer> info;
 	Server.getUploadInfo(info);
 
-	for(int x=0; x<info.size(); x++){
-		std::string client_IP = info.at(x).IP;
-		std::string file_ID = info.at(x).file_ID;
-		std::string fileName = info.at(x).fileName;
-		std::string fileSize = info.at(x).fileSize;
-		std::string uploadSpeed = info.at(x).speed;
-		int percentComplete = info.at(x).percentComplete;
-
+	for(std::vector<server::infoBuffer>::iterator iter0 = info.begin(); iter0 != info.end(); iter0++){
 		//set up column
 		Gtk::TreeModel::ColumnRecord column;
 		Gtk::TreeModelColumn<Glib::ustring> client_IP_t;
@@ -474,8 +459,8 @@ bool gui::uploadInfoRefresh()
 		//iterate through all the rows
 		bool foundEntry = false;
 		Gtk::TreeModel::Children children = uploadList->children();
-		for(Gtk::TreeModel::Children::iterator iter = children.begin(); iter != children.end(); ++iter){
- 			Gtk::TreeModel::Row row = *iter;
+		for(Gtk::TreeModel::Children::iterator iter1 = children.begin(); iter1 != children.end(); iter1++){
+ 			Gtk::TreeModel::Row row = *iter1;
 
 			//get the server_IP and file_ID to check for existing download
 			Glib::ustring client_IP_retrieved;
@@ -484,9 +469,9 @@ bool gui::uploadInfoRefresh()
 			row.get_value(1, file_ID_retrieved);
 
 			//see if there is already an entry for the file in the download list
-			if(client_IP_retrieved == client_IP && file_ID_retrieved == file_ID){
-				row[uploadSpeed_t] = uploadSpeed;
-				row[percentComplete_t] = percentComplete;
+			if(client_IP_retrieved == iter0->client_IP && file_ID_retrieved == iter0->file_ID){
+				row[uploadSpeed_t] = iter0->speed;
+				row[percentComplete_t] = iter0->percentComplete;
 
 				foundEntry = true;
 				break;
@@ -496,19 +481,25 @@ bool gui::uploadInfoRefresh()
 		if(!foundEntry){
 			Gtk::TreeModel::Row row = *(uploadList->append());
 
-			row[client_IP_t] = client_IP;
-			row[file_ID_t] = file_ID;
-			row[fileName_t] = fileName;
-			row[fileSize_t] = fileSize;
-			row[uploadSpeed_t] = uploadSpeed;
-			row[percentComplete_t] = percentComplete;
+			row[client_IP_t] = iter0->client_IP;
+			row[file_ID_t] = iter0->file_ID;
+			row[fileName_t] = iter0->fileName;
+			row[fileSize_t] = iter0->fileSize;
+			row[uploadSpeed_t] = iter0->speed;
+			row[percentComplete_t] = iter0->percentComplete;
 		}
 	}
 
 	//get rid of rows without corresponding uploadInfo(finished uploads)
 	Gtk::TreeModel::Children children = uploadList->children();
-	for(Gtk::TreeModel::Children::iterator iter = children.begin(); iter != children.end(); ++iter){
-	 	Gtk::TreeModel::Row row = *iter;
+
+	//if no upload info exists at all remove all rows(all uploads complete)
+	if(info.size() == 0){
+		uploadList->clear();
+	}
+
+	for(Gtk::TreeModel::Children::iterator iter0 = children.begin(); iter0 != children.end(); iter0++){
+	 	Gtk::TreeModel::Row row = *iter0;
 
 		//get the file_ID and fileName to check for existing download
 		Glib::ustring client_IP_retrieved;
@@ -518,25 +509,16 @@ bool gui::uploadInfoRefresh()
 
 		//loop through the upload info and check if we have an entry for upload
 		bool uploadFound = false;
-		for(int x=0; x<info.size(); x++){
-			std::string client_IP = info.at(x).IP;
-			std::string file_ID = info.at(x).file_ID;
-
+		for(std::vector<server::infoBuffer>::iterator iter1 = info.begin(); iter1 != info.end(); iter1++){
 			//check if server_IP and file_ID match the row
-			if(client_IP_retrieved == client_IP && file_ID_retrieved == file_ID){
+			if(client_IP_retrieved == iter1->client_IP && file_ID_retrieved == iter1->file_ID){
 				uploadFound = true;
 			}
 		}
 
 		//if upload info wasn't found for row delete it(upload completed)
 		if(!uploadFound){
-			uploadList->erase(iter);
-			break;
-		}
-
-		//if no upload info exists at all remove all rows(all uploads complete)
-		if(info.size() == 0){
-			uploadList->clear();
+			uploadList->erase(iter0);
 			break;
 		}
 	}
@@ -577,18 +559,14 @@ void gui::searchInfoSetup()
 
 bool gui::searchInfoRefresh()
 {
-	//update upload info
+	//update search info to reflect last search
 	Exploration.getSearchResults(searchInfo);
 
-	for(int x=0; x<searchInfo.size(); x++){
-		std::string messageDigest = searchInfo.at(x).messageDigest;
-		std::string fileName = searchInfo.at(x).fileName;
-		std::string fileSize = searchInfo.at(x).fileSize;
-		std::string fileSize_bytes = searchInfo.at(x).fileSize_bytes;
+	for(std::vector<exploration::infoBuffer>::iterator iter0 = searchInfo.begin(); iter0 != searchInfo.end(); iter0++){
 
 		std::string server_IP;
-		for(std::vector<std::string>::iterator iter = searchInfo.at(x).IP.begin(); iter != searchInfo.at(x).IP.end(); iter++){
-			server_IP += *iter + ", ";
+		for(std::vector<std::string>::iterator iter1 = iter0->server_IP.begin(); iter1 != iter0->server_IP.end(); iter1++){
+			server_IP += *iter1 + ", ";
 		}
 
 		//set up column
@@ -606,15 +584,15 @@ bool gui::searchInfoRefresh()
 		//iterate through all the rows
 		bool foundEntry = false;
 		Gtk::TreeModel::Children children = searchList->children();
-		for(Gtk::TreeModel::Children::iterator iter = children.begin(); iter != children.end(); ++iter){
- 			Gtk::TreeModel::Row row = *iter;
+		for(Gtk::TreeModel::Children::iterator iter1 = children.begin(); iter1 != children.end(); iter1++){
+ 			Gtk::TreeModel::Row row = *iter1;
 
 			//get the db_ID to check for existing results
 			Glib::ustring messageDigest_retrieved;
 			row.get_value(0, messageDigest_retrieved);
 
 			//see if there is already an entry for the file in the download list
-			if(messageDigest_retrieved == messageDigest){
+			if(messageDigest_retrieved == iter0->messageDigest){
 				foundEntry = true;
 				break;
 			}
@@ -623,17 +601,23 @@ bool gui::searchInfoRefresh()
 		if(!foundEntry){
 			Gtk::TreeModel::Row row = *(searchList->append());
 
-			row[messageDigest_t] = messageDigest;
-			row[fileName_t] = fileName;
-			row[fileSize_t] = fileSize;
+			row[messageDigest_t] = iter0->messageDigest;
+			row[fileName_t] = iter0->fileName;
+			row[fileSize_t] = iter0->fileSize;
 			row[server_IP_t] = server_IP;
 		}
 	}
 
 	//get rid of rows without corresponding searchInfo(user initiated a new search)
 	Gtk::TreeModel::Children children = searchList->children();
-	for(Gtk::TreeModel::Children::iterator iter = children.begin(); iter != children.end(); ++iter){
-	 	Gtk::TreeModel::Row row = *iter;
+
+	//if no info exists in searchList remove all entries
+	if(searchInfo.size() == 0){
+		searchList->clear();
+	}
+
+	for(Gtk::TreeModel::Children::iterator iter0 = children.begin(); iter0 != children.end(); iter0++){
+	 	Gtk::TreeModel::Row row = *iter0;
 
 		//get the messageDigest to check for existing results
 		Glib::ustring messageDigest_retrieved;
@@ -641,24 +625,16 @@ bool gui::searchInfoRefresh()
 
 		//loop through the upload info and check if we have an entry for upload
 		bool searchInfoFound = false;
-		for(int x=0; x<searchInfo.size(); x++){
-			std::string messageDigest = searchInfo.at(x).messageDigest;
-
+		for(std::vector<exploration::infoBuffer>::iterator iter1 = searchInfo.begin(); iter1 != searchInfo.end(); iter1++){
 			//check if messageDigest matches row
-			if(messageDigest_retrieved == messageDigest){
+			if(messageDigest_retrieved == iter1->messageDigest){
 				searchInfoFound = true;
 			}
 		}
 
 		//if upload info wasn't found for row delete it(user initiated a new search)
 		if(!searchInfoFound){
-			searchList->erase(iter);
-			break;
-		}
-
-		//if no info exists at all remove the last entry remaining
-		if(searchInfo.size() == 0){
-			searchList->clear();
+			searchList->erase(iter0);
 			break;
 		}
 	}
@@ -670,7 +646,7 @@ bool gui::updateStatusBar()
 {
 	std::string status;
 
-	if(Server.indexing){
+	if(Server.isIndexing()){
 		status = "  Download Speed: " + Client.getTotalSpeed() + " Upload Speed: " + Server.getTotalSpeed() + "  Indexing/Hashing ";
 	}
 	else{

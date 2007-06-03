@@ -20,11 +20,13 @@ public:
 	~superBlock();
 
 	/*
-	addBlock   - returns false if superBlock doesn't need the block, otherwise adds it
-	complete   - returns true if the superBlock is complete
-	getRequest - returns the number of a fileBlock this superBlock needs
+	addBlock     - returns false if superBlock doesn't need the block, otherwise adds it
+	allRequested - all blocks have been requested(but not all necessarily received)
+	complete     - returns true if the superBlock is complete
+	getRequest   - returns the number of a fileBlock this superBlock needs
 	*/
 	bool addBlock(int blockNumber, std::string * fileBlock);
+	bool allRequested();
 	bool complete();
 	int getRequest();
 
@@ -49,7 +51,7 @@ private:
 	std::deque<int> missingBlocks;
 
 	/*
-	missing - finds missing blocks
+	missing - finds missing blocks, not very expensive(CPU time) to call
 	*/
 	void findMissing();
 

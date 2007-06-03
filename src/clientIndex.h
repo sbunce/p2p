@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "clientBuffer.h"
+#include "download.h"
 #include "exploration.h"
 #include "globals.h"
 
@@ -30,7 +30,7 @@ public:
 	*/
 	void terminateDownload(std::string messageDigest_in);
 	std::string getFilePath(std::string messageDigest_in);
-	void initialFillBuffer(std::vector<clientBuffer> & sendBuffer);
+	void initialFillBuffer(std::vector<download> & sendBuffer);
 	int startDownload(exploration::infoBuffer info);
 
 private:

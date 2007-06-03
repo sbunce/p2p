@@ -1,17 +1,23 @@
 BUGS AND NECESSARY FEATURES
 
--client is not working with UNRELIABLE_CLIENT enabled.
+-Process buffer loop is odd, it could be more efficient.
 
--clientIndex code that resumes a download is broken.
+-segfaults on partial recompilation but not full recompilation, problem in makefile.
 
--get rid of all for loops where items are being accessed by myVector.at(x), it's
-horribly inefficient.
+-Replace debugging output std::endl's with "\n".
+
+-Program crashes if trying to resume download where the user has removed the partial
+file.
+
+-The client doesn't need to know what fileID it requested a block from.
+
+-There is no check for a download already completed by the download feature.
+
+-Client is not working with UNRELIABLE_CLIENT enabled.
 
 -If the download directory is missing and a download is started the directory
 is not created and the RAM starts getting sucked up because nothing is getting
 written to disk.
-
--gui::searchInfoRefresh() is not removing more than one entry per tick.
 
 -clientIndex::initialFillBuffer() needs to be able to determine the starting
 block count on downloads resumed on startup.
@@ -38,9 +44,18 @@ and over(trying to waste bandwidth to degrate serving capability).
 -Reduce control data size by encoding file and fileBlock numbers. Also, perhaps
 negotiate control data size for each download.
 
--There should be information in the gui statusbar for protocol overhead.
+-Information in the gui statusbar for protocol overhead.
 
 
 IDEAS
 
+-Locating files should be done on a tiered linear network. Hosts should connect to
+eachother in a sequential way on level 1 but in other ways on the other levels to
+make it so the client can start traversing the network on the level which is closest.
+
+Tier 1: Linear
+Tier 2: Random
+
+Question: How would tier 1 remain connected at all times?
+Question: How to insure roughly the same access time to any node?
 

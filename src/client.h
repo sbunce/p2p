@@ -19,7 +19,7 @@
 #include <vector>
 
 #include "clientIndex.h"
-#include "clientBuffer.h"
+#include "download.h"
 #include "exploration.h"
 #include "globals.h"
 
@@ -31,7 +31,7 @@ public:
 	{
 	public:
 		std::string messageDigest;
-		std::string IP;
+		std::string server_IP;
 		std::string fileName;
 		std::string fileSize;
 		std::string speed;
@@ -59,7 +59,7 @@ private:
 	fd_set readfds;         //master file descriptor set
 
 	//send buffer
-	std::vector<clientBuffer> sendBuffer;
+	std::vector<download> sendBuffer;
 
 	/*
 	disconnect          - disconnects a socket

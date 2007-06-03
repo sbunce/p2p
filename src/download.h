@@ -9,7 +9,7 @@
 #include "superBlock.h"
 #include "globals.h"
 
-class clientBuffer
+class download
 {
 public:
 	class serverElement
@@ -23,11 +23,39 @@ public:
 		bool lastRequest;      //the last block has been requested from this server
 	};
 
+	//stores information specific to certain servers
+	std::list<serverElement> Server;
+
+	download(std::string & messageDigest_in, std::string & fileName_in, 
+		std::string & filePath_in, int fileSize_in, int blockCount_in, int lastBlock_in,
+		int lastBlockSize_in, int lastSuperBlock_in, int currentSuperBlock_in);
+	~download();
 	/*
-	Each of the following items needs to be filled when the clientBuffer is instantiated.
-	Server list needs to have at least one element in it.
+	completed        - returns true if download completed, false if not
+	getBlockCount    - returns the number of fileBlocks received
+	getMessageDigest - returns the message digest for the download
+	getFileName      - returns the fileName of the download
+	getFileSize      - returns the fileSize of the file being downloaded(bytes)
+	getLastBlock     - returns the last block number
+	getRequst        - returns a number of a block that needs to be requested
+	getSpeed         - returns the speed of this download
+	hasSocket        - returns true if the socket belongs to this download
+	processBuffer    - does actions based on buffer
 	*/
-	std::list<serverElement> Server; //holds information specific to individual servers
+	void addServer(download::serverElement & Server);
+	bool complete();
+	const int & getBlockCount();
+	const std::string & getFileName();
+	const int & getFileSize();
+	const int & getLastBlock();
+	const std::string & getMessageDigest();
+	int getRequest();
+	const int & getSpeed();
+	bool hasSocket(int socketfd);
+	void processBuffer(int socketfd, char recvBuff[], int nbytes);
+
+private:
+	//these must be set before the download begins and will be set by ctor
 	std::string messageDigest; //unique identifier of the file and message digest
 	std::string fileName;      //name of the file
 	std::string filePath;      //path to write file to on local system
@@ -38,30 +66,9 @@ public:
 	int lastSuperBlock;        //holds the number of the last superBlock
 	int currentSuperBlock;     //what superBlock clientBuffer is currently on
 
-
-	std::vector<int> invalidSockets; //sockets clientBuffer wants disconnected(abusive/slow/etc)
-	int downloadSpeed;               //speed of download(bytes per second)
-
-	clientBuffer();
-	/*
-	addBlocks      - add complete fileBlocks to the superBlocks
-	calculateSpeed - calculates the download speed of a download
-	completed      - returns true if download completed, false if not
-	getRuest       - returns a number of a block that needs to be requested
-	hasSocket      - returns true if the socket belongs to this download
-	processBuffer  - does actions based on buffer
-	*/
-	int addBlock(std::string & bucket);
-	void calculateSpeed();
-	bool complete();
-	int getRequest();
-	bool hasSocket(int socketfd);
-	void processBuffer(int socketfd, char recvBuff[], int nbytes);
-
-private:
-	//true when download is completed and ready for client to remove
-	bool downloadComplete;
-
+	//these will be set automatically in ctor
+	int downloadSpeed;     //speed of download(bytes per second)
+	bool downloadComplete; //true when download is completed
 	int averageSeconds;    //seconds to average download speed over(n - 2 seconds)
 
 	/*
@@ -78,9 +85,13 @@ private:
 	std::vector<int> secondBytes;    //bytes in the second
 
 	/*
+	addBlocks        - add complete fileBlocks to the superBlocks
+	calculateSpeed   - calculates the download speed of a download
 	findMissing      - finds missing blocks in the tree
-	writeTree        - writes a completed superBlock to file
+	writeTree        - writes a superBlock to file
 	*/
+	int addBlock(std::string & bucket);
+	void calculateSpeed();
 	void findMissing();
 	void writeSuperBlock(std::string * container[]);
 };

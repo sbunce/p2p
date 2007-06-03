@@ -14,11 +14,9 @@ public:
 	/*
 	hashFile - hash a whole file and return the message digest
 	*/
-	const std::string & hashFile(std::string filePath);
+	const std::string hashFile(std::string filePath);
 
 private:
 	sha SHA;
-
 };
 #endif
-

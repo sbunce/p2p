@@ -172,7 +172,7 @@ bool server::getUploadInfo(std::vector<infoBuffer> & uploadInfo)
 
 		infoBuffer info;
 
-		info.IP = uploadSpeed.at(x).client_IP;
+		info.client_IP = uploadSpeed.at(x).client_IP;
 		info.file_ID = uploadSpeed.at(x).file_ID;
 		info.fileName = uploadSpeed.at(x).fileName;
 		info.fileSize = fileSize_s.str();
@@ -185,6 +185,11 @@ bool server::getUploadInfo(std::vector<infoBuffer> & uploadInfo)
 	}//end lock scope
 
 	return true;
+}
+
+const bool & server::isIndexing()
+{
+	return indexing;
 }
 
 void server::newCon(int listener)

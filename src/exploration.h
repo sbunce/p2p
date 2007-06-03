@@ -20,7 +20,7 @@ public:
 		std::string fileSize;
 
 		//information unique to the server, these vectors are parallel
-		std::vector<std::string> IP;
+		std::vector<std::string> server_IP;
 		std::vector<std::string> file_ID;
 	};
 

@@ -1,7 +1,7 @@
 CC = g++ -c
 CCL = g++
 
-OBJECTS = main.o client.o clientBuffer.o clientIndex.o exploration.o gui.o \
+OBJECTS = main.o client.o download.o clientIndex.o exploration.o gui.o \
 	gui_about.o hash.o server.o serverIndex.o sha.o superBlock.o
 
 LINKER_OPTIONS = `pkg-config gtkmm-2.4 --cflags --libs` \
@@ -14,13 +14,13 @@ main: $(OBJECTS)
 main.o: main.cc gui.o
 	$(CC) main.cc `pkg-config gtkmm-2.4 --cflags`
 
-client.o: client.cc client.h clientBuffer.o clientIndex.o exploration.o globals.h 
+client.o: client.cc client.h download.o clientIndex.o exploration.o globals.h 
 	$(CC) client.cc
 
-clientBuffer.o: clientBuffer.cc clientBuffer.h exploration.o hash.o superBlock.o globals.h
-	$(CC) clientBuffer.cc
+download.o: download.cc download.h hash.o superBlock.o globals.h
+	$(CC) download.cc
 
-clientIndex.o: clientIndex.cc clientIndex.h exploration.o globals.h
+clientIndex.o: clientIndex.cc clientIndex.h download.o exploration.o globals.h
 	$(CC) clientIndex.cc
 
 exploration.o: exploration.cc exploration.h globals.h

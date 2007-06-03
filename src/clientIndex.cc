@@ -18,7 +18,6 @@ clientIndex::clientIndex()
 
 void clientIndex::terminateDownload(std::string messageDigest_in)
 {
-std::cout << "messageDigest_in: " << messageDigest_in << std::endl;
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(Mutex);
 
@@ -100,7 +99,7 @@ std::string clientIndex::getFilePath(std::string messageDigest_in)
 	}//end lock scope
 }
 
-void clientIndex::initialFillBuffer(std::vector<clientBuffer> & sendBuffer)
+void clientIndex::initialFillBuffer(std::vector<download> & sendBuffer)
 {
 	namespace fs = boost::filesystem;
 
@@ -118,34 +117,43 @@ void clientIndex::initialFillBuffer(std::vector<clientBuffer> & sendBuffer)
 			boost::tokenizer<boost::char_separator<char> > tokens(temp, sep);
 			boost::tokenizer<boost::char_separator<char> >::iterator iter = tokens.begin();
 
-			clientBuffer temp_cb;
-			temp_cb.messageDigest = *iter++;
-			temp_cb.fileName = *iter++;
-			temp_cb.fileSize = atoi((*iter++).c_str());
+			std::string messageDigest = *iter++;
+			std::string fileName = *iter++;
+			fs::path filePath_path = fs::system_complete(fs::path(global::CLIENT_DOWNLOAD_DIRECTORY + fileName, fs::native));
+			std::string filePath = filePath_path.string();
+			int fileSize = atoi((*iter++).c_str());
 
-			//determine current download status
-			fs::path filePath = fs::system_complete(fs::path(global::CLIENT_DOWNLOAD_DIRECTORY + temp_cb.fileName, fs::native));
-			int currentBytes = fs::file_size(filePath);
-			temp_cb.blockCount = currentBytes / (global::BUFFER_SIZE - global::CONTROL_SIZE);
+			int currentBytes = fs::file_size(filePath_path); //get the size of the partial file
+			int blockCount = currentBytes / (global::BUFFER_SIZE - global::CONTROL_SIZE);
+			int lastBlock = fileSize/(global::BUFFER_SIZE - global::CONTROL_SIZE);
+			int lastBlockSize = fileSize % (global::BUFFER_SIZE - global::CONTROL_SIZE) + global::CONTROL_SIZE;
+			int lastSuperBlock = lastBlock / global::SUPERBLOCK_SIZE;
+			int currentSuperBlock = currentBytes / ( (global::BUFFER_SIZE - global::CONTROL_SIZE) * global::SUPERBLOCK_SIZE );
 
-			temp_cb.lastBlock = temp_cb.fileSize/(global::BUFFER_SIZE - global::CONTROL_SIZE);
-			temp_cb.lastBlockSize = temp_cb.fileSize % (global::BUFFER_SIZE - global::CONTROL_SIZE) + global::CONTROL_SIZE;
-			temp_cb.lastSuperBlock = temp_cb.lastBlock / global::SUPERBLOCK_SIZE;
+			download resumedDownload(
+				messageDigest,
+				fileName,
+				filePath,
+				fileSize,
+				blockCount,
+				lastBlock,
+				lastBlockSize,
+				lastSuperBlock,
+				currentSuperBlock
+			);
 
-			//determine current superBlock
-			temp_cb.currentSuperBlock = currentBytes / ( (global::BUFFER_SIZE - global::CONTROL_SIZE) * global::SUPERBLOCK_SIZE );
-
+			//add known servers associated with this download
 			while(iter != tokens.end()){
-				clientBuffer::serverElement temp_se;
-				temp_se.server_IP = *iter++;
-				temp_se.file_ID = atoi((*iter++).c_str());
-				temp_se.socketfd = -1;
-				temp_se.ready = true;
-				temp_se.lastRequest = false;
-				temp_cb.Server.push_back(temp_se);
+				download::serverElement SE;
+				SE.server_IP = *iter++;
+				SE.socketfd = -1;
+				SE.ready = true;
+				SE.file_ID = atoi((*iter++).c_str());
+				SE.lastRequest = false;
+				resumedDownload.Server.push_back(SE);
 			}
 
-			sendBuffer.push_back(temp_cb);
+			sendBuffer.push_back(resumedDownload);
 		}
 
 		fin.close();
@@ -195,8 +203,8 @@ int clientIndex::startDownload(exploration::infoBuffer info)
 			std::ostringstream entry_s;
 			entry_s << info.messageDigest << global::DELIMITER << info.fileName << global::DELIMITER << info.fileSize_bytes << global::DELIMITER;
 
-			for(int x=0; x<info.IP.size(); x++){
-				entry_s << info.IP.at(x) << global::DELIMITER << info.file_ID.at(x) << "\n";
+			for(int x=0; x<info.server_IP.size(); x++){
+				entry_s << info.server_IP.at(x) << global::DELIMITER << info.file_ID.at(x) << "\n";
 			}
 
 			std::ofstream fout(indexName.c_str(), std::ios::app);

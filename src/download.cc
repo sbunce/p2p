@@ -3,17 +3,48 @@
 #include <iostream>
 #include <sstream>
 
-#include "clientBuffer.h"
+#ifdef UNRELIABLE_CLIENT
+#include <time.h>
+#endif
 
-clientBuffer::clientBuffer()
+#include "download.h"
+
+download::download(std::string & messageDigest_in, std::string & fileName_in,
+	std::string & filePath_in, int fileSize_in, int blockCount_in, int lastBlock_in,
+	int lastBlockSize_in, int lastSuperBlock_in, int currentSuperBlock_in)
 {
-	downloadComplete = false;
+	//non-defaults
+	messageDigest = messageDigest_in;
+	fileName = fileName_in;
+	filePath = filePath_in;
+	fileSize = fileSize_in;
+	blockCount = blockCount_in;
+	lastBlock = lastBlock_in;
+	lastBlockSize = lastBlockSize_in;
+	lastSuperBlock = lastSuperBlock_in;
+	currentSuperBlock = currentSuperBlock_in;
 
+	//defaults
+	downloadComplete = false;
 	averageSeconds = 3;
 	downloadSpeed = 0;
+
+	//add the first superBlock to superBuffer, needed for getRequest to work on first call
+	superBlock SB(currentSuperBlock++, lastBlock);
+	superBuffer.push_back(SB);
+
+#ifdef UNRELIABLE_CLIENT
+	//seed random number generator
+	std::srand(time(0));
+#endif
 }
 
-int clientBuffer::addBlock(std::string & bucket)
+download::~download()
+{
+
+}
+
+int download::addBlock(std::string & bucket)
 {
 	//find position of delimiters
 	int first = bucket.find_first_of(",");
@@ -28,7 +59,7 @@ int clientBuffer::addBlock(std::string & bucket)
 #ifdef UNRELIABLE_CLIENT
 	//this exists for debug purposes, 1% chance of "dropping" a packet
 	int random = rand() % 100;
-	if(random < global::UNRELIABLE_CLIENT_PERCENT - 1){
+	if(random < global::UNRELIABLE_CLIENT_PERCENT){
 		std::cout << "testing: client::addToTree(): OOPs! I dropped fileBlock " << blockNumber << std::endl;
 
 		if(atoi(blockNumber.c_str()) == lastBlock){
@@ -53,14 +84,20 @@ int clientBuffer::addBlock(std::string & bucket)
 		bucket.clear();
 	}
 
+	bool blockAdded = false;
 	for(std::deque<superBlock>::iterator iter = superBuffer.begin(); iter != superBuffer.end(); iter++){
 		if(iter->addBlock(atoi(blockNumber.c_str()), fileBlock)){
+			blockAdded = true;
 			break;
 		}
 	}
+
+	if(!blockAdded){
+		delete fileBlock;
+	}
 }
 
-void clientBuffer::calculateSpeed()
+void download::calculateSpeed()
 {
 	time_t curr = time(0);
 
@@ -105,19 +142,44 @@ void clientBuffer::calculateSpeed()
 	downloadSpeed = totalBytes / (averageSeconds - 2);
 }
 
-bool clientBuffer::complete()
+bool download::complete()
 {
 	return downloadComplete;
 }
 
-int clientBuffer::getRequest()
+const int & download::getBlockCount()
+{
+	return blockCount;
+}
+
+const std::string & download::getFileName()
+{
+	return fileName;
+}
+
+const int & download::getFileSize()
+{
+	return fileSize;
+}
+
+const int & download::getLastBlock()
+{
+	return lastBlock;
+}
+
+const std::string & download::getMessageDigest()
+{
+	return messageDigest;
+}
+
+int download::getRequest()
 {
 	calculateSpeed();
 
-	//download just started, add the first superBlock
-	if(currentSuperBlock == 0){
+	//create another superBlock if the buffer is empty and download not completed
+	if(superBuffer.empty() && currentSuperBlock <= lastSuperBlock){
 		superBlock SB(currentSuperBlock++, lastBlock);
-		superBuffer.push_back(SB);
+		superBuffer.push_front(SB);
 	}
 
 	//write out the oldest superBlocks if they're complete
@@ -129,21 +191,67 @@ int clientBuffer::getRequest()
 		if(superBuffer.empty()){
 			break;
 		}
-	}	
-
-	//create another superBlock if the buffer is empty and download not completed
-	if(superBuffer.empty() && currentSuperBlock <= lastSuperBlock){
-		superBlock SB(currentSuperBlock++, lastBlock);
-		superBuffer.push_front(SB);
 	}
 
-	//save blockCount for percent complete calculation
-	blockCount = superBuffer.front().getRequest();
+	/*
+	If all requests were made but the superBlock is not complete start working
+	on new superBlocks to give slower servers time to send their fileBlocks for
+	the old superBlocks.
+	*/
+	if(superBuffer.front().allRequested() && !superBuffer.front().complete()){
 
-	return blockCount;
+		if(superBuffer.size() >= global::SUPERBUFFER_SIZE){
+			blockCount = superBuffer.back().getRequest();
+		}
+		else{
+			if(currentSuperBlock >= lastSuperBlock){
+				blockCount = superBuffer.back().getRequest();
+			}
+			else{
+				superBlock SB(currentSuperBlock++, lastBlock);
+				superBuffer.push_front(SB);
+				blockCount = superBuffer.front().getRequest();
+			}
+		}
+	}
+	else if(!superBuffer.front().allRequested()){
+		blockCount = superBuffer.front().getRequest();
+	}
+
+	/*
+	Don't return the last block number until it's the absolute last needed by
+	this download. This makes checking for a completed download a lot easier!
+	*/
+	if(blockCount == lastBlock){
+
+		//check if there are no superBlocks left but the last one
+		if(superBuffer.size() == 1){
+			int request = superBuffer.back().getRequest();
+
+			//check if no more block requests are left but the last one
+			if(request == -1){
+				return lastBlock;
+			}
+			else{ //return a remaining request that isn't the last request
+				return request;
+			}
+		}
+		else{ //the superBuffer has more than one block in it, serve the oldest
+			blockCount = superBuffer.back().getRequest();
+			return blockCount;
+		}
+	}
+	else{ //any request but the last one gets served here
+		return blockCount;
+	}
 }
 
-bool clientBuffer::hasSocket(int socketfd)
+const int & download::getSpeed()
+{
+	return downloadSpeed;
+}
+
+bool download::hasSocket(int socketfd)
 {
 	for(std::list<serverElement>::iterator iter = Server.begin(); iter != Server.end(); iter++){
 		if(iter->socketfd == socketfd){
@@ -154,7 +262,7 @@ bool clientBuffer::hasSocket(int socketfd)
 	return false;
 }
 
-void clientBuffer::processBuffer(int socketfd, char recvBuff[], int nbytes)
+void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 {
 	//fill the bucket
 	for(std::list<serverElement>::iterator iter = Server.begin(); iter != Server.end(); iter++){
@@ -172,7 +280,11 @@ void clientBuffer::processBuffer(int socketfd, char recvBuff[], int nbytes)
 #ifdef DEBUG
 			std::cout << "error: client::processBuffer() detected buffer overrun from " << iter->server_IP << std::endl;
 #endif
-			invalidSockets.push_back(iter->socketfd);
+
+//DEBUG, add in something to disconnect sockets
+
+
+			//invalidSockets.push_back(iter->socketfd);
 			Server.erase(iter);
 		}
 
@@ -184,19 +296,29 @@ void clientBuffer::processBuffer(int socketfd, char recvBuff[], int nbytes)
 
 		if(iter->lastRequest){
 
-			//check for zero in case the last block was exactly BUFFER_SIZE
+			//check for zero in case the lastrequesting block: 1536
 			if(iter->bucket.size() != 0){
 				//add last partial block to tree
 				if(iter->bucket.size() == lastBlockSize){
 					addBlock(iter->bucket);
-					iter->lastRequest = false;
+
+#ifdef UNRELIABLE_CLIENT
+					/*
+					This exists to make UNRELIABLE_CLIENT work. It wouldn't be needed
+					under real conditions because if the program got to this point it
+					wouldn't "lose" a fileBlock.
+					*/
+					if(!superBuffer.back().complete()){
+						iter->ready = true;
+					}
+#endif
 				}
 				else{ //full block not yet received
 					break;
 				}
 			}
 
-			//write out the oldest superBlocks if they're complete
+			//write out the oldest superBlock if it's complete
 			while(superBuffer.back().complete()){
 
 				writeSuperBlock(superBuffer.back().container);
@@ -206,14 +328,17 @@ void clientBuffer::processBuffer(int socketfd, char recvBuff[], int nbytes)
 					downloadComplete = true;
 					break;
 				}
-			}	
-
+			}
 		}
 	}
 }
 
-void clientBuffer::writeSuperBlock(std::string * container[])
+void download::writeSuperBlock(std::string * container[])
 {
+#ifdef DEBUG
+	std::cout << "download::writeSuperBlock() was called" << "\n";
+#endif
+
 	std::ofstream fout(filePath.c_str(), std::ios::app);
 
 	if(fout.is_open()){
@@ -222,13 +347,18 @@ void clientBuffer::writeSuperBlock(std::string * container[])
 			if(container[x] != 0){
 				fout.write(container[x]->c_str(), container[x]->size());
 			}
+#ifdef DEBUG
+			else{
+				std::cout << "download::writeSuperBlock() is trying to write a incomplete superBlock" << std::endl;
+			}
+#endif
 		}
 
 		fout.close();
 	}
 	else{
 #ifdef DEBUG
-		std::cout << "error: clientBuffer::writeTree() error opening file" << std::endl;
+		std::cout << "error: download::writeTree() error opening file" << std::endl;
 #endif
 	}
 }

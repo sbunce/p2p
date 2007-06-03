@@ -7,9 +7,6 @@
 #include <iomanip>
 #include <sstream>
 
-//c standard libraries
-#include <ctype.h>
-
 #include "exploration.h"
 
 exploration::exploration()
@@ -72,7 +69,7 @@ void exploration::search(std::string searchWord)
 				std::string fileSize_bytes = *iter++;
 
 				while(iter != tokens.end()){
-					info.IP.push_back(*iter++);
+					info.server_IP.push_back(*iter++);
 					info.file_ID.push_back(*iter++);
 				}
 
