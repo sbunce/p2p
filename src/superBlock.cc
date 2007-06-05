@@ -18,9 +18,6 @@ superBlock::superBlock(int superBlockNumber_in, int lastBlock_in)
 	if(maxBlock > lastBlock_in){
 		maxBlock = lastBlock_in;
 	}
-
-std::cout << "minBlock: " << minBlock << "\n";
-std::cout << "maxBlock: " << maxBlock << "\n";
 }
 
 superBlock::~superBlock()
@@ -85,7 +82,6 @@ int superBlock::getRequest()
 		findMissing();
 
 		if(missingBlocks.empty()){
-			std::cout << "info: superBlock::getRequest() called when it needed no blocks" << std::endl;
 			return -1;
 		}
 

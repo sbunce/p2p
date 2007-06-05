@@ -36,7 +36,7 @@ void exploration::search(std::string searchWord)
 	stringToUpper(searchWord);
 
 #ifdef DEBUG
-	std::cout << "info: exploration::search(): search entered: " << searchWord << std::endl;
+	std::cout << "info: exploration::search(): search entered: " << searchWord << "\n";
 #endif
 
 	std::ifstream fin(searchDatabase.c_str());
@@ -95,7 +95,7 @@ void exploration::search(std::string searchWord)
 	}
 	else{
 #ifdef DEBUG
-		std::cout << "error: exploration::search(): cannot open " << searchDatabase << std::endl;
+		std::cout << "error: exploration::search(): cannot open " << searchDatabase << "\n";
 #endif
 	}
 

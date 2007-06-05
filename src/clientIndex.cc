@@ -50,7 +50,7 @@ void clientIndex::terminateDownload(std::string messageDigest_in)
 	}
 	else{
 #ifdef DEBUG
-		std::cout << "error: clientIndex::downloadComplete(): couldn't open " << indexName << std::endl;
+		std::cout << "error: clientIndex::downloadComplete(): couldn't open " << indexName << "\n";
 #endif
 	}
 
@@ -88,18 +88,18 @@ std::string clientIndex::getFilePath(std::string messageDigest_in)
 	}
 	else{
 #ifdef DEBUG
-		std::cout << "error: clientIndex::getFilePath(): can't open " << indexName << std::endl;
+		std::cout << "error: clientIndex::getFilePath(): can't open " << indexName << "\n";
 #endif
 	}
 
 #ifdef DEBUG
-		std::cout << "error: clientIndex::getFilePath(): did not return a file path" << indexName << std::endl;
+		std::cout << "error: clientIndex::getFilePath(): did not return a file path" << indexName << "\n";
 #endif
 
 	}//end lock scope
 }
 
-void clientIndex::initialFillBuffer(std::vector<download> & sendBuffer)
+void clientIndex::initialFillBuffer(std::vector<download> & downloadBuffer)
 {
 	namespace fs = boost::filesystem;
 
@@ -153,14 +153,14 @@ void clientIndex::initialFillBuffer(std::vector<download> & sendBuffer)
 				resumedDownload.Server.push_back(SE);
 			}
 
-			sendBuffer.push_back(resumedDownload);
+			downloadBuffer.push_back(resumedDownload);
 		}
 
 		fin.close();
 	}
 	else{
 #ifdef DEBUG
-		std::cout << "error: clientIndex::initialFillBuffer(): can't open " << indexName << std::endl;
+		std::cout << "error: clientIndex::initialFillBuffer(): can't open " << indexName << "\n";
 #endif
 	}
 
@@ -191,7 +191,7 @@ int clientIndex::startDownload(exploration::infoBuffer info)
 			if(temp.substr(temp.find_last_of(global::DELIMITER) + 1) == info.fileName){
 				entryFound = true;
 #ifdef DEBUG
-				std::cout << "error: clientIndex::startDownload(): file is already downloading" << std::endl;
+				std::cout << "error: clientIndex::startDownload(): file is already downloading\n";
 #endif
 				return -1;
 			}
@@ -201,10 +201,10 @@ int clientIndex::startDownload(exploration::infoBuffer info)
 		if(!entryFound){
 			//write the share index file
 			std::ostringstream entry_s;
-			entry_s << info.messageDigest << global::DELIMITER << info.fileName << global::DELIMITER << info.fileSize_bytes << global::DELIMITER;
+			entry_s << info.messageDigest << global::DELIMITER << info.fileName << global::DELIMITER << info.fileSize_bytes;
 
 			for(int x=0; x<info.server_IP.size(); x++){
-				entry_s << info.server_IP.at(x) << global::DELIMITER << info.file_ID.at(x) << "\n";
+				entry_s << global::DELIMITER << info.server_IP.at(x) << global::DELIMITER << info.file_ID.at(x);
 			}
 
 			std::ofstream fout(indexName.c_str(), std::ios::app);
@@ -214,14 +214,14 @@ int clientIndex::startDownload(exploration::infoBuffer info)
 			}
 			else{
 #ifdef DEBUG
-				std::cout << "error: clientIndex::startDownload(): can't open " << indexName << std::endl;
+				std::cout << "error: clientIndex::startDownload(): can't open " << indexName << "\n";
 #endif
 			}
 		}
 	}
 	else{
 #ifdef DEBUG
-		std::cout << "error: clientIndex::startDownload(): can't open " << indexName << std::endl;
+		std::cout << "error: clientIndex::startDownload(): can't open " << indexName << "\n";
 #endif
 	}
 

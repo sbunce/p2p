@@ -55,11 +55,12 @@ public:
 
 private:
 	//networking related
-	int fdmax;              //holds the number of the maximum socket
-	fd_set readfds;         //master file descriptor set
+	int fdmax;        //holds the number of the maximum socket
+	fd_set readfds;   //temporary file descriptor set to pass to select()
+	fd_set masterfds; //master file descriptor set
 
 	//send buffer
-	std::vector<download> sendBuffer;
+	std::vector<download> downloadBuffer;
 
 	/*
 	disconnect          - disconnects a socket
@@ -78,8 +79,8 @@ private:
 	void sendPendingRequests();
 	int sendRequest(std::string server_IP, int & socketfd, int fileID, int fileBlock);
 
-	boost::mutex sendBufferMutex;  //mutex for any usage of sendBuffer
-	boost::mutex readfdsMutex;     //mutex for readfds fd_set
+	boost::mutex downloadBufferMutex;  //mutex for any usage of sendBuffer
+	boost::mutex masterfdsMutex;       //mutex for readfds fd_set
 
 	clientIndex ClientIndex;
 };

@@ -32,7 +32,7 @@ const std::string hash::hashFile(std::string filePath)
 	}
 	else{
 #ifdef DEBUG
-		std::cout << "error: hash::hashFile(): couldn't open " << filePath << std::endl;
+		std::cout << "error: hash::hashFile(): couldn't open " << filePath << "\n";
 #endif
 	}
 

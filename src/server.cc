@@ -19,7 +19,7 @@ server::server()
 void server::disconnect(int clientSock)
 {
 #ifdef DEBUG
-	std::cout << "info: server::disconnect(): server disconnecting socket number " << clientSock << std::endl;
+	std::cout << "info: server::disconnect(): server disconnecting socket number " << clientSock << "\n";
 #endif
 	numConnections--;
 
@@ -215,7 +215,7 @@ void server::newCon(int listener)
 			}
 
 #ifdef DEBUG
-			std::cout << "info: server::newCon(): " << inet_ntoa(remoteaddr.sin_addr) << " socket " << newfd << " connected" << std::endl;
+			std::cout << "info: server::newCon(): " << inet_ntoa(remoteaddr.sin_addr) << " socket " << newfd << " connected\n";
 #endif
 		}
 		else{ //too many connections, send rejection to new socket and disconnect
@@ -223,7 +223,7 @@ void server::newCon(int listener)
 			close(newfd);
 
 #ifdef DEBUG
-			std::cout << "warning: server::newCon(): max connections reached, rejected new connection" << std::endl;
+			std::cout << "warning: server::newCon(): max connections reached, rejected new connection\n";
 #endif
 		}
 	}
@@ -238,7 +238,7 @@ void server::queueRequest(int clientSock, char recvBuff[], int nbytes)
 	getpeername(clientSock, (struct sockaddr*)&addr, &len);
 
 #ifdef DEBUG_VERBOSE
-	std::cout << "info: server::queueRequest(): server received " << request << " from " << inet_ntoa(addr.sin_addr) << std::endl;
+	std::cout << "info: server::queueRequest(): server received " << request << " from " << inet_ntoa(addr.sin_addr) << "\n";
 #endif
 
 	/*
@@ -330,7 +330,7 @@ int server::sendBlock(int clientSock, int file_ID, int fileBlock)
 	sockaddr_in addr;
 	socklen_t len = sizeof(addr);
 	getpeername(clientSock, (struct sockaddr*)&addr, &len);
-	std::cout << "info: server::sendBlock(): server sending " << control << " to " << inet_ntoa(addr.sin_addr) << std::endl;
+	std::cout << "info: server::sendBlock(): server sending " << control << " to " << inet_ntoa(addr.sin_addr) << "\n";
 #endif
 
 	control.append(global::CONTROL_SIZE - control.length(), ' '); //blank the extra space
@@ -384,7 +384,7 @@ int server::sendBlock(int clientSock, int file_ID, int fileBlock)
 	}
 	else{
 #ifdef DEBUG
-		std::cout << "error: server::sendBlock(): can't open requested file for reading" << std::endl;
+		std::cout << "error: server::sendBlock(): can't open requested file for reading\n";
 #endif
 	}
 }
@@ -442,7 +442,7 @@ void server::start_thread()
    int nbytes;                     //how many bytes sent in one shot
 
 #ifdef DEBUG
-std::cout << "info: server::start_thread(): server created listener socket number " << listener << std::endl;
+std::cout << "info: server::start_thread(): server created listener socket number " << listener << "\n";
 #endif
 	//main server loop
 	while(true){

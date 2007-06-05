@@ -46,6 +46,8 @@ download::~download()
 
 int download::addBlock(std::string & bucket)
 {
+	calculateSpeed();
+
 	//find position of delimiters
 	int first = bucket.find_first_of(",");
 	int second = bucket.find_first_of(",", first+1);
@@ -60,7 +62,7 @@ int download::addBlock(std::string & bucket)
 	//this exists for debug purposes, 1% chance of "dropping" a packet
 	int random = rand() % 100;
 	if(random < global::UNRELIABLE_CLIENT_PERCENT){
-		std::cout << "testing: client::addToTree(): OOPs! I dropped fileBlock " << blockNumber << std::endl;
+		std::cout << "testing: client::addToTree(): OOPs! I dropped fileBlock " << blockNumber << "\n";
 
 		if(atoi(blockNumber.c_str()) == lastBlock){
 			bucket.clear();
@@ -174,48 +176,88 @@ const std::string & download::getMessageDigest()
 
 int download::getRequest()
 {
-	calculateSpeed();
+	/*
+	This function is a bit hard to understand but it defines how the superBlocks
+	are managed and is inherently complicated.
+	*/
 
-	//create another superBlock if the buffer is empty and download not completed
+	/*
+	Write out the oldest superBlocks if they're complete. It's possible the
+	superBuffer could be empty so a check for this is done.
+	*/
+	if(!superBuffer.empty()){
+		while(superBuffer.back().complete()){
+
+			writeSuperBlock(superBuffer.back().container);
+			superBuffer.pop_back();
+
+			if(superBuffer.empty()){
+				break;
+			}
+		}
+	}
+
+	/*
+	Create another superBlock if the buffer is empty and the download is not
+	completed.
+	*/
 	if(superBuffer.empty() && currentSuperBlock <= lastSuperBlock){
 		superBlock SB(currentSuperBlock++, lastBlock);
 		superBuffer.push_front(SB);
 	}
 
-	//write out the oldest superBlocks if they're complete
-	while(superBuffer.back().complete()){
-
-		writeSuperBlock(superBuffer.back().container);
-		superBuffer.pop_back();
-
-		if(superBuffer.empty()){
-			break;
-		}
-	}
-
 	/*
 	If all requests were made but the superBlock is not complete start working
-	on new superBlocks to give slower servers time to send their fileBlocks for
-	the old superBlocks.
+	on a new superBlocks to give slower servers time to send their fileBlocks for
+	the older superBlocks.
+
+	.front() indicates a newer superBlock
+	.back() indicates a older superBlock
+	*/
+	/*
+	If all fileBlocks have been requested but the front is not complete either
+	there are two possibilities:
+
+	1) Add a new superBlock and get a request number from it.
+	2) There is no room for another superBlock, rerequest a fileBlock from the
+	   oldest superBlock.
 	*/
 	if(superBuffer.front().allRequested() && !superBuffer.front().complete()){
 
+		//if the superBuffer is full rerequest from the oldest superBlock
 		if(superBuffer.size() >= global::SUPERBUFFER_SIZE){
 			blockCount = superBuffer.back().getRequest();
 		}
-		else{
-			if(currentSuperBlock >= lastSuperBlock){
-				blockCount = superBuffer.back().getRequest();
-			}
-			else{
+		else{ //there is room for another superBlock
+
+			//if the file needs another superBlock add it and get a request
+			if(currentSuperBlock <= lastSuperBlock){
 				superBlock SB(currentSuperBlock++, lastBlock);
 				superBuffer.push_front(SB);
 				blockCount = superBuffer.front().getRequest();
 			}
+			else{
+				/*
+				The file doesn't need another superBlock, start rerequesting early.
+				This happens when the end of the download approaches.
+				*/
+				blockCount = superBuffer.back().getRequest();
+			}
 		}
 	}
+	/*
+	If all requests have not yet been made then proceed normally by getting the
+	next request from the newest superBlock.
+	*/
 	else if(!superBuffer.front().allRequested()){
 		blockCount = superBuffer.front().getRequest();
+	}
+	/*
+	All blocks already requested from the front superBlock and the front
+	superBlock is complete. Rerequest a block from the oldest superBlock.
+	*/
+	else{
+		blockCount = superBuffer.back().getRequest();
 	}
 
 	/*
@@ -224,15 +266,21 @@ int download::getRequest()
 	*/
 	if(blockCount == lastBlock){
 
-		//check if there are no superBlocks left but the last one
+		//determine if there are no superBlocks left but the last one
 		if(superBuffer.size() == 1){
+
+			/*
+			If no superBlock but the last one remains then try getting another
+			request. If the superBlock returns -1 then it doesn't need any other
+			blocks.
+			*/
 			int request = superBuffer.back().getRequest();
 
-			//check if no more block requests are left but the last one
+			//if no other block but the last one is needed
 			if(request == -1){
 				return lastBlock;
 			}
-			else{ //return a remaining request that isn't the last request
+			else{ //if another block is needed
 				return request;
 			}
 		}
@@ -241,7 +289,7 @@ int download::getRequest()
 			return blockCount;
 		}
 	}
-	else{ //any request but the last one gets served here
+	else{ //any request but the last one gets returned without the above checking
 		return blockCount;
 	}
 }
@@ -253,8 +301,8 @@ const int & download::getSpeed()
 
 bool download::hasSocket(int socketfd)
 {
-	for(std::list<serverElement>::iterator iter = Server.begin(); iter != Server.end(); iter++){
-		if(iter->socketfd == socketfd){
+	for(std::list<serverElement>::iterator iter0 = Server.begin(); iter0 != Server.end(); iter0++){
+		if(iter0->socketfd == socketfd){
 			return true;
 		}
 	}
@@ -267,66 +315,67 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 	//fill the bucket
 	for(std::list<serverElement>::iterator iter = Server.begin(); iter != Server.end(); iter++){
 
-		//add the buffer to the right bucket
+		//add the buffer to the right bucket and process
 		if(iter->socketfd == socketfd){
+
 			iter->bucket.append(recvBuff, nbytes);
+
 #ifdef DEBUG_VERBOSE
-			std::cout << "info: bucket.size(): " << iter->bucket.size() << std::endl;
+			std::cout << "info: download::processBuffer() IP: " << iter->server_IP << " bucket size: " << iter->bucket.size() << "\n";
+			std::cout << "info: superBuffer.size(): " << superBuffer.size() << "\n";
 #endif
-		}
 
-		//disconnect the server if it's being nasty!
-		if(iter->bucket.size() > 3*global::BUFFER_SIZE){
+			//disconnect the server if it's being nasty!
+			if(iter->bucket.size() > 3*global::BUFFER_SIZE){
 #ifdef DEBUG
-			std::cout << "error: client::processBuffer() detected buffer overrun from " << iter->server_IP << std::endl;
+				std::cout << "error: client::processBuffer() detected buffer overrun from " << iter->server_IP << "\n";
 #endif
-
 //DEBUG, add in something to disconnect sockets
-
-
-			//invalidSockets.push_back(iter->socketfd);
-			Server.erase(iter);
-		}
-
-		//if full block received write to tree and ready another request
-		if(iter->bucket.size() % global::BUFFER_SIZE == 0){
-			addBlock(iter->bucket);
-			iter->ready = true;
-		}
-
-		if(iter->lastRequest){
-
-			//check for zero in case the lastrequesting block: 1536
-			if(iter->bucket.size() != 0){
-				//add last partial block to tree
-				if(iter->bucket.size() == lastBlockSize){
-					addBlock(iter->bucket);
-
-#ifdef UNRELIABLE_CLIENT
-					/*
-					This exists to make UNRELIABLE_CLIENT work. It wouldn't be needed
-					under real conditions because if the program got to this point it
-					wouldn't "lose" a fileBlock.
-					*/
-					if(!superBuffer.back().complete()){
-						iter->ready = true;
-					}
-#endif
-				}
-				else{ //full block not yet received
-					break;
-				}
+				//invalidSockets.push_back(iter->socketfd);
+				Server.erase(iter);
 			}
 
-			//write out the oldest superBlock if it's complete
-			while(superBuffer.back().complete()){
+			//if full block received add it to a superBlock and ready another request
+			if(iter->bucket.size() % global::BUFFER_SIZE == 0){
+				addBlock(iter->bucket);
+				iter->ready = true;
+			}
 
-				writeSuperBlock(superBuffer.back().container);
-				superBuffer.pop_back();
+			if(iter->lastRequest){
 
-				if(superBuffer.empty()){
-					downloadComplete = true;
-					break;
+				//check for zero in case the last requested block was exactly global::BUFFER_SIZE
+				if(iter->bucket.size() != 0){
+
+					//add last partial block to tree
+					if(iter->bucket.size() == lastBlockSize){
+						addBlock(iter->bucket);
+
+#ifdef UNRELIABLE_CLIENT
+						/*
+						This exists to make UNRELIABLE_CLIENT work. It wouldn't be needed
+						under real conditions because if the program got to this point it
+						wouldn't "lose" a fileBlock.
+						*/
+						if(!superBuffer.back().complete()){
+							iter->ready = true;
+						}
+#endif
+					}
+					else{ //full block not yet received, wait for it
+						break;
+					}
+				}
+
+				//write out the oldest superBlock if it's complete
+				while(superBuffer.back().complete()){
+
+					writeSuperBlock(superBuffer.back().container);
+					superBuffer.pop_back();
+
+					if(superBuffer.empty()){
+						downloadComplete = true;
+						break;
+					}
 				}
 			}
 		}
@@ -336,7 +385,7 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 void download::writeSuperBlock(std::string * container[])
 {
 #ifdef DEBUG
-	std::cout << "download::writeSuperBlock() was called" << "\n";
+	std::cout << "info: download::writeSuperBlock() was called\n";
 #endif
 
 	std::ofstream fout(filePath.c_str(), std::ios::app);
@@ -349,7 +398,7 @@ void download::writeSuperBlock(std::string * container[])
 			}
 #ifdef DEBUG
 			else{
-				std::cout << "download::writeSuperBlock() is trying to write a incomplete superBlock" << std::endl;
+				std::cout << "download::writeSuperBlock() is trying to write a incomplete superBlock\n";
 			}
 #endif
 		}
@@ -358,7 +407,7 @@ void download::writeSuperBlock(std::string * container[])
 	}
 	else{
 #ifdef DEBUG
-		std::cout << "error: download::writeTree() error opening file" << std::endl;
+		std::cout << "error: download::writeTree() error opening file\n";
 #endif
 	}
 }

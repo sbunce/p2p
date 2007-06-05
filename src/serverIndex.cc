@@ -48,7 +48,7 @@ bool serverIndex::getFileInfo(int fileID, int & fileSize, std::string & filePath
 	}
 	else{
 #ifdef DEBUG
-		std::cout << "error: serverIndex::getFileInfo(): can't open " << shareIndex << std::endl;
+		std::cout << "error: serverIndex::getFileInfo(): can't open " << shareIndex << "\n";
 #endif
 		return false;
 	}
@@ -68,7 +68,7 @@ int serverIndex::indexShare_recurse(std::string dirName)
 
 	if(!fs::exists(fullPath)){
 #ifdef DEBUG
-		std::cout << "error: fileIndex::indexShare(): can't locate " << fullPath.string() << std::endl;
+		std::cout << "error: fileIndex::indexShare(): can't locate " << fullPath.string() << "\n";
 #endif
 		return -1;
 	}
@@ -92,14 +92,14 @@ int serverIndex::indexShare_recurse(std::string dirName)
 			}
 			catch(std::exception & ex){
 #ifdef DEBUG
-				std::cout << "error: serverIndex::indexShare_recurse(): file " << dir_itr->leaf() << " caused exception " << ex.what() << std::endl;
+				std::cout << "error: serverIndex::indexShare_recurse(): file " << dir_itr->leaf() << " caused exception " << ex.what() << "\n";
 #endif
 			}
 		}
 	}
 	else{
 #ifdef DEBUG
-		std::cout << "error: fileIndex::indexShare(): index points to file when it should point at directory" << std::endl;    
+		std::cout << "error: fileIndex::indexShare(): index points to file when it should point at directory\n";    
 #endif
 	}
 
@@ -135,7 +135,7 @@ void serverIndex::removeMissing()
 	}
 	else{
 #ifdef DEBUG
-		std::cout << "error: fileIndex::removeMissing(): couldn't open share index" << std::endl;
+		std::cout << "error: fileIndex::removeMissing(): couldn't open share index\n";
 #endif
 	}
 }
@@ -180,7 +180,7 @@ void serverIndex::writeEntry(int size, std::string path)
 			}
 			else{
 #ifdef DEBUG
-				std::cout << "error: serverIndex::writeEntry(): couldn't open " << shareIndex << std::endl;
+				std::cout << "error: serverIndex::writeEntry(): couldn't open " << shareIndex << "\n";
 #endif
 			}
 		}

@@ -1,10 +1,7 @@
 BUGS AND NECESSARY FEATURES
 
--Process buffer loop is odd, it could be more efficient.
-
--segfaults on partial recompilation but not full recompilation, problem in makefile.
-
--Replace debugging output std::endl's with "\n".
+-Make client::infoBuffer store IP's in a vector. Correctly download IP display
+in the gui.
 
 -Program crashes if trying to resume download where the user has removed the partial
 file.
@@ -13,26 +10,23 @@ file.
 
 -There is no check for a download already completed by the download feature.
 
--Client is not working with UNRELIABLE_CLIENT enabled.
-
 -If the download directory is missing and a download is started the directory
 is not created and the RAM starts getting sucked up because nothing is getting
 written to disk.
 
--clientIndex::initialFillBuffer() needs to be able to determine the starting
-block count on downloads resumed on startup.
-
 -There should be a check for the delimiter in the index files.
 Filenames can have a delimiter in them and mess things up.
-
--Small packet size is wasting a lot of speed. Hypothesis is that the total time 
-waiting between request of data and data transmission is greater the smaller
-the packet size. 4096 = 1000kB/s vs 65535 = 2200kB/s.
 
 -Client has no control of how many connections it will try to make.
 
 
 POSSIBLE FEATURES
+
+-Writing to disk is slowing down rerequests and hurting speed.
+
+-Small packet size is wasting a lot of speed. Hypothesis is that the total time 
+waiting between request of data and data transmission is greater the smaller
+the packet size. 4096 = 1000kB/s vs 65535 = 2200kB/s.
 
 -Add a check to make sure the client is not requesting the same blocks over
 and over(trying to waste bandwidth to degrate serving capability).
