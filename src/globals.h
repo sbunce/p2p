@@ -4,8 +4,8 @@
 #include <string>
 #include "sha.h"
 
-#define DEBUG
-#define DEBUG_VERBOSE
+//#define DEBUG
+//#define DEBUG_VERBOSE
 
 namespace global //"global" namespace ;-)
 {
@@ -13,7 +13,7 @@ namespace global //"global" namespace ;-)
 	If enabled client randomly "drops" packets. This is good for testing the
 	rerequest ability.
 	*/
-	#define UNRELIABLE_CLIENT
+	//#define UNRELIABLE_CLIENT
 	const int UNRELIABLE_CLIENT_PERCENT = 99;
 
 	const int BUFFER_SIZE = 4096;    //how big packets can be(bytes, maximum 65535)

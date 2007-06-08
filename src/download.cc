@@ -354,7 +354,7 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 						/*
 						This exists to make UNRELIABLE_CLIENT work. It wouldn't be needed
 						under real conditions because if the program got to this point it
-						wouldn't "lose" a fileBlock.
+						wouldn't "drop" a fileBlock.
 						*/
 						if(!superBuffer.back().complete()){
 							iter->ready = true;

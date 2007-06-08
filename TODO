@@ -1,12 +1,12 @@
 BUGS AND NECESSARY FEATURES
 
+-Does not yet allow for downloading multiple files at the same time.
+
 -Make client::infoBuffer store IP's in a vector. Correctly download IP display
 in the gui.
 
 -Program crashes if trying to resume download where the user has removed the partial
 file.
-
--The client doesn't need to know what fileID it requested a block from.
 
 -There is no check for a download already completed by the download feature.
 
@@ -19,14 +19,10 @@ Filenames can have a delimiter in them and mess things up.
 
 -Client has no control of how many connections it will try to make.
 
-
 POSSIBLE FEATURES
 
--Writing to disk is slowing down rerequests and hurting speed.
-
--Small packet size is wasting a lot of speed. Hypothesis is that the total time 
-waiting between request of data and data transmission is greater the smaller
-the packet size. 4096 = 1000kB/s vs 65535 = 2200kB/s.
+-Possibly add a check to make sure the block requested is the block the server
+sends.
 
 -Add a check to make sure the client is not requesting the same blocks over
 and over(trying to waste bandwidth to degrate serving capability).
@@ -42,6 +38,19 @@ negotiate control data size for each download.
 
 
 IDEAS
+
+-Link the server elements together in a ring. Have a token that each can pass 
+to the next to signify that it's their turn to request a block from the socket.
+Only the serverElements that have the same socket needs to be linked. hasSocket()
+will need to be modified to where it only returns true if the element containing
+the socket currently has the token. Might need to give the serverElement some
+brains, give it some functions instead of just using it as a dumb container.
+
+-Overhead can be reduced a lot. The client doesn't need to know what file_ID
+the server is sending because it tracks everything by the socket number. The
+client also doesn't need to know the fileBlock because it can expect the server
+to send the block that was requested. For that matter what the server is doing
+"BLS" also doesn't need to be known.
 
 -Locating files should be done on a tiered linear network. Hosts should connect to
 eachother in a sequential way on level 1 but in other ways on the other levels to
