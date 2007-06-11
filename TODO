@@ -1,6 +1,9 @@
 BUGS AND NECESSARY FEATURES
 
--Does not yet allow for downloading multiple files at the same time.
+-server::queueRequest() has a send in it that doesn't loop until complete
+
+-Algorithm for checking upload speed doesn't work right when not all blocks are being
+requested from the server.
 
 -Make client::infoBuffer store IP's in a vector. Correctly download IP display
 in the gui.
@@ -20,6 +23,9 @@ Filenames can have a delimiter in them and mess things up.
 -Client has no control of how many connections it will try to make.
 
 POSSIBLE FEATURES
+
+-download::addBlock() is a possible performance problem. A std::string is created
+to hold the fileBlock and it is copied in to a superBlock. Is copying necessary?
 
 -Possibly add a check to make sure the block requested is the block the server
 sends.

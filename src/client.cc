@@ -20,18 +20,18 @@ void client::terminateDownload(std::string messageDigest_in)
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
 
 	//find the file and remove it from the downloadBuffer
-	for(std::vector<download>::iterator iter = downloadBuffer.begin(); iter < downloadBuffer.end(); iter++){
+	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
 
-		if(messageDigest_in == iter->getMessageDigest()){
+		if(messageDigest_in == iter0->getMessageDigest()){
 
 			//disconnect all sockets associated with the download
-			for(std::list<download::serverElement>::iterator subIter = iter->Server.begin(); subIter != iter->Server.end(); subIter++){
-				disconnect(subIter->socketfd);
+			for(std::vector<download::serverElement *>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
+				disconnect((*iter1)->socketfd);
 			}
 
 			//get rid of the download
-			ClientIndex.terminateDownload(iter->getMessageDigest());
-			downloadBuffer.erase(iter);
+			ClientIndex.terminateDownload(iter0->getMessageDigest());
+			downloadBuffer.erase(iter0);
 		}
 	}
 
@@ -57,6 +57,7 @@ void client::disconnect(int socketfd)
 
 bool client::getDownloadInfo(std::vector<infoBuffer> & downloadInfo)
 {
+std::cout << "client::getDownloadInfo start\n";
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
 
@@ -65,15 +66,15 @@ bool client::getDownloadInfo(std::vector<infoBuffer> & downloadInfo)
 	}
 
 	//process sendQueue
-	for(std::vector<download>::iterator iter = downloadBuffer.begin(); iter != downloadBuffer.end(); iter++){
+	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
 		//calculate the percent complete
-		float bytesDownloaded = iter->getBlockCount() * (global::BUFFER_SIZE - global::CONTROL_SIZE);
-		float fileSize = iter->getFileSize();
+		float bytesDownloaded = iter0->getBlockCount() * (global::BUFFER_SIZE - global::CONTROL_SIZE);
+		float fileSize = iter0->getFileSize();
 		float percent = (bytesDownloaded / fileSize) * 100;
 		int percentComplete = int(percent);
 
 		//convert fileSize from Bytes to megaBytes
-		fileSize = iter->getFileSize() / 1024 / 1024;
+		fileSize = iter0->getFileSize() / 1024 / 1024;
 		std::ostringstream fileSize_s;
 
 		if(fileSize < 1){
@@ -84,19 +85,19 @@ bool client::getDownloadInfo(std::vector<infoBuffer> & downloadInfo)
 		}
 
 		//convert the download speed to kiloBytes
-		int downloadSpeed = iter->getSpeed() / 1024;
+		int downloadSpeed = iter0->getSpeed() / 1024;
 		std::ostringstream downloadSpeed_s;
 		downloadSpeed_s << downloadSpeed << " kB/s";
 
 		infoBuffer info;
-		info.messageDigest = iter->getMessageDigest();
+		info.messageDigest = iter0->getMessageDigest();
 
 		//get all IP's
-		for(std::list<download::serverElement>::iterator subIter = iter->Server.begin(); subIter != iter->Server.end(); subIter++){
-			info.server_IP += subIter->server_IP + ", ";
+		for(std::vector<download::serverElement *>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
+			info.server_IP += (*iter1)->server_IP + ", ";
 		}
 
-		info.fileName = iter->getFileName();
+		info.fileName = iter0->getFileName();
 		info.fileSize = fileSize_s.str();
 		info.speed = downloadSpeed_s.str();
 		info.percentComplete = percentComplete;
@@ -110,7 +111,7 @@ bool client::getDownloadInfo(std::vector<infoBuffer> & downloadInfo)
 	}
 
 	}//end lock scope
-
+std::cout << "client::getDownloadInfo end\n";
 	return true;
 }
 
@@ -166,6 +167,8 @@ void client::start_thread()
 
 	//main client receive loop
 	while(true){
+static int clientReturn = 0;
+std::cout << "client return " << clientReturn++ << "\n";
 		sendPendingRequests();
 
 		/*
@@ -214,26 +217,37 @@ void client::sendPendingRequests()
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
 
+	//pass tokens
+	for(std::vector<std::deque<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
+
+		//if the download has relinquished it's token, give the token to the next download
+		if(iter0->front()->token == false){
+			iter0->push_back(iter0->front());
+			iter0->pop_front();
+			iter0->front()->token = true;
+		}
+	}
+
 	//process sendQueue
 	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 < downloadBuffer.end(); iter0++){
-		for(std::list<download::serverElement>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
+		for(std::vector<download::serverElement *>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
+
+			if((*iter1)->ready && (*iter1)->token){
 #ifdef DEBUG_VERBOSE
-				std::cout << "info: client::sendPendingRequests() IP: " << iter1->server_IP << " ready: " << iter1->ready << "\n";
+				std::cout << "info: client::sendPendingRequests() IP: " << (*iter1)->server_IP << " ready: " << (*iter1)->ready << "\n";
 #endif
-			if(iter1->ready){
-
 				int request = iter0->getRequest();
-				sendRequest(iter1->server_IP, iter1->socketfd, iter1->file_ID, request);
+				sendRequest((*iter1)->server_IP, (*iter1)->socketfd, (*iter1)->file_ID, request);
 
-				//will be ready again when a response it received to this requst
-				iter1->ready = false;
+				//will be ready again when a response is received to this requst
+				(*iter1)->ready = false;
 
 				/*
 				If the last request was made to a server the serverElement must be marked
 				so it knows to expect a incomplete packet.
 				*/
 				if(request == iter0->getLastBlock()){
-					iter1->lastRequest = true;
+					(*iter1)->lastRequest = true;
 				}
 			}
 		}
@@ -331,20 +345,54 @@ bool client::startDownload(exploration::infoBuffer info)
 		currentSuperBlock
 	);
 
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(downloadBufferMutex);
+
 	//add known servers associated with this download
 	for(int x=0; x<info.server_IP.size(); x++){
-		download::serverElement SE;
-		SE.server_IP = info.server_IP.at(x);
-		SE.socketfd = -1;
-		SE.ready = true;
-		SE.file_ID = atoi(info.file_ID.at(x).c_str());
-		SE.lastRequest = false;
+
+		download::serverElement * SE = new download::serverElement();
+		SE->token = false;
+		SE->server_IP = info.server_IP.at(x);
+		SE->ready = true;
+		SE->file_ID = atoi(info.file_ID.at(x).c_str());
+		SE->lastRequest = false;
+		SE->socketfd = -1; //will be changed to appropriate number if socket already connected to server
+
+		//see if a socket for this server already exists, if it does then reuse it
+		for(std::vector<std::deque<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
+
+			if(iter0->front()->server_IP == info.server_IP.at(x)){
+				SE->socketfd = iter0->front()->socketfd;
+				break;
+			}
+		}
+
+		//add the server to the server vector if it exists, otherwise make a new one and add it to serverHolder
+		bool found = false;
+		for(std::vector<std::deque<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
+
+			if(iter0->front()->server_IP == SE->server_IP){
+				//all servers in the vector must have the same socket
+				SE->socketfd = iter0->front()->socketfd;
+				iter0->push_back(SE);
+				found = true;
+			}
+		}
+
+		if(!found){
+			//make a new server deque for the server and add it to the serverHolder
+			std::deque<download::serverElement *> newServer;
+			newServer.push_back(SE);
+			serverHolder.push_back(newServer);
+		}
+
+		//add server to the download
 		newDownload.Server.push_back(SE);
 	}
 
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
 	downloadBuffer.push_back(newDownload);
+
 	}//end lock scope
 
 	return true;

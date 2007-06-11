@@ -14,7 +14,7 @@
 #include <fcntl.h>
 
 //std
-#include <queue>
+#include <deque>
 #include <string>
 #include <vector>
 
@@ -63,6 +63,15 @@ private:
 	std::vector<download> downloadBuffer;
 
 	/*
+	Each deque will contain pointers to serverElements that one or more of the
+	downloads have. Before each sendPendingRequests a token is passed from one
+	serverElement to the next. This will determine what download gets to make a
+	request. This is for the purpose of allowing multiple downloads from the same
+	server to share one socket and take turns using it.
+	*/
+	std::vector<std::deque<download::serverElement *> > serverHolder;
+
+	/*
 	disconnect          - disconnects a socket
 	disconnect          - disconnects a socket
 	processBuffer       - establishes our receive protocol,
@@ -79,8 +88,8 @@ private:
 	void sendPendingRequests();
 	int sendRequest(std::string server_IP, int & socketfd, int fileID, int fileBlock);
 
-	boost::mutex downloadBufferMutex;  //mutex for any usage of sendBuffer
-	boost::mutex masterfdsMutex;       //mutex for readfds fd_set
+	boost::mutex downloadBufferMutex;    //mutex for any usage of sendBuffer
+	boost::mutex masterfdsMutex;         //mutex for readfds fd_set
 
 	clientIndex ClientIndex;
 };

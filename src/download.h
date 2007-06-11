@@ -2,7 +2,6 @@
 #define H_CLIENT_BUFFER
 
 #include <deque>
-#include <list>
 #include <string>
 #include <vector>
 
@@ -15,6 +14,9 @@ public:
 	class serverElement
 	{
 	public:
+		//true if the client is ready for a request from this download
+		bool token;
+
 		std::string server_IP; //IP of the server that has the file
 		int socketfd;          //holds the socket number or -1(no socket yet created)
 		bool ready;            //true if ready to send another block request
@@ -24,7 +26,7 @@ public:
 	};
 
 	//stores information specific to certain servers
-	std::list<serverElement> Server;
+	std::vector<serverElement *> Server;
 
 	download(std::string & messageDigest_in, std::string & fileName_in, 
 		std::string & filePath_in, int fileSize_in, int blockCount_in, int lastBlock_in,
@@ -93,7 +95,7 @@ private:
 	int addBlock(std::string & bucket);
 	void calculateSpeed();
 	void findMissing();
-	void writeSuperBlock(std::string * container[]);
+	void writeSuperBlock(std::string container[]);
 };
 #endif
 

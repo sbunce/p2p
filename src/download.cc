@@ -76,26 +76,20 @@ int download::addBlock(std::string & bucket)
 #endif
 
 	//prepare fileBlock to be added to a superBlock
-	std::string * fileBlock = new std::string;
+	std::string fileBlock;
 	if(bucket.size() >= global::BUFFER_SIZE){
-		*fileBlock = bucket.substr(global::CONTROL_SIZE, global::BUFFER_SIZE - global::CONTROL_SIZE);
+		fileBlock = bucket.substr(global::CONTROL_SIZE, global::BUFFER_SIZE - global::CONTROL_SIZE);
 		bucket.erase(0, global::BUFFER_SIZE);
 	}
 	else{ //last block encountered
-		*fileBlock = bucket.substr(global::CONTROL_SIZE, bucket.size() - global::CONTROL_SIZE);
+		fileBlock = bucket.substr(global::CONTROL_SIZE, bucket.size() - global::CONTROL_SIZE);
 		bucket.clear();
 	}
 
-	bool blockAdded = false;
 	for(std::deque<superBlock>::iterator iter = superBuffer.begin(); iter != superBuffer.end(); iter++){
 		if(iter->addBlock(atoi(blockNumber.c_str()), fileBlock)){
-			blockAdded = true;
 			break;
 		}
-	}
-
-	if(!blockAdded){
-		delete fileBlock;
 	}
 }
 
@@ -301,8 +295,15 @@ const int & download::getSpeed()
 
 bool download::hasSocket(int socketfd)
 {
-	for(std::list<serverElement>::iterator iter0 = Server.begin(); iter0 != Server.end(); iter0++){
-		if(iter0->socketfd == socketfd){
+	for(std::vector<serverElement *>::iterator iter0 = Server.begin(); iter0 != Server.end(); iter0++){
+
+		/*
+		This function is used by the client to check whether this download requested
+		the fileBlock it got a response to. Only return true if the download both 
+		has the socket and it has a token. If it doesn't have a token it's possible 
+		the request came from a different download.
+		*/
+		if((*iter0)->socketfd == socketfd && (*iter0)->token){
 			return true;
 		}
 	}
@@ -313,22 +314,22 @@ bool download::hasSocket(int socketfd)
 void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 {
 	//fill the bucket
-	for(std::list<serverElement>::iterator iter = Server.begin(); iter != Server.end(); iter++){
+	for(std::vector<serverElement *>::iterator iter = Server.begin(); iter != Server.end(); iter++){
 
 		//add the buffer to the right bucket and process
-		if(iter->socketfd == socketfd){
+		if((*iter)->socketfd == socketfd){
 
-			iter->bucket.append(recvBuff, nbytes);
+			(*iter)->bucket.append(recvBuff, nbytes);
 
 #ifdef DEBUG_VERBOSE
-			std::cout << "info: download::processBuffer() IP: " << iter->server_IP << " bucket size: " << iter->bucket.size() << "\n";
+			std::cout << "info: download::processBuffer() IP: " << (*iter)->server_IP << " bucket size: " << (*iter)->bucket.size() << "\n";
 			std::cout << "info: superBuffer.size(): " << superBuffer.size() << "\n";
 #endif
 
 			//disconnect the server if it's being nasty!
-			if(iter->bucket.size() > 3*global::BUFFER_SIZE){
+			if((*iter)->bucket.size() > 3*global::BUFFER_SIZE){
 #ifdef DEBUG
-				std::cout << "error: client::processBuffer() detected buffer overrun from " << iter->server_IP << "\n";
+				std::cout << "error: client::processBuffer() detected buffer overrun from " << (*iter)->server_IP << "\n";
 #endif
 //DEBUG, add in something to disconnect sockets
 				//invalidSockets.push_back(iter->socketfd);
@@ -336,19 +337,21 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 			}
 
 			//if full block received add it to a superBlock and ready another request
-			if(iter->bucket.size() % global::BUFFER_SIZE == 0){
-				addBlock(iter->bucket);
-				iter->ready = true;
+			if((*iter)->bucket.size() % global::BUFFER_SIZE == 0){
+				addBlock((*iter)->bucket);
+
+				(*iter)->token = false; //relinquish token
+				(*iter)->ready = true;  //indicate ready for another request
 			}
 
-			if(iter->lastRequest){
+			if((*iter)->lastRequest){
 
 				//check for zero in case the last requested block was exactly global::BUFFER_SIZE
-				if(iter->bucket.size() != 0){
+				if((*iter)->bucket.size() != 0){
 
 					//add last partial block to tree
-					if(iter->bucket.size() == lastBlockSize){
-						addBlock(iter->bucket);
+					if((*iter)->bucket.size() == lastBlockSize){
+						addBlock((*iter)->bucket);
 
 #ifdef UNRELIABLE_CLIENT
 						/*
@@ -357,7 +360,8 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 						wouldn't "drop" a fileBlock.
 						*/
 						if(!superBuffer.back().complete()){
-							iter->ready = true;
+							(*iter)->token = false; //relinquish token
+							(*iter)->ready = true;  //indicate ready for another request
 						}
 #endif
 					}
@@ -382,7 +386,7 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 	}
 }
 
-void download::writeSuperBlock(std::string * container[])
+void download::writeSuperBlock(std::string container[])
 {
 #ifdef DEBUG
 	std::cout << "info: download::writeSuperBlock() was called\n";
@@ -393,14 +397,7 @@ void download::writeSuperBlock(std::string * container[])
 	if(fout.is_open()){
 
 		for(int x=0; x<global::SUPERBLOCK_SIZE; x++){
-			if(container[x] != 0){
-				fout.write(container[x]->c_str(), container[x]->size());
-			}
-#ifdef DEBUG
-			else{
-				std::cout << "download::writeSuperBlock() is trying to write a incomplete superBlock\n";
-			}
-#endif
+			fout.write(container[x].c_str(), container[x].size());
 		}
 
 		fout.close();
