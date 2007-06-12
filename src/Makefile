@@ -14,7 +14,7 @@ main: $(OBJECTS)
 main.o: main.cc gui.o
 	$(CC) main.cc `pkg-config gtkmm-2.4 --cflags`
 
-client.o: client.cc client.h download.o clientIndex.o exploration.o globals.h
+client.o: client.cc client.h download.o clientIndex.o exploration.o globals.h 
 	$(CC) client.cc
 
 download.o: download.cc download.h hash.o superBlock.o globals.h

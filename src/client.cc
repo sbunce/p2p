@@ -20,18 +20,18 @@ void client::terminateDownload(std::string messageDigest_in)
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
 
 	//find the file and remove it from the downloadBuffer
-	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
+	for(std::vector<download>::iterator iter = downloadBuffer.begin(); iter < downloadBuffer.end(); iter++){
 
-		if(messageDigest_in == iter0->getMessageDigest()){
+		if(messageDigest_in == iter->getMessageDigest()){
 
 			//disconnect all sockets associated with the download
-			for(std::vector<download::serverElement *>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
-				disconnect((*iter1)->socketfd);
+			for(std::vector<download::serverElement *>::iterator subIter = iter->Server.begin(); subIter != iter->Server.end(); subIter++){
+				disconnect((*subIter)->socketfd);
 			}
 
 			//get rid of the download
-			ClientIndex.terminateDownload(iter0->getMessageDigest());
-			downloadBuffer.erase(iter0);
+			ClientIndex.terminateDownload(iter->getMessageDigest());
+			downloadBuffer.erase(iter);
 		}
 	}
 
@@ -57,7 +57,6 @@ void client::disconnect(int socketfd)
 
 bool client::getDownloadInfo(std::vector<infoBuffer> & downloadInfo)
 {
-std::cout << "client::getDownloadInfo start\n";
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
 
@@ -66,15 +65,15 @@ std::cout << "client::getDownloadInfo start\n";
 	}
 
 	//process sendQueue
-	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
+	for(std::vector<download>::iterator iter = downloadBuffer.begin(); iter != downloadBuffer.end(); iter++){
 		//calculate the percent complete
-		float bytesDownloaded = iter0->getBlockCount() * (global::BUFFER_SIZE - global::CONTROL_SIZE);
-		float fileSize = iter0->getFileSize();
+		float bytesDownloaded = iter->getBlockCount() * (global::BUFFER_SIZE - global::CONTROL_SIZE);
+		float fileSize = iter->getFileSize();
 		float percent = (bytesDownloaded / fileSize) * 100;
 		int percentComplete = int(percent);
 
 		//convert fileSize from Bytes to megaBytes
-		fileSize = iter0->getFileSize() / 1024 / 1024;
+		fileSize = iter->getFileSize() / 1024 / 1024;
 		std::ostringstream fileSize_s;
 
 		if(fileSize < 1){
@@ -85,19 +84,19 @@ std::cout << "client::getDownloadInfo start\n";
 		}
 
 		//convert the download speed to kiloBytes
-		int downloadSpeed = iter0->getSpeed() / 1024;
+		int downloadSpeed = iter->getSpeed() / 1024;
 		std::ostringstream downloadSpeed_s;
 		downloadSpeed_s << downloadSpeed << " kB/s";
 
 		infoBuffer info;
-		info.messageDigest = iter0->getMessageDigest();
+		info.messageDigest = iter->getMessageDigest();
 
 		//get all IP's
-		for(std::vector<download::serverElement *>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
-			info.server_IP += (*iter1)->server_IP + ", ";
+		for(std::vector<download::serverElement *>::iterator subIter = iter->Server.begin(); subIter != iter->Server.end(); subIter++){
+			info.server_IP += (*subIter)->server_IP + ", ";
 		}
 
-		info.fileName = iter0->getFileName();
+		info.fileName = iter->getFileName();
 		info.fileSize = fileSize_s.str();
 		info.speed = downloadSpeed_s.str();
 		info.percentComplete = percentComplete;
@@ -111,7 +110,7 @@ std::cout << "client::getDownloadInfo start\n";
 	}
 
 	}//end lock scope
-std::cout << "client::getDownloadInfo end\n";
+
 	return true;
 }
 
@@ -167,8 +166,6 @@ void client::start_thread()
 
 	//main client receive loop
 	while(true){
-static int clientReturn = 0;
-std::cout << "client return " << clientReturn++ << "\n";
 		sendPendingRequests();
 
 		/*
@@ -231,15 +228,15 @@ void client::sendPendingRequests()
 	//process sendQueue
 	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 < downloadBuffer.end(); iter0++){
 		for(std::vector<download::serverElement *>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
-
-			if((*iter1)->ready && (*iter1)->token){
 #ifdef DEBUG_VERBOSE
-				std::cout << "info: client::sendPendingRequests() IP: " << (*iter1)->server_IP << " ready: " << (*iter1)->ready << "\n";
+				std::cout << "info: client::sendPendingRequests() IP: " << iter1->server_IP << " ready: " << iter1->ready << "\n";
 #endif
+			if((*iter1)->ready){
+
 				int request = iter0->getRequest();
 				sendRequest((*iter1)->server_IP, (*iter1)->socketfd, (*iter1)->file_ID, request);
 
-				//will be ready again when a response is received to this requst
+				//will be ready again when a response it received to this requst
 				(*iter1)->ready = false;
 
 				/*
@@ -394,6 +391,7 @@ bool client::startDownload(exploration::infoBuffer info)
 	downloadBuffer.push_back(newDownload);
 
 	}//end lock scope
+
 
 	return true;
 }

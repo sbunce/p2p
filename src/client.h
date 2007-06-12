@@ -14,7 +14,7 @@
 #include <fcntl.h>
 
 //std
-#include <deque>
+#include <queue>
 #include <string>
 #include <vector>
 
@@ -88,8 +88,8 @@ private:
 	void sendPendingRequests();
 	int sendRequest(std::string server_IP, int & socketfd, int fileID, int fileBlock);
 
-	boost::mutex downloadBufferMutex;    //mutex for any usage of sendBuffer
-	boost::mutex masterfdsMutex;         //mutex for readfds fd_set
+	boost::mutex downloadBufferMutex;  //mutex for any usage of sendBuffer
+	boost::mutex masterfdsMutex;       //mutex for readfds fd_set
 
 	clientIndex ClientIndex;
 };

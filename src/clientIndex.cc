@@ -101,6 +101,7 @@ std::string clientIndex::getFilePath(std::string messageDigest_in)
 
 void clientIndex::initialFillBuffer(std::vector<download> & downloadBuffer)
 {
+/*
 	namespace fs = boost::filesystem;
 
 	{//begin lock scope
@@ -141,7 +142,7 @@ void clientIndex::initialFillBuffer(std::vector<download> & downloadBuffer)
 				lastSuperBlock,
 				currentSuperBlock
 			);
-/*
+
 			//add known servers associated with this download
 			while(iter != tokens.end()){
 				download::serverElement SE;
@@ -152,7 +153,7 @@ void clientIndex::initialFillBuffer(std::vector<download> & downloadBuffer)
 				SE.lastRequest = false;
 				resumedDownload.Server.push_back(SE);
 			}
-*/
+
 			downloadBuffer.push_back(resumedDownload);
 		}
 
@@ -165,6 +166,7 @@ void clientIndex::initialFillBuffer(std::vector<download> & downloadBuffer)
 	}
 
 	}//end lock scope
+*/
 }
 
 int clientIndex::startDownload(exploration::infoBuffer info)
@@ -206,8 +208,6 @@ int clientIndex::startDownload(exploration::infoBuffer info)
 			for(int x=0; x<info.server_IP.size(); x++){
 				entry_s << global::DELIMITER << info.server_IP.at(x) << global::DELIMITER << info.file_ID.at(x);
 			}
-
-			entry_s << "\n";
 
 			std::ofstream fout(indexName.c_str(), std::ios::app);
 			if(fout.is_open()){
