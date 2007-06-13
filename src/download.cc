@@ -76,13 +76,13 @@ int download::addBlock(std::string & bucket)
 #endif
 
 	//prepare fileBlock to be added to a superBlock
-	std::string * fileBlock = new std::string;
+	std::string fileBlock;
 	if(bucket.size() >= global::BUFFER_SIZE){
-		*fileBlock = bucket.substr(global::CONTROL_SIZE, global::BUFFER_SIZE - global::CONTROL_SIZE);
+		fileBlock = bucket.substr(global::CONTROL_SIZE, global::BUFFER_SIZE - global::CONTROL_SIZE);
 		bucket.erase(0, global::BUFFER_SIZE);
 	}
 	else{ //last block encountered
-		*fileBlock = bucket.substr(global::CONTROL_SIZE, bucket.size() - global::CONTROL_SIZE);
+		fileBlock = bucket.substr(global::CONTROL_SIZE, bucket.size() - global::CONTROL_SIZE);
 		bucket.clear();
 	}
 
@@ -92,10 +92,6 @@ int download::addBlock(std::string & bucket)
 			blockAdded = true;
 			break;
 		}
-	}
-
-	if(!blockAdded){
-		delete fileBlock;
 	}
 }
 
@@ -302,7 +298,14 @@ const int & download::getSpeed()
 bool download::hasSocket(int socketfd)
 {
 	for(std::vector<serverElement *>::iterator iter0 = Server.begin(); iter0 != Server.end(); iter0++){
-		if((*iter0)->socketfd == socketfd){
+
+		/*
+		This function is used by the client to check whether this download requested
+		the fileBlock it got a response to. Only return true if the download both 
+		has the socket and it has a token. If it doesn't have a token it's possible 
+		the request came from a different download.
+		*/
+		if((*iter0)->socketfd == socketfd && (*iter0)->token){
 			return true;
 		}
 	}
@@ -339,6 +342,7 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 			if((*iter)->bucket.size() % global::BUFFER_SIZE == 0){
 				addBlock((*iter)->bucket);
 				(*iter)->ready = true;
+				(*iter)->token = false;
 			}
 
 			if((*iter)->lastRequest){
@@ -358,6 +362,7 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 						*/
 						if(!superBuffer.back().complete()){
 							(*iter)->ready = true;
+							(*iter)->token = false;
 						}
 #endif
 					}
@@ -382,7 +387,7 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 	}
 }
 
-void download::writeSuperBlock(std::string * container[])
+void download::writeSuperBlock(std::string container[])
 {
 #ifdef DEBUG
 	std::cout << "info: download::writeSuperBlock() was called\n";
@@ -393,16 +398,8 @@ void download::writeSuperBlock(std::string * container[])
 	if(fout.is_open()){
 
 		for(int x=0; x<global::SUPERBLOCK_SIZE; x++){
-			if(container[x] != 0){
-				fout.write(container[x]->c_str(), container[x]->size());
-			}
-#ifdef DEBUG
-			else{
-				std::cout << "download::writeSuperBlock() is trying to write a incomplete superBlock\n";
-			}
-#endif
+			fout.write(container[x].c_str(), container[x].size());
 		}
-
 		fout.close();
 	}
 	else{

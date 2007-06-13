@@ -209,6 +209,8 @@ int clientIndex::startDownload(exploration::infoBuffer info)
 				entry_s << global::DELIMITER << info.server_IP.at(x) << global::DELIMITER << info.file_ID.at(x);
 			}
 
+			entry_s << "\n";
+
 			std::ofstream fout(indexName.c_str(), std::ios::app);
 			if(fout.is_open()){
 				fout.write(entry_s.str().c_str(), entry_s.str().length());

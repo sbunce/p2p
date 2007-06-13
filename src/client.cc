@@ -20,18 +20,18 @@ void client::terminateDownload(std::string messageDigest_in)
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
 
 	//find the file and remove it from the downloadBuffer
-	for(std::vector<download>::iterator iter = downloadBuffer.begin(); iter < downloadBuffer.end(); iter++){
+	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 < downloadBuffer.end(); iter0++){
 
-		if(messageDigest_in == iter->getMessageDigest()){
+		if(messageDigest_in == iter0->getMessageDigest()){
 
 			//disconnect all sockets associated with the download
-			for(std::vector<download::serverElement *>::iterator subIter = iter->Server.begin(); subIter != iter->Server.end(); subIter++){
-				disconnect((*subIter)->socketfd);
+			for(std::vector<download::serverElement *>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
+				disconnect((*iter1)->socketfd);
 			}
 
 			//get rid of the download
-			ClientIndex.terminateDownload(iter->getMessageDigest());
-			downloadBuffer.erase(iter);
+			ClientIndex.terminateDownload(iter0->getMessageDigest());
+			downloadBuffer.erase(iter0);
 		}
 	}
 
@@ -65,15 +65,15 @@ bool client::getDownloadInfo(std::vector<infoBuffer> & downloadInfo)
 	}
 
 	//process sendQueue
-	for(std::vector<download>::iterator iter = downloadBuffer.begin(); iter != downloadBuffer.end(); iter++){
+	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
 		//calculate the percent complete
-		float bytesDownloaded = iter->getBlockCount() * (global::BUFFER_SIZE - global::CONTROL_SIZE);
-		float fileSize = iter->getFileSize();
+		float bytesDownloaded = iter0->getBlockCount() * (global::BUFFER_SIZE - global::CONTROL_SIZE);
+		float fileSize = iter0->getFileSize();
 		float percent = (bytesDownloaded / fileSize) * 100;
 		int percentComplete = int(percent);
 
 		//convert fileSize from Bytes to megaBytes
-		fileSize = iter->getFileSize() / 1024 / 1024;
+		fileSize = iter0->getFileSize() / 1024 / 1024;
 		std::ostringstream fileSize_s;
 
 		if(fileSize < 1){
@@ -84,19 +84,19 @@ bool client::getDownloadInfo(std::vector<infoBuffer> & downloadInfo)
 		}
 
 		//convert the download speed to kiloBytes
-		int downloadSpeed = iter->getSpeed() / 1024;
+		int downloadSpeed = iter0->getSpeed() / 1024;
 		std::ostringstream downloadSpeed_s;
 		downloadSpeed_s << downloadSpeed << " kB/s";
 
 		infoBuffer info;
-		info.messageDigest = iter->getMessageDigest();
+		info.messageDigest = iter0->getMessageDigest();
 
 		//get all IP's
-		for(std::vector<download::serverElement *>::iterator subIter = iter->Server.begin(); subIter != iter->Server.end(); subIter++){
-			info.server_IP += (*subIter)->server_IP + ", ";
+		for(std::vector<download::serverElement *>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
+			info.server_IP += (*iter1)->server_IP + ", ";
 		}
 
-		info.fileName = iter->getFileName();
+		info.fileName = iter0->getFileName();
 		info.fileSize = fileSize_s.str();
 		info.speed = downloadSpeed_s.str();
 		info.percentComplete = percentComplete;
@@ -228,11 +228,11 @@ void client::sendPendingRequests()
 	//process sendQueue
 	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 < downloadBuffer.end(); iter0++){
 		for(std::vector<download::serverElement *>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
-#ifdef DEBUG_VERBOSE
-				std::cout << "info: client::sendPendingRequests() IP: " << iter1->server_IP << " ready: " << iter1->ready << "\n";
-#endif
-			if((*iter1)->ready){
 
+			if((*iter1)->ready && (*iter1)->token){
+#ifdef DEBUG_VERBOSE
+				std::cout << "info: client::sendPendingRequests() IP: " << (*iter1)->server_IP << " ready: " << (*iter1)->ready << "\n";
+#endif
 				int request = iter0->getRequest();
 				sendRequest((*iter1)->server_IP, (*iter1)->socketfd, (*iter1)->file_ID, request);
 
@@ -391,7 +391,6 @@ bool client::startDownload(exploration::infoBuffer info)
 	downloadBuffer.push_back(newDownload);
 
 	}//end lock scope
-
 
 	return true;
 }

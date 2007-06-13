@@ -95,7 +95,7 @@ private:
 	int addBlock(std::string & bucket);
 	void calculateSpeed();
 	void findMissing();
-	void writeSuperBlock(std::string * container[]);
+	void writeSuperBlock(std::string container[]);
 };
 #endif
 

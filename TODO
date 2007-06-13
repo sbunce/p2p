@@ -1,5 +1,7 @@
 BUGS AND NECESSARY FEATURES
 
+-client::addBlock() has string copying in it, could be a performance problem
+
 -server::queueRequest() has a send in it that doesn't loop until complete
 
 -Does not yet allow for downloading multiple files at the same time.

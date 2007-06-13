@@ -8,11 +8,6 @@ superBlock::superBlock(int superBlockNumber_in, int lastBlock_in)
 	minBlock = superBlockNumber * global::SUPERBLOCK_SIZE;
 	maxBlock = (superBlockNumber * global::SUPERBLOCK_SIZE) + (global::SUPERBLOCK_SIZE - 1);
 
-	//set null pointers
-	for(int x=0; x<global::SUPERBLOCK_SIZE; x++){
-		container[x] = 0;
-	}
-
 	nextRequest = minBlock;
 
 	if(maxBlock > lastBlock_in){
@@ -20,24 +15,12 @@ superBlock::superBlock(int superBlockNumber_in, int lastBlock_in)
 	}
 }
 
-superBlock::~superBlock()
-{
-	for(int x=0; x<global::SUPERBLOCK_SIZE; x++){
-		if(container[x] != 0){
-			delete container[x];
-		}
-	}
-}
-
-bool superBlock::addBlock(int blockNumber, std::string * fileBlock)
+bool superBlock::addBlock(int blockNumber, std::string & fileBlock)
 {
 	if(blockNumber >= minBlock && blockNumber <= maxBlock){
 
-		if(container[blockNumber % global::SUPERBLOCK_SIZE] == 0){
+		if(container[blockNumber % global::SUPERBLOCK_SIZE].empty()){
 			container[blockNumber % global::SUPERBLOCK_SIZE] = fileBlock;
-		}
-		else{ //already have this block
-			delete fileBlock;
 		}
 
 		return true;
@@ -99,7 +82,7 @@ void superBlock::findMissing()
 	*/
 	if(missingBlocks.empty()){
 		for(int x=0; x<=maxBlock - minBlock; x++){
-			if(container[x] == 0){
+			if(container[x].empty()){
 				 missingBlocks.push_back((superBlockNumber * global::SUPERBLOCK_SIZE) + x);
 			}
 		}
