@@ -16,6 +16,7 @@ client::client()
 
 void client::terminateDownload(std::string messageDigest_in)
 {
+/* OLD CODE
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
 
@@ -36,6 +37,7 @@ void client::terminateDownload(std::string messageDigest_in)
 	}
 
 	}//end lock scope
+*/
 }
 
 void client::disconnect(int socketfd)
@@ -121,8 +123,8 @@ std::string client::getTotalSpeed()
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
 
-	for(std::vector<download>::iterator iter = downloadBuffer.begin(); iter != downloadBuffer.end(); iter++){
-		speed += iter->getSpeed();
+	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
+		speed += iter0->getSpeed();
 	}
 
 	}//end lock scope
@@ -350,9 +352,9 @@ bool client::startDownload(exploration::infoBuffer info)
 
 		download::serverElement * SE = new download::serverElement();
 		SE->token = false;
-		SE->server_IP = info.server_IP.at(x);
+		SE->server_IP = info.server_IP[x];
 		SE->ready = true;
-		SE->file_ID = atoi(info.file_ID.at(x).c_str());
+		SE->file_ID = atoi(info.file_ID[x].c_str());
 		SE->lastRequest = false;
 		SE->socketfd = -1; //will be changed to appropriate number if socket already connected to server
 

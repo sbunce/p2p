@@ -316,43 +316,43 @@ bool download::hasSocket(int socketfd)
 void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 {
 	//fill the bucket
-	for(std::vector<serverElement *>::iterator iter = Server.begin(); iter != Server.end(); iter++){
+	for(std::vector<serverElement *>::iterator iter0 = Server.begin(); iter0 != Server.end(); iter0++){
 
 		//add the buffer to the right bucket and process
-		if((*iter)->socketfd == socketfd){
+		if((*iter0)->socketfd == socketfd){
 
-			(*iter)->bucket.append(recvBuff, nbytes);
+			(*iter0)->bucket.append(recvBuff, nbytes);
 
 #ifdef DEBUG_VERBOSE
-			std::cout << "info: download::processBuffer() IP: " << (*iter)->server_IP << " bucket size: " << (*iter)->bucket.size() << "\n";
+			std::cout << "info: download::processBuffer() IP: " << (*iter0)->server_IP << " bucket size: " << (*iter0)->bucket.size() << "\n";
 			std::cout << "info: superBuffer.size(): " << superBuffer.size() << "\n";
 #endif
 
 			//disconnect the server if it's being nasty!
-			if((*iter)->bucket.size() > 3*global::BUFFER_SIZE){
+			if((*iter0)->bucket.size() > 3*global::BUFFER_SIZE){
 #ifdef DEBUG
 				std::cout << "error: client::processBuffer() detected buffer overrun from " << (*iter)->server_IP << "\n";
 #endif
 //DEBUG, add in something to disconnect sockets
 				//invalidSockets.push_back(iter->socketfd);
-				Server.erase(iter);
+				Server.erase(iter0);
 			}
 
 			//if full block received add it to a superBlock and ready another request
-			if((*iter)->bucket.size() % global::BUFFER_SIZE == 0){
-				addBlock((*iter)->bucket);
-				(*iter)->ready = true;
-				(*iter)->token = false;
+			if((*iter0)->bucket.size() % global::BUFFER_SIZE == 0){
+				addBlock((*iter0)->bucket);
+				(*iter0)->ready = true;
+				(*iter0)->token = false;
 			}
 
-			if((*iter)->lastRequest){
+			if((*iter0)->lastRequest){
 
 				//check for zero in case the last requested block was exactly global::BUFFER_SIZE
-				if((*iter)->bucket.size() != 0){
+				if((*iter0)->bucket.size() != 0){
 
 					//add last partial block to tree
-					if((*iter)->bucket.size() == lastBlockSize){
-						addBlock((*iter)->bucket);
+					if((*iter0)->bucket.size() == lastBlockSize){
+						addBlock((*iter0)->bucket);
 
 #ifdef UNRELIABLE_CLIENT
 						/*
@@ -361,8 +361,8 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 						wouldn't "drop" a fileBlock.
 						*/
 						if(!superBuffer.back().complete()){
-							(*iter)->ready = true;
-							(*iter)->token = false;
+							(*iter0)->ready = true;
+							(*iter0)->token = false;
 						}
 #endif
 					}

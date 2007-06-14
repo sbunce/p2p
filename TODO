@@ -1,13 +1,11 @@
 BUGS AND NECESSARY FEATURES
 
--client::addBlock() has string copying in it, could be a performance problem
+-The implementation of multi-downloading isn't done. It needs new logic in
+client::terminateDownload() to get rid of downloads but not disconnect sockets
+still in use. clientIndex::initialFillBuffer() is also not working.
 
--server::queueRequest() has a send in it that doesn't loop until complete
-
--Does not yet allow for downloading multiple files at the same time.
-
--Make client::infoBuffer store IP's in a vector. Correctly download IP display
-in the gui.
+-Make client::infoBuffer store IP's in a vector to leave it more up to the gui
+to determine how they're displayed.
 
 -Program crashes if trying to resume download where the user has removed the partial
 file.
@@ -15,15 +13,17 @@ file.
 -There is no check for a download already completed by the download feature.
 
 -If the download directory is missing and a download is started the directory
-is not created and the RAM starts getting sucked up because nothing is getting
-written to disk.
+is not created automatically.
 
 -There should be a check for the delimiter in the index files.
 Filenames can have a delimiter in them and mess things up.
 
 -Client has no control of how many connections it will try to make.
 
+
 POSSIBLE FEATURES
+
+-client::addBlock() has string copying in it, could be a performance problem.
 
 -Possibly add a check to make sure the block requested is the block the server
 sends.
@@ -43,12 +43,10 @@ negotiate control data size for each download.
 
 IDEAS
 
--Link the server elements together in a ring. Have a token that each can pass 
-to the next to signify that it's their turn to request a block from the socket.
-Only the serverElements that have the same socket needs to be linked. hasSocket()
-will need to be modified to where it only returns true if the element containing
-the socket currently has the token. Might need to give the serverElement some
-brains, give it some functions instead of just using it as a dumb container.
+-Have the destructor for download.cc delete it's server elements. Delete the
+download instance in client::terminateDownload(). Get terminateDownload working
+such that it doesn't disconnect sockets that are still being used by other
+downloads. Also, terminateDownload would need to clean up serverHolder.
 
 -Overhead can be reduced a lot. The client doesn't need to know what file_ID
 the server is sending because it tracks everything by the socket number. The

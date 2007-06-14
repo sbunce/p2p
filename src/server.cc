@@ -268,7 +268,17 @@ void server::queueRequest(int clientSock, char recvBuff[], int nbytes)
 		}//end lock scope
 	}
 	else{
-		send(clientSock, global::P_BCM.c_str(), global::P_BCM.length(), 0);
+		int bytesToSend = global::P_BCM.size();
+		int nbytes = 0;
+		while(bytesToSend > 0){
+			nbytes = send(clientSock, global::P_BCM.c_str(), global::P_BCM.length(), 0);
+
+			if(nbytes == -1){
+				break;
+			}
+
+			bytesToSend -= nbytes;
+		}
 	}
 }
 
