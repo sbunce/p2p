@@ -4,7 +4,7 @@
 #include <string>
 #include "sha.h"
 
-//#define DEBUG
+#define DEBUG
 //#define DEBUG_VERBOSE
 
 namespace global //"global" namespace ;-)

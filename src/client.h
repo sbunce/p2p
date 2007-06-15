@@ -55,9 +55,10 @@ public:
 
 private:
 	//networking related
-	int fdmax;        //holds the number of the maximum socket
-	fd_set readfds;   //temporary file descriptor set to pass to select()
-	fd_set masterfds; //master file descriptor set
+	int fdmax;             //holds the number of the maximum socket
+	fd_set readfds;        //temporary file descriptor set to pass to select()
+	fd_set masterfds;      //master file descriptor set
+	bool resumedDownloads; //true if postResumeConnect needs to be run(after resuming)
 
 	//send buffer
 	std::vector<download> downloadBuffer;
@@ -82,6 +83,7 @@ private:
 	sendRequest         - sends a request to a server
 	*/
 	void disconnect(int socketfd);
+	void postResumeConnect();
 	int processBuffer(int socketfd, char recvBuff[], int nbytes);
 	void removeCompleted(std::string messageDigest);
 	void start_thread();

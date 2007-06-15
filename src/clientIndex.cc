@@ -99,9 +99,8 @@ std::string clientIndex::getFilePath(std::string messageDigest_in)
 	}//end lock scope
 }
 
-void clientIndex::initialFillBuffer(std::vector<download> & downloadBuffer)
+bool clientIndex::initialFillBuffer(std::vector<download> & downloadBuffer, std::vector<std::deque<download::serverElement *> > & serverHolder)
 {
-/*
 	namespace fs = boost::filesystem;
 
 	{//begin lock scope
@@ -145,19 +144,41 @@ void clientIndex::initialFillBuffer(std::vector<download> & downloadBuffer)
 
 			//add known servers associated with this download
 			while(iter != tokens.end()){
-				download::serverElement SE;
-				SE.server_IP = *iter++;
-				SE.socketfd = -1;
-				SE.ready = true;
-				SE.file_ID = atoi((*iter++).c_str());
-				SE.lastRequest = false;
+				download::serverElement * SE = new download::serverElement;
+				SE->token = false;
+				SE->server_IP = *iter++;
+				SE->socketfd = -1;
+				SE->ready = true;
+				SE->file_ID = atoi((*iter++).c_str());
+				SE->lastRequest = false;
 				resumedDownload.Server.push_back(SE);
+
+				//add the server to the server vector if it exists, otherwise make a new one and add it to serverHolder
+				bool found = false;
+				for(std::vector<std::deque<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
+
+					if(iter0->front()->server_IP == SE->server_IP){
+						//all servers in the vector must have the same socket
+						SE->socketfd = iter0->front()->socketfd;
+						iter0->push_back(SE);
+						found = true;
+					}
+				}
+
+				if(!found){
+					//make a new server deque for the server and add it to the serverHolder
+					std::deque<download::serverElement *> newServer;
+					newServer.push_back(SE);
+					serverHolder.push_back(newServer);
+				}
 			}
 
 			downloadBuffer.push_back(resumedDownload);
 		}
 
 		fin.close();
+
+		return true;
 	}
 	else{
 #ifdef DEBUG
@@ -166,7 +187,8 @@ void clientIndex::initialFillBuffer(std::vector<download> & downloadBuffer)
 	}
 
 	}//end lock scope
-*/
+
+	return false;
 }
 
 int clientIndex::startDownload(exploration::infoBuffer info)

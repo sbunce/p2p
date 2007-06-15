@@ -11,33 +11,7 @@ client::client()
 	fdmax = 0;
 
 	//no mutex needed because client thread can't be running yet
-	ClientIndex.initialFillBuffer(downloadBuffer);
-}
-
-void client::terminateDownload(std::string messageDigest_in)
-{
-/* OLD CODE
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
-
-	//find the file and remove it from the downloadBuffer
-	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 < downloadBuffer.end(); iter0++){
-
-		if(messageDigest_in == iter0->getMessageDigest()){
-
-			//disconnect all sockets associated with the download
-			for(std::vector<download::serverElement *>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
-				disconnect((*iter1)->socketfd);
-			}
-
-			//get rid of the download
-			ClientIndex.terminateDownload(iter0->getMessageDigest());
-			downloadBuffer.erase(iter0);
-		}
-	}
-
-	}//end lock scope
-*/
+	resumedDownloads = ClientIndex.initialFillBuffer(downloadBuffer, serverHolder);
 }
 
 void client::disconnect(int socketfd)
@@ -153,6 +127,44 @@ int client::processBuffer(int socketfd, char recvBuff[], int nbytes)
 	}
 }
 
+void client::postResumeConnect()
+{
+	sockaddr_in dest_addr;
+
+	//create sockets for the resumed downloads
+	for(std::vector<std::deque<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
+			
+		int socketfd = socket(PF_INET, SOCK_STREAM, 0);
+		FD_SET(socketfd, &masterfds);
+
+		dest_addr.sin_family = AF_INET;                           //set socket type TCP
+		dest_addr.sin_port = htons(global::P2P_PORT);             //set destination port
+		dest_addr.sin_addr.s_addr = inet_addr(iter0->front()->server_IP.c_str()); //set destination IP
+		memset(&(dest_addr.sin_zero),'\0',8);                     //zero out the rest of struct
+
+		//make sure fdmax is always the highest socket number
+		if(socketfd > fdmax){
+			fdmax = socketfd;
+		}
+
+		if(connect(socketfd, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) == -1){
+#ifdef DEBUG
+			std::cout << "error: client::sendRequest() could not connect to server\n";
+#endif
+		}
+#ifdef DEBUG
+		std::cout << "info: client::sendRequest() created socket " << socketfd << " for " << iter0->front()->server_IP << "\n";
+#endif
+
+		//set all server elements with this IP to the same socket
+		for(std::deque<download::serverElement *>::iterator iter1 = iter0->begin(); iter1 != iter0->end(); iter1++){
+			(*iter1)->socketfd = socketfd;
+		}
+	}
+
+	resumedDownloads = false;
+}
+
 void client::start()
 {
 	boost::thread clientThread(boost::bind(&client::start_thread, this));
@@ -168,6 +180,11 @@ void client::start_thread()
 
 	//main client receive loop
 	while(true){
+
+		if(resumedDownloads){
+			postResumeConnect();
+		}
+
 		sendPendingRequests();
 
 		/*
@@ -395,5 +412,86 @@ bool client::startDownload(exploration::infoBuffer info)
 	}//end lock scope
 
 	return true;
+}
+
+void client::terminateDownload(std::string messageDigest_in)
+{
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(downloadBufferMutex);
+
+	//find the download
+	std::vector<download>::iterator download_iter;
+	for(download_iter = downloadBuffer.begin(); download_iter != downloadBuffer.end(); download_iter++){
+
+		if(messageDigest_in == download_iter->getMessageDigest()){
+			break;
+		}
+	}
+
+	/*
+	Find the serverHolder element and remove the serverElements from it that correspond
+	to the serverElements in the download. If a socket is abandoned(no downloads using
+	it) then disconnect it.
+	*/
+	while(!download_iter->Server.empty()){
+
+		int socketfd;
+
+		/*
+		Erase the serverElement pointer that exists in both the serverHolder and
+		within the download Server container. Free the memory for it.
+		*/
+		bool foundElement = false; //true if iterator was invalidated
+		for(std::vector<std::deque<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
+
+			for(std::deque<download::serverElement *>::iterator iter1 = iter0->begin(); iter1 != iter0->end(); iter1++){
+
+				if(*iter1 == download_iter->Server.back()){
+
+					/*
+					Store the socket file descriptor found in this Server element for
+					the purpose of disconnecting it later(if no other downloads are
+					using it.
+					*/
+					socketfd = (*iter1)->socketfd;
+
+					delete *iter1;
+					iter0->erase(iter1);
+					download_iter->Server.pop_back();
+					break;
+				}
+			}
+
+			if(foundElement){
+				break;
+			}
+		}
+
+		//if there is an empty serverHolder deque element after the removal above then erase it
+		for(std::vector<std::deque<download::serverElement *> >::iterator serverHolder_iter = serverHolder.begin(); serverHolder_iter != serverHolder.end(); serverHolder_iter++){
+
+			if(serverHolder_iter->empty()){
+
+				/*
+				If the serverHolder has an empty element that indicates that the last
+				serverElement removed from it belonged to the last download using the
+				socket. If this is the case then disconnect the socket.
+				*/
+				disconnect(socketfd);
+
+				//get rid of the empty serverHolder element
+				serverHolder.erase(serverHolder_iter);
+				break;
+			}
+		}
+	}
+
+	//remove download from download index file
+	ClientIndex.terminateDownload(download_iter->getMessageDigest());
+
+	//get rid of the downlaod from the downloadBuffer
+	downloadBuffer.erase(download_iter);
+
+	}//end lock scope
 }
 

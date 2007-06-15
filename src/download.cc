@@ -331,7 +331,7 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 			//disconnect the server if it's being nasty!
 			if((*iter0)->bucket.size() > 3*global::BUFFER_SIZE){
 #ifdef DEBUG
-				std::cout << "error: client::processBuffer() detected buffer overrun from " << (*iter)->server_IP << "\n";
+				std::cout << "error: client::processBuffer() detected buffer overrun from " << (*iter0)->server_IP << "\n";
 #endif
 //DEBUG, add in something to disconnect sockets
 				//invalidSockets.push_back(iter->socketfd);
@@ -389,7 +389,7 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 
 void download::writeSuperBlock(std::string container[])
 {
-#ifdef DEBUG
+#ifdef DEBUG_VERBOSE
 	std::cout << "info: download::writeSuperBlock() was called\n";
 #endif
 
