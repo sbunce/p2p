@@ -1,35 +1,37 @@
 BUGS AND NECESSARY FEATURES
 
--The implementation of multi-downloading isn't done. It needs new logic in
-client::terminateDownload() to get rid of downloads but not disconnect sockets
-still in use. clientIndex::initialFillBuffer() is also not working.
+-Sometimes when terminating download downloads get "stuck". Idea, if the download 
+and serverElements are removed when the server has not sent all of it's data we 
+get a condition where a partial bucket is lost and the bucket for the wrong 
+download is partially filled. A new request is not being sent back to that 
+server because the download thinks it needs more data and won't relinquish 
+it's token. Perhaps make a queue of downloads to terminate and have it processed
+at the right time when this problem is guaranteed not to happen.
 
--Make client::infoBuffer store IP's in a vector to leave it more up to the gui
-to determine how they're displayed.
+-download::processBuffer() needs a mechanism to disconnect abusive servers.
 
 -Program crashes if trying to resume download where the user has removed the partial
 file.
 
 -There is no check for a download already completed by the download feature.
+For example it's possible to download a file that's already been downloaded and
+it will just append to the end of the already downloaded file.
 
 -If the download directory is missing and a download is started the directory
 is not created automatically.
 
--There should be a check for the delimiter in the index files.
-Filenames can have a delimiter in them and mess things up.
-
--Client has no control of how many connections it will try to make.
-
 
 POSSIBLE FEATURES
 
+-Consider having the IP's in the infoBuffers put in a vector instead of being
+all put in a string.
+
+-Client has no control of how many connections it will try to make. Add it.
+
 -client::addBlock() has string copying in it, could be a performance problem.
 
--Possibly add a check to make sure the block requested is the block the server
-sends.
-
 -Add a check to make sure the client is not requesting the same blocks over
-and over(trying to waste bandwidth to degrate serving capability).
+and over(trying to waste bandwidth to degrade serving capability).
 
 -Have the serverIndex poll to check for new files added to share.
 
@@ -42,11 +44,6 @@ negotiate control data size for each download.
 
 
 IDEAS
-
--Have the destructor for download.cc delete it's server elements. Delete the
-download instance in client::terminateDownload(). Get terminateDownload working
-such that it doesn't disconnect sockets that are still being used by other
-downloads. Also, terminateDownload would need to clean up serverHolder.
 
 -Overhead can be reduced a lot. The client doesn't need to know what file_ID
 the server is sending because it tracks everything by the socket number. The

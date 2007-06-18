@@ -113,7 +113,7 @@ std::string client::getTotalSpeed()
 int client::processBuffer(int socketfd, char recvBuff[], int nbytes)
 {
 	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
-		//found the right bucket
+
 		if(iter0->hasSocket(socketfd)){
 
 			iter0->processBuffer(socketfd, recvBuff, nbytes);

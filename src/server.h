@@ -6,8 +6,9 @@
 #include <boost/bind.hpp>
 
 //std
+#include <deque>
 #include <string>
-#include <queue>
+#include <vector>
 
 //networking
 #include <sys/types.h>
@@ -47,17 +48,20 @@ public:
 	class speedElement
 	{
 	public:
-		std::string client_IP;
+		//the gui will need this when displaying the upload
 		std::string fileName;
-		int file_ID;           //file identifier, used to check against bufferElement
-		int fileSize;          //size of file
-		int fileBlock;         //what fileBlock was last requested
-		int percentComplete;   //0-100
 
-		int lastSeen;          //when the file was last seen in the uploadBuffer
-		int lastCalc;          //time when uploadSpeed last calculated
-		int oldFileBlock;      //fileBlock that was served at lastCalc
-		int uploadSpeed;       //the speed in bytes/second of upload
+		//used to idenfity what upload this is
+		std::string client_IP;
+		int file_ID;
+
+		//these vectors are parallel and used for upload speed calculation
+		std::deque<int> downloadSecond; //second at which secondBytes were uploaded
+		std::deque<int> secondBytes;    //bytes in the second
+
+		//used to calculate percent complete
+		int fileSize;  //size of file
+		int fileBlock; //what fileBlock was last requested
 	};
 
 	server();
@@ -87,7 +91,7 @@ private:
 	//send buffer
 	std::vector<bufferElement> sendBuffer;
 
-	//used by getUploadInfo function to track upload speeds
+	//used by calculateSpeed() to track upload speeds
 	std::vector<speedElement> uploadSpeed;
 
 	/*
@@ -100,10 +104,10 @@ private:
 	start_th       - starts the server thread
 	*/
 	void disconnect(int clientSock);
-	void calculateSpeed();
+	void calculateSpeed(int clientSock, int file_ID, int fileBlock);
 	void newCon(int listener);
 	void queueRequest(int clientSock, char recvBuff[], int nbytes);
-	int sendBlock(int clientSock, int fileID, int fileBlock);
+	int sendBlock(int clientSock, int file_ID, int fileBlock);
 	void stateTick();
 	void start_thread();
 

@@ -53,11 +53,19 @@ bool superBlock::complete()
 
 int superBlock::getRequest()
 {
+#ifdef REREQUEST_PERCENTAGE
+	static long requestCount = 0;
+	static long rerequestCount = 0;
+#endif
+
 	/*
 	Return all request numbers in order. If that was already done then return
 	missing block numbers in order.
 	*/
 	if(nextRequest <= maxBlock){
+#ifdef REREQUEST_PERCENTAGE
+		requestCount++;
+#endif
 		return nextRequest++;
 	}
 	else{
@@ -67,6 +75,14 @@ int superBlock::getRequest()
 		if(missingBlocks.empty()){
 			return -1;
 		}
+
+#ifdef REREQUEST_PERCENTAGE
+		rerequestCount++;
+		static float percentage = ((float)rerequestCount / (float)requestCount) * 100;
+		std::cout << "rerequest: " << percentage << "%\n";
+		std::cout << "requestCount: " << requestCount << "\n";
+		std::cout << "rerequestCount: " << rerequestCount << "\n";
+#endif
 
 		int blockNumber = missingBlocks.front();
 		missingBlocks.pop_front();

@@ -1,4 +1,5 @@
 //std
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
@@ -27,76 +28,66 @@ void server::disconnect(int clientSock)
 	FD_CLR(clientSock, &masterfds);
 }
 
-void server::calculateSpeed()
+void server::calculateSpeed(int clientSock, int file_ID, int fileBlock)
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(Mutex);
+	time_t currentTime = time(0);
 
-	time_t curr = time(0);
-	std::ostringstream currentTime_s;
-	currentTime_s << curr;
-	int currentTime = atoi(currentTime_s.str().c_str());
+	//get IP of the socket
+	struct sockaddr_in addr;
+	socklen_t len = sizeof(addr);
+	getpeername(clientSock, (struct sockaddr*)&addr, &len);
 
-	for(int x=0; x<sendBuffer.size(); x++){
-		bool foundItem = false;
+	bool found = false;
+	for(std::vector<speedElement>::iterator iter0 = uploadSpeed.begin(); iter0 != uploadSpeed.end(); iter0++){
 
-		for(int y=0; y<uploadSpeed.size(); y++){
-			if(uploadSpeed.at(y).client_IP == sendBuffer.at(x).client_IP && uploadSpeed.at(y).file_ID == sendBuffer.at(x).file_ID){
+		//if element found update it
+		if(iter0->client_IP == inet_ntoa(addr.sin_addr) && iter0->file_ID == file_ID){
+			found = true;
 
-				foundItem = true;
-
-				//update the element found
-				uploadSpeed.at(y).fileBlock = sendBuffer.at(x).fileBlock;
-				uploadSpeed.at(y).lastSeen = currentTime;
+			//check time and update byte count
+			if(iter0->downloadSecond.front() == currentTime){
+				iter0->secondBytes.front() += global::BUFFER_SIZE;
 			}
-		}
-
-		//add uploadSpeed element based on sendBuffer element if no existing entry
-		if(!foundItem){
-			//get IP of the socket
-			struct sockaddr_in addr;
-			socklen_t len = sizeof(addr);
-			getpeername(sendBuffer.at(x).clientSock, (struct sockaddr*)&addr, &len);
-
-			int fileSize;
-			std::string fileName;
-			std::string filePath;
-
-			//get filePath and fileSize, abort if file is not found
-			if(ServerIndex.getFileInfo(sendBuffer.at(x).file_ID, fileSize, filePath)){
-				fileName = filePath.substr(filePath.find_last_of("/")+1);
-
-				//prepare speedElement
-				speedElement temp;
-				temp.client_IP = inet_ntoa(addr.sin_addr);
-				temp.fileName = fileName;
-				temp.file_ID = sendBuffer.at(x).file_ID;
-				temp.fileSize = fileSize;
-				temp.fileBlock = sendBuffer.at(x).fileBlock;
-				temp.lastSeen = currentTime;
-				temp.lastCalc = currentTime;
-				temp.oldFileBlock = sendBuffer.at(x).fileBlock;
-				temp.uploadSpeed = 0;
-
-				uploadSpeed.push_back(temp);
+			else{
+				iter0->downloadSecond.push_front(currentTime);
+				iter0->secondBytes.push_front(global::BUFFER_SIZE);
 			}
+
+			iter0->fileBlock = fileBlock;
+
+			//get rid of elements older than SPEED_AVERAGE seconds
+			//+2 on SPEED_AVERAGE because first and last second will be discarded
+			if(iter0->downloadSecond.back() <= currentTime - (global::SPEED_AVERAGE + 2)){
+				iter0->downloadSecond.pop_back();
+				iter0->secondBytes.pop_back();
+			}
+
+			break;
 		}
 	}
 
-	//get rid of speedElement for files that havn't been seen in sendBuffer for 5 seconds
-	for(int x=0; x<uploadSpeed.size(); x++){
-		if(currentTime - uploadSpeed.at(x).lastSeen > 5){
-			uploadSpeed.erase(uploadSpeed.begin() + x);
-		}
-	}
+	//make a new element if there is no speed element for this client
+	if(!found){
+		int fileSize;
+		std::string filePath;
+		std::string fileName;
 
-	//calculate the upload speed if a second or more has elapsed on lastCalc
-	for(int x=0; x<uploadSpeed.size(); x++){
-		if(uploadSpeed.at(x).lastCalc < currentTime){
-			int timeDifference = currentTime - uploadSpeed.at(x).lastCalc;
-			uploadSpeed.at(x).lastCalc = currentTime;
-			uploadSpeed.at(x).uploadSpeed = ((uploadSpeed.at(x).fileBlock - uploadSpeed.at(x).oldFileBlock) * global::BUFFER_SIZE) / timeDifference;
-			uploadSpeed.at(x).oldFileBlock = uploadSpeed.at(x).fileBlock;
+		//only add an element if we have the file requested
+		if(ServerIndex.getFileInfo(file_ID, fileSize, filePath)){
+
+			speedElement temp;
+			temp.fileName = filePath.substr(filePath.find_last_of("/")+1);
+			temp.client_IP = inet_ntoa(addr.sin_addr);
+			temp.file_ID = file_ID;
+			temp.fileBlock = fileBlock;
+			temp.downloadSecond.push_back(currentTime);
+			temp.secondBytes.push_back(global::BUFFER_SIZE);
+			temp.fileSize = fileSize;
+			temp.fileBlock = fileBlock;
+
+			uploadSpeed.push_back(temp);
 		}
 	}
 
@@ -105,23 +96,26 @@ void server::calculateSpeed()
 
 std::string server::getTotalSpeed()
 {
-	//used so that calculateSpeed() gets polled occasionally,
-	//regardless of whether or not there is anything to be served
-	calculateSpeed();
-
-	int speed = 0;
+	int totalBytes = 0;
 
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(Mutex);
 
-	for(int x=0; x<uploadSpeed.size(); x++){
-		speed += uploadSpeed.at(x).uploadSpeed;
+	/*
+	Loop through all downloads to determine how many bits were downloaded in the
+	last SPEED_AVERAGE seconds.
+	*/
+	for(std::vector<speedElement>::iterator iter0 = uploadSpeed.begin(); iter0 < uploadSpeed.end(); iter0++){
+		for(int x=1; x < iter0->downloadSecond.size() - 1; x++){
+			totalBytes += iter0->secondBytes[x];
+		}
 	}
 
 	}//end lock scope
 
-	speed = speed / 1024; //convert to kB
+	int speed = totalBytes / global::SPEED_AVERAGE;
 
+	speed = speed / 1024; //convert to kB
 	std::ostringstream speed_s;
 	speed_s << speed << " kB/s";
 
@@ -133,19 +127,28 @@ bool server::getUploadInfo(std::vector<infoBuffer> & uploadInfo)
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(Mutex);
 
+	//remove completed downloads from uploadSpeed
+	time_t currentTime = time(0);
+	for(std::vector<speedElement>::iterator iter0 = uploadSpeed.begin(); iter0 < uploadSpeed.end(); iter0++){
+		if(iter0->downloadSecond.front() < (int)currentTime - global::COMPLETE_REMOVE){
+			uploadSpeed.erase(iter0);
+			break;
+		}
+	}
+
 	if(uploadSpeed.size() == 0){
 		return false;
 	}
 
 	//process sendQueue
-	for(int x=0; x<uploadSpeed.size(); x++){
+	for(std::vector<speedElement>::iterator iter0 = uploadSpeed.begin(); iter0 < uploadSpeed.end(); iter0++){
 		//calculate the percent complete
-		float bytesUploaded = uploadSpeed.at(x).fileBlock * (global::BUFFER_SIZE - global::CONTROL_SIZE);
-		float fileSize_f = uploadSpeed.at(x).fileSize;
+		float bytesUploaded = iter0->fileBlock * (global::BUFFER_SIZE - global::CONTROL_SIZE);
+		float fileSize_f = iter0->fileSize;
 		float percent = (bytesUploaded / fileSize_f) * 100;
 		int percentComplete;
 
-		//floating point value will never be 100, this compensates
+		//floating point will never be exactly 100, this completes
 		if(percent > 99){
 			percentComplete = 100;
 		}
@@ -154,10 +157,11 @@ bool server::getUploadInfo(std::vector<infoBuffer> & uploadInfo)
 		}
 
 		//convert fileSize from Bytes to megaBytes
-		float fileSize = uploadSpeed.at(x).fileSize / 1024 / 1024;
+		float fileSize = iter0->fileSize / 1024 / 1024;
 
 		std::ostringstream fileSize_s;
 
+		//change display to a decimal if less than 1mB
 		if(fileSize < 1){
 			fileSize_s << std::setprecision(2) << fileSize << " mB";
 		}
@@ -165,16 +169,24 @@ bool server::getUploadInfo(std::vector<infoBuffer> & uploadInfo)
 			fileSize_s << (int)fileSize << " mB";
 		}
 
-		//convert the download speed to kiloBytes
-		int speed = uploadSpeed.at(x).uploadSpeed / 1024;
+		//add up bytes for SPEED_AVERAGE seconds
+		int totalBytes = 0;
+		for(int x=1; x < iter0->downloadSecond.size() - 1; x++){
+			totalBytes += iter0->secondBytes[x];
+		}
+
+		//take average
+		totalBytes /= global::SPEED_AVERAGE;
+
+		//convert the download speed to kB
+		int speed = totalBytes / 1024;
 		std::ostringstream speed_s;
 		speed_s << speed << " kB/s";
 
 		infoBuffer info;
-
-		info.client_IP = uploadSpeed.at(x).client_IP;
-		info.file_ID = uploadSpeed.at(x).file_ID;
-		info.fileName = uploadSpeed.at(x).fileName;
+		info.client_IP = iter0->client_IP;
+		info.file_ID = iter0->file_ID;
+		info.fileName = iter0->fileName;
 		info.fileSize = fileSize_s.str();
 		info.speed = speed_s.str();
 		info.percentComplete = percentComplete;
@@ -452,7 +464,7 @@ void server::start_thread()
    int nbytes;                     //how many bytes sent in one shot
 
 #ifdef DEBUG
-std::cout << "info: server::start_thread(): server created listener socket number " << listener << "\n";
+	std::cout << "info: server::start_thread(): server created listener socket number " << listener << "\n";
 #endif
 	//main server loop
 	while(true){
@@ -488,11 +500,10 @@ std::cout << "info: server::start_thread(): server created listener socket numbe
 
 void server::stateTick()
 {
-	calculateSpeed();
-
 	//send whole sendBuffer
 	while(!sendBuffer.empty()){
 		sendBlock(sendBuffer.back().clientSock, sendBuffer.back().file_ID, sendBuffer.back().fileBlock);
+		calculateSpeed(sendBuffer.back().clientSock, sendBuffer.back().file_ID, sendBuffer.back().fileBlock);
 
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(Mutex);

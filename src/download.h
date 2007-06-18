@@ -57,6 +57,8 @@ public:
 	void processBuffer(int socketfd, char recvBuff[], int nbytes);
 
 private:
+	bool disconnect; //true if download pending disconnect
+
 	//these must be set before the download begins and will be set by ctor
 	std::string messageDigest; //unique identifier of the file and message digest
 	std::string fileName;      //name of the file
@@ -71,7 +73,6 @@ private:
 	//these will be set automatically in ctor
 	int downloadSpeed;     //speed of download(bytes per second)
 	bool downloadComplete; //true when download is completed
-	int averageSeconds;    //seconds to average download speed over(n - 2 seconds)
 
 	/*
 	This will grow to SUPERBUFFER_SIZE if there are missing blocks in a superBlock.

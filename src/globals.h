@@ -4,25 +4,31 @@
 #include <string>
 #include "sha.h"
 
+//debugging output levels, enable one or both
 #define DEBUG
 //#define DEBUG_VERBOSE
 
+//outputs the percent of rerequests
+//#define REREQUEST_PERCENTAGE
+
 namespace global //"global" namespace ;-)
 {
-	/*
-	If enabled client randomly "drops" packets. This is good for testing the
-	rerequest ability.
-	*/
+	//randomly "drop" packets
 	//#define UNRELIABLE_CLIENT
-	const int UNRELIABLE_CLIENT_PERCENT = 99;
+	const int UNRELIABLE_CLIENT_PERCENT = 99; //what % to "drop"
 
 	const int BUFFER_SIZE = 4096;    //how big packets can be(bytes, maximum 65535)
 	const int CONTROL_SIZE = 32;     //how much of the packet is control data(bytes)
-	const int SUPERBLOCK_SIZE = 128; //how many fileBlocks are kept in a superBlock
-	const int SUPERBUFFER_SIZE = 8;  //how many superBlocks are kept in the clientBuffer
+	const int SUPERBLOCK_SIZE = 512; //how many fileBlocks are kept in a superBlock
+
+	//2 is optimal, for a bigger buffer increase SUPERBLOCK_SIZE
+	const int SUPERBUFFER_SIZE = 2;  //how many superBlocks are kept in the clientBuffer
+
 	const int MAX_CONNECTIONS = 50;  //maximum number of connections to server/from client
 	const int P2P_PORT = 6969;       //port client connects to and server receives on
 	const int GUI_TICK = 100;        //time(in milliseconds) between gui updates
+	const int SPEED_AVERAGE = 5;     //how many seconds to average upload/download speed over
+	const int COMPLETE_REMOVE = 5;   //how many seconds to wait before removing a complete upload/download
 
 	const std::string P_SBL = "SBL"; //request from client to server for fileBlock
 	const std::string P_BLS = "BLS"; //response from server to client with fileBlock attached

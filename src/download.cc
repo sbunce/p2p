@@ -26,7 +26,6 @@ download::download(std::string & messageDigest_in, std::string & fileName_in,
 
 	//defaults
 	downloadComplete = false;
-	averageSeconds = 3;
 	downloadSpeed = 0;
 
 	//add the first superBlock to superBuffer, needed for getRequest to work on first call
@@ -97,14 +96,9 @@ int download::addBlock(std::string & bucket)
 
 void download::calculateSpeed()
 {
-	time_t curr = time(0);
+	time_t currentTime = time(0);
 
-	std::ostringstream currentTime_s;
-	currentTime_s << curr;
-
-	int currentTime = atoi(currentTime_s.str().c_str());
 	bool updated = false;
-
 	//if the vectors are empty
 	if(downloadSecond.empty()){
 		downloadSecond.push_back(currentTime);
@@ -113,7 +107,7 @@ void download::calculateSpeed()
 	}
 
 	//get rid of information that's older than what to average
-	if(currentTime - downloadSecond.front() >= averageSeconds){
+	if(currentTime - downloadSecond.front() >= global::SPEED_AVERAGE + 2){
 		downloadSecond.erase(downloadSecond.begin());
 		secondBytes.erase(secondBytes.begin());
 	}
@@ -132,12 +126,12 @@ void download::calculateSpeed()
 
 	//count up all the bytes excluding the first and last second
 	int totalBytes = 0;
-	for(int x=1; x<downloadSecond.size()-1; x++){
+	for(int x=1; x<downloadSecond.size() - 1; x++){
 		totalBytes += secondBytes.at(x);
 	}
 
 	//divide by the time
-	downloadSpeed = totalBytes / (averageSeconds - 2);
+	downloadSpeed = totalBytes / global::SPEED_AVERAGE;
 }
 
 bool download::complete()
@@ -302,7 +296,7 @@ bool download::hasSocket(int socketfd)
 		/*
 		This function is used by the client to check whether this download requested
 		the fileBlock it got a response to. Only return true if the download both 
-		has the socket and it has a token. If it doesn't have a token it's possible 
+		has the socket and it has a token. If it doesn't have the token then
 		the request came from a different download.
 		*/
 		if((*iter0)->socketfd == socketfd && (*iter0)->token){
@@ -333,7 +327,9 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 #ifdef DEBUG
 				std::cout << "error: client::processBuffer() detected buffer overrun from " << (*iter0)->server_IP << "\n";
 #endif
+
 //DEBUG, add in something to disconnect sockets
+
 				//invalidSockets.push_back(iter->socketfd);
 				Server.erase(iter0);
 			}
