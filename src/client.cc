@@ -110,14 +110,13 @@ std::string client::getTotalSpeed()
 	return speed_s.str();
 }
 
-int client::processBuffer(int socketfd, char recvBuff[], int nbytes)
+void client::processBuffer(int socketfd, char recvBuff[], int nbytes)
 {
 	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
 
 		if(iter0->hasSocket(socketfd)){
 
 			iter0->processBuffer(socketfd, recvBuff, nbytes);
-
 			if(iter0->complete()){
 				terminateDownload(iter0->getMessageDigest());
 			}
@@ -368,11 +367,8 @@ bool client::startDownload(exploration::infoBuffer info)
 	for(int x=0; x<info.server_IP.size(); x++){
 
 		download::serverElement * SE = new download::serverElement();
-		SE->token = false;
 		SE->server_IP = info.server_IP[x];
-		SE->ready = true;
 		SE->file_ID = atoi(info.file_ID[x].c_str());
-		SE->lastRequest = false;
 		SE->socketfd = -1; //will be changed to appropriate number if socket already connected to server
 
 		//see if a socket for this server already exists, if it does then reuse it
@@ -454,6 +450,8 @@ void client::terminateDownload(std::string messageDigest_in)
 					using it.
 					*/
 					socketfd = (*iter1)->socketfd;
+
+std::cout << "server " << (*iter1)->server_IP << " bucket size: " << (*iter1)->bucket.size() << "\n";
 
 					delete *iter1;
 					iter0->erase(iter1);

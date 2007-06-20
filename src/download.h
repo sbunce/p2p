@@ -14,15 +14,23 @@ public:
 	class serverElement
 	{
 	public:
-		//true if the client is ready for a request from this download
-		bool token;
+		serverElement()
+		{
+			token = false;
+			ready = true;
+			lastRequest = false;
+		}
 
+		//these three set automatically
+		bool token;            //true if the client is ready for a request
+		bool lastRequest;      //the last block has been requested from this server
+		bool ready;            //true if ready to send another block request
+
+		//these need to be set before this server can be used
 		std::string server_IP; //IP of the server that has the file
 		int socketfd;          //holds the socket number or -1(no socket yet created)
-		bool ready;            //true if ready to send another block request
 		int file_ID;           //the ID of the file on the server
 		std::string bucket;    //buffer for received data
-		bool lastRequest;      //the last block has been requested from this server
 	};
 
 	//stores information specific to certain servers
@@ -57,8 +65,6 @@ public:
 	void processBuffer(int socketfd, char recvBuff[], int nbytes);
 
 private:
-	bool disconnect; //true if download pending disconnect
-
 	//these must be set before the download begins and will be set by ctor
 	std::string messageDigest; //unique identifier of the file and message digest
 	std::string fileName;      //name of the file
@@ -73,6 +79,7 @@ private:
 	//these will be set automatically in ctor
 	int downloadSpeed;     //speed of download(bytes per second)
 	bool downloadComplete; //true when download is completed
+	int averageSeconds;    //seconds to average download speed over(n - 2 seconds)
 
 	/*
 	This will grow to SUPERBUFFER_SIZE if there are missing blocks in a superBlock.

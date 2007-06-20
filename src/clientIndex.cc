@@ -145,12 +145,9 @@ bool clientIndex::initialFillBuffer(std::vector<download> & downloadBuffer, std:
 			//add known servers associated with this download
 			while(iter != tokens.end()){
 				download::serverElement * SE = new download::serverElement;
-				SE->token = false;
 				SE->server_IP = *iter++;
 				SE->socketfd = -1;
-				SE->ready = true;
 				SE->file_ID = atoi((*iter++).c_str());
-				SE->lastRequest = false;
 				resumedDownload.Server.push_back(SE);
 
 				//add the server to the server vector if it exists, otherwise make a new one and add it to serverHolder

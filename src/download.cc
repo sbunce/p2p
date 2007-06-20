@@ -85,10 +85,8 @@ int download::addBlock(std::string & bucket)
 		bucket.clear();
 	}
 
-	bool blockAdded = false;
 	for(std::deque<superBlock>::iterator iter = superBuffer.begin(); iter != superBuffer.end(); iter++){
 		if(iter->addBlock(atoi(blockNumber.c_str()), fileBlock)){
-			blockAdded = true;
 			break;
 		}
 	}
@@ -327,7 +325,6 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 #ifdef DEBUG
 				std::cout << "error: client::processBuffer() detected buffer overrun from " << (*iter0)->server_IP << "\n";
 #endif
-
 //DEBUG, add in something to disconnect sockets
 
 				//invalidSockets.push_back(iter->socketfd);
