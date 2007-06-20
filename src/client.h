@@ -45,7 +45,7 @@ public:
 	getTotalSpeed      - returns the total download speed
 	start              - start the client thread
 	startDownload      - start a new download
-	terminateDownload  - schedule a download to be terminated
+	terminateDownload  - wrapper for terminateDownload_real()
 	*/
 
 	bool getDownloadInfo(std::vector<infoBuffer> & downloadInfo);
@@ -74,23 +74,15 @@ private:
 	std::vector<std::deque<download::serverElement *> > serverHolder;
 
 	/*
-	If the download and serverElements are removed when the server has not sent
-	all of it's data there is a condition where a partial bucket is lost and the
-	bucket for the wrong download is partially filled. A new request is not being
-	sent back to that server because the download thinks it needs more data and
-	won't relinquish it's token. To correct this terminateDownload() tells
-	processBuffer() to ignore X number of bytes from a socket.
-	*/
-//DEBUG do something
-
-	/*
-	disconnect          - disconnects a socket
-	disconnect          - disconnects a socket
-	processBuffer       - establishes the receive protocol
-	removeCompleted     - removes completed downloads from the sendBuffer
-	start_thread        - starts the main client thread
-	sendPendingRequests - send pending requests(duh)
-	sendRequest         - sends a request to a server
+	disconnect             - disconnects a socket
+	disconnect             - disconnects a socket
+	processBuffer          - establishes the receive protocol
+	removeCompleted        - removes completed downloads from the sendBuffer
+	start_thread           - starts the main client thread
+	sendPendingRequests    - send pending requests(duh)
+	sendRequest            - sends a request to a server
+	terminateDownload_real - terminate a download, all calls to this function need to be
+	                       - within a downloadBufferMutex scoped lock
 	*/
 	void disconnect(int socketfd);
 	void postResumeConnect();
@@ -99,9 +91,11 @@ private:
 	void start_thread();
 	void sendPendingRequests();
 	int sendRequest(std::string server_IP, int & socketfd, int fileID, int fileBlock);
+	void terminateDownload_real(std::string messageDigest_in);
 
 	boost::mutex downloadBufferMutex;  //mutex for any usage of sendBuffer
-	boost::mutex masterfdsMutex;       //mutex for masterfds fd_set
+	boost::mutex masterfdsMutex;       //mutex for any usage of masterfds fd_set
+	boost::mutex socketIgnoreMutex;   //mutex for any usage of socketIgnore
 
 	clientIndex ClientIndex;
 };

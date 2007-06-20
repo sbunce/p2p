@@ -1,12 +1,9 @@
 BUGS AND NECESSARY FEATURES
 
--Sometimes when terminating download downloads get "stuck". Idea, if the download 
-and serverElements are removed when the server has not sent all of it's data we 
-get a condition where a partial bucket is lost and the bucket for the wrong 
-download is partially filled. A new request is not being sent back to that 
-server because the download thinks it needs more data and won't relinquish 
-it's token. Perhaps make a queue of downloads to terminate and have it processed
-at the right time when this problem is guaranteed not to happen.
+-Sometimes when terminating download downloads get "stuck". If the download 
+and serverElements are removed before a full response to the latest request the
+client will try to send another request to a socket that's not ready for it,
+fouling things up.
 
 -download::processBuffer() needs a mechanism to disconnect abusive servers.
 

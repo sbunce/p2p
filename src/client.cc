@@ -112,18 +112,23 @@ std::string client::getTotalSpeed()
 
 void client::processBuffer(int socketfd, char recvBuff[], int nbytes)
 {
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(downloadBufferMutex);
+
 	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
 
-		if(iter0->hasSocket(socketfd)){
+		if(iter0->hasSocket(socketfd, nbytes)){
 
 			iter0->processBuffer(socketfd, recvBuff, nbytes);
 			if(iter0->complete()){
-				terminateDownload(iter0->getMessageDigest());
+				terminateDownload_real(iter0->getMessageDigest());
 			}
 
 			break;
 		}
 	}
+
+	}//end lock scope
 }
 
 void client::postResumeConnect()
@@ -247,7 +252,7 @@ void client::sendPendingRequests()
 	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 < downloadBuffer.end(); iter0++){
 		for(std::vector<download::serverElement *>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
 
-			if((*iter1)->ready && (*iter1)->token){
+			if((*iter1)->bytesExpected == 0 && (*iter1)->token){
 #ifdef DEBUG_VERBOSE
 				std::cout << "info: client::sendPendingRequests() IP: " << (*iter1)->server_IP << " ready: " << (*iter1)->ready << "\n";
 #endif
@@ -255,7 +260,7 @@ void client::sendPendingRequests()
 				sendRequest((*iter1)->server_IP, (*iter1)->socketfd, (*iter1)->file_ID, request);
 
 				//will be ready again when a response it received to this requst
-				(*iter1)->ready = false;
+				(*iter1)->bytesExpected = global::BUFFER_SIZE;
 
 				/*
 				If the last request was made to a server the serverElement must be marked
@@ -415,6 +420,13 @@ void client::terminateDownload(std::string messageDigest_in)
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
 
+	terminateDownload_real(messageDigest_in);
+
+	}//end lock scope
+}
+
+void client::terminateDownload_real(std::string messageDigest_in)
+{
 	//find the download
 	std::vector<download>::iterator download_iter;
 	for(download_iter = downloadBuffer.begin(); download_iter != downloadBuffer.end(); download_iter++){
@@ -450,8 +462,6 @@ void client::terminateDownload(std::string messageDigest_in)
 					using it.
 					*/
 					socketfd = (*iter1)->socketfd;
-
-std::cout << "server " << (*iter1)->server_IP << " bucket size: " << (*iter1)->bucket.size() << "\n";
 
 					delete *iter1;
 					iter0->erase(iter1);
@@ -489,7 +499,5 @@ std::cout << "server " << (*iter1)->server_IP << " bucket size: " << (*iter1)->b
 
 	//get rid of the downlaod from the downloadBuffer
 	downloadBuffer.erase(download_iter);
-
-	}//end lock scope
 }
 

@@ -287,7 +287,7 @@ const int & download::getSpeed()
 	return downloadSpeed;
 }
 
-bool download::hasSocket(int socketfd)
+bool download::hasSocket(int socketfd, int nbytes)
 {
 	for(std::vector<serverElement *>::iterator iter0 = Server.begin(); iter0 != Server.end(); iter0++){
 
@@ -297,7 +297,7 @@ bool download::hasSocket(int socketfd)
 		has the socket and it has a token. If it doesn't have the token then
 		the request came from a different download.
 		*/
-		if((*iter0)->socketfd == socketfd && (*iter0)->token){
+		if((*iter0)->socketfd == socketfd && (*iter0)->token && (*iter0)->bytesExpected >= nbytes){
 			return true;
 		}
 	}
@@ -334,7 +334,7 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 			//if full block received add it to a superBlock and ready another request
 			if((*iter0)->bucket.size() % global::BUFFER_SIZE == 0){
 				addBlock((*iter0)->bucket);
-				(*iter0)->ready = true;
+				(*iter0)->bytesExpected = 0;
 				(*iter0)->token = false;
 			}
 
@@ -354,7 +354,7 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 						wouldn't "drop" a fileBlock.
 						*/
 						if(!superBuffer.back().complete()){
-							(*iter0)->ready = true;
+							(*iter0)->bytesExpected = 0;
 							(*iter0)->token = false;
 						}
 #endif

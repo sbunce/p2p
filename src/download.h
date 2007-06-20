@@ -17,7 +17,7 @@ public:
 		serverElement()
 		{
 			token = false;
-			ready = true;
+			bytesExpected = 0;
 			lastRequest = false;
 		}
 
@@ -25,6 +25,13 @@ public:
 		bool token;            //true if the client is ready for a request
 		bool lastRequest;      //the last block has been requested from this server
 		bool ready;            //true if ready to send another block request
+
+		/*
+		How many bytes expected as a result of the last request. The server is ready
+		for another request when this equals zero.
+		*/
+		int bytesExpected;
+
 
 		//these need to be set before this server can be used
 		std::string server_IP; //IP of the server that has the file
@@ -61,7 +68,7 @@ public:
 	const std::string & getMessageDigest();
 	int getRequest();
 	const int & getSpeed();
-	bool hasSocket(int socketfd);
+	bool hasSocket(int socketfd, int nbytes);
 	void processBuffer(int socketfd, char recvBuff[], int nbytes);
 
 private:
