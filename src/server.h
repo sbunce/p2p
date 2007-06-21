@@ -82,8 +82,6 @@ private:
 	//networking related
 	int maxConnections; //maximum connections allowed
 	int numConnections; //how many are currently connected
-
-	//having these class wide saves on tons of parameter passing
 	fd_set readfds;   //file descriptor set(the one passed to select())
 	fd_set masterfds; //master file descriptor set
 	int fdmax;        //holds the number of the maximum socket

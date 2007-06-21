@@ -10,19 +10,19 @@ class serverIndex
 {
 public:
 	/*
-	indexShare   - updates the share.index file to reflect changes in ./share
-	               returns 0 if success or -1 if error
-	getFileInfo  - client inputs the fileID, function returns the file size and file path
-	             - returns false if file doesn't exist
+	indexShare  - updates the share.index file to reflect changes in ./share
+	              returns 0 if success or -1 if error
+	getFileInfo - client inputs the fileID, function returns the file size and file path
+	            - returns false if file doesn't exist
 	*/
 	serverIndex();
 	/*
 	share.index file format
 	fileID 0 is always the share index
 	<fileID>:<size>:<path>
-	fileID     - arbitrary number, needed for client to request what file they want
-	fileSize   - size in blocks, blocksize determined in server.cc
-	filePath   - path to the file, something like ./share/file.avi
+	fileID   - arbitrary number, needed for client to request what file they want
+	fileSize - size in blocks, blocksize determined in server.cc
+	filePath - path to the file, something like ./share/file.avi
 	*/
 	void indexShare();
 	bool getFileInfo(int fileID, int & fileSize, std::string & filePath);

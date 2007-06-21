@@ -25,6 +25,7 @@ download::download(std::string & messageDigest_in, std::string & fileName_in,
 	currentSuperBlock = currentSuperBlock_in;
 
 	//defaults
+	terminateDownload = false;
 	downloadComplete = false;
 	downloadSpeed = 0;
 
@@ -155,6 +156,11 @@ const int & download::getFileSize()
 const int & download::getLastBlock()
 {
 	return lastBlock;
+}
+
+const int & download::getLastBlockSize()
+{
+	return lastBlockSize;
 }
 
 const std::string & download::getMessageDigest()
@@ -314,6 +320,7 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 		if((*iter0)->socketfd == socketfd){
 
 			(*iter0)->bucket.append(recvBuff, nbytes);
+			(*iter0)->bytesExpected -= nbytes;
 
 #ifdef DEBUG_VERBOSE
 			std::cout << "info: download::processBuffer() IP: " << (*iter0)->server_IP << " bucket size: " << (*iter0)->bucket.size() << "\n";
@@ -335,10 +342,15 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 			if((*iter0)->bucket.size() % global::BUFFER_SIZE == 0){
 				addBlock((*iter0)->bucket);
 				(*iter0)->bytesExpected = 0;
-				(*iter0)->token = false;
+
+				//only give up the token if the download is not terminating
+				if(!terminateDownload){
+					(*iter0)->token = false;
+				}
 			}
 
-			if((*iter0)->lastRequest){
+			//!complete() because often the last fileBlock gets requested more than once
+			if((*iter0)->lastRequest && !complete()){
 
 				//check for zero in case the last requested block was exactly global::BUFFER_SIZE
 				if((*iter0)->bucket.size() != 0){
@@ -355,7 +367,11 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 						*/
 						if(!superBuffer.back().complete()){
 							(*iter0)->bytesExpected = 0;
-							(*iter0)->token = false;
+
+							//only give up the token if the download is not terminating
+							if(!terminateDownload){
+								(*iter0)->token = false;
+							}
 						}
 #endif
 					}
@@ -399,6 +415,33 @@ void download::writeSuperBlock(std::string container[])
 #ifdef DEBUG
 		std::cout << "error: download::writeTree() error opening file\n";
 #endif
+	}
+}
+
+void download::startTerminate()
+{
+	terminateDownload = true;
+}
+
+bool download::terminating()
+{
+	return terminateDownload;
+}
+
+bool download::readyTerminate()
+{
+	if(terminateDownload){
+		for(std::vector<serverElement *>::iterator iter0 = Server.begin(); iter0 != Server.end(); iter0++){
+
+			if((*iter0)->bytesExpected != 0){
+				return false;
+			}
+		}
+
+		return true;
+	}
+	else{
+		return false;
 	}
 }
 

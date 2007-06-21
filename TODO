@@ -1,10 +1,5 @@
 BUGS AND NECESSARY FEATURES
 
--Sometimes when terminating download downloads get "stuck". If the download 
-and serverElements are removed before a full response to the latest request the
-client will try to send another request to a socket that's not ready for it,
-fouling things up.
-
 -download::processBuffer() needs a mechanism to disconnect abusive servers.
 
 -Program crashes if trying to resume download where the user has removed the partial
@@ -20,24 +15,17 @@ is not created automatically.
 
 POSSIBLE FEATURES
 
--Consider having the IP's in the infoBuffers put in a vector instead of being
-all put in a string.
+-Reduce copying in download::addBlock().
+
+-Since only two superBlocks(leading/trailing) are ideal think about simplifying
+download::getRequest().
 
 -Client has no control of how many connections it will try to make. Add it.
-
--client::addBlock() has string copying in it, could be a performance problem.
 
 -Add a check to make sure the client is not requesting the same blocks over
 and over(trying to waste bandwidth to degrade serving capability).
 
 -Have the serverIndex poll to check for new files added to share.
-
--Come up with a indexing scheme for search.db(it'll get big).
-
--Reduce control data size by encoding file and fileBlock numbers. Also, perhaps
-negotiate control data size for each download.
-
--Information in the gui statusbar for protocol overhead.
 
 
 IDEAS

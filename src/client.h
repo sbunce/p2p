@@ -40,14 +40,13 @@ public:
 
 	client();
 	/*
-	getDownloadInfo    - returns download info for all files in sendBuffer
-	                   - returns false if no downloads
-	getTotalSpeed      - returns the total download speed
-	start              - start the client thread
-	startDownload      - start a new download
-	terminateDownload  - wrapper for terminateDownload_real()
+	getDownloadInfo   - returns download info for all files in sendBuffer
+	                  - returns false if no downloads
+	getTotalSpeed     - returns the total download speed
+	start             - start the client thread
+	startDownload     - start a new download
+	terminateDownload - wrapper for terminateDownload_real()
 	*/
-
 	bool getDownloadInfo(std::vector<infoBuffer> & downloadInfo);
 	std::string getTotalSpeed();
 	void start();
@@ -75,9 +74,8 @@ private:
 
 	/*
 	disconnect             - disconnects a socket
-	disconnect             - disconnects a socket
 	processBuffer          - establishes the receive protocol
-	removeCompleted        - removes completed downloads from the sendBuffer
+	removeTerminated       - removes downloads that are done terminating
 	start_thread           - starts the main client thread
 	sendPendingRequests    - send pending requests(duh)
 	sendRequest            - sends a request to a server
@@ -87,15 +85,23 @@ private:
 	void disconnect(int socketfd);
 	void postResumeConnect();
 	void processBuffer(int socketfd, char recvBuff[], int nbytes);
-	void removeCompleted(std::string messageDigest);
+	void removeTerminated();
 	void start_thread();
 	void sendPendingRequests();
 	int sendRequest(std::string server_IP, int & socketfd, int fileID, int fileBlock);
+
+	/*
+	This function is only to be called if the download isn't expecting any data on any
+	sockets. If the download is expecting data and we delete the download then there
+	are lots of synchronization problems which lead to "hung" sockets(program logic
+	out of sync with what the socket can do). For this reason disconnected downloads
+	are deferred with terminateDownload()/removeTerminated() and only disconnected
+	when all serverElements expect 0 bytes from their respective servers.
+	*/
 	void terminateDownload_real(std::string messageDigest_in);
 
-	boost::mutex downloadBufferMutex;  //mutex for any usage of sendBuffer
-	boost::mutex masterfdsMutex;       //mutex for any usage of masterfds fd_set
-	boost::mutex socketIgnoreMutex;   //mutex for any usage of socketIgnore
+	boost::mutex downloadBufferMutex; //mutex for any usage of sendBuffer
+	boost::mutex masterfdsMutex;      //mutex for any usage of masterfds fd_set
 
 	clientIndex ClientIndex;
 };

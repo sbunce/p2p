@@ -121,9 +121,28 @@ void client::processBuffer(int socketfd, char recvBuff[], int nbytes)
 
 			iter0->processBuffer(socketfd, recvBuff, nbytes);
 			if(iter0->complete()){
-				terminateDownload_real(iter0->getMessageDigest());
+				iter0->startTerminate();
 			}
 
+			break;
+		}
+	}
+
+	}//end lock scope
+}
+
+inline void client::removeTerminated()
+{
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(downloadBufferMutex);
+
+	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 < downloadBuffer.end(); iter0++){
+
+		if(iter0->readyTerminate()){
+#ifdef DEBUG
+			std::cout << "info: client::removeTerminated() deffered termination of \"" << iter0->getFileName() << "\" done\n";
+#endif
+			terminateDownload_real(iter0->getMessageDigest());
 			break;
 		}
 	}
@@ -189,6 +208,7 @@ void client::start_thread()
 			postResumeConnect();
 		}
 
+		removeTerminated();
 		sendPendingRequests();
 
 		/*
@@ -250,6 +270,15 @@ void client::sendPendingRequests()
 
 	//process sendQueue
 	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 < downloadBuffer.end(); iter0++){
+
+		/*
+		Don't send new requests from downloads that are in the process of terminating
+		or complete.
+		*/
+		if(iter0->terminating() || iter0->complete()){
+			continue;
+		}
+
 		for(std::vector<download::serverElement *>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
 
 			if((*iter1)->bytesExpected == 0 && (*iter1)->token){
@@ -261,6 +290,7 @@ void client::sendPendingRequests()
 
 				//will be ready again when a response it received to this requst
 				(*iter1)->bytesExpected = global::BUFFER_SIZE;
+				(*iter1)->lastRequest = false;
 
 				/*
 				If the last request was made to a server the serverElement must be marked
@@ -268,6 +298,7 @@ void client::sendPendingRequests()
 				*/
 				if(request == iter0->getLastBlock()){
 					(*iter1)->lastRequest = true;
+					(*iter1)->bytesExpected = iter0->getLastBlockSize();
 				}
 			}
 		}
@@ -420,7 +451,27 @@ void client::terminateDownload(std::string messageDigest_in)
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
 
-	terminateDownload_real(messageDigest_in);
+	//find the download and set it to terminate
+	std::vector<download>::iterator download_iter;
+	for(download_iter = downloadBuffer.begin(); download_iter != downloadBuffer.end(); download_iter++){
+
+		if(messageDigest_in == download_iter->getMessageDigest()){
+			download_iter->startTerminate();
+			break;
+		}
+	}
+
+	if(download_iter->readyTerminate()){
+#ifdef DEBUG
+		std::cout << "client::terminateDownload() doing quick terminate of \"" << download_iter->getFileName() << "\"\n";
+#endif
+		terminateDownload_real(messageDigest_in);
+	}
+#ifdef DEBUG
+	else{
+		std::cout << "info: client::terminateDownload() is scheduling the download to be removed\n";
+	}
+#endif
 
 	}//end lock scope
 }

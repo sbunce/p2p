@@ -5,7 +5,7 @@
 #include "sha.h"
 
 //debugging output levels, enable one or both
-#define DEBUG
+//#define DEBUG
 //#define DEBUG_VERBOSE
 
 //outputs the percent of rerequests
@@ -15,11 +15,11 @@ namespace global //"global" namespace ;-)
 {
 	//randomly "drop" packets
 	//#define UNRELIABLE_CLIENT
-	const int UNRELIABLE_CLIENT_PERCENT = 99; //what % to "drop"
+	const int UNRELIABLE_CLIENT_PERCENT = 90; //what % to "drop"
 
 	const int BUFFER_SIZE = 4096;    //how big packets can be(bytes, maximum 65535)
 	const int CONTROL_SIZE = 32;     //how much of the packet is control data(bytes)
-	const int SUPERBLOCK_SIZE = 512; //how many fileBlocks are kept in a superBlock
+	const int SUPERBLOCK_SIZE = 256; //how many fileBlocks are kept in a superBlock
 
 	//2 is optimal, for a bigger buffer increase SUPERBLOCK_SIZE
 	const int SUPERBUFFER_SIZE = 2;  //how many superBlocks are kept in the clientBuffer

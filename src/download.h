@@ -54,10 +54,14 @@ public:
 	getFileName      - returns the fileName of the download
 	getFileSize      - returns the fileSize of the file being downloaded(bytes)
 	getLastBlock     - returns the last block number
+	getLastBlockSize - returns the size of the last block
 	getRequst        - returns a number of a block that needs to be requested
 	getSpeed         - returns the speed of this download
 	hasSocket        - returns true if the socket belongs to this download
 	processBuffer    - does actions based on buffer
+	startTerminate   - starts the termination process
+	terminating      - returns true if download is in the process of terminating
+	readyTerminate   - returns true if this download is ready to be terminated
 	*/
 	void addServer(download::serverElement & Server);
 	bool complete();
@@ -65,13 +69,23 @@ public:
 	const std::string & getFileName();
 	const int & getFileSize();
 	const int & getLastBlock();
+	const int & getLastBlockSize();
 	const std::string & getMessageDigest();
 	int getRequest();
 	const int & getSpeed();
 	bool hasSocket(int socketfd, int nbytes);
 	void processBuffer(int socketfd, char recvBuff[], int nbytes);
+	void startTerminate();
+	bool terminating();
+	bool readyTerminate();
 
 private:
+	/*
+	True if download is in the process of terminating. This involves checking to
+	make sure all serverElements expect 0 bytes.
+	*/
+	bool terminateDownload;
+
 	//these must be set before the download begins and will be set by ctor
 	std::string messageDigest; //unique identifier of the file and message digest
 	std::string fileName;      //name of the file
@@ -91,7 +105,7 @@ private:
 	/*
 	This will grow to SUPERBUFFER_SIZE if there are missing blocks in a superBlock.
 	This buffer is maintained to avoid the problem of rerequesting blocks that slow
-	hosts havn't sent yet. Hopefully a slow host will finish sending it's block by
+	hosts havn't yet sent. Hopefully a slow host will finish sending it's block by
 	the time SUPERBUFFER_SIZE superBlocks have completed. If it hasn't then it will
 	get requested from a different host.
 	*/
@@ -102,10 +116,10 @@ private:
 	std::vector<int> secondBytes;    //bytes in the second
 
 	/*
-	addBlocks        - add complete fileBlocks to the superBlocks
-	calculateSpeed   - calculates the download speed of a download
-	findMissing      - finds missing blocks in the tree
-	writeTree        - writes a superBlock to file
+	addBlocks      - add complete fileBlocks to the superBlocks
+	calculateSpeed - calculates the download speed of a download
+	findMissing    - finds missing blocks in the tree
+	writeTree      - writes a superBlock to file
 	*/
 	int addBlock(std::string & bucket);
 	void calculateSpeed();
