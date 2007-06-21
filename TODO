@@ -15,8 +15,6 @@ is not created automatically.
 
 POSSIBLE FEATURES
 
--Reduce copying in download::addBlock().
-
 -Since only two superBlocks(leading/trailing) are ideal think about simplifying
 download::getRequest().
 
