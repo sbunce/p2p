@@ -1,3 +1,5 @@
+//std
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -131,6 +133,52 @@ void client::processBuffer(int socketfd, char recvBuff[], int nbytes)
 	}//end lock scope
 }
 
+//check if a serverElement is marked as abusive
+bool client::removeAbusive_check(download::serverElement * ringElement)
+{
+	if(ringElement->abusive){
+
+		return true;
+	}
+
+	return false;
+}
+
+/*
+Check if a serverElement is marked as abusive, if it is then disconnect the
+socket and free the memory.
+*/
+bool client::removeAbusive_checkDelete(download::serverElement * ringElement)
+{
+	if(ringElement->abusive){
+
+		disconnect(ringElement->socketfd);
+		delete ringElement;
+		return true;
+	}
+
+	return false;
+}
+
+inline void client::removeAbusive()
+{
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(downloadBufferMutex);
+
+	//remove serverElements from the serverHolder if they're marked as abusive
+	for(std::vector<std::deque<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
+
+		//std::remove_if(iter0->begin(), iter0->end(), boost::bind(&client::removeAbusive_check, _1) == true);
+	}
+
+	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 < downloadBuffer.end(); iter0++){
+
+		//std::remove_if(iter0->Server.begin(), iter0->Server.end(), removeAbusive_checkDelete);
+	}
+
+	}//end lock scope
+}
+
 inline void client::removeTerminated()
 {
 	{//begin lock scope
@@ -142,7 +190,7 @@ inline void client::removeTerminated()
 #ifdef DEBUG
 			std::cout << "info: client::removeTerminated() deffered termination of \"" << iter0->getFileName() << "\" done\n";
 #endif
-			terminateDownload_real(iter0->getMessageDigest());
+			terminateDownload(iter0->getMessageDigest());
 			break;
 		}
 	}
@@ -204,12 +252,17 @@ void client::start_thread()
 	//main client receive loop
 	while(true){
 
+		/*
+		If the program was just started and it has downloads that need to be resumed this
+		will connect to all the servers.
+		*/
 		if(resumedDownloads){
 			postResumeConnect();
 		}
 
-		removeTerminated();
-		sendPendingRequests();
+		removeAbusive();       //check for abusive servers and disconnect them
+		removeTerminated();    //check for downloads scheduled for deletion
+		sendPendingRequests(); //send requests for servers that are ready
 
 		/*
 		These must be initialized every iteration on linux(and possibly other OS's)
@@ -446,7 +499,7 @@ bool client::startDownload(exploration::infoBuffer info)
 	return true;
 }
 
-void client::terminateDownload(std::string messageDigest_in)
+void client::stopDownload(std::string messageDigest_in)
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
@@ -463,20 +516,20 @@ void client::terminateDownload(std::string messageDigest_in)
 
 	if(download_iter->readyTerminate()){
 #ifdef DEBUG
-		std::cout << "client::terminateDownload() doing quick terminate of \"" << download_iter->getFileName() << "\"\n";
+		std::cout << "client::stopDownload() doing quick terminate of \"" << download_iter->getFileName() << "\"\n";
 #endif
-		terminateDownload_real(messageDigest_in);
+		terminateDownload(messageDigest_in);
 	}
 #ifdef DEBUG
 	else{
-		std::cout << "info: client::terminateDownload() is scheduling the download to be removed\n";
+		std::cout << "info: client::stopDownload() is scheduling the download to be removed\n";
 	}
 #endif
 
 	}//end lock scope
 }
 
-void client::terminateDownload_real(std::string messageDigest_in)
+void client::terminateDownload(std::string messageDigest_in)
 {
 	//find the download
 	std::vector<download>::iterator download_iter;

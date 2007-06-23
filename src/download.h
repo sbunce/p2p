@@ -32,12 +32,17 @@ public:
 		*/
 		int bytesExpected;
 
-
 		//these need to be set before this server can be used
 		std::string server_IP; //IP of the server that has the file
 		int socketfd;          //holds the socket number or -1(no socket yet created)
 		int file_ID;           //the ID of the file on the server
 		std::string bucket;    //buffer for received data
+
+		/*
+		If this is set to true the server will be disconnected and all serverElements
+		from the client::serverHolder and download::Server will be removed.
+		*/
+		bool abusive;
 	};
 
 	//stores information specific to certain servers

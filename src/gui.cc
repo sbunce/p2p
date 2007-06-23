@@ -196,7 +196,7 @@ void gui::cancelDownload()
 			Glib::ustring messageDigest_retrieved;
 			row.get_value(0, messageDigest_retrieved);
 
-			Client.terminateDownload(messageDigest_retrieved);
+			Client.stopDownload(messageDigest_retrieved);
 		}
 	}
 }

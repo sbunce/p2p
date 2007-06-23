@@ -15,6 +15,8 @@ is not created automatically.
 
 POSSIBLE FEATURES
 
+-Reduce copying in download::addBlock().
+
 -Since only two superBlocks(leading/trailing) are ideal think about simplifying
 download::getRequest().
 
@@ -27,6 +29,13 @@ and over(trying to waste bandwidth to degrade serving capability).
 
 
 IDEAS
+
+-Consider moving client::downloadBuffer to a list. It'd allow slower random access
+but it'd do faster deletions and it'd have it's very nice remove_if member function.
+
+-Derive the download class from class X. Virtualize functions in class X. This 
+will allow you to make other classes and derive them from class X which will 
+allow downloading of different things and setting different buffer sizes.
 
 -Overhead can be reduced a lot. The client doesn't need to know what file_ID
 the server is sending because it tracks everything by the socket number. The

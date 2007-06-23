@@ -45,13 +45,13 @@ public:
 	getTotalSpeed     - returns the total download speed
 	start             - start the client thread
 	startDownload     - start a new download
-	terminateDownload - wrapper for terminateDownload_real()
+	terminateDownload - wrapper for terminateDownload()
 	*/
 	bool getDownloadInfo(std::vector<infoBuffer> & downloadInfo);
 	std::string getTotalSpeed();
 	void start();
 	bool startDownload(exploration::infoBuffer info);
-	void terminateDownload(std::string messageDigest_in);
+	void stopDownload(std::string messageDigest_in);
 
 private:
 	//networking related
@@ -73,18 +73,24 @@ private:
 	std::vector<std::deque<download::serverElement *> > serverHolder;
 
 	/*
-	disconnect             - disconnects a socket
-	processBuffer          - establishes the receive protocol
-	removeTerminated       - removes downloads that are done terminating
-	start_thread           - starts the main client thread
-	sendPendingRequests    - send pending requests(duh)
-	sendRequest            - sends a request to a server
-	terminateDownload_real - terminate a download, all calls to this function need to be
-	                       - within a downloadBufferMutex scoped lock
+	removeAbusive_check       - returns true if the serverElement is marked as abusive
+	removeAbusive_checkDelete - same as removeAbusive_check but disconnects socket and frees memory
+	disconnect                - disconnects a socket
+	processBuffer             - establishes the receive protocol
+	removeAbusive             - disconnects sockets and removes abusive servers
+	removeTerminated          - removes downloads that are done terminating
+	start_thread              - starts the main client thread
+	sendPendingRequests       - send pending requests(duh)
+	sendRequest               - sends a request to a server
+	terminateDownload_real    - terminate a download, all calls to this function need to be
+	                          - within a downloadBufferMutex scoped lock
 	*/
+	bool removeAbusive_check(download::serverElement * ringElement);
+	bool removeAbusive_checkDelete(download::serverElement * ringElement);
 	void disconnect(int socketfd);
 	void postResumeConnect();
 	void processBuffer(int socketfd, char recvBuff[], int nbytes);
+	void removeAbusive();
 	void removeTerminated();
 	void start_thread();
 	void sendPendingRequests();
@@ -95,10 +101,11 @@ private:
 	sockets. If the download is expecting data and we delete the download then there
 	are lots of synchronization problems which lead to "hung" sockets(program logic
 	out of sync with what the socket can do). For this reason disconnected downloads
-	are deferred with terminateDownload()/removeTerminated() and only disconnected
-	when all serverElements expect 0 bytes from their respective servers.
+	are deferred with stopDownload()/removeTerminated() and only disconnected
+	when all serverElements expect 0 bytes from their respective servers. Any calls
+	to this function must be within a downloadBufferMutex scoped lock.
 	*/
-	void terminateDownload_real(std::string messageDigest_in);
+	void terminateDownload(std::string messageDigest_in);
 
 	boost::mutex downloadBufferMutex; //mutex for any usage of sendBuffer
 	boost::mutex masterfdsMutex;      //mutex for any usage of masterfds fd_set
