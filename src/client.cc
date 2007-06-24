@@ -23,7 +23,7 @@ void client::disconnect(int socketfd)
 	std::cout << "info: client disconnecting socket number " << socketfd << "\n";
 #endif
 
-	//if socket = -1 then there is no corresponding socket in masterfds
+	//if socket = -1 then no socket yet created so no need to close()
 	if(socketfd != -1){
 		close(socketfd);
 
@@ -46,7 +46,7 @@ bool client::getDownloadInfo(std::vector<infoBuffer> & downloadInfo)
 	//process sendQueue
 	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
 		//calculate the percent complete
-		float bytesDownloaded = iter0->getBlockCount() * (global::BUFFER_SIZE - global::CONTROL_SIZE);
+		float bytesDownloaded = iter0->getBlockCount() * global::BUFFER_SIZE;
 		float fileSize = iter0->getFileSize();
 		float percent = (bytesDownloaded / fileSize) * 100;
 		int percentComplete = int(percent);
@@ -339,6 +339,7 @@ void client::sendPendingRequests()
 				sendRequest((*iter1)->server_IP, (*iter1)->socketfd, (*iter1)->file_ID, request);
 
 				//will be ready again when a response it received to this requst
+				(*iter1)->blockRequested = request;
 				(*iter1)->bytesExpected = global::BUFFER_SIZE;
 				(*iter1)->lastRequest = false;
 
@@ -388,15 +389,19 @@ int client::sendRequest(std::string server_IP, int & socketfd, int file_ID, int 
 
 	}
 
-	std::ostringstream sendRequest_s;
-	sendRequest_s << global::P_SBL << "," << file_ID << "," << fileBlock << ",";
+	std::ostringstream request_s;
+	request_s << global::P_SBL << global::DELIMITER << file_ID << global::DELIMITER << fileBlock << global::DELIMITER;
 
-	int bytesToSend = sendRequest_s.str().length();
+	//the request has to be REQUEST_CONTROL_SIZE bytes exactly
+	std::string request = request_s.str();
+	request.append(global::REQUEST_CONTROL_SIZE - request.length(), ' '); //blank the extra space
+
+	int bytesToSend = request_s.str().length();
 	int nbytes = 0; //how many bytes sent in one shot
 
 	//send request
 	while(bytesToSend > 0){
-		nbytes = send(socketfd, sendRequest_s.str().c_str(), sendRequest_s.str().length(), 0);
+		nbytes = send(socketfd, request.c_str(), request.length(), 0);
 
 		if(nbytes == -1){
 #ifdef DEBUG
@@ -409,7 +414,7 @@ int client::sendRequest(std::string server_IP, int & socketfd, int file_ID, int 
 	}
 
 #ifdef DEBUG_VERBOSE
-	std::cout << "info: client sending " << sendRequest_s.str() << " to " << server_IP << "\n";
+	std::cout << "info: client sending " << request << " to " << server_IP << "\n";
 #endif
 
 	return 0;
@@ -429,8 +434,8 @@ bool client::startDownload(exploration::infoBuffer info)
 	std::string filePath = ClientIndex.getFilePath(info.messageDigest);
 	int fileSize = atoi(info.fileSize_bytes.c_str());
 	int blockCount = 0;
-	int lastBlock = atoi(info.fileSize_bytes.c_str())/(global::BUFFER_SIZE - global::CONTROL_SIZE);
-	int lastBlockSize = atoi(info.fileSize_bytes.c_str()) % (global::BUFFER_SIZE - global::CONTROL_SIZE) + global::CONTROL_SIZE;
+	int lastBlock = atoi(info.fileSize_bytes.c_str())/(global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE);
+	int lastBlockSize = atoi(info.fileSize_bytes.c_str()) % (global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE) + global::RESPONSE_CONTROL_SIZE;
 	int lastSuperBlock = lastBlock / global::SUPERBLOCK_SIZE;
 	int currentSuperBlock = 0;
 

@@ -145,11 +145,11 @@ bool clientIndex::initialFillBuffer(std::list<download> & downloadBuffer, std::l
 			addedElements = true;
 
 			int currentBytes = fs::file_size(filePath_path); //get the size of the partial file
-			int blockCount = currentBytes / (global::BUFFER_SIZE - global::CONTROL_SIZE);
-			int lastBlock = fileSize/(global::BUFFER_SIZE - global::CONTROL_SIZE);
-			int lastBlockSize = fileSize % (global::BUFFER_SIZE - global::CONTROL_SIZE) + global::CONTROL_SIZE;
+			int blockCount = currentBytes / (global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE);
+			int lastBlock = fileSize/(global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE);
+			int lastBlockSize = fileSize % (global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE) + global::RESPONSE_CONTROL_SIZE;
 			int lastSuperBlock = lastBlock / global::SUPERBLOCK_SIZE;
-			int currentSuperBlock = currentBytes / ( (global::BUFFER_SIZE - global::CONTROL_SIZE) * global::SUPERBLOCK_SIZE );
+			int currentSuperBlock = currentBytes / ( (global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE) * global::SUPERBLOCK_SIZE );
 
 			download resumedDownload(
 				messageDigest,

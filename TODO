@@ -1,5 +1,12 @@
 BUGS AND NECESSARY FEATURES
 
+-There needs to be a check so that when the user tries to download the same thing
+twice the second download doesn't get appended to the first.
+
+-There needs to be a timer on download termination to go ahead and do it
+if X amount of time passes. Servers with buckets with junk data should be
+globally disconnected. As it is right now a server can send junk data for
+the last packet and make the download "stick".
 
 POSSIBLE FEATURES
 

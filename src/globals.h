@@ -31,21 +31,31 @@ namespace global //"global" namespace ;-)
 	/* ************ END DEBUGGING OPTIONS ************ */
 
 	const int BUFFER_SIZE = 4096;    //how big packets can be(bytes, maximum 65535)
-	const int CONTROL_SIZE = 32;     //how much of the packet is control data(bytes)
 	const int SUPERBLOCK_SIZE = 256; //how many fileBlocks are kept in a superBlock
-
 	const int MAX_CONNECTIONS = 50;  //maximum number of connections to server/from client
 	const int P2P_PORT = 6969;       //port client connects to and server receives on
 	const int GUI_TICK = 100;        //time(in milliseconds) between gui updates
 	const int SPEED_AVERAGE = 5;     //how many seconds to average upload/download speed over
 	const int COMPLETE_REMOVE = 5;   //how many seconds to wait before removing a complete upload/download
+	const int TIMEOUT = 60;          //how many seconds to wait for a client or server
 
-	const std::string P_SBL = "SBL"; //request from client to server for fileBlock
-	const std::string P_BLS = "BLS"; //response from server to client with fileBlock attached
-	const std::string P_REJ = "REJ"; //rejected connection from the server
-	const std::string P_DNE = "DNE"; //server did not find the requested block
-	const std::string P_FNF = "FNF"; //server did not find the requested file
-	const std::string P_BCM = "BCM"; //server received unrecognized command
+	/*
+	More data needs to be sent to the server to make a request than needs to be
+	sent back to the client to respond to the request.
+	*/
+	const int REQUEST_CONTROL_SIZE = 32; //how much of the request packet is control data
+	const int RESPONSE_CONTROL_SIZE = 1; //how much of the response packet is control data
+
+	/*
+	Control byte to indicate the type of reply. The size of these should correspond
+	to the number of bytes specified by CONTROL_SIZE. Strings specified are
+	arbitrary but must be unique.
+	*/
+	const std::string P_SBL = "A"; //request from client to server for fileBlock
+	const std::string P_BLS = "B"; //response from server to client with fileBlock attached
+	const std::string P_REJ = "C"; //rejected connection from the server
+	const std::string P_DNE = "D"; //server did not find the requested block
+	const std::string P_FNF = "E"; //server did not find the requested file
 
 	//hash type: enuSHA1, enuSHA224, enuSHA256, enuSHA384, enuSHA512
 	//if this is changed all databases will need to be rebuilt

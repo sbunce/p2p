@@ -34,8 +34,23 @@ public:
 		int percentComplete;
 	};
 
-	//element of sendBuffer, public but outside classes shouldn't need one
-	class bufferElement
+	server();
+	/*
+	getUploadInfo - updates and returns upload information
+	              - returns false if no uploads
+	getTotalSpeed - returns the total speed of all uploads
+	*/
+	bool getUploadInfo(std::vector<infoBuffer> & uploadInfo);
+	std::string getTotalSpeed();
+	const bool & isIndexing();
+	void start();
+
+private:
+	//false while files are being indexed/hashed
+	bool indexing;
+
+	//element of sendBuffer, information about what was requested is stored in this
+	class sendBufferElement
 	{
 	public:
 		std::string client_IP; //only used for info purposes like calculateSpeed()
@@ -44,7 +59,20 @@ public:
 		int fileBlock;         //what chunk of the file the client wants(buffer*offset)
 	};
 
-	//element of uploadSpeed, public but outside classes shouldn't need one
+	/*
+	If the client can't send REQUEST_CONTROL_SIZE bytes in one shot then the
+	amount it can send will be stored here until all REQUEST_CONTROL_SIZE bytes
+	are gotten. Once the full request is made it will be processed.
+	*/
+	class requestBufferElement
+	{
+	public:
+		int lastSeen;
+		int clientSock;
+		std::string bucket; //holds the partial request
+	};
+
+	//use by uploadSpeed to track the progress of an upload
 	class speedElement
 	{
 	public:
@@ -64,21 +92,6 @@ public:
 		int fileBlock; //what fileBlock was last requested
 	};
 
-	server();
-	/*
-	getUploadInfo - updates and returns upload information
-	              - returns false if no uploads
-	getTotalSpeed - returns the total speed of all uploads
-	*/
-	bool getUploadInfo(std::vector<infoBuffer> & uploadInfo);
-	std::string getTotalSpeed();
-	const bool & isIndexing();
-	void start();
-
-private:
-	//false while files are being indexed/hashed
-	bool indexing;
-
 	//networking related
 	int maxConnections; //maximum connections allowed
 	int numConnections; //how many are currently connected
@@ -86,8 +99,11 @@ private:
 	fd_set masterfds; //master file descriptor set
 	int fdmax;        //holds the number of the maximum socket
 
-	//send buffer
-	std::vector<bufferElement> sendBuffer;
+	//stores pending responses
+	std::vector<sendBufferElement> sendBuffer;
+
+	//stores partial requests
+	std::vector<requestBufferElement> requestBuffer;
 
 	//used by calculateSpeed() to track upload speeds
 	std::vector<speedElement> uploadSpeed;

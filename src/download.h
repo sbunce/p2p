@@ -28,12 +28,6 @@ public:
 		bool lastRequest;      //the last block has been requested from this server
 		bool ready;            //true if ready to send another block request
 
-		/*
-		How many bytes expected as a result of the last request. The server is ready
-		for another request when this equals zero.
-		*/
-		int bytesExpected;
-
 		//these need to be set before this server can be used
 		std::string server_IP; //IP of the server that has the file
 		int socketfd;          //holds the socket number or -1(no socket yet created)
@@ -45,6 +39,10 @@ public:
 		from the client::serverHolder and download::Server will be removed.
 		*/
 		bool abusive;
+
+		//these are set by the client to keep track of the last request.
+		int blockRequested; //what block was requested
+		int bytesExpected;  //how many bytes need to be received to finish the request
 	};
 
 	//stores information specific to certain servers
@@ -53,7 +51,6 @@ public:
 	download(std::string & messageDigest_in, std::string & fileName_in, 
 		std::string & filePath_in, int fileSize_in, int blockCount_in, int lastBlock_in,
 		int lastBlockSize_in, int lastSuperBlock_in, int currentSuperBlock_in);
-	~download();
 	/*
 	completed        - returns true if download completed, false if not
 	getBlockCount    - returns the number of fileBlocks received
@@ -128,7 +125,7 @@ private:
 	findMissing    - finds missing blocks in the tree
 	writeTree      - writes a superBlock to file
 	*/
-	int addBlock(std::string & bucket);
+	int addBlock(int & blockNumber, std::string & bucket);
 	void calculateSpeed();
 	void findMissing();
 	void writeSuperBlock(std::string container[]);

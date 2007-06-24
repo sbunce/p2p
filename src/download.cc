@@ -34,24 +34,9 @@ download::download(std::string & messageDigest_in, std::string & fileName_in,
 	std::srand(time(0));
 }
 
-download::~download()
-{
-
-}
-
-int download::addBlock(std::string & bucket)
+int download::addBlock(int & blockNumber, std::string & bucket)
 {
 	calculateSpeed();
-
-	//find position of delimiters
-	int first = bucket.find_first_of(",");
-	int second = bucket.find_first_of(",", first+1);
-	int third = bucket.find_first_of(",", second+1);
-
-	//get control data
-	std::string command = bucket.substr(0, first);
-	std::string file_ID = bucket.substr(first+1, (second - 1) - first);
-	std::string blockNumber = bucket.substr(second+1, (third - 1) - second);
 
 #ifdef UNRELIABLE_CLIENT
 	//this exists for debug purposes, 1% chance of "dropping" a packet
@@ -59,7 +44,7 @@ int download::addBlock(std::string & bucket)
 	if(random < global::UNRELIABLE_CLIENT_VALUE){
 		std::cout << "testing: client::addToTree(): OOPs! I dropped fileBlock " << blockNumber << "\n";
 
-		if(atoi(blockNumber.c_str()) == lastBlock){
+		if(blockNumber == lastBlock){
 			bucket.clear();
 		}
 		else{
@@ -73,16 +58,16 @@ int download::addBlock(std::string & bucket)
 	//prepare fileBlock to be added to a superBlock
 	std::string fileBlock;
 	if(bucket.size() >= global::BUFFER_SIZE){
-		fileBlock = bucket.substr(global::CONTROL_SIZE, global::BUFFER_SIZE - global::CONTROL_SIZE);
-		bucket.erase(0, global::BUFFER_SIZE);
+		fileBlock = bucket.substr(global::RESPONSE_CONTROL_SIZE, global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE);
+		bucket.clear();
 	}
 	else{ //last block encountered
-		fileBlock = bucket.substr(global::CONTROL_SIZE, bucket.size() - global::CONTROL_SIZE);
+		fileBlock = bucket.substr(global::RESPONSE_CONTROL_SIZE, bucket.size() - global::RESPONSE_CONTROL_SIZE);
 		bucket.clear();
 	}
 
 	for(std::deque<superBlock>::iterator iter = superBuffer.begin(); iter != superBuffer.end(); iter++){
-		if(iter->addBlock(atoi(blockNumber.c_str()), fileBlock)){
+		if(iter->addBlock(blockNumber, fileBlock)){
 			break;
 		}
 	}
@@ -347,7 +332,7 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 
 			//if full block received add it to a superBlock and ready another request
 			if((*iter0)->bucket.size() % global::BUFFER_SIZE == 0){
-				addBlock((*iter0)->bucket);
+				addBlock((*iter0)->blockRequested, (*iter0)->bucket);
 				(*iter0)->bytesExpected = 0;
 
 				//only give up the token if the download is not terminating
@@ -364,7 +349,7 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 
 					//add last partial block to tree
 					if((*iter0)->bucket.size() == lastBlockSize){
-						addBlock((*iter0)->bucket);
+						addBlock((*iter0)->blockRequested, (*iter0)->bucket);
 
 #ifdef UNRELIABLE_CLIENT
 						/*

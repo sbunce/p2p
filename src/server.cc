@@ -30,8 +30,6 @@ void server::disconnect(int clientSock)
 
 void server::calculateSpeed(int clientSock, int file_ID, int fileBlock)
 {
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(Mutex);
 	time_t currentTime = time(0);
 
 	//get IP of the socket
@@ -90,8 +88,6 @@ void server::calculateSpeed(int clientSock, int file_ID, int fileBlock)
 			uploadSpeed.push_back(temp);
 		}
 	}
-
-	}//end lock scope
 }
 
 std::string server::getTotalSpeed()
@@ -143,7 +139,7 @@ bool server::getUploadInfo(std::vector<infoBuffer> & uploadInfo)
 	//process sendQueue
 	for(std::vector<speedElement>::iterator iter0 = uploadSpeed.begin(); iter0 < uploadSpeed.end(); iter0++){
 		//calculate the percent complete
-		float bytesUploaded = iter0->fileBlock * (global::BUFFER_SIZE - global::CONTROL_SIZE);
+		float bytesUploaded = iter0->fileBlock * global::BUFFER_SIZE;
 		float fileSize_f = iter0->fileSize;
 		float percent = (bytesUploaded / fileSize_f) * 100;
 		int percentComplete;
@@ -253,156 +249,157 @@ void server::queueRequest(int clientSock, char recvBuff[], int nbytes)
 	std::cout << "info: server::queueRequest(): server received " << request << " from " << inet_ntoa(addr.sin_addr) << "\n";
 #endif
 
-	/*
-	part1 - the command
-	part2 - dependant on command
-		if part1 == p_sendBlock then part2 == file_ID
-		if part1 == p_sendBlock then part3 == fileBlock
-	*/
-	std::string part1 = request.substr(0, request.find_first_of(","));
-	request = request.substr(request.find_first_of(",")+1);
-	std::string part2 = request.substr(0, request.find_first_of(","));
-	request = request.substr(request.find_first_of(",")+1);
-	std::string part3 = request.substr(0, request.find_first_of(","));
+	//if a full request was received then process it, otherwise buffer
+	if(nbytes == global::REQUEST_CONTROL_SIZE){
 
-	if(part1 == global::P_SBL){
-		bufferElement temp;
-		temp.client_IP = inet_ntoa(addr.sin_addr);
-		temp.clientSock = clientSock;
-		temp.file_ID = atoi(part2.c_str());
-		temp.fileBlock = atoi(part3.c_str());
+		//find position of delimiters
+		int first = request.find_first_of(global::DELIMITER);
+		int second = request.find_first_of(global::DELIMITER, first+1);
+		int third = request.find_first_of(global::DELIMITER, second+1);
 
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(Mutex);
+		//tokenize control data
+		std::string command = request.substr(0, first);
+		std::string file_ID = request.substr(first+1, (second - 1) - first);
+		std::string fileBlock = request.substr(second+1, (third - 1) - second);
 
-		sendBuffer.push_back(temp);
+		if(command == global::P_SBL){
+			sendBufferElement temp;
+			temp.client_IP = inet_ntoa(addr.sin_addr);
+			temp.clientSock = clientSock;
+			temp.file_ID = atoi(file_ID.c_str());
+			temp.fileBlock = atoi(fileBlock.c_str());
 
-		}//end lock scope
+			{//begin lock scope
+			boost::mutex::scoped_lock lock(Mutex);
+
+			sendBuffer.push_back(temp);
+
+			}//end lock scope
+		}
 	}
 	else{
-		int bytesToSend = global::P_BCM.size();
-		int nbytes = 0;
-		while(bytesToSend > 0){
-			nbytes = send(clientSock, global::P_BCM.c_str(), global::P_BCM.length(), 0);
 
-			if(nbytes == -1){
+		/*
+		This part shouldn't run very often. It will only run if the MTU of the client
+		or server is less than global::REQUEST_CONTROL_SIZE which is generally going
+		to be very small.
+		*/
+
+		bool found = false;
+		for(std::vector<requestBufferElement>::iterator iter0 = requestBuffer.begin(); iter0 != requestBuffer.end(); iter0++){
+
+			if(iter0->clientSock == clientSock){
+				iter0->bucket.append(recvBuff, nbytes);
+
+				if(iter0->bucket.size() == global::REQUEST_CONTROL_SIZE){
+
+					//find position of delimiters
+					int first = request.find_first_of(global::DELIMITER);
+					int second = request.find_first_of(global::DELIMITER, first+1);
+					int third = request.find_first_of(global::DELIMITER, second+1);
+
+					//tokenize control data
+					std::string command = request.substr(0, first);
+					std::string file_ID = request.substr(first+1, (second - 1) - first);
+					std::string fileBlock = request.substr(second+1, (third - 1) - second);
+
+					if(command == global::P_SBL){
+						sendBufferElement temp;
+						temp.client_IP = inet_ntoa(addr.sin_addr);
+						temp.clientSock = clientSock;
+						temp.file_ID = atoi(file_ID.c_str());
+						temp.fileBlock = atoi(fileBlock.c_str());
+
+						{//begin lock scope
+						boost::mutex::scoped_lock lock(Mutex);
+
+						sendBuffer.push_back(temp);
+
+						}//end lock scope
+					}
+				}
+				else if(iter0->bucket.size() > global::REQUEST_CONTROL_SIZE){
+					//overflow detected, erase buffer
+					requestBuffer.erase(iter0);
+				}
+
 				break;
 			}
+		}
 
-			bytesToSend -= nbytes;
+		time_t currentTime = time(0);
+
+		if(!found){
+			requestBufferElement temp;
+			temp.lastSeen = currentTime;
+			temp.clientSock = clientSock;
+			temp.bucket.append(recvBuff, nbytes);
+
+			//check for overflow, add to requestBuffer if not overflow
+			if(temp.bucket.size() <= global::REQUEST_CONTROL_SIZE){
+				requestBuffer.push_back(temp);
+			}
+		}
+
+		//remove requestBuffer elements that are too old
+		for(std::vector<requestBufferElement>::iterator iter0 = requestBuffer.begin(); iter0 != requestBuffer.end(); iter0++){
+
+			if(currentTime - iter0->lastSeen > global::TIMEOUT){
+				requestBuffer.erase(iter0++); //increment the iterator while still valid
+			}
 		}
 	}
 }
 
 int server::sendBlock(int clientSock, int file_ID, int fileBlock)
 {
-   int bytesToSend = 0;          //how many bytes left to send
-   int nbytes;                   //how many bytes sent in one shot
-	char ch;                      //single char read from stream
-	char sendBuffer[global::BUFFER_SIZE]; //send buffer
+   int bytesToSend = 0;    //how many bytes left to send
+   int nbytes;             //how many bytes sent in one shot
+	std::string response;
 
 	//check for valid file request
 	int fileSize;
 	std::string filePath;
-	//true if file requested that we don't have
 	if(!ServerIndex.getFileInfo(file_ID, fileSize, filePath)){
-		std::string control = global::P_FNF;
-		control.append(global::CONTROL_SIZE - control.length(), ' '); //blank the extra space
-		control.copy(sendBuffer, global::CONTROL_SIZE);
-
-		while(bytesToSend > 0){ //send until buffer is empty
-			nbytes = send(clientSock, sendBuffer, bytesToSend, 0);
-
-			if(nbytes == -1){
-				break;
-			}
-
-			bytesToSend -= nbytes;
-		}
-
 		return 0;
 	}
 
 	//check for valid block request
-	if(fileBlock*(global::BUFFER_SIZE - global::CONTROL_SIZE) > fileSize){
-		std::string control = global::P_DNE;
-		control.append(global::CONTROL_SIZE - control.length(), ' '); //blank the extra space
-		control.copy(sendBuffer, global::CONTROL_SIZE);
-
-		while(bytesToSend > 0){ //send until buffer is empty
-			nbytes = send(clientSock, sendBuffer, bytesToSend, 0);
-
-			if(nbytes == -1){
-				break;
-			}
-
-			bytesToSend -= nbytes;
-		}
-
+	if(fileBlock*(global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE) > fileSize){
 		return 0;
 	}
 
-	//valid block and file requested, continue to serve request
 	//prepare control data
-	std::ostringstream control_s;
-	control_s << global::P_BLS << "," << file_ID << "," << fileBlock << ",";
-	std::string control = control_s.str();
-
-#ifdef DEBUG_VERBOSE
-	sockaddr_in addr;
-	socklen_t len = sizeof(addr);
-	getpeername(clientSock, (struct sockaddr*)&addr, &len);
-	std::cout << "info: server::sendBlock(): server sending " << control << " to " << inet_ntoa(addr.sin_addr) << "\n";
-#endif
-
-	control.append(global::CONTROL_SIZE - control.length(), ' '); //blank the extra space
-
-	//copy control data to send buffer
-	control.copy(sendBuffer, global::CONTROL_SIZE);
-	bytesToSend = global::CONTROL_SIZE;
+	response += global::P_BLS;
+	bytesToSend = response.size();
 
 	std::ifstream fin(filePath.c_str());
 
-	//block is located at the buffer size multiplied by the block number
-	fin.seekg(fileBlock*(global::BUFFER_SIZE - global::CONTROL_SIZE));
+	if(fin.is_open()){
 
-	if(fin.is_open()){ //make sure the file is open
-		/*
-		Needed for disconnects, if client disconnects we don't want to try to send
-		a partial packet to a disconnected socket
-		*/
-		bool packetSent = false;
+		//seek to the fileBlock the client wants
+		fin.seekg(fileBlock*(global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE));
 
-		while(fin.get(ch)){ //read in one char at a time until buffer is full
-			sendBuffer[bytesToSend++] = ch;
-
-			if(bytesToSend == global::BUFFER_SIZE){ //buffer is full, send it
-				while(bytesToSend > 0){      //send until buffer is empty
-					nbytes = send(clientSock, sendBuffer, bytesToSend, 0);
-
-					if(nbytes == -1){
-						break;
-					}
-
-					bytesToSend -= nbytes;
-				}
-				packetSent = true;
-
+		//fill the buffer
+		char ch;
+		while(fin.get(ch)){
+			response += ch;
+			bytesToSend++;
+			if(bytesToSend == global::BUFFER_SIZE){
 				break;
 			}
-		}
-		//EOF was hit, send what we have
-		while(bytesToSend > 0 && !packetSent){
-			nbytes = send(clientSock, sendBuffer, bytesToSend, 0);
-
-			if(nbytes == -1){
-				break;
-			}
-
-			bytesToSend -= nbytes;
 		}
 
 		fin.close();
+
+		//send the buffer
+		while(bytesToSend > 0){
+			nbytes = send(clientSock, response.c_str(), bytesToSend, 0);
+			if(nbytes == -1){
+				break;
+			}
+			bytesToSend -= nbytes;
+		}
 	}
 	else{
 #ifdef DEBUG
@@ -485,7 +482,6 @@ void server::start_thread()
 					newCon(x);
 				}
 				else{ //existing socket sending data
-					//check for disconnect
 					if((nbytes = recv(x, recvBuff, sizeof(recvBuff), 0)) <= 0){
 						disconnect(x);
 					}
@@ -500,14 +496,15 @@ void server::start_thread()
 
 void server::stateTick()
 {
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(Mutex);
+
 	//send whole sendBuffer
 	while(!sendBuffer.empty()){
 		sendBlock(sendBuffer.back().clientSock, sendBuffer.back().file_ID, sendBuffer.back().fileBlock);
 		calculateSpeed(sendBuffer.back().clientSock, sendBuffer.back().file_ID, sendBuffer.back().fileBlock);
-
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(Mutex);
 		sendBuffer.pop_back();
-		}//end lock scope
 	}
+
+	}//end lock scope
 }
