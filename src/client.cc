@@ -1,7 +1,8 @@
 //std
 #include <algorithm>
-#include <iostream>
 #include <fstream>
+#include <functional>
+#include <iostream>
 #include <iomanip>
 #include <list>
 #include <sstream>
@@ -43,7 +44,7 @@ bool client::getDownloadInfo(std::vector<infoBuffer> & downloadInfo)
 	}
 
 	//process sendQueue
-	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
+	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
 		//calculate the percent complete
 		float bytesDownloaded = iter0->getBlockCount() * (global::BUFFER_SIZE - global::CONTROL_SIZE);
 		float fileSize = iter0->getFileSize();
@@ -70,7 +71,7 @@ bool client::getDownloadInfo(std::vector<infoBuffer> & downloadInfo)
 		info.messageDigest = iter0->getMessageDigest();
 
 		//get all IP's
-		for(std::vector<download::serverElement *>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
+		for(std::list<download::serverElement *>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
 			info.server_IP += (*iter1)->server_IP + ", ";
 		}
 
@@ -99,7 +100,7 @@ std::string client::getTotalSpeed()
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
 
-	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
+	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
 		speed += iter0->getSpeed();
 	}
 
@@ -117,7 +118,7 @@ void client::processBuffer(int socketfd, char recvBuff[], int nbytes)
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
 
-	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
+	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
 
 		if(iter0->hasSocket(socketfd, nbytes)){
 
@@ -133,47 +134,43 @@ void client::processBuffer(int socketfd, char recvBuff[], int nbytes)
 	}//end lock scope
 }
 
-//check if a serverElement is marked as abusive
-bool client::removeAbusive_check(download::serverElement * ringElement)
+//returns true if serverHolder element empty
+bool removeAbusive_checkEmpty(std::list<download::serverElement *> & serverHolderElement)
 {
-	if(ringElement->abusive){
-
-		return true;
-	}
-
-	return false;
+	return serverHolderElement.empty();
 }
 
-/*
-Check if a serverElement is marked as abusive, if it is then disconnect the
-socket and free the memory.
-*/
-bool client::removeAbusive_checkDelete(download::serverElement * ringElement)
-{
-	if(ringElement->abusive){
-
-		disconnect(ringElement->socketfd);
-		delete ringElement;
-		return true;
-	}
-
-	return false;
-}
-
-inline void client::removeAbusive()
+void client::removeAbusive()
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
 
-	//remove serverElements from the serverHolder if they're marked as abusive
-	for(std::vector<std::deque<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
+	//remove serverElement pointers from the serverHolder if they're marked as abusive
+	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
 
-		//std::remove_if(iter0->begin(), iter0->end(), boost::bind(&client::removeAbusive_check, _1) == true);
+		for(std::list<download::serverElement *>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
+
+			if((*iter1)->abusive){
+
+				iter0->Server.erase(iter1++); //iterator incremented while still valid
+			}
+		}
 	}
 
-	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 < downloadBuffer.end(); iter0++){
+	//remove serverElement pointers from the downloads, free the memory, and disconnect the socket if they're marked as abusive
+	for(std::list<std::list<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
 
-		//std::remove_if(iter0->Server.begin(), iter0->Server.end(), removeAbusive_checkDelete);
+		if(iter0->front()->abusive){
+
+			disconnect(iter0->front()->socketfd);
+
+			//free memory
+			for(std::list<download::serverElement *>::iterator iter1 = iter0->begin(); iter1 != iter0->end(); iter1++){
+				delete *iter1;
+			}
+
+			serverHolder.erase(iter0++); //iterator incremented while still valid
+		}
 	}
 
 	}//end lock scope
@@ -184,11 +181,11 @@ inline void client::removeTerminated()
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
 
-	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 < downloadBuffer.end(); iter0++){
+	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
 
 		if(iter0->readyTerminate()){
 #ifdef DEBUG
-			std::cout << "info: client::removeTerminated() deffered termination of \"" << iter0->getFileName() << "\" done\n";
+			std::cout << "info: client::removeTerminated() deferred termination of \"" << iter0->getFileName() << "\" done\n";
 #endif
 			terminateDownload(iter0->getMessageDigest());
 			break;
@@ -203,7 +200,7 @@ void client::postResumeConnect()
 	sockaddr_in dest_addr;
 
 	//create sockets for the resumed downloads
-	for(std::vector<std::deque<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
+	for(std::list<std::list<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
 			
 		int socketfd = socket(PF_INET, SOCK_STREAM, 0);
 		FD_SET(socketfd, &masterfds);
@@ -228,7 +225,7 @@ void client::postResumeConnect()
 #endif
 
 		//set all server elements with this IP to the same socket
-		for(std::deque<download::serverElement *>::iterator iter1 = iter0->begin(); iter1 != iter0->end(); iter1++){
+		for(std::list<download::serverElement *>::iterator iter1 = iter0->begin(); iter1 != iter0->end(); iter1++){
 			(*iter1)->socketfd = socketfd;
 		}
 	}
@@ -311,7 +308,7 @@ void client::sendPendingRequests()
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
 
 	//pass tokens
-	for(std::vector<std::deque<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
+	for(std::list<std::list<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
 
 		//if the download has relinquished it's token, give the token to the next download
 		if(iter0->front()->token == false){
@@ -322,7 +319,7 @@ void client::sendPendingRequests()
 	}
 
 	//process sendQueue
-	for(std::vector<download>::iterator iter0 = downloadBuffer.begin(); iter0 < downloadBuffer.end(); iter0++){
+	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
 
 		/*
 		Don't send new requests from downloads that are in the process of terminating
@@ -332,7 +329,7 @@ void client::sendPendingRequests()
 			continue;
 		}
 
-		for(std::vector<download::serverElement *>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
+		for(std::list<download::serverElement *>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
 
 			if((*iter1)->bytesExpected == 0 && (*iter1)->token){
 #ifdef DEBUG_VERBOSE
@@ -461,7 +458,7 @@ bool client::startDownload(exploration::infoBuffer info)
 		SE->socketfd = -1; //will be changed to appropriate number if socket already connected to server
 
 		//see if a socket for this server already exists, if it does then reuse it
-		for(std::vector<std::deque<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
+		for(std::list<std::list<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
 
 			if(iter0->front()->server_IP == info.server_IP.at(x)){
 				SE->socketfd = iter0->front()->socketfd;
@@ -471,7 +468,7 @@ bool client::startDownload(exploration::infoBuffer info)
 
 		//add the server to the server vector if it exists, otherwise make a new one and add it to serverHolder
 		bool found = false;
-		for(std::vector<std::deque<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
+		for(std::list<std::list<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
 
 			if(iter0->front()->server_IP == SE->server_IP){
 				//all servers in the vector must have the same socket
@@ -483,7 +480,7 @@ bool client::startDownload(exploration::infoBuffer info)
 
 		if(!found){
 			//make a new server deque for the server and add it to the serverHolder
-			std::deque<download::serverElement *> newServer;
+			std::list<download::serverElement *> newServer;
 			newServer.push_back(SE);
 			serverHolder.push_back(newServer);
 		}
@@ -505,7 +502,7 @@ void client::stopDownload(std::string messageDigest_in)
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
 
 	//find the download and set it to terminate
-	std::vector<download>::iterator download_iter;
+	std::list<download>::iterator download_iter;
 	for(download_iter = downloadBuffer.begin(); download_iter != downloadBuffer.end(); download_iter++){
 
 		if(messageDigest_in == download_iter->getMessageDigest()){
@@ -532,7 +529,7 @@ void client::stopDownload(std::string messageDigest_in)
 void client::terminateDownload(std::string messageDigest_in)
 {
 	//find the download
-	std::vector<download>::iterator download_iter;
+	std::list<download>::iterator download_iter;
 	for(download_iter = downloadBuffer.begin(); download_iter != downloadBuffer.end(); download_iter++){
 
 		if(messageDigest_in == download_iter->getMessageDigest()){
@@ -554,9 +551,9 @@ void client::terminateDownload(std::string messageDigest_in)
 		within the download Server container. Free the memory for it.
 		*/
 		bool foundElement = false; //true if iterator was invalidated
-		for(std::vector<std::deque<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
+		for(std::list<std::list<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
 
-			for(std::deque<download::serverElement *>::iterator iter1 = iter0->begin(); iter1 != iter0->end(); iter1++){
+			for(std::list<download::serverElement *>::iterator iter1 = iter0->begin(); iter1 != iter0->end(); iter1++){
 
 				if(*iter1 == download_iter->Server.back()){
 
@@ -580,7 +577,7 @@ void client::terminateDownload(std::string messageDigest_in)
 		}
 
 		//if there is an empty serverHolder deque element after the removal above then erase it
-		for(std::vector<std::deque<download::serverElement *> >::iterator serverHolder_iter = serverHolder.begin(); serverHolder_iter != serverHolder.end(); serverHolder_iter++){
+		for(std::list<std::list<download::serverElement *> >::iterator serverHolder_iter = serverHolder.begin(); serverHolder_iter != serverHolder.end(); serverHolder_iter++){
 
 			if(serverHolder_iter->empty()){
 

@@ -14,7 +14,7 @@
 #include <fcntl.h>
 
 //std
-#include <queue>
+#include <list>
 #include <string>
 #include <vector>
 
@@ -61,7 +61,7 @@ private:
 	bool resumedDownloads; //true if postResumeConnect needs to be run(after resuming)
 
 	//send buffer
-	std::vector<download> downloadBuffer;
+	std::list<download> downloadBuffer;
 
 	/*
 	Each deque will contain pointers to serverElements that one or more of the
@@ -70,11 +70,9 @@ private:
 	request. This is for the purpose of allowing multiple downloads from the same
 	server to share one socket and take turns using it.
 	*/
-	std::vector<std::deque<download::serverElement *> > serverHolder;
+	std::list<std::list<download::serverElement *> > serverHolder;
 
 	/*
-	removeAbusive_check       - returns true if the serverElement is marked as abusive
-	removeAbusive_checkDelete - same as removeAbusive_check but disconnects socket and frees memory
 	disconnect                - disconnects a socket
 	processBuffer             - establishes the receive protocol
 	removeAbusive             - disconnects sockets and removes abusive servers
@@ -85,8 +83,6 @@ private:
 	terminateDownload_real    - terminate a download, all calls to this function need to be
 	                          - within a downloadBufferMutex scoped lock
 	*/
-	bool removeAbusive_check(download::serverElement * ringElement);
-	bool removeAbusive_checkDelete(download::serverElement * ringElement);
 	void disconnect(int socketfd);
 	void postResumeConnect();
 	void processBuffer(int socketfd, char recvBuff[], int nbytes);

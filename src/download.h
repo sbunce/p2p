@@ -2,6 +2,7 @@
 #define H_CLIENT_BUFFER
 
 #include <deque>
+#include <list>
 #include <string>
 #include <vector>
 
@@ -19,6 +20,7 @@ public:
 			token = false;
 			bytesExpected = 0;
 			lastRequest = false;
+			abusive = false;
 		}
 
 		//these three set automatically
@@ -46,7 +48,7 @@ public:
 	};
 
 	//stores information specific to certain servers
-	std::vector<serverElement *> Server;
+	std::list<serverElement *> Server;
 
 	download(std::string & messageDigest_in, std::string & fileName_in, 
 		std::string & filePath_in, int fileSize_in, int blockCount_in, int lastBlock_in,

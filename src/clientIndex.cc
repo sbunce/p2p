@@ -6,6 +6,7 @@
 //std
 #include <fstream>
 #include <iostream>
+#include <list>
 #include <sstream>
 
 #include "clientIndex.h"
@@ -14,6 +15,9 @@ clientIndex::clientIndex()
 {
 	indexName = global::CLIENT_DOWNLOAD_INDEX;
 	downloadDirectory = global::CLIENT_DOWNLOAD_DIRECTORY;
+
+	//create the download directory if it doesn't exist
+	boost::filesystem::create_directory(downloadDirectory);
 }
 
 void clientIndex::terminateDownload(std::string messageDigest_in)
@@ -99,8 +103,13 @@ std::string clientIndex::getFilePath(std::string messageDigest_in)
 	}//end lock scope
 }
 
-bool clientIndex::initialFillBuffer(std::vector<download> & downloadBuffer, std::vector<std::deque<download::serverElement *> > & serverHolder)
+bool clientIndex::initialFillBuffer(std::list<download> & downloadBuffer, std::list<std::list<download::serverElement *> > & serverHolder)
 {
+	bool addedElements = false;
+
+	//will host messageDigests of files not found, ie the user removed the partials
+	std::vector<std::string> missingFiles;
+
 	namespace fs = boost::filesystem;
 
 	{//begin lock scope
@@ -122,6 +131,18 @@ bool clientIndex::initialFillBuffer(std::vector<download> & downloadBuffer, std:
 			fs::path filePath_path = fs::system_complete(fs::path(global::CLIENT_DOWNLOAD_DIRECTORY + fileName, fs::native));
 			std::string filePath = filePath_path.string();
 			int fileSize = atoi((*iter++).c_str());
+
+			//make sure the file is present, ie the user has not removed the partial file
+			std::ifstream fin(filePath.c_str());
+			if(fin.is_open()){
+				fin.close();
+			}
+			else{
+				missingFiles.push_back(messageDigest);
+				continue;
+			}
+
+			addedElements = true;
 
 			int currentBytes = fs::file_size(filePath_path); //get the size of the partial file
 			int blockCount = currentBytes / (global::BUFFER_SIZE - global::CONTROL_SIZE);
@@ -152,7 +173,7 @@ bool clientIndex::initialFillBuffer(std::vector<download> & downloadBuffer, std:
 
 				//add the server to the server vector if it exists, otherwise make a new one and add it to serverHolder
 				bool found = false;
-				for(std::vector<std::deque<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
+				for(std::list<std::list<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
 
 					if(iter0->front()->server_IP == SE->server_IP){
 						//all servers in the vector must have the same socket
@@ -164,7 +185,7 @@ bool clientIndex::initialFillBuffer(std::vector<download> & downloadBuffer, std:
 
 				if(!found){
 					//make a new server deque for the server and add it to the serverHolder
-					std::deque<download::serverElement *> newServer;
+					std::list<download::serverElement *> newServer;
 					newServer.push_back(SE);
 					serverHolder.push_back(newServer);
 				}
@@ -174,8 +195,6 @@ bool clientIndex::initialFillBuffer(std::vector<download> & downloadBuffer, std:
 		}
 
 		fin.close();
-
-		return true;
 	}
 	else{
 #ifdef DEBUG
@@ -185,7 +204,12 @@ bool clientIndex::initialFillBuffer(std::vector<download> & downloadBuffer, std:
 
 	}//end lock scope
 
-	return false;
+	//remove entries for files that are not present
+	for(std::vector<std::string>::iterator iter0 = missingFiles.begin(); iter0 != missingFiles.end(); iter0++){
+		terminateDownload(*iter0);
+	}
+
+	return addedElements;
 }
 
 int clientIndex::startDownload(exploration::infoBuffer info)

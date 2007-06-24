@@ -1,26 +1,10 @@
 BUGS AND NECESSARY FEATURES
 
--download::processBuffer() needs a mechanism to disconnect abusive servers.
-
--Program crashes if trying to resume download where the user has removed the partial
-file.
-
--There is no check for a download already completed by the download feature.
-For example it's possible to download a file that's already been downloaded and
-it will just append to the end of the already downloaded file.
-
--If the download directory is missing and a download is started the directory
-is not created automatically.
-
 
 POSSIBLE FEATURES
 
--Reduce copying in download::addBlock().
-
--Since only two superBlocks(leading/trailing) are ideal think about simplifying
-download::getRequest().
-
--Client has no control of how many connections it will try to make. Add it.
+-Client has no control of how many connections it will try to make. This
+feature can be added once exploration is working.
 
 -Add a check to make sure the client is not requesting the same blocks over
 and over(trying to waste bandwidth to degrade serving capability).
@@ -30,8 +14,9 @@ and over(trying to waste bandwidth to degrade serving capability).
 
 IDEAS
 
--Consider moving client::downloadBuffer to a list. It'd allow slower random access
-but it'd do faster deletions and it'd have it's very nice remove_if member function.
+-When a server comes back online have it "announce" to people previously downloading
+from it that it is back online. This will allow people to locate a server with a dynamic
+IP also.
 
 -Derive the download class from class X. Virtualize functions in class X. This 
 will allow you to make other classes and derive them from class X which will 

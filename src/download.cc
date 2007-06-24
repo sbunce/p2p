@@ -2,10 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-
-#ifdef UNRELIABLE_CLIENT
 #include <time.h>
-#endif
 
 #include "download.h"
 
@@ -33,10 +30,8 @@ download::download(std::string & messageDigest_in, std::string & fileName_in,
 	superBlock SB(currentSuperBlock++, lastBlock);
 	superBuffer.push_back(SB);
 
-#ifdef UNRELIABLE_CLIENT
 	//seed random number generator
 	std::srand(time(0));
-#endif
 }
 
 download::~download()
@@ -60,8 +55,8 @@ int download::addBlock(std::string & bucket)
 
 #ifdef UNRELIABLE_CLIENT
 	//this exists for debug purposes, 1% chance of "dropping" a packet
-	int random = rand() % 100;
-	if(random < global::UNRELIABLE_CLIENT_PERCENT){
+	int random = rand() % 10000;
+	if(random < global::UNRELIABLE_CLIENT_VALUE){
 		std::cout << "testing: client::addToTree(): OOPs! I dropped fileBlock " << blockNumber << "\n";
 
 		if(atoi(blockNumber.c_str()) == lastBlock){
@@ -172,11 +167,18 @@ int download::getRequest()
 {
 	/*
 	This function is a bit hard to understand but it defines how the superBlocks
-	are managed and is inherently complicated.
+	are managed and is inherently complicated. Basically there are two superBlocks,
+	the leading superBlock and the trailing superBlock. If there is a getRequest
+	and all requests for the leading superBlock have been made then rerequest
+	fileBlocks from the trailing superBlock. If the trailing superBlock is complete
+	then write it to disk and make the leading superBlock the trailing superBlock
+	and add a new leading superBlock. The idea is that two superBlocks are
+	maintained so that when the trailing one is incomplete we can work on completing
+	a new one while the slow servers send their fileBlocks for the old one.
 	*/
 
 	/*
-	Write out the oldest superBlocks if they're complete. It's possible the
+	Write out the oldest superBlock if it's complete. It's possible the
 	superBuffer could be empty so a check for this is done.
 	*/
 	if(!superBuffer.empty()){
@@ -219,7 +221,7 @@ int download::getRequest()
 	if(superBuffer.front().allRequested() && !superBuffer.front().complete()){
 
 		//if the superBuffer is full rerequest from the oldest superBlock
-		if(superBuffer.size() >= global::SUPERBUFFER_SIZE){
+		if(superBuffer.size() >= 2){
 			blockCount = superBuffer.back().getRequest();
 		}
 		else{ //there is room for another superBlock
@@ -295,7 +297,7 @@ const int & download::getSpeed()
 
 bool download::hasSocket(int socketfd, int nbytes)
 {
-	for(std::vector<serverElement *>::iterator iter0 = Server.begin(); iter0 != Server.end(); iter0++){
+	for(std::list<serverElement *>::iterator iter0 = Server.begin(); iter0 != Server.end(); iter0++){
 
 		/*
 		This function is used by the client to check whether this download requested
@@ -314,7 +316,7 @@ bool download::hasSocket(int socketfd, int nbytes)
 void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 {
 	//fill the bucket
-	for(std::vector<serverElement *>::iterator iter0 = Server.begin(); iter0 != Server.end(); iter0++){
+	for(std::list<serverElement *>::iterator iter0 = Server.begin(); iter0 != Server.end(); iter0++){
 
 		//add the buffer to the right bucket and process
 		if((*iter0)->socketfd == socketfd){
@@ -327,12 +329,19 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 			std::cout << "info: superBuffer.size(): " << superBuffer.size() << "\n";
 #endif
 
+#ifdef ABUSIVE_SERVER
+			int random = rand() % 10000;
+			if(random < global::ABUSIVE_SERVER_VALUE){
+				std::cout << "testing: client::processBuffer() simulated abuse for " << (*iter0)->server_IP << "\n";
+				(*iter0)->bucket += " ";
+			}
+#endif
+
 			//disconnect the server if it's being nasty!
 			if((*iter0)->bucket.size() > global::BUFFER_SIZE){
 #ifdef DEBUG
 				std::cout << "error: client::processBuffer() detected buffer overrun from " << (*iter0)->server_IP << "\n";
 #endif
-
 				(*iter0)->abusive = true;
 			}
 
@@ -429,7 +438,7 @@ bool download::terminating()
 bool download::readyTerminate()
 {
 	if(terminateDownload){
-		for(std::vector<serverElement *>::iterator iter0 = Server.begin(); iter0 != Server.end(); iter0++){
+		for(std::list<serverElement *>::iterator iter0 = Server.begin(); iter0 != Server.end(); iter0++){
 
 			if((*iter0)->bytesExpected != 0){
 				return false;

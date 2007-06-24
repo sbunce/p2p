@@ -4,25 +4,35 @@
 #include <string>
 #include "sha.h"
 
-//debugging output levels, enable one or both
-//#define DEBUG
-//#define DEBUG_VERBOSE
-
-//outputs the percent of rerequests
-//#define REREQUEST_PERCENTAGE
-
 namespace global //"global" namespace ;-)
 {
-	//randomly "drop" packets
+	/* *********** BEGIN DEBUGGING OPTIONS *********** */
+
+	#define DEBUG
+	//#define DEBUG_VERBOSE
+	//#define REREQUEST_PERCENTAGE
+
+	/*
+	If enabled the client randomly "drops" packets. The value is the number of
+	packets to drop out of 10,000. Example: 25 = 0.0025%.
+	*/
 	//#define UNRELIABLE_CLIENT
-	const int UNRELIABLE_CLIENT_PERCENT = 90; //what % to "drop"
+	const int UNRELIABLE_CLIENT_VALUE = 500;
+
+	/*
+	If enabled server sometimes sends 1 byte more than it should. The value is 
+	the number of packets to be abusive with out of 10,000. Example: 15 = 0.0015%.
+	This option will result in the client being abused disconnecting the server.
+	This option is actually applied on the client but the effect is the same.
+	*/
+	//#define ABUSIVE_SERVER
+	const int ABUSIVE_SERVER_VALUE = 1;
+
+	/* ************ END DEBUGGING OPTIONS ************ */
 
 	const int BUFFER_SIZE = 4096;    //how big packets can be(bytes, maximum 65535)
 	const int CONTROL_SIZE = 32;     //how much of the packet is control data(bytes)
 	const int SUPERBLOCK_SIZE = 256; //how many fileBlocks are kept in a superBlock
-
-	//2 is optimal, for a bigger buffer increase SUPERBLOCK_SIZE
-	const int SUPERBUFFER_SIZE = 2;  //how many superBlocks are kept in the clientBuffer
 
 	const int MAX_CONNECTIONS = 50;  //maximum number of connections to server/from client
 	const int P2P_PORT = 6969;       //port client connects to and server receives on

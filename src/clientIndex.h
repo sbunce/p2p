@@ -30,7 +30,7 @@ public:
 	*/
 	void terminateDownload(std::string messageDigest_in);
 	std::string getFilePath(std::string messageDigest_in);
-	bool initialFillBuffer(std::vector<download> & downloadBuffer, std::vector<std::deque<download::serverElement *> > & serverHolder);
+	bool initialFillBuffer(std::list<download> & downloadBuffer, std::list<std::list<download::serverElement *> > & serverHolder);
 	int startDownload(exploration::infoBuffer info);
 
 private:
