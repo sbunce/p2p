@@ -17,11 +17,14 @@ main.o: main.cc gui.o
 client.o: client.cc client.h download.o clientIndex.o exploration.o globals.h 
 	$(CC) client.cc
 
-download.o: download.cc download.h hash.o superBlock.o globals.h
-	$(CC) download.cc
-
 clientIndex.o: clientIndex.cc clientIndex.h download.o exploration.o globals.h
 	$(CC) clientIndex.cc
+
+digest_DB.o: digest_DB.cc digest_DB.h globals.h
+	$(CC) digest_DB.cc
+
+download.o: download.cc download.h hash.o superBlock.o globals.h
+	$(CC) download.cc
 
 exploration.o: exploration.cc exploration.h globals.h
 	$(CC) exploration.cc
@@ -46,6 +49,14 @@ sha.o: sha.cc sha.h globals.h
 
 superBlock.o: superBlock.cc superBlock.h globals.h
 	$(CC) superBlock.cc
+
+digest_DB_test: digest_DB_test.cc
+	$(CCL) digest_DB_test.cc digest_DB.cc -o ../digest_DB-test
+	@echo "\nBuilding digest_DB-test completed.\n"
+
+sha_test: sha_test.cc sha.o
+	$(CCL) sha_test.cc sha.cc -o ../sha-test
+	@echo "\nBuilding sha-test completed.\n"
 
 clean:
 	rm -v *.o

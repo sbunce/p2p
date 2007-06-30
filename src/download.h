@@ -84,6 +84,8 @@ public:
 	bool readyTerminate();
 
 private:
+	sha SHA; //creates message digests for superBlocks
+
 	/*
 	True if download is in the process of terminating. This involves checking to
 	make sure all serverElements expect 0 bytes.

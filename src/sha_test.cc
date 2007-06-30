@@ -3,40 +3,43 @@
 #include <string>
 
 #include "sha.h"
+#include "globals.h"
 
 int main(int argc, char * argv[])
 {
 	sha SHA;
+	SHA.Init(global::HASH_TYPE);
 
-	char message[4096*128];
-	std::string messageDigest;
+	std::ifstream fin("RMS at UCSD.ogg");
 
-	std::string inFile = "American Psycho.avi";
-	std::string outFile = "blarg.txt";
+	if(fin.is_open()){
 
-	std::ifstream fin(inFile.c_str());
-	std::ofstream fout(outFile.c_str());
+		std::string fileBlock;
 
-	while(true){
+		while(true){
 
-		fin.read(message, 4096*128);
+			fileBlock.clear();
 
-		//eof if gcount() == 0
-		if(fin.gcount() == 0){
-			break;
+			//get one superBlock worth of data
+			char ch;
+			int bytes = 0;
+			while(fin.get(ch)){
+				fileBlock += ch;
+				bytes++;
+				if(bytes == (global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE) * global::SUPERBLOCK_SIZE){
+					break;
+				}
+			}
+
+			SHA.Update((const sha_byte *) fileBlock.c_str(), fileBlock.size());
+			SHA.End();
+
+			std::cout << SHA.StringHash() << "\n";
+
+			if(fin.gcount() == 0){
+				break;
+			}
 		}
-
-		/*
-		enuSHA1,
-		enuSHA160 = enuSHA1,
-		enuSHA224,
-		enuSHA256,
-		enuSHA384,
-		enuSHA512,
-		*/
-		messageDigest = SHA.GetHash(sha::enuSHA160, (const unsigned char *)message, fin.gcount());
-
-		fout << messageDigest << "\n";
 	}
 
 	return 0;

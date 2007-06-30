@@ -37,7 +37,7 @@ namespace global //"global" namespace ;-)
 	const int GUI_TICK = 100;        //time(in milliseconds) between gui updates
 	const int SPEED_AVERAGE = 5;     //how many seconds to average upload/download speed over
 	const int COMPLETE_REMOVE = 5;   //how many seconds to wait before removing a complete upload/download
-	const int TIMEOUT = 60;          //how many seconds to wait for a client or server
+	const int TIMEOUT = 5;           //how many seconds to wait for a client or server
 
 	/*
 	More data needs to be sent to the server to make a request than needs to be

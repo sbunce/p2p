@@ -54,6 +54,8 @@ public:
 	void stopDownload(std::string messageDigest_in);
 
 private:
+	sha SHA; //creates messageDigests
+
 	//networking related
 	int fdmax;             //holds the number of the maximum socket
 	fd_set readfds;        //temporary file descriptor set to pass to select()

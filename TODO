@@ -1,14 +1,18 @@
 BUGS AND NECESSARY FEATURES
 
+-serverIndex.cc line 188-194 move to ctor
+
+-Have the download::writeBlock function just write the trailing superBlock
+with not parameter passed in to it. If it fails hash check remove it.
+
 -There needs to be a check so that when the user tries to download the same thing
 twice the second download doesn't get appended to the first.
 
--There needs to be a timer on download termination to go ahead and do it
-if X amount of time passes. Servers with buckets with junk data should be
-globally disconnected. As it is right now a server can send junk data for
-the last packet and make the download "stick".
 
 POSSIBLE FEATURES
+
+-A timer on all servers that keeps track of time of request to time of response
+or fulfilled request. A way to disconnect servers that are unresponsive.
 
 -Client has no control of how many connections it will try to make. This
 feature can be added once exploration is working.
@@ -21,27 +25,19 @@ and over(trying to waste bandwidth to degrade serving capability).
 
 IDEAS
 
--When a server comes back online have it "announce" to people previously downloading
-from it that it is back online. This will allow people to locate a server with a dynamic
-IP also.
+-Make the hash database like a streaming filesystem where every hash field points
+to the next hash field. The file format should be fixed length where the pointer
+to the record stored at the end of each record is a RRN.
+
+-Exploration belongs in the client class, not out on it's own.
+
+-Make a tracker that is basically a web server. The tracker will serve XML files
+and track who's connected to the download. The tracker will trust other trackers
+to form a tree or trust.
 
 -Derive the download class from class X. Virtualize functions in class X. This 
 will allow you to make other classes and derive them from class X which will 
-allow downloading of different things and setting different buffer sizes.
+allow downloading of different things with different buffer sizes.
 
--Overhead can be reduced a lot. The client doesn't need to know what file_ID
-the server is sending because it tracks everything by the socket number. The
-client also doesn't need to know the fileBlock because it can expect the server
-to send the block that was requested. For that matter what the server is doing
-"BLS" also doesn't need to be known.
-
--Locating files should be done on a tiered linear network. Hosts should connect to
-eachother in a sequential way on level 1 but in other ways on the other levels to
-make it so the client can start traversing the network on the level which is closest.
-
-Tier 1: Linear
-Tier 2: Random
-
-Question: How would tier 1 remain connected at all times?
-Question: How to insure roughly the same access time to any node?
-
+-Consider using a bitset to convert fileBlock numbers in to base 2 to maximize
+usage of bytes sent over the network.

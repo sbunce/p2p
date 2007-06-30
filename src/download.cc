@@ -32,6 +32,9 @@ download::download(std::string & messageDigest_in, std::string & fileName_in,
 
 	//seed random number generator
 	std::srand(time(0));
+
+	//set the hash type
+	SHA.Init(global::HASH_TYPE);
 }
 
 int download::addBlock(int & blockNumber, std::string & bucket)
@@ -393,6 +396,13 @@ void download::writeSuperBlock(std::string container[])
 #ifdef DEBUG_VERBOSE
 	std::cout << "info: download::writeSuperBlock() was called\n";
 #endif
+
+	//get the messageDigest of the superBlock
+	for(int x=0; x<global::SUPERBLOCK_SIZE; x++){
+		SHA.Update((const sha_byte *) container[x].c_str(), container[x].size());
+	}
+	SHA.End();
+	std::cout << SHA.StringHash() << "\n";
 
 	std::ofstream fout(filePath.c_str(), std::ios::app);
 
