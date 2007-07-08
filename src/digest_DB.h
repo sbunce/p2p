@@ -1,23 +1,15 @@
 #ifndef H_DIGEST_DB
 #define H_DIGEST_DB
 
-#include <vector>
+#include <deque>
 #include <string>
 
-const int MESSAGE_DIGEST_SIZE = 40;
-const int RRN_SIZE = 7;
-const std::string RECORD_DELIMITER = "\n";
-const int RECORD_SIZE = MESSAGE_DIGEST_SIZE + RRN_SIZE + RECORD_DELIMITER.size();
-const std::string MESSAGE_DIGEST_INDEX = "messageDigest.idx";
-const std::string MESSAGE_DIGEST_DB = "messageDigest.db";
-
+#include "globals.h"
 
 /*
 MESSAGE_DIGEST_INDEX file format:
-The first line is a RRN for the start of the free space chain.
-The other lines are as follows:
-<key>|<RRN>
-where key is the hash of the hashes of all the superBlocks in the file
+First Line: <RRN_Free><RRN_Count>
+All other lines fit this grammar: <key>|<RRN>
 
 MESSAGE_DIGEST_DB file format:
 <messageDigest>|<RRN>
@@ -31,14 +23,26 @@ public:
 	/*
 	addDigests      - add digests for a file to the database
 	                - returns false if digests already exist for specified key
+	deleteDigests   - removes a set of digests and adds it to the RRN_Free list
+	                - doesn't actually remove but marks the records as free(can be overwritten)
+	                - returns false if nothing deleted
 	retrieveDigests - retrieves digests associated with a key
 	                - returns false if key wasn't found
 	*/
-	bool addDigests(std::string key, std::vector<std::string> & digests);
-	bool retrieveDigests(std::string key, std::vector<std::string> & digests);
+	bool addDigests(std::string key, std::deque<std::string> & digests);
+	bool deleteDigests(std::string key);
+	bool retrieveDigests(std::string key, std::deque<std::string> & digests);
 
 private:
+	int RRN_Free;  //start of the free record list
+	int RRN_Count; //how many records there in the database(including deleted)
 
+	/*
+	update_RRN_Free  - updates the RRN_Free in the index file
+	update_RRN_Count - updates the RRN_Count in the index file
+	*/
+	void update_RRN_Free(std::fstream & index_fstream);
+	void update_RRN_Count(std::fstream & index_fstream);
 };
 #endif
 

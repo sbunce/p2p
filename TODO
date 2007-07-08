@@ -1,5 +1,8 @@
 BUGS AND NECESSARY FEATURES
 
+-digest_DB should have the index combined in to the .db file and shouldb be a
+linked list also.
+
 -serverIndex.cc line 188-194 move to ctor
 
 -Have the download::writeBlock function just write the trailing superBlock

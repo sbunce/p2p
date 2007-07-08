@@ -61,12 +61,24 @@ namespace global //"global" namespace ;-)
 	//if this is changed all databases will need to be rebuilt
 	const sha::SHA_TYPE HASH_TYPE = sha::enuSHA1;
 
+	/*
+	These are options used for the digest_DB.
+	WARNING: If HASH_TYPE is changed MESSAGE_DIGEST_SIZE must be updated. The
+		database and database index would also need to be rebuilt.
+	*/
+	const int MESSAGE_DIGEST_SIZE = 40; //size(in bytes) of the base16 representation of the hash
+	const int RRN_SIZE = 7;             //how much space to allocate to the RRN numbers in the records
+	const int RECORD_SIZE = MESSAGE_DIGEST_SIZE + RRN_SIZE + 1; //+1 for \n
+	const std::string RECORD_LIST_END = "#";
+
 	//default locations of index files and shared/downloaded files
 	const std::string CLIENT_DOWNLOAD_INDEX = "download.db";
-	const std::string SERVER_SHARE_INDEX = "share.db";
-	const std::string EXPLORATION_SEARCH_DATABASE = "search.db";
 	const std::string CLIENT_DOWNLOAD_DIRECTORY = "download/";
+	const std::string EXPLORATION_SEARCH_DATABASE = "search.db";
+	const std::string MESSAGE_DIGEST_INDEX = "messageDigest.idx";
+	const std::string MESSAGE_DIGEST_DB = "messageDigest.db";
 	const std::string SERVER_SHARE_DIRECTORY = "share/";
+	const std::string SERVER_SHARE_INDEX = "share.db";
 
 	//field delimiter for all text files
 	const std::string DELIMITER = "|";
