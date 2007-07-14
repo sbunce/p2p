@@ -42,12 +42,13 @@ int main(int argc, char *argv[])
 	std::deque<std::string> retrieval1;
 	Digest_DB.retrieveDigests("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", retrieval1);
 
-	for(std::deque<std::string>::iterator iter0 = retrieval1.begin(); iter0 !=retrieval1.end(); iter0++){
+	for(std::deque<std::string>::iterator iter0 = retrieval1.begin(); iter0 != retrieval1.end(); iter0++){
 
 		std::cout << *iter0 << "\n";
 	}
 
 	Digest_DB.deleteDigests("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+	Digest_DB.deleteDigests("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
 
 	return 0;
 }

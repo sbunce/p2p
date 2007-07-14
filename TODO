@@ -1,7 +1,8 @@
 BUGS AND NECESSARY FEATURES
 
--digest_DB should have the index combined in to the .db file and shouldb be a
-linked list also.
+-digest_DB should have a free record list in the index file to reuse space, think
+about having RRN_Free and RRN_Count moved to the db file and have the index have its
+own counts
 
 -serverIndex.cc line 188-194 move to ctor
 
@@ -13,6 +14,9 @@ twice the second download doesn't get appended to the first.
 
 
 POSSIBLE FEATURES
+
+-Look in to smart pointers, especially in the download/superBlock where new'ing
+and delete'ing is crossing class barriers.
 
 -A timer on all servers that keeps track of time of request to time of response
 or fulfilled request. A way to disconnect servers that are unresponsive.

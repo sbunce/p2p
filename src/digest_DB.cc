@@ -22,21 +22,23 @@ digest_DB::digest_DB()
 	else{ //create index and set defaults
 		std::ofstream index_fstream(global::MESSAGE_DIGEST_INDEX.c_str());
 
-		//write the default RRN_Count to the file (0)
+		//prepare default RRN_Count to the file (0)
 		std::string RRN_CountIndex = "0";
 		RRN_CountIndex.append(global::RRN_SIZE - RRN_CountIndex.size(), ' ');
-		index_fstream << RRN_CountIndex;
 
-		//write the default RRN_Free to the file (-1)
+		//prepare default RRN_Free to the file (-1)
 		std::string RRN_FreeIndex = "-1";
 		RRN_FreeIndex.append(global::RRN_SIZE - RRN_FreeIndex.size(), ' ');
-		index_fstream << RRN_FreeIndex << "\n";
+
+		//combine and write
+		std::string combine = RRN_CountIndex + RRN_FreeIndex;
+		combine.append(global::RECORD_SIZE - combine.size(), ' ');
+		index_fstream << combine << "\n";
+		index_fstream.close();
 
 		//set the RRN_Free and RRN_Count data members
 		RRN_Free = -1;
 		RRN_Count = 0;
-
-		index_fstream.close();
 	}
 
 	//check if the database file exists, if it doesn't then create it
@@ -54,25 +56,23 @@ digest_DB::digest_DB()
 bool digest_DB::addDigests(std::string key, std::deque<std::string> & digests)
 {
 	std::fstream index_fstream(global::MESSAGE_DIGEST_INDEX.c_str());
-	std::fstream DB_fstream(global::MESSAGE_DIGEST_DB.c_str());
 
 	std::string temp; //holds lines from DB or index
 
 	//not interested in the first line(RRN_Free, RRN_Count);
-	index_fstream.seekg(global::RRN_SIZE * 2);
+	index_fstream.seekg(global::RECORD_SIZE);
 
 	//check to see if this set of digests already exists
 	while(getline(index_fstream, temp)){
 
 		if(key == temp.substr(0, global::MESSAGE_DIGEST_SIZE)){
 			index_fstream.close();
-			DB_fstream.close();
 			return false;
 		}
 	}
-
 	index_fstream.close();
 
+	std::fstream DB_fstream(global::MESSAGE_DIGEST_DB.c_str());
 	std::string previous_RRN; //stores the RRN for each iteration to link records
 	int end_RRN = -1;         //the RRN of the end of this list
 
@@ -95,7 +95,7 @@ bool digest_DB::addDigests(std::string key, std::deque<std::string> & digests)
 			else{
 				record = *iter0 + previous_RRN;
 			}
-			record.append((global::RECORD_SIZE - 1) - record.size(), ' '); //-1 for \n
+			record.append((global::RECORD_SIZE) - record.size(), ' ');
 			DB_fstream << record << "\n";
 
 			//save the RRN for the next iteration
@@ -129,7 +129,7 @@ bool digest_DB::addDigests(std::string key, std::deque<std::string> & digests)
 			else{
 				record = *iter0 + previous_RRN;
 			}
-			record.append((global::RECORD_SIZE - 1) - record.size(), ' ');
+			record.append((global::RECORD_SIZE) - record.size(), ' ');
 			DB_fstream << record << "\n";
 
 			//save the RRN for the next iteration
@@ -150,38 +150,40 @@ bool digest_DB::addDigests(std::string key, std::deque<std::string> & digests)
 		}
 	}
 
-	index_fstream.open(global::MESSAGE_DIGEST_INDEX.c_str());
+	DB_fstream.close();
 
 	//update the index
-	update_RRN_Free(index_fstream);
-	update_RRN_Count(index_fstream);
+	addKeyToIndex(key, end_RRN);
+	update_RRN_Free();
+	update_RRN_Count();
 
-	//add the key and RRN for the last messageDigest in the list to the index
+	return true;
+}
+
+void digest_DB::addKeyToIndex(std::string key, int RRN)
+{
+	std::fstream index_fstream(global::MESSAGE_DIGEST_INDEX.c_str());
 	index_fstream.seekp(0, std::ios::end);
+
 	std::ostringstream record_s;
-	record_s << key << end_RRN;
+	record_s << key << RRN;
 	std::string record = record_s.str();
 	record.append(global::RECORD_SIZE - record.size(), ' ');
 	index_fstream << record << "\n";
-
-	index_fstream.close();
-	DB_fstream.close();
-
-	return true;
 }
 
 bool digest_DB::deleteDigests(std::string key)
 {
 	std::fstream index_fstream(global::MESSAGE_DIGEST_INDEX.c_str());
 
-	std::string temp;      //holds lines from DB or index
-	int next_RRN = -1;     //holds next RRN to be visited
+	std::string temp;  //holds lines from DB or index
+	int next_RRN = -1; //holds next RRN to be visited
 
 	//holds the original RRN_Free to link this list to
 	int RRN_FreeStart = RRN_Free;
 
 	//not interested in the first line(RRN_Free, RRN_Count);
-	index_fstream.seekg(global::RRN_SIZE * 2);
+	index_fstream.seekg(global::RECORD_SIZE);
 
 	//locate the messageDigest list to delete
 	while(getline(index_fstream, temp)){
@@ -208,7 +210,8 @@ bool digest_DB::deleteDigests(std::string key)
 
 	while(true){
 
-		DB_fstream.seekp((next_RRN * global::RECORD_SIZE) + global::MESSAGE_DIGEST_SIZE, std::ios::beg);
+		//seek to the RRN of the first record in the list
+		DB_fstream.seekp((next_RRN * (global::RECORD_SIZE + 1)) + global::MESSAGE_DIGEST_SIZE, std::ios::beg);
 
 		//read the RRN (pointer to next in list)
 		char RRN_ch[global::MESSAGE_DIGEST_SIZE + 1];
@@ -217,7 +220,8 @@ bool digest_DB::deleteDigests(std::string key)
 
 		if(temp == global::RECORD_LIST_END){
 
-			DB_fstream.seekp((next_RRN * global::RECORD_SIZE) + global::MESSAGE_DIGEST_SIZE, std::ios::beg);
+			//seek to the RRN of the next record in the list
+			DB_fstream.seekp((next_RRN * (global::RECORD_SIZE + 1)) + global::MESSAGE_DIGEST_SIZE, std::ios::beg);
 
 			if(RRN_FreeStart != -1){
 				//link the RRN_Free list with the end of the deleted record list
@@ -227,7 +231,7 @@ bool digest_DB::deleteDigests(std::string key)
 				RRN_FreeStartLink.append(global::RRN_SIZE - RRN_FreeStartLink.size(), ' ');
 				DB_fstream << RRN_FreeStartLink;
 			}
-			else{
+			else{ //use free record space
 				std::string RRN_FreeStartLink = global::RECORD_LIST_END;
 				RRN_FreeStartLink.append(global::RRN_SIZE - RRN_FreeStartLink.size(), ' ');
 				DB_fstream << RRN_FreeStartLink;
@@ -241,8 +245,10 @@ bool digest_DB::deleteDigests(std::string key)
 		}
 	}
 
+	index_fstream.close();
+
 	//update the index
-	update_RRN_Free(index_fstream);
+	update_RRN_Free();
 }
 
 bool digest_DB::retrieveDigests(std::string key, std::deque<std::string> & digests)
@@ -253,7 +259,7 @@ bool digest_DB::retrieveDigests(std::string key, std::deque<std::string> & diges
 	int next_RRN = -1; //holds next RRN to be visited
 
 	//not interested in the first line(RRN_Free, RRN_Count);
-	index_fstream.seekg(global::RRN_SIZE * 2);
+	index_fstream.seekg(global::RECORD_SIZE);
 
 	//find the RRN of the start of the digests list
 	while(getline(index_fstream, temp)){
@@ -276,7 +282,7 @@ bool digest_DB::retrieveDigests(std::string key, std::deque<std::string> & diges
 	//read the list and copy to digests deque
 	while(next_RRN != -1){
 
-		DB_fstream.seekp(next_RRN * global::RECORD_SIZE, std::ios::beg);
+		DB_fstream.seekp(next_RRN * (global::RECORD_SIZE + 1), std::ios::beg);
 
 		//read the messageDigest and store it in the digests deque
 		char messageDigest_ch[global::MESSAGE_DIGEST_SIZE + 1];
@@ -300,8 +306,9 @@ bool digest_DB::retrieveDigests(std::string key, std::deque<std::string> & diges
 	return true;
 }
 
-void digest_DB::update_RRN_Free(std::fstream & index_fstream)
+void digest_DB::update_RRN_Free()
 {
+	std::fstream index_fstream(global::MESSAGE_DIGEST_INDEX.c_str());
 	index_fstream.seekp(0, std::ios::beg);
 
 	std::ostringstream RRN_FreeIndex_s;
@@ -309,10 +316,13 @@ void digest_DB::update_RRN_Free(std::fstream & index_fstream)
 	std::string RRN_FreeIndex = RRN_FreeIndex_s.str();
 	RRN_FreeIndex.append(global::RRN_SIZE - RRN_FreeIndex.size(), ' ');
 	index_fstream << RRN_FreeIndex;
+
+	index_fstream.close();
 }
 
-void digest_DB::update_RRN_Count(std::fstream & index_fstream)
+void digest_DB::update_RRN_Count()
 {
+	std::fstream index_fstream(global::MESSAGE_DIGEST_INDEX.c_str());
 	index_fstream.seekp(global::RRN_SIZE, std::ios::beg);
 
 	std::ostringstream RRN_CountIndex_s;
@@ -320,5 +330,7 @@ void digest_DB::update_RRN_Count(std::fstream & index_fstream)
 	std::string RRN_CountIndex = RRN_CountIndex_s.str();
 	RRN_CountIndex.append(global::RRN_SIZE - RRN_CountIndex.size(), ' ');
 	index_fstream << RRN_CountIndex;
+
+	index_fstream.close();
 }
 

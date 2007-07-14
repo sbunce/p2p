@@ -9,11 +9,10 @@
 /*
 MESSAGE_DIGEST_INDEX file format:
 First Line: <RRN_Free><RRN_Count>
-All other lines fit this grammar: <key>|<RRN>
+All Other Lines: <key><RRN>
 
 MESSAGE_DIGEST_DB file format:
-<messageDigest>|<RRN>
-the record size is fixed length at MESSAGE_DIGEST_SIZE + RRN_SIZE + DELIMITER.size()
+<messageDigest><RRN>
 */
 
 class digest_DB
@@ -38,11 +37,13 @@ private:
 	int RRN_Count; //how many records there in the database(including deleted)
 
 	/*
+	addKeyToIndex    - adds the key to the index file
 	update_RRN_Free  - updates the RRN_Free in the index file
 	update_RRN_Count - updates the RRN_Count in the index file
 	*/
-	void update_RRN_Free(std::fstream & index_fstream);
-	void update_RRN_Count(std::fstream & index_fstream);
+	void addKeyToIndex(std::string key, int RRN);
+	void update_RRN_Free();
+	void update_RRN_Count();
 };
 #endif
 
