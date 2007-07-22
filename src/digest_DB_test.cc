@@ -18,7 +18,6 @@ int main(int argc, char *argv[])
 
 	Digest_DB.addDigests("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", myDeq1);
 
-
 	std::deque<std::string> myDeq2;
 	myDeq2.push_back("6666666666666666666666666666666666666666");
 	myDeq2.push_back("7777777777777777777777777777777777777777");
@@ -39,6 +38,16 @@ int main(int argc, char *argv[])
 	Digest_DB.addDigests("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ", myDeq3);
 
 
+	std::deque<std::string> myDeq4;
+	myDeq4.push_back("BABABABABABABABABABABABABABABABABABABABA");
+	myDeq4.push_back("CDCDCDCDCDCDCDCDCDCDCDCDCDCDCDCDCDCDCDCD");
+	myDeq4.push_back("DEDEDEDEDEDEDEDEDEDEDEDEDEDEDEDEDEDEDEDE");
+	myDeq4.push_back("EFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEF");
+	myDeq4.push_back("FGFGFGFGFGFGFGFGFGFGFGFGFGFGFGFGFGFGFGFG");
+
+	Digest_DB.addDigests("1111111111111111111111111111111111111111", myDeq4);
+
+
 	std::deque<std::string> retrieval1;
 	Digest_DB.retrieveDigests("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", retrieval1);
 
@@ -48,7 +57,7 @@ int main(int argc, char *argv[])
 	}
 
 	Digest_DB.deleteDigests("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
-	Digest_DB.deleteDigests("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
+//	Digest_DB.deleteDigests("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
 
 	return 0;
 }

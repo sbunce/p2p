@@ -237,6 +237,12 @@ void server::newCon(int listener)
 	}
 }
 
+bool queueRequest_checkAge(server::requestBufferElement & RBE)
+{
+	time_t currentTime = time(0);
+	return (currentTime - RBE.lastSeen > global::TIMEOUT);
+}
+
 void server::queueRequest(int clientSock, char recvBuff[], int nbytes)
 {
 	std::string request(recvBuff, nbytes);
@@ -342,12 +348,7 @@ void server::queueRequest(int clientSock, char recvBuff[], int nbytes)
 		}
 
 		//remove requestBuffer elements that are too old
-		for(std::vector<requestBufferElement>::iterator iter0 = requestBuffer.begin(); iter0 != requestBuffer.end(); iter0++){
-
-			if(currentTime - iter0->lastSeen > global::TIMEOUT){
-				requestBuffer.erase(iter0++); //increment the iterator while still valid
-			}
-		}
+		remove_if(requestBuffer.begin(), requestBuffer.end(), queueRequest_checkAge);
 	}
 }
 

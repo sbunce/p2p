@@ -23,15 +23,13 @@ void client::disconnect(int socketfd)
 	std::cout << "info: client disconnecting socket number " << socketfd << "\n";
 #endif
 
-	//if socket = -1 then no socket yet created so no need to close()
-	if(socketfd != -1){
-		close(socketfd);
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(masterfdsMutex);
 
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(masterfdsMutex);
-		FD_CLR(socketfd, &masterfds);
-		}//end lock scope
-	}
+	close(socketfd);
+	FD_CLR(socketfd, &masterfds);
+
+	}//end lock scope
 }
 
 bool client::getDownloadInfo(std::vector<infoBuffer> & downloadInfo)
@@ -134,10 +132,16 @@ void client::processBuffer(int socketfd, char recvBuff[], int nbytes)
 	}//end lock scope
 }
 
-//returns true if serverHolder element empty
-bool removeAbusive_checkEmpty(std::list<download::serverElement *> & serverHolderElement)
+bool client::removeAbusive_checkContains(std::list<download::abusiveServerElement> & abusiveServerTemp, download::serverElement * SE)
 {
-	return serverHolderElement.empty();
+	for(std::list<download::abusiveServerElement>::iterator iter0 = abusiveServerTemp.begin(); iter0 != abusiveServerTemp.end(); iter0++){
+
+		if(iter0->server_IP == SE->server_IP){
+			return true;
+		}
+	}
+
+	return false;
 }
 
 void client::removeAbusive()
@@ -145,38 +149,69 @@ void client::removeAbusive()
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
 
-	//remove serverElement pointers from the serverHolder if they're marked as abusive
+	std::list<download::abusiveServerElement> abusiveServerTemp;
+
+	//check to see if any downloads are reporting abusive servers
 	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
-
-		for(std::list<download::serverElement *>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
-
-			if((*iter1)->abusive){
-
-				iter0->Server.erase(iter1++); //iterator incremented while still valid
-			}
-		}
+		abusiveServerTemp.splice(abusiveServerTemp.end(), iter0->abusiveServer);
 	}
 
-	//remove serverElement pointers from the downloads, free the memory, and disconnect the socket if they're marked as abusive
-	for(std::list<std::list<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
+	//if new abusive servers discovered find and remove associated serverElements
+	if(!abusiveServerTemp.empty()){
+		//sort and remove duplicates
+		abusiveServerTemp.sort();
+		abusiveServerTemp.unique();
+	
+		//check for abusive serverElement pointers within each download
+		for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
 
-		if(iter0->front()->abusive){
+			//remove serverElements marked as abusive
+			std::list<download::serverElement *>::iterator Server_iter = iter0->Server.begin();
+			while(Server_iter != iter0->Server.end()){
 
-			disconnect(iter0->front()->socketfd);
-
-			//free memory
-			for(std::list<download::serverElement *>::iterator iter1 = iter0->begin(); iter1 != iter0->end(); iter1++){
-				delete *iter1;
+				if(removeAbusive_checkContains(abusiveServerTemp, *Server_iter)){
+					Server_iter = iter0->Server.erase(Server_iter);
+				}
+				else{
+					Server_iter++;
+				}
 			}
+		}
 
-			serverHolder.erase(iter0++); //iterator incremented while still valid
+		//check for abusive serverElement pointer rings
+		std::list<std::list<download::serverElement *> >::iterator serverHolder_iter = serverHolder.begin();
+		while(serverHolder_iter != serverHolder.end()){
+
+			//if abusive element found remove ring and free ring memory
+			if(removeAbusive_checkContains(abusiveServerTemp, serverHolder_iter->front())){
+
+				disconnect(serverHolder_iter->front()->socketfd);
+
+				for(std::list<download::serverElement *>::iterator iter0 = serverHolder_iter->begin(); iter0 != serverHolder_iter->end(); iter0++){
+					delete *iter0;
+				}
+
+				serverHolder_iter = serverHolder.erase(serverHolder_iter);
+			}
+			else{
+				serverHolder_iter++;
+			}
 		}
 	}
 
 	}//end lock scope
 }
 
-inline void client::removeTerminated()
+void client::removeDisconnected(int socketfd)
+{
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(downloadBufferMutex);
+
+
+	}//end lock scope
+}
+
+void client::removeTerminated()
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
@@ -243,6 +278,8 @@ void client::start_thread()
 	char recvBuff[global::BUFFER_SIZE];  //the receive buffer
    int nbytes;                          //how many bytes received in one shot
 
+	FD_ZERO(&masterfds);
+
 	//how long select() waits before returning(unless data received)
 	timeval tv;
 
@@ -257,7 +294,7 @@ void client::start_thread()
 			postResumeConnect();
 		}
 
-		removeAbusive();       //check for abusive servers and disconnect them
+		removeAbusive();       //remove servers marked as abusive
 		removeTerminated();    //check for downloads scheduled for deletion
 		sendPendingRequests(); //send requests for servers that are ready
 

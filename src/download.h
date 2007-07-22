@@ -20,7 +20,6 @@ public:
 			token = false;
 			bytesExpected = 0;
 			lastRequest = false;
-			abusive = false;
 		}
 
 		//these three set automatically
@@ -34,16 +33,31 @@ public:
 		int file_ID;           //the ID of the file on the server
 		std::string bucket;    //buffer for received data
 
-		/*
-		If this is set to true the server will be disconnected and all serverElements
-		from the client::serverHolder and download::Server will be removed.
-		*/
-		bool abusive;
-
 		//these are set by the client to keep track of the last request.
 		int blockRequested; //what block was requested
 		int bytesExpected;  //how many bytes need to be received to finish the request
 	};
+
+	//element of abusiveServer
+	class abusiveServerElement
+	{
+	public:
+		bool operator <(abusiveServerElement & RHS)
+		{
+			return *this < RHS;
+		}
+
+		bool operator ==(abusiveServerElement & RHS)
+		{
+			return this->server_IP == RHS.server_IP;
+		}
+
+		std::string server_IP;
+		int socketfd;
+	};
+
+	//stores abusive server information
+	std::list<abusiveServerElement> abusiveServer;
 
 	//stores information specific to certain servers
 	std::list<serverElement *> Server;

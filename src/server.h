@@ -34,6 +34,20 @@ public:
 		int percentComplete;
 	};
 
+	/*
+	If the client can't send REQUEST_CONTROL_SIZE bytes in one shot then the
+	amount it can send will be stored here until all REQUEST_CONTROL_SIZE bytes
+	are gotten. Once the full request is made it will be processed. This class
+	is public but no one but the server should need one.
+	*/
+	class requestBufferElement
+	{
+	public:
+		int lastSeen;
+		int clientSock;
+		std::string bucket; //holds the partial request
+	};
+
 	server();
 	/*
 	getUploadInfo - updates and returns upload information
@@ -57,19 +71,6 @@ private:
 		int clientSock;        //what socket to send the data to
 		int file_ID;           //what file the client has requested
 		int fileBlock;         //what chunk of the file the client wants(buffer*offset)
-	};
-
-	/*
-	If the client can't send REQUEST_CONTROL_SIZE bytes in one shot then the
-	amount it can send will be stored here until all REQUEST_CONTROL_SIZE bytes
-	are gotten. Once the full request is made it will be processed.
-	*/
-	class requestBufferElement
-	{
-	public:
-		int lastSeen;
-		int clientSock;
-		std::string bucket; //holds the partial request
 	};
 
 	//use by uploadSpeed to track the progress of an upload
@@ -112,10 +113,9 @@ private:
 	disconnect     - disconnect client and remove socket from master set
 	calculateSpeed - process the sendQueue and update uploadSpeed
 	newCon         - sets up socket for client
-	serveRequest   - the network protocol of this program, does actions based on request
-	sendFile       - send a file to a client
-	stateTick      - do actions pending, like sending data, etc
-	start_th       - starts the server thread
+	queueRequest   - interprets the request from a client and buffers it
+	sendBlock      - sends a fileBlock to a client
+	stateTick      - do pending actions
 	*/
 	void disconnect(int clientSock);
 	void calculateSpeed(int clientSock, int file_ID, int fileBlock);

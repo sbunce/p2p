@@ -330,7 +330,12 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 #ifdef DEBUG
 				std::cout << "error: client::processBuffer() detected buffer overrun from " << (*iter0)->server_IP << "\n";
 #endif
-				(*iter0)->abusive = true;
+				abusiveServerElement temp;
+				temp.server_IP = (*iter0)->server_IP;
+				temp.socketfd = (*iter0)->socketfd;
+				abusiveServer.push_back(temp);
+
+				break;
 			}
 
 			//if full block received add it to a superBlock and ready another request

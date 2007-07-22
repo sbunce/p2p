@@ -1,22 +1,20 @@
 BUGS AND NECESSARY FEATURES
 
--digest_DB should have a free record list in the index file to reuse space, think
-about having RRN_Free and RRN_Count moved to the db file and have the index have its
-own counts
-
--serverIndex.cc line 188-194 move to ctor
-
--Have the download::writeBlock function just write the trailing superBlock
-with not parameter passed in to it. If it fails hash check remove it.
+-If two downloads are added with a very small interval of time between them
+an extra socket is opened to the same host if there is already a socket open
+to that host.
 
 -There needs to be a check so that when the user tries to download the same thing
 twice the second download doesn't get appended to the first.
 
+-The IP addresses don't update when servers go missing. There should be some
+indication under the IP field that IP's are being searched for. Make it say
+"searching..";
+
 
 POSSIBLE FEATURES
 
--Look in to smart pointers, especially in the download/superBlock where new'ing
-and delete'ing is crossing class barriers.
+-Function to reduce fdmax when sockets are closed.
 
 -A timer on all servers that keeps track of time of request to time of response
 or fulfilled request. A way to disconnect servers that are unresponsive.
@@ -32,19 +30,14 @@ and over(trying to waste bandwidth to degrade serving capability).
 
 IDEAS
 
--Make the hash database like a streaming filesystem where every hash field points
-to the next hash field. The file format should be fixed length where the pointer
-to the record stored at the end of each record is a RRN.
-
 -Exploration belongs in the client class, not out on it's own.
-
--Make a tracker that is basically a web server. The tracker will serve XML files
-and track who's connected to the download. The tracker will trust other trackers
-to form a tree or trust.
 
 -Derive the download class from class X. Virtualize functions in class X. This 
 will allow you to make other classes and derive them from class X which will 
 allow downloading of different things with different buffer sizes.
 
--Consider using a bitset to convert fileBlock numbers in to base 2 to maximize
-usage of bytes sent over the network.
+-File location should be done with trackers which are organized in to a tree
+structure such that if the user adds a tracker the user will also get to see
+the files of the trackers that tracker trusts and the files that that tracker
+trusts etc. Have an option to limit trust levels to direct trust only, one
+level inheritance and all level inheritance.

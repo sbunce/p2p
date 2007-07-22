@@ -45,7 +45,7 @@ public:
 	getTotalSpeed     - returns the total download speed
 	start             - start the client thread
 	startDownload     - start a new download
-	terminateDownload - wrapper for terminateDownload()
+	stopDownload      - wrapper for terminateDownload()
 	*/
 	bool getDownloadInfo(std::vector<infoBuffer> & downloadInfo);
 	std::string getTotalSpeed();
@@ -75,20 +75,24 @@ private:
 	std::list<std::list<download::serverElement *> > serverHolder;
 
 	/*
-	disconnect                - disconnects a socket
-	processBuffer             - establishes the receive protocol
-	removeAbusive             - disconnects sockets and removes abusive servers
-	removeTerminated          - removes downloads that are done terminating
-	start_thread              - starts the main client thread
-	sendPendingRequests       - send pending requests(duh)
-	sendRequest               - sends a request to a server
-	terminateDownload_real    - terminate a download, all calls to this function need to be
-	                          - within a downloadBufferMutex scoped lock
+	disconnect                  - disconnects a socket
+	processBuffer               - establishes the receive protocol
+	removeAbusive_checkContains - returns true if the vector contains a serverElement with a matching IP
+	removeAbusive               - disconnects sockets and removes abusive servers
+	removeDisconnected          - removes serverElements for servers that disconnected from us
+	removeTerminated            - removes downloads that are done terminating
+	start_thread                - starts the main client thread
+	sendPendingRequests         - send pending requests(duh)
+	sendRequest                 - sends a request to a server
+	terminateDownload_real      - terminate a download, all calls to this function must be
+	                            - within a downloadBufferMutex scoped lock!
 	*/
 	void disconnect(int socketfd);
 	void postResumeConnect();
 	void processBuffer(int socketfd, char recvBuff[], int nbytes);
+	bool removeAbusive_checkContains(std::list<download::abusiveServerElement> & abusiveServerTemp, download::serverElement * SE);
 	void removeAbusive();
+	void removeDisconnected(int socketfd);
 	void removeTerminated();
 	void start_thread();
 	void sendPendingRequests();
