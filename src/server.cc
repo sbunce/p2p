@@ -90,17 +90,13 @@ void server::calculateSpeed(int clientSock, int file_ID, int fileBlock)
 	}
 }
 
-std::string server::getTotalSpeed()
+int server::getTotalSpeed()
 {
 	int totalBytes = 0;
 
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(Mutex);
 
-	/*
-	Loop through all downloads to determine how many bits were downloaded in the
-	last SPEED_AVERAGE seconds.
-	*/
 	for(std::vector<speedElement>::iterator iter0 = uploadSpeed.begin(); iter0 < uploadSpeed.end(); iter0++){
 		for(int x=1; x < iter0->downloadSecond.size() - 1; x++){
 			totalBytes += iter0->secondBytes[x];
@@ -111,11 +107,7 @@ std::string server::getTotalSpeed()
 
 	int speed = totalBytes / global::SPEED_AVERAGE;
 
-	speed = speed / 1024; //convert to kB
-	std::ostringstream speed_s;
-	speed_s << speed << " kB/s";
-
-	return speed_s.str();
+	return speed;
 }
 
 bool server::getUploadInfo(std::vector<infoBuffer> & uploadInfo)

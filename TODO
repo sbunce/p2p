@@ -1,29 +1,15 @@
 BUGS AND NECESSARY FEATURES
 
--If two downloads are added with a very small interval of time between them
-an extra socket is opened to the same host if there is already a socket open
-to that host.
-
 -There needs to be a check so that when the user tries to download the same thing
 twice the second download doesn't get appended to the first.
 
--The IP addresses don't update when servers go missing. There should be some
-indication under the IP field that IP's are being searched for. Make it say
-"searching..";
-
+-Fix includes, change from " " to < > and have the proper linker statements.
 
 POSSIBLE FEATURES
 
--Function to reduce fdmax when sockets are closed.
+-A server timeout for servers that accept requests but never respond.
 
--A timer on all servers that keeps track of time of request to time of response
-or fulfilled request. A way to disconnect servers that are unresponsive.
-
--Client has no control of how many connections it will try to make. This
-feature can be added once exploration is working.
-
--Add a check to make sure the client is not requesting the same blocks over
-and over(trying to waste bandwidth to degrade serving capability).
+-Client control of how many outgoing connections it will try to make.
 
 -Have the serverIndex poll to check for new files added to share.
 

@@ -20,13 +20,11 @@ namespace global //"global" namespace ;-)
 	const int UNRELIABLE_CLIENT_VALUE = 500;
 
 	/*
-	If enabled server sometimes sends 1 byte more than it should. The value is 
-	the number of packets to be abusive with out of 10,000. Example: 15 = 0.0015%.
-	This option will result in the client being abused disconnecting the server.
-	This option is actually applied on the client but the effect is the same.
+	If enabled server sometimes sends 1 byte more than it should. The abusive server
+	value is the number of packets to process before simulating abuse.
 	*/
-	#define ABUSIVE_SERVER
-	const int ABUSIVE_SERVER_VALUE = 1;
+	//#define ABUSIVE_SERVER
+	const int ABUSIVE_SERVER_VALUE = 25000;
 
 	/* ************ END DEBUGGING OPTIONS ************ */
 

@@ -80,6 +80,7 @@ public:
 	startTerminate   - starts the termination process
 	terminating      - returns true if download is in the process of terminating
 	readyTerminate   - returns true if this download is ready to be terminated
+	zeroSpeed        - reset download speed to zero, useful to run when last server removed
 	*/
 	void addServer(download::serverElement & Server);
 	bool complete();
@@ -96,6 +97,7 @@ public:
 	void startTerminate();
 	bool terminating();
 	bool readyTerminate();
+	void zeroSpeed();
 
 private:
 	sha SHA; //creates message digests for superBlocks

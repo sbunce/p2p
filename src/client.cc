@@ -17,7 +17,7 @@ client::client()
 	resumedDownloads = ClientIndex.initialFillBuffer(downloadBuffer, serverHolder);
 }
 
-void client::disconnect(int socketfd)
+inline void client::disconnect(int socketfd)
 {
 #ifdef DEBUG
 	std::cout << "info: client disconnecting socket number " << socketfd << "\n";
@@ -28,6 +28,16 @@ void client::disconnect(int socketfd)
 
 	close(socketfd);
 	FD_CLR(socketfd, &masterfds);
+
+	//reduce fdmax if possible
+	int maxFound = 0;
+	for(int x=0; x<fdmax; x++){
+		if(FD_ISSET(x, &masterfds)){
+			maxFound = x;
+		}
+	}
+
+	fdmax = maxFound;
 
 	}//end lock scope
 }
@@ -73,6 +83,10 @@ bool client::getDownloadInfo(std::vector<infoBuffer> & downloadInfo)
 			info.server_IP += (*iter1)->server_IP + ", ";
 		}
 
+		if(info.server_IP.empty()){
+			info.server_IP = "searching..";
+		}
+
 		info.fileName = iter0->getFileName();
 		info.fileSize = fileSize_s.str();
 		info.speed = downloadSpeed_s.str();
@@ -91,7 +105,7 @@ bool client::getDownloadInfo(std::vector<infoBuffer> & downloadInfo)
 	return true;
 }
 
-std::string client::getTotalSpeed()
+int client::getTotalSpeed()
 {
 	int speed = 0;
 
@@ -104,14 +118,40 @@ std::string client::getTotalSpeed()
 
 	}//end lock scope
 
-	speed = speed / 1024; //convert to kB
-	std::ostringstream speed_s;
-	speed_s << speed << " kB/s";
-
-	return speed_s.str();
+	return speed;
 }
 
-void client::processBuffer(int socketfd, char recvBuff[], int nbytes)
+bool client::newConnection(int & socketfd, std::string & server_IP)
+{
+	sockaddr_in dest_addr;
+
+	socketfd = socket(PF_INET, SOCK_STREAM, 0);
+	FD_SET(socketfd, &masterfds);
+
+	dest_addr.sin_family = AF_INET;                           //set socket type TCP
+	dest_addr.sin_port = htons(global::P2P_PORT);             //set destination port
+	dest_addr.sin_addr.s_addr = inet_addr(server_IP.c_str()); //set destination IP
+	memset(&(dest_addr.sin_zero),'\0',8);                     //zero out the rest of struct
+
+	//make sure fdmax is always the highest socket number
+	if(socketfd > fdmax){
+		fdmax = socketfd;
+	}
+
+	if(connect(socketfd, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) == -1){
+#ifdef DEBUG
+		std::cout << "error: client::sendRequest() could not connect to server\n";
+#endif
+		return false; //new connection failed
+	}
+#ifdef DEBUG
+	std::cout << "info: client::sendRequest() created socket " << socketfd << " for " << server_IP << "\n";
+#endif
+
+	return true; //new connection created
+}
+
+inline void client::processBuffer(int socketfd, char recvBuff[], int nbytes)
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
@@ -132,6 +172,16 @@ void client::processBuffer(int socketfd, char recvBuff[], int nbytes)
 	}//end lock scope
 }
 
+void client::resetHungDownloadSpeed()
+{
+	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
+
+		if(iter0->Server.empty()){
+			iter0->zeroSpeed();
+		}
+	}
+}
+
 bool client::removeAbusive_checkContains(std::list<download::abusiveServerElement> & abusiveServerTemp, download::serverElement * SE)
 {
 	for(std::list<download::abusiveServerElement>::iterator iter0 = abusiveServerTemp.begin(); iter0 != abusiveServerTemp.end(); iter0++){
@@ -144,7 +194,7 @@ bool client::removeAbusive_checkContains(std::list<download::abusiveServerElemen
 	return false;
 }
 
-void client::removeAbusive()
+inline void client::removeAbusive()
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
@@ -158,6 +208,7 @@ void client::removeAbusive()
 
 	//if new abusive servers discovered find and remove associated serverElements
 	if(!abusiveServerTemp.empty()){
+
 		//sort and remove duplicates
 		abusiveServerTemp.sort();
 		abusiveServerTemp.unique();
@@ -199,19 +250,56 @@ void client::removeAbusive()
 		}
 	}
 
+	resetHungDownloadSpeed();
+
 	}//end lock scope
 }
 
-void client::removeDisconnected(int socketfd)
+inline void client::removeDisconnected(int socketfd)
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
+	
+	//check for disconnected serverElements
+	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
 
+		//remove serverElements that were disconnected
+		std::list<download::serverElement *>::iterator Server_iter = iter0->Server.begin();
+		while(Server_iter != iter0->Server.end()){
+
+			if((*Server_iter)->socketfd == socketfd){
+				Server_iter = iter0->Server.erase(Server_iter);
+			}
+			else{
+				Server_iter++;
+			}
+		}
+	}
+
+	//check for disconnected serverElements
+	std::list<std::list<download::serverElement *> >::iterator serverHolder_iter = serverHolder.begin();
+	while(serverHolder_iter != serverHolder.end()){
+
+		//remove serverElements rings for disconnected servers
+		if(serverHolder_iter->front()->socketfd == socketfd){
+
+			for(std::list<download::serverElement *>::iterator iter0 = serverHolder_iter->begin(); iter0 != serverHolder_iter->end(); iter0++){
+				delete *iter0;
+			}
+
+			serverHolder_iter = serverHolder.erase(serverHolder_iter);
+		}
+		else{
+			serverHolder_iter++;
+		}
+	}
+
+	resetHungDownloadSpeed();
 
 	}//end lock scope
 }
 
-void client::removeTerminated()
+inline void client::removeTerminated()
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
@@ -230,35 +318,16 @@ void client::removeTerminated()
 	}//end lock scope
 }
 
-void client::postResumeConnect()
+inline void client::postResumeConnect()
 {
 	sockaddr_in dest_addr;
 
 	//create sockets for the resumed downloads
 	for(std::list<std::list<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
-			
-		int socketfd = socket(PF_INET, SOCK_STREAM, 0);
-		FD_SET(socketfd, &masterfds);
 
-		dest_addr.sin_family = AF_INET;                           //set socket type TCP
-		dest_addr.sin_port = htons(global::P2P_PORT);             //set destination port
-		dest_addr.sin_addr.s_addr = inet_addr(iter0->front()->server_IP.c_str()); //set destination IP
-		memset(&(dest_addr.sin_zero),'\0',8);                     //zero out the rest of struct
-
-		//make sure fdmax is always the highest socket number
-		if(socketfd > fdmax){
-			fdmax = socketfd;
-		}
-
-		if(connect(socketfd, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) == -1){
-#ifdef DEBUG
-			std::cout << "error: client::sendRequest() could not connect to server\n";
-#endif
-		}
-#ifdef DEBUG
-		std::cout << "info: client::sendRequest() created socket " << socketfd << " for " << iter0->front()->server_IP << "\n";
-#endif
-
+		int socketfd;
+		newConnection(socketfd, iter0->front()->server_IP);
+	
 		//set all server elements with this IP to the same socket
 		for(std::list<download::serverElement *>::iterator iter1 = iter0->begin(); iter1 != iter0->end(); iter1++){
 			(*iter1)->socketfd = socketfd;
@@ -303,7 +372,7 @@ void client::start_thread()
 		because linux will change them(POSIX.1-2001 allows this). This work-around 
 		doesn't adversely effect other operating systems.
 		*/
-		tv.tv_sec = 1;
+		tv.tv_sec = 2;
 		tv.tv_usec = 0;
 
 		/*
@@ -329,6 +398,7 @@ void client::start_thread()
 
 			if(FD_ISSET(x, &readfds)){
 				if((nbytes = recv(x, recvBuff, sizeof(recvBuff), 0)) <= 0){
+					removeDisconnected(x);
 					disconnect(x);
 				}
 				else{
@@ -339,7 +409,7 @@ void client::start_thread()
 	}
 }
 
-void client::sendPendingRequests()
+inline void client::sendPendingRequests()
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
@@ -397,35 +467,6 @@ void client::sendPendingRequests()
 
 int client::sendRequest(std::string server_IP, int & socketfd, int file_ID, int fileBlock)
 {
-	sockaddr_in dest_addr;
-
-	//if no socket then create one
-	if(socketfd == -1){
-		socketfd = socket(PF_INET, SOCK_STREAM, 0);
-		FD_SET(socketfd, &masterfds);
-
-		dest_addr.sin_family = AF_INET;                           //set socket type TCP
-		dest_addr.sin_port = htons(global::P2P_PORT);             //set destination port
-		dest_addr.sin_addr.s_addr = inet_addr(server_IP.c_str()); //set destination IP
-		memset(&(dest_addr.sin_zero),'\0',8);                     //zero out the rest of struct
-
-		//make sure fdmax is always the highest socket number
-		if(socketfd > fdmax){
-			fdmax = socketfd;
-		}
-
-		if(connect(socketfd, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) == -1){
-#ifdef DEBUG
-			std::cout << "error: client::sendRequest() could not connect to server\n";
-#endif
-			return 0;
-		}
-#ifdef DEBUG
-		std::cout << "info: client::sendRequest() created socket " << socketfd << " for " << server_IP << "\n";
-#endif
-
-	}
-
 	std::ostringstream request_s;
 	request_s << global::P_SBL << global::DELIMITER << file_ID << global::DELIMITER << fileBlock << global::DELIMITER;
 
@@ -497,30 +538,39 @@ bool client::startDownload(exploration::infoBuffer info)
 		download::serverElement * SE = new download::serverElement();
 		SE->server_IP = info.server_IP[x];
 		SE->file_ID = atoi(info.file_ID[x].c_str());
-		SE->socketfd = -1; //will be changed to appropriate number if socket already connected to server
 
 		//see if a socket for this server already exists, if it does then reuse it
+		bool socketFound = false;
 		for(std::list<std::list<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
 
-			if(iter0->front()->server_IP == info.server_IP.at(x)){
+			if(iter0->front()->server_IP == info.server_IP[x]){
 				SE->socketfd = iter0->front()->socketfd;
 				break;
 			}
 		}
 
+		//if existing socket not found create a new one
+		if(!socketFound){
+
+			//if cannot connect to server don't add this element
+			if(!newConnection(SE->socketfd, SE->server_IP)){
+				continue;
+			}
+		}
+
 		//add the server to the server vector if it exists, otherwise make a new one and add it to serverHolder
-		bool found = false;
+		bool ringFound = false;
 		for(std::list<std::list<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
 
 			if(iter0->front()->server_IP == SE->server_IP){
 				//all servers in the vector must have the same socket
 				SE->socketfd = iter0->front()->socketfd;
 				iter0->push_back(SE);
-				found = true;
+				ringFound = true;
 			}
 		}
 
-		if(!found){
+		if(!ringFound){
 			//make a new server deque for the server and add it to the serverHolder
 			std::list<download::serverElement *> newServer;
 			newServer.push_back(SE);

@@ -345,6 +345,7 @@ bool gui::downloadInfoRefresh()
 
 			//see if there is already an entry for the file in the download list
 			if(messageDigest_retrieved == iter0->messageDigest){
+				row[server_IP_t] = iter0->server_IP;
 				row[downloadSpeed_t] = iter0->speed;
 				row[percentComplete_t] = iter0->percentComplete;
 
@@ -644,13 +645,25 @@ bool gui::searchInfoRefresh()
 
 bool gui::updateStatusBar()
 {
-	std::string status;
+	std::string status; //holds entire status line
+
+	//get the total client download speed
+	int clientSpeed = Client.getTotalSpeed();
+	clientSpeed = clientSpeed / 1024; //convert to kB
+	std::ostringstream clientSpeed_s;
+	clientSpeed_s << clientSpeed << " kB/s";
+
+	//get the total server upload speed
+	int serverSpeed = Server.getTotalSpeed();
+	serverSpeed = serverSpeed / 1024; //convert to kB
+	std::ostringstream serverSpeed_s;
+	serverSpeed_s << serverSpeed << " kB/s";
 
 	if(Server.isIndexing()){
-		status = "  Download Speed: " + Client.getTotalSpeed() + " Upload Speed: " + Server.getTotalSpeed() + "  Indexing/Hashing ";
+		status = "  Download Speed: " + clientSpeed_s.str() + " Upload Speed: " + serverSpeed_s.str() + "  Indexing/Hashing ";
 	}
 	else{
-		status = "  Download Speed: " + Client.getTotalSpeed() + " Upload Speed: " + Server.getTotalSpeed();
+		status = "  Download Speed: " + clientSpeed_s.str() + " Upload Speed: " + serverSpeed_s.str();
 	}
 
 	statusbar->pop();

@@ -42,13 +42,13 @@ public:
 	/*
 	getDownloadInfo   - returns download info for all files in sendBuffer
 	                  - returns false if no downloads
-	getTotalSpeed     - returns the total download speed
+	getTotalSpeed     - returns the total download speed(in bytes per second)
 	start             - start the client thread
 	startDownload     - start a new download
 	stopDownload      - wrapper for terminateDownload()
 	*/
 	bool getDownloadInfo(std::vector<infoBuffer> & downloadInfo);
-	std::string getTotalSpeed();
+	int getTotalSpeed();
 	void start();
 	bool startDownload(exploration::infoBuffer info);
 	void stopDownload(std::string messageDigest_in);
@@ -76,7 +76,9 @@ private:
 
 	/*
 	disconnect                  - disconnects a socket
+	newConnection               - create a connection with a server, returns false if failed
 	processBuffer               - establishes the receive protocol
+	resetHungDownloadSpeed      - checks for downloads without servers and resets their download speeds
 	removeAbusive_checkContains - returns true if the vector contains a serverElement with a matching IP
 	removeAbusive               - disconnects sockets and removes abusive servers
 	removeDisconnected          - removes serverElements for servers that disconnected from us
@@ -88,8 +90,10 @@ private:
 	                            - within a downloadBufferMutex scoped lock!
 	*/
 	void disconnect(int socketfd);
+	bool newConnection(int & socketfd, std::string & server_IP);
 	void postResumeConnect();
 	void processBuffer(int socketfd, char recvBuff[], int nbytes);
+	void resetHungDownloadSpeed();
 	bool removeAbusive_checkContains(std::list<download::abusiveServerElement> & abusiveServerTemp, download::serverElement * SE);
 	void removeAbusive();
 	void removeDisconnected(int socketfd);

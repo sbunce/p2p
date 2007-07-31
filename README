@@ -17,3 +17,9 @@ DEBUG             - enables terse debuggning output.
 DEBUG_VERBOSE     - Enables very verbose output. Best to direct this to a file for searching.
 UNRELIABLE_CLIENT - 50% chance of "dropping" a received packet.
 
+Depends:
+g++
+boost::bind
+boost::thread
+boost::tokenize
+gtkmm

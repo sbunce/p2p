@@ -52,10 +52,10 @@ public:
 	/*
 	getUploadInfo - updates and returns upload information
 	              - returns false if no uploads
-	getTotalSpeed - returns the total speed of all uploads
+	getTotalSpeed - returns the total speed of all uploads(in bytes per second)
 	*/
 	bool getUploadInfo(std::vector<infoBuffer> & uploadInfo);
-	std::string getTotalSpeed();
+	int getTotalSpeed();
 	const bool & isIndexing();
 	void start();
 

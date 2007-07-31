@@ -318,9 +318,12 @@ void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
 #endif
 
 #ifdef ABUSIVE_SERVER
-			int random = rand() % 10000;
-			if(random < global::ABUSIVE_SERVER_VALUE){
-				std::cout << "testing: client::processBuffer() simulated abuse for " << (*iter0)->server_IP << "\n";
+			static int counter = 0;
+			counter++;
+			if(counter % global::ABUSIVE_SERVER_VALUE == 0){
+				std::cout << "testing: client::processBuffer() simulated abuse from " << (*iter0)->server_IP << "\n";
+
+				//overflow the buffer by one byte
 				(*iter0)->bucket += " ";
 			}
 #endif
@@ -450,5 +453,10 @@ bool download::readyTerminate()
 	else{
 		return false;
 	}
+}
+
+void download::zeroSpeed()
+{
+	downloadSpeed = 0;
 }
 
