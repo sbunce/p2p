@@ -5,7 +5,7 @@ OBJECTS = main.o client.o download.o clientIndex.o exploration.o gui.o \
 	gui_about.o hash.o server.o serverIndex.o sha.o superBlock.o
 
 LINKER_OPTIONS = `pkg-config gtkmm-2.4 --cflags --libs` \
-	-lboost_thread -D_REENTRANT -lboost_filesystem 
+	-lboost_thread -D_REENTRANT -lboost_filesystem -lsqlite3
 
 main: $(OBJECTS)
 	$(CCL) $(OBJECTS) -o ../simple-p2p $(LINKER_OPTIONS)

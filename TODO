@@ -5,6 +5,7 @@ twice the second download doesn't get appended to the first.
 
 -Fix includes, change from " " to < > and have the proper linker statements.
 
+
 POSSIBLE FEATURES
 
 -A server timeout for servers that accept requests but never respond.
@@ -27,3 +28,4 @@ structure such that if the user adds a tracker the user will also get to see
 the files of the trackers that tracker trusts and the files that that tracker
 trusts etc. Have an option to limit trust levels to direct trust only, one
 level inheritance and all level inheritance.
+

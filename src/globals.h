@@ -8,7 +8,7 @@ namespace global //"global" namespace ;-)
 {
 	/* *********** BEGIN DEBUGGING OPTIONS *********** */
 
-	#define DEBUG
+	//#define DEBUG
 	//#define DEBUG_VERBOSE
 	//#define REREQUEST_PERCENTAGE
 
@@ -78,6 +78,8 @@ namespace global //"global" namespace ;-)
 	const std::string MESSAGE_DIGEST_INDEX = "messageDigest.idx";
 	const std::string SERVER_SHARE_DIRECTORY = "share/";
 	const std::string SERVER_SHARE_INDEX = "share.db";
+
+	const std::string DATABASE_PATH = "database";
 
 	//field delimiter for all text files
 	const std::string DELIMITER = "|";
