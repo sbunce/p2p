@@ -1,7 +1,5 @@
 #include "sha.h"
 
-#include <iostream>
-
 using namespace std;
 
 //BEGIN hash constants for SHA-1

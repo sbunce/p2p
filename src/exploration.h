@@ -2,8 +2,9 @@
 #define H_EXPLORATION
 
 //std
+#include <list>
+#include <sqlite3.h>
 #include <string>
-#include <vector>
 
 #include "globals.h"
 
@@ -14,9 +15,8 @@ public:
 	class infoBuffer
 	{
 	public:
-		std::string messageDigest;
+		std::string hash;
 		std::string fileName;
-		std::string fileSize_bytes;
 		std::string fileSize;
 
 		//information unique to the server, these vectors are parallel
@@ -26,27 +26,38 @@ public:
 
 	exploration();
 	/*
-	getSearchResults - retrieves the search results
+	search - searches the database for names which match searchWord
 	*/
-	void getSearchResults(std::vector<infoBuffer> & info);
-	/*
-	search - searches search DB and populates searchResults
-	search.db file format:
-	<SHA_hash>|<fileName>|<fileSize>|<serverInfo>
-	<serverInfo> = <server_IP>|<file_ID(remote)>|<serverInfo><nothing>
-	<nothing> = no more to the record
-	*/
-	void search(std::string searchWord);
+	void search(std::string & searchWord, std::list<infoBuffer> & info);
 
 private:
-	std::string searchDatabase;
-
-	//contains the results from the last search
-	std::vector<infoBuffer> searchResults;
+	/*
+	Wrappers for call-back functions. These exist to convert the void pointer
+	that sqlite3_exec allows as a call-back in to a member function pointer that
+	is needed to call a member function of *this class.
+	*/
+	static int search_callBack_wrapper(void * objectPtr, int columnsRetrieved, char ** queryResponse, char ** columnName)
+	{
+		exploration * thisClass = (exploration *)objectPtr;
+		thisClass->search_callBack(columnsRetrieved, queryResponse, columnName);
+		return 0;
+	}
 
 	/*
-	stringToUpper - converts a string to upper case
+	The call-back functions themselves. These are called by the wrappers which are
+	passed to sqlite3_exec. These contain the logic of what needs to be done.
 	*/
-	void stringToUpper(std::string & str);
+	void search_callBack(int & columnsRetrieved, char ** queryResponse, char ** columnName);
+
+	//contains the results from the last search
+	std::list<infoBuffer> searchResults;
+
+	//sqlite database pointer to be passed to functions like sqlite3_exec
+	sqlite3 * sqlite3_DB;
+
+	/*
+	percentToAsterisk - converts all '*' in a string to '%'
+	*/
+	void asteriskToPercent(std::string & searchWord);
 };
 #endif

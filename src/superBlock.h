@@ -16,7 +16,7 @@ public:
 	The superBlockNumber represents a group of fileBlocks which compose the
 	superBlock, it's used to calculate what fileBlocks the superBlock needs.
 	*/
-	superBlock(int superBlockNumber_in, int lastBlock_in);
+	superBlock(const int & superBlockNumber_in, const int & lastBlock_in);
 
 	/*
 	addBlock     - returns false if superBlock doesn't need the block, otherwise adds it
@@ -24,7 +24,7 @@ public:
 	complete     - returns true if the superBlock is complete
 	getRequest   - returns the number of a fileBlock this superBlock needs
 	*/
-	bool addBlock(int blockNumber, std::string & fileBlock);
+	bool addBlock(const int & blockNumber, const std::string & fileBlock);
 	bool allRequested();
 	bool complete();
 	int getRequest();

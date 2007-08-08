@@ -1,8 +1,8 @@
 //std
 #include <algorithm>
 #include <cstdlib>
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <iomanip>
 #include <sstream>
 #include <time.h>

@@ -19,7 +19,7 @@ public:
 	            - returns true if file found, false if file not found
 	*/
 	void indexShare();
-	bool getFileInfo(int file_ID, int & fileSize, std::string & filePath);
+	bool getFileInfo(const int & file_ID, int & fileSize, std::string & filePath);
 
 private:
 
@@ -72,8 +72,8 @@ private:
 	indexShare_recurse - recursive function to locate all files in share(calls addEntry)
 	removeMissing      - removes files from the database that aren't present
 	*/
-	void addEntry(int size, std::string path);
-	int indexShare_recurse(std::string directoryName);
+	void addEntry(const int & size, const std::string & path);
+	int indexShare_recurse(const std::string directoryName);
 	void removeMissing();
 };
 #endif

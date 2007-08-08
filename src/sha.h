@@ -39,7 +39,6 @@
 #ifndef H_SHA2
 #define H_SHA2
 
-#include <string>
 #include <stdexcept>
 
 //NOTE: You may need to define things by hand for your system:

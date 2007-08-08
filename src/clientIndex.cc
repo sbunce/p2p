@@ -1,7 +1,7 @@
 //boost
-#include "boost/filesystem/operations.hpp"
-#include "boost/filesystem/path.hpp"
-#include "boost/tokenizer.hpp"
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+#include <boost/tokenizer.hpp>
 
 //std
 #include <fstream>
@@ -13,266 +13,201 @@
 
 clientIndex::clientIndex()
 {
-	indexName = global::CLIENT_DOWNLOAD_INDEX;
-	downloadDirectory = global::CLIENT_DOWNLOAD_DIRECTORY;
-
 	//create the download directory if it doesn't exist
-	boost::filesystem::create_directory(downloadDirectory);
+	boost::filesystem::create_directory(global::CLIENT_DOWNLOAD_DIRECTORY);
+
+	int returnCode;
+	if((returnCode = sqlite3_open(global::DATABASE_PATH.c_str(), &sqlite3_DB)) != 0){
+#ifdef DEBUG
+		std::cout << "error: clientIndex::clientIndex() #1 failed with sqlite3 error " << returnCode << "\n";
+#endif
+	}
+	if((returnCode = sqlite3_busy_timeout(sqlite3_DB, 1000)) != 0){
+#ifdef DEBUG
+		std::cout << "error: clientIndex::clientIndex() #2 failed with sqlite3 error " << returnCode << "\n";
+#endif
+	}
+	if((returnCode = sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS downloads (hash TEXT, name TEXT, size INTEGER, server_IP TEXT, file_ID TEXT)", NULL, NULL, NULL)) != 0){
+#ifdef DEBUG
+		std::cout << "error: clientIndex::clientIndex() #3 failed with sqlite3 error " << returnCode << "\n";
+#endif
+	}
+	if((returnCode = sqlite3_exec(sqlite3_DB, "CREATE UNIQUE INDEX IF NOT EXISTS downloadsHashIndex ON downloads (hash)", NULL, NULL, NULL)) != 0){
+#ifdef DEBUG
+		std::cout << "error: clientIndex::clientIndex() #4 failed with sqlite3 error " << returnCode << "\n";
+#endif
+	}
 }
 
-void clientIndex::terminateDownload(std::string messageDigest_in)
+bool clientIndex::getFilePath(const std::string & hash, std::string & path)
 {
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(Mutex);
+	std::ostringstream query;
+	getFilePath_entryExists = false;
 
-	std::ifstream fin(indexName.c_str());
-	std::string fileBuffer;
+	//locate the record
+	query << "SELECT name FROM downloads WHERE hash = \"" << hash << "\" LIMIT 1";
 
-	if(fin.is_open()){
-		std::string temp;
-		std::string oneLine;
+	int returnCode;
+	if((returnCode = sqlite3_exec(sqlite3_DB, query.str().c_str(), getFilePath_callBack_wrapper, (void *)this, NULL)) != 0){
+#ifdef DEBUG
+		std::cout << "error: clientIndex::getFilePath() failed with sqlite3 error " << returnCode << "\n";
+#endif
+	}
 
-		while(getline(fin, oneLine)){
-			temp = oneLine;
-
-			std::string messageDigest = temp.substr(0, temp.find_first_of(global::DELIMITER));
-
-			//save all entries except for the one specified in parameter to function
-			if(messageDigest_in != messageDigest){
-				fileBuffer = fileBuffer + oneLine + "\n";
-			}
-			else{
-				continue;
-			}
-		}
-
-		fin.close();
-
-		std::ofstream fout(indexName.c_str());
-		fout << fileBuffer;
-		fout.close();
+	if(getFilePath_entryExists){
+		path = global::CLIENT_DOWNLOAD_DIRECTORY + getFilePath_fileName;
+		return true;
 	}
 	else{
 #ifdef DEBUG
-		std::cout << "error: clientIndex::downloadComplete(): couldn't open " << indexName << "\n";
+		std::cout << "error: clientIndex::getFilePath() didn't find record\n";
 #endif
+		return false;
 	}
-
-	}//end lock scope
 }
 
-std::string clientIndex::getFilePath(std::string messageDigest_in)
+void clientIndex::getFilePath_callBack(int & columnsRetrieved, char ** queryResponse, char ** columnName)
 {
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(Mutex);
-
-	std::ifstream fin(indexName.c_str());
-
-	if(fin.is_open()){
-		std::string temp;
-
-		while(getline(fin, temp)){
-
-			boost::char_separator<char> sep(global::DELIMITER.c_str());
-			boost::tokenizer<boost::char_separator<char> > tokens(temp, sep);
-			boost::tokenizer<boost::char_separator<char> >::iterator iter = tokens.begin();
-
-			std::string messageDigest = *iter++;
-
-			if(messageDigest_in == messageDigest){
-
-				std::string fileName = *iter++;
-				std::string filePath;
-				filePath = downloadDirectory + fileName;
-				return filePath;
-			}
-		}
-
-		fin.close();
-	}
-	else{
-#ifdef DEBUG
-		std::cout << "error: clientIndex::getFilePath(): can't open " << indexName << "\n";
-#endif
-	}
-
-#ifdef DEBUG
-		std::cout << "error: clientIndex::getFilePath(): did not return a file path" << indexName << "\n";
-#endif
-
-	}//end lock scope
+	getFilePath_entryExists = true;
+	getFilePath_fileName.assign(queryResponse[0]);
 }
 
-bool clientIndex::initialFillBuffer(std::list<download> & downloadBuffer, std::list<std::list<download::serverElement *> > & serverHolder)
+void clientIndex::initialFillBuffer(std::list<download> & downloadBuffer, std::list<std::list<download::serverElement *> > & serverHolder)
 {
-	bool addedElements = false;
+	int returnCode;
+	if((returnCode = sqlite3_exec(sqlite3_DB, "SELECT * FROM downloads", initialFillBuffer_callBack_wrapper, (void *)this, NULL)) != 0){
+#ifdef DEBUG
+		std::cout << "error: clientIndex::initialFillBuffer() failed with sqlite3 error " << returnCode << "\n";
+#endif
+	}
 
-	//will host messageDigests of files not found, ie the user removed the partials
-	std::vector<std::string> missingFiles;
+	//do splicing of the temporary downloadBuffer and serverHolder to the actual
+	serverHolder.splice(serverHolder.end(), initialFillBuffer_serverHolder);
+	downloadBuffer.splice(downloadBuffer.end(), initialFillBuffer_downloadBuffer);
+}
 
+void clientIndex::initialFillBuffer_callBack(int & columnsRetrieved, char ** queryResponse, char ** columnName)
+{
 	namespace fs = boost::filesystem;
 
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(Mutex);
+	std::string path(queryResponse[1]);
+	path = global::CLIENT_DOWNLOAD_DIRECTORY + path;
 
-	std::ifstream fin(indexName.c_str());
+	//make sure the file is present
+	std::fstream fstream_temp(path.c_str());
+	if(fstream_temp.is_open()){ //partial file exists, add to downloadBuffer
+		fstream_temp.close();
 
-	if(fin.is_open()){
-		std::string temp;
+		std::string hash(queryResponse[0]);
+		std::string fileName(queryResponse[1]);
+		fs::path path_boost = fs::system_complete(fs::path(global::CLIENT_DOWNLOAD_DIRECTORY + fileName, fs::native));
+		int size = atoi(queryResponse[2]);
+		int currentBytes = fs::file_size(path_boost);
+		int blockCount = currentBytes / (global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE);
+		int lastBlock = size/(global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE);
+		int lastBlockSize = size % (global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE) + global::RESPONSE_CONTROL_SIZE;
+		int lastSuperBlock = lastBlock / global::SUPERBLOCK_SIZE;
+		int currentSuperBlock = currentBytes / ( (global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE) * global::SUPERBLOCK_SIZE );
 
-		while(getline(fin, temp)){
+		download resumedDownload(
+			hash,
+			fileName,
+			path,
+			size,
+			blockCount,
+			lastBlock,
+			lastBlockSize,
+			lastSuperBlock,
+			currentSuperBlock
+		);
 
-			boost::char_separator<char> sep(global::DELIMITER.c_str());
-			boost::tokenizer<boost::char_separator<char> > tokens(temp, sep);
-			boost::tokenizer<boost::char_separator<char> >::iterator iter = tokens.begin();
+		std::string undelim_server_IP(queryResponse[3]);
+		std::string undelim_file_ID(queryResponse[4]);
 
-			std::string messageDigest = *iter++;
-			std::string fileName = *iter++;
-			fs::path filePath_path = fs::system_complete(fs::path(global::CLIENT_DOWNLOAD_DIRECTORY + fileName, fs::native));
-			std::string filePath = filePath_path.string();
-			int fileSize = atoi((*iter++).c_str());
+		boost::char_separator<char> sep(",");
+		boost::tokenizer<boost::char_separator<char> > server_IP_tokens(undelim_server_IP, sep);
+		boost::tokenizer<boost::char_separator<char> >::iterator server_IP_iter = server_IP_tokens.begin();
+		boost::tokenizer<boost::char_separator<char> > file_ID_tokens(undelim_file_ID, sep);
+		boost::tokenizer<boost::char_separator<char> >::iterator file_ID_iter = file_ID_tokens.begin();	
 
-			//make sure the file is present, ie the user has not removed the partial file
-			std::ifstream fin(filePath.c_str());
-			if(fin.is_open()){
-				fin.close();
-			}
-			else{
-				missingFiles.push_back(messageDigest);
-				continue;
-			}
+		//create serverElements for all servers and add them to the download
+		while(server_IP_iter != server_IP_tokens.end()){
+			download::serverElement * SE = new download::serverElement;
+			SE->socketfd = -1;
+			SE->server_IP = *server_IP_iter++;
+			SE->file_ID = atoi(file_ID_iter->c_str()); file_ID_iter++;
+			resumedDownload.Server.push_back(SE);
 
-			addedElements = true;
+			bool ringFound = false;
+			for(std::list<std::list<download::serverElement *> >::iterator iter1 = initialFillBuffer_serverHolder.begin(); iter1 != initialFillBuffer_serverHolder.end(); iter1++){
 
-			int currentBytes = fs::file_size(filePath_path); //get the size of the partial file
-			int blockCount = currentBytes / (global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE);
-			int lastBlock = fileSize/(global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE);
-			int lastBlockSize = fileSize % (global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE) + global::RESPONSE_CONTROL_SIZE;
-			int lastSuperBlock = lastBlock / global::SUPERBLOCK_SIZE;
-			int currentSuperBlock = currentBytes / ( (global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE) * global::SUPERBLOCK_SIZE );
-
-			download resumedDownload(
-				messageDigest,
-				fileName,
-				filePath,
-				fileSize,
-				blockCount,
-				lastBlock,
-				lastBlockSize,
-				lastSuperBlock,
-				currentSuperBlock
-			);
-
-			//add known servers associated with this download
-			while(iter != tokens.end()){
-				download::serverElement * SE = new download::serverElement;
-				SE->server_IP = *iter++;
-				SE->socketfd = -1;
-				SE->file_ID = atoi((*iter++).c_str());
-				resumedDownload.Server.push_back(SE);
-
-				//add the server to the server vector if it exists, otherwise make a new one and add it to serverHolder
-				bool found = false;
-				for(std::list<std::list<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
-
-					if(iter0->front()->server_IP == SE->server_IP){
-						//all servers in the vector must have the same socket
-						SE->socketfd = iter0->front()->socketfd;
-						iter0->push_back(SE);
-						found = true;
+				if(!iter1->empty()){
+					if(iter1->front()->server_IP == SE->server_IP){
+						iter1->push_back(SE);
+						ringFound = true;
+						break;
 					}
 				}
-
-				if(!found){
-					//make a new server deque for the server and add it to the serverHolder
-					std::list<download::serverElement *> newServer;
-					newServer.push_back(SE);
-					serverHolder.push_back(newServer);
-				}
 			}
 
-			downloadBuffer.push_back(resumedDownload);
+			if(!ringFound){
+				std::list<download::serverElement *> newRing;
+				newRing.push_back(SE);
+				initialFillBuffer_serverHolder.push_back(newRing);
+			}
 		}
 
-		fin.close();
+		initialFillBuffer_downloadBuffer.push_back(resumedDownload);
 	}
-	else{
+	else{ //partial file removed, delete entry from database
+
+		std::ostringstream query;
+		query << "DELETE FROM downloads WHERE name = \"" << queryResponse[1] << "\"";
+
+		int returnCode;
+		if((returnCode = sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL)) != 0){
 #ifdef DEBUG
-		std::cout << "error: clientIndex::initialFillBuffer(): can't open " << indexName << "\n";
+		std::cout << "error: clientIndex::initialFillBuffer() failed with sqlite3 error " << returnCode << "\n";
 #endif
+		}
 	}
-
-	}//end lock scope
-
-	//remove entries for files that are not present
-	for(std::vector<std::string>::iterator iter0 = missingFiles.begin(); iter0 != missingFiles.end(); iter0++){
-		terminateDownload(*iter0);
-	}
-
-	return addedElements;
 }
 
-int clientIndex::startDownload(exploration::infoBuffer info)
+bool clientIndex::startDownload(exploration::infoBuffer & info)
 {
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(Mutex);
-
-	std::ifstream fin(indexName.c_str());
-
-	//if the download database file doesn't exist then create it
-	if(!fin.is_open()){
-		std::ofstream fout(indexName.c_str());
-		fout.close();
-		fin.close();
-		fin.open(indexName.c_str());
+	std::ostringstream query;
+	query << "INSERT INTO downloads (hash, name, size, server_IP, file_ID) VALUES ('" << info.hash << "', '" << info.fileName << "', " << info.fileSize << ", '";
+	for(std::vector<std::string>::iterator iter0 = info.server_IP.begin(); iter0 != info.server_IP.end(); iter0++){
+		query << *iter0 << ",";
 	}
+	query << "', '";
+	for(std::vector<std::string>::iterator iter0 = info.file_ID.begin(); iter0 != info.file_ID.end(); iter0++){
+		query << *iter0 << ",";
+	}
+	query << "')";
 
-	if(fin.is_open()){
-		std::string temp;
-		bool entryFound = false;
-
-		while(getline(fin, temp) && !entryFound){
-			//check all entries for duplicate
-			if(temp.substr(temp.find_last_of(global::DELIMITER) + 1) == info.fileName){
-				entryFound = true;
-#ifdef DEBUG
-				std::cout << "error: clientIndex::startDownload(): file is already downloading\n";
-#endif
-				return -1;
-			}
-		}
-		fin.close();
-
-		if(!entryFound){
-			//write the share index file
-			std::ostringstream entry_s;
-			entry_s << info.messageDigest << global::DELIMITER << info.fileName << global::DELIMITER << info.fileSize_bytes;
-
-			for(int x=0; x<info.server_IP.size(); x++){
-				entry_s << global::DELIMITER << info.server_IP.at(x) << global::DELIMITER << info.file_ID.at(x);
-			}
-
-			entry_s << "\n";
-
-			std::ofstream fout(indexName.c_str(), std::ios::app);
-			if(fout.is_open()){
-				fout.write(entry_s.str().c_str(), entry_s.str().length());
-				fout.close();
-			}
-			else{
-#ifdef DEBUG
-				std::cout << "error: clientIndex::startDownload(): can't open " << indexName << "\n";
-#endif
-			}
-		}
+	int returnCode;
+	if((returnCode = sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL)) == 0){
+		return true;
 	}
 	else{
 #ifdef DEBUG
-		std::cout << "error: clientIndex::startDownload(): can't open " << indexName << "\n";
+		std::cout << "error: clientIndex::startDownload() failed with sqlite3 error " << returnCode << "\n";
+#endif
+		return false;
+	}
+}
+
+void clientIndex::terminateDownload(const std::string & hash)
+{
+	std::ostringstream query;
+	query << "DELETE FROM downloads WHERE hash = \"" << hash << "\"";
+
+	int returnCode;
+	if((returnCode = sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL)) != 0){
+#ifdef DEBUG
+		std::cout << "error: clientIndex::terminateDownload() failed with sqlite3 error " << returnCode << "\n";
 #endif
 	}
-
-	return 0;
-
-	}//end lock scope
 }
+

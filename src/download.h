@@ -20,12 +20,12 @@ public:
 			token = false;
 			bytesExpected = 0;
 			lastRequest = false;
+			blockRequested = 0;
 		}
 
 		//these three set automatically
 		bool token;            //true if the client is ready for a request
 		bool lastRequest;      //the last block has been requested from this server
-		bool ready;            //true if ready to send another block request
 
 		//these need to be set before this server can be used
 		std::string server_IP; //IP of the server that has the file
@@ -62,13 +62,14 @@ public:
 	//stores information specific to certain servers
 	std::list<serverElement *> Server;
 
-	download(std::string & messageDigest_in, std::string & fileName_in, 
-		std::string & filePath_in, int fileSize_in, int blockCount_in, int lastBlock_in,
-		int lastBlockSize_in, int lastSuperBlock_in, int currentSuperBlock_in);
+	download(const std::string & hash_in, const std::string & fileName_in, 
+		const std::string & filePath_in, const int & fileSize_in, const int & blockCount_in,
+		const int & lastBlock_in, const int & lastBlockSize_in, const int & lastSuperBlock_in,
+		const int & currentSuperBlock_in);
 	/*
 	completed        - returns true if download completed, false if not
 	getBlockCount    - returns the number of fileBlocks received
-	getMessageDigest - returns the message digest for the download
+	getHash          - returns the hash for the downloading file
 	getFileName      - returns the fileName of the download
 	getFileSize      - returns the fileSize of the file being downloaded(bytes)
 	getLastBlock     - returns the last block number
@@ -89,11 +90,11 @@ public:
 	const int & getFileSize();
 	const int & getLastBlock();
 	const int & getLastBlockSize();
-	const std::string & getMessageDigest();
+	const std::string & getHash();
 	int getRequest();
 	const int & getSpeed();
-	bool hasSocket(int socketfd, int nbytes);
-	void processBuffer(int socketfd, char recvBuff[], int nbytes);
+	bool hasSocket(const int & socketfd, const int & nbytes);
+	void processBuffer(const int & socketfd, char recvBuff[], const int & nbytes);
 	void startTerminate();
 	bool terminating();
 	bool readyTerminate();
@@ -109,15 +110,15 @@ private:
 	bool terminateDownload;
 
 	//these must be set before the download begins and will be set by ctor
-	std::string messageDigest; //unique identifier of the file and message digest
-	std::string fileName;      //name of the file
-	std::string filePath;      //path to write file to on local system
-	int fileSize;              //size of the file(bytes)
-	int blockCount;            //used for percentage complete calculation
-	int lastBlock;             //the last block number
-	int lastBlockSize;         //holds the exact size of the last fileBlock(in bytes)
-	int lastSuperBlock;        //holds the number of the last superBlock
-	int currentSuperBlock;     //what superBlock clientBuffer is currently on
+	std::string hash;      //unique identifier of the file and message digest
+	std::string fileName;  //name of the file
+	std::string filePath;  //path to write file to on local system
+	int fileSize;          //size of the file(bytes)
+	int blockCount;        //used for percentage complete calculation
+	int lastBlock;         //the last block number
+	int lastBlockSize;     //holds the exact size of the last fileBlock(in bytes)
+	int lastSuperBlock;    //holds the number of the last superBlock
+	int currentSuperBlock; //what superBlock clientBuffer is currently on
 
 	//these will be set automatically in ctor
 	int downloadSpeed;     //speed of download(bytes per second)
@@ -143,7 +144,7 @@ private:
 	findMissing    - finds missing blocks in the tree
 	writeTree      - writes a superBlock to file
 	*/
-	int addBlock(int & blockNumber, std::string & bucket);
+	int addBlock(const int & blockNumber, std::string & bucket);
 	void calculateSpeed();
 	void findMissing();
 	void writeSuperBlock(std::string container[]);

@@ -2,7 +2,7 @@
 
 #include "superBlock.h"
 
-superBlock::superBlock(int superBlockNumber_in, int lastBlock_in)
+superBlock::superBlock(const int & superBlockNumber_in, const int & lastBlock_in)
 {
 	superBlockNumber = superBlockNumber_in;
 	minBlock = superBlockNumber * global::SUPERBLOCK_SIZE;
@@ -15,7 +15,7 @@ superBlock::superBlock(int superBlockNumber_in, int lastBlock_in)
 	}
 }
 
-bool superBlock::addBlock(int blockNumber, std::string & fileBlock)
+bool superBlock::addBlock(const int & blockNumber, const std::string & fileBlock)
 {
 	if(blockNumber >= minBlock && blockNumber <= maxBlock){
 

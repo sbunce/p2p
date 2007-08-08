@@ -1,10 +1,6 @@
 //Gtk
 #include <gtkmm.h>
 
-//std
-#include <iostream>
-#include <string>
-
 #include "gui.h"
 
 int main(int argc, char* argv[])

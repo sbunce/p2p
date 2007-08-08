@@ -6,12 +6,13 @@
 
 #include "download.h"
 
-download::download(std::string & messageDigest_in, std::string & fileName_in,
-	std::string & filePath_in, int fileSize_in, int blockCount_in, int lastBlock_in,
-	int lastBlockSize_in, int lastSuperBlock_in, int currentSuperBlock_in)
+download::download(const std::string & hash_in, const std::string & fileName_in, 
+	const std::string & filePath_in, const int & fileSize_in, const int & blockCount_in,
+	const int & lastBlock_in, const int & lastBlockSize_in, const int & lastSuperBlock_in,
+	const int & currentSuperBlock_in)
 {
 	//non-defaults
-	messageDigest = messageDigest_in;
+	hash = hash_in;
 	fileName = fileName_in;
 	filePath = filePath_in;
 	fileSize = fileSize_in;
@@ -37,7 +38,7 @@ download::download(std::string & messageDigest_in, std::string & fileName_in,
 	SHA.Init(global::HASH_TYPE);
 }
 
-int download::addBlock(int & blockNumber, std::string & bucket)
+int download::addBlock(const int & blockNumber, std::string & bucket)
 {
 	calculateSpeed();
 
@@ -146,9 +147,9 @@ const int & download::getLastBlockSize()
 	return lastBlockSize;
 }
 
-const std::string & download::getMessageDigest()
+const std::string & download::getHash()
 {
-	return messageDigest;
+	return hash;
 }
 
 int download::getRequest()
@@ -156,11 +157,11 @@ int download::getRequest()
 	/*
 	This function is a bit hard to understand but it defines how the superBlocks
 	are managed and is inherently complicated. Basically there are two superBlocks,
-	the leading superBlock and the trailing superBlock. If there is a getRequest
-	and all requests for the leading superBlock have been made then rerequest
-	fileBlocks from the trailing superBlock. If the trailing superBlock is complete
-	then write it to disk and make the leading superBlock the trailing superBlock
-	and add a new leading superBlock. The idea is that two superBlocks are
+	a leading superBlock and a trailing superBlock. If there is a getRequest()
+	and all requests for the leading superBlock have been made then a rerequest of
+	fileBlocks from the trailing superBlock are made. If the trailing superBlock
+	is complete then write it to disk and make the leading superBlock the trailing
+	superBlock and add a new leading superBlock. The idea is that two superBlocks are
 	maintained so that when the trailing one is incomplete we can work on completing
 	a new one while the slow servers send their fileBlocks for the old one.
 	*/
@@ -283,7 +284,7 @@ const int & download::getSpeed()
 	return downloadSpeed;
 }
 
-bool download::hasSocket(int socketfd, int nbytes)
+bool download::hasSocket(const int & socketfd, const int & nbytes)
 {
 	for(std::list<serverElement *>::iterator iter0 = Server.begin(); iter0 != Server.end(); iter0++){
 
@@ -301,7 +302,7 @@ bool download::hasSocket(int socketfd, int nbytes)
 	return false;
 }
 
-void download::processBuffer(int socketfd, char recvBuff[], int nbytes)
+void download::processBuffer(const int & socketfd, char recvBuff[], const int & nbytes)
 {
 	//fill the bucket
 	for(std::list<serverElement *>::iterator iter0 = Server.begin(); iter0 != Server.end(); iter0++){

@@ -7,11 +7,11 @@
 #include <boost/bind.hpp>
 
 //networking
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 //std
 #include <list>
@@ -30,7 +30,7 @@ public:
 	class infoBuffer
 	{
 	public:
-		std::string messageDigest;
+		std::string hash;
 		std::string server_IP;
 		std::string fileName;
 		std::string fileSize;
@@ -51,16 +51,16 @@ public:
 	int getTotalSpeed();
 	void start();
 	bool startDownload(exploration::infoBuffer info);
-	void stopDownload(std::string messageDigest_in);
+	void stopDownload(const std::string & hash);
 
 private:
 	sha SHA; //creates messageDigests
 
 	//networking related
-	int fdmax;             //holds the number of the maximum socket
-	fd_set readfds;        //temporary file descriptor set to pass to select()
-	fd_set masterfds;      //master file descriptor set
-	bool resumedDownloads; //true if postResumeConnect needs to be run(after resuming)
+	int fdmax;            //holds the number of the maximum socket
+	fd_set readfds;       //temporary file descriptor set to pass to select()
+	fd_set masterfds;     //master file descriptor set
+	bool resumeDownloads; //true if postResumeConnect needs to be run(after resuming)
 
 	//send buffer
 	std::list<download> downloadBuffer;
@@ -89,18 +89,18 @@ private:
 	terminateDownload_real      - terminate a download, all calls to this function must be
 	                            - within a downloadBufferMutex scoped lock!
 	*/
-	void disconnect(int socketfd);
+	void disconnect(const int & socketfd);
 	bool newConnection(int & socketfd, std::string & server_IP);
 	void postResumeConnect();
-	void processBuffer(int socketfd, char recvBuff[], int nbytes);
+	void processBuffer(const int & socketfd, char recvBuff[], const int & nbytes);
 	void resetHungDownloadSpeed();
 	bool removeAbusive_checkContains(std::list<download::abusiveServerElement> & abusiveServerTemp, download::serverElement * SE);
 	void removeAbusive();
-	void removeDisconnected(int socketfd);
+	void removeDisconnected(const int & socketfd);
 	void removeTerminated();
 	void start_thread();
 	void sendPendingRequests();
-	int sendRequest(std::string server_IP, int & socketfd, int fileID, int fileBlock);
+	int sendRequest(const std::string & server_IP, const int & socketfd, const int & fileID, const int & fileBlock);
 
 	/*
 	This function is only to be called if the download isn't expecting any data on any
@@ -111,7 +111,7 @@ private:
 	when all serverElements expect 0 bytes from their respective servers. Any calls
 	to this function must be within a downloadBufferMutex scoped lock.
 	*/
-	void terminateDownload(std::string messageDigest_in);
+	void terminateDownload(const std::string & hash);
 
 	boost::mutex downloadBufferMutex; //mutex for any usage of sendBuffer
 	boost::mutex masterfdsMutex;      //mutex for any usage of masterfds fd_set

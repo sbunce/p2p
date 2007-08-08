@@ -5,8 +5,8 @@
 #include <gtkmm.h>
 
 //std
+#include <list>
 #include <string>
-#include <vector>
 
 #include "client.h"
 #include "server.h"
@@ -84,7 +84,7 @@ private:
 	void uploadInfoSetup();
 	bool uploadInfoRefresh();
 	void searchInfoSetup();
-	bool searchInfoRefresh();
+	void searchInfoRefresh();
 	bool updateStatusBar();
 
 	client Client;
@@ -92,6 +92,6 @@ private:
 	exploration Exploration;
 
 	//holds the information from the last search
-	std::vector<exploration::infoBuffer> searchInfo;
+	std::list<exploration::infoBuffer> searchInfo;
 };
 #endif
