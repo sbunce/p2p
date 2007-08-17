@@ -7,17 +7,13 @@
 namespace global //"global" namespace ;-)
 {
 	/* *********** BEGIN DEBUGGING OPTIONS *********** */
-
-	#define DEBUG
+	//#define DEBUG
 	//#define DEBUG_VERBOSE
 	//#define REREQUEST_PERCENTAGE
 
-	/*
-	If enabled the client randomly "drops" packets. The value is the number of
-	packets to drop out of 10,000. Example: 25 = 0.0025%.
-	*/
+	//what % of fileBlocks to "drop"
 	//#define UNRELIABLE_CLIENT
-	const int UNRELIABLE_CLIENT_VALUE = 500;
+	const int UNRELIABLE_CLIENT_VALUE = 99;
 
 	/*
 	If enabled server sometimes sends 1 byte more than it should. The abusive server
@@ -25,12 +21,11 @@ namespace global //"global" namespace ;-)
 	*/
 	//#define ABUSIVE_SERVER
 	const int ABUSIVE_SERVER_VALUE = 20000;
-
 	/* ************ END DEBUGGING OPTIONS ************ */
 
-	const int BUFFER_SIZE = 4096;    //how big packets can be(bytes, maximum 65535)
-	const int SUPERBLOCK_SIZE = 256; //how many fileBlocks are kept in a superBlock
-	const int MAX_CONNECTIONS = 50;  //maximum number of connections to server/from client
+	const int BUFFER_SIZE = 4096;    //how big packets can be
+	const int SUPERBLOCK_SIZE = 64;  //how many fileBlocks are kept in a superBlock
+	const int MAX_CONNECTIONS = 50;  //maximum number of connections both incoming/outgoing
 	const int P2P_PORT = 6969;       //port client connects to and server receives on
 	const int GUI_TICK = 100;        //time(in milliseconds) between gui updates
 	const int SPEED_AVERAGE = 5;     //how many seconds to average upload/download speed over
@@ -38,35 +33,34 @@ namespace global //"global" namespace ;-)
 	const int TIMEOUT = 5;           //how many seconds to wait for a client or server
 
 	/*
-	More data needs to be sent to the server to make a request than needs to be
-	sent back to the client to respond to the request.
+	C_CTRL_SIZE includes a command and potentially request data.
+	example request: X Y Y Y Y Z Z Z Z are the 9 bits of control data.
+	X - command bit
+	Y - file ID bits
+	Z - block number bits
+	S_CTRL_SIZE includes only a command.
 	*/
-	const int REQUEST_CONTROL_SIZE = 32; //how much of the request packet is control data
-	const int RESPONSE_CONTROL_SIZE = 1; //how much of the response packet is control data
+	const int C_CTRL_SIZE = 9; //protocol control data size, client -> server
+	const int S_CTRL_SIZE = 1; //protocol control data size, server -> client
 
-	/*
-	Control byte to indicate the type of reply. The size of these should correspond
-	to the number of bytes specified by CONTROL_SIZE. Strings specified are
-	arbitrary but must be unique.
-	*/
-	const std::string P_SBL = "A"; //request from client to server for fileBlock
-	const std::string P_BLS = "B"; //response from server to client with fileBlock attached
-	const std::string P_REJ = "C"; //rejected connection from the server
-	const std::string P_DNE = "D"; //server did not find the requested block
-	const std::string P_FNF = "E"; //server did not find the requested file
+	//protocol commands, client -> server
+	const char P_SBL = (char)1; //"send a file block"
 
-	//hash type: enuSHA1, enuSHA224, enuSHA256, enuSHA384, enuSHA512
+	//protocol commands, server -> client
+	const char P_DNE = (char)2; //"I don't have that block yet but I have the file"
+	const char P_FNF = (char)3; //"I don't have that file"
+	const char P_BLS = (char)4; //"here is the block requested"
+
+	//protocol commands, client and server
+	const char P_REJ = (char)5; //"I have too many connections already"
+
 	//if this is changed all databases will need to be rebuilt
 	const sha::SHA_TYPE HASH_TYPE = sha::enuSHA1;
 
-	//default locations of index files and shared/downloaded files
+	//default locations
 	const std::string CLIENT_DOWNLOAD_DIRECTORY = "download/";
-	const std::string EXPLORATION_SEARCH_DATABASE = "search.db";
 	const std::string SERVER_SHARE_DIRECTORY = "share/";
 	const std::string DATABASE_PATH = "database";
-
-	//field delimiter for all text files
-	const std::string DELIMITER = "|";
 }
 #endif
 

@@ -27,10 +27,6 @@ download::download(const std::string & hash_in, const std::string & fileName_in,
 	downloadComplete = false;
 	downloadSpeed = 0;
 
-	//add the first superBlock to superBuffer, needed for getRequest to work on first call
-	superBlock SB(currentSuperBlock++, lastBlock);
-	superBuffer.push_back(SB);
-
 	//seed random number generator
 	std::srand(time(0));
 
@@ -43,8 +39,7 @@ int download::addBlock(const int & blockNumber, std::string & bucket)
 	calculateSpeed();
 
 #ifdef UNRELIABLE_CLIENT
-	//this exists for debug purposes, 1% chance of "dropping" a packet
-	int random = rand() % 10000;
+	int random = rand() % 100;
 	if(random < global::UNRELIABLE_CLIENT_VALUE){
 		std::cout << "testing: client::addToTree(): OOPs! I dropped fileBlock " << blockNumber << "\n";
 
@@ -62,11 +57,11 @@ int download::addBlock(const int & blockNumber, std::string & bucket)
 	//prepare fileBlock to be added to a superBlock
 	std::string fileBlock;
 	if(bucket.size() >= global::BUFFER_SIZE){
-		fileBlock = bucket.substr(global::RESPONSE_CONTROL_SIZE, global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE);
+		fileBlock = bucket.substr(global::S_CTRL_SIZE, global::BUFFER_SIZE - global::S_CTRL_SIZE);
 		bucket.clear();
 	}
 	else{ //last block encountered
-		fileBlock = bucket.substr(global::RESPONSE_CONTROL_SIZE, bucket.size() - global::RESPONSE_CONTROL_SIZE);
+		fileBlock = bucket.substr(global::S_CTRL_SIZE, bucket.size() - global::S_CTRL_SIZE);
 		bucket.clear();
 	}
 
@@ -155,19 +150,7 @@ const std::string & download::getHash()
 int download::getRequest()
 {
 	/*
-	This function is a bit hard to understand but it defines how the superBlocks
-	are managed and is inherently complicated. Basically there are two superBlocks,
-	a leading superBlock and a trailing superBlock. If there is a getRequest()
-	and all requests for the leading superBlock have been made then a rerequest of
-	fileBlocks from the trailing superBlock are made. If the trailing superBlock
-	is complete then write it to disk and make the leading superBlock the trailing
-	superBlock and add a new leading superBlock. The idea is that two superBlocks are
-	maintained so that when the trailing one is incomplete we can work on completing
-	a new one while the slow servers send their fileBlocks for the old one.
-	*/
-
-	/*
-	Write out the oldest superBlock if it's complete. It's possible the
+	Write out the oldest superBlocks if they're complete. It's possible the
 	superBuffer could be empty so a check for this is done.
 	*/
 	if(!superBuffer.empty()){
@@ -183,66 +166,58 @@ int download::getRequest()
 	}
 
 	/*
-	Create another superBlock if the buffer is empty and the download is not
-	completed.
+	SB = superBlock
+	FB = fileBlock
+	* = requested fileBlock
+	M = missing fileBlock
+
+	Scenario #1 Ideal Conditions:
+		P1 would load a SB and return the first request. P4 would serve all requests
+	until SB was half completed. P3 would serve all requests until all requests
+	made. At this point either P1 or P2 will get called depending on whether
+	all FB were received for SB. This cycle would repeat under ideal conditions.
+
+	Scenario #2 Unreliable Hosts:
+		P1 would load a SB and return the first request. P4 would serve all requests
+	until SB was half completed. P3 would serve all requests until all requests
+	made. At this point we're missing FB that slow servers havn't sent yet.
+	P2 adds a leading SB to the buffer. P4 requests FB for the leading SB until
+	half the FB are requested. At this point P3 would rerequest FB from the back
+	until those blocks were gotten. The back SB would be written as soon as it
+	completed and P3 would start serving requests from the one remaining SB.
+
+	Example of a rerequest:
+	 back()                     front()
+	-----------------------	   -----------------------
+	|***M*******M*********| 	|***M******           |
+	-----------------------   	-----------------------
+	At this point the missing blocks from the back() would be rerequested.
+
+	Example of new SB creation.
+	 front() & back()
+	-----------------------
+	|*******************M*|
+	-----------------------
+	At this point a new leading SB would be added and that missing FB would be
+	given time to arrive.
 	*/
-	if(superBuffer.empty() && currentSuperBlock <= lastSuperBlock){
+	if(superBuffer.empty()){ //P1
 		superBlock SB(currentSuperBlock++, lastBlock);
 		superBuffer.push_front(SB);
-	}
-
-	/*
-	If all requests were made but the superBlock is not complete start working
-	on a new superBlocks to give slower servers time to send their fileBlocks for
-	the older superBlocks.
-
-	.front() indicates a newer superBlock
-	.back() indicates a older superBlock
-	*/
-	/*
-	If all fileBlocks have been requested but the front is not complete either
-	there are two possibilities:
-
-	1) Add a new superBlock and get a request number from it.
-	2) There is no room for another superBlock, rerequest a fileBlock from the
-	   oldest superBlock.
-	*/
-	if(superBuffer.front().allRequested() && !superBuffer.front().complete()){
-
-		//if the superBuffer is full rerequest from the oldest superBlock
-		if(superBuffer.size() >= 2){
-			blockCount = superBuffer.back().getRequest();
-		}
-		else{ //there is room for another superBlock
-
-			//if the file needs another superBlock add it and get a request
-			if(currentSuperBlock <= lastSuperBlock){
-				superBlock SB(currentSuperBlock++, lastBlock);
-				superBuffer.push_front(SB);
-				blockCount = superBuffer.front().getRequest();
-			}
-			else{
-				/*
-				The file doesn't need another superBlock, start rerequesting early.
-				This happens when the end of the download approaches.
-				*/
-				blockCount = superBuffer.back().getRequest();
-			}
-		}
-	}
-	/*
-	If all requests have not yet been made then proceed normally by getting the
-	next request from the newest superBlock.
-	*/
-	else if(!superBuffer.front().allRequested()){
 		blockCount = superBuffer.front().getRequest();
 	}
-	/*
-	All blocks already requested from the front superBlock and the front
-	superBlock is complete. Rerequest a block from the oldest superBlock.
-	*/
-	else{
+	else if(superBuffer.front().allRequested()){ //P2
+		if(superBuffer.size() < 2 && currentSuperBlock <= lastSuperBlock){
+			superBlock SB(currentSuperBlock++, lastBlock);
+			superBuffer.push_front(SB);
+		}
+		blockCount = superBuffer.front().getRequest();
+	}
+	else if(superBuffer.front().halfRequested()){ //P3
 		blockCount = superBuffer.back().getRequest();
+	}
+	else{ //P4
+		blockCount = superBuffer.front().getRequest();
 	}
 
 	/*
@@ -269,7 +244,7 @@ int download::getRequest()
 				return request;
 			}
 		}
-		else{ //the superBuffer has more than one block in it, serve the oldest
+		else{ //more than one superBlock, serve request from oldest
 			blockCount = superBuffer.back().getRequest();
 			return blockCount;
 		}

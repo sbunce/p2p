@@ -1,25 +1,7 @@
-FILE FORMATS
-
-download.db - files the client class is in the process of downloading
-<messageDigest>|<fileName>|<fileSize>|<server_IP>|<file_ID>
-
-share.db - files the server class has shared
-<file_ID>|<messageDigest>|<size>|<path>
-file_ID 0 is always the share index
-
-search.db - files known and what host they're on
-<messageDigest>|<fileName>|<fileSize>|<server_IP>|<file_ID>
-
-
 DEBUGGING LEVELS(set in globals.h)
-
 DEBUG             - enables terse debuggning output.
 DEBUG_VERBOSE     - Enables very verbose output. Best to direct this to a file for searching.
 UNRELIABLE_CLIENT - 50% chance of "dropping" a received packet.
 
 Depends:
-g++
-boost::bind
-boost::thread
-boost::tokenize
-gtkmm
+libsqlite3-dev libboost-filesystem-dev libboost-thread-dev

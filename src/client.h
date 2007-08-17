@@ -13,6 +13,9 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+//contains enum type for error codes select() might return
+#include <errno.h>
+
 //std
 #include <list>
 #include <string>
@@ -58,11 +61,18 @@ private:
 
 	//networking related
 	int fdmax;            //holds the number of the maximum socket
-	fd_set readfds;       //temporary file descriptor set to pass to select()
 	fd_set masterfds;     //master file descriptor set
+	fd_set readfds;       //holds what sockets are ready to be read
+	fd_set writefds;      //holds what sockets can be written to without blocking
 	bool resumeDownloads; //true if postResumeConnect needs to be run(after resuming)
 
-	//send buffer
+	/*
+	Buffer for partial sends. The partial send buffers can be accessed by socket
+	number with sendBuffer[socketNumber];
+	*/
+	std::vector<std::string> sendBuffer;
+
+	//contains currently running downloads
 	std::list<download> downloadBuffer;
 
 	/*
@@ -84,10 +94,9 @@ private:
 	removeDisconnected          - removes serverElements for servers that disconnected from us
 	removeTerminated            - removes downloads that are done terminating
 	start_thread                - starts the main client thread
-	sendPendingRequests         - send pending requests(duh)
+	sendPendingRequests         - send pending requests
+	encode                      - converts 32bit integer to 4 chars
 	sendRequest                 - sends a request to a server
-	terminateDownload_real      - terminate a download, all calls to this function must be
-	                            - within a downloadBufferMutex scoped lock!
 	*/
 	void disconnect(const int & socketfd);
 	bool newConnection(int & socketfd, std::string & server_IP);
@@ -100,7 +109,8 @@ private:
 	void removeTerminated();
 	void start_thread();
 	void sendPendingRequests();
-	int sendRequest(const std::string & server_IP, const int & socketfd, const int & fileID, const int & fileBlock);
+	std::string encodeInt(unsigned int number);
+	int sendRequest(const int & socketfd, const unsigned int & fileID, const unsigned int & fileBlock);
 
 	/*
 	This function is only to be called if the download isn't expecting any data on any
@@ -113,8 +123,7 @@ private:
 	*/
 	void terminateDownload(const std::string & hash);
 
-	boost::mutex downloadBufferMutex; //mutex for any usage of sendBuffer
-	boost::mutex masterfdsMutex;      //mutex for any usage of masterfds fd_set
+	boost::mutex Mutex;
 
 	clientIndex ClientIndex;
 };

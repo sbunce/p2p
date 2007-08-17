@@ -1,30 +1,13 @@
 BUGS AND NECESSARY FEATURES
 
--Crashing when starting up to resume downloads. It's related to the "-1" thing.
+-Need to use writefds in the client for requests(even though requests are real
+small a malicious person could exploit it).
 
--Strange pause when a server can't be connected to. Pause is due to the time
-it takes connect() to timeout connection. Decouple gui from startDownload()
+-Needs to be a check so that when the user tries to download the same thing
+twice the second download doesn't get appended to the first. Make a database
+to store downloaded file information to check against.
 
--There needs to be a check so that when the user tries to download the same thing
-twice the second download doesn't get appended to the first.
-
--The send() logic may be flawed. I have send()'s enclosed in a while loop so
-that the loop will run until the whole fileBlock is sent. Linux must be buffering
-because send says it can send a whole 65000 byte chunk in one shot even though
-my lo MTU is 16436. Consider passing select() a writefds to determine what
-sockets are ready for writing. Use buckets for not only receiving but also for
-sending. Be sure that the problem is like you understand it before trying to
-"fix" anything.
-
--The server requests a file path from the DB on each request. If a person requests
-one block it's likely they'll requests another. Consider having a buffer to
-ease demands on database. I already know I'm hitting the default timeout on
-sqlite3 with all the requests the server is making to the DB.
-
--Lock the downloadBuffer separately from serverHolder or rename downloadBufferMutex
-to something more generic, it's confusing.
-
--A server timeout for servers that accept requests but never respond.
+-Need a server timeout for servers that accept requests but never respond.
 
 -Client control of how many outgoing connections it will try to make.
 
@@ -32,12 +15,6 @@ to something more generic, it's confusing.
 
 
 IDEAS
-
--Exploration belongs in the client class, not out on it's own.
-
--Derive the download class from class X. Virtualize functions in class X. This 
-will allow you to make other classes and derive them from class X which will 
-allow downloading of different things.
 
 -File location should be done with trackers which are organized in to a tree
 structure such that if the user adds a tracker the user will also get to see

@@ -1,5 +1,6 @@
 //std
 #include <algorithm>
+#include <bitset>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -27,9 +28,6 @@ inline void client::disconnect(const int & socketfd)
 	std::cout << "info: client disconnecting socket number " << socketfd << "\n";
 #endif
 
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(masterfdsMutex);
-
 	close(socketfd);
 	FD_CLR(socketfd, &masterfds);
 
@@ -40,14 +38,12 @@ inline void client::disconnect(const int & socketfd)
 			break;
 		}
 	}
-
-	}//end lock scope
 }
 
 bool client::getDownloadInfo(std::vector<infoBuffer> & downloadInfo)
 {
 	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
+	boost::mutex::scoped_lock lock(Mutex);
 
 	if(downloadBuffer.size() == 0){
 		return false;
@@ -112,7 +108,7 @@ int client::getTotalSpeed()
 	int speed = 0;
 
 	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
+	boost::mutex::scoped_lock lock(Mutex);
 
 	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
 		speed += iter0->getSpeed();
@@ -152,7 +148,7 @@ bool client::newConnection(int & socketfd, std::string & server_IP)
 inline void client::processBuffer(const int & socketfd, char recvBuff[], const int & nbytes)
 {
 	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
+	boost::mutex::scoped_lock lock(Mutex);
 
 	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
 
@@ -195,7 +191,7 @@ bool client::removeAbusive_checkContains(std::list<download::abusiveServerElemen
 inline void client::removeAbusive()
 {
 	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
+	boost::mutex::scoped_lock lock(Mutex);
 
 	std::list<download::abusiveServerElement> abusiveServerTemp;
 
@@ -255,7 +251,7 @@ inline void client::removeAbusive()
 inline void client::removeDisconnected(const int & socketfd)
 {
 	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
+	boost::mutex::scoped_lock lock(Mutex);
 	
 	//find the disconnected serverElements in the downloads
 	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
@@ -298,7 +294,7 @@ inline void client::removeDisconnected(const int & socketfd)
 inline void client::removeTerminated()
 {
 	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
+	boost::mutex::scoped_lock lock(Mutex);
 
 	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
 
@@ -371,22 +367,19 @@ void client::start_thread()
 		tv.tv_sec = 2;
 		tv.tv_usec = 0;
 
-		/*
-		select() changes the fd_set passed to it to only reflect the sockets that need
-		to be read. Because of this a copy must be kept(masterfds) so select() doesn't
-		blow away the set. Before every call on select() readfds must be set equal to
-		masterfds so that select will check all sockets to see if they're ready for a
-		read. If they are they'll be left in the set, if they're not they'll be removed
-		from the set.
-		*/
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(masterfdsMutex);
 		readfds = masterfds;
-		}//end lock scope
 
 		if((select(fdmax+1, &readfds, NULL, NULL, &tv)) == -1){
-			perror("select");
-			exit(1);
+
+			/*
+			If gprof is enabled this program will occasionally be sent a PROF
+			signal. If this happens when select() is running then select will
+			return with EINTR.
+			*/
+			if(errno != EINTR){
+				perror("select");
+				exit(1);
+			}
 		}
 
 		//begin loop through all of the sockets, checking for flags
@@ -408,7 +401,7 @@ void client::start_thread()
 inline void client::sendPendingRequests()
 {
 	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
+	boost::mutex::scoped_lock lock(Mutex);
 
 	//pass tokens
 	for(std::list<std::list<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
@@ -438,8 +431,8 @@ inline void client::sendPendingRequests()
 #ifdef DEBUG_VERBOSE
 				std::cout << "info: client::sendPendingRequests() IP: " << (*iter1)->server_IP << "\n";
 #endif
-				int request = iter0->getRequest();
-				sendRequest((*iter1)->server_IP, (*iter1)->socketfd, (*iter1)->file_ID, request);
+				unsigned int request = iter0->getRequest();
+				sendRequest((*iter1)->socketfd, (*iter1)->file_ID, request);
 
 				//will be ready again when a response it received to this requst
 				(*iter1)->blockRequested = request;
@@ -461,21 +454,33 @@ inline void client::sendPendingRequests()
 	}//end lock scope
 }
 
-int client::sendRequest(const std::string & server_IP, const int & socketfd, const int & file_ID, const int & fileBlock)
+std::string client::encodeInt(unsigned int number)
+{
+	std::string encodedNumber;
+	std::bitset<32> bs = number;
+	std::bitset<32> bs_temp;
+
+	for(int x=0; x<4; x++){
+		bs_temp = bs;
+		bs_temp <<= 8*x;
+		bs_temp >>= 24;
+		encodedNumber += (unsigned char)bs_temp.to_ulong();
+	}
+
+	return encodedNumber;
+}
+
+int client::sendRequest(const int & socketfd, const unsigned int & file_ID, const unsigned int & fileBlock)
 {
 	std::ostringstream request_s;
-	request_s << global::P_SBL << global::DELIMITER << file_ID << global::DELIMITER << fileBlock << global::DELIMITER;
-
-	//the request has to be REQUEST_CONTROL_SIZE bytes exactly
-	std::string request = request_s.str();
-	request.append(global::REQUEST_CONTROL_SIZE - request.length(), ' '); //blank the extra space
+	request_s << global::P_SBL << encodeInt(file_ID) << encodeInt(fileBlock);
 
 	int bytesToSend = request_s.str().length();
 	int nbytes = 0; //how many bytes sent in one shot
 
 	//send request
 	while(bytesToSend > 0){
-		nbytes = send(socketfd, request.c_str(), request.length(), 0);
+		nbytes = send(socketfd, request_s.str().c_str(), request_s.str().length(), 0);
 
 		if(nbytes == -1){
 #ifdef DEBUG
@@ -488,6 +493,7 @@ int client::sendRequest(const std::string & server_IP, const int & socketfd, con
 	}
 
 #ifdef DEBUG_VERBOSE
+//fix this by getting the IP
 	std::cout << "info: client sending " << request << " to " << server_IP << "\n";
 #endif
 
@@ -508,8 +514,8 @@ bool client::startDownload(exploration::infoBuffer info)
 
 	int fileSize = atoi(info.fileSize.c_str());
 	int blockCount = 0;
-	int lastBlock = atoi(info.fileSize.c_str())/(global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE);
-	int lastBlockSize = atoi(info.fileSize.c_str()) % (global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE) + global::RESPONSE_CONTROL_SIZE;
+	int lastBlock = atoi(info.fileSize.c_str())/(global::BUFFER_SIZE - global::S_CTRL_SIZE);
+	int lastBlockSize = atoi(info.fileSize.c_str()) % (global::BUFFER_SIZE - global::S_CTRL_SIZE) + global::S_CTRL_SIZE;
 	int lastSuperBlock = lastBlock / global::SUPERBLOCK_SIZE;
 	int currentSuperBlock = 0;
 
@@ -526,7 +532,7 @@ bool client::startDownload(exploration::infoBuffer info)
 	);
 
 	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
+	boost::mutex::scoped_lock lock(Mutex);
 
 	//add known servers associated with this download
 	for(int x=0; x<info.server_IP.size(); x++){
@@ -592,7 +598,7 @@ bool client::startDownload(exploration::infoBuffer info)
 void client::stopDownload(const std::string & hash)
 {
 	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
+	boost::mutex::scoped_lock lock(Mutex);
 
 	//find the download and set it to terminate
 	std::list<download>::iterator download_iter;

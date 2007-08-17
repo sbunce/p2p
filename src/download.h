@@ -30,11 +30,11 @@ public:
 		//these need to be set before this server can be used
 		std::string server_IP; //IP of the server that has the file
 		int socketfd;          //holds the socket number or -1(no socket yet created)
-		int file_ID;           //the ID of the file on the server
+		unsigned int file_ID;           //the ID of the file on the server
 		std::string bucket;    //buffer for received data
 
 		//these are set by the client to keep track of the last request.
-		int blockRequested; //what block was requested
+		unsigned int blockRequested; //what block was requested
 		int bytesExpected;  //how many bytes need to be received to finish the request
 	};
 

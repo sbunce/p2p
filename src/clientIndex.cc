@@ -103,11 +103,11 @@ void clientIndex::initialFillBuffer_callBack(int & columnsRetrieved, char ** que
 		fs::path path_boost = fs::system_complete(fs::path(global::CLIENT_DOWNLOAD_DIRECTORY + fileName, fs::native));
 		int size = atoi(queryResponse[2]);
 		int currentBytes = fs::file_size(path_boost);
-		int blockCount = currentBytes / (global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE);
-		int lastBlock = size/(global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE);
-		int lastBlockSize = size % (global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE) + global::RESPONSE_CONTROL_SIZE;
+		int blockCount = currentBytes / (global::BUFFER_SIZE - global::S_CTRL_SIZE);
+		int lastBlock = size/(global::BUFFER_SIZE - global::S_CTRL_SIZE);
+		int lastBlockSize = size % (global::BUFFER_SIZE - global::S_CTRL_SIZE) + global::S_CTRL_SIZE;
 		int lastSuperBlock = lastBlock / global::SUPERBLOCK_SIZE;
-		int currentSuperBlock = currentBytes / ( (global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE) * global::SUPERBLOCK_SIZE );
+		int currentSuperBlock = currentBytes / ( (global::BUFFER_SIZE - global::S_CTRL_SIZE) * global::SUPERBLOCK_SIZE );
 
 		download resumedDownload(
 			hash,

@@ -1,6 +1,5 @@
 //std
-#include <algorithm>
-#include <cstdlib>
+#include <bitset>
 #include <fstream>
 #include <iostream>
 #include <iomanip>
@@ -11,31 +10,71 @@
 
 server::server()
 {
-	maxConnections = global::MAX_CONNECTIONS;
-	numConnections = 0;
-
-	indexing = true;
+	connections = 0;
 }
 
-void server::disconnect(int clientSock)
+void server::disconnect(const int & socketfd)
 {
 #ifdef DEBUG
-	std::cout << "info: server::disconnect(): server disconnecting socket number " << clientSock << "\n";
+	std::cout << "info: server::disconnect(): server disconnecting socket number " << socketfd << "\n";
 #endif
-	numConnections--;
 
-	close(clientSock);
-	FD_CLR(clientSock, &masterfds);
+	/*
+	It is possible for disconnect() to get called more than once when a socket
+	disconnects which necessitates this check before removing the socket from the
+	set and decrementing connections.
+	*/
+	if(FD_ISSET(socketfd, &masterfds)){
+		connections--;
+		close(socketfd);
+		FD_CLR(socketfd, &masterfds);
+	}
+
+	//reduce fdmax if possible
+	for(int x=fdmax; x != 0; x--){
+		if(FD_ISSET(x, &masterfds)){
+			fdmax = x;
+			break;
+		}
+	}
+
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(sendBufferMutex);
+
+	//erase any remaining buffer
+	sendBuffer[socketfd].clear();
+
+	//reduce send/receive buffers if possible
+	while(sendBuffer.size() >= fdmax+1){
+		sendBuffer.pop_back();
+	}
+
+	}//end lock scope
+
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(receiveBufferMutex);
+
+	//erase any remaining buffer
+	receiveBuffer[socketfd].clear();
+
+	while(receiveBuffer.size() >= fdmax+1){
+		receiveBuffer.pop_back();
+	}
+
+	}//end lock scope
 }
 
-void server::calculateSpeed(int clientSock, int file_ID, int fileBlock)
+void server::calculateSpeed(const int & socketfd, const int & file_ID, const int & fileBlock)
 {
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(uploadSpeedMutex);
+
 	time_t currentTime = time(0);
 
 	//get IP of the socket
 	struct sockaddr_in addr;
 	socklen_t len = sizeof(addr);
-	getpeername(clientSock, (struct sockaddr*)&addr, &len);
+	getpeername(socketfd, (struct sockaddr*)&addr, &len);
 
 	bool found = false;
 	for(std::vector<speedElement>::iterator iter0 = uploadSpeed.begin(); iter0 != uploadSpeed.end(); iter0++){
@@ -88,6 +127,8 @@ void server::calculateSpeed(int clientSock, int file_ID, int fileBlock)
 			uploadSpeed.push_back(temp);
 		}
 	}
+
+	}//end lock scope
 }
 
 int server::getTotalSpeed()
@@ -95,7 +136,7 @@ int server::getTotalSpeed()
 	int totalBytes = 0;
 
 	{//begin lock scope
-	boost::mutex::scoped_lock lock(Mutex);
+	boost::mutex::scoped_lock lock(uploadSpeedMutex);
 
 	for(std::vector<speedElement>::iterator iter0 = uploadSpeed.begin(); iter0 < uploadSpeed.end(); iter0++){
 		for(int x=1; x < iter0->downloadSecond.size() - 1; x++){
@@ -113,7 +154,7 @@ int server::getTotalSpeed()
 bool server::getUploadInfo(std::vector<infoBuffer> & uploadInfo)
 {
 	{//begin lock scope
-	boost::mutex::scoped_lock lock(Mutex);
+	boost::mutex::scoped_lock lock(uploadSpeedMutex);
 
 	//remove completed downloads from uploadSpeed
 	time_t currentTime = time(0);
@@ -128,7 +169,6 @@ bool server::getUploadInfo(std::vector<infoBuffer> & uploadInfo)
 		return false;
 	}
 
-	//process sendQueue
 	for(std::vector<speedElement>::iterator iter0 = uploadSpeed.begin(); iter0 < uploadSpeed.end(); iter0++){
 		//calculate the percent complete
 		float bytesUploaded = iter0->fileBlock * global::BUFFER_SIZE;
@@ -192,212 +232,147 @@ const bool & server::isIndexing()
 	return indexing;
 }
 
-void server::newCon(int listener)
+void server::newConnection(const int & listener)
 {
 	struct sockaddr_in remoteaddr;
 	socklen_t addrlen = sizeof(remoteaddr);
 	int newfd;
 
 	//make a new socket for incoming connection
-	if((newfd = accept(listener, (struct sockaddr *)&remoteaddr, &addrlen)) == -1){
+	newfd = accept(listener, (struct sockaddr *)&remoteaddr, &addrlen);
+	if(newfd == -1){
 		perror("accept");
 	}
 	else{ //add new socket to master set
-		numConnections++;
+		connections++;
 
-		if(numConnections <= maxConnections){
+		if(connections <= global::MAX_CONNECTIONS){
 			FD_SET(newfd, &masterfds);
 
-			//make sure fdmax is always the highest connected socket number,
-			//if we have a low socket reused we don't want to set it as highest
+			//make sure fdmax is correct, resize buffers if needed
 			if(newfd > fdmax){
 				fdmax = newfd;
-			}
 
+				{//begin lock scope
+				boost::mutex::scoped_lock lock(sendBufferMutex);
+
+				//resize send/receive buffers if necessary
+				while(sendBuffer.size() <= fdmax+1){
+					std::string newBuffer;
+					sendBuffer.push_back(newBuffer);
+					sendBuffer.back().reserve(global::BUFFER_SIZE);
+				}
+
+				}//end lock scope
+
+				{//begin lock scope
+				boost::mutex::scoped_lock lock(receiveBufferMutex);
+
+				while(receiveBuffer.size() <= fdmax+1){
+					std::string newBuffer;
+					receiveBuffer.push_back(newBuffer);
+				}
+
+				}//end lock scope
+			}
 #ifdef DEBUG
-			std::cout << "info: server::newCon(): " << inet_ntoa(remoteaddr.sin_addr) << " socket " << newfd << " connected\n";
+			std::cout << "info: server::newConnection(): " << inet_ntoa(remoteaddr.sin_addr) << " socket " << newfd << " connected\n";
 #endif
 		}
 		else{ //too many connections, send rejection to new socket and disconnect
-			send(newfd, global::P_REJ.c_str(), global::P_REJ.length(), 0);
+			char temp[] = {global::P_REJ, '\0'};
+			send(newfd, temp, sizeof(temp), 0);
 			close(newfd);
-
 #ifdef DEBUG
-			std::cout << "warning: server::newCon(): max connections reached, rejected new connection\n";
+			std::cout << "warning: server::newConnection(): max connections reached, rejected new connection\n";
 #endif
 		}
 	}
 }
 
-bool queueRequest_checkAge(server::requestBufferElement & RBE)
+inline unsigned int server::decodeInt(const int & begin, char recvBuffer[])
 {
-	time_t currentTime = time(0);
-	return (currentTime - RBE.lastSeen > global::TIMEOUT);
+	std::bitset<32> bs(0);
+	std::bitset<32> bs_temp;
+
+	int y = 3;
+	for(int x=begin; x<begin+4; x++){
+		bs_temp = (unsigned char)recvBuffer[x];
+		bs_temp <<= 8*y--;
+		bs |= bs_temp;
+	}
+
+	return (unsigned int)bs.to_ulong();
 }
 
-void server::queueRequest(int clientSock, char recvBuff[], int nbytes)
+inline int server::prepareSendBuffer(const int & socketfd, const int & file_ID, const int & blockNumber)
 {
-	std::string request(recvBuff, nbytes);
+	sendBuffer[socketfd].clear(); //make sure no residual in the buffer
 
-	sockaddr_in addr;
-	socklen_t len = sizeof(addr);
-	getpeername(clientSock, (struct sockaddr*)&addr, &len);
-
-#ifdef DEBUG_VERBOSE
-	std::cout << "info: server::queueRequest(): server received " << request << " from " << inet_ntoa(addr.sin_addr) << "\n";
-#endif
-
-	//if a full request was received then process it, otherwise buffer
-	if(nbytes == global::REQUEST_CONTROL_SIZE){
-
-		//find position of delimiters
-		int first = request.find_first_of(global::DELIMITER);
-		int second = request.find_first_of(global::DELIMITER, first+1);
-		int third = request.find_first_of(global::DELIMITER, second+1);
-
-		//tokenize control data
-		std::string command = request.substr(0, first);
-		std::string file_ID = request.substr(first+1, (second - 1) - first);
-		std::string fileBlock = request.substr(second+1, (third - 1) - second);
-
-		if(command == global::P_SBL){
-			sendBufferElement temp;
-			temp.client_IP = inet_ntoa(addr.sin_addr);
-			temp.clientSock = clientSock;
-			temp.file_ID = atoi(file_ID.c_str());
-			temp.fileBlock = atoi(fileBlock.c_str());
-
-			{//begin lock scope
-			boost::mutex::scoped_lock lock(Mutex);
-
-			sendBuffer.push_back(temp);
-
-			}//end lock scope
-		}
-	}
-	else{
-
-		/*
-		This part shouldn't run very often. It will only run if the MTU of the client
-		or server is less than global::REQUEST_CONTROL_SIZE which is generally going
-		to be very small.
-		*/
-
-		bool found = false;
-		for(std::vector<requestBufferElement>::iterator iter0 = requestBuffer.begin(); iter0 != requestBuffer.end(); iter0++){
-
-			if(iter0->clientSock == clientSock){
-				iter0->bucket.append(recvBuff, nbytes);
-
-				if(iter0->bucket.size() == global::REQUEST_CONTROL_SIZE){
-
-					//find position of delimiters
-					int first = request.find_first_of(global::DELIMITER);
-					int second = request.find_first_of(global::DELIMITER, first+1);
-					int third = request.find_first_of(global::DELIMITER, second+1);
-
-					//tokenize control data
-					std::string command = request.substr(0, first);
-					std::string file_ID = request.substr(first+1, (second - 1) - first);
-					std::string fileBlock = request.substr(second+1, (third - 1) - second);
-
-					if(command == global::P_SBL){
-						sendBufferElement temp;
-						temp.client_IP = inet_ntoa(addr.sin_addr);
-						temp.clientSock = clientSock;
-						temp.file_ID = atoi(file_ID.c_str());
-						temp.fileBlock = atoi(fileBlock.c_str());
-
-						{//begin lock scope
-						boost::mutex::scoped_lock lock(Mutex);
-
-						sendBuffer.push_back(temp);
-
-						}//end lock scope
-					}
-				}
-				else if(iter0->bucket.size() > global::REQUEST_CONTROL_SIZE){
-					//overflow detected, erase buffer
-					requestBuffer.erase(iter0);
-				}
-
-				break;
-			}
-		}
-
-		time_t currentTime = time(0);
-
-		if(!found){
-			requestBufferElement temp;
-			temp.lastSeen = currentTime;
-			temp.clientSock = clientSock;
-			temp.bucket.append(recvBuff, nbytes);
-
-			//check for overflow, add to requestBuffer if not overflow
-			if(temp.bucket.size() <= global::REQUEST_CONTROL_SIZE){
-				requestBuffer.push_back(temp);
-			}
-		}
-
-		//remove requestBuffer elements that are too old
-		remove_if(requestBuffer.begin(), requestBuffer.end(), queueRequest_checkAge);
-	}
-}
-
-int server::sendBlock(int clientSock, int file_ID, int fileBlock)
-{
-   int bytesToSend = 0;    //how many bytes left to send
-   int nbytes;             //how many bytes sent in one shot
-	std::string response;
-
-	//check for valid file request
+	//get fileSize/filePath that corresponds to file_ID
 	int fileSize;
 	std::string filePath;
 	if(!ServerIndex.getFileInfo(file_ID, fileSize, filePath)){
+		//file was not found
+		sendBuffer[socketfd] += global::P_FNF;
 		return 0;
 	}
 
 	//check for valid block request
-	if(fileBlock*(global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE) > fileSize){
+	if(blockNumber*(global::BUFFER_SIZE - global::S_CTRL_SIZE) > fileSize){
+		//a block past the end of file was requested
+		sendBuffer[socketfd] += global::P_DNE;
 		return 0;
 	}
 
-	//prepare control data
-	response += global::P_BLS;
-	bytesToSend = response.size();
+	sendBuffer[socketfd] += global::P_BLS; //add control data
 
 	std::ifstream fin(filePath.c_str());
 
 	if(fin.is_open()){
 
 		//seek to the fileBlock the client wants
-		fin.seekg(fileBlock*(global::BUFFER_SIZE - global::RESPONSE_CONTROL_SIZE));
+		fin.seekg(blockNumber*(global::BUFFER_SIZE - global::S_CTRL_SIZE));
 
 		//fill the buffer
 		char ch;
 		while(fin.get(ch)){
-			response += ch;
-			bytesToSend++;
-			if(bytesToSend == global::BUFFER_SIZE){
+			sendBuffer[socketfd] += ch;
+			if(sendBuffer[socketfd].size() == global::BUFFER_SIZE){
 				break;
 			}
 		}
 
 		fin.close();
+	}
 
-		//send the buffer
-		while(bytesToSend > 0){
-			nbytes = send(clientSock, response.c_str(), bytesToSend, 0);
-			if(nbytes == -1){
-				break;
-			}
-			bytesToSend -= nbytes;
+	//Update speed calculation. Assumes this block will be sent.
+	calculateSpeed(socketfd, file_ID, blockNumber);
+
+	return 0;
+}
+
+inline void server::processRequest(const int & socketfd, char recvBuffer[], const int & nbytes)
+{
+#ifdef DEBUG_VERBOSE
+	sockaddr_in addr;
+	socklen_t len = sizeof(addr);
+	getpeername(socketfd, (struct sockaddr*)&addr, &len);
+	std::cout << "info: server::queueRequest(): server received " << request << " from " << inet_ntoa(addr.sin_addr) << "\n";
+#endif
+
+	if(nbytes == global::C_CTRL_SIZE){
+
+		if(recvBuffer[0] == global::P_SBL){
+
+			int file_ID = decodeInt(1, recvBuffer);
+			int blockNumber = decodeInt(5, recvBuffer);
+
+			prepareSendBuffer(socketfd, file_ID, blockNumber);
 		}
 	}
 	else{
-#ifdef DEBUG
-		std::cout << "error: server::sendBlock(): can't open requested file for reading\n";
-#endif
+		receiveBuffer[socketfd].append(recvBuffer);
 	}
 }
 
@@ -423,18 +398,18 @@ void server::start_thread()
 	}
 
 	//reuse port if already in use
-	//if we don't do this it can take up to a minute for kernel to de-allocate port
+	//if this isn't done it can take up to a minute for port to be de-allocated
 	int yes = 1;
 	if(setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1){
 		perror("setsockopt");
 		exit(1);
 	}
 
-	struct sockaddr_in myaddr;           //server address
-	myaddr.sin_family = AF_INET;         //set ipv4
-	myaddr.sin_addr.s_addr = INADDR_ANY; //set to listen on all available interfaces
-	myaddr.sin_port = htons(global::P2P_PORT);   //set listening port
-	memset(&(myaddr.sin_zero), '\0', 8); //zero the rest
+	struct sockaddr_in myaddr;                 //server address
+	myaddr.sin_family = AF_INET;               //set ipv4
+	myaddr.sin_addr.s_addr = INADDR_ANY;       //set to listen on all available interfaces
+	myaddr.sin_port = htons(global::P2P_PORT); //set listening port
+	memset(&(myaddr.sin_zero), '\0', 8);
 
 	//set listener info to what we set above
 	if(bind(listener, (struct sockaddr *)&myaddr, sizeof(myaddr)) == -1){
@@ -448,38 +423,50 @@ void server::start_thread()
 		exit(1);
 	}
 
-	FD_SET(listener, &masterfds);   //add listener to master set
+	FD_SET(listener, &masterfds);
 	fdmax = listener;
-	char recvBuff[global::BUFFER_SIZE];     //our receive buffer
-   int nbytes;                     //how many bytes sent in one shot
+	char recvBuffer[global::BUFFER_SIZE];
+   int nbytes;
 
 #ifdef DEBUG
 	std::cout << "info: server::start_thread(): server created listener socket number " << listener << "\n";
 #endif
-	//main server loop
+
 	while(true){
-		//required because select modifies readfds
+
 		readfds = masterfds;
+		writefds = masterfds;
 
-		stateTick();
-
-		if(select(fdmax+1, &readfds, NULL, NULL, NULL) == -1){
+		if(select(fdmax+1, &readfds, &writefds, NULL, NULL) == -1){
 			perror("select");
 			exit(1);
 		}
 
-		//begin loop through all of our sockets, checking for flags
 		for(int x=0; x<=fdmax; x++){
 			if(FD_ISSET(x, &readfds)){
+
 				if(x == listener){ //new client connected
-					newCon(x);
+					newConnection(x);
 				}
 				else{ //existing socket sending data
-					if((nbytes = recv(x, recvBuff, sizeof(recvBuff), 0)) <= 0){
+					if((nbytes = recv(x, recvBuffer, sizeof(recvBuffer), 0)) <= 0){
 						disconnect(x);
 					}
 					else{ //incoming data from client socket
-						queueRequest(x, recvBuff, nbytes);
+						processRequest(x, recvBuffer, nbytes);
+					}
+				}
+			}
+
+			if(FD_ISSET(x, &writefds)){
+
+				if(!sendBuffer[x].empty()){
+
+					if((nbytes = send(x, sendBuffer[x].c_str(), sendBuffer[x].size(), 0)) <= 0){
+						disconnect(x);
+					}
+					else{ //remove bytes sent from buffer
+						sendBuffer[x].erase(0, nbytes);
 					}
 				}
 			}
@@ -487,17 +474,3 @@ void server::start_thread()
 	}
 }
 
-void server::stateTick()
-{
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(Mutex);
-
-	//send whole sendBuffer
-	while(!sendBuffer.empty()){
-		sendBlock(sendBuffer.back().clientSock, sendBuffer.back().file_ID, sendBuffer.back().fileBlock);
-		calculateSpeed(sendBuffer.back().clientSock, sendBuffer.back().file_ID, sendBuffer.back().fileBlock);
-		sendBuffer.pop_back();
-	}
-
-	}//end lock scope
-}

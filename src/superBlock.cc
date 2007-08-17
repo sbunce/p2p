@@ -13,6 +13,8 @@ superBlock::superBlock(const int & superBlockNumber_in, const int & lastBlock_in
 	if(maxBlock > lastBlock_in){
 		maxBlock = lastBlock_in;
 	}
+
+	halfReq = false;
 }
 
 bool superBlock::addBlock(const int & blockNumber, const std::string & fileBlock)
@@ -63,9 +65,15 @@ int superBlock::getRequest()
 	missing block numbers in order.
 	*/
 	if(nextRequest <= maxBlock){
+
 #ifdef REREQUEST_PERCENTAGE
 		requestCount++;
 #endif
+
+		if((nextRequest % global::SUPERBLOCK_SIZE) == (maxBlock - minBlock) / 2){
+			halfReq = true;
+		}
+
 		return nextRequest++;
 	}
 	else{
@@ -76,32 +84,34 @@ int superBlock::getRequest()
 			return -1;
 		}
 
+		int blockNumber = missingBlocks.front();
+		missingBlocks.pop_front();
+
 #ifdef REREQUEST_PERCENTAGE
 		rerequestCount++;
 		static float percentage = ((float)rerequestCount / (float)requestCount) * 100;
-		std::cout << "rerequest: " << percentage << "%\n";
 		std::cout << "requestCount: " << requestCount << "\n";
 		std::cout << "rerequestCount: " << rerequestCount << "\n";
+		std::cout << "rerequest: " << percentage << "%\n";
 #endif
 
-		int blockNumber = missingBlocks.front();
-		missingBlocks.pop_front();
 		return blockNumber;
 	}
 }
 
 void superBlock::findMissing()
 {
-	/*
-	Don't check for missing blocks if missing blocks are already known. This way
-	duplicates in missingBlocks don't have to be checked for.
-	*/
-	if(missingBlocks.empty()){
-		for(int x=0; x<=maxBlock - minBlock; x++){
-			if(container[x].empty()){
-				 missingBlocks.push_back((superBlockNumber * global::SUPERBLOCK_SIZE) + x);
-			}
+	missingBlocks.clear();
+
+	for(int x=0; x<=maxBlock - minBlock; x++){
+		if(container[x].empty()){
+			 missingBlocks.push_back((superBlockNumber * global::SUPERBLOCK_SIZE) + x);
 		}
 	}
+}
+
+bool superBlock::halfRequested()
+{
+	return halfReq;
 }
 

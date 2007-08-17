@@ -34,20 +34,6 @@ public:
 		int percentComplete;
 	};
 
-	/*
-	If the client can't send REQUEST_CONTROL_SIZE bytes in one shot then the
-	amount it can send will be stored here until all REQUEST_CONTROL_SIZE bytes
-	are gotten. Once the full request is made it will be processed. This class
-	is public but no one but the server should need one.
-	*/
-	class requestBufferElement
-	{
-	public:
-		int lastSeen;
-		int clientSock;
-		std::string bucket; //holds the partial request
-	};
-
 	server();
 	/*
 	getUploadInfo - updates and returns upload information
@@ -60,20 +46,10 @@ public:
 	void start();
 
 private:
-	//false while files are being indexed/hashed
+	//true while files are being indexed/hashed
 	bool indexing;
 
-	//element of sendBuffer, information about what was requested is stored in this
-	class sendBufferElement
-	{
-	public:
-		std::string client_IP; //only used for info purposes like calculateSpeed()
-		int clientSock;        //what socket to send the data to
-		int file_ID;           //what file the client has requested
-		int fileBlock;         //what chunk of the file the client wants(buffer*offset)
-	};
-
-	//use by uploadSpeed to track the progress of an upload
+	//used by uploadSpeed to track the progress of an upload
 	class speedElement
 	{
 	public:
@@ -93,40 +69,52 @@ private:
 		int fileBlock; //what fileBlock was last requested
 	};
 
-	//networking related
-	int maxConnections; //maximum connections allowed
-	int numConnections; //how many are currently connected
-	fd_set readfds;   //file descriptor set(the one passed to select())
-	fd_set masterfds; //master file descriptor set
-	int fdmax;        //holds the number of the maximum socket
-
-	//stores pending responses
-	std::vector<sendBufferElement> sendBuffer;
-
-	//stores partial requests
-	std::vector<requestBufferElement> requestBuffer;
-
 	//used by calculateSpeed() to track upload speeds
 	std::vector<speedElement> uploadSpeed;
 
 	/*
-	disconnect     - disconnect client and remove socket from master set
-	calculateSpeed - process the sendQueue and update uploadSpeed
-	newCon         - sets up socket for client
-	queueRequest   - interprets the request from a client and buffers it
-	sendBlock      - sends a fileBlock to a client
-	stateTick      - do pending actions
+	Stores pending responses. The partial send buffers can be accessed by socket
+	number with sendBuffer[socketNumber];
 	*/
-	void disconnect(int clientSock);
-	void calculateSpeed(int clientSock, int file_ID, int fileBlock);
-	void newCon(int listener);
-	void queueRequest(int clientSock, char recvBuff[], int nbytes);
-	int sendBlock(int clientSock, int file_ID, int fileBlock);
-	void stateTick();
+	std::vector<std::string> sendBuffer;
+
+	/*
+	Stores partial requests. The partial requests can be accessed by socket number
+	with receiveBuffer[socketNumber];
+	*/
+	std::vector<std::string> receiveBuffer;
+
+	//how many are connections currently established
+	int connections;
+
+	//select() related
+	fd_set masterfds;   //master file descriptor set
+	fd_set readfds;     //set when socket can read without blocking
+	fd_set writefds;    //set when socket can write without blocking
+	int fdmax;          //holds the number of the maximum socket
+
+	/*
+	decodeInt         - turns four char's in to a 32bit integer starting at 'begin'
+	disconnect        - disconnect client and remove socket from master set
+	calculateSpeed    - process the sendQueue and update uploadSpeed
+	newConnection     - sets up socket for client
+	prepareSendBuffer - prepares a response to a file block request
+	processRequest    - interprets the request from a client and buffers it
+	sendBlock         - sends a fileBlock to a client
+	stateTick         - do pending actions
+	*/
+	unsigned int decodeInt(const int & begin, char recvBuffer[]);
+	void disconnect(const int & socketfd);
+	void calculateSpeed(const int & socketfd, const int & file_ID, const int & fileBlock);
+	void newConnection(const int & listener);
+	int prepareSendBuffer(const int & socketfd, const int & file_ID, const int & blockNumber);
+	void processRequest(const int & socketfd, char recvBuffer[], const int & nbytes);
 	void start_thread();
 
-	//items that require locking: uploadSpeed
-	boost::mutex Mutex;
+	//locks
+	boost::mutex sendBufferMutex;
+	boost::mutex receiveBufferMutex;
+	boost::mutex uploadSpeedMutex;
 
 	//keeps track of shared files
 	serverIndex ServerIndex;

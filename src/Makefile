@@ -1,18 +1,28 @@
 CC = g++ -O3 -c
 CCL = g++
 
+#-pg compiles in gprof, -fno-inline allows gprof to be more specific
+DEBUG = -pg -fno-inline
+
 OBJECTS = main.o client.o download.o clientIndex.o exploration.o gui.o \
 	gui_about.o hash.o server.o serverIndex.o sha.o superBlock.o
 
 LINKER_OPTIONS = `pkg-config gtkmm-2.4 --cflags --libs` \
 	-lboost_thread -D_REENTRANT -lboost_filesystem -lsqlite3
 
+SERVER_OBJECTS = main-server.o hash.o server.o serverIndex.o sha.o
+
+SERVER_LINKER_OPTIONS = -lboost_thread -D_REENTRANT -lboost_filesystem -lsqlite3
+
 main: $(OBJECTS)
-	$(CCL) $(OBJECTS) -o ../simple-p2p $(LINKER_OPTIONS)
+	$(CCL) $(OBJECTS) $(DEBUG) -o ../simple-p2p $(LINKER_OPTIONS)
 	@echo "\nBuilding simple-p2p completed!\n"
 
 main.o: main.cc gui.o
 	$(CC) main.cc `pkg-config gtkmm-2.4 --cflags`
+
+main-server.o: main-server.cc server.o
+	$(CC) main-server.cc
 
 client.o: client.cc client.h download.o clientIndex.o exploration.o globals.h 
 	$(CC) client.cc
@@ -49,7 +59,11 @@ superBlock.o: superBlock.cc superBlock.h globals.h
 
 sha_test: sha_test.cc sha.o
 	$(CCL) sha_test.cc sha.cc -o ../sha-test
-	@echo "\nBuilding sha-test completed.\n"
+
+# standalone server, no gui
+server: main-server.o hash.o serverIndex.o sha.o
+	$(CCL) $(SERVER_OBJECTS) -o ../server $(SERVER_LINKER_OPTIONS) 
+	@echo "\nBuilding simple-p2p-server completed.\n"
 
 clean:
 	rm -v *.o
