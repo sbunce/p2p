@@ -60,11 +60,21 @@ private:
 	sha SHA; //creates messageDigests
 
 	//networking related
-	int fdmax;            //holds the number of the maximum socket
 	fd_set masterfds;     //master file descriptor set
 	fd_set readfds;       //holds what sockets are ready to be read
 	fd_set writefds;      //holds what sockets can be written to without blocking
-	bool resumeDownloads; //true if postResumeConnect needs to be run(after resuming)
+	int fdmax;            //holds the number of the maximum socket
+
+	//true if postResumeConnect needs to be run(after resuming)
+	bool resumeDownloads;
+
+	/*
+	This is set to true when the sendBuffer has something in it. This exists for
+	the purpose of having an alternate select() call that doesn't involve writefds
+	because using writefds hogs CPU. However when there is data to write it is
+	proper to use writefds.
+	*/
+	bool sendPending;
 
 	/*
 	Buffer for partial sends. The partial send buffers can be accessed by socket
@@ -94,7 +104,7 @@ private:
 	removeDisconnected          - removes serverElements for servers that disconnected from us
 	removeTerminated            - removes downloads that are done terminating
 	start_thread                - starts the main client thread
-	sendPendingRequests         - send pending requests
+	prepareRequests             - send pending requests
 	encode                      - converts 32bit integer to 4 chars
 	sendRequest                 - sends a request to a server
 	*/
@@ -108,7 +118,7 @@ private:
 	void removeDisconnected(const int & socketfd);
 	void removeTerminated();
 	void start_thread();
-	void sendPendingRequests();
+	void prepareRequests();
 	std::string encodeInt(unsigned int number);
 	int sendRequest(const int & socketfd, const unsigned int & fileID, const unsigned int & fileBlock);
 
@@ -123,7 +133,9 @@ private:
 	*/
 	void terminateDownload(const std::string & hash);
 
-	boost::mutex Mutex;
+	boost::mutex downloadBufferMutex;
+	boost::mutex sendBufferMutex;
+	boost::mutex serverHolderMutex;
 
 	clientIndex ClientIndex;
 };

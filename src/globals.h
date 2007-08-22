@@ -7,7 +7,7 @@
 namespace global //"global" namespace ;-)
 {
 	/* *********** BEGIN DEBUGGING OPTIONS *********** */
-	//#define DEBUG
+	#define DEBUG
 	//#define DEBUG_VERBOSE
 	//#define REREQUEST_PERCENTAGE
 

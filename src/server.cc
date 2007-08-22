@@ -11,6 +11,8 @@
 server::server()
 {
 	connections = 0;
+	sendPending = false;
+	FD_ZERO(&masterfds);
 }
 
 void server::disconnect(const int & socketfd)
@@ -257,18 +259,19 @@ void server::newConnection(const int & listener)
 				boost::mutex::scoped_lock lock(sendBufferMutex);
 
 				//resize send/receive buffers if necessary
-				while(sendBuffer.size() <= fdmax+1){
+				while(sendBuffer.size() <= fdmax){
 					std::string newBuffer;
 					sendBuffer.push_back(newBuffer);
-					sendBuffer.back().reserve(global::BUFFER_SIZE);
 				}
+
+				sendBuffer[newfd].reserve(global::BUFFER_SIZE);
 
 				}//end lock scope
 
 				{//begin lock scope
 				boost::mutex::scoped_lock lock(receiveBufferMutex);
 
-				while(receiveBuffer.size() <= fdmax+1){
+				while(receiveBuffer.size() <= fdmax){
 					std::string newBuffer;
 					receiveBuffer.push_back(newBuffer);
 				}
@@ -369,6 +372,8 @@ inline void server::processRequest(const int & socketfd, char recvBuffer[], cons
 			int blockNumber = decodeInt(5, recvBuffer);
 
 			prepareSendBuffer(socketfd, file_ID, blockNumber);
+
+			sendPending = true;
 		}
 	}
 	else{
@@ -432,14 +437,40 @@ void server::start_thread()
 	std::cout << "info: server::start_thread(): server created listener socket number " << listener << "\n";
 #endif
 
+	//resize sendBuffer
+	while(sendBuffer.size() <= fdmax){
+		std::string newBuffer;
+		sendBuffer.push_back(newBuffer);
+	}
+
 	while(true){
 
 		readfds = masterfds;
 		writefds = masterfds;
 
-		if(select(fdmax+1, &readfds, &writefds, NULL, NULL) == -1){
-			perror("select");
-			exit(1);
+		/*
+		This if(sendPending) exists to save a LOT of CPU time by not checking
+		if sockets are ready to write when we don't need to write anything.
+		*/
+		if(sendPending){
+			if((select(fdmax+1, &readfds, &writefds, NULL, NULL)) == -1){
+
+				//gprof will send PROF signal, this will ignore it
+				if(errno != EINTR){
+					perror("select");
+					exit(1);
+				}
+			}
+		}
+		else{
+			if((select(fdmax+1, &readfds, NULL, NULL, NULL)) == -1){
+
+				//gprof will send PROF signal, this will ignore it
+				if(errno != EINTR){
+					perror("select");
+					exit(1);
+				}
+			}
 		}
 
 		for(int x=0; x<=fdmax; x++){
@@ -449,6 +480,7 @@ void server::start_thread()
 					newConnection(x);
 				}
 				else{ //existing socket sending data
+
 					if((nbytes = recv(x, recvBuffer, sizeof(recvBuffer), 0)) <= 0){
 						disconnect(x);
 					}
@@ -471,6 +503,8 @@ void server::start_thread()
 				}
 			}
 		}
+
+		sendPending = false;
 	}
 }
 

@@ -1,8 +1,5 @@
 BUGS AND NECESSARY FEATURES
 
--Need to use writefds in the client for requests(even though requests are real
-small a malicious person could exploit it).
-
 -Needs to be a check so that when the user tries to download the same thing
 twice the second download doesn't get appended to the first. Make a database
 to store downloaded file information to check against.
@@ -22,3 +19,5 @@ the files of the trackers that tracker trusts and the files that that tracker
 trusts etc. Have an option to limit trust levels to direct trust only, one
 level inheritance and all level inheritance.
 
+-The protocol for sending information for a file should be 1 byte command, 4 byte
+packet length(base 2), the rest of the packet will be variable length.
