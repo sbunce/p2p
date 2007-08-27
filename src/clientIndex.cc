@@ -32,7 +32,7 @@ clientIndex::clientIndex()
 		std::cout << "error: clientIndex::clientIndex() #3 failed with sqlite3 error " << returnCode << "\n";
 #endif
 	}
-	if((returnCode = sqlite3_exec(sqlite3_DB, "CREATE UNIQUE INDEX IF NOT EXISTS downloadsHashIndex ON downloads (hash)", NULL, NULL, NULL)) != 0){
+	if((returnCode = sqlite3_exec(sqlite3_DB, "CREATE UNIQUE INDEX IF NOT EXISTS hashIndex ON downloads (hash)", NULL, NULL, NULL)) != 0){
 #ifdef DEBUG
 		std::cout << "error: clientIndex::clientIndex() #4 failed with sqlite3 error " << returnCode << "\n";
 #endif

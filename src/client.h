@@ -47,17 +47,18 @@ public:
 	                  - returns false if no downloads
 	getTotalSpeed     - returns the total download speed(in bytes per second)
 	start             - start the client thread
-	startDownload     - start a new download
+	startDownload     - schedules a download to be started
 	stopDownload      - wrapper for terminateDownload()
 	*/
 	bool getDownloadInfo(std::vector<infoBuffer> & downloadInfo);
 	int getTotalSpeed();
 	void start();
-	bool startDownload(exploration::infoBuffer info);
+	void startDownload(exploration::infoBuffer info);
 	void stopDownload(const std::string & hash);
 
 private:
-	sha SHA; //creates messageDigests
+	sha SHA;                 //creates messageDigests
+	clientIndex ClientIndex; //gives client access to the database
 
 	//networking related
 	fd_set masterfds;     //master file descriptor set
@@ -69,12 +70,11 @@ private:
 	bool resumeDownloads;
 
 	/*
-	This is set to true when the sendBuffer has something in it. This exists for
-	the purpose of having an alternate select() call that doesn't involve writefds
-	because using writefds hogs CPU. However when there is data to write it is
-	proper to use writefds.
+	When this is zero there are no pending requests to send. This exists for the
+	purpose of having an alternate select() call that doesn't involve writefds
+	because using writefds hogs CPU.
 	*/
-	bool sendPending;
+	int sendPending;
 
 	/*
 	Buffer for partial sends. The partial send buffers can be accessed by socket
@@ -84,6 +84,19 @@ private:
 
 	//contains currently running downloads
 	std::list<download> downloadBuffer;
+
+	/*
+	exploration::infoBuffer's (new download information) is put here to schedule
+	a download to start.
+	*/
+	std::list<exploration::infoBuffer> scheduledDownload;
+
+	/*
+	This holds the hash of a download scheduled for deferred termination. This
+	exists for no other purpose but to make locking the downloadBuffer and
+	serverHolder easier.
+	*/
+	std::vector<std::string> deferredTermination;
 
 	/*
 	Each deque will contain pointers to serverElements that one or more of the
@@ -96,7 +109,10 @@ private:
 
 	/*
 	disconnect                  - disconnects a socket
+	encodeInt                   - converts 32bit integer to 4 chars
 	newConnection               - create a connection with a server, returns false if failed
+	postResumeConnect           - if the program was restarted this function resumes downloads
+	prepareRequests             - send pending requests
 	processBuffer               - establishes the receive protocol
 	resetHungDownloadSpeed      - checks for downloads without servers and resets their download speeds
 	removeAbusive_checkContains - returns true if the vector contains a serverElement with a matching IP
@@ -104,13 +120,15 @@ private:
 	removeDisconnected          - removes serverElements for servers that disconnected from us
 	removeTerminated            - removes downloads that are done terminating
 	start_thread                - starts the main client thread
-	prepareRequests             - send pending requests
-	encode                      - converts 32bit integer to 4 chars
+	read_socket                 - when a socket needs to be read
+	write_socket                - when a socket needs to be written
 	sendRequest                 - sends a request to a server
 	*/
 	void disconnect(const int & socketfd);
+	std::string encodeInt(unsigned int number);
 	bool newConnection(int & socketfd, std::string & server_IP);
 	void postResumeConnect();
+	void prepareRequests();
 	void processBuffer(const int & socketfd, char recvBuff[], const int & nbytes);
 	void resetHungDownloadSpeed();
 	bool removeAbusive_checkContains(std::list<download::abusiveServerElement> & abusiveServerTemp, download::serverElement * SE);
@@ -118,25 +136,25 @@ private:
 	void removeDisconnected(const int & socketfd);
 	void removeTerminated();
 	void start_thread();
-	void prepareRequests();
-	std::string encodeInt(unsigned int number);
+	void read_socket(const int & socket);
+	void write_socket(const int & socket);
 	int sendRequest(const int & socketfd, const unsigned int & fileID, const unsigned int & fileBlock);
-
-	/*
-	This function is only to be called if the download isn't expecting any data on any
-	sockets. If the download is expecting data and we delete the download then there
-	are lots of synchronization problems which lead to "hung" sockets(program logic
-	out of sync with what the socket can do). For this reason disconnected downloads
-	are deferred with stopDownload()/removeTerminated() and only disconnected
-	when all serverElements expect 0 bytes from their respective servers. Any calls
-	to this function must be within a downloadBufferMutex scoped lock.
-	*/
+	void startDeferredDownloads();
+	bool startDownload_deferred(exploration::infoBuffer info);
 	void terminateDownload(const std::string & hash);
 
+	/*
+	It's a lot of mutex's but each names the object it locks in the format
+	boost::mutex <object>Mutex. The only possible complication to these locks is
+	that a deferredTerminationMutex is nested within a downloadBufferMutex and a
+	serverHolderMutex is nested within a downloadBufferMutex. As a consequence of
+	this a downloadBufferMutex should never be locked within a deferredTerminationMutex
+	and a serverHolderMutex should never be locked within a downloadBufferMutex.
+	*/
 	boost::mutex downloadBufferMutex;
+	boost::mutex deferredTerminationMutex;
 	boost::mutex sendBufferMutex;
-	boost::mutex serverHolderMutex;
-
-	clientIndex ClientIndex;
+	boost::mutex serverElementMutex;
+	boost::mutex scheduledDownloadMutex;
 };
 #endif

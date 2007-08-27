@@ -31,7 +31,7 @@ serverIndex::serverIndex()
 		std::cout << "error: serverIndex::serverIndex() #3 failed with sqlite3 error " << returnCode << "\n";
 #endif
 	}
-	if((returnCode = sqlite3_exec(sqlite3_DB, "CREATE UNIQUE INDEX IF NOT EXISTS sharePathIndex ON share (path)", NULL, NULL, NULL)) != 0){
+	if((returnCode = sqlite3_exec(sqlite3_DB, "CREATE UNIQUE INDEX IF NOT EXISTS pathIndex ON share (path)", NULL, NULL, NULL)) != 0){
 #ifdef DEBUG
 		std::cout << "error: serverIndex::serverIndex() #4 failed with sqlite3 error " << returnCode << "\n";
 #endif

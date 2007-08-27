@@ -293,7 +293,7 @@ void server::newConnection(const int & listener)
 	}
 }
 
-inline unsigned int server::decodeInt(const int & begin, char recvBuffer[])
+unsigned int server::decodeInt(const int & begin, char recvBuffer[])
 {
 	std::bitset<32> bs(0);
 	std::bitset<32> bs_temp;
@@ -308,7 +308,7 @@ inline unsigned int server::decodeInt(const int & begin, char recvBuffer[])
 	return (unsigned int)bs.to_ulong();
 }
 
-inline int server::prepareSendBuffer(const int & socketfd, const int & file_ID, const int & blockNumber)
+int server::prepareSendBuffer(const int & socketfd, const int & file_ID, const int & blockNumber)
 {
 	sendBuffer[socketfd].clear(); //make sure no residual in the buffer
 
@@ -355,7 +355,7 @@ inline int server::prepareSendBuffer(const int & socketfd, const int & file_ID, 
 	return 0;
 }
 
-inline void server::processRequest(const int & socketfd, char recvBuffer[], const int & nbytes)
+void server::processRequest(const int & socketfd, char recvBuffer[], const int & nbytes)
 {
 #ifdef DEBUG_VERBOSE
 	sockaddr_in addr;

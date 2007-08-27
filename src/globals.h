@@ -23,14 +23,14 @@ namespace global //"global" namespace ;-)
 	const int ABUSIVE_SERVER_VALUE = 20000;
 	/* ************ END DEBUGGING OPTIONS ************ */
 
-	const int BUFFER_SIZE = 4096;    //how big packets can be
-	const int SUPERBLOCK_SIZE = 64;  //how many fileBlocks are kept in a superBlock
-	const int MAX_CONNECTIONS = 50;  //maximum number of connections both incoming/outgoing
-	const int P2P_PORT = 6969;       //port client connects to and server receives on
-	const int GUI_TICK = 100;        //time(in milliseconds) between gui updates
-	const int SPEED_AVERAGE = 5;     //how many seconds to average upload/download speed over
-	const int COMPLETE_REMOVE = 5;   //how many seconds to wait before removing a complete upload/download
-	const int TIMEOUT = 5;           //how many seconds to wait for a client or server
+	const int BUFFER_SIZE = 1024;     //size of one packet
+	const int SUPERBLOCK_SIZE = 2048; //how many fileBlocks are kept in a superBlock
+	const int MAX_CONNECTIONS = 50;   //maximum number of connections both incoming/outgoing
+	const int P2P_PORT = 6969;        //port client connects to and server receives on
+	const int GUI_TICK = 100;         //time(in milliseconds) between gui updates
+	const int SPEED_AVERAGE = 5;      //how many seconds to average upload/download speed over
+	const int COMPLETE_REMOVE = 5;    //how many seconds to wait before removing a complete upload/download
+	const int TIMEOUT = 5;            //how many seconds to wait for a client or server
 
 	/*
 	C_CTRL_SIZE includes a command and potentially request data.

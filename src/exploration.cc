@@ -38,7 +38,7 @@ exploration::exploration()
 	}
 }
 
-inline void exploration::asteriskToPercent(std::string & searchWord)
+void exploration::asteriskToPercent(std::string & searchWord)
 {
 	for(std::string::iterator iter0 = searchWord.begin(); iter0 != searchWord.end(); iter0++){
 		if(*iter0 == '*'){
