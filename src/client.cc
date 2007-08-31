@@ -1,6 +1,5 @@
 //std
 #include <algorithm>
-#include <bitset>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -13,14 +12,25 @@
 client::client()
 {
 	fdmax = 0;
-	ClientIndex.initialFillBuffer(downloadBuffer, serverHolder);
-
+	//ClientIndex.initialFillBuffer(downloadBuffer, serverHolder);
+/*
 	if(!downloadBuffer.empty()){
 		resumeDownloads = true;
 	}
-
-	sendPending = 0;
+*/
+	sendPending = new int(0);
 	FD_ZERO(&masterfds);
+}
+
+client::~client()
+{
+	for(std::vector<clientBuffer *>::iterator iter0 = ClientBuffer.begin(); iter0 != ClientBuffer.end(); iter0++){
+		if(*iter0 != 0){
+			delete *iter0;
+		}
+	}
+
+	delete sendPending;
 }
 
 void client::disconnect(const int & socketfd)
@@ -41,124 +51,26 @@ void client::disconnect(const int & socketfd)
 	}
 
 	{//begin lock scope
-	boost::mutex::scoped_lock lock(sendBufferMutex);
-
-	//erase any remaining buffer
-	sendBuffer[socketfd].clear();
+	boost::mutex::scoped_lock lock(ClientBufferMutex);
 
 	//reduce send/receive buffers if possible
-	while(sendBuffer.size() >= fdmax){
-		sendBuffer.pop_back();
+	while(ClientBuffer.size() >= fdmax){
+		ClientBuffer.pop_back();
 	}
 
 	}//end lock scope
-}
-
-std::string client::encodeInt(unsigned int number)
-{
-	std::string encodedNumber;
-	std::bitset<32> bs = number;
-	std::bitset<32> bs_temp;
-
-	for(int x=0; x<4; x++){
-		bs_temp = bs;
-		bs_temp <<= 8*x;
-		bs_temp >>= 24;
-		encodedNumber += (unsigned char)bs_temp.to_ulong();
-	}
-
-	return encodedNumber;
 }
 
 bool client::getDownloadInfo(std::vector<infoBuffer> & downloadInfo)
 {
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
-
-	if(downloadBuffer.size() == 0){
-		return false;
-	}
-
-	//process sendQueue
-	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
-		//calculate the percent complete
-		float bytesDownloaded = iter0->getBlockCount() * global::BUFFER_SIZE;
-		float fileSize = iter0->getFileSize();
-		float percent = (bytesDownloaded / fileSize) * 100;
-		int percentComplete = int(percent);
-
-		//convert fileSize from Bytes to megaBytes
-		fileSize = iter0->getFileSize() / 1024 / 1024;
-		std::ostringstream fileSize_s;
-
-		if(fileSize < 1){
-			fileSize_s << std::setprecision(2) << fileSize << " mB";
-		}
-		else{
-			fileSize_s << (int)fileSize << " mB";
-		}
-
-		//convert the download speed to kiloBytes
-		int downloadSpeed = iter0->getSpeed() / 1024;
-		std::ostringstream downloadSpeed_s;
-		downloadSpeed_s << downloadSpeed << " kB/s";
-
-		infoBuffer info;
-		info.hash = iter0->getHash();
-
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(serverElementMutex);
-
-		//get all IP's
-		int count = 0;
-		for(std::list<download::serverElement *>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
-
-			if(count % 2 == 0){
-				info.server_IP += "\n";
-			}
-
-			info.server_IP += (*iter1)->server_IP + ", ";
-			count++;
-		}
-
-		}//end lock scope
-
-		if(info.server_IP.empty()){
-			info.server_IP = "searching..";
-		}
-
-		info.fileName = iter0->getFileName();
-		info.fileSize = fileSize_s.str();
-		info.speed = downloadSpeed_s.str();
-		info.percentComplete = percentComplete;
-
-		//happens sometimes during testing or if something went wrong
-		if(percentComplete > 100){
-			info.percentComplete = 100;
-		}
-
-		downloadInfo.push_back(info);
-	}
-
-	}//end lock scope
 
 	return true;
 }
 
 int client::getTotalSpeed()
 {
-	int speed = 0;
 
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
-
-	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
-		speed += iter0->getSpeed();
-	}
-
-	}//end lock scope
-
-	return speed;
+	return 69;
 }
 
 bool client::newConnection(int & socketfd, std::string & server_IP)
@@ -175,7 +87,7 @@ bool client::newConnection(int & socketfd, std::string & server_IP)
 		return false; //new connection failed
 	}
 #ifdef DEBUG
-	std::cout << "info: client::sendRequest() created socket " << socketfd << " for " << server_IP << "\n";
+	std::cout << "info: client::newConnection() created socket " << socketfd << " for " << server_IP << "\n";
 #endif
 
 	//make sure fdmax is always the highest socket number
@@ -183,15 +95,18 @@ bool client::newConnection(int & socketfd, std::string & server_IP)
 		fdmax = socketfd;
 
 		{//begin lock scope
-		boost::mutex::scoped_lock lock(sendBufferMutex);
+		boost::mutex::scoped_lock lock(ClientBufferMutex);
 
 		//resize send/receive buffers if necessary
-		while(sendBuffer.size() <= fdmax){
-			std::string newBuffer;
-			sendBuffer.push_back(newBuffer);
-		}
+		while(ClientBuffer.size() <= fdmax){
 
-		sendBuffer[socketfd].reserve(global::C_CTRL_SIZE);
+			if(ClientBuffer.size() == socketfd){
+				ClientBuffer.push_back(new clientBuffer(server_IP, sendPending));
+			}
+			else{
+				ClientBuffer.push_back((clientBuffer *)0);
+			}
+		}
 
 		}//end lock scope
 	}
@@ -202,8 +117,9 @@ bool client::newConnection(int & socketfd, std::string & server_IP)
 
 void client::postResumeConnect()
 {
-	if(resumeDownloads){
+//	if(resumeDownloads){
 
+/* resume those downloads
 		sockaddr_in dest_addr;
 
 		//create sockets for the resumed downloads
@@ -217,106 +133,21 @@ void client::postResumeConnect()
 				(*iter1)->socketfd = socketfd;
 			}
 		}
+*/
 
 		resumeDownloads = false;
-	}
+//	}
 }
 
 void client::prepareRequests()
 {
 	{//begin lock scope
-	boost::mutex::scoped_lock lock(serverElementMutex);
+	boost::mutex::scoped_lock lock(ClientBufferMutex);
 
-	//pass tokens
-	for(std::list<std::list<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
-
-		//if the download has relinquished it's token, give the token to the next download
-		if(iter0->front()->token == false){
-			iter0->push_back(iter0->front());
-			iter0->pop_front();
-			iter0->front()->token = true;
+	for(std::vector<clientBuffer *>::iterator iter0 = ClientBuffer.begin(); iter0 != ClientBuffer.end(); iter0++){
+		if(*iter0 != 0){
+			(*iter0)->prepareRequest();
 		}
-	}
-
-	}//end lock scope
-
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
-
-	//process sendQueue
-	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
-
-		/*
-		Don't send new requests from downloads that are in the process of terminating
-		or complete.
-		*/
-		if(iter0->terminating() || iter0->complete()){
-			continue;
-		}
-
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(serverElementMutex);
-
-		for(std::list<download::serverElement *>::iterator iter1 = iter0->Server.begin(); iter1 != iter0->Server.end(); iter1++){
-
-			if((*iter1)->bytesExpected == 0 && (*iter1)->token){
-
-				if(sendBuffer[(*iter1)->socketfd].empty()){
-#ifdef DEBUG_VERBOSE
-					std::cout << "info: client::prepareRequests() IP: " << (*iter1)->server_IP << "\n";
-#endif
-					unsigned int request = iter0->getRequest();
-					std::ostringstream request_s;
-					request_s << global::P_SBL << encodeInt((*iter1)->file_ID) << encodeInt(request);
-
-					sendBuffer[(*iter1)->socketfd] = request_s.str();
-
-					//will be ready again when a response it received to this requst
-					(*iter1)->blockRequested = request;
-					(*iter1)->bytesExpected = global::BUFFER_SIZE;
-					(*iter1)->lastRequest = false;
-
-					/*
-					If the last request was made to a server the serverElement must be marked
-					so it knows to expect a incomplete packet.
-					*/
-					if(request == iter0->getLastBlock()){
-						(*iter1)->lastRequest = true;
-						(*iter1)->bytesExpected = iter0->getLastBlockSize();
-					}
-
-					sendPending++;
-				}
-			}
-		}
-
-		}//end lock scope
-	}
-
-	}//end lock scope
-}
-
-void client::processBuffer(const int & socketfd, char recvBuff[], const int & nbytes)
-{
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
-
-	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
-
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(serverElementMutex);
-
-		if(iter0->hasSocket(socketfd, nbytes)){
-
-			iter0->processBuffer(socketfd, recvBuff, nbytes);
-			if(iter0->complete()){
-				iter0->startTerminate();
-			}
-
-			break;
-		}
-
-		}//end lock scope
 	}
 
 	}//end lock scope
@@ -324,156 +155,30 @@ void client::processBuffer(const int & socketfd, char recvBuff[], const int & nb
 
 void client::resetHungDownloadSpeed()
 {
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
-
-	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
-
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(serverElementMutex);
-
-		if(iter0->Server.empty()){
-			iter0->zeroSpeed();
-		}
-
-		}//end lock scope
-	}
-
-	}//end lock scope
-}
-
-bool client::removeAbusive_checkContains(std::list<download::abusiveServerElement> & abusiveServerTemp, download::serverElement * SE)
-{
-	for(std::list<download::abusiveServerElement>::iterator iter0 = abusiveServerTemp.begin(); iter0 != abusiveServerTemp.end(); iter0++){
-
-		if(iter0->server_IP == SE->server_IP){
-			return true;
-		}
-	}
-
-	return false;
+	//call zeroSpeed() on a download without any associated sockets
 }
 
 void client::removeAbusive()
 {
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
+//remove the socket if it has been marked as abusive
 
-	std::list<download::abusiveServerElement> abusiveServerTemp;
-
-	//check to see if any downloads are reporting abusive servers
-	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
-		abusiveServerTemp.splice(abusiveServerTemp.end(), iter0->abusiveServer);
-	}
-
-	//if new abusive servers discovered find and remove associated serverElements
-	if(!abusiveServerTemp.empty()){
-
-		//sort and remove duplicates
-		abusiveServerTemp.sort();
-		abusiveServerTemp.unique();
-	
-		//check for abusive serverElement pointers within each download
-		for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
-
-			//remove serverElements marked as abusive
-			std::list<download::serverElement *>::iterator Server_iter = iter0->Server.begin();
-			while(Server_iter != iter0->Server.end()){
-
-				if(removeAbusive_checkContains(abusiveServerTemp, *Server_iter)){
-					Server_iter = iter0->Server.erase(Server_iter);
-				}
-				else{
-					Server_iter++;
-				}
-			}
-		}
-
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(serverElementMutex);
-
-		//check for abusive serverElement pointer rings
-		std::list<std::list<download::serverElement *> >::iterator serverHolder_iter = serverHolder.begin();
-		while(serverHolder_iter != serverHolder.end()){
-
-			//if abusive element found remove ring and free ring memory
-			if(removeAbusive_checkContains(abusiveServerTemp, serverHolder_iter->front())){
-				disconnect(serverHolder_iter->front()->socketfd);
-
-				for(std::list<download::serverElement *>::iterator iter0 = serverHolder_iter->begin(); iter0 != serverHolder_iter->end(); iter0++){
-					delete *iter0;
-				}
-
-				serverHolder_iter = serverHolder.erase(serverHolder_iter);
-			}
-			else{
-				serverHolder_iter++;
-			}
-		}
-
-		}//end lock scope
-	}
-
-	}//end lock scope
-
-	resetHungDownloadSpeed();
+//	resetHungDownloadSpeed();
 }
 
 void client::removeDisconnected(const int & socketfd)
 {
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
-	
-	//find the disconnected serverElements in the downloads
-	for(std::list<download>::iterator iter0 = downloadBuffer.begin(); iter0 != downloadBuffer.end(); iter0++){
+//remove the element associated with the socket
 
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(serverElementMutex);
 
-		//remove serverElements that were disconnected
-		std::list<download::serverElement *>::iterator Server_iter = iter0->Server.begin();
-		while(Server_iter != iter0->Server.end()){
-
-			if((*Server_iter)->socketfd == socketfd){
-				Server_iter = iter0->Server.erase(Server_iter);
-			}
-			else{
-				Server_iter++;
-			}
-		}
-
-		}//end lock scope
-	}
-
-	}//end lock scope
-
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(serverElementMutex);
-
-	//find disconnected serverElement rings in the serverHolder
-	std::list<std::list<download::serverElement *> >::iterator serverHolder_iter = serverHolder.begin();
-	while(serverHolder_iter != serverHolder.end()){
-
-		//remove serverElements rings for disconnected servers
-		if(serverHolder_iter->front()->socketfd == socketfd){
-			for(std::list<download::serverElement *>::iterator iter0 = serverHolder_iter->begin(); iter0 != serverHolder_iter->end(); iter0++){
-				delete *iter0;
-			}
-
-			serverHolder_iter = serverHolder.erase(serverHolder_iter);
-		}
-		else{
-			serverHolder_iter++;
-		}
-	}
-
-	}//end lock scope
-
-	resetHungDownloadSpeed();
+//	resetHungDownloadSpeed();
 }
 
 void client::removeTerminated()
 {
+//there should be a bool to determine if the body of this even gets run.
+
+
+/*
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(downloadBufferMutex);
 
@@ -505,6 +210,7 @@ void client::removeTerminated()
 	deferredTermination.clear();
 
 	}//end lock scope
+*/
 }
 
 void client::start()
@@ -514,6 +220,7 @@ void client::start()
 
 void client::start_thread()
 {
+
 	//how long select() waits before returning(unless data received)
 	timeval tv;
 
@@ -521,15 +228,16 @@ void client::start_thread()
 	while(true){
 
 		postResumeConnect();      //resumes downloads after program start
+		prepareRequests();
 		startDeferredDownloads(); //starts scheduled downloads
 		removeAbusive();          //remove servers marked as abusive
 		removeTerminated();       //check for downloads scheduled for deletion
-		prepareRequests();        //send requests for servers that are ready
 
 		/*
 		These must be initialized every iteration on linux(and possibly other OS's)
-		because linux will change them(POSIX.1-2001 allows this). This work-around 
-		doesn't adversely effect other operating systems.
+		because linux will change them(POSIX.1-2001 allows this) to reflect the
+		time that select() has blocked for. This work-around doesn't adversely
+		effect other operating systems.
 		*/
 		tv.tv_sec = 2;
 		tv.tv_usec = 0;
@@ -538,7 +246,7 @@ void client::start_thread()
 		This if(sendPending) exists to save a LOT of CPU time by not checking
 		if sockets are ready to write when we don't need to write anything.
 		*/
-		if(sendPending != 0){
+		if(*sendPending != 0){
 			readfds = masterfds;
 			writefds = masterfds;
 
@@ -573,38 +281,40 @@ void client::start_thread()
 	}
 }
 
-void client::read_socket(const int & socket)
-{
-	char recvBuff[global::BUFFER_SIZE];
-	int nbytes = recv(socket, recvBuff, global::BUFFER_SIZE, 0);
-
-	if(nbytes <= 0){
-		removeDisconnected(socket);
-		disconnect(socket);
-	}
-	else{
-		processBuffer(socket, recvBuff, nbytes);
-	}
-}
-
-void client::write_socket(const int & socket)
+inline void client::read_socket(const int & socketfd)
 {
 	{//begin lock scope
-	boost::mutex::scoped_lock lock(sendBufferMutex);
+	boost::mutex::scoped_lock lock(ClientBufferMutex);
 
-	if(!sendBuffer[socket].empty()){
+	char recvBuff[global::BUFFER_SIZE];
+	int nbytes = recv(socketfd, recvBuff, global::BUFFER_SIZE, 0);
 
-		int nbytes = send(socket, sendBuffer[socket].c_str(), sendBuffer[socket].size(), 0);
+	if(nbytes <= 0){
+		disconnect(socketfd);
+	}
+	else{
+		ClientBuffer[socketfd]->recvBuffer.append(recvBuff, nbytes);
+		ClientBuffer[socketfd]->postRecv();
+	}
+
+	}//end lock scope
+}
+
+inline void client::write_socket(const int & socketfd)
+{
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(ClientBufferMutex);
+
+	if(!ClientBuffer[socketfd]->sendBuffer.empty()){
+
+		int nbytes = send(socketfd, ClientBuffer[socketfd]->sendBuffer.c_str(), ClientBuffer[socketfd]->sendBuffer.size(), 0);
 
 		if(nbytes <= 0){
-			disconnect(socket);
+			disconnect(socketfd);
 		}
 		else{ //remove bytes sent from buffer
-			sendBuffer[socket].erase(0, nbytes);
-
-			if(sendBuffer[socket].empty()){
-				sendPending--;
-			}
+			ClientBuffer[socketfd]->sendBuffer.erase(0, nbytes);
+			ClientBuffer[socketfd]->postSend();
 		}
 	}
 
@@ -615,9 +325,7 @@ void client::startDownload(exploration::infoBuffer info)
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(scheduledDownloadMutex);
-
 	scheduledDownload.push_back(info);
-
 	}//end lock scope
 }
 
@@ -625,13 +333,11 @@ void client::startDeferredDownloads()
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(scheduledDownloadMutex);
-
 	for(std::list<exploration::infoBuffer>::iterator iter0 = scheduledDownload.begin(); iter0 != scheduledDownload.end(); iter0++){
 		startDownload_deferred(*iter0);
 	}
 
 	scheduledDownload.clear();
-
 	}//end lock scope
 }
 
@@ -642,9 +348,10 @@ bool client::startDownload_deferred(exploration::infoBuffer info)
 		return false;
 	}
 
+	//get file path, stop if file not found(it should be)
 	std::string filePath;
 	if(!ClientIndex.getFilePath(info.hash, filePath)){
-		return 0;
+		return false;
 	}
 
 	int fileSize = atoi(info.fileSize.c_str());
@@ -654,7 +361,7 @@ bool client::startDownload_deferred(exploration::infoBuffer info)
 	int lastSuperBlock = lastBlock / global::SUPERBLOCK_SIZE;
 	int currentSuperBlock = 0;
 
-	download newDownload(
+	download * Download = new download(
 		info.hash,
 		info.fileName,
 		filePath,
@@ -666,190 +373,74 @@ bool client::startDownload_deferred(exploration::infoBuffer info)
 		currentSuperBlock
 	);
 
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(serverElementMutex);
-
 	//add known servers associated with this download
-	for(int x=0; x<info.server_IP.size(); x++){
+	for(int x = 0; x < info.server_IP.size(); x++){
 
-		download::serverElement * SE = new download::serverElement();
-		SE->server_IP = info.server_IP[x];
-		SE->file_ID = atoi(info.file_ID[x].c_str());
-
-		//if a socket for this server already exists then reuse it
 		bool socketFound = false;
-		for(std::list<std::list<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
 
-			if(iter0->front()->server_IP == SE->server_IP){
-				SE->socketfd = iter0->front()->socketfd;
-				socketFound = true;
-				break;
+		{//begin lock scope
+		boost::mutex::scoped_lock lock(ClientBufferMutex);
+
+		//see if a socket already exists for the IP
+		for(int socket = 0; socket <= fdmax; socket++){
+			if(FD_ISSET(socket, &masterfds)){
+				if(ClientBuffer[socket]->get_IP() == info.server_IP[x]){
+					ClientBuffer[socket]->addDownload(atoi(info.file_ID[x].c_str()), Download);
+					socketFound = true;
+				}
 			}
+		}
+
+		}//end lock scope
+
+		if(socketFound){
+			continue;
 		}
 
 		//if existing socket not found create a new one
 		if(!socketFound){
 
-			//if cannot connect to server don't add this element
-			if(!newConnection(SE->socketfd, SE->server_IP)){
+			int socket;
+			if(!newConnection(socket, info.server_IP[x])){
 #ifdef DEBUG
-				std::cout << "info: client::startDownload() could not connect to " << SE->server_IP << "\n";
+				std::cout << "info: client::startDownload() could not connect to " << info.server_IP[x] << "\n";
 #endif
-				delete SE;
 				continue;
 			}
-		}
+			else{
 
-		//add the server to appropriate server ring if it exists, if not create a new ring
-		bool ringFound = false;
-		for(std::list<std::list<download::serverElement *> >::iterator iter0 = serverHolder.begin(); iter0 != serverHolder.end(); iter0++){
+				{//begin lock scope
+				boost::mutex::scoped_lock lock(ClientBufferMutex);
 
-			if(iter0->front()->server_IP == SE->server_IP){
-				//all servers in the vector must have the same socket
-				SE->socketfd = iter0->front()->socketfd;
-				iter0->push_back(SE);
-				ringFound = true;
+				ClientBuffer[socket]->addDownload(atoi(info.file_ID[x].c_str()), Download);
+
+				}//end lock scope
 			}
 		}
-
-		if(!ringFound){
-			//make a new server deque for the server and add it to the serverHolder
-			std::list<download::serverElement *> newServer;
-			newServer.push_back(SE);
-			serverHolder.push_back(newServer);
-		}
-
-		//add server to the download
-		newDownload.Server.push_back(SE);
 	}
-
-	}//end lock scope
-
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
-
-	downloadBuffer.push_back(newDownload);
-
-	}//end lock scope
 
 	return true;
 }
 
 void client::stopDownload(const std::string & hash)
 {
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
-
-	//find the download and set it to terminate
-	std::list<download>::iterator download_iter;
-	for(download_iter = downloadBuffer.begin(); download_iter != downloadBuffer.end(); download_iter++){
-
-		if(hash == download_iter->getHash()){
-			download_iter->startTerminate();
-			break;
-		}
-	}
-
-	if(download_iter->readyTerminate()){
-#ifdef DEBUG
-		std::cout << "info: client::stopDownload() doing quick terminate of \"" << download_iter->getFileName() << "\"\n";
-#endif
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(deferredTerminationMutex);
-
-		deferredTermination.push_back(download_iter->getHash());
-
-		}//end lock scope
-	}
-#ifdef DEBUG
-	else{
-		std::cout << "info: client::stopDownload() is scheduling the download to be removed\n";
-	}
-#endif
-
-	}//end lock scope
-
+/*
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(deferredTerminationMutex);
 
-	for(std::vector<std::string>::iterator iter0 = deferredTermination.begin(); iter0 != deferredTermination.end(); iter0++){
-		terminateDownload(*iter0);
-	}
-
-	deferredTermination.clear();
+	deferredTermination.push_back(hash);
 
 	}//end lock scope
+*/
 }
 
 void client::terminateDownload(const std::string & hash)
 {
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(downloadBufferMutex);
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(serverElementMutex);
-
-	//find the download to terminate
-	std::list<download>::iterator download_iter;
-	for(download_iter = downloadBuffer.begin(); download_iter != downloadBuffer.end(); download_iter++){
-
-		if(hash == download_iter->getHash()){
-			break;
-		}
-	}
-
-	/*
-	Find the serverHolder element and remove the serverElements from it that correspond
-	to the serverElements in the download. If a socket is abandoned(no other downloads
-	using it) then get rid of it.
-	*/
-	while(!download_iter->Server.empty()){
-
-		//holder for socket to be disconnected if no other downloads are using it
-		int socket;
-
-		/*
-		Look through the serverHolder rings for serverElements matching
-		download_iter->Server.back(). When a matching element is found erase it
-		from the ring, pop the back of download_iter->Server.
-		*/
-		for(std::list<std::list<download::serverElement *> >::iterator serverHolder_iter = serverHolder.begin(); serverHolder_iter != serverHolder.end(); serverHolder_iter++){
-			for(std::list<download::serverElement *>::iterator ring_iter = serverHolder_iter->begin(); ring_iter != serverHolder_iter->end(); ring_iter++){
-
-				if(*ring_iter == download_iter->Server.back()){
-					socket = (*ring_iter)->socketfd;
-					delete *ring_iter;
-					ring_iter = serverHolder_iter->erase(ring_iter);
-					download_iter->Server.pop_back();
-				}
-			}
-		}
-
-		/*
-		There may be an empty server ring after the above double-for erased a
-		serverElement from a ring. If there is that means there are no more
-		downloads using the socket and the empty ring will be erased and the
-		socket disconnected.
-		*/
-		std::list<std::list<download::serverElement *> >::iterator serverHolder_iter = serverHolder.begin();
-		while(serverHolder_iter != serverHolder.end()){
-
-			if(serverHolder_iter->empty()){
-				disconnect(socket);
-				serverHolder_iter = serverHolder.erase(serverHolder_iter);
-			}
-			else{
-				serverHolder_iter++;
-			}
-		}
-	}
+/*
+	//this function removes downloads
 
 	//remove download entry from the database
 	ClientIndex.terminateDownload(download_iter->getHash());
-
-	//get rid of the download from the downloadBuffer
-	downloadBuffer.erase(download_iter);
-
-	}//end lock scope
-	}//end lock scope
+*/
 }
 

@@ -6,7 +6,7 @@
 #include <sqlite3.h>
 #include <string>
 
-#include "globals.h"
+#include "global.h"
 
 class exploration
 {

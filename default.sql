@@ -1,4 +1,4 @@
-DROP TABLE search;
+DROP TABLE IF EXISTS search;
 CREATE TABLE search (hash TEXT, name TEXT, size INTEGER, server_IP TEXT, file_ID TEXT);
 CREATE UNIQUE INDEX IF NOT EXISTS nameIndex ON search (name);
 INSERT INTO search (hash, name, size, server_IP, file_ID)
@@ -10,7 +10,7 @@ VALUES ('05EB36B483CCEAE80DB4852FDEC81981351974B2', 'Excitebike.avi', '21953008'
 INSERT INTO search (hash, name, size, server_IP, file_ID)
 VALUES ('669D5F2A93B4B2D77BF451ED7C2B658379BFAE4D', 'Super Mario 2 (Jap).avi', '21208890', '192.168.1.3,192.168.1.4,192.168.1.5,192.168.1.114', '4,4,4,4');
 
-DROP TABLE share;
+DROP TABLE IF EXISTS share;
 CREATE TABLE share (ID INTEGER PRIMARY KEY AUTOINCREMENT, hash TEXT, size INTEGER, path TEXT);
 CREATE UNIQUE INDEX IF NOT EXISTS pathIndex ON share (path);
 INSERT INTO share (hash, size, path)

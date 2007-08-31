@@ -7,10 +7,15 @@ never disconnect. A person could exploit this by taking up slots but no bandwidt
 
 -Have the serverIndex poll to check for new files added to share.
 
--The client::terminateDownload is missing locks, and it's calling functions aren't
-locking properly either.
-
 -The server sendPending needs to operate like the client sendPending.
+
+-Check for destructors to free memory on program close.
+
+-Go through the whole ClientBuffer before checking sockets and generate new
+requests for all sockets. This is necessary for saving CPU time. Checking for
+sockets ready to write is expensive and the client needs to write a very small
+amount. If checking write capability is triggered by reads there is more time
+with the write checking enabled.
 
 
 DEFERRED FEATURES
@@ -26,8 +31,7 @@ PERFORMANCE OBSERVANCES
 the servers have to seeks to different files often. mmap? Use the boost::iostream
 library to set up a mapped file.
 
--I'm doing a erase on my network buffer when it shouldn't be necessary. I could
-just write over the existing bytes and keep track of how many I've sent.
+-Instead of new'ing superBlocks consider respecializing them to different blocks.
 
 
 IDEAS

@@ -71,7 +71,7 @@ void clientIndex::getFilePath_callBack(int & columnsRetrieved, char ** queryResp
 	getFilePath_entryExists = true;
 	getFilePath_fileName.assign(queryResponse[0]);
 }
-
+/*
 void clientIndex::initialFillBuffer(std::list<download> & downloadBuffer, std::list<std::list<download::serverElement *> > & serverHolder)
 {
 	int returnCode;
@@ -85,7 +85,9 @@ void clientIndex::initialFillBuffer(std::list<download> & downloadBuffer, std::l
 	serverHolder.splice(serverHolder.end(), initialFillBuffer_serverHolder);
 	downloadBuffer.splice(downloadBuffer.end(), initialFillBuffer_downloadBuffer);
 }
+*/
 
+/*
 void clientIndex::initialFillBuffer_callBack(int & columnsRetrieved, char ** queryResponse, char ** columnName)
 {
 	namespace fs = boost::filesystem;
@@ -172,17 +174,30 @@ void clientIndex::initialFillBuffer_callBack(int & columnsRetrieved, char ** que
 		}
 	}
 }
+*/
 
 bool clientIndex::startDownload(exploration::infoBuffer & info)
 {
 	std::ostringstream query;
 	query << "INSERT INTO downloads (hash, name, size, server_IP, file_ID) VALUES ('" << info.hash << "', '" << info.fileName << "', " << info.fileSize << ", '";
 	for(std::vector<std::string>::iterator iter0 = info.server_IP.begin(); iter0 != info.server_IP.end(); iter0++){
-		query << *iter0 << ",";
+
+		if(iter0 + 1 != info.server_IP.end()){
+			query << *iter0 << ",";
+		}
+		else{
+			query << *iter0;
+		}
 	}
 	query << "', '";
 	for(std::vector<std::string>::iterator iter0 = info.file_ID.begin(); iter0 != info.file_ID.end(); iter0++){
-		query << *iter0 << ",";
+
+		if(iter0 + 1 != info.file_ID.end()){
+			query << *iter0 << ",";
+		}
+		else{
+			query << *iter0;
+		}
 	}
 	query << "')";
 

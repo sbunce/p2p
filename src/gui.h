@@ -9,6 +9,7 @@
 #include <string>
 
 #include "client.h"
+#include "global.h"
 #include "server.h"
 #include "exploration.h"
 

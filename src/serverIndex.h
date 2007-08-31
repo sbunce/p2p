@@ -4,7 +4,7 @@
 #include <string>
 #include <sqlite3.h>
 
-#include "globals.h"
+#include "global.h"
 #include "hash.h"
 
 class serverIndex

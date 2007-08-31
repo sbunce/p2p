@@ -4,7 +4,7 @@
 #include <deque>
 #include <string>
 
-#include "globals.h"
+#include "global.h"
 
 class superBlock
 {

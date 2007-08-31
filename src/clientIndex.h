@@ -9,7 +9,7 @@
 
 #include "download.h"
 #include "exploration.h"
-#include "globals.h"
+#include "global.h"
 
 class clientIndex
 {
@@ -24,7 +24,12 @@ public:
 	terminateDownload - removes the download entry from the database
 	*/
 	bool getFilePath(const std::string & hash, std::string & path);
-	void initialFillBuffer(std::list<download> & downloadBuffer, std::list<std::list<download::serverElement *> > & serverHolder);
+
+
+//needs to be reworked
+	//void initialFillBuffer(std::list<download> & downloadBuffer, std::list<std::list<download::serverElement *> > & serverHolder);
+
+
 	bool startDownload(exploration::infoBuffer & info);
 	void terminateDownload(const std::string & hash);
 
@@ -41,19 +46,24 @@ private:
 		thisClass->getFilePath_callBack(columnsRetrieved, queryResponse, columnName);
 		return 0;
 	}
+
+/*
 	static int initialFillBuffer_callBack_wrapper(void * objectPtr, int columnsRetrieved, char ** queryResponse, char ** columnName)
 	{
 		clientIndex * thisClass = (clientIndex *)objectPtr;
 		thisClass->initialFillBuffer_callBack(columnsRetrieved, queryResponse, columnName);
 		return 0;
 	}
-
+*/
 	/*
 	The call-back functions themselves. These are called by the wrappers which are
 	passed to sqlite3_exec. These contain the logic of what needs to be done.
 	*/
 	void getFilePath_callBack(int & columnsRetrieved, char ** queryResponse, char ** columnName);
-	void initialFillBuffer_callBack(int & columnsRetrieved, char ** queryResponse, char ** columnName);
+
+
+//needs to be reworked
+	//void initialFillBuffer_callBack(int & columnsRetrieved, char ** queryResponse, char ** columnName);
 
 	/*
 	These variables are used by the call-back functions to communicate back with
@@ -62,7 +72,7 @@ private:
 	bool getFilePath_entryExists;
 	std::string getFilePath_fileName;
 	std::list<download> initialFillBuffer_downloadBuffer;
-	std::list<std::list<download::serverElement *> > initialFillBuffer_serverHolder;
+//	std::list<std::list<download::serverElement *> > initialFillBuffer_serverHolder;
 
 	sqlite3 * sqlite3_DB; //sqlite database pointer to be passed to functions like sqlite3_exec
 };

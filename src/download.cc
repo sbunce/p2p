@@ -7,7 +7,7 @@
 #include "download.h"
 
 download::download(const std::string & hash_in, const std::string & fileName_in, 
-	const std::string & filePath_in, const int & fileSize_in, const int & blockCount_in,
+	const std::string & filePath_in, const int & fileSize_in, const int & latestRequest_in,
 	const int & lastBlock_in, const int & lastBlockSize_in, const int & lastSuperBlock_in,
 	const int & currentSuperBlock_in)
 {
@@ -16,25 +16,24 @@ download::download(const std::string & hash_in, const std::string & fileName_in,
 	fileName = fileName_in;
 	filePath = filePath_in;
 	fileSize = fileSize_in;
-	blockCount = blockCount_in;
+	latestRequest = latestRequest_in;
 	lastBlock = lastBlock_in;
 	lastBlockSize = lastBlockSize_in;
 	lastSuperBlock = lastSuperBlock_in;
 	currentSuperBlock = currentSuperBlock_in;
 
 	//defaults
-	terminateDownload = false;
 	downloadComplete = false;
-	downloadSpeed = 0;
 
-	//seed random number generator
+#ifdef UNRELIABLE_CLIENT
 	std::srand(time(0));
+#endif
 
 	//set the hash type
 	SHA.Init(global::HASH_TYPE);
 }
 
-int download::addBlock(const int & blockNumber, std::string & bucket)
+void download::addBlock(const int & blockNumber, std::string & block)
 {
 	calculateSpeed();
 
@@ -44,31 +43,32 @@ int download::addBlock(const int & blockNumber, std::string & bucket)
 		std::cout << "testing: client::addToTree(): OOPs! I dropped fileBlock " << blockNumber << "\n";
 
 		if(blockNumber == lastBlock){
-			bucket.clear();
+			block.clear();
 		}
 		else{
-			bucket.erase(0, global::BUFFER_SIZE);
+			block.erase(0, global::BUFFER_SIZE);
 		}
+	}
+	else{
+#endif
 
-		return 0;
+	//trim off protocol information
+	block.erase(0, global::S_CTRL_SIZE);
+
+	//add the block to the appropriate superBlock
+	for(std::deque<superBlock>::iterator iter = superBuffer.begin(); iter != superBuffer.end(); iter++){
+		if(iter->addBlock(blockNumber, block)){
+			break;
+		}
+	}
+#ifdef UNRELIABLE_CLIENT
 	}
 #endif
 
-	//prepare fileBlock to be added to a superBlock
-	std::string fileBlock;
-	if(bucket.size() >= global::BUFFER_SIZE){
-		fileBlock = bucket.substr(global::S_CTRL_SIZE, global::BUFFER_SIZE - global::S_CTRL_SIZE);
-		bucket.clear();
-	}
-	else{ //last block encountered
-		fileBlock = bucket.substr(global::S_CTRL_SIZE, bucket.size() - global::S_CTRL_SIZE);
-		bucket.clear();
-	}
-
-	for(std::deque<superBlock>::iterator iter = superBuffer.begin(); iter != superBuffer.end(); iter++){
-		if(iter->addBlock(blockNumber, fileBlock)){
-			break;
-		}
+	if(blockNumber == lastBlock){
+		writeSuperBlock(superBuffer.back().container);
+		superBuffer.pop_back();
+		downloadComplete = true;
 	}
 }
 
@@ -117,11 +117,6 @@ bool download::complete()
 	return downloadComplete;
 }
 
-const int & download::getBlockCount()
-{
-	return blockCount;
-}
-
 const std::string & download::getFileName()
 {
 	return fileName;
@@ -132,22 +127,17 @@ const int & download::getFileSize()
 	return fileSize;
 }
 
-const int & download::getLastBlock()
+const int & download::getBytesExpected()
 {
-	return lastBlock;
+	if(latestRequest == lastBlock){
+		return lastBlockSize;
+	}
+	else{
+		return global::BUFFER_SIZE;
+	}
 }
 
-const int & download::getLastBlockSize()
-{
-	return lastBlockSize;
-}
-
-const std::string & download::getHash()
-{
-	return hash;
-}
-
-int download::getRequest()
+const int download::getRequest()
 {
 	/*
 	Write out the oldest superBlocks if they're complete. It's possible the
@@ -204,27 +194,27 @@ int download::getRequest()
 	if(superBuffer.empty()){ //P1
 		superBlock SB(currentSuperBlock++, lastBlock);
 		superBuffer.push_front(SB);
-		blockCount = superBuffer.front().getRequest();
+		latestRequest = superBuffer.front().getRequest();
 	}
 	else if(superBuffer.front().allRequested()){ //P2
 		if(superBuffer.size() < 2 && currentSuperBlock <= lastSuperBlock){
 			superBlock SB(currentSuperBlock++, lastBlock);
 			superBuffer.push_front(SB);
 		}
-		blockCount = superBuffer.front().getRequest();
+		latestRequest = superBuffer.front().getRequest();
 	}
 	else if(superBuffer.front().halfRequested()){ //P3
-		blockCount = superBuffer.back().getRequest();
+		latestRequest = superBuffer.back().getRequest();
 	}
 	else{ //P4
-		blockCount = superBuffer.front().getRequest();
+		latestRequest = superBuffer.front().getRequest();
 	}
 
 	/*
 	Don't return the last block number until it's the absolute last needed by
 	this download. This makes checking for a completed download a lot easier!
 	*/
-	if(blockCount == lastBlock){
+	if(latestRequest == lastBlock){
 
 		//determine if there are no superBlocks left but the last one
 		if(superBuffer.size() == 1){
@@ -245,133 +235,12 @@ int download::getRequest()
 			}
 		}
 		else{ //more than one superBlock, serve request from oldest
-			blockCount = superBuffer.back().getRequest();
-			return blockCount;
+			latestRequest = superBuffer.back().getRequest();
+			return latestRequest;
 		}
 	}
 	else{ //any request but the last one gets returned without the above checking
-		return blockCount;
-	}
-}
-
-const int & download::getSpeed()
-{
-	return downloadSpeed;
-}
-
-bool download::hasSocket(const int & socketfd, const int & nbytes)
-{
-	for(std::list<serverElement *>::iterator iter0 = Server.begin(); iter0 != Server.end(); iter0++){
-
-		/*
-		This function is used by the client to check whether this download requested
-		the fileBlock it got a response to. Only return true if the download both 
-		has the socket and it has a token. If it doesn't have the token then
-		the request came from a different download.
-		*/
-		if((*iter0)->socketfd == socketfd && (*iter0)->token && (*iter0)->bytesExpected >= nbytes){
-			return true;
-		}
-	}
-
-	return false;
-}
-
-void download::processBuffer(const int & socketfd, char recvBuff[], const int & nbytes)
-{
-	//fill the bucket
-	for(std::list<serverElement *>::iterator iter0 = Server.begin(); iter0 != Server.end(); iter0++){
-
-		//add the buffer to the right bucket and process
-		if((*iter0)->socketfd == socketfd){
-
-			(*iter0)->bucket.append(recvBuff, nbytes);
-			(*iter0)->bytesExpected -= nbytes;
-
-#ifdef DEBUG_VERBOSE
-			std::cout << "info: download::processBuffer() IP: " << (*iter0)->server_IP << " bucket size: " << (*iter0)->bucket.size() << "\n";
-			std::cout << "info: superBuffer.size(): " << superBuffer.size() << "\n";
-#endif
-
-#ifdef ABUSIVE_SERVER
-			static int counter = 0;
-			counter++;
-			if(counter % global::ABUSIVE_SERVER_VALUE == 0){
-				std::cout << "testing: client::processBuffer() simulated abuse from " << (*iter0)->server_IP << "\n";
-
-				//overflow the buffer by one byte
-				(*iter0)->bucket += " ";
-			}
-#endif
-
-			//disconnect the server if it's being nasty!
-			if((*iter0)->bucket.size() > global::BUFFER_SIZE){
-#ifdef DEBUG
-				std::cout << "error: client::processBuffer() detected buffer overrun from " << (*iter0)->server_IP << "\n";
-#endif
-				abusiveServerElement temp;
-				temp.server_IP = (*iter0)->server_IP;
-				temp.socketfd = (*iter0)->socketfd;
-				abusiveServer.push_back(temp);
-
-				break;
-			}
-
-			//if full block received add it to a superBlock and ready another request
-			if((*iter0)->bucket.size() % global::BUFFER_SIZE == 0){
-				addBlock((*iter0)->blockRequested, (*iter0)->bucket);
-				(*iter0)->bytesExpected = 0;
-
-				//only give up the token if the download is not terminating
-				if(!terminateDownload){
-					(*iter0)->token = false;
-				}
-			}
-
-			//!complete() because often the last fileBlock gets requested more than once
-			if((*iter0)->lastRequest && !complete()){
-
-				//check for zero in case the last requested block was exactly global::BUFFER_SIZE
-				if((*iter0)->bucket.size() != 0){
-
-					//add last partial block to tree
-					if((*iter0)->bucket.size() == lastBlockSize){
-						addBlock((*iter0)->blockRequested, (*iter0)->bucket);
-
-#ifdef UNRELIABLE_CLIENT
-						/*
-						This exists to make UNRELIABLE_CLIENT work. It wouldn't be needed
-						under real conditions because if the program got to this point it
-						wouldn't "drop" a fileBlock.
-						*/
-						if(!superBuffer.back().complete()){
-							(*iter0)->bytesExpected = 0;
-
-							//only give up the token if the download is not terminating
-							if(!terminateDownload){
-								(*iter0)->token = false;
-							}
-						}
-#endif
-					}
-					else{ //full block not yet received, wait for it
-						break;
-					}
-				}
-
-				//write out the oldest superBlock if it's complete
-				while(superBuffer.back().complete()){
-
-					writeSuperBlock(superBuffer.back().container);
-					superBuffer.pop_back();
-
-					if(superBuffer.empty()){
-						downloadComplete = true;
-						break;
-					}
-				}
-			}
-		}
+		return latestRequest;
 	}
 }
 
@@ -402,37 +271,5 @@ void download::writeSuperBlock(std::string container[])
 		std::cout << "error: download::writeTree() error opening file\n";
 #endif
 	}
-}
-
-void download::startTerminate()
-{
-	terminateDownload = true;
-}
-
-bool download::terminating()
-{
-	return terminateDownload;
-}
-
-bool download::readyTerminate()
-{
-	if(terminateDownload){
-		for(std::list<serverElement *>::iterator iter0 = Server.begin(); iter0 != Server.end(); iter0++){
-
-			if((*iter0)->bytesExpected != 0){
-				return false;
-			}
-		}
-
-		return true;
-	}
-	else{
-		return false;
-	}
-}
-
-void download::zeroSpeed()
-{
-	downloadSpeed = 0;
 }
 

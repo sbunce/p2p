@@ -19,7 +19,7 @@
 //contains enum type for error codes select() might return
 #include <errno.h>
 
-#include "globals.h"
+#include "global.h"
 #include "serverIndex.h"
 
 class server

@@ -5,7 +5,7 @@
 #include <string>
 
 #include "sha.h"
-#include "globals.h"
+#include "global.h"
 
 class hash
 {

@@ -5,8 +5,9 @@ CCL = g++
 
 #GPROF = -pg
 
-OBJECTS = main.o client.o download.o clientIndex.o exploration.o gui.o \
-	gui_about.o hash.o server.o serverIndex.o sha.o superBlock.o
+OBJECTS = main.o client.o clientBuffer.o download.o clientIndex.o \
+	exploration.o gui.o gui_about.o hash.o server.o serverIndex.o sha.o \
+	superBlock.o
 
 LINKER_OPTIONS = `pkg-config gtkmm-2.4 --cflags --libs` \
 	-lboost_thread -D_REENTRANT -lboost_filesystem -lsqlite3
@@ -25,37 +26,40 @@ main.o: main.cc gui.o
 main-server.o: main-server.cc server.o
 	$(CC) main-server.cc
 
-client.o: client.cc client.h download.o clientIndex.o exploration.o globals.h 
+client.o: client.cc client.h clientBuffer.o clientIndex.o exploration.o global.h 
 	$(CC) client.cc
 
-clientIndex.o: clientIndex.cc clientIndex.h download.o exploration.o globals.h
+clientBuffer.o: clientBuffer.cc clientBuffer.h download.o global.h
+	$(CC) clientBuffer.cc
+
+clientIndex.o: clientIndex.cc clientIndex.h download.o exploration.o global.h
 	$(CC) clientIndex.cc
 
-download.o: download.cc download.h hash.o superBlock.o globals.h
+download.o: download.cc download.h hash.o superBlock.o global.h
 	$(CC) download.cc
 
-exploration.o: exploration.cc exploration.h globals.h
+exploration.o: exploration.cc exploration.h global.h
 	$(CC) exploration.cc
 
-gui.o: gui.cc gui.h client.o exploration.o gui_about.o server.o globals.h
+gui.o: gui.cc gui.h client.o exploration.o gui_about.o server.o global.h
 	$(CC) gui.cc `pkg-config gtkmm-2.4 --cflags`
 
-gui_about.o: gui_about.cc gui_about.h globals.h
+gui_about.o: gui_about.cc gui_about.h global.h
 	$(CC) gui_about.cc `pkg-config gtkmm-2.4 --cflags`
 
-hash.o: hash.cc hash.h sha.o globals.h
+hash.o: hash.cc hash.h sha.o global.h
 	$(CC) hash.cc
 
-server.o: server.cc server.h serverIndex.o globals.h
+server.o: server.cc server.h serverIndex.o global.h
 	$(CC) server.cc
 
-serverIndex.o: serverIndex.cc serverIndex.h globals.h
+serverIndex.o: serverIndex.cc serverIndex.h global.h
 	$(CC) serverIndex.cc
 
-sha.o: sha.cc sha.h globals.h
+sha.o: sha.cc sha.h global.h
 	$(CC) sha.cc
 
-superBlock.o: superBlock.cc superBlock.h globals.h
+superBlock.o: superBlock.cc superBlock.h global.h
 	$(CC) superBlock.cc
 
 sha_test: sha_test.cc sha.o
