@@ -13,13 +13,20 @@ clientBuffer::clientBuffer(const std::string & server_IP_in, int * sendPending_i
 	sendBuffer.reserve(global::C_CTRL_SIZE);
 	Download_iter = Download.begin();
 	ready = true;
-	abusive = false;
+	abuse = false;
+	terminating = false;
 }
 
 void clientBuffer::addDownload(const unsigned int & file_ID, download * newDownload)
 {
 	downloadHolder DownloadHolder(file_ID, newDownload);
 	Download.push_back(DownloadHolder);
+	newDownload->regConnection(server_IP);
+}
+
+const bool clientBuffer::empty()
+{
+	return Download.empty();
 }
 
 std::string clientBuffer::encodeInt(const unsigned int & number)
@@ -52,7 +59,7 @@ void clientBuffer::postRecv()
 	}
 
 	if(recvBuffer.size() > bytesExpected){
-		abusive = true;
+		abuse = true;
 	}
 }
 
@@ -65,7 +72,7 @@ void clientBuffer::postSend()
 
 void clientBuffer::prepareRequest()
 {
-	if(ready){
+	if(ready && !terminating){
 		rotateDownloads();
 		latestRequested = Download_iter->Download->getRequest();
 		bytesExpected = Download_iter->Download->getBytesExpected();
@@ -83,6 +90,42 @@ void clientBuffer::rotateDownloads()
 
 	if(Download_iter == Download.end()){
 		Download_iter = Download.begin();
+	}
+}
+
+const bool clientBuffer::terminateDownload(const std::string & hash)
+{
+	//if currently on this download then still expecting bytes
+	if(hash == Download_iter->Download->getHash()){
+		if(ready){ //if not expecting any more bytes
+			Download_iter->Download->unregConnection(server_IP);
+			Download.erase(Download_iter);
+			Download_iter = Download.begin(); //iterator invalidated, set to new
+			terminating = false;
+			return true;
+		}
+		else{ //expecting more bytes, let them finish before terminating
+			terminating = true;
+			return false;
+		}
+	}
+
+	for(std::list<downloadHolder>::iterator iter0 = Download.begin(); iter0 != Download.end(); iter0++){
+
+		if(hash == iter0->Download->getHash()){
+			iter0->Download->unregConnection(server_IP);
+			Download.erase(iter0);
+			break;
+		}
+	}
+
+	return true;
+}
+
+void clientBuffer::unregisterAll()
+{
+	for(std::list<downloadHolder>::iterator iter0 = Download.begin(); iter0 != Download.end(); iter0++){
+		iter0->Download->unregConnection(server_IP);
 	}
 }
 

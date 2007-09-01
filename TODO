@@ -9,13 +9,7 @@ never disconnect. A person could exploit this by taking up slots but no bandwidt
 
 -The server sendPending needs to operate like the client sendPending.
 
--Check for destructors to free memory on program close.
-
--Go through the whole ClientBuffer before checking sockets and generate new
-requests for all sockets. This is necessary for saving CPU time. Checking for
-sockets ready to write is expensive and the client needs to write a very small
-amount. If checking write capability is triggered by reads there is more time
-with the write checking enabled.
+-Recent changes made to the server are causing crashing.
 
 
 DEFERRED FEATURES
@@ -23,6 +17,17 @@ DEFERRED FEATURES
 -Needs to be a check so that when the user tries to download the same thing
 twice the second download doesn't get appended to the first. Make a database
 to store downloaded file information to check against.
+
+-Something to account for the burst of rerequests at the end of a file.
+
+-There probably needs to be a distinction made between completed and stopped
+downloads. Like what happens with the partial file from a stopped download?
+
+-Algorithm to make download speed more smooth. Perhaps something which will give
+the number the direction of the actual speed but only allow it to travel in that
+direction at a certain rate. Perhaps how much it could travel in each time step
+could be calculated in such a way that when it's close it can't travel very
+fast but when it's far away it can travel faster.
 
 
 PERFORMANCE OBSERVANCES

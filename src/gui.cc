@@ -326,6 +326,12 @@ bool gui::downloadInfoRefresh()
 		column.add(downloadSpeed_t);
 		column.add(percentComplete_t);
 
+		//get all the server_IP information in one string
+		std::string combined_IP;
+		for(std::list<std::string>::iterator iter2 = iter0->server_IP.begin(); iter2 != iter0->server_IP.end(); iter2++){
+			combined_IP += *iter2 + "|";
+		}
+
 		//iterate through all the rows
 		bool foundEntry = false;
 		Gtk::TreeModel::Children children = downloadList->children();
@@ -338,7 +344,8 @@ bool gui::downloadInfoRefresh()
 
 			//see if there is already an entry for the file in the download list
 			if(hash_retrieved == iter0->hash){
-				row[server_IP_t] = iter0->server_IP;
+
+				row[server_IP_t] = combined_IP;
 				row[downloadSpeed_t] = iter0->speed;
 				row[percentComplete_t] = iter0->percentComplete;
 
@@ -351,7 +358,7 @@ bool gui::downloadInfoRefresh()
 			Gtk::TreeModel::Row row = *(downloadList->append());
 
 			row[hash_t] = iter0->hash;
-			row[server_IP_t] = iter0->server_IP;
+			row[server_IP_t] = combined_IP;
 			row[fileName_t] = iter0->fileName;
 			row[fileSize_t] = iter0->fileSize;
 			row[downloadSpeed_t] = iter0->speed;

@@ -97,12 +97,12 @@ private:
 	int fdmax;          //holds the number of the maximum socket
 
 	/*
-	This is set to true when the sendBuffer has something in it. This exists for
-	the purpose of having an alternate select() call that doesn't involve writefds
+	This is a count of how many sends there are waiting. This exists for the
+	purpose of having an alternate select() call that doesn't involve writefds
 	because using writefds hogs CPU. However when there is data to write it is
 	proper to use writefds.
 	*/
-	bool sendPending;
+	int sendPending;
 
 	/*
 	decodeInt         - turns four char's in to a 32bit integer starting at 'begin'

@@ -11,7 +11,7 @@
 server::server()
 {
 	connections = 0;
-	sendPending = false;
+	sendPending = 0;
 	FD_ZERO(&masterfds);
 }
 
@@ -373,7 +373,7 @@ void server::processRequest(const int & socketfd, char recvBuffer[], const int &
 
 			prepareSendBuffer(socketfd, file_ID, blockNumber);
 
-			sendPending = true;
+			sendPending++;
 		}
 	}
 	else{
@@ -452,7 +452,7 @@ void server::start_thread()
 		This if(sendPending) exists to save a LOT of CPU time by not checking
 		if sockets are ready to write when we don't need to write anything.
 		*/
-		if(sendPending){
+		if(sendPending != 0){
 			if((select(fdmax+1, &readfds, &writefds, NULL, NULL)) == -1){
 
 				//gprof will send PROF signal, this will ignore it
@@ -473,38 +473,43 @@ void server::start_thread()
 			}
 		}
 
-		for(int x=0; x<=fdmax; x++){
-			if(FD_ISSET(x, &readfds)){
+		for(int socketfd = 0; socketfd <= fdmax; socketfd++){
+			if(FD_ISSET(socketfd, &readfds)){
 
-				if(x == listener){ //new client connected
-					newConnection(x);
+				if(socketfd == listener){ //new client connected
+					newConnection(socketfd);
 				}
 				else{ //existing socket sending data
 
-					if((nbytes = recv(x, recvBuffer, sizeof(recvBuffer), 0)) <= 0){
-						disconnect(x);
+					if((nbytes = recv(socketfd, recvBuffer, sizeof(recvBuffer), 0)) <= 0){
+						disconnect(socketfd);
+
+						//it's possible the disconnected socket was in writefds, try to remove it
+						FD_CLR(socketfd, &writefds);
 					}
 					else{ //incoming data from client socket
-						processRequest(x, recvBuffer, nbytes);
+						processRequest(socketfd, recvBuffer, nbytes);
 					}
 				}
 			}
 
-			if(FD_ISSET(x, &writefds)){
+			if(FD_ISSET(socketfd, &writefds)){
 
-				if(!sendBuffer[x].empty()){
+				if(!sendBuffer[socketfd].empty()){
 
-					if((nbytes = send(x, sendBuffer[x].c_str(), sendBuffer[x].size(), 0)) <= 0){
-						disconnect(x);
+					if((nbytes = send(socketfd, sendBuffer[socketfd].c_str(), sendBuffer[socketfd].size(), 0)) <= 0){
+						disconnect(socketfd);
 					}
 					else{ //remove bytes sent from buffer
-						sendBuffer[x].erase(0, nbytes);
+						sendBuffer[socketfd].erase(0, nbytes);
+
+						if(sendBuffer[socketfd].empty()){
+							sendPending--;
+						}
 					}
 				}
 			}
 		}
-
-		sendPending = false;
 	}
 }
 
