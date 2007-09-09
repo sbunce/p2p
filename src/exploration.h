@@ -15,9 +15,21 @@ public:
 	class infoBuffer
 	{
 	public:
+		infoBuffer()
+		{
+			//defaults which don't need to be set on new downloads
+			resumed = false;
+			latestRequest = 0;
+			currentSuperBlock = 0;
+		}
+
+		bool resumed; //if this infoBuffer is being used to resume a download
+
 		std::string hash;
 		std::string fileName;
 		std::string fileSize;
+		unsigned int latestRequest; //what block was most recently requested
+		int currentSuperBlock;
 
 		//information unique to the server, these vectors are parallel
 		std::vector<std::string> server_IP;

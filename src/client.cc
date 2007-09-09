@@ -14,18 +14,12 @@ client::client()
 	fdmax = 0;
 	FD_ZERO(&masterfds);
 
-
-//Reconnecting resumed downloads should be done here.
-	//ClientIndex.initialFillBuffer(downloadBuffer, serverHolder);
-/*
-	if(!downloadBuffer.empty()){
-		resumeDownloads = true;
-	}
-*/
-	newDownloadPending = false;
-
+	newDownloadPending = new bool(false);
 	sendPending = new int(0);
 	downloadComplete = new bool(false);
+
+	//reconnect downloads that havn't finished
+	ClientIndex.initialFillBuffer(scheduledDownload, newDownloadPending);
 }
 
 client::~client()
@@ -40,10 +34,10 @@ client::~client()
 		delete *iter0;
 	}
 
+	delete newDownloadPending;
 	delete sendPending;
 	delete downloadComplete;
 }
-
 
 //only call this function from within a ClientDownloadBufferMutex
 void client::disconnect(const int & socketfd)
@@ -297,7 +291,7 @@ void client::start_thread()
 	while(true){
 
 		//start user initiated downloads
-		if(newDownloadPending){
+		if(*newDownloadPending){
 			startDeferredDownloads();
 		}
 
@@ -405,13 +399,14 @@ void client::startDownload(exploration::infoBuffer info)
 
 	}//end lock scope
 
-	newDownloadPending = true;
+	*newDownloadPending = true;
 }
 
 void client::startDeferredDownloads()
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(scheduledDownloadMutex);
+
 	for(std::list<exploration::infoBuffer>::iterator iter0 = scheduledDownload.begin(); iter0 != scheduledDownload.end(); iter0++){
 		startDownload_deferred(*iter0);
 	}
@@ -419,14 +414,16 @@ void client::startDeferredDownloads()
 	scheduledDownload.clear();
 	}//end lock scope
 
-	newDownloadPending = false;
+	*newDownloadPending = false;
 }
 
 bool client::startDownload_deferred(exploration::infoBuffer info)
 {
 	//make sure file isn't already downloading
-	if(!ClientIndex.startDownload(info)){
-		return false;
+	if(!info.resumed){
+		if(!ClientIndex.startDownload(info)){
+			return false;
+		}
 	}
 
 	//get file path, stop if file not found(it should be)
@@ -436,18 +433,18 @@ bool client::startDownload_deferred(exploration::infoBuffer info)
 	}
 
 	int fileSize = atoi(info.fileSize.c_str());
-	int blockCount = 0;
+	int latestRequest = info.latestRequest;
 	int lastBlock = atoi(info.fileSize.c_str())/(global::BUFFER_SIZE - global::S_CTRL_SIZE);
 	int lastBlockSize = atoi(info.fileSize.c_str()) % (global::BUFFER_SIZE - global::S_CTRL_SIZE) + global::S_CTRL_SIZE;
 	int lastSuperBlock = lastBlock / global::SUPERBLOCK_SIZE;
-	int currentSuperBlock = 0;
+	int currentSuperBlock = info.currentSuperBlock;
 
 	download * Download = new download(
 		info.hash,
 		info.fileName,
 		filePath,
 		fileSize,
-		blockCount,
+		latestRequest,
 		lastBlock,
 		lastBlockSize,
 		lastSuperBlock,

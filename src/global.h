@@ -13,7 +13,7 @@ namespace global //"global" namespace ;-)
 
 	//what % of fileBlocks to "drop"
 	//#define UNRELIABLE_CLIENT
-	const int UNRELIABLE_CLIENT_VALUE = 99;
+	const int UNRELIABLE_CLIENT_VALUE = 95;
 
 	/*
 	If enabled server sometimes sends 1 byte more than it should. The abusive server
@@ -35,9 +35,9 @@ namespace global //"global" namespace ;-)
 	/*
 	C_CTRL_SIZE includes a command and potentially request data.
 	example request: X Y Y Y Y Z Z Z Z are the 9 bits of control data.
-	X - command bit
-	Y - file ID bits
-	Z - block number bits
+	X - command byte
+	Y - file ID bytes
+	Z - block number bytes
 	S_CTRL_SIZE includes only a command.
 	*/
 	const int C_CTRL_SIZE = 9; //protocol control data size, client -> server
@@ -54,7 +54,7 @@ namespace global //"global" namespace ;-)
 	//protocol commands, client and server
 	const char P_REJ = (char)5; //"I have too many connections already"
 
-	//if this is changed all databases will need to be rebuilt
+	//if this is changed the database will need to be rebuilt
 	const sha::SHA_TYPE HASH_TYPE = sha::enuSHA1;
 
 	//default locations

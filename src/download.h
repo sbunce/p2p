@@ -29,6 +29,7 @@ public:
 		const std::string & filePath_in, const int & fileSize_in, const int & blockCount_in,
 		const int & lastBlock_in, const int & lastBlockSize_in, const int & lastSuperBlock_in,
 		const int & currentSuperBlock_in, bool * downloadComplete_flag_in);
+
 	/*
 	addBlock         - add complete fileBlocks to the superBlocks
 	completed        - returns true if download completed

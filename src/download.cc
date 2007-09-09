@@ -41,7 +41,7 @@ void download::addBlock(const int & blockNumber, std::string & block)
 #ifdef UNRELIABLE_CLIENT
 	int random = rand() % 100;
 	if(random < global::UNRELIABLE_CLIENT_VALUE){
-		std::cout << "testing: client::addToTree(): OOPs! I dropped fileBlock " << blockNumber << "\n";
+		std::cout << "testing: client::addBlock(): OOPs! I dropped fileBlock " << blockNumber << "\n";
 
 		if(blockNumber == lastBlock){
 			block.clear();
@@ -57,8 +57,8 @@ void download::addBlock(const int & blockNumber, std::string & block)
 	block.erase(0, global::S_CTRL_SIZE);
 
 	//add the block to the appropriate superBlock
-	for(std::deque<superBlock>::iterator iter = superBuffer.begin(); iter != superBuffer.end(); iter++){
-		if(iter->addBlock(blockNumber, block)){
+	for(std::deque<superBlock>::iterator iter0 = superBuffer.begin(); iter0 != superBuffer.end(); iter0++){
+		if(iter0->addBlock(blockNumber, block)){
 			break;
 		}
 	}
@@ -216,14 +216,12 @@ const int download::getRequest()
 	given time to arrive.
 	*/
 	if(superBuffer.empty()){ //P1
-		superBlock SB(currentSuperBlock++, lastBlock);
-		superBuffer.push_front(SB);
+		superBuffer.push_front(superBlock(currentSuperBlock++, lastBlock));
 		latestRequest = superBuffer.front().getRequest();
 	}
 	else if(superBuffer.front().allRequested()){ //P2
 		if(superBuffer.size() < 2 && currentSuperBlock <= lastSuperBlock){
-			superBlock SB(currentSuperBlock++, lastBlock);
-			superBuffer.push_front(SB);
+			superBuffer.push_front(superBlock(currentSuperBlock++, lastBlock));
 		}
 		latestRequest = superBuffer.front().getRequest();
 	}

@@ -1,18 +1,10 @@
-BUGS AND NECESSARY FEATURES
+BUGS
 
--Need a server timeout for servers that accept requests but never respond and
-never disconnect. A person could exploit this by taking up slots but no bandwidth.
-
--Client control of how many outgoing connections it will try to make.
-
--Have the serverIndex poll to check for new files added to share.
-
--The server sendPending needs to operate like the client sendPending.
-
--Recent changes made to the server are causing crashing.
+Server is pausing due to the time it takes startDownloads_deferred to release
+it's hold on scheduledDownloadsMutex.
 
 
-DEFERRED FEATURES
+NEEDED FEATURES
 
 -Needs to be a check so that when the user tries to download the same thing
 twice the second download doesn't get appended to the first. Make a database
@@ -29,12 +21,19 @@ direction at a certain rate. Perhaps how much it could travel in each time step
 could be calculated in such a way that when it's close it can't travel very
 fast but when it's far away it can travel faster.
 
+-Have the serverIndex poll to check for new files added to share.
+
+-Client control of how many outgoing connections it will try to make.
+
+-Need a server timeout for servers that accept requests but never respond and
+never disconnect. A person could exploit this by taking up slots but no bandwidth.
+
 
 PERFORMANCE OBSERVANCES
 
 -With multiple downloads transfer speed also decreases. I suspect it's because
-the servers have to seeks to different files often. mmap? Use the boost::iostream
-library to set up a mapped file.
+the servers have to seek to different files often. Could a buffer solve this?
+How would that be implemented?
 
 -Instead of new'ing superBlocks consider respecializing them to different blocks.
 
@@ -50,6 +49,3 @@ level inheritance and all level inheritance.
 -The protocol for sending information for a file should be 1 byte command, 2 byte
 packet length, the rest of the packet will be variable length.
 
--If I moved the downloads in to the serverElements then I could get rid of the
-Server container within the downloads simplifying things a lot. The serverElements
-would still be in a buffer accessed by 

@@ -9,16 +9,17 @@ OBJECTS = main.o client.o clientBuffer.o download.o clientIndex.o \
 	exploration.o gui.o gui_about.o hash.o server.o serverIndex.o sha.o \
 	superBlock.o
 
-LINKER_OPTIONS = `pkg-config gtkmm-2.4 --cflags --libs` \
-	-lboost_thread -D_REENTRANT -lboost_filesystem -lsqlite3
+LINKER_OPTIONS = `pkg-config gtkmm-2.4 --cflags --libs` -lboost_filesystem \
+	-lboost_thread -D_REENTRANT -lsqlite3 
 
 SERVER_OBJECTS = main-server.o hash.o server.o serverIndex.o sha.o
 
-SERVER_LINKER_OPTIONS = -lboost_thread -D_REENTRANT -lboost_filesystem -lsqlite3
+SERVER_LINKER_OPTIONS = -lboost_filesystem -lboost_thread -D_REENTRANT \
+	-lsqlite3
 
 main: $(OBJECTS)
 	$(CCL) $(OBJECTS) $(GPROF) -o ../simple-p2p $(LINKER_OPTIONS)
-	@echo "\nBuilding simple-p2p completed!\n"
+	@echo "\nBuilding simple-p2p complete.\n"
 
 main.o: main.cc gui.o
 	$(CC) main.cc `pkg-config gtkmm-2.4 --cflags`
@@ -67,7 +68,7 @@ sha_test: sha_test.cc sha.o
 
 server: $(SERVER_OBJECTS)
 	$(CCL) $(SERVER_OBJECTS) $(GPROF) -o ../server $(SERVER_LINKER_OPTIONS) 
-	@echo "\nBuilding server completed.\n"
+	@echo "\nBuilding server complete.\n"
 
 clean:
 	rm -v *.o

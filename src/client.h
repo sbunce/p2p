@@ -94,7 +94,7 @@ private:
 	exploration::infoBuffer's (new download information) is put here to schedule
 	a download to start.
 	*/
-	bool newDownloadPending;
+	bool * newDownloadPending;
 	std::list<exploration::infoBuffer> scheduledDownload;
 
 	/*
