@@ -72,7 +72,7 @@ void clientIndex::getFilePath_callBack(int & columnsRetrieved, char ** queryResp
 	getFilePath_fileName.assign(queryResponse[0]);
 }
 
-void clientIndex::initialFillBuffer(std::list<exploration::infoBuffer> & scheduledDownload, bool * newDownloadPending)
+void clientIndex::initialFillBuffer(std::list<exploration::infoBuffer> & resumedDownload)
 {
 	int returnCode;
 	if((returnCode = sqlite3_exec(sqlite3_DB, "SELECT * FROM download", initialFillBuffer_callBack_wrapper, (void *)this, NULL)) != 0){
@@ -81,11 +81,7 @@ void clientIndex::initialFillBuffer(std::list<exploration::infoBuffer> & schedul
 #endif
 	}
 
-	scheduledDownload.splice(scheduledDownload.end(), initialFillBuffer_scheduledDownload);
-
-	if(!scheduledDownload.empty()){
-		*newDownloadPending = true;
-	}
+	resumedDownload.splice(resumedDownload.end(), initialFillBuffer_resumedDownload);
 }
 
 void clientIndex::initialFillBuffer_callBack(int & columnsRetrieved, char ** queryResponse, char ** columnName)
@@ -127,7 +123,7 @@ void clientIndex::initialFillBuffer_callBack(int & columnsRetrieved, char ** que
 			IB.file_ID.push_back(*file_ID_iter++);
 		}
 
-		initialFillBuffer_scheduledDownload.push_back(IB);
+		initialFillBuffer_resumedDownload.push_back(IB);
 	}
 	else{ //partial file removed, delete entry from database
 

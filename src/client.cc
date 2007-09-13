@@ -14,12 +14,16 @@ client::client()
 	fdmax = 0;
 	FD_ZERO(&masterfds);
 
-	newDownloadPending = new bool(false);
 	sendPending = new int(0);
 	downloadComplete = new bool(false);
 
 	//reconnect downloads that havn't finished
-	ClientIndex.initialFillBuffer(scheduledDownload, newDownloadPending);
+	std::list<exploration::infoBuffer> resumedDownload;
+	ClientIndex.initialFillBuffer(resumedDownload);
+
+	for(std::list<exploration::infoBuffer>::iterator iter0 = resumedDownload.begin(); iter0 != resumedDownload.end(); iter0++){
+		startDownload(*iter0);
+	}
 }
 
 client::~client()
@@ -34,7 +38,6 @@ client::~client()
 		delete *iter0;
 	}
 
-	delete newDownloadPending;
 	delete sendPending;
 	delete downloadComplete;
 }
@@ -81,8 +84,6 @@ bool client::getDownloadInfo(std::vector<infoBuffer> & downloadInfo)
 		return false;
 	}
 
-	//locate completed downloads
-	std::list<std::string> completeHash;
 	for(std::list<download *>::iterator iter0 = DownloadBuffer.begin(); iter0 != DownloadBuffer.end(); iter0++){
 
 		//calculate the percent complete
@@ -147,51 +148,111 @@ int client::getTotalSpeed()
 	return speed;
 }
 
-bool client::newConnection(int & socketfd, std::string & server_IP)
+void client::main_thread()
+{
+	//how long select() waits before returning(unless data received)
+	timeval tv;
+
+	//main client receive loop
+	while(true){
+
+		if(*downloadComplete){
+			removeCompleted();
+		}
+
+		//trigger generation of new requests for ready sockets
+		prepareRequests();
+
+		/*
+		These must be initialized every iteration on linux(and possibly other OS's)
+		because linux will change them(POSIX.1-2001 allows this) to reflect the
+		time that select() has blocked for. This work-around doesn't adversely
+		effect other operating systems.
+		*/
+		tv.tv_sec = 2;
+		tv.tv_usec = 0;
+
+		/*
+		This if(sendPending) exists to save a LOT of CPU time by not checking
+		if sockets are ready to write when we don't need to write anything.
+		*/
+		if(*sendPending != 0){
+			readfds = masterfds;
+			writefds = masterfds;
+
+			if((select(fdmax+1, &readfds, &writefds, NULL, &tv)) == -1){
+				if(errno != EINTR){
+					perror("select");
+					exit(1);
+				}
+			}
+		}
+		else{
+			FD_ZERO(&writefds);
+			readfds = masterfds;
+
+			if((select(fdmax+1, &readfds, NULL, NULL, &tv)) == -1){
+				if(errno != EINTR){
+					perror("select");
+					exit(1);
+				}
+			}
+		}
+
+		//begin loop through all of the sockets, checking for flags
+		for(int socketfd = 0; socketfd <= fdmax; socketfd++){
+			if(FD_ISSET(socketfd, &readfds)){
+				read_socket(socketfd);
+			}
+			if(FD_ISSET(socketfd, &writefds)){
+				write_socket(socketfd);
+			}
+		}
+	}
+}
+
+bool client::newConnection(pendingConnection * PC)
 {
 	sockaddr_in dest_addr;
-	socketfd = socket(PF_INET, SOCK_STREAM, 0);
+	int socketfd = socket(PF_INET, SOCK_STREAM, 0);
 
-	dest_addr.sin_family = AF_INET;                           //set socket type TCP
-	dest_addr.sin_port = htons(global::P2P_PORT);             //set destination port
-	dest_addr.sin_addr.s_addr = inet_addr(server_IP.c_str()); //set destination IP
-	memset(&(dest_addr.sin_zero),'\0',8);                     //zero out the rest
+	dest_addr.sin_family = AF_INET;                               //set socket type TCP
+	dest_addr.sin_port = htons(global::P2P_PORT);                 //set destination port
+	dest_addr.sin_addr.s_addr = inet_addr(PC->server_IP.c_str()); //set destination IP
+	memset(&(dest_addr.sin_zero),'\0',8);                         //zero out the rest
 
 	if(connect(socketfd, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) == -1){
 		return false; //new connection failed
 	}
 #ifdef DEBUG
-	std::cout << "info: client::newConnection() created socket " << socketfd << " for " << server_IP << "\n";
+	std::cout << "info: client::newConnection() created socket " << socketfd << " for " << PC->server_IP << "\n";
 #endif
+
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(ClientDownloadBufferMutex);
 
 	//make sure fdmax is always the highest socket number
 	if(socketfd > fdmax){
 		fdmax = socketfd;
 
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(ClientDownloadBufferMutex);
-
 		//resize send/receive buffers if necessary
 		while(ClientBuffer.size() <= fdmax){
 
 			if(ClientBuffer.size() == socketfd){
-				ClientBuffer.push_back(new clientBuffer(server_IP, sendPending));
+				ClientBuffer.push_back(new clientBuffer(PC->server_IP, sendPending));
+				ClientBuffer[socketfd]->addDownload(atoi(PC->file_ID.c_str()), PC->Download);
 			}
 			else{
 				ClientBuffer.push_back((clientBuffer *)0);
 			}
 		}
-
-		}//end lock scope
 	}
 	else{
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(ClientDownloadBufferMutex);
-
-		ClientBuffer[socketfd] = new clientBuffer(server_IP, sendPending);
-
-		}//end lock scope
+		ClientBuffer[socketfd] = new clientBuffer(PC->server_IP, sendPending);
+		ClientBuffer[socketfd]->addDownload(atoi(PC->file_ID.c_str()), PC->Download);
 	}
+
+	}//end lock scope
 
 	FD_SET(socketfd, &masterfds);
 	return true; //new connection created
@@ -206,6 +267,25 @@ void client::prepareRequests()
 		if(*iter0 != 0){
 			(*iter0)->prepareRequest();
 		}
+	}
+
+	}//end lock scope
+}
+
+inline void client::read_socket(const int & socketfd)
+{
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(ClientDownloadBufferMutex);
+
+	char recvBuff[global::BUFFER_SIZE];
+	int nbytes = recv(socketfd, recvBuff, global::BUFFER_SIZE, 0);
+
+	if(nbytes <= 0){
+		disconnect(socketfd);
+	}
+	else{
+		ClientBuffer[socketfd]->recvBuffer.append(recvBuff, nbytes);
+		ClientBuffer[socketfd]->postRecv();
 	}
 
 	}//end lock scope
@@ -279,145 +359,14 @@ void client::removeCompleted()
 
 void client::start()
 {
-	boost::thread clientThread(boost::bind(&client::start_thread, this));
-}
+	boost::thread T1(boost::bind(&client::main_thread, this));
 
-void client::start_thread()
-{
-	//how long select() waits before returning(unless data received)
-	timeval tv;
-
-	//main client receive loop
-	while(true){
-
-		//start user initiated downloads
-		if(*newDownloadPending){
-			startDeferredDownloads();
-		}
-
-		if(*downloadComplete){
-			removeCompleted();
-		}
-
-		//trigger generation of new requests for ready sockets
-		prepareRequests();
-
-		/*
-		These must be initialized every iteration on linux(and possibly other OS's)
-		because linux will change them(POSIX.1-2001 allows this) to reflect the
-		time that select() has blocked for. This work-around doesn't adversely
-		effect other operating systems.
-		*/
-		tv.tv_sec = 2;
-		tv.tv_usec = 0;
-
-		/*
-		This if(sendPending) exists to save a LOT of CPU time by not checking
-		if sockets are ready to write when we don't need to write anything.
-		*/
-		if(*sendPending != 0){
-			readfds = masterfds;
-			writefds = masterfds;
-
-			if((select(fdmax+1, &readfds, &writefds, NULL, &tv)) == -1){
-				if(errno != EINTR){
-					perror("select");
-					exit(1);
-				}
-			}
-		}
-		else{
-			FD_ZERO(&writefds);
-			readfds = masterfds;
-
-			if((select(fdmax+1, &readfds, NULL, NULL, &tv)) == -1){
-				if(errno != EINTR){
-					perror("select");
-					exit(1);
-				}
-			}
-		}
-
-		//begin loop through all of the sockets, checking for flags
-		for(int socketfd = 0; socketfd <= fdmax; socketfd++){
-			if(FD_ISSET(socketfd, &readfds)){
-				read_socket(socketfd);
-			}
-			if(FD_ISSET(socketfd, &writefds)){
-				write_socket(socketfd);
-			}
-		}
+	for(int x = 0; x < global::TREAD_POOL_SIZE; x++){
+		boost::thread T2(boost::bind(&client::serverConnect_thread, this));
 	}
 }
 
-inline void client::read_socket(const int & socketfd)
-{
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(ClientDownloadBufferMutex);
-
-	char recvBuff[global::BUFFER_SIZE];
-	int nbytes = recv(socketfd, recvBuff, global::BUFFER_SIZE, 0);
-
-	if(nbytes <= 0){
-		disconnect(socketfd);
-	}
-	else{
-		ClientBuffer[socketfd]->recvBuffer.append(recvBuff, nbytes);
-		ClientBuffer[socketfd]->postRecv();
-	}
-
-	}//end lock scope
-}
-
-inline void client::write_socket(const int & socketfd)
-{
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(ClientDownloadBufferMutex);
-
-	if(!ClientBuffer[socketfd]->sendBuffer.empty()){
-
-		int nbytes = send(socketfd, ClientBuffer[socketfd]->sendBuffer.c_str(), ClientBuffer[socketfd]->sendBuffer.size(), 0);
-
-		if(nbytes <= 0){
-			disconnect(socketfd);
-		}
-		else{ //remove bytes sent from buffer
-			ClientBuffer[socketfd]->sendBuffer.erase(0, nbytes);
-			ClientBuffer[socketfd]->postSend();
-		}
-	}
-
-	}//end lock scope
-}
-
-void client::startDownload(exploration::infoBuffer info)
-{
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(scheduledDownloadMutex);
-
-	scheduledDownload.push_back(info);
-
-	}//end lock scope
-
-	*newDownloadPending = true;
-}
-
-void client::startDeferredDownloads()
-{
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(scheduledDownloadMutex);
-
-	for(std::list<exploration::infoBuffer>::iterator iter0 = scheduledDownload.begin(); iter0 != scheduledDownload.end(); iter0++){
-		startDownload_deferred(*iter0);
-	}
-
-	scheduledDownload.clear();
-	}//end lock scope
-
-	*newDownloadPending = false;
-}
-
-bool client::startDownload_deferred(exploration::infoBuffer info)
+bool client::startDownload(exploration::infoBuffer info)
 {
 	//make sure file isn't already downloading
 	if(!info.resumed){
@@ -452,56 +401,109 @@ bool client::startDownload_deferred(exploration::infoBuffer info)
 		downloadComplete
 	);
 
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(ClientDownloadBufferMutex);
+
 	DownloadBuffer.push_back(Download);
 
-	//add known servers associated with this download
+	}//end lock scope
+
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(PendingConnectionMutex);
+
+	//queue up all sockets to be connected
 	for(int x = 0; x < info.server_IP.size(); x++){
 
-		bool socketFound = false;
+		pendingConnection * PC = new pendingConnection(Download, info.server_IP[x], info.file_ID[x]);
+		PendingConnection.push_back(PC);
+	}
+
+	}//end lock scope
+}
+
+bool client::startNewSource(const std::string & hash, std::string & server_IP, std::string & file_ID)
+{
+	download * Download = 0;
+
+	//remove the Download element
+	for(std::list<download *>::iterator iter0 = DownloadBuffer.begin(); iter0 != DownloadBuffer.end(); iter0++){
+		if(hash == (*iter0)->getHash()){
+			Download = *iter0;
+		}
+	}
+
+	//exit out if download not found
+	if(Download == 0){
+		return false;
+	}
+
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(PendingConnectionMutex);
+
+	pendingConnection * PC = new pendingConnection(Download, server_IP, file_ID);
+	PendingConnection.push_back(PC);
+
+	}//end lock scope
+
+	return true;
+}
+
+void client::serverConnect_thread()
+{
+	pendingConnection * PC = 0;
+
+	while(true){
 
 		{//begin lock scope
-		boost::mutex::scoped_lock lock(ClientDownloadBufferMutex);
+		boost::mutex::scoped_lock lock(PendingConnectionMutex);
 
-		//see if a socket already exists for the IP
-		for(int socket = 0; socket <= fdmax; socket++){
-			if(FD_ISSET(socket, &masterfds)){
-				if(ClientBuffer[socket]->get_IP() == info.server_IP[x]){
-					ClientBuffer[socket]->addDownload(atoi(info.file_ID[x].c_str()), Download);
-					socketFound = true;
-				}
-			}
+		if(!PendingConnection.empty()){
+			PC = PendingConnection.back();
+			PendingConnection.pop_back();
 		}
 
 		}//end lock scope
 
-		if(socketFound){
-			continue;
+		if(PC != 0){
+			serverConnect(PC);
+			PC = 0;
 		}
+		else{
+			sleep(1);
+		}
+	}
+}
 
-		//if existing socket not found create a new one
-		if(!socketFound){
+void client::serverConnect(pendingConnection * PC)
+{
+	bool socketFound = false;
 
-			int socketfd;
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(ClientDownloadBufferMutex);
 
-			if(!newConnection(socketfd, info.server_IP[x])){
-#ifdef DEBUG
-				std::cout << "info: client::startDownload() could not connect to " << info.server_IP[x] << "\n";
-#endif
-				continue;
-			}
-			else{
-
-				{//begin lock scope
-				boost::mutex::scoped_lock lock(ClientDownloadBufferMutex);
-
-				ClientBuffer[socketfd]->addDownload(atoi(info.file_ID[x].c_str()), Download);
-
-				}//end lock scope
+	//see if a socket already exists for the IP
+	for(int socket = 0; socket <= fdmax; socket++){
+		if(FD_ISSET(socket, &masterfds)){
+			if(ClientBuffer[socket]->get_IP() == PC->server_IP){
+				ClientBuffer[socket]->addDownload(atoi(PC->file_ID.c_str()), PC->Download);
+				socketFound = true;
 			}
 		}
 	}
 
-	return true;
+	}//end lock scope
+
+	//if existing socket not found create a new one
+	if(!socketFound){
+
+		if(!newConnection(PC)){
+#ifdef DEBUG
+			std::cout << "info: client::serverConnect() could not connect to " << PC->server_IP << "\n";
+#endif
+		}
+	}
+
+	delete PC;
 }
 
 void client::stopDownload(const std::string & hash)
@@ -515,6 +517,27 @@ void client::stopDownload(const std::string & hash)
 		if(hash == (*iter0)->getHash()){
 			(*iter0)->stop();
 			break;
+		}
+	}
+
+	}//end lock scope
+}
+
+inline void client::write_socket(const int & socketfd)
+{
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(ClientDownloadBufferMutex);
+
+	if(!ClientBuffer[socketfd]->sendBuffer.empty()){
+
+		int nbytes = send(socketfd, ClientBuffer[socketfd]->sendBuffer.c_str(), ClientBuffer[socketfd]->sendBuffer.size(), 0);
+
+		if(nbytes <= 0){
+			disconnect(socketfd);
+		}
+		else{ //remove bytes sent from buffer
+			ClientBuffer[socketfd]->sendBuffer.erase(0, nbytes);
+			ClientBuffer[socketfd]->postSend();
 		}
 	}
 

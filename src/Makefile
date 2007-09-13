@@ -1,4 +1,5 @@
-#build packages needed g++ libboost-thread-dev libboost-filesystem-dev libsqlite3-dev
+#build dependencies(ubuntu package names)
+#g++ libboost-thread-dev libboost-filesystem-dev libsqlite3-dev
 
 CC = g++ -O3 -c
 CCL = g++

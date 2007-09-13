@@ -24,7 +24,7 @@ public:
 	terminateDownload - removes the download entry from the database
 	*/
 	bool getFilePath(const std::string & hash, std::string & path);
-	void initialFillBuffer(std::list<exploration::infoBuffer> & scheduledDownload, bool * newDownloadPending);
+	void initialFillBuffer(std::list<exploration::infoBuffer> & resumedDownload);
 	bool startDownload(exploration::infoBuffer & info);
 	void terminateDownload(const std::string & hash);
 
@@ -62,7 +62,7 @@ private:
 	*/
 	bool getFilePath_entryExists;
 	std::string getFilePath_fileName;
-	std::list<exploration::infoBuffer> initialFillBuffer_scheduledDownload;
+	std::list<exploration::infoBuffer> initialFillBuffer_resumedDownload;
 
 	sqlite3 * sqlite3_DB; //sqlite database pointer to be passed to functions like sqlite3_exec
 };

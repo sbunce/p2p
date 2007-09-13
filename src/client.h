@@ -48,17 +48,37 @@ public:
 	getDownloadInfo   - returns download info for all files in sendBuffer
 	                  - returns false if no downloads
 	getTotalSpeed     - returns the total download speed(in bytes per second)
-	start             - start the client thread
+	start             - start the threads needed for the client
 	startDownload     - schedules a download to be started
 	stopDownload      - marks a download as completed so it will be stopped
 	*/
 	bool getDownloadInfo(std::vector<infoBuffer> & downloadInfo);
 	int getTotalSpeed();
 	void start();
-	void startDownload(exploration::infoBuffer info);
+	bool startDownload(exploration::infoBuffer info);
 	void stopDownload(const std::string & hash);
 
 private:
+
+	class pendingConnection
+	{
+	public:
+		pendingConnection(download * Download_in, std::string & server_IP_in,
+			std::string & file_ID_in)
+		{
+			Download = Download_in;
+			server_IP = server_IP_in;
+			file_ID = file_ID_in;
+		}
+
+		download * Download;
+		std::string server_IP;
+		std::string file_ID;
+	};
+
+	//holds connections which need to be made
+	std::vector<pendingConnection *> PendingConnection;
+
 	sha SHA;                 //creates messageDigests
 	clientIndex ClientIndex; //gives client access to the database
 
@@ -91,13 +111,6 @@ private:
 	int * sendPending;
 
 	/*
-	exploration::infoBuffer's (new download information) is put here to schedule
-	a download to start.
-	*/
-	bool * newDownloadPending;
-	std::list<exploration::infoBuffer> scheduledDownload;
-
-	/*
 	The vector holds the hash of a download scheduled for deferred termination.
 	*/
 	std::vector<std::string> deferredTermination;
@@ -106,27 +119,33 @@ private:
 	bool * downloadComplete;
 
 	/*
-	disconnect       - disconnects a socket
-	newConnection    - create a connection with a server, returns false if failed
-	prepareRequests  - sets up new requests
-	removeCompleted  - removes downloads that are complete(or stopped)
-	start_thread     - starts the main client thread
-	read_socket      - when a socket needs to be read
-	write_socket     - when a socket needs to be written
+	disconnect           - disconnects a socket, modifies ClientBuffer
+	main_thread          - main client thread that sends/receives data and triggers events
+	newConnection        - create a connection with a server, modifies ClientBuffer
+	                     - returns false if cannot connect to server
+	prepareRequests      - touches each ClientBuffer element to trigger new requests(if needed)
+	read_socket          - when a socket needs to be read
+	removeCompleted      - removes downloads that are complete(or stopped)
+	serverConnect_thread - sets up new downloads (monitors scheduledDownload)
+	serverConnect        - called by startDownload_thread() to set up new downloads
+	startNewSource       - adds a download source for a download identified by hash
+	                     - returns false if the download is not found
+	write_socket         - when a socket needs to be written
 	*/
 	void disconnect(const int & socketfd);
-	bool newConnection(int & socketfd, std::string & server_IP);
+	void main_thread();
+	bool newConnection(pendingConnection * PC);
 	void prepareRequests();
-	void removeCompleted();
-	void start_thread();
 	inline void read_socket(const int & socketfd);
+	void removeCompleted();
+	void serverConnect_thread();
+	void serverConnect(pendingConnection * PC);
+	bool startNewSource(const std::string & hash, std::string & server_IP, std::string & file_ID);
 	inline void write_socket(const int & socketfd);
-	void startDeferredDownloads();
-	bool startDownload_deferred(exploration::infoBuffer info);
 
 	//each mutex names the object it locks in the format boost::mutex <object>Mutex
 	boost::mutex ClientDownloadBufferMutex; //for both ClientBuffer and DownloadBuffer
 	boost::mutex deferredTerminationMutex;
-	boost::mutex scheduledDownloadMutex;
+	boost::mutex PendingConnectionMutex;
 };
 #endif

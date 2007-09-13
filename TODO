@@ -1,10 +1,12 @@
 BUGS
 
-Server is pausing due to the time it takes startDownloads_deferred to release
-it's hold on scheduledDownloadsMutex.
+-Multiple connections to the same server still being made.
 
+-Server crashes whem multiple connections are made.
 
 NEEDED FEATURES
+
+-Put a check on the server to only let clients connect once.
 
 -Needs to be a check so that when the user tries to download the same thing
 twice the second download doesn't get appended to the first. Make a database
@@ -23,19 +25,8 @@ fast but when it's far away it can travel faster.
 
 -Have the serverIndex poll to check for new files added to share.
 
--Client control of how many outgoing connections it will try to make.
-
 -Need a server timeout for servers that accept requests but never respond and
 never disconnect. A person could exploit this by taking up slots but no bandwidth.
-
-
-PERFORMANCE OBSERVANCES
-
--With multiple downloads transfer speed also decreases. I suspect it's because
-the servers have to seek to different files often. Could a buffer solve this?
-How would that be implemented?
-
--Instead of new'ing superBlocks consider respecializing them to different blocks.
 
 
 IDEAS
