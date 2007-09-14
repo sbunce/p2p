@@ -1,8 +1,7 @@
 BUGS
 
--Multiple connections to the same server still being made.
-
 -Server crashes whem multiple connections are made.
+
 
 NEEDED FEATURES
 

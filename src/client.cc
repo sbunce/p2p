@@ -28,6 +28,9 @@ client::client()
 
 client::~client()
 {
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(ClientDownloadBufferMutex);
+
 	for(std::vector<clientBuffer *>::iterator iter0 = ClientBuffer.begin(); iter0 != ClientBuffer.end(); iter0++){
 		if(*iter0 != 0){
 			delete *iter0;
@@ -38,12 +41,14 @@ client::~client()
 		delete *iter0;
 	}
 
+	}//end lock scope
+
 	delete sendPending;
 	delete downloadComplete;
 }
 
-//only call this function from within a ClientDownloadBufferMutex
-void client::disconnect(const int & socketfd)
+//this function should only be used from within a ClientDownloadBufferMutex
+inline void client::disconnect(const int & socketfd)
 {
 #ifdef DEBUG
 	std::cout << "info: client disconnecting socket number " << socketfd << "\n";
@@ -93,7 +98,7 @@ bool client::getDownloadInfo(std::vector<infoBuffer> & downloadInfo)
 		int percentComplete = int(percent);
 
 		//convert fileSize from B to MB
-		fileSize = (*iter0)->getFileSize() / 1024 / 1024;
+		fileSize = fileSize / 1024 / 1024;
 		std::ostringstream fileSize_s;
 
 		if(fileSize < 1){
@@ -213,6 +218,16 @@ void client::main_thread()
 
 bool client::newConnection(pendingConnection * PC)
 {
+	//make sure the socket isn't already connected
+	for(int socketfd = 0; socketfd < ClientBuffer.size(); socketfd++){
+		if(ClientBuffer[socketfd] != 0){
+			if(PC->server_IP == ClientBuffer[socketfd]->get_IP()){
+				ClientBuffer[socketfd]->addDownload(atoi(PC->file_ID.c_str()), PC->Download);
+				return true;
+			}
+		}
+	}
+
 	sockaddr_in dest_addr;
 	int socketfd = socket(PF_INET, SOCK_STREAM, 0);
 
@@ -221,8 +236,11 @@ bool client::newConnection(pendingConnection * PC)
 	dest_addr.sin_addr.s_addr = inet_addr(PC->server_IP.c_str()); //set destination IP
 	memset(&(dest_addr.sin_zero),'\0',8);                         //zero out the rest
 
-	if(connect(socketfd, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) == -1){
+	if(connect(socketfd, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0){
 		return false; //new connection failed
+	}
+	else{
+		FD_SET(socketfd, &masterfds);
 	}
 #ifdef DEBUG
 	std::cout << "info: client::newConnection() created socket " << socketfd << " for " << PC->server_IP << "\n";
@@ -237,24 +255,18 @@ bool client::newConnection(pendingConnection * PC)
 
 		//resize send/receive buffers if necessary
 		while(ClientBuffer.size() <= fdmax){
-
-			if(ClientBuffer.size() == socketfd){
-				ClientBuffer.push_back(new clientBuffer(PC->server_IP, sendPending));
-				ClientBuffer[socketfd]->addDownload(atoi(PC->file_ID.c_str()), PC->Download);
-			}
-			else{
-				ClientBuffer.push_back((clientBuffer *)0);
-			}
+			ClientBuffer.push_back((clientBuffer *)0);
 		}
 	}
-	else{
+
+	if(ClientBuffer[socketfd] == 0){
 		ClientBuffer[socketfd] = new clientBuffer(PC->server_IP, sendPending);
-		ClientBuffer[socketfd]->addDownload(atoi(PC->file_ID.c_str()), PC->Download);
 	}
+
+	ClientBuffer[socketfd]->addDownload(atoi(PC->file_ID.c_str()), PC->Download);
 
 	}//end lock scope
 
-	FD_SET(socketfd, &masterfds);
 	return true; //new connection created
 }
 
@@ -412,36 +424,23 @@ bool client::startDownload(exploration::infoBuffer info)
 	boost::mutex::scoped_lock lock(PendingConnectionMutex);
 
 	//queue up all sockets to be connected
-	for(int x = 0; x < info.server_IP.size(); x++){
+	for(int x=0; x<info.server_IP.size(); x++){
 
-		pendingConnection * PC = new pendingConnection(Download, info.server_IP[x], info.file_ID[x]);
-		PendingConnection.push_back(PC);
-	}
+		//add to existing container if possible
+		bool found = false;
+		for(std::list<std::list<pendingConnection *> >::iterator iter0 = PendingConnection.begin(); iter0 != PendingConnection.end(); iter0++){
+			if(iter0->back()->server_IP == info.server_IP[x]){
+				iter0->push_front(new pendingConnection(Download, info.server_IP[x], info.file_ID[x]));
+				found = true;
+			}
+		}
 
-	}//end lock scope
-}
-
-bool client::startNewSource(const std::string & hash, std::string & server_IP, std::string & file_ID)
-{
-	download * Download = 0;
-
-	//remove the Download element
-	for(std::list<download *>::iterator iter0 = DownloadBuffer.begin(); iter0 != DownloadBuffer.end(); iter0++){
-		if(hash == (*iter0)->getHash()){
-			Download = *iter0;
+		if(!found){
+			std::list<pendingConnection *> temp;
+			temp.push_back(new pendingConnection(Download, info.server_IP[x], info.file_ID[x]));
+			PendingConnection.push_back(temp);
 		}
 	}
-
-	//exit out if download not found
-	if(Download == 0){
-		return false;
-	}
-
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(PendingConnectionMutex);
-
-	pendingConnection * PC = new pendingConnection(Download, server_IP, file_ID);
-	PendingConnection.push_back(PC);
 
 	}//end lock scope
 
@@ -458,52 +457,45 @@ void client::serverConnect_thread()
 		boost::mutex::scoped_lock lock(PendingConnectionMutex);
 
 		if(!PendingConnection.empty()){
-			PC = PendingConnection.back();
-			PendingConnection.pop_back();
+
+			for(std::list<std::list<pendingConnection *> >::iterator iter0 = PendingConnection.begin(); iter0 != PendingConnection.end(); iter0++){
+				if(iter0->back()->status == FREE){
+					PC = iter0->back();
+					iter0->back()->status = PROCESSING;
+					break;
+				}
+			}
 		}
 
 		}//end lock scope
 
 		if(PC != 0){
-			serverConnect(PC);
+
+			newConnection(PC);
+
+			{//begin lock scope
+			boost::mutex::scoped_lock lock(PendingConnectionMutex);
+
+			for(std::list<std::list<pendingConnection *> >::iterator iter0 = PendingConnection.begin(); iter0 != PendingConnection.end(); iter0++){
+				if(iter0->back() == PC){
+					delete iter0->back();
+					iter0->pop_back();
+
+					if(iter0->empty()){
+						PendingConnection.erase(iter0);
+					}
+					break;
+				}
+			}
+
+			}//end lock scope
+
 			PC = 0;
 		}
 		else{
 			sleep(1);
 		}
 	}
-}
-
-void client::serverConnect(pendingConnection * PC)
-{
-	bool socketFound = false;
-
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(ClientDownloadBufferMutex);
-
-	//see if a socket already exists for the IP
-	for(int socket = 0; socket <= fdmax; socket++){
-		if(FD_ISSET(socket, &masterfds)){
-			if(ClientBuffer[socket]->get_IP() == PC->server_IP){
-				ClientBuffer[socket]->addDownload(atoi(PC->file_ID.c_str()), PC->Download);
-				socketFound = true;
-			}
-		}
-	}
-
-	}//end lock scope
-
-	//if existing socket not found create a new one
-	if(!socketFound){
-
-		if(!newConnection(PC)){
-#ifdef DEBUG
-			std::cout << "info: client::serverConnect() could not connect to " << PC->server_IP << "\n";
-#endif
-		}
-	}
-
-	delete PC;
 }
 
 void client::stopDownload(const std::string & hash)

@@ -25,6 +25,7 @@ download::download(const std::string & hash_in, const std::string & fileName_in,
 
 	//defaults
 	downloadComplete = false;
+	downloadSpeed = 0;
 
 #ifdef UNRELIABLE_CLIENT
 	std::srand(time(0));

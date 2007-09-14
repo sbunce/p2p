@@ -31,7 +31,7 @@ namespace global //"global" namespace ;-)
 	const int SPEED_AVERAGE = 5;      //how many seconds to average upload/download speed over
 	const int COMPLETE_REMOVE = 5;    //how many seconds to wait before removing a complete upload/download
 	const int TIMEOUT = 5;            //how many seconds to wait for a client or server
-	const int TREAD_POOL_SIZE = 10;   //how many threads are dedicated to making new connections
+	const int TREAD_POOL_SIZE = 5;    //how many threads are dedicated to making new connections
 	const int SHARE_REFRESH = 1200;   //number of seconds between updating share information
 
 	/*

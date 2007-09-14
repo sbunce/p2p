@@ -60,6 +60,15 @@ public:
 
 private:
 
+	/*
+	The status of the pendingConnection element.
+	FREE       - awaiting a thread to feed it to newConnection
+	PROCESSING - a thread has already fed the element to newConnection
+
+	If a element is set to processing then no other threads touch it.
+	*/
+	enum PendingStatus { FREE, PROCESSING };
+
 	class pendingConnection
 	{
 	public:
@@ -69,15 +78,20 @@ private:
 			Download = Download_in;
 			server_IP = server_IP_in;
 			file_ID = file_ID_in;
+			status = FREE;
 		}
 
 		download * Download;
 		std::string server_IP;
 		std::string file_ID;
+		PendingStatus status;
 	};
 
-	//holds connections which need to be made
-	std::vector<pendingConnection *> PendingConnection;
+	/*
+	Holds connections which need to be made. If multiple connections to the same
+	server need to be made they're put in the same inner vector.
+	*/
+	std::list<std::list<pendingConnection *> > PendingConnection;
 
 	sha SHA;                 //creates messageDigests
 	clientIndex ClientIndex; //gives client access to the database
@@ -127,25 +141,21 @@ private:
 	read_socket          - when a socket needs to be read
 	removeCompleted      - removes downloads that are complete(or stopped)
 	serverConnect_thread - sets up new downloads (monitors scheduledDownload)
-	serverConnect        - called by startDownload_thread() to set up new downloads
-	startNewSource       - adds a download source for a download identified by hash
-	                     - returns false if the download is not found
 	write_socket         - when a socket needs to be written
 	*/
-	void disconnect(const int & socketfd);
+	inline void disconnect(const int & socketfd);
 	void main_thread();
 	bool newConnection(pendingConnection * PC);
 	void prepareRequests();
 	inline void read_socket(const int & socketfd);
 	void removeCompleted();
 	void serverConnect_thread();
-	void serverConnect(pendingConnection * PC);
-	bool startNewSource(const std::string & hash, std::string & server_IP, std::string & file_ID);
 	inline void write_socket(const int & socketfd);
 
 	//each mutex names the object it locks in the format boost::mutex <object>Mutex
 	boost::mutex ClientDownloadBufferMutex; //for both ClientBuffer and DownloadBuffer
 	boost::mutex deferredTerminationMutex;
 	boost::mutex PendingConnectionMutex;
+	boost::mutex PCPMutex;
 };
 #endif
