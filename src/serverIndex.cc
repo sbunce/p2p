@@ -36,6 +36,8 @@ serverIndex::serverIndex()
 		std::cout << "error: serverIndex::serverIndex() #4 failed with sqlite3 error " << returnCode << "\n";
 #endif
 	}
+
+	indexing = false;
 }
 
 void serverIndex::addEntry(const int & size, const std::string & path)
@@ -102,10 +104,20 @@ void serverIndex::getFileInfo_callBack(int & columnsRetrieved, char ** queryResp
 	getFileInfo_filePath.assign(queryResponse[1]);
 }
 
-void serverIndex::indexShare()
+bool serverIndex::is_indexing()
 {
-	removeMissing();
-	indexShare_recurse(global::SERVER_SHARE_DIRECTORY);
+	return indexing;
+}
+
+void serverIndex::indexShare_thread()
+{
+	while(true){
+		indexing = true;
+		removeMissing();
+		indexShare_recurse(global::SERVER_SHARE_DIRECTORY);
+		indexing = false;
+		sleep(global::SHARE_REFRESH);
+	}
 }
 
 int serverIndex::indexShare_recurse(const std::string directoryName)
@@ -183,6 +195,10 @@ void serverIndex::removeMissing_callBack(int & columnsRetrieved, char ** queryRe
 #endif
 		}
 	}
+}
 
+void serverIndex::start()
+{
+	boost::thread T(boost::bind(&serverIndex::indexShare_thread, this));
 }
 

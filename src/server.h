@@ -7,6 +7,7 @@
 
 //std
 #include <deque>
+#include <list>
 #include <string>
 #include <vector>
 
@@ -32,8 +33,8 @@ public:
 		std::string client_IP;
 		std::string file_ID;
 		std::string fileName;
-		std::string fileSize;
-		std::string speed;
+		int fileSize;
+		int speed;
 		int percentComplete;
 	};
 
@@ -45,13 +46,10 @@ public:
 	*/
 	bool getUploadInfo(std::vector<infoBuffer> & uploadInfo);
 	int getTotalSpeed();
-	const bool & isIndexing();
+	bool is_indexing();
 	void start();
 
 private:
-	//true while files are being indexed/hashed
-	bool indexing;
-
 	//used by uploadSpeed to track the progress of an upload
 	class speedElement
 	{
@@ -73,7 +71,7 @@ private:
 	};
 
 	//used by calculateSpeed() to track upload speeds
-	std::vector<speedElement> uploadSpeed;
+	std::list<speedElement> uploadSpeed;
 
 	/*
 	Stores pending responses. The partial send buffers can be accessed by socket
@@ -108,7 +106,9 @@ private:
 	decodeInt         - turns four char's in to a 32bit integer starting at 'begin'
 	disconnect        - disconnect client and remove socket from master set
 	calculateSpeed    - process the sendQueue and update uploadSpeed
+	main_thread       - where the party is at
 	newConnection     - sets up socket for client
+	                  - returns true if connection suceeded
 	prepareSendBuffer - prepares a response to a file block request
 	processRequest    - interprets the request from a client and buffers it
 	sendBlock         - sends a fileBlock to a client
@@ -117,12 +117,11 @@ private:
 	unsigned int decodeInt(const int & begin, char recvBuffer[]);
 	void disconnect(const int & socketfd);
 	void calculateSpeed(const int & socketfd, const int & file_ID, const int & fileBlock);
-	void newConnection(const int & listener);
+	void main_thread();
+	bool newConnection(const int & listener);
 	int prepareSendBuffer(const int & socketfd, const int & file_ID, const int & blockNumber);
 	void processRequest(const int & socketfd, char recvBuffer[], const int & nbytes);
-	void start_thread();
 
-	//locks
 	boost::mutex sendBufferMutex;
 	boost::mutex receiveBufferMutex;
 	boost::mutex uploadSpeedMutex;

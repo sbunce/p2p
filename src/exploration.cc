@@ -40,7 +40,7 @@ exploration::exploration()
 
 void exploration::asteriskToPercent(std::string & searchWord)
 {
-	for(std::string::iterator iter0 = searchWord.begin(); iter0 != searchWord.end(); iter0++){
+	for(std::string::iterator iter0 = searchWord.begin(); iter0 != searchWord.end(); ++iter0){
 		if(*iter0 == '*'){
 			*iter0 = '%';
 		}

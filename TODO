@@ -1,31 +1,20 @@
 BUGS
 
--Server crashes whem multiple connections are made.
-
 
 NEEDED FEATURES
 
--Put a check on the server to only let clients connect once.
-
--Needs to be a check so that when the user tries to download the same thing
-twice the second download doesn't get appended to the first. Make a database
-to store downloaded file information to check against.
-
--Something to account for the burst of rerequests at the end of a file.
+-Something to account for the burst of rerequests the client makes
+when at the end of a file.
 
 -There probably needs to be a distinction made between completed and stopped
 downloads. Like what happens with the partial file from a stopped download?
 
--Algorithm to make download speed more smooth. Perhaps something which will give
-the number the direction of the actual speed but only allow it to travel in that
-direction at a certain rate. Perhaps how much it could travel in each time step
-could be calculated in such a way that when it's close it can't travel very
-fast but when it's far away it can travel faster.
 
--Have the serverIndex poll to check for new files added to share.
+DEFERRED FEATURES
 
--Need a server timeout for servers that accept requests but never respond and
-never disconnect. A person could exploit this by taking up slots but no bandwidth.
+-Needs to be a check so that when the user tries to download the same thing
+twice the second download doesn't get appended to the first. Make a database
+to store downloaded file information to check against.
 
 
 IDEAS
@@ -36,6 +25,6 @@ the files of the trackers that tracker trusts and the files that that tracker
 trusts etc. Have an option to limit trust levels to direct trust only, one
 level inheritance and all level inheritance.
 
--The protocol for sending information for a file should be 1 byte command, 2 byte
-packet length, the rest of the packet will be variable length.
+-The protocol for sending information for a file should be 1 byte command,
+2 byte packet length, the rest of the packet will be variable length.
 

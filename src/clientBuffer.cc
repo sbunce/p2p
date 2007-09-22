@@ -15,6 +15,8 @@ clientBuffer::clientBuffer(const std::string & server_IP_in, int * sendPending_i
 	ready = true;
 	abuse = false;
 	terminating = false;
+
+	lastSeen = time(0);
 }
 
 void clientBuffer::addDownload(const unsigned int & file_ID, download * newDownload)
@@ -35,7 +37,7 @@ std::string clientBuffer::encodeInt(const unsigned int & number)
 	std::bitset<32> bs = number;
 	std::bitset<32> bs_temp;
 
-	for(int x=0; x<4; x++){
+	for(int x=0; x<4; ++x){
 		bs_temp = bs;
 		bs_temp <<= 8*x;
 		bs_temp >>= 24;
@@ -50,6 +52,11 @@ const std::string & clientBuffer::get_IP()
 	return server_IP;
 }
 
+const time_t & clientBuffer::get_lastSeen()
+{
+	return lastSeen;
+}
+
 void clientBuffer::postRecv()
 {
 	if(recvBuffer.size() == bytesExpected){
@@ -61,12 +68,14 @@ void clientBuffer::postRecv()
 	if(recvBuffer.size() > bytesExpected){
 		abuse = true;
 	}
+
+	lastSeen = time(0);
 }
 
 void clientBuffer::postSend()
 {
 	if(sendBuffer.empty()){
-		(*sendPending)--;
+		--(*sendPending);
 	}
 }
 
@@ -77,7 +86,7 @@ void clientBuffer::prepareRequest()
 		latestRequested = Download_iter->Download->getRequest();
 		bytesExpected = Download_iter->Download->getBytesExpected();
 		sendBuffer = global::P_SBL + encodeInt(Download_iter->file_ID) + encodeInt(latestRequested);
-		(*sendPending)++;
+		++(*sendPending);
 		ready = false;
 	}
 }
@@ -85,7 +94,7 @@ void clientBuffer::prepareRequest()
 void clientBuffer::rotateDownloads()
 {
 	if(!Download.empty()){
-		Download_iter++;
+		++Download_iter;
 	}
 
 	if(Download_iter == Download.end()){
@@ -99,8 +108,7 @@ const bool clientBuffer::terminateDownload(const std::string & hash)
 	if(hash == Download_iter->Download->getHash()){
 		if(ready){ //if not expecting any more bytes
 			Download_iter->Download->unregConnection(server_IP);
-			Download.erase(Download_iter);
-			Download_iter = Download.begin(); //iterator invalidated, set to new
+			Download_iter = Download.erase(Download_iter);
 			terminating = false;
 			return true;
 		}
@@ -110,13 +118,16 @@ const bool clientBuffer::terminateDownload(const std::string & hash)
 		}
 	}
 
-	for(std::list<downloadHolder>::iterator iter0 = Download.begin(); iter0 != Download.end(); iter0++){
-
-		if(hash == iter0->Download->getHash()){
-			iter0->Download->unregConnection(server_IP);
-			Download.erase(iter0);
+	std::list<downloadHolder>::iterator iter_cur, iter_end;
+	iter_cur = Download.begin();
+	iter_end = Download.end();
+	while(iter_cur != iter_end){
+		if(hash == iter_cur->Download->getHash()){
+			iter_cur->Download->unregConnection(server_IP);
+			Download.erase(iter_cur);
 			break;
 		}
+		++iter_cur;
 	}
 
 	return true;
@@ -124,8 +135,12 @@ const bool clientBuffer::terminateDownload(const std::string & hash)
 
 void clientBuffer::unregisterAll()
 {
-	for(std::list<downloadHolder>::iterator iter0 = Download.begin(); iter0 != Download.end(); iter0++){
-		iter0->Download->unregConnection(server_IP);
+	std::list<downloadHolder>::iterator iter_cur, iter_end;
+	iter_cur = Download.begin();
+	iter_end = Download.end();
+	while(iter_cur != iter_end){
+		iter_cur->Download->unregConnection(server_IP);
+		++iter_cur;
 	}
 }
 

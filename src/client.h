@@ -17,6 +17,7 @@
 #include <errno.h>
 
 //std
+#include <ctime>
 #include <list>
 #include <string>
 #include <vector>
@@ -37,9 +38,9 @@ public:
 		std::string hash;
 		std::list<std::string> server_IP;
 		std::string fileName;
-		std::string fileSize;
-		std::string speed;
-		int percentComplete;
+		int fileSize;        //bytes
+		int speed;           //bytes per second
+		int percentComplete; //0-100
 	};
 
 	client();
@@ -59,6 +60,9 @@ public:
 	void stopDownload(const std::string & hash);
 
 private:
+	//holds the current time(set in main_thread), used for server timeouts
+	time_t currentTime;
+	time_t previousIntervalEnd;
 
 	/*
 	The status of the pendingConnection element.
@@ -68,7 +72,6 @@ private:
 	If a element is set to processing then no other threads touch it.
 	*/
 	enum PendingStatus { FREE, PROCESSING };
-
 	class pendingConnection
 	{
 	public:
@@ -133,6 +136,7 @@ private:
 	bool * downloadComplete;
 
 	/*
+	checkTimeouts        - checks all servers to see if they've timed out and removes/disconnects if they have
 	disconnect           - disconnects a socket, modifies ClientBuffer
 	main_thread          - main client thread that sends/receives data and triggers events
 	newConnection        - create a connection with a server, modifies ClientBuffer
@@ -141,8 +145,11 @@ private:
 	read_socket          - when a socket needs to be read
 	removeCompleted      - removes downloads that are complete(or stopped)
 	serverConnect_thread - sets up new downloads (monitors scheduledDownload)
+	startNewConnection   - associates a new server with a download(connects to server)
+	                     - returns false if the download associated with hash isn't found
 	write_socket         - when a socket needs to be written
 	*/
+	void checkTimeouts();
 	inline void disconnect(const int & socketfd);
 	void main_thread();
 	bool newConnection(pendingConnection * PC);
@@ -150,6 +157,7 @@ private:
 	inline void read_socket(const int & socketfd);
 	void removeCompleted();
 	void serverConnect_thread();
+	bool startNewConnection(const std::string hash, std::string server_IP, std::string file_ID);
 	inline void write_socket(const int & socketfd);
 
 	//each mutex names the object it locks in the format boost::mutex <object>Mutex

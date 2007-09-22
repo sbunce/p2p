@@ -43,7 +43,6 @@ void download::addBlock(const int & blockNumber, std::string & block)
 	int random = rand() % 100;
 	if(random < global::UNRELIABLE_CLIENT_VALUE){
 		std::cout << "testing: client::addBlock(): OOPs! I dropped fileBlock " << blockNumber << "\n";
-
 		if(blockNumber == lastBlock){
 			block.clear();
 		}
@@ -58,7 +57,7 @@ void download::addBlock(const int & blockNumber, std::string & block)
 	block.erase(0, global::S_CTRL_SIZE);
 
 	//add the block to the appropriate superBlock
-	for(std::deque<superBlock>::iterator iter0 = superBuffer.begin(); iter0 != superBuffer.end(); iter0++){
+	for(std::deque<superBlock>::iterator iter0 = superBuffer.begin(); iter0 != superBuffer.end(); ++iter0){
 		if(iter0->addBlock(blockNumber, block)){
 			break;
 		}
@@ -108,7 +107,7 @@ void download::calculateSpeed()
 
 	//count up all the bytes excluding the first and last second
 	int totalBytes = 0;
-	for(int x = 1; x <= downloadSecond.size() - 1; x++){
+	for(int x = 1; x <= downloadSecond.size() - 1; ++x){
 		totalBytes += secondBytes[x];
 	}
 
@@ -150,8 +149,12 @@ std::list<std::string> & download::get_IPs()
 {
 	get_IPs_list.clear();
 
-	for(std::list<connection>::iterator iter0 = currentConnections.begin(); iter0 != currentConnections.end(); iter0++){
-		get_IPs_list.push_back(iter0->server_IP);
+	std::list<connection>::iterator iter_cur, iter_end;
+	iter_cur = currentConnections.begin();
+	iter_end = currentConnections.end();
+	while(iter_cur != iter_end){
+		get_IPs_list.push_back(iter_cur->server_IP);
+		++iter_cur;
 	}
 
 	return get_IPs_list;
@@ -209,7 +212,7 @@ const int download::getRequest()
 	At this point the missing blocks from the back() would be rerequested.
 
 	Example of new SB creation.
-	 front() & back()
+	 front() = back()
 	-----------------------
 	|*******************M*|
 	-----------------------
@@ -281,11 +284,15 @@ void download::regConnection(std::string & server_IP)
 
 void download::unregConnection(const std::string & server_IP)
 {
-	for(std::list<connection>::iterator iter0 = currentConnections.begin(); iter0 != currentConnections.end(); iter0++){
-		if(server_IP == iter0->server_IP){
-			currentConnections.erase(iter0);
+	std::list<connection>::iterator iter_cur, iter_end;
+	iter_cur = currentConnections.begin();
+	iter_end = currentConnections.end();
+	while(iter_cur != iter_end){
+		if(server_IP == iter_cur->server_IP){
+			currentConnections.erase(iter_cur);
 			break;
 		}
+		++iter_cur;
 	}
 }
 
@@ -312,7 +319,7 @@ void download::writeSuperBlock(std::string container[])
 
 	if(fout.is_open()){
 
-		for(int x=0; x<global::SUPERBLOCK_SIZE; x++){
+		for(int x=0; x<global::SUPERBLOCK_SIZE; ++x){
 			fout.write(container[x].c_str(), container[x].size());
 		}
 		fout.close();

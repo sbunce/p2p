@@ -332,6 +332,11 @@ bool gui::downloadInfoRefresh()
 			combined_IP += *iter2 + "|";
 		}
 
+		//convert the download speed to kiloBytes
+		int downloadSpeed = iter0->speed / 1024;
+		std::ostringstream downloadSpeed_s;
+		downloadSpeed_s << downloadSpeed << " kB/s";
+
 		//iterate through all the rows
 		bool foundEntry = false;
 		Gtk::TreeModel::Children children = downloadList->children();
@@ -344,11 +349,9 @@ bool gui::downloadInfoRefresh()
 
 			//see if there is already an entry for the file in the download list
 			if(hash_retrieved == iter0->hash){
-
 				row[server_IP_t] = combined_IP;
-				row[downloadSpeed_t] = iter0->speed;
+				row[downloadSpeed_t] = downloadSpeed_s.str();
 				row[percentComplete_t] = iter0->percentComplete;
-
 				foundEntry = true;
 				break;
 			}
@@ -357,11 +360,21 @@ bool gui::downloadInfoRefresh()
 		if(!foundEntry){
 			Gtk::TreeModel::Row row = *(downloadList->append());
 
+			//convert fileSize from B to MB
+			float fileSize = iter0->fileSize / 1024 / 1024;
+			std::ostringstream fileSize_s;
+			if(fileSize < 1){
+				fileSize_s << std::setprecision(2) << fileSize << " mB";
+			}
+			else{
+				fileSize_s << (int)fileSize << " mB";
+			}
+
 			row[hash_t] = iter0->hash;
 			row[server_IP_t] = combined_IP;
 			row[fileName_t] = iter0->fileName;
-			row[fileSize_t] = iter0->fileSize;
-			row[downloadSpeed_t] = iter0->speed;
+			row[fileSize_t] = fileSize_s.str();
+			row[downloadSpeed_t] = downloadSpeed_s.str();
 			row[percentComplete_t] = iter0->percentComplete;
 		}
 	}
@@ -457,6 +470,9 @@ bool gui::uploadInfoRefresh()
 		column.add(uploadSpeed_t);
 		column.add(percentComplete_t);
 
+		std::ostringstream speed_s;
+		speed_s << (iter0->speed / 1024) << " kB/s";
+
 		//iterate through all the rows
 		bool foundEntry = false;
 		Gtk::TreeModel::Children children = uploadList->children();
@@ -471,7 +487,7 @@ bool gui::uploadInfoRefresh()
 
 			//see if there is already an entry for the file in the download list
 			if(client_IP_retrieved == iter0->client_IP && file_ID_retrieved == iter0->file_ID){
-				row[uploadSpeed_t] = iter0->speed;
+				row[uploadSpeed_t] = speed_s.str();
 				row[percentComplete_t] = iter0->percentComplete;
 
 				foundEntry = true;
@@ -482,11 +498,21 @@ bool gui::uploadInfoRefresh()
 		if(!foundEntry){
 			Gtk::TreeModel::Row row = *(uploadList->append());
 
+			//change display to a decimal if less than 1mB
+			float fileSize = iter0->fileSize / 1024 / 1024;
+			std::ostringstream fileSize_s;
+			if(fileSize < 1){
+				fileSize_s << std::setprecision(2) << fileSize << " mB";
+			}
+			else{
+				fileSize_s << (int)fileSize << " mB";
+			}
+
 			row[client_IP_t] = iter0->client_IP;
 			row[file_ID_t] = iter0->file_ID;
 			row[fileName_t] = iter0->fileName;
-			row[fileSize_t] = iter0->fileSize;
-			row[uploadSpeed_t] = iter0->speed;
+			row[fileSize_t] = fileSize_s.str();
+			row[uploadSpeed_t] = speed_s.str();
 			row[percentComplete_t] = iter0->percentComplete;
 		}
 	}
@@ -617,7 +643,7 @@ bool gui::updateStatusBar()
 	std::ostringstream serverSpeed_s;
 	serverSpeed_s << serverSpeed << " kB/s";
 
-	if(Server.isIndexing()){
+	if(Server.is_indexing()){
 		status = "  Download Speed: " + clientSpeed_s.str() + " Upload Speed: " + serverSpeed_s.str() + "  Indexing/Hashing ";
 	}
 	else{

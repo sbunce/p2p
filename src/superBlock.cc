@@ -20,11 +20,9 @@ superBlock::superBlock(const int & superBlockNumber_in, const int & lastBlock_in
 bool superBlock::addBlock(const int & blockNumber, const std::string & fileBlock)
 {
 	if(blockNumber >= minBlock && blockNumber <= maxBlock){
-
 		if(container[blockNumber % global::SUPERBLOCK_SIZE].empty()){
 			container[blockNumber % global::SUPERBLOCK_SIZE] = fileBlock;
 		}
-
 		return true;
 	}
 	else{
@@ -67,7 +65,7 @@ int superBlock::getRequest()
 	if(nextRequest <= maxBlock){
 
 #ifdef REREQUEST_PERCENTAGE
-		requestCount++;
+		++requestCount;
 #endif
 
 		if((nextRequest % global::SUPERBLOCK_SIZE) == (maxBlock - minBlock) / 2){
@@ -103,7 +101,7 @@ void superBlock::findMissing()
 {
 	missingBlocks.clear();
 
-	for(int x=0; x<=maxBlock - minBlock; x++){
+	for(int x=0; x<=maxBlock - minBlock; ++x){
 		if(container[x].empty()){
 			 missingBlocks.push_back((superBlockNumber * global::SUPERBLOCK_SIZE) + x);
 		}

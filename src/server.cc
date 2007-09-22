@@ -13,6 +13,8 @@ server::server()
 	connections = 0;
 	sendPending = 0;
 	FD_ZERO(&masterfds);
+
+	ServerIndex.start();
 }
 
 void server::disconnect(const int & socketfd)
@@ -27,13 +29,13 @@ void server::disconnect(const int & socketfd)
 	set and decrementing connections.
 	*/
 	if(FD_ISSET(socketfd, &masterfds)){
-		connections--;
+		--connections;
 		close(socketfd);
 		FD_CLR(socketfd, &masterfds);
 	}
 
 	//reduce fdmax if possible
-	for(int x=fdmax; x != 0; x--){
+	for(int x=fdmax; x != 0; --x){
 		if(FD_ISSET(x, &masterfds)){
 			fdmax = x;
 			break;
@@ -79,32 +81,37 @@ void server::calculateSpeed(const int & socketfd, const int & file_ID, const int
 	getpeername(socketfd, (struct sockaddr*)&addr, &len);
 
 	bool found = false;
-	for(std::vector<speedElement>::iterator iter0 = uploadSpeed.begin(); iter0 != uploadSpeed.end(); iter0++){
+	std::list<speedElement>::iterator iter_cur, iter_end;
+	iter_cur = uploadSpeed.begin();
+	iter_end = uploadSpeed.end();
+	while(iter_cur != iter_end){
 
 		//if element found update it
-		if(iter0->client_IP == inet_ntoa(addr.sin_addr) && iter0->file_ID == file_ID){
+		if(iter_cur->client_IP == inet_ntoa(addr.sin_addr) && iter_cur->file_ID == file_ID){
 			found = true;
 
 			//check time and update byte count
-			if(iter0->downloadSecond.front() == currentTime){
-				iter0->secondBytes.front() += global::BUFFER_SIZE;
+			if(iter_cur->downloadSecond.front() == currentTime){
+				iter_cur->secondBytes.front() += global::BUFFER_SIZE;
 			}
 			else{
-				iter0->downloadSecond.push_front(currentTime);
-				iter0->secondBytes.push_front(global::BUFFER_SIZE);
+				iter_cur->downloadSecond.push_front(currentTime);
+				iter_cur->secondBytes.push_front(global::BUFFER_SIZE);
 			}
 
-			iter0->fileBlock = fileBlock;
+			iter_cur->fileBlock = fileBlock;
 
 			//get rid of elements older than SPEED_AVERAGE seconds
 			//+2 on SPEED_AVERAGE because first and last second will be discarded
-			if(iter0->downloadSecond.back() <= currentTime - (global::SPEED_AVERAGE + 2)){
-				iter0->downloadSecond.pop_back();
-				iter0->secondBytes.pop_back();
+			if(iter_cur->downloadSecond.back() <= currentTime - (global::SPEED_AVERAGE + 2)){
+				iter_cur->downloadSecond.pop_back();
+				iter_cur->secondBytes.pop_back();
 			}
 
 			break;
 		}
+
+		++iter_cur;
 	}
 
 	//make a new element if there is no speed element for this client
@@ -129,7 +136,6 @@ void server::calculateSpeed(const int & socketfd, const int & file_ID, const int
 			uploadSpeed.push_back(temp);
 		}
 	}
-
 	}//end lock scope
 }
 
@@ -139,17 +145,19 @@ int server::getTotalSpeed()
 
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(uploadSpeedMutex);
-
-	for(std::vector<speedElement>::iterator iter0 = uploadSpeed.begin(); iter0 < uploadSpeed.end(); iter0++){
-		for(int x=1; x < iter0->downloadSecond.size() - 1; x++){
-			totalBytes += iter0->secondBytes[x];
+	std::list<speedElement>::iterator iter_cur, iter_end;
+	iter_cur = uploadSpeed.begin();
+	iter_end = uploadSpeed.end();
+	while(iter_cur != iter_end){
+		int DS_size = iter_cur->downloadSecond.size();
+		for(int x=1; x<DS_size - 1; ++x){
+			totalBytes += iter_cur->secondBytes[x];
 		}
+		++iter_cur;
 	}
-
 	}//end lock scope
 
 	int speed = totalBytes / global::SPEED_AVERAGE;
-
 	return speed;
 }
 
@@ -160,93 +168,90 @@ bool server::getUploadInfo(std::vector<infoBuffer> & uploadInfo)
 
 	//remove completed downloads from uploadSpeed
 	time_t currentTime = time(0);
-	for(std::vector<speedElement>::iterator iter0 = uploadSpeed.begin(); iter0 < uploadSpeed.end(); iter0++){
-		if(iter0->downloadSecond.front() < (int)currentTime - global::COMPLETE_REMOVE){
-			uploadSpeed.erase(iter0);
-			break;
+	std::list<speedElement>::iterator iter_cur, iter_end;
+	iter_cur = uploadSpeed.begin();
+	iter_end = uploadSpeed.end();
+	while(iter_cur != iter_end){
+		if(iter_cur->downloadSecond.front() < (int)currentTime - global::COMPLETE_REMOVE){
+			iter_cur = uploadSpeed.erase(iter_cur);
+		}
+		else{
+			++iter_cur;
 		}
 	}
 
-	if(uploadSpeed.size() == 0){
+	if(uploadSpeed.empty()){
 		return false;
 	}
 
-	for(std::vector<speedElement>::iterator iter0 = uploadSpeed.begin(); iter0 < uploadSpeed.end(); iter0++){
-		//calculate the percent complete
-		float bytesUploaded = iter0->fileBlock * global::BUFFER_SIZE;
-		float fileSize_f = iter0->fileSize;
-		float percent = (bytesUploaded / fileSize_f) * 100;
-		int percentComplete;
-
-		//floating point will never be exactly 100, this completes
-		if(percent > 99){
-			percentComplete = 100;
-		}
-		else{
-			percentComplete = int(percent);
-		}
-
-		//convert fileSize from Bytes to megaBytes
-		float fileSize = iter0->fileSize / 1024 / 1024;
-
-		std::ostringstream fileSize_s;
-
-		//change display to a decimal if less than 1mB
-		if(fileSize < 1){
-			fileSize_s << std::setprecision(2) << fileSize << " mB";
-		}
-		else{
-			fileSize_s << (int)fileSize << " mB";
+	iter_cur = uploadSpeed.begin();
+	iter_end = uploadSpeed.end();
+	while(iter_cur != iter_end){
+		float percent = ((iter_cur->fileBlock * global::BUFFER_SIZE) / (float)iter_cur->fileSize) * 100;
+		if(percent > 100){
+			percent = 100;
 		}
 
 		//add up bytes for SPEED_AVERAGE seconds
 		int totalBytes = 0;
-		for(int x=1; x < iter0->downloadSecond.size() - 1; x++){
-			totalBytes += iter0->secondBytes[x];
+		int DS_size = iter_cur->downloadSecond.size();
+		for(int x=1; x<DS_size - 1; ++x){
+			totalBytes += iter_cur->secondBytes[x];
 		}
 
 		//take average
-		totalBytes /= global::SPEED_AVERAGE;
-
-		//convert the download speed to kB
-		int speed = totalBytes / 1024;
-		std::ostringstream speed_s;
-		speed_s << speed << " kB/s";
+		totalBytes = totalBytes / global::SPEED_AVERAGE;
 
 		infoBuffer info;
-		info.client_IP = iter0->client_IP;
-		info.file_ID = iter0->file_ID;
-		info.fileName = iter0->fileName;
-		info.fileSize = fileSize_s.str();
-		info.speed = speed_s.str();
-		info.percentComplete = percentComplete;
+		info.client_IP = iter_cur->client_IP;
+		info.file_ID = iter_cur->file_ID;
+		info.fileName = iter_cur->fileName;
+		info.fileSize = iter_cur->fileSize;
+		info.speed = totalBytes;
+		info.percentComplete = (int)percent;
 
 		uploadInfo.push_back(info);
+		++iter_cur;
 	}
-
 	}//end lock scope
 
 	return true;
 }
 
-const bool & server::isIndexing()
+bool server::is_indexing()
 {
-	return indexing;
+	return ServerIndex.is_indexing();
 }
 
-void server::newConnection(const int & listener)
+bool server::newConnection(const int & listener)
 {
 	struct sockaddr_in remoteaddr;
-	socklen_t addrlen = sizeof(remoteaddr);
-	int newfd;
+	socklen_t len = sizeof(remoteaddr);
 
 	//make a new socket for incoming connection
-	newfd = accept(listener, (struct sockaddr *)&remoteaddr, &addrlen);
+	int newfd = accept(listener, (struct sockaddr *)&remoteaddr, &len);
+
+	//make sure the client isn't already connected
+	std::string new_IP(inet_ntoa(remoteaddr.sin_addr));
+	struct sockaddr_in temp_addr;
+	for(int socketfd=0; socketfd<=fdmax; ++socketfd){
+		if(FD_ISSET(socketfd, &masterfds)){
+			getpeername(socketfd, (struct sockaddr*)&temp_addr, &len);
+			if(strcmp(new_IP.c_str(), inet_ntoa(temp_addr.sin_addr)) == 0){
+#ifdef DEBUG
+				std::cout << "error: server::newConnection(): client " << new_IP << " attempted multiple connections\n";
+#endif
+				close(newfd);
+				return false;
+			}
+		}
+	}
+
 	if(newfd == -1){
 		perror("accept");
 	}
 	else{ //add new socket to master set
-		connections++;
+		++connections;
 
 		if(connections <= global::MAX_CONNECTIONS){
 			FD_SET(newfd, &masterfds);
@@ -291,6 +296,8 @@ void server::newConnection(const int & listener)
 #endif
 		}
 	}
+
+	return true;
 }
 
 unsigned int server::decodeInt(const int & begin, char recvBuffer[])
@@ -299,7 +306,7 @@ unsigned int server::decodeInt(const int & begin, char recvBuffer[])
 	std::bitset<32> bs_temp;
 
 	int y = 3;
-	for(int x=begin; x<begin+4; x++){
+	for(int x=begin; x<begin+4; ++x){
 		bs_temp = (unsigned char)recvBuffer[x];
 		bs_temp <<= 8*y--;
 		bs |= bs_temp;
@@ -308,93 +315,8 @@ unsigned int server::decodeInt(const int & begin, char recvBuffer[])
 	return (unsigned int)bs.to_ulong();
 }
 
-int server::prepareSendBuffer(const int & socketfd, const int & file_ID, const int & blockNumber)
+void server::main_thread()
 {
-	sendBuffer[socketfd].clear(); //make sure no residual in the buffer
-
-	//get fileSize/filePath that corresponds to file_ID
-	int fileSize;
-	std::string filePath;
-	if(!ServerIndex.getFileInfo(file_ID, fileSize, filePath)){
-		//file was not found
-		sendBuffer[socketfd] += global::P_FNF;
-		return 0;
-	}
-
-	//check for valid block request
-	if(blockNumber*(global::BUFFER_SIZE - global::S_CTRL_SIZE) > fileSize){
-		//a block past the end of file was requested
-		sendBuffer[socketfd] += global::P_DNE;
-		return 0;
-	}
-
-	sendBuffer[socketfd] += global::P_BLS; //add control data
-
-	std::ifstream fin(filePath.c_str());
-
-	if(fin.is_open()){
-
-		//seek to the fileBlock the client wants
-		fin.seekg(blockNumber*(global::BUFFER_SIZE - global::S_CTRL_SIZE));
-
-		//fill the buffer
-		char ch;
-		while(fin.get(ch)){
-			sendBuffer[socketfd] += ch;
-			if(sendBuffer[socketfd].size() == global::BUFFER_SIZE){
-				break;
-			}
-		}
-
-		fin.close();
-	}
-
-	//Update speed calculation. Assumes this block will be sent.
-	calculateSpeed(socketfd, file_ID, blockNumber);
-
-	return 0;
-}
-
-void server::processRequest(const int & socketfd, char recvBuffer[], const int & nbytes)
-{
-#ifdef DEBUG_VERBOSE
-	sockaddr_in addr;
-	socklen_t len = sizeof(addr);
-	getpeername(socketfd, (struct sockaddr*)&addr, &len);
-	std::cout << "info: server::queueRequest(): server received " << request << " from " << inet_ntoa(addr.sin_addr) << "\n";
-#endif
-
-	if(nbytes == global::C_CTRL_SIZE){
-
-		if(recvBuffer[0] == global::P_SBL){
-
-			int file_ID = decodeInt(1, recvBuffer);
-			int blockNumber = decodeInt(5, recvBuffer);
-
-			prepareSendBuffer(socketfd, file_ID, blockNumber);
-
-			sendPending++;
-		}
-	}
-	else{
-		receiveBuffer[socketfd].append(recvBuffer);
-	}
-}
-
-void server::start()
-{
-	boost::thread serverThread(boost::bind(&server::start_thread, this));
-}
-
-void server::start_thread()
-{
-	/*
-	The server will not start until indexing is done.
-	This can potentially take a long time to calculate hashes.
-	*/
-	ServerIndex.indexShare();
-	indexing = false;
-
 	//set listening socket
 	int listener;
 	if((listener = socket(PF_INET, SOCK_STREAM, 0)) == -1){
@@ -444,17 +366,14 @@ void server::start_thread()
 	}
 
 	while(true){
-
 		readfds = masterfds;
 		writefds = masterfds;
-
 		/*
 		This if(sendPending) exists to save a LOT of CPU time by not checking
 		if sockets are ready to write when we don't need to write anything.
 		*/
 		if(sendPending != 0){
 			if((select(fdmax+1, &readfds, &writefds, NULL, NULL)) == -1){
-
 				//gprof will send PROF signal, this will ignore it
 				if(errno != EINTR){
 					perror("select");
@@ -464,7 +383,6 @@ void server::start_thread()
 		}
 		else{
 			if((select(fdmax+1, &readfds, NULL, NULL, NULL)) == -1){
-
 				//gprof will send PROF signal, this will ignore it
 				if(errno != EINTR){
 					perror("select");
@@ -473,17 +391,14 @@ void server::start_thread()
 			}
 		}
 
-		for(int socketfd = 0; socketfd <= fdmax; socketfd++){
+		for(int socketfd=0; socketfd<=fdmax; ++socketfd){
 			if(FD_ISSET(socketfd, &readfds)){
-
 				if(socketfd == listener){ //new client connected
 					newConnection(socketfd);
 				}
 				else{ //existing socket sending data
-
 					if((nbytes = recv(socketfd, recvBuffer, sizeof(recvBuffer), 0)) <= 0){
 						disconnect(socketfd);
-
 						//it's possible the disconnected socket was in writefds, try to remove it
 						FD_CLR(socketfd, &writefds);
 					}
@@ -494,22 +409,97 @@ void server::start_thread()
 			}
 
 			if(FD_ISSET(socketfd, &writefds)){
-
 				if(!sendBuffer[socketfd].empty()){
-
 					if((nbytes = send(socketfd, sendBuffer[socketfd].c_str(), sendBuffer[socketfd].size(), 0)) <= 0){
 						disconnect(socketfd);
 					}
 					else{ //remove bytes sent from buffer
 						sendBuffer[socketfd].erase(0, nbytes);
-
 						if(sendBuffer[socketfd].empty()){
-							sendPending--;
+							--sendPending;
 						}
 					}
 				}
 			}
 		}
 	}
+}
+
+int server::prepareSendBuffer(const int & socketfd, const int & file_ID, const int & blockNumber)
+{
+	sendBuffer[socketfd].clear(); //make sure no residual in the buffer
+
+	//get fileSize/filePath that corresponds to file_ID
+	int fileSize;
+	std::string filePath;
+	if(!ServerIndex.getFileInfo(file_ID, fileSize, filePath)){
+		//file was not found
+		sendBuffer[socketfd] += global::P_FNF;
+		return 0;
+	}
+
+	//check for valid block request
+	if(blockNumber*(global::BUFFER_SIZE - global::S_CTRL_SIZE) > fileSize){
+		//a block past the end of file was requested
+		sendBuffer[socketfd] += global::P_DNE;
+		return 0;
+	}
+
+	sendBuffer[socketfd] += global::P_BLS; //add control data
+
+	std::ifstream fin(filePath.c_str());
+
+	if(fin.is_open()){
+
+		//seek to the fileBlock the client wants
+		fin.seekg(blockNumber*(global::BUFFER_SIZE - global::S_CTRL_SIZE));
+
+		//fill the buffer
+		char ch;
+		while(fin.get(ch)){
+			sendBuffer[socketfd] += ch;
+			if(sendBuffer[socketfd].size() == global::BUFFER_SIZE){
+				break;
+			}
+		}
+
+		fin.close();
+	}
+
+	//update speed calculation (assumes there is a response)
+	calculateSpeed(socketfd, file_ID, blockNumber);
+
+	return 0;
+}
+
+void server::processRequest(const int & socketfd, char recvBuffer[], const int & nbytes)
+{
+	if(nbytes == global::C_CTRL_SIZE){
+
+		if(recvBuffer[0] == global::P_SBL){
+
+			int file_ID = decodeInt(1, recvBuffer);
+			int blockNumber = decodeInt(5, recvBuffer);
+
+			prepareSendBuffer(socketfd, file_ID, blockNumber);
+
+			++sendPending;
+
+#ifdef DEBUG_VERBOSE
+			sockaddr_in addr;
+			socklen_t len = sizeof(addr);
+			getpeername(socketfd, (struct sockaddr*)&addr, &len);
+			std::cout << "info: server::queueRequest(): server received " << blockNumber << " from " << inet_ntoa(addr.sin_addr) << "\n";
+#endif
+		}
+	}
+	else{
+		receiveBuffer[socketfd].append(recvBuffer);
+	}
+}
+
+void server::start()
+{
+	boost::thread T(boost::bind(&server::main_thread, this));
 }
 

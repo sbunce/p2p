@@ -46,7 +46,6 @@ bool clientIndex::getFilePath(const std::string & hash, std::string & path)
 
 	//locate the record
 	query << "SELECT name FROM download WHERE hash = \"" << hash << "\" LIMIT 1";
-
 	int returnCode;
 	if((returnCode = sqlite3_exec(sqlite3_DB, query.str().c_str(), getFilePath_callBack_wrapper, (void *)this, NULL)) != 0){
 #ifdef DEBUG
@@ -143,8 +142,7 @@ bool clientIndex::startDownload(exploration::infoBuffer & info)
 {
 	std::ostringstream query;
 	query << "INSERT INTO download (hash, name, size, server_IP, file_ID) VALUES ('" << info.hash << "', '" << info.fileName << "', " << info.fileSize << ", '";
-	for(std::vector<std::string>::iterator iter0 = info.server_IP.begin(); iter0 != info.server_IP.end(); iter0++){
-
+	for(std::vector<std::string>::iterator iter0 = info.server_IP.begin(); iter0 != info.server_IP.end(); ++iter0){
 		if(iter0 + 1 != info.server_IP.end()){
 			query << *iter0 << ",";
 		}
@@ -153,7 +151,7 @@ bool clientIndex::startDownload(exploration::infoBuffer & info)
 		}
 	}
 	query << "', '";
-	for(std::vector<std::string>::iterator iter0 = info.file_ID.begin(); iter0 != info.file_ID.end(); iter0++){
+	for(std::vector<std::string>::iterator iter0 = info.file_ID.begin(); iter0 != info.file_ID.end(); ++iter0){
 
 		if(iter0 + 1 != info.file_ID.end()){
 			query << *iter0 << ",";

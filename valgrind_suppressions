@@ -307,3 +307,21 @@
    fun:g_main_loop_run
    fun:gtk_main
 }
+
+{
+   <insert a suppression name here>
+   Memcheck:Param
+   write(buf)
+   obj:/lib/ld-2.5.so
+   fun:_X11TransWrite
+   obj:/usr/lib/libX11.so.6.2.0
+   fun:XFlush
+   fun:gdk_display_flush
+   fun:gdk_window_process_all_updates
+   obj:/usr/lib/libgtk-x11-2.0.so.0.1000.11
+   obj:/usr/lib/libglib-2.0.so.0.1200.11
+   fun:g_main_context_dispatch
+   obj:/usr/lib/libglib-2.0.so.0.1200.11
+   fun:g_main_loop_run
+   fun:gtk_main
+}

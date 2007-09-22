@@ -1,6 +1,8 @@
 #ifndef H_CLIENT_BUFFER
 #define H_CLIENT_BUFFER
 
+//std
+#include <ctime>
 #include <list>
 
 #include "download.h"
@@ -17,6 +19,7 @@ public:
 	/*
 	addDownload       - associate a download with this clientBuffer
 	empty             - return true if Download is empty
+	get_lastSeen      - returns the unix timestamp of when this server last responded
 	get_IP            - returns the IP address associated with this clientBuffer
 	postRecv          - does actions which may need to be done after a recv
 	postSend          - does actions which may need to be done after a send
@@ -30,6 +33,7 @@ public:
 	void addDownload(const unsigned int & file_ID, download * newDownload);
 	const bool empty();
 	const std::string & get_IP();
+	const time_t & get_lastSeen();
 	void postRecv();
 	void postSend();
 	void prepareRequest();
@@ -39,6 +43,12 @@ public:
 private:
 	//IP associated with this serverElement
 	std::string server_IP;
+
+	/*
+	Unix timestamp of when the last communication was received from the server
+	associated with this clientBuffer.
+	*/
+	time_t lastSeen;
 
 	/*
 	Set to true if terminateDownload was called, this clientBuffer has the
@@ -75,6 +85,8 @@ private:
 
 	//what Download this socket is currently serving
 	std::list<downloadHolder>::iterator Download_iter;
+
+	//all downloads that this clientBuffer is serving
 	std::list<downloadHolder> Download;
 
 	/*
