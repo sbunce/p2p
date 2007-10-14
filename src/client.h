@@ -128,7 +128,7 @@ private:
 	int * sendPending;
 
 	/*
-	The vector holds the hash of a download scheduled for deferred termination.
+	The vector holds the hash of downloads scheduled for deferred termination.
 	*/
 	std::vector<std::string> deferredTermination;
 

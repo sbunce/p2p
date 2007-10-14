@@ -1,3 +1,7 @@
+//boost
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+
 //std
 #include <fstream>
 #include <iostream>
@@ -298,7 +302,12 @@ void download::unregConnection(const std::string & server_IP)
 
 void download::stop()
 {
+	namespace fs = boost::filesystem;
+
 	downloadComplete = true;
+	superBuffer.clear();
+	fs::path path = fs::system_complete(fs::path(filePath, fs::native));
+	fs::remove(path);
 	*downloadComplete_flag = true;
 }
 

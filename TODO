@@ -3,11 +3,8 @@ BUGS
 
 NEEDED FEATURES
 
--Something to account for the burst of rerequests the client makes
-when at the end of a file.
-
--There probably needs to be a distinction made between completed and stopped
-downloads. Like what happens with the partial file from a stopped download?
+-There should be a 1 second timer that makes the clientBuffer wait
+between requests of the last block.
 
 
 DEFERRED FEATURES
@@ -24,7 +21,4 @@ structure such that if the user adds a tracker the user will also get to see
 the files of the trackers that tracker trusts and the files that that tracker
 trusts etc. Have an option to limit trust levels to direct trust only, one
 level inheritance and all level inheritance.
-
--The protocol for sending information for a file should be 1 byte command,
-2 byte packet length, the rest of the packet will be variable length.
 

@@ -44,7 +44,6 @@ client::~client()
 
 void client::checkTimeouts()
 {
-std::cout << "ZORT\n";
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(ClientDownloadBufferMutex);
 
