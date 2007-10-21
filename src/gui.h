@@ -56,44 +56,44 @@ private:
 	Glib::RefPtr<Gtk::ListStore> searchList;
 
 	/*functions associated with Gtk signals
-	aboutProgram   - user clicked Help/About
-	cancelDownload - when user clicks Cancel on a download in downloadsView
-	downloadFile   - when user clicks Download on a entry in searchView
-	downloadClick  - interprets downloadsView input, can pop up a menu
-	quitProgram    - when user clicks File/Quit
-	searchInput    - when user clicks searchButton or hits enter while on searchEntry
-	searchClick    - interprets searchView input, can pop up a menu
+	about_program   - user clicked Help/About
+	cancel_download - when user clicks Cancel on a download in downloadsView
+	download_file   - when user clicks Download on a entry in searchView
+	download_click  - interprets downloadsView input, can pop up a menu
+	quit_program    - when user clicks File/Quit
+	search_input    - when user clicks searchButton or hits enter while on searchEntry
+	search_click    - interprets searchView input, can pop up a menu
 	*/
-	void aboutProgram();
-	void cancelDownload();
-	void downloadFile();
-	bool downloadClick(GdkEventButton * event);
-	void quitProgram();
-	void searchInput();
-	bool searchClick(GdkEventButton * event);
+	void about_program();
+	void cancel_download();
+	void download_file();
+	bool download_click(GdkEventButton * event);
+	void quit_program();
+	void search_input();
+	bool search_click(GdkEventButton * event);
 
 	/*
-	downloadInfoSetup   - sets up the download tab treeview columns
-	downloadInfoRefresh - updates the information in downloadList
-	uploadInfoSetup     - sets up the upload tab treeview columns
-	uploadInfoRefresh   - updates the information in uploadList
-	searchInfoSetup     - sets up the search tab treeview columns
-	searchInfoRefresh   - updates the information in searchList
-	updateStatusBar     - updates the information in the status bar
+	download_info_setup   - sets up the download tab treeview columns
+	download_info_refresh - updates the information in downloadList
+	upload_info_setup     - sets up the upload tab treeview columns
+	upload_info_refresh   - updates the information in uploadList
+	search_info_setup     - sets up the search tab treeview columns
+	search_info_refresh   - updates the information in searchList
+	update_status_bar     - updates the information in the status bar
 	*/
-	void downloadInfoSetup();
-	bool downloadInfoRefresh();
-	void uploadInfoSetup();
-	bool uploadInfoRefresh();
-	void searchInfoSetup();
-	void searchInfoRefresh();
-	bool updateStatusBar();
+	void download_info_setup();
+	bool download_info_refresh();
+	void upload_info_setup();
+	bool upload_info_refresh();
+	void search_info_setup();
+	void search_info_refresh();
+	bool update_status_bar();
 
 	client Client;
 	server Server;
 	exploration Exploration;
 
 	//holds the information from the last search
-	std::list<exploration::info_buffer> searchInfo;
+	std::list<exploration::info_buffer> Search_Info;
 };
 #endif

@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "superBlock.h"
+#include "super_block.h"
 #include "global.h"
 
 class download
@@ -79,8 +79,8 @@ private:
 	int latest_request;      //most recently requested block
 	int last_block;          //the last block number
 	int last_block_size;     //holds the exact size of the last fileBlock(in bytes)
-	int last_super_block;    //holds the number of the last superBlock
-	int current_super_block; //what superBlock clientBuffer is currently on
+	int last_super_block;    //holds the number of the last super_block
+	int current_super_block; //what super_block clientBuffer is currently on
 
 	/*
 	Tells the client that a download is complete, used when download is complete.
@@ -93,13 +93,13 @@ private:
 	bool download_complete; //true when the download is completed
 
 	/*
-	This will grow to SUPERBUFFER_SIZE if there are missing blocks in a superBlock.
+	This will grow to SUPERBUFFER_SIZE if there are missing blocks in a super_block.
 	This buffer is maintained to avoid the problem of rerequesting blocks that slow
 	hosts havn't yet sent. Hopefully a slow host will finish sending it's block by
 	the time SUPERBUFFER_SIZE superBlocks have completed. If it hasn't then it will
 	get requested from a different host.
 	*/
-	std::deque<superBlock> Super_Buffer;
+	std::deque<super_block> Super_Buffer;
 
 	//these vectors are parallel and used for download speed calculation
 	std::vector<int> Download_Second; //second at which Second_Bytes were downloaded
@@ -107,7 +107,7 @@ private:
 
 	/*
 	calculate_speed - calculates the download speed of a download
-	writeTree       - writes a superBlock to file
+	writeTree       - writes a super_block to file
 	*/
 	void calculate_speed();
 	void write_super_block(std::string container[]);

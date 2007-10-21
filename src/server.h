@@ -21,7 +21,7 @@
 #include <errno.h>
 
 #include "global.h"
-#include "serverIndex.h"
+#include "server_index.h"
 
 class server
 {
@@ -40,17 +40,17 @@ public:
 
 	server();
 	/*
-	getUploadInfo - updates and returns upload information
-	              - returns false if no uploads
+	get_upload_info - updates and returns upload information
+	                  returns false if no uploads
 	get_total_speed - returns the total speed of all uploads(in bytes per second)
 	*/
-	bool getUploadInfo(std::vector<info_buffer> & uploadInfo);
+	bool get_upload_info(std::vector<info_buffer> & uploadInfo);
 	int get_total_speed();
 	bool is_indexing();
 	void start();
 
 private:
-	//used by uploadSpeed to track the progress of an upload
+	//used by Upload_Speed to track the progress of an upload
 	class speedElement
 	{
 	public:
@@ -62,71 +62,71 @@ private:
 		int file_ID;
 
 		//these vectors are parallel and used for upload speed calculation
-		std::deque<int> downloadSecond; //second at which secondBytes were uploaded
-		std::deque<int> secondBytes;    //bytes in the second
+		std::deque<int> download_second; //second at which second_bytes were uploaded
+		std::deque<int> second_bytes;    //bytes in the second
 
 		//used to calculate percent complete
 		int file_size;  //size of file
-		int fileBlock; //what fileBlock was last requested
+		int file_block; //what file_block was last requested
 	};
 
-	//used by calculateSpeed() to track upload speeds
-	std::list<speedElement> uploadSpeed;
+	//used by calculate_speed() to track upload speeds
+	std::list<speedElement> Upload_Speed;
 
 	/*
 	Stores pending responses. The partial send buffers can be accessed by socket
-	number with sendBuffer[socketNumber];
+	number with Send_Buffer[socketNumber];
 	*/
-	std::vector<std::string> sendBuffer;
+	std::vector<std::string> Send_Buffer;
 
 	/*
 	Stores partial requests. The partial requests can be accessed by socket number
-	with receiveBuffer[socketNumber];
+	with Recv_Buffer[socketNumber];
 	*/
-	std::vector<std::string> receiveBuffer;
+	std::vector<std::string> Recv_Buffer;
 
 	//how many are connections currently established
 	int connections;
 
 	//select() related
-	fd_set masterfds;   //master file descriptor set
-	fd_set readfds;     //set when socket can read without blocking
-	fd_set writefds;    //set when socket can write without blocking
-	int fdmax;          //holds the number of the maximum socket
+	fd_set master_FDS;   //master file descriptor set
+	fd_set read_FDS;     //set when socket can read without blocking
+	fd_set write_FDS;    //set when socket can write without blocking
+	int FD_max;          //holds the number of the maximum socket
 
 	/*
 	This is a count of how many sends there are waiting. This exists for the
-	purpose of having an alternate select() call that doesn't involve writefds
-	because using writefds hogs CPU. However when there is data to write it is
-	proper to use writefds.
+	purpose of having an alternate select() call that doesn't involve write_FDS
+	because using write_FDS hogs CPU. However when there is data to write it is
+	proper to use write_FDS.
 	*/
-	int sendPending;
+	int send_pending;
 
 	/*
-	decodeInt         - turns four char's in to a 32bit integer starting at 'begin'
-	disconnect        - disconnect client and remove socket from master set
-	calculateSpeed    - process the sendQueue and update uploadSpeed
-	main_thread       - where the party is at
-	newConnection     - sets up socket for client
-	                  - returns true if connection suceeded
-	prepareSendBuffer - prepares a response to a file block request
-	processRequest    - interprets the request from a client and buffers it
-	sendBlock         - sends a fileBlock to a client
-	stateTick         - do pending actions
+	decode_int          - turns four char's in to a 32bit integer starting at 'begin'
+	disconnect          - disconnect client and remove socket from master set
+	calculate_speed     - process the sendQueue and update Upload_Speed
+	main_thread         - where the party is at
+	new_conn            - sets up socket for client
+	                    - returns true if connection suceeded
+	prepare_send_buffer - prepares a response to a file block request
+	process_request     - interprets the request from a client and buffers it
+	sendBlock           - sends a file_block to a client
+	stateTick           - do pending actions
 	*/
-	unsigned int decodeInt(const int & begin, char recvBuffer[]);
+	unsigned int decode_int(const int & begin, char recvBuffer[]);
 	void disconnect(const int & socketfd);
-	void calculateSpeed(const int & socketfd, const int & file_ID, const int & fileBlock);
+	void calculate_speed(const int & socketfd, const int & file_ID, const int & file_block);
 	void main_thread();
-	bool newConnection(const int & listener);
-	int prepareSendBuffer(const int & socketfd, const int & file_ID, const int & blockNumber);
-	void processRequest(const int & socketfd, char recvBuffer[], const int & nbytes);
+	bool new_conn(const int & listener);
+	int prepare_send_buffer(const int & socketfd, const int & file_ID, const int & blockNumber);
+	void process_request(const int & socketfd, char recvBuffer[], const int & nbytes);
 
-	boost::mutex sendBufferMutex;
-	boost::mutex receiveBufferMutex;
-	boost::mutex uploadSpeedMutex;
+	boost::mutex SB_mutex; //mutex for all usage of Send_Buffer
+	boost::mutex RB_mutex; //mutex for all usage of Recv_Buffer
+	boost::mutex US_mutex; //mutex for all usage of Upload_Speed
 
 	//keeps track of shared files
-	serverIndex ServerIndex;
+	server_index Server_Index;
 };
 #endif

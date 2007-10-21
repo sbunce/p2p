@@ -11,10 +11,10 @@
 #include "global.h"
 #include "hash.h"
 
-class serverIndex
+class server_index
 {
 public:
-	serverIndex();
+	server_index();
 	/*
 	is_indexing - true if indexing(scanning for new files and hashing)
 	getFileInfo - sets fileSize and filePath based on file_ID
@@ -35,19 +35,19 @@ private:
 	*/
 	static int addEntry_callBack_wrapper(void * objectPtr, int columnsRetrieved, char ** queryResponse, char ** columnName)
 	{
-		serverIndex * thisClass = (serverIndex *)objectPtr;
+		server_index * thisClass = (server_index *)objectPtr;
 		thisClass->addEntry_callBack(columnsRetrieved, queryResponse, columnName);
 		return 0;
 	}
 	static int getFileInfo_callBack_wrapper(void * objectPtr, int columnsRetrieved, char ** queryResponse, char ** columnName)
 	{
-		serverIndex * thisClass = (serverIndex *)objectPtr;
+		server_index * thisClass = (server_index *)objectPtr;
 		thisClass->getFileInfo_callBack(columnsRetrieved, queryResponse, columnName);
 		return 0;
 	}
 	static int removeMissing_callBack_wrapper(void * objectPtr, int columnsRetrieved, char ** queryResponse, char ** columnName)
 	{
-		serverIndex * thisClass = (serverIndex *)objectPtr;
+		server_index * thisClass = (server_index *)objectPtr;
 		thisClass->removeMissing_callBack(columnsRetrieved, queryResponse, columnName);
 		return 0;
 	}

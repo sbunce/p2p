@@ -8,9 +8,9 @@
 #include <sstream>
 #include <string>
 
-#include "serverIndex.h"
+#include "server_index.h"
 
-serverIndex::serverIndex()
+server_index::server_index()
 {
 	//create the share directory if it doesn't exist
 	boost::filesystem::create_directory(global::SERVER_SHARE_DIRECTORY);
@@ -18,29 +18,29 @@ serverIndex::serverIndex()
 	int returnCode;
 	if((returnCode = sqlite3_open(global::DATABASE_PATH.c_str(), &sqlite3_DB)) != 0){
 #ifdef DEBUG
-		std::cout << "error: serverIndex::serverIndex() #1 failed with sqlite3 error " << returnCode << "\n";
+		std::cout << "error: server_index::server_index() #1 failed with sqlite3 error " << returnCode << "\n";
 #endif
 	}
 	if((returnCode = sqlite3_busy_timeout(sqlite3_DB, 1000)) != 0){
 #ifdef DEBUG
-		std::cout << "error: serverIndex::serverIndex() #2 failed with sqlite3 error " << returnCode << "\n";
+		std::cout << "error: server_index::server_index() #2 failed with sqlite3 error " << returnCode << "\n";
 #endif
 	}
 	if((returnCode = sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS share (ID INTEGER PRIMARY KEY AUTOINCREMENT, hash TEXT, size INTEGER, path TEXT)", NULL, NULL, NULL)) != 0){
 #ifdef DEBUG
-		std::cout << "error: serverIndex::serverIndex() #3 failed with sqlite3 error " << returnCode << "\n";
+		std::cout << "error: server_index::server_index() #3 failed with sqlite3 error " << returnCode << "\n";
 #endif
 	}
 	if((returnCode = sqlite3_exec(sqlite3_DB, "CREATE UNIQUE INDEX IF NOT EXISTS pathIndex ON share (path)", NULL, NULL, NULL)) != 0){
 #ifdef DEBUG
-		std::cout << "error: serverIndex::serverIndex() #4 failed with sqlite3 error " << returnCode << "\n";
+		std::cout << "error: server_index::server_index() #4 failed with sqlite3 error " << returnCode << "\n";
 #endif
 	}
 
 	indexing = false;
 }
 
-void serverIndex::addEntry(const int & size, const std::string & path)
+void server_index::addEntry(const int & size, const std::string & path)
 {
 	std::ostringstream query;
 	addEntry_entryExists = false;
@@ -51,28 +51,28 @@ void serverIndex::addEntry(const int & size, const std::string & path)
 	int returnCode;
 	if((returnCode = sqlite3_exec(sqlite3_DB, query.str().c_str(), addEntry_callBack_wrapper, (void *)this, NULL)) != 0){
 #ifdef DEBUG
-		std::cout << "error: serverIndex::addEntry() #1 failed with sqlite3 error " << returnCode << "\n";
+		std::cout << "error: server_index::addEntry() #1 failed with sqlite3 error " << returnCode << "\n";
 #endif
 	}
 
 	if(!addEntry_entryExists){
 		query.str("");
-		query << "INSERT INTO share (hash, size, path) VALUES ('" << Hash.hashFile(path) << "', '" << size << "', '" << path << "')";
+		query << "INSERT INTO share (hash, size, path) VALUES ('" << Hash.hash_file(path) << "', '" << size << "', '" << path << "')";
 
 		if((returnCode = sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL)) != 0){
 #ifdef DEBUG
-			std::cout << "error: serverIndex::addEntry() #2 failed with sqlite3 error " << returnCode << "\n";
+			std::cout << "error: server_index::addEntry() #2 failed with sqlite3 error " << returnCode << "\n";
 #endif
 		}
 	}
 }
 
-void serverIndex::addEntry_callBack(int & columnsRetrieved, char ** queryResponse, char ** columnName)
+void server_index::addEntry_callBack(int & columnsRetrieved, char ** queryResponse, char ** columnName)
 {
 	addEntry_entryExists = true;
 }
 
-bool serverIndex::getFileInfo(const int & file_ID, int & fileSize, std::string & filePath)
+bool server_index::getFileInfo(const int & file_ID, int & fileSize, std::string & filePath)
 {
 	std::ostringstream query;
 	getFileInfo_entryExists = false;
@@ -83,7 +83,7 @@ bool serverIndex::getFileInfo(const int & file_ID, int & fileSize, std::string &
 	int returnCode;
 	if((returnCode = sqlite3_exec(sqlite3_DB, query.str().c_str(), getFileInfo_callBack_wrapper, (void *)this, NULL)) != 0){
 #ifdef DEBUG
-		std::cout << "error: serverIndex::getFileInfo() failed with sqlite3 error " << returnCode << "\n";
+		std::cout << "error: server_index::getFileInfo() failed with sqlite3 error " << returnCode << "\n";
 #endif
 	}
 
@@ -97,19 +97,19 @@ bool serverIndex::getFileInfo(const int & file_ID, int & fileSize, std::string &
 	}
 }
 
-void serverIndex::getFileInfo_callBack(int & columnsRetrieved, char ** queryResponse, char ** columnName)
+void server_index::getFileInfo_callBack(int & columnsRetrieved, char ** queryResponse, char ** columnName)
 {
 	getFileInfo_entryExists = true;
 	getFileInfo_fileSize = atoi(queryResponse[0]);
 	getFileInfo_filePath.assign(queryResponse[1]);
 }
 
-bool serverIndex::is_indexing()
+bool server_index::is_indexing()
 {
 	return indexing;
 }
 
-void serverIndex::indexShare_thread()
+void server_index::indexShare_thread()
 {
 	while(true){
 		indexing = true;
@@ -120,7 +120,7 @@ void serverIndex::indexShare_thread()
 	}
 }
 
-int serverIndex::indexShare_recurse(const std::string directoryName)
+int server_index::indexShare_recurse(const std::string directoryName)
 {
 	namespace fs = boost::filesystem;
 
@@ -153,7 +153,7 @@ int serverIndex::indexShare_recurse(const std::string directoryName)
 			}
 			catch(std::exception & ex){
 #ifdef DEBUG
-				std::cout << "error: serverIndex::indexShare_recurse(): file " << directory_iter->leaf() << " caused exception " << ex.what() << "\n";
+				std::cout << "error: server_index::indexShare_recurse(): file " << directory_iter->leaf() << " caused exception " << ex.what() << "\n";
 #endif
 			}
 		}
@@ -167,17 +167,17 @@ int serverIndex::indexShare_recurse(const std::string directoryName)
 	return 0;
 }
 
-void serverIndex::removeMissing()
+void server_index::removeMissing()
 {
 	int returnCode;
 	if((returnCode = sqlite3_exec(sqlite3_DB, "SELECT path FROM share", removeMissing_callBack_wrapper, (void *)this, NULL)) != 0){
 #ifdef DEBUG
-		std::cout << "error: serverIndex::removeMissing() failed with sqlite3 error " << returnCode << "\n";
+		std::cout << "error: server_index::removeMissing() failed with sqlite3 error " << returnCode << "\n";
 #endif
 	}
 }
 
-void serverIndex::removeMissing_callBack(int & columnsRetrieved, char ** queryResponse, char ** columnName)
+void server_index::removeMissing_callBack(int & columnsRetrieved, char ** queryResponse, char ** columnName)
 {
 	std::fstream temp(queryResponse[0]);
 
@@ -191,14 +191,14 @@ void serverIndex::removeMissing_callBack(int & columnsRetrieved, char ** queryRe
 		int returnCode;
 		if((returnCode = sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL)) != 0){
 #ifdef DEBUG
-			std::cout << "error: serverIndex::removeMissing_callBack() failed with sqlite3 error " << returnCode << "\n";
+			std::cout << "error: server_index::removeMissing_callBack() failed with sqlite3 error " << returnCode << "\n";
 #endif
 		}
 	}
 }
 
-void serverIndex::start()
+void server_index::start()
 {
-	boost::thread T(boost::bind(&serverIndex::indexShare_thread, this));
+	boost::thread T(boost::bind(&server_index::indexShare_thread, this));
 }
 

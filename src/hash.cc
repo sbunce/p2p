@@ -9,7 +9,7 @@ hash::hash()
 
 }
 
-const std::string hash::hashFile(std::string filePath)
+const std::string hash::hash_file(std::string filePath)
 {
 	SHA.Init(global::HASH_TYPE);
 	char chunk[4096*128];
@@ -32,7 +32,7 @@ const std::string hash::hashFile(std::string filePath)
 	}
 	else{
 #ifdef DEBUG
-		std::cout << "error: hash::hashFile(): couldn't open " << filePath << "\n";
+		std::cout << "error: hash::hash_file(): couldn't open " << filePath << "\n";
 #endif
 	}
 

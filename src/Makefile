@@ -7,8 +7,8 @@ CCL = g++
 #GPROF = -pg
 
 OBJECTS = main.o client.o client_buffer.o download.o client_index.o \
-	exploration.o gui.o gui_about.o hash.o server.o serverIndex.o sha.o \
-	superBlock.o
+	exploration.o gui.o gui_about.o hash.o server.o server_index.o sha.o \
+	super_block.o
 
 LINKER_OPTIONS = `pkg-config gtkmm-2.4 --cflags --libs` -lboost_filesystem \
 	-lboost_thread -D_REENTRANT -lsqlite3 
@@ -29,7 +29,7 @@ client_buffer.o: client_buffer.cc client_buffer.h download.o global.h
 client_index.o: client_index.cc client_index.h download.o exploration.o global.h
 	$(CC) client_index.cc
 
-download.o: download.cc download.h hash.o superBlock.o global.h
+download.o: download.cc download.h hash.o super_block.o global.h
 	$(CC) download.cc
 
 exploration.o: exploration.cc exploration.h global.h
@@ -44,17 +44,17 @@ gui_about.o: gui_about.cc gui_about.h global.h
 hash.o: hash.cc hash.h sha.o global.h
 	$(CC) hash.cc
 
-server.o: server.cc server.h serverIndex.o global.h
+server.o: server.cc server.h server_index.o global.h
 	$(CC) server.cc
 
-serverIndex.o: serverIndex.cc serverIndex.h global.h
-	$(CC) serverIndex.cc
+server_index.o: server_index.cc server_index.h global.h
+	$(CC) server_index.cc
 
 sha.o: sha.cc sha.h global.h
 	$(CC) sha.cc
 
-superBlock.o: superBlock.cc superBlock.h global.h
-	$(CC) superBlock.cc
+super_block.o: super_block.cc super_block.h global.h
+	$(CC) super_block.cc
 
 sha_test: sha_test.cc sha.o
 	$(CCL) sha_test.cc sha.cc -o ../sha-test

@@ -60,8 +60,8 @@ void download::add_block(const int & blockNumber, std::string & block)
 	//trim off protocol information
 	block.erase(0, global::S_CTRL_SIZE);
 
-	//add the block to the appropriate superBlock
-	for(std::deque<superBlock>::iterator iter0 = Super_Buffer.begin(); iter0 != Super_Buffer.end(); ++iter0){
+	//add the block to the appropriate super_block
+	for(std::deque<super_block>::iterator iter0 = Super_Buffer.begin(); iter0 != Super_Buffer.end(); ++iter0){
 		if(iter0->add_block(blockNumber, block)){
 			break;
 		}
@@ -188,7 +188,7 @@ const int download::get_request()
 	}
 
 	/*
-	SB = superBlock
+	SB = super_block
 	FB = fileBlock
 	* = requested fileBlock
 	M = missing fileBlock
@@ -224,16 +224,16 @@ const int download::get_request()
 	given time to arrive.
 	*/
 	if(Super_Buffer.empty()){ //P1
-		Super_Buffer.push_front(superBlock(current_super_block++, last_block));
+		Super_Buffer.push_front(super_block(current_super_block++, last_block));
 		latest_request = Super_Buffer.front().get_request();
 	}
-	else if(Super_Buffer.front().allRequested()){ //P2
+	else if(Super_Buffer.front().all_requested()){ //P2
 		if(Super_Buffer.size() < 2 && current_super_block <= last_super_block){
-			Super_Buffer.push_front(superBlock(current_super_block++, last_block));
+			Super_Buffer.push_front(super_block(current_super_block++, last_block));
 		}
 		latest_request = Super_Buffer.front().get_request();
 	}
-	else if(Super_Buffer.front().halfRequested()){ //P3
+	else if(Super_Buffer.front().half_requested()){ //P3
 		latest_request = Super_Buffer.back().get_request();
 	}
 	else{ //P4
@@ -250,8 +250,8 @@ const int download::get_request()
 		if(Super_Buffer.size() == 1){
 
 			/*
-			If no superBlock but the last one remains then try getting another
-			request. If the superBlock returns -1 then it doesn't need any other
+			If no super_block but the last one remains then try getting another
+			request. If the super_block returns -1 then it doesn't need any other
 			blocks.
 			*/
 			int request = Super_Buffer.back().get_request();
@@ -265,7 +265,7 @@ const int download::get_request()
 				return latest_request;
 			}
 		}
-		else{ //more than one superBlock, serve request from oldest
+		else{ //more than one super_block, serve request from oldest
 			latest_request = Super_Buffer.back().get_request();
 			return latest_request;
 		}
@@ -317,7 +317,7 @@ void download::write_super_block(std::string container[])
 	std::cout << "info: download::write_super_block() was called\n";
 #endif
 /*
-	//get the messageDigest of the superBlock
+	//get the messageDigest of the super_block
 	for(int x=0; x<global::SUPERBLOCK_SIZE; x++){
 		SHA.Update((const sha_byte *) container[x].c_str(), container[x].size());
 	}
