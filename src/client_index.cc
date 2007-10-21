@@ -9,9 +9,9 @@
 #include <list>
 #include <sstream>
 
-#include "clientIndex.h"
+#include "client_index.h"
 
-clientIndex::clientIndex()
+client_index::client_index()
 {
 	//create the download directory if it doesn't exist
 	boost::filesystem::create_directory(global::CLIENT_DOWNLOAD_DIRECTORY);
@@ -19,75 +19,75 @@ clientIndex::clientIndex()
 	int returnCode;
 	if((returnCode = sqlite3_open(global::DATABASE_PATH.c_str(), &sqlite3_DB)) != 0){
 #ifdef DEBUG
-		std::cout << "error: clientIndex::clientIndex() #1 failed with sqlite3 error " << returnCode << "\n";
+		std::cout << "error: client_index::client_index() #1 failed with sqlite3 error " << returnCode << "\n";
 #endif
 	}
 	if((returnCode = sqlite3_busy_timeout(sqlite3_DB, 1000)) != 0){
 #ifdef DEBUG
-		std::cout << "error: clientIndex::clientIndex() #2 failed with sqlite3 error " << returnCode << "\n";
+		std::cout << "error: client_index::client_index() #2 failed with sqlite3 error " << returnCode << "\n";
 #endif
 	}
 	if((returnCode = sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS download (hash TEXT, name TEXT, size INTEGER, server_IP TEXT, file_ID TEXT)", NULL, NULL, NULL)) != 0){
 #ifdef DEBUG
-		std::cout << "error: clientIndex::clientIndex() #3 failed with sqlite3 error " << returnCode << "\n";
+		std::cout << "error: client_index::client_index() #3 failed with sqlite3 error " << returnCode << "\n";
 #endif
 	}
 	if((returnCode = sqlite3_exec(sqlite3_DB, "CREATE UNIQUE INDEX IF NOT EXISTS hashIndex ON download (hash)", NULL, NULL, NULL)) != 0){
 #ifdef DEBUG
-		std::cout << "error: clientIndex::clientIndex() #4 failed with sqlite3 error " << returnCode << "\n";
+		std::cout << "error: client_index::client_index() #4 failed with sqlite3 error " << returnCode << "\n";
 #endif
 	}
 }
 
-bool clientIndex::getFilePath(const std::string & hash, std::string & path)
+bool client_index::get_file_path(const std::string & hash, std::string & path)
 {
 	std::ostringstream query;
-	getFilePath_entryExists = false;
+	get_file_path_entry_exits = false;
 
 	//locate the record
 	query << "SELECT name FROM download WHERE hash = \"" << hash << "\" LIMIT 1";
 	int returnCode;
-	if((returnCode = sqlite3_exec(sqlite3_DB, query.str().c_str(), getFilePath_callBack_wrapper, (void *)this, NULL)) != 0){
+	if((returnCode = sqlite3_exec(sqlite3_DB, query.str().c_str(), get_file_path_callBack_wrapper, (void *)this, NULL)) != 0){
 #ifdef DEBUG
-		std::cout << "error: clientIndex::getFilePath() failed with sqlite3 error " << returnCode << "\n";
+		std::cout << "error: client_index::get_file_path() failed with sqlite3 error " << returnCode << "\n";
 #endif
 	}
 
-	if(getFilePath_entryExists){
-		path = global::CLIENT_DOWNLOAD_DIRECTORY + getFilePath_fileName;
+	if(get_file_path_entry_exits){
+		path = global::CLIENT_DOWNLOAD_DIRECTORY + get_file_path_file_name;
 		return true;
 	}
 	else{
 #ifdef DEBUG
-		std::cout << "error: clientIndex::getFilePath() didn't find record\n";
+		std::cout << "error: client_index::get_file_path() didn't find record\n";
 #endif
 		return false;
 	}
 }
 
-void clientIndex::getFilePath_callBack(int & columnsRetrieved, char ** queryResponse, char ** columnName)
+void client_index::get_file_path_callBack(int & columns_retrieved, char ** query_response, char ** column_name)
 {
-	getFilePath_entryExists = true;
-	getFilePath_fileName.assign(queryResponse[0]);
+	get_file_path_entry_exits = true;
+	get_file_path_file_name.assign(query_response[0]);
 }
 
-void clientIndex::initialFillBuffer(std::list<exploration::infoBuffer> & resumedDownload)
+void client_index::initial_fill_buff(std::list<exploration::info_buffer> & resumed_download)
 {
 	int returnCode;
-	if((returnCode = sqlite3_exec(sqlite3_DB, "SELECT * FROM download", initialFillBuffer_callBack_wrapper, (void *)this, NULL)) != 0){
+	if((returnCode = sqlite3_exec(sqlite3_DB, "SELECT * FROM download", initial_fill_buff_callBack_wrapper, (void *)this, NULL)) != 0){
 #ifdef DEBUG
-		std::cout << "error: clientIndex::initialFillBuffer() failed with sqlite3 error " << returnCode << "\n";
+		std::cout << "error: client_index::initial_fill_buff() failed with sqlite3 error " << returnCode << "\n";
 #endif
 	}
 
-	resumedDownload.splice(resumedDownload.end(), initialFillBuffer_resumedDownload);
+	resumed_download.splice(resumed_download.end(), initial_fill_buff_resumed_download);
 }
 
-void clientIndex::initialFillBuffer_callBack(int & columnsRetrieved, char ** queryResponse, char ** columnName)
+void client_index::initial_fill_buff_callBack(int & columns_retrieved, char ** query_response, char ** column_name)
 {
 	namespace fs = boost::filesystem;
 
-	std::string path(queryResponse[1]);
+	std::string path(query_response[1]);
 	path = global::CLIENT_DOWNLOAD_DIRECTORY + path;
 
 	//make sure the file is present
@@ -95,19 +95,19 @@ void clientIndex::initialFillBuffer_callBack(int & columnsRetrieved, char ** que
 	if(fstream_temp.is_open()){ //partial file exists, add to downloadBuffer
 		fstream_temp.close();
 
-		exploration::infoBuffer IB;
+		exploration::info_buffer IB;
 		IB.resumed = true;
 
-		IB.hash.assign(queryResponse[0]);
-		IB.fileName.assign(queryResponse[1]);
-		fs::path path_boost = fs::system_complete(fs::path(global::CLIENT_DOWNLOAD_DIRECTORY + IB.fileName, fs::native));
-		IB.fileSize.assign(queryResponse[2]);
+		IB.hash.assign(query_response[0]);
+		IB.file_name.assign(query_response[1]);
+		fs::path path_boost = fs::system_complete(fs::path(global::CLIENT_DOWNLOAD_DIRECTORY + IB.file_name, fs::native));
+		IB.file_size.assign(query_response[2]);
 		unsigned int currentBytes = fs::file_size(path_boost);
-		IB.latestRequest = currentBytes / (global::BUFFER_SIZE - global::S_CTRL_SIZE);
-		IB.currentSuperBlock = currentBytes / ( (global::BUFFER_SIZE - global::S_CTRL_SIZE) * global::SUPERBLOCK_SIZE );
+		IB.latest_request = currentBytes / (global::BUFFER_SIZE - global::S_CTRL_SIZE);
+		IB.current_super_block = currentBytes / ( (global::BUFFER_SIZE - global::S_CTRL_SIZE) * global::SUPERBLOCK_SIZE );
 
-		std::string undelim_server_IP(queryResponse[3]);
-		std::string undelim_file_ID(queryResponse[4]);
+		std::string undelim_server_IP(query_response[3]);
+		std::string undelim_file_ID(query_response[4]);
 
 		boost::char_separator<char> sep(","); //delimiter for servers and file_IDs
 		boost::tokenizer<boost::char_separator<char> > server_IP_tokens(undelim_server_IP, sep);
@@ -122,26 +122,26 @@ void clientIndex::initialFillBuffer_callBack(int & columnsRetrieved, char ** que
 			IB.file_ID.push_back(*file_ID_iter++);
 		}
 
-		initialFillBuffer_resumedDownload.push_back(IB);
+		initial_fill_buff_resumed_download.push_back(IB);
 	}
 	else{ //partial file removed, delete entry from database
 
 		std::ostringstream query;
-		query << "DELETE FROM download WHERE name = \"" << queryResponse[1] << "\"";
+		query << "DELETE FROM download WHERE name = \"" << query_response[1] << "\"";
 
 		int returnCode;
 		if((returnCode = sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL)) != 0){
 #ifdef DEBUG
-		std::cout << "error: clientIndex::initialFillBuffer() failed with sqlite3 error " << returnCode << "\n";
+		std::cout << "error: client_index::initial_fill_buff() failed with sqlite3 error " << returnCode << "\n";
 #endif
 		}
 	}
 }
 
-bool clientIndex::startDownload(exploration::infoBuffer & info)
+bool client_index::start_download(exploration::info_buffer & info)
 {
 	std::ostringstream query;
-	query << "INSERT INTO download (hash, name, size, server_IP, file_ID) VALUES ('" << info.hash << "', '" << info.fileName << "', " << info.fileSize << ", '";
+	query << "INSERT INTO download (hash, name, size, server_IP, file_ID) VALUES ('" << info.hash << "', '" << info.file_name << "', " << info.file_size << ", '";
 	for(std::vector<std::string>::iterator iter0 = info.server_IP.begin(); iter0 != info.server_IP.end(); ++iter0){
 		if(iter0 + 1 != info.server_IP.end()){
 			query << *iter0 << ",";
@@ -168,13 +168,13 @@ bool clientIndex::startDownload(exploration::infoBuffer & info)
 	}
 	else{
 #ifdef DEBUG
-		std::cout << "error: clientIndex::startDownload() failed with sqlite3 error " << returnCode << "\n";
+		std::cout << "error: client_index::start_download() failed with sqlite3 error " << returnCode << "\n";
 #endif
 		return false;
 	}
 }
 
-void clientIndex::terminateDownload(const std::string & hash)
+void client_index::terminate_download(const std::string & hash)
 {
 	std::ostringstream query;
 	query << "DELETE FROM download WHERE hash = \"" << hash << "\"";
@@ -182,7 +182,7 @@ void clientIndex::terminateDownload(const std::string & hash)
 	int returnCode;
 	if((returnCode = sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL)) != 0){
 #ifdef DEBUG
-		std::cout << "error: clientIndex::terminateDownload() failed with sqlite3 error " << returnCode << "\n";
+		std::cout << "error: client_index::terminate_download() failed with sqlite3 error " << returnCode << "\n";
 #endif
 	}
 }

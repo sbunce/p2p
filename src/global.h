@@ -4,23 +4,23 @@
 #include <string>
 #include "sha.h"
 
-namespace global //"global" namespace ;-)
+namespace global
 {
 	/* *********** BEGIN DEBUGGING OPTIONS *********** */
-	#define DEBUG
+	//#define DEBUG
 	//#define DEBUG_VERBOSE
 	//#define REREQUEST_PERCENTAGE
 
 	//what % of fileBlocks to "drop"
 	//#define UNRELIABLE_CLIENT
-	const int UNRELIABLE_CLIENT_VALUE = 95;
+	//const int UNRELIABLE_CLIENT_VALUE = 95;
 
 	/*
 	If enabled server sometimes sends 1 byte more than it should. The abusive server
 	value is the number of packets to process before simulating abuse.
 	*/
 	//#define ABUSIVE_SERVER
-	const int ABUSIVE_SERVER_VALUE = 20000;
+	//const int ABUSIVE_SERVER_VALUE = 20000;
 	/* ************ END DEBUGGING OPTIONS ************ */
 
 	const int BUFFER_SIZE = 1024;     //size of one packet

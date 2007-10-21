@@ -17,7 +17,7 @@ superBlock::superBlock(const int & superBlockNumber_in, const int & lastBlock_in
 	halfReq = false;
 }
 
-bool superBlock::addBlock(const int & blockNumber, const std::string & fileBlock)
+bool superBlock::add_block(const int & blockNumber, const std::string & fileBlock)
 {
 	if(blockNumber >= minBlock && blockNumber <= maxBlock){
 		if(container[blockNumber % global::SUPERBLOCK_SIZE].empty()){
@@ -35,7 +35,7 @@ bool superBlock::allRequested()
 	/*
 	After sequential requests are done linear searches are done for missing blocks.
 	Because of this nextRequest stays one above maxBlock when all requests have 
-	been returned once. Refer to getRequest() to see why this works.
+	been returned once. Refer to get_request() to see why this works.
 	*/
 	return nextRequest > maxBlock;
 }
@@ -51,7 +51,7 @@ bool superBlock::complete()
 	}
 }
 
-int superBlock::getRequest()
+int superBlock::get_request()
 {
 #ifdef REREQUEST_PERCENTAGE
 	static long requestCount = 0;

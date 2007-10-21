@@ -27,25 +27,25 @@ class server
 {
 public:
 	//used to pass information to user interface
-	class infoBuffer
+	class info_buffer
 	{
 	public:
 		std::string client_IP;
 		std::string file_ID;
-		std::string fileName;
-		int fileSize;
+		std::string file_name;
+		int file_size;
 		int speed;
-		int percentComplete;
+		int percent_complete;
 	};
 
 	server();
 	/*
 	getUploadInfo - updates and returns upload information
 	              - returns false if no uploads
-	getTotalSpeed - returns the total speed of all uploads(in bytes per second)
+	get_total_speed - returns the total speed of all uploads(in bytes per second)
 	*/
-	bool getUploadInfo(std::vector<infoBuffer> & uploadInfo);
-	int getTotalSpeed();
+	bool getUploadInfo(std::vector<info_buffer> & uploadInfo);
+	int get_total_speed();
 	bool is_indexing();
 	void start();
 
@@ -55,7 +55,7 @@ private:
 	{
 	public:
 		//the gui will need this when displaying the upload
-		std::string fileName;
+		std::string file_name;
 
 		//used to idenfity what upload this is
 		std::string client_IP;
@@ -66,7 +66,7 @@ private:
 		std::deque<int> secondBytes;    //bytes in the second
 
 		//used to calculate percent complete
-		int fileSize;  //size of file
+		int file_size;  //size of file
 		int fileBlock; //what fileBlock was last requested
 	};
 

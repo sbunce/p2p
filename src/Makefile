@@ -6,17 +6,12 @@ CCL = g++
 
 #GPROF = -pg
 
-OBJECTS = main.o client.o clientBuffer.o download.o clientIndex.o \
+OBJECTS = main.o client.o client_buffer.o download.o client_index.o \
 	exploration.o gui.o gui_about.o hash.o server.o serverIndex.o sha.o \
 	superBlock.o
 
 LINKER_OPTIONS = `pkg-config gtkmm-2.4 --cflags --libs` -lboost_filesystem \
 	-lboost_thread -D_REENTRANT -lsqlite3 
-
-SERVER_OBJECTS = main-server.o hash.o server.o serverIndex.o sha.o
-
-SERVER_LINKER_OPTIONS = -lboost_filesystem -lboost_thread -D_REENTRANT \
-	-lsqlite3
 
 main: $(OBJECTS)
 	$(CCL) $(OBJECTS) $(GPROF) -o ../simple-p2p $(LINKER_OPTIONS)
@@ -25,17 +20,14 @@ main: $(OBJECTS)
 main.o: main.cc gui.o
 	$(CC) main.cc `pkg-config gtkmm-2.4 --cflags`
 
-main-server.o: main-server.cc server.o
-	$(CC) main-server.cc
-
-client.o: client.cc client.h clientBuffer.o clientIndex.o exploration.o global.h 
+client.o: client.cc client.h client_buffer.o client_index.o exploration.o global.h 
 	$(CC) client.cc
 
-clientBuffer.o: clientBuffer.cc clientBuffer.h download.o global.h
-	$(CC) clientBuffer.cc
+client_buffer.o: client_buffer.cc client_buffer.h download.o global.h
+	$(CC) client_buffer.cc
 
-clientIndex.o: clientIndex.cc clientIndex.h download.o exploration.o global.h
-	$(CC) clientIndex.cc
+client_index.o: client_index.cc client_index.h download.o exploration.o global.h
+	$(CC) client_index.cc
 
 download.o: download.cc download.h hash.o superBlock.o global.h
 	$(CC) download.cc
@@ -66,10 +58,6 @@ superBlock.o: superBlock.cc superBlock.h global.h
 
 sha_test: sha_test.cc sha.o
 	$(CCL) sha_test.cc sha.cc -o ../sha-test
-
-server: $(SERVER_OBJECTS)
-	$(CCL) $(SERVER_OBJECTS) $(GPROF) -o ../server $(SERVER_LINKER_OPTIONS) 
-	@echo "\nBuilding server complete.\n"
 
 clean:
 	rm -v *.o

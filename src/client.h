@@ -19,11 +19,12 @@
 //std
 #include <ctime>
 #include <list>
+#include <map>
 #include <string>
 #include <vector>
 
-#include "clientBuffer.h"
-#include "clientIndex.h"
+#include "client_buffer.h"
+#include "client_index.h"
 #include "download.h"
 #include "exploration.h"
 #include "global.h"
@@ -32,138 +33,131 @@ class client
 {
 public:
 	//used to pass information to user interface
-	class infoBuffer
+	class info_buffer
 	{
 	public:
 		std::string hash;
 		std::list<std::string> server_IP;
-		std::string fileName;
-		int fileSize;        //bytes
-		int speed;           //bytes per second
-		int percentComplete; //0-100
+		std::string file_name;
+		int file_size;        //bytes
+		int speed;            //bytes per second
+		int percent_complete; //0-100
 	};
 
 	client();
 	~client();
 	/*
-	getDownloadInfo   - returns download info for all files in sendBuffer
+	get_download_info - returns download info for all files in sendBuffer
 	                  - returns false if no downloads
-	getTotalSpeed     - returns the total download speed(in bytes per second)
+	get_total_speed   - returns the total download speed(in bytes per second)
 	start             - start the threads needed for the client
-	startDownload     - schedules a download to be started
-	stopDownload      - marks a download as completed so it will be stopped
+	stop              - stops all threads, must be called before destruction
+	start_download    - schedules a download to be started
+	stop_download     - marks a download as completed so it will be stopped
 	*/
-	bool getDownloadInfo(std::vector<infoBuffer> & downloadInfo);
-	int getTotalSpeed();
+	bool get_download_info(std::vector<info_buffer> & download_info);
+	int get_total_speed();
 	void start();
-	bool startDownload(exploration::infoBuffer info);
-	void stopDownload(const std::string & hash);
+	void stop();
+	bool start_download(exploration::info_buffer info);
+	void stop_download(const std::string & hash);
 
 private:
+	bool stop_threads; //if true this will trigger thread termination
+	int threads;       //how many threads are currently running
+
 	//holds the current time(set in main_thread), used for server timeouts
-	time_t currentTime;
-	time_t previousIntervalEnd;
+	time_t current_time;
+	time_t previous_time;
 
-	/*
-	The status of the pendingConnection element.
-	FREE       - awaiting a thread to feed it to newConnection
-	PROCESSING - a thread has already fed the element to newConnection
-
-	If a element is set to processing then no other threads touch it.
-	*/
-	enum PendingStatus { FREE, PROCESSING };
-	class pendingConnection
+	//starting download information stored in this
+	class pending_connection
 	{
 	public:
-		pendingConnection(download * Download_in, std::string & server_IP_in,
+		pending_connection(download * Download_in, std::string & server_IP_in,
 			std::string & file_ID_in)
 		{
 			Download = Download_in;
 			server_IP = server_IP_in;
 			file_ID = file_ID_in;
-			status = FREE;
+			processing = false;
 		}
 
 		download * Download;
 		std::string server_IP;
 		std::string file_ID;
-		PendingStatus status;
+		bool processing; //checked to make sure two connection attemps aren't made concurrently
 	};
 
 	/*
 	Holds connections which need to be made. If multiple connections to the same
-	server need to be made they're put in the same inner vector.
+	server need to be made they're put in the same inner list.
 	*/
-	std::list<std::list<pendingConnection *> > PendingConnection;
+	std::list<std::list<pending_connection *> > Pending_Connection;
 
 	sha SHA;                 //creates messageDigests
-	clientIndex ClientIndex; //gives client access to the database
+	client_index Client_Index; //gives client access to the database
 
 	/*
 	All the information relevant to each socket accessible with the socket fd int
-	example: ClientBuffer[socketfd].something.
+	example: Client_Buffer[socket_FD].something.
 
-	DownloadBuffer stores all the downloads contained within the ClientBuffer in
+	Download_Buffer stores all the downloads contained within the Client_Buffer in
 	no particular order.
 
 	Access to both of these must be locked with the same mutex
-	(ClientDownloadBufferMutex).
+	(CB_D_mutex).
 	*/
-	std::vector<clientBuffer *> ClientBuffer;
-	std::list<download *> DownloadBuffer;
+	std::map<int, client_buffer *> Client_Buffer;
+	std::list<download *> Download_Buffer;
 
 	//networking related
-	fd_set masterfds;     //master file descriptor set
-	fd_set readfds;       //holds what sockets are ready to be read
-	fd_set writefds;      //holds what sockets can be written to without blocking
-	int fdmax;            //holds the number of the maximum socket
+	fd_set master_FDS; //master file descriptor set
+	fd_set read_FDS;   //holds what sockets are ready to be read
+	fd_set write_FDS;  //holds what sockets can be written to without blocking
+	int FD_max;        //holds the number of the maximum socket
 
 	/*
 	When this is zero there are no pending requests to send. This exists for the
-	purpose of having an alternate select() call that doesn't involve writefds
-	because using writefds hogs CPU. When the value referenced by this equals 0
-	then there are no sends pending and writefds doesn't need to be used. These
-	are given to the clientBuffer elements so they can increment it.
+	purpose of having an alternate select() call that doesn't involve write_FDS
+	because using write_FDS hogs CPU. When the value referenced by this equals 0
+	then there are no sends pending and write_FDS doesn't need to be used. These
+	are given to the client_buffer elements so they can increment it.
 	*/
-	int * sendPending;
-
-	/*
-	The vector holds the hash of downloads scheduled for deferred termination.
-	*/
-	std::vector<std::string> deferredTermination;
+	int * send_pending;
 
 	//true if a download is complete, handed to all downloads
-	bool * downloadComplete;
+	bool * download_complete;
 
 	/*
-	checkTimeouts        - checks all servers to see if they've timed out and removes/disconnects if they have
-	disconnect           - disconnects a socket, modifies ClientBuffer
-	main_thread          - main client thread that sends/receives data and triggers events
-	newConnection        - create a connection with a server, modifies ClientBuffer
-	                     - returns false if cannot connect to server
-	prepareRequests      - touches each ClientBuffer element to trigger new requests(if needed)
-	read_socket          - when a socket needs to be read
-	removeCompleted      - removes downloads that are complete(or stopped)
-	serverConnect_thread - sets up new downloads (monitors scheduledDownload)
-	startNewConnection   - associates a new server with a download(connects to server)
-	                     - returns false if the download associated with hash isn't found
-	write_socket         - when a socket needs to be written
+	check_timeouts     - checks all servers to see if they've timed out and removes/disconnects if they have
+	disconnect         - disconnects a socket, modifies Client_Buffer
+	main_thread        - main client thread that sends/receives data and triggers events
+	new_conn           - create a connection with a server, modifies Client_Buffer
+	                   - returns false if cannot connect to server
+	prepare_requests   - touches each Client_Buffer element to trigger new requests(if needed)
+	remove_complete    - removes downloads that are complete(or stopped)
+	server_conn_thread - sets up new downloads (monitors scheduledDownload)
+	start_new_conn     - associates a new server with a download(connects to server)
+	                   - returns false if the download associated with hash isn't found
 	*/
-	void checkTimeouts();
-	inline void disconnect(const int & socketfd);
+	void check_timeouts();
+	inline void disconnect(const int & socket_FD);
 	void main_thread();
-	bool newConnection(pendingConnection * PC);
-	void prepareRequests();
-	inline void read_socket(const int & socketfd);
-	void removeCompleted();
-	void serverConnect_thread();
-	bool startNewConnection(const std::string hash, std::string server_IP, std::string file_ID);
-	inline void write_socket(const int & socketfd);
+	bool new_conn(pending_connection * PC);
+	void prepare_requests();
+	void remove_complete();
+	void server_conn_thread();
+	bool start_new_conn(const std::string hash, std::string server_IP, std::string file_ID);
 
 	//each mutex names the object it locks in the format boost::mutex <object>Mutex
-	boost::mutex ClientDownloadBufferMutex; //for both ClientBuffer and DownloadBuffer
-	boost::mutex deferredTerminationMutex;
-	boost::mutex PendingConnectionMutex;
-	boost::mutex PCPMutex;
+	boost::mutex CB_D_mutex; //for both Client_Buffer and Download_Buffer
+	boost::mutex PC_mutex;   //locks access to pending_connection instances
+
+	/*
+	Locks access to everything NOT stop_threads. This is used by stop() to terminate
+	all threads.
+	*/
+	boost::mutex stop_mutex;
 };
 #endif

@@ -38,27 +38,27 @@ exploration::exploration()
 	}
 }
 
-void exploration::asteriskToPercent(std::string & searchWord)
+void exploration::asteriskToPercent(std::string & search_word)
 {
-	for(std::string::iterator iter0 = searchWord.begin(); iter0 != searchWord.end(); ++iter0){
+	for(std::string::iterator iter0 = search_word.begin(); iter0 != search_word.end(); ++iter0){
 		if(*iter0 == '*'){
 			*iter0 = '%';
 		}
 	}
 }
 
-void exploration::search(std::string & searchWord, std::list<infoBuffer> & info)
+void exploration::search(std::string & search_word, std::list<info_buffer> & info)
 {
-	searchResults.clear();
-	asteriskToPercent(searchWord);
+	Search_Results.clear();
+	asteriskToPercent(search_word);
 
 #ifdef DEBUG
-	std::cout << "info: exploration::search(): search entered: \"" << searchWord << "\"\n";
+	std::cout << "info: exploration::search(): search entered: \"" << search_word << "\"\n";
 #endif
 
 	std::ostringstream query;
-	if(!searchWord.empty()){
-		query << "SELECT * FROM search WHERE name LIKE \"%" << searchWord << "%\"";
+	if(!search_word.empty()){
+		query << "SELECT * FROM search WHERE name LIKE \"%" << search_word << "%\"";
 
 		int returnCode;
 		if((returnCode = sqlite3_exec(sqlite3_DB, query.str().c_str(), search_callBack_wrapper, (void *)this, NULL)) != 0){
@@ -68,16 +68,16 @@ void exploration::search(std::string & searchWord, std::list<infoBuffer> & info)
 		}
 
 		info.clear();
-		info.splice(info.end(), searchResults);
+		info.splice(info.end(), Search_Results);
 	}
 }
 
 void exploration::search_callBack(int & columnsRetrieved, char ** queryResponse, char ** columnName)
 {
-	infoBuffer temp;
+	info_buffer temp;
 	temp.hash.append(queryResponse[0]);
-	temp.fileName.append(queryResponse[1]);
-	temp.fileSize.append(queryResponse[2]);
+	temp.file_name.append(queryResponse[1]);
+	temp.file_size.append(queryResponse[2]);
 
 	std::string undelim_server_IP(queryResponse[3]);
 	std::string undelim_file_ID(queryResponse[4]);
@@ -93,6 +93,6 @@ void exploration::search_callBack(int & columnsRetrieved, char ** queryResponse,
 		temp.file_ID.push_back(*file_ID_iter++);
 	}
 
-	searchResults.push_back(temp);
+	Search_Results.push_back(temp);
 }
 

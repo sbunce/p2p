@@ -10,26 +10,26 @@
 
 #include "download.h"
 
-download::download(const std::string & hash_in, const std::string & fileName_in, 
-	const std::string & filePath_in, const int & fileSize_in, const int & latestRequest_in,
-	const int & lastBlock_in, const int & lastBlockSize_in, const int & lastSuperBlock_in,
-	const int & currentSuperBlock_in, bool * downloadComplete_flag_in)
+download::download(const std::string & hash_in, const std::string & file_name_in, 
+	const std::string & file_path_in, const int & file_size_in, const int & latest_request_in,
+	const int & last_block_in, const int & last_block_size_in, const int & last_super_block_in,
+	const int & current_super_block_in, bool * download_complete_flag_in)
 {
 	//non-defaults
 	hash = hash_in;
-	fileName = fileName_in;
-	filePath = filePath_in;
-	fileSize = fileSize_in;
-	latestRequest = latestRequest_in;
-	lastBlock = lastBlock_in;
-	lastBlockSize = lastBlockSize_in;
-	lastSuperBlock = lastSuperBlock_in;
-	currentSuperBlock = currentSuperBlock_in;
-	downloadComplete_flag = downloadComplete_flag_in;
+	file_name = file_name_in;
+	file_path = file_path_in;
+	file_size = file_size_in;
+	latest_request = latest_request_in;
+	last_block = last_block_in;
+	last_block_size = last_block_size_in;
+	last_super_block = last_super_block_in;
+	current_super_block = current_super_block_in;
+	download_complete_flag = download_complete_flag_in;
 
 	//defaults
-	downloadComplete = false;
-	downloadSpeed = 0;
+	download_complete = false;
+	download_speed = 0;
 
 #ifdef UNRELIABLE_CLIENT
 	std::srand(time(0));
@@ -39,15 +39,15 @@ download::download(const std::string & hash_in, const std::string & fileName_in,
 	SHA.Init(global::HASH_TYPE);
 }
 
-void download::addBlock(const int & blockNumber, std::string & block)
+void download::add_block(const int & blockNumber, std::string & block)
 {
-	calculateSpeed();
+	calculate_speed();
 
 #ifdef UNRELIABLE_CLIENT
 	int random = rand() % 100;
 	if(random < global::UNRELIABLE_CLIENT_VALUE){
-		std::cout << "testing: client::addBlock(): OOPs! I dropped fileBlock " << blockNumber << "\n";
-		if(blockNumber == lastBlock){
+		std::cout << "testing: client::add_block(): OOPs! I dropped fileBlock " << blockNumber << "\n";
+		if(blockNumber == last_block){
 			block.clear();
 		}
 		else{
@@ -61,8 +61,8 @@ void download::addBlock(const int & blockNumber, std::string & block)
 	block.erase(0, global::S_CTRL_SIZE);
 
 	//add the block to the appropriate superBlock
-	for(std::deque<superBlock>::iterator iter0 = superBuffer.begin(); iter0 != superBuffer.end(); ++iter0){
-		if(iter0->addBlock(blockNumber, block)){
+	for(std::deque<superBlock>::iterator iter0 = Super_Buffer.begin(); iter0 != Super_Buffer.end(); ++iter0){
+		if(iter0->add_block(blockNumber, block)){
 			break;
 		}
 	}
@@ -70,81 +70,81 @@ void download::addBlock(const int & blockNumber, std::string & block)
 	}
 #endif
 
-	//the superBuffer may be empty if the last block is requested more than once
-	if(blockNumber == lastBlock && !superBuffer.empty()){
-		writeSuperBlock(superBuffer.back().container);
-		superBuffer.pop_back();
-		downloadComplete = true;
-		*downloadComplete_flag = true;
+	//the Super_Buffer may be empty if the last block is requested more than once
+	if(blockNumber == last_block && !Super_Buffer.empty()){
+		write_super_block(Super_Buffer.back().container);
+		Super_Buffer.pop_back();
+		download_complete = true;
+		*download_complete_flag = true;
 	}
 }
 
-void download::calculateSpeed()
+void download::calculate_speed()
 {
 	time_t currentTime = time(0);
 
 	bool updated = false;
 	//if the vectors are empty
-	if(downloadSecond.empty()){
-		downloadSecond.push_back(currentTime);
-		secondBytes.push_back(global::BUFFER_SIZE);
+	if(Download_Second.empty()){
+		Download_Second.push_back(currentTime);
+		Second_Bytes.push_back(global::BUFFER_SIZE);
 		updated = true;
 	}
 
 	//get rid of information that's older than what to average
-	if(currentTime - downloadSecond.front() >= global::SPEED_AVERAGE + 2){
-		downloadSecond.erase(downloadSecond.begin());
-		secondBytes.erase(secondBytes.begin());
+	if(currentTime - Download_Second.front() >= global::SPEED_AVERAGE + 2){
+		Download_Second.erase(Download_Second.begin());
+		Second_Bytes.erase(Second_Bytes.begin());
 	}
 
 	//if still on the same second
-	if(!updated && downloadSecond.back() == currentTime){
-		secondBytes.back() += global::BUFFER_SIZE;
+	if(!updated && Download_Second.back() == currentTime){
+		Second_Bytes.back() += global::BUFFER_SIZE;
 		updated = true;
 	}
 
 	//no entry for current second, add one
 	if(!updated){
-		downloadSecond.push_back(currentTime);
-		secondBytes.push_back(global::BUFFER_SIZE);
+		Download_Second.push_back(currentTime);
+		Second_Bytes.push_back(global::BUFFER_SIZE);
 	}
 
 	//count up all the bytes excluding the first and last second
 	int totalBytes = 0;
-	for(int x = 1; x <= downloadSecond.size() - 1; ++x){
-		totalBytes += secondBytes[x];
+	for(int x = 1; x <= Download_Second.size() - 1; ++x){
+		totalBytes += Second_Bytes[x];
 	}
 
 	//divide by the time
-	downloadSpeed = totalBytes / global::SPEED_AVERAGE;
+	download_speed = totalBytes / global::SPEED_AVERAGE;
 }
 
 bool download::complete()
 {
-	return downloadComplete;
+	return download_complete;
 }
 
-const int & download::getBytesExpected()
+const int & download::get_bytes_expected()
 {
-	if(latestRequest == lastBlock){
-		return lastBlockSize;
+	if(latest_request == last_block){
+		return last_block_size;
 	}
 	else{
 		return global::BUFFER_SIZE;
 	}
 }
 
-const std::string & download::getFileName()
+const std::string & download::get_file_name()
 {
-	return fileName;
+	return file_name;
 }
 
-const int & download::getFileSize()
+const int & download::get_file_size()
 {
-	return fileSize;
+	return file_size;
 }
 
-const std::string & download::getHash()
+const std::string & download::get_hash()
 {
 	return hash;
 }
@@ -154,8 +154,8 @@ std::list<std::string> & download::get_IPs()
 	get_IPs_list.clear();
 
 	std::list<connection>::iterator iter_cur, iter_end;
-	iter_cur = currentConnections.begin();
-	iter_end = currentConnections.end();
+	iter_cur = current_conns.begin();
+	iter_end = current_conns.end();
 	while(iter_cur != iter_end){
 		get_IPs_list.push_back(iter_cur->server_IP);
 		++iter_cur;
@@ -164,24 +164,24 @@ std::list<std::string> & download::get_IPs()
 	return get_IPs_list;
 }
 
-const int & download::getLatestRequest()
+const int & download::get_latest_request()
 {
-	return latestRequest;
+	return latest_request;
 }
 
-const int download::getRequest()
+const int download::get_request()
 {
 	/*
 	Write out the oldest superBlocks if they're complete. It's possible the
-	superBuffer could be empty so a check for this is done.
+	Super_Buffer could be empty so a check for this is done.
 	*/
-	if(!superBuffer.empty()){
-		while(superBuffer.back().complete()){
+	if(!Super_Buffer.empty()){
+		while(Super_Buffer.back().complete()){
 
-			writeSuperBlock(superBuffer.back().container);
-			superBuffer.pop_back();
+			write_super_block(Super_Buffer.back().container);
+			Super_Buffer.pop_back();
 
-			if(superBuffer.empty()){
+			if(Super_Buffer.empty()){
 				break;
 			}
 		}
@@ -223,77 +223,77 @@ const int download::getRequest()
 	At this point a new leading SB would be added and that missing FB would be
 	given time to arrive.
 	*/
-	if(superBuffer.empty()){ //P1
-		superBuffer.push_front(superBlock(currentSuperBlock++, lastBlock));
-		latestRequest = superBuffer.front().getRequest();
+	if(Super_Buffer.empty()){ //P1
+		Super_Buffer.push_front(superBlock(current_super_block++, last_block));
+		latest_request = Super_Buffer.front().get_request();
 	}
-	else if(superBuffer.front().allRequested()){ //P2
-		if(superBuffer.size() < 2 && currentSuperBlock <= lastSuperBlock){
-			superBuffer.push_front(superBlock(currentSuperBlock++, lastBlock));
+	else if(Super_Buffer.front().allRequested()){ //P2
+		if(Super_Buffer.size() < 2 && current_super_block <= last_super_block){
+			Super_Buffer.push_front(superBlock(current_super_block++, last_block));
 		}
-		latestRequest = superBuffer.front().getRequest();
+		latest_request = Super_Buffer.front().get_request();
 	}
-	else if(superBuffer.front().halfRequested()){ //P3
-		latestRequest = superBuffer.back().getRequest();
+	else if(Super_Buffer.front().halfRequested()){ //P3
+		latest_request = Super_Buffer.back().get_request();
 	}
 	else{ //P4
-		latestRequest = superBuffer.front().getRequest();
+		latest_request = Super_Buffer.front().get_request();
 	}
 
 	/*
 	Don't return the last block number until it's the absolute last needed by
 	this download. This makes checking for a completed download a lot easier!
 	*/
-	if(latestRequest == lastBlock){
+	if(latest_request == last_block){
 
 		//determine if there are no superBlocks left but the last one
-		if(superBuffer.size() == 1){
+		if(Super_Buffer.size() == 1){
 
 			/*
 			If no superBlock but the last one remains then try getting another
 			request. If the superBlock returns -1 then it doesn't need any other
 			blocks.
 			*/
-			int request = superBuffer.back().getRequest();
+			int request = Super_Buffer.back().get_request();
 
 			//if no other block but the last one is needed
 			if(request == -1){
-				return lastBlock;
+				return last_block;
 			}
 			else{ //if another block is needed
-				latestRequest = request;
-				return latestRequest;
+				latest_request = request;
+				return latest_request;
 			}
 		}
 		else{ //more than one superBlock, serve request from oldest
-			latestRequest = superBuffer.back().getRequest();
-			return latestRequest;
+			latest_request = Super_Buffer.back().get_request();
+			return latest_request;
 		}
 	}
 	else{ //any request but the last one gets returned without the above checking
-		return latestRequest;
+		return latest_request;
 	}
 }
 
-const int & download::getSpeed()
+const int & download::get_speed()
 {
-	return downloadSpeed;
+	return download_speed;
 }
 
-void download::regConnection(std::string & server_IP)
+void download::reg_conn(std::string & server_IP)
 {
 	connection temp(server_IP);
-	currentConnections.push_back(temp);
+	current_conns.push_back(temp);
 }
 
-void download::unregConnection(const std::string & server_IP)
+void download::unreg_conn(const std::string & server_IP)
 {
 	std::list<connection>::iterator iter_cur, iter_end;
-	iter_cur = currentConnections.begin();
-	iter_end = currentConnections.end();
+	iter_cur = current_conns.begin();
+	iter_end = current_conns.end();
 	while(iter_cur != iter_end){
 		if(server_IP == iter_cur->server_IP){
-			currentConnections.erase(iter_cur);
+			current_conns.erase(iter_cur);
 			break;
 		}
 		++iter_cur;
@@ -304,17 +304,17 @@ void download::stop()
 {
 	namespace fs = boost::filesystem;
 
-	downloadComplete = true;
-	superBuffer.clear();
-	fs::path path = fs::system_complete(fs::path(filePath, fs::native));
+	download_complete = true;
+	Super_Buffer.clear();
+	fs::path path = fs::system_complete(fs::path(file_path, fs::native));
 	fs::remove(path);
-	*downloadComplete_flag = true;
+	*download_complete_flag = true;
 }
 
-void download::writeSuperBlock(std::string container[])
+void download::write_super_block(std::string container[])
 {
 #ifdef DEBUG_VERBOSE
-	std::cout << "info: download::writeSuperBlock() was called\n";
+	std::cout << "info: download::write_super_block() was called\n";
 #endif
 /*
 	//get the messageDigest of the superBlock
@@ -324,7 +324,7 @@ void download::writeSuperBlock(std::string container[])
 	SHA.End();
 	std::cout << SHA.StringHash() << "\n";
 */
-	std::ofstream fout(filePath.c_str(), std::ios::app);
+	std::ofstream fout(file_path.c_str(), std::ios::app);
 
 	if(fout.is_open()){
 

@@ -19,16 +19,16 @@ public:
 	superBlock(const int & superBlockNumber_in, const int & lastBlock_in);
 
 	/*
-	addBlock      - returns false if superBlock doesn't need the block, otherwise adds it
+	add_block      - returns false if superBlock doesn't need the block, otherwise adds it
 	allRequested  - all blocks have been requested(but not all necessarily received)
 	complete      - returns true if the superBlock is complete
-	getRequest    - returns the number of a fileBlock this superBlock needs
+	get_request    - returns the number of a fileBlock this superBlock needs
 	halfRequested - returns true if half of the blocks have been requested
 	*/
-	bool addBlock(const int & blockNumber, const std::string & fileBlock);
+	bool add_block(const int & blockNumber, const std::string & fileBlock);
 	bool allRequested();
 	bool complete();
-	int getRequest();
+	int get_request();
 	bool halfRequested();
 
 private:

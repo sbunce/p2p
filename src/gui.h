@@ -17,6 +17,7 @@ class gui : public Gtk::Window
 {
 public:
 	gui();
+	~gui();
 
 private:
 	//Gtk gui objects
@@ -49,7 +50,7 @@ private:
 	Gtk::Menu downloadsPopupMenu;
 	Gtk::Menu searchPopupMenu;
 
-	//the list which the tree views display
+	//the lists which the tree views display
 	Glib::RefPtr<Gtk::ListStore> downloadList;
 	Glib::RefPtr<Gtk::ListStore> uploadList;
 	Glib::RefPtr<Gtk::ListStore> searchList;
@@ -93,6 +94,6 @@ private:
 	exploration Exploration;
 
 	//holds the information from the last search
-	std::list<exploration::infoBuffer> searchInfo;
+	std::list<exploration::info_buffer> searchInfo;
 };
 #endif

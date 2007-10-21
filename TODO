@@ -6,6 +6,10 @@ NEEDED FEATURES
 -There should be a 1 second timer that makes the clientBuffer wait
 between requests of the last block.
 
+-exploration should be moved inside the client.
+
+-client_buffer needs to be generalized.
+
 
 DEFERRED FEATURES
 

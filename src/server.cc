@@ -116,21 +116,21 @@ void server::calculateSpeed(const int & socketfd, const int & file_ID, const int
 
 	//make a new element if there is no speed element for this client
 	if(!found){
-		int fileSize;
+		int file_size;
 		std::string filePath;
-		std::string fileName;
+		std::string file_name;
 
 		//only add an element if we have the file requested
-		if(ServerIndex.getFileInfo(file_ID, fileSize, filePath)){
+		if(ServerIndex.getFileInfo(file_ID, file_size, filePath)){
 
 			speedElement temp;
-			temp.fileName = filePath.substr(filePath.find_last_of("/")+1);
+			temp.file_name = filePath.substr(filePath.find_last_of("/")+1);
 			temp.client_IP = inet_ntoa(addr.sin_addr);
 			temp.file_ID = file_ID;
 			temp.fileBlock = fileBlock;
 			temp.downloadSecond.push_back(currentTime);
 			temp.secondBytes.push_back(global::BUFFER_SIZE);
-			temp.fileSize = fileSize;
+			temp.file_size = file_size;
 			temp.fileBlock = fileBlock;
 
 			uploadSpeed.push_back(temp);
@@ -139,7 +139,7 @@ void server::calculateSpeed(const int & socketfd, const int & file_ID, const int
 	}//end lock scope
 }
 
-int server::getTotalSpeed()
+int server::get_total_speed()
 {
 	int totalBytes = 0;
 
@@ -161,7 +161,7 @@ int server::getTotalSpeed()
 	return speed;
 }
 
-bool server::getUploadInfo(std::vector<infoBuffer> & uploadInfo)
+bool server::getUploadInfo(std::vector<info_buffer> & uploadInfo)
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(uploadSpeedMutex);
@@ -187,7 +187,7 @@ bool server::getUploadInfo(std::vector<infoBuffer> & uploadInfo)
 	iter_cur = uploadSpeed.begin();
 	iter_end = uploadSpeed.end();
 	while(iter_cur != iter_end){
-		float percent = ((iter_cur->fileBlock * global::BUFFER_SIZE) / (float)iter_cur->fileSize) * 100;
+		float percent = ((iter_cur->fileBlock * global::BUFFER_SIZE) / (float)iter_cur->file_size) * 100;
 		if(percent > 100){
 			percent = 100;
 		}
@@ -202,13 +202,13 @@ bool server::getUploadInfo(std::vector<infoBuffer> & uploadInfo)
 		//take average
 		totalBytes = totalBytes / global::SPEED_AVERAGE;
 
-		infoBuffer info;
+		info_buffer info;
 		info.client_IP = iter_cur->client_IP;
 		info.file_ID = iter_cur->file_ID;
-		info.fileName = iter_cur->fileName;
-		info.fileSize = iter_cur->fileSize;
+		info.file_name = iter_cur->file_name;
+		info.file_size = iter_cur->file_size;
 		info.speed = totalBytes;
-		info.percentComplete = (int)percent;
+		info.percent_complete = (int)percent;
 
 		uploadInfo.push_back(info);
 		++iter_cur;
@@ -429,17 +429,17 @@ int server::prepareSendBuffer(const int & socketfd, const int & file_ID, const i
 {
 	sendBuffer[socketfd].clear(); //make sure no residual in the buffer
 
-	//get fileSize/filePath that corresponds to file_ID
-	int fileSize;
+	//get file_size/filePath that corresponds to file_ID
+	int file_size;
 	std::string filePath;
-	if(!ServerIndex.getFileInfo(file_ID, fileSize, filePath)){
+	if(!ServerIndex.getFileInfo(file_ID, file_size, filePath)){
 		//file was not found
 		sendBuffer[socketfd] += global::P_FNF;
 		return 0;
 	}
 
 	//check for valid block request
-	if(blockNumber*(global::BUFFER_SIZE - global::S_CTRL_SIZE) > fileSize){
+	if(blockNumber*(global::BUFFER_SIZE - global::S_CTRL_SIZE) > file_size){
 		//a block past the end of file was requested
 		sendBuffer[socketfd] += global::P_DNE;
 		return 0;
