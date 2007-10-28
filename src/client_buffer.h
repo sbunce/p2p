@@ -5,6 +5,7 @@
 #include <ctime>
 #include <list>
 
+#include "atomic.h"
 #include "download.h"
 #include "global.h"
 
@@ -14,7 +15,7 @@ public:
 	std::string recv_buff; //buffer for partial recvs
 	std::string send_buff; //buffer for partial sends
 
-	client_buffer(const std::string & server_IP_in, int * send_pending_in);
+	client_buffer(const std::string & server_IP_in, atomic<int> * send_pending_in);
 
 	/*
 	add_download       - associate a download with this client_buffer
@@ -65,7 +66,7 @@ private:
 	bool abuse;
 
 	//determines whether the client will send, full description on client.h
-	int * send_pending;
+	atomic<int> * send_pending;
 
 	unsigned int latest_requested; //what block was most recently requested
 	unsigned int bytes_expected;   //how many bytes needed to fulfill request

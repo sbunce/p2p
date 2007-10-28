@@ -13,7 +13,7 @@
 download::download(const std::string & hash_in, const std::string & file_name_in, 
 	const std::string & file_path_in, const int & file_size_in, const int & latest_request_in,
 	const int & last_block_in, const int & last_block_size_in, const int & last_super_block_in,
-	const int & current_super_block_in, bool * download_complete_flag_in)
+	const int & current_super_block_in, atomic<bool> * download_complete_flag_in)
 {
 	//non-defaults
 	hash = hash_in;

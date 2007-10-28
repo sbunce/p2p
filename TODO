@@ -1,5 +1,8 @@
 BUGS
 
+-Make a class to wrap the flag variables. Have a mutex inside this class. Even
+though it works not don't assume atomicity. It's dangerous.
+
 
 NEEDED FEATURES
 

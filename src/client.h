@@ -23,6 +23,7 @@
 #include <string>
 #include <vector>
 
+#include "atomic.h"
 #include "client_buffer.h"
 #include "client_index.h"
 #include "download.h"
@@ -63,8 +64,8 @@ public:
 	void stop_download(const std::string & hash);
 
 private:
-	bool stop_threads; //if true this will trigger thread termination
-	int threads;       //how many threads are currently running
+	atomic<bool> stop_threads; //if true this will trigger thread termination
+	atomic<int> threads;       //how many threads are currently running
 
 	//holds the current time(set in main_thread), used for server timeouts
 	time_t current_time;
@@ -124,10 +125,10 @@ private:
 	then there are no sends pending and write_FDS doesn't need to be used. These
 	are given to the client_buffer elements so they can increment it.
 	*/
-	int * send_pending;
+	atomic<int> * send_pending;
 
 	//true if a download is complete, handed to all downloads
-	bool * download_complete;
+	atomic<bool> * download_complete;
 
 	/*
 	check_timeouts     - checks all servers to see if they've timed out and removes/disconnects if they have

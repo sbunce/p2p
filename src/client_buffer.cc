@@ -3,7 +3,7 @@
 
 #include "client_buffer.h"
 
-client_buffer::client_buffer(const std::string & server_IP_in, int * send_pending_in)
+client_buffer::client_buffer(const std::string & server_IP_in, atomic<int> * send_pending_in)
 {
 	server_IP = server_IP_in;
 	send_pending = send_pending_in;

@@ -9,8 +9,10 @@ client::client()
 {
 	FD_max = 0;
 	FD_ZERO(&master_FDS);
-	send_pending = new int(0);
-	download_complete = new bool(false);
+	send_pending = new atomic<int>;
+	*send_pending = 0;
+	download_complete = new atomic<bool>;
+	*download_complete = false;
 	stop_threads = false;
 	threads = 0;
 	current_time = time(0);
@@ -146,7 +148,7 @@ void client::main_thread()
 	}
 
 	while(true){
-		if(stop_threads){
+		if(stop_threads == true){
 			break;
 		}
 
@@ -156,7 +158,7 @@ void client::main_thread()
 			previous_time = current_time;
 		}
 
-		if(*download_complete){
+		if(*download_complete == true){
 			remove_complete();
 		}
 
@@ -381,7 +383,7 @@ void client::stop()
 	stop_threads = true;
 
 	//spin-lock idea, wait for threads to terminate before returning
-	while(threads){
+	while(threads != 0){
 		usleep(10);
 	}
 }
@@ -522,7 +524,7 @@ void client::server_conn_thread()
 	host/port.
 	*/
 	while(true){
-		if(stop_threads){
+		if(stop_threads == true){
 			break;
 		}
 

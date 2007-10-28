@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "atomic.h"
 #include "super_block.h"
 #include "global.h"
 
@@ -15,7 +16,7 @@ public:
 	download(const std::string & hash_in, const std::string & file_name_in, 
 		const std::string & file_path_in, const int & file_size_in, const int & latest_request_in,
 		const int & last_block_in, const int & last_block_size_in, const int & last_super_block_in,
-		const int & current_super_block_in, bool * download_complete_flag_in);
+		const int & current_super_block_in, atomic<bool> * download_complete_flag_in);
 
 	/*
 	add_block          - add complete fileBlocks to the superBlocks
@@ -86,7 +87,7 @@ private:
 	Tells the client that a download is complete, used when download is complete.
 	Full description in client.h.
 	*/
-	bool * download_complete_flag;
+	atomic<bool> * download_complete_flag;
 
 	//used for speed calculation (automatically set in ctor)
 	int download_speed;     //speed of download(bytes per second)
