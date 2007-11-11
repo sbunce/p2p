@@ -126,7 +126,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	vbox2->pack_start(*menubar, Gtk::PACK_SHRINK, 0);
 	vbox2->pack_start(*notebook1);
 	vbox2->pack_start(*statusbar, Gtk::PACK_SHRINK, 0);
-	window->set_title(("simple-p2p"));
+	window->set_title(global::WINDOW_TITLE);
 	window->resize(800, 600);
 	window->set_modal(false);
 	window->property_window_position().set_value(Gtk::WIN_POS_NONE);

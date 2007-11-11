@@ -5,9 +5,6 @@
 This container locks access to a variable. Operators have been overloaded such
 that the container can be treated like the variable you put in to it. Not all
 operators are present for all types.
-
-WARNING: If one thread is accessing this class and another frees the memory for
-this class then there will be undefined behavior.
 */
 
 //std
@@ -35,6 +32,7 @@ public:
 	const T operator ++ (int);  //post-increment
 	const T operator -- (void); //pre-decrement
 	const T operator -- (int);  //post-decrement
+	operator bool ();           //if(atomicObj){}
 
 	//operators to interact with other atomic instantiations
 	const atomic<T> & operator = (atomic<T> & rval);
@@ -105,6 +103,13 @@ template<class T> const T atomic<T>::operator -- (int)
 {
 	{ boost::mutex::scoped_lock lock(Mutex);
 	return x--;
+	}
+}
+template<class T> atomic<T>::operator bool ()
+{
+	{ boost::mutex::scoped_lock lock(Mutex);
+	if(x){ return true;}
+	else{ return false;}
 	}
 }
 

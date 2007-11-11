@@ -148,7 +148,7 @@ void client::main_thread()
 	}
 
 	while(true){
-		if(stop_threads == true){
+		if(stop_threads){
 			break;
 		}
 
@@ -158,7 +158,7 @@ void client::main_thread()
 			previous_time = current_time;
 		}
 
-		if(*download_complete == true){
+		if(*download_complete){
 			remove_complete();
 		}
 
@@ -383,7 +383,7 @@ void client::stop()
 	stop_threads = true;
 
 	//spin-lock idea, wait for threads to terminate before returning
-	while(threads != 0){
+	while(threads){
 		usleep(10);
 	}
 }
@@ -524,7 +524,7 @@ void client::server_conn_thread()
 	host/port.
 	*/
 	while(true){
-		if(stop_threads == true){
+		if(stop_threads){
 			break;
 		}
 

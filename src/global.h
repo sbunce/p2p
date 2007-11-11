@@ -23,6 +23,8 @@ namespace global
 	//const int ABUSIVE_SERVER_VALUE = 20000;
 	/* ************ END DEBUGGING OPTIONS ************ */
 
+	const std::string WINDOW_TITLE = "p2p";
+
 	const int BUFFER_SIZE = 1024;     //size of one packet
 	const int SUPERBLOCK_SIZE = 2048; //how many fileBlocks are kept in a superBlock
 	const int MAX_CONNECTIONS = 50;   //maximum number of connections both incoming/outgoing

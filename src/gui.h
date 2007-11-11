@@ -97,3 +97,4 @@ private:
 	std::list<exploration::info_buffer> Search_Info;
 };
 #endif
+
