@@ -14,147 +14,225 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	Server.start();
 	Client.start();
 
-	//Gtk objects
 	window = this;
-	quit = NULL;
+	menubar = Gtk::manage(new class Gtk::MenuBar());
+	notebook = Gtk::manage(new class Gtk::Notebook());
+
+	//file menu
 	fileMenu = Gtk::manage(new class Gtk::Menu());
 	fileMenuItem = NULL;
-	about = NULL;
+	quit = NULL;
+
+	//help menu
 	helpMenu = Gtk::manage(new class Gtk::Menu());
 	helpMenuItem = NULL;
-	menubar = Gtk::manage(new class Gtk::MenuBar());
+	about = NULL;
+
+	//notebook tabs
+	searchTab = Gtk::manage(new class Gtk::Label((" Search ")));
+	downloadTab = Gtk::manage(new class Gtk::Label((" Downloads ")));
+	uploadTab = Gtk::manage(new class Gtk::Label((" Uploads ")));
+	trackerTab = Gtk::manage(new class Gtk::Label((" Trackers ")));
+
+	//search related
 	searchEntry = Gtk::manage(new class Gtk::Entry());
 	searchButton = Gtk::manage(new class Gtk::Button(("Search")));
-	hbox1 = Gtk::manage(new class Gtk::HBox(false, 0));
+
+	//tracker related
+	trackerEntry = Gtk::manage(new class Gtk::Entry());
+	trackerButton = Gtk::manage(new class Gtk::Button(("Add")));
+
+	//treeviews for different tabs
 	searchView = Gtk::manage(new class Gtk::TreeView());
 	scrolledwindow1 = Gtk::manage(new class Gtk::ScrolledWindow());
-	vbox1 = Gtk::manage(new class Gtk::VBox(false, 0));
-	searchTab = Gtk::manage(new class Gtk::Label((" Search ")));
-	downloadsView = Gtk::manage(new class Gtk::TreeView());
+	downloadView = Gtk::manage(new class Gtk::TreeView());
 	scrolledwindow2 = Gtk::manage(new class Gtk::ScrolledWindow());
-	downloadsTab = Gtk::manage(new class Gtk::Label((" Downloads ")));
-	uploadsView = Gtk::manage(new class Gtk::TreeView());
+	uploadView = Gtk::manage(new class Gtk::TreeView());
 	scrolledwindow3 = Gtk::manage(new class Gtk::ScrolledWindow());
-	uploadsTab = Gtk::manage(new class Gtk::Label((" Uploads ")));
-	notebook1 = Gtk::manage(new class Gtk::Notebook());
-	statusbar = Gtk::manage(new class Gtk::Statusbar());
-	vbox2 = Gtk::manage(new class Gtk::VBox(false, 0));
+	trackerView = Gtk::manage(new class Gtk::TreeView());
+	scrolledwindow4 = Gtk::manage(new class Gtk::ScrolledWindow());
 
-	//Gtk menu objects
+	//boxes (divides the window)
+	search_HBox = Gtk::manage(new class Gtk::HBox(false, 0));
+	tracker_HBox = Gtk::manage(new class Gtk::HBox(false, 0));
+	search_VBox = Gtk::manage(new class Gtk::VBox(false, 0));
+	main_VBox = Gtk::manage(new class Gtk::VBox(false, 0));
+	tracker_VBox = Gtk::manage(new class Gtk::VBox(false, 0));
+
+	//bottom bar that displays status etc
+	statusbar = Gtk::manage(new class Gtk::Statusbar());
+
+	//add items to File menu
 	fileMenu->items().push_back(Gtk::Menu_Helpers::StockMenuElem(Gtk::StockID("gtk-quit")));
 	quit = (Gtk::ImageMenuItem *)&fileMenu->items().back();
-	helpMenu->items().push_back(Gtk::Menu_Helpers::MenuElem(("_About")));
-	about = (Gtk::MenuItem *)&helpMenu->items().back();
 	menubar->items().push_back(Gtk::Menu_Helpers::MenuElem(("_File"), *fileMenu));
 	fileMenuItem = (Gtk::MenuItem *)&menubar->items().back();
 	menubar->items().push_back(Gtk::Menu_Helpers::MenuElem(("_Help"), *helpMenu));
 	helpMenuItem = (Gtk::MenuItem *)&menubar->items().back();
 
-	//Gtk object settings
-	searchEntry->set_flags(Gtk::CAN_FOCUS);
+	//add items to Help menu
+	helpMenu->items().push_back(Gtk::Menu_Helpers::MenuElem(("_About")));
+	about = (Gtk::MenuItem *)&helpMenu->items().back();
+
+	//search entry box properties
 	searchEntry->set_visibility(true);
 	searchEntry->set_editable(true);
 	searchEntry->set_max_length(0);
 	searchEntry->set_text((""));
-	searchEntry->set_has_frame(true);
-	searchEntry->set_activates_default(false);
-	searchButton->set_flags(Gtk::CAN_FOCUS);
-	searchButton->set_relief(Gtk::RELIEF_NORMAL);
-	hbox1->pack_start(*searchEntry);
-	hbox1->pack_start(*searchButton, Gtk::PACK_SHRINK, 5);
+
+	//tracker entry box properties
+	trackerEntry->set_visibility(true);
+	trackerEntry->set_editable(true);
+	trackerEntry->set_max_length(0);
+	trackerEntry->set_text((""));
+
+	//add search input/button to horizontal box
+	search_HBox->pack_start(*searchEntry);
+	search_HBox->pack_start(*searchButton, Gtk::PACK_SHRINK, 5);
+
+	//add tracker input/button to horizontal box
+	tracker_HBox->pack_start(*trackerEntry);
+	tracker_HBox->pack_start(*trackerButton, Gtk::PACK_SHRINK, 5);
+
+	//TreeView and ScrolledWindow properties
+	//search
 	searchView->set_flags(Gtk::CAN_FOCUS);
-	searchView->set_headers_visible(true);
-	searchView->set_rules_hint(false);
-	searchView->set_reorderable(false);
-	searchView->set_enable_search(true);
+	searchView->set_headers_visible(false); //true enables column labels
+	searchView->set_rules_hint(true);       //true sets alternating row background color
+	searchView->set_reorderable(false);     //allow moving of TreeView elements
+	searchView->set_enable_search(false);   //allow searching of TreeView contents
 	scrolledwindow1->set_flags(Gtk::CAN_FOCUS);
 	scrolledwindow1->set_shadow_type(Gtk::SHADOW_IN);
 	scrolledwindow1->set_policy(Gtk::POLICY_ALWAYS, Gtk::POLICY_ALWAYS);
 	scrolledwindow1->property_window_placement().set_value(Gtk::CORNER_TOP_LEFT);
 	scrolledwindow1->add(*searchView);
-	vbox1->pack_start(*hbox1, Gtk::PACK_SHRINK, 0);
-	vbox1->pack_start(*scrolledwindow1);
-	searchTab->set_alignment(0.5,0.5);
-	searchTab->set_padding(0,0);
-	searchTab->set_justify(Gtk::JUSTIFY_LEFT);
-	searchTab->set_line_wrap(false);
-	searchTab->set_use_markup(false);
-	searchTab->set_selectable(false);
-	downloadsView->set_flags(Gtk::CAN_FOCUS);
-	downloadsView->set_headers_visible(true);
-	downloadsView->set_rules_hint(false);
-	downloadsView->set_reorderable(false);
-	downloadsView->set_enable_search(true);
+	//download
+	downloadView->set_flags(Gtk::CAN_FOCUS);
+	downloadView->set_headers_visible(false);
+	downloadView->set_rules_hint(true);
+	downloadView->set_reorderable(true);
+	downloadView->set_enable_search(false);
 	scrolledwindow2->set_flags(Gtk::CAN_FOCUS);
 	scrolledwindow2->set_shadow_type(Gtk::SHADOW_IN);
 	scrolledwindow2->set_policy(Gtk::POLICY_ALWAYS, Gtk::POLICY_ALWAYS);
 	scrolledwindow2->property_window_placement().set_value(Gtk::CORNER_TOP_LEFT);
-	scrolledwindow2->add(*downloadsView);
-	downloadsTab->set_alignment(0.5,0.5);
-	downloadsTab->set_padding(0,0);
-	downloadsTab->set_justify(Gtk::JUSTIFY_LEFT);
-	downloadsTab->set_line_wrap(false);
-	downloadsTab->set_use_markup(false);
-	downloadsTab->set_selectable(false);
-	uploadsView->set_flags(Gtk::CAN_FOCUS);
-	uploadsView->set_headers_visible(true);
-	uploadsView->set_rules_hint(false);
-	uploadsView->set_reorderable(false);
-	uploadsView->set_enable_search(true);
+	scrolledwindow2->add(*downloadView);
+	//upload
+	uploadView->set_flags(Gtk::CAN_FOCUS);
+	uploadView->set_headers_visible(false);
+	uploadView->set_rules_hint(true);
+	uploadView->set_reorderable(false);
+	uploadView->set_enable_search(false);
 	scrolledwindow3->set_flags(Gtk::CAN_FOCUS);
 	scrolledwindow3->set_shadow_type(Gtk::SHADOW_IN);
 	scrolledwindow3->set_policy(Gtk::POLICY_ALWAYS, Gtk::POLICY_ALWAYS);
 	scrolledwindow3->property_window_placement().set_value(Gtk::CORNER_TOP_LEFT);
-	scrolledwindow3->add(*uploadsView);
-	uploadsTab->set_alignment(0.5,0.5);
-	uploadsTab->set_padding(0,0);
-	uploadsTab->set_justify(Gtk::JUSTIFY_LEFT);
-	uploadsTab->set_line_wrap(false);
-	uploadsTab->set_use_markup(false);
-	uploadsTab->set_selectable(false);
-	notebook1->set_flags(Gtk::CAN_FOCUS);
-	notebook1->set_show_tabs(true);
-	notebook1->set_show_border(true);
-	notebook1->set_tab_pos(Gtk::POS_TOP);
-	notebook1->set_scrollable(false);
-	notebook1->append_page(*vbox1, *searchTab);
-	notebook1->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
-	notebook1->append_page(*scrolledwindow2, *downloadsTab);
-	notebook1->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
-	notebook1->append_page(*scrolledwindow3, *uploadsTab);
-	notebook1->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
-	vbox2->pack_start(*menubar, Gtk::PACK_SHRINK, 0);
-	vbox2->pack_start(*notebook1);
-	vbox2->pack_start(*statusbar, Gtk::PACK_SHRINK, 0);
+	scrolledwindow3->add(*uploadView);
+	//tracker
+	trackerView->set_flags(Gtk::CAN_FOCUS);
+	trackerView->set_headers_visible(false);
+	trackerView->set_rules_hint(true);
+	trackerView->set_reorderable(true);
+	trackerView->set_enable_search(false);
+	scrolledwindow4->set_flags(Gtk::CAN_FOCUS);
+	scrolledwindow4->set_shadow_type(Gtk::SHADOW_IN);
+	scrolledwindow4->set_policy(Gtk::POLICY_ALWAYS, Gtk::POLICY_ALWAYS);
+	scrolledwindow4->property_window_placement().set_value(Gtk::CORNER_TOP_LEFT);
+	scrolledwindow4->add(*trackerView);
+
+	//add search input/button/TreeView to the window for searching
+	search_VBox->pack_start(*search_HBox, Gtk::PACK_SHRINK, 0);
+	search_VBox->pack_start(*scrolledwindow1);
+
+	//add tracker input/button/TreeView to the window for adding trackers
+	tracker_VBox->pack_start(*tracker_HBox, Gtk::PACK_SHRINK, 0);
+	tracker_VBox->pack_start(*scrolledwindow4);
+
+	//tab properties
+	//search
+	searchTab->set_justify(Gtk::JUSTIFY_LEFT);
+	searchTab->set_line_wrap(false);  //allows wrapping of tab label
+	searchTab->set_selectable(false); //true allows selecting of the text from the label
+	//download
+	downloadTab->set_justify(Gtk::JUSTIFY_LEFT);
+	downloadTab->set_line_wrap(false);
+	downloadTab->set_selectable(false);
+	//upload
+	uploadTab->set_justify(Gtk::JUSTIFY_LEFT);
+	uploadTab->set_line_wrap(false);
+	uploadTab->set_selectable(false);
+	//tracker
+	trackerTab->set_justify(Gtk::JUSTIFY_LEFT);
+	trackerTab->set_line_wrap(false);
+	trackerTab->set_selectable(false);
+
+	//set notebook properties
+	notebook->set_flags(Gtk::CAN_FOCUS);
+	notebook->set_show_tabs(true);
+	notebook->set_show_border(true);
+	notebook->set_tab_pos(Gtk::POS_TOP);
+	notebook->set_scrollable(false);
+
+	//add elements to the notebook
+	notebook->append_page(*search_VBox, *searchTab);
+	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
+	notebook->append_page(*scrolledwindow2, *downloadTab);
+	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
+	notebook->append_page(*scrolledwindow3, *uploadTab);
+	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
+	notebook->append_page(*tracker_VBox, *trackerTab);
+	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
+
+	//add items to the main VBox
+	main_VBox->pack_start(*menubar, Gtk::PACK_SHRINK, 0);
+	main_VBox->pack_start(*notebook);
+	main_VBox->pack_start(*statusbar, Gtk::PACK_SHRINK, 0);
+
+	//window properties
 	window->set_title(global::WINDOW_TITLE);
 	window->resize(800, 600);
 	window->set_modal(false);
 	window->property_window_position().set_value(Gtk::WIN_POS_NONE);
 	window->set_resizable(true);
 	window->property_destroy_with_parent().set_value(false);
-	window->add(*vbox2);
+	window->add(*main_VBox);
+
+	//set objects to be visible
+	window->show();
 	quit->show();
 	fileMenuItem->show();
 	about->show();
 	helpMenuItem->show();
 	menubar->show();
+
 	searchEntry->show();
 	searchButton->show();
-	hbox1->show();
+	trackerEntry->show();
+	trackerButton->show();
+
 	searchView->show();
-	scrolledwindow1->show();
-	vbox1->show();
+	downloadView->show();
+	uploadView->show();
+	trackerView->show();
+
 	searchTab->show();
-	downloadsView->show();
+	downloadTab->show();
+	uploadTab->show();
+	trackerTab->show();
+
+	search_HBox->show();
+	search_VBox->show();
+	tracker_HBox->show();
+	tracker_VBox->show();
+	main_VBox->show();
+
+	scrolledwindow1->show();
 	scrolledwindow2->show();
-	downloadsTab->show();
-	uploadsView->show();
 	scrolledwindow3->show();
-	uploadsTab->show();
-	notebook1->show();
+	scrolledwindow4->show();
+
+	notebook->show();
 	statusbar->show();
-	vbox2->show();
-	window->show();
 
 	//Gtk signals
 	quit->signal_activate().connect(sigc::mem_fun(*this, &gui::quit_program), false);
@@ -162,6 +240,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	searchEntry->signal_activate().connect(sigc::mem_fun(*this, &gui::search_input), false);
 	searchButton->signal_clicked().connect(sigc::mem_fun(*this, &gui::search_input), false);
 
+	//set up Gtk::TreeView for each tab
 	download_info_setup();
 	upload_info_setup();
 	search_info_setup();
@@ -185,7 +264,7 @@ void gui::about_program()
 
 void gui::cancel_download()
 {
-	Glib::RefPtr<Gtk::TreeView::Selection> refSelection = downloadsView->get_selection();
+	Glib::RefPtr<Gtk::TreeView::Selection> refSelection = downloadView->get_selection();
 	if(refSelection){
 		Gtk::TreeModel::iterator iter0 = refSelection->get_selected();
 		if(iter0){
@@ -232,8 +311,8 @@ bool gui::download_click(GdkEventButton * event)
 		Gtk::TreeModel::Path path;
 		Gtk::TreeViewColumn columnObject;
 		Gtk::TreeViewColumn * column = &columnObject;
-		if(downloadsView->get_path_at_pos((int)event->x, (int)event->y, path, column, x, y)){
-			downloadsView->set_cursor(path);
+		if(downloadView->get_path_at_pos((int)event->x, (int)event->y, path, column, x, y)){
+			downloadView->set_cursor(path);
 		}
 
 		return true;
@@ -282,22 +361,22 @@ void gui::download_info_setup()
 	column.add(percent_complete_t);
 
 	downloadList = Gtk::ListStore::create(column);
-	downloadsView->set_model(downloadList);
+	downloadView->set_model(downloadList);
 
 	//add columns
-	downloadsView->append_column("  Server IP  ", server_IP_t);
-	downloadsView->append_column("  File Name  ", file_name_t);
-	downloadsView->append_column("  File Size  ", file_size_t);
-	downloadsView->append_column("  Download Speed  ", download_speed_t);
+	downloadView->append_column("  Server IP  ", server_IP_t);
+	downloadView->append_column("  File Name  ", file_name_t);
+	downloadView->append_column("  File Size  ", file_size_t);
+	downloadView->append_column("  Download Speed  ", download_speed_t);
 
 	//display percentage progress bar
 	Gtk::CellRendererProgress * cell = new Gtk::CellRendererProgress;
-	int cols_count = downloadsView->append_column("  Percent Complete  ", *cell);
-	Gtk::TreeViewColumn * pColumn = downloadsView->get_column(cols_count - 1);
+	int cols_count = downloadView->append_column("  Percent Complete  ", *cell);
+	Gtk::TreeViewColumn * pColumn = downloadView->get_column(cols_count - 1);
 	pColumn->add_attribute(cell->property_value(), percent_complete_t);
 
-	//signal for clicks on downloadsView
-	downloadsView->signal_button_press_event().connect(sigc::mem_fun(*this, 
+	//signal for clicks on downloadView
+	downloadView->signal_button_press_event().connect(sigc::mem_fun(*this, 
 		&gui::download_click), false);
 
 	//menu that pops up when right click happens
@@ -458,18 +537,18 @@ void gui::upload_info_setup()
 	column.add(percent_complete_t);
 
 	uploadList = Gtk::ListStore::create(column);
-	uploadsView->set_model(uploadList);
+	uploadView->set_model(uploadList);
 
 	//add columns
-	uploadsView->append_column("  Client IP  ", client_IP_t);
-	uploadsView->append_column("  File Name  ", file_name_t);
-	uploadsView->append_column("  File Size  ", file_size_t);
-	uploadsView->append_column("  Upload Speed  ", uploadSpeed_t);
+	uploadView->append_column("  Client IP  ", client_IP_t);
+	uploadView->append_column("  File Name  ", file_name_t);
+	uploadView->append_column("  File Size  ", file_size_t);
+	uploadView->append_column("  Upload Speed  ", uploadSpeed_t);
 
 	//display percentage progress bar
 	Gtk::CellRendererProgress* cell = new Gtk::CellRendererProgress;
-	int cols_count = uploadsView->append_column("  Percent Complete  ", *cell);
-	Gtk::TreeViewColumn* pColumn = uploadsView->get_column(cols_count - 1);
+	int cols_count = uploadView->append_column("  Percent Complete  ", *cell);
+	Gtk::TreeViewColumn* pColumn = uploadView->get_column(cols_count - 1);
 	pColumn->add_attribute(cell->property_value(), percent_complete_t);
 }
 
@@ -619,7 +698,7 @@ void gui::search_info_setup()
 	searchView->append_column("  File Size  ", file_size_t);
 	searchView->append_column("  Server IP  ", server_IP_t);
 
-	//signal for clicks on downloadsView
+	//signal for clicks on downloadView
 	searchView->signal_button_press_event().connect(sigc::mem_fun(*this, &gui::search_click), false);
 
 	//menu that pops up when right click happens

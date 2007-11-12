@@ -1,7 +1,6 @@
 BUGS
 
--Make a class to wrap the flag variables. Have a mutex inside this class. Even
-though it works not don't assume atomicity. It's dangerous.
+-The server needs a stop() function to stop it's thread.
 
 
 NEEDED FEATURES
@@ -12,6 +11,8 @@ between requests of the last block.
 -exploration should be moved inside the client.
 
 -client_buffer needs to be generalized.
+
+-documentation on all the gui ctor stuff and header stuff needs to be done.
 
 
 DEFERRED FEATURES

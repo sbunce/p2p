@@ -20,46 +20,69 @@ public:
 	~gui();
 
 private:
-	//Gtk gui objects
-	class Gtk::Window * window;
-	class Gtk::ImageMenuItem * quit;
+	class Gtk::Window * window;     //main window
+	class Gtk::MenuBar * menubar;   //main menu, holds Gtk::Menu
+	class Gtk::Notebook * notebook; //main tabs, holds Gtk::Label
+
+	//file menu
 	class Gtk::Menu * fileMenu;
 	class Gtk::MenuItem * fileMenuItem;
-	class Gtk::MenuItem * about;
+	class Gtk::ImageMenuItem * quit;
+
+	//help menu
 	class Gtk::Menu * helpMenu;
 	class Gtk::MenuItem * helpMenuItem;
-	class Gtk::MenuBar * menubar;
-	class Gtk::Entry * searchEntry;
-	class Gtk::Button * searchButton;
-	class Gtk::HBox * hbox1;
+	class Gtk::MenuItem * about;
+
+	//notebook tabs
+	class Gtk::Label * searchTab;
+	class Gtk::Label * downloadTab;
+	class Gtk::Label * uploadTab;
+	class Gtk::Label * trackerTab;
+	
+	//search
+	class Gtk::Entry * searchEntry;   //input box for searches
+	class Gtk::Button * searchButton; //search button
+
+	//tracker add
+	class Gtk::Entry * trackerEntry;   //input box for trackers
+	class Gtk::Button * trackerButton; //tracker button
+
+	//treeviews for different tabs
 	class Gtk::TreeView * searchView;
 	class Gtk::ScrolledWindow * scrolledwindow1;
-	class Gtk::VBox * vbox1;
-	class Gtk::Label * searchTab;
-	class Gtk::TreeView * downloadsView;
+	class Gtk::TreeView * downloadView;
 	class Gtk::ScrolledWindow * scrolledwindow2;
-	class Gtk::Label * downloadsTab;
-	class Gtk::TreeView * uploadsView;
+	class Gtk::TreeView * uploadView;
 	class Gtk::ScrolledWindow * scrolledwindow3;
-	class Gtk::Label * uploadsTab;
-	class Gtk::Notebook * notebook1;
-	class Gtk::Statusbar * statusbar;
-	class Gtk::VBox * vbox2;
+	class Gtk::TreeView * trackerView;
+	class Gtk::ScrolledWindow * scrolledwindow4;
 
-	//popups for when user right clicks on treeviews
+	//boxes (divides the window)
+	class Gtk::HBox * search_HBox;  //separates the search input and search button
+	class Gtk::HBox * tracker_HBox; //separates the tracker input and add button
+	class Gtk::VBox * search_VBox;  //VBox which goes inside the search ScrolledWindow
+	class Gtk::VBox * main_VBox;    //VBox for the main window (separates top from bottom)
+	class Gtk::VBox * tracker_VBox; //VBox which goes inside the tracker ScrolledWindow
+
+	//bottom bar that displays status etc
+	class Gtk::Statusbar * statusbar;
+
+	//popup menus for when user right clicks on treeviews
 	Gtk::Menu downloadsPopupMenu;
 	Gtk::Menu searchPopupMenu;
 
-	//the lists which the tree views display
+	//the lists which the treeviews display
+	Glib::RefPtr<Gtk::ListStore> searchList;
 	Glib::RefPtr<Gtk::ListStore> downloadList;
 	Glib::RefPtr<Gtk::ListStore> uploadList;
-	Glib::RefPtr<Gtk::ListStore> searchList;
+	Glib::RefPtr<Gtk::ListStore> trackerList;
 
 	/*functions associated with Gtk signals
 	about_program   - user clicked Help/About
-	cancel_download - when user clicks Cancel on a download in downloadsView
+	cancel_download - when user clicks Cancel on a download in downloadView
 	download_file   - when user clicks Download on a entry in searchView
-	download_click  - interprets downloadsView input, can pop up a menu
+	download_click  - interprets downloadView input, can pop up a menu
 	quit_program    - when user clicks File/Quit
 	search_input    - when user clicks searchButton or hits enter while on searchEntry
 	search_click    - interprets searchView input, can pop up a menu
@@ -97,4 +120,3 @@ private:
 	std::list<exploration::info_buffer> Search_Info;
 };
 #endif
-

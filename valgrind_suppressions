@@ -289,3 +289,22 @@
    obj:/usr/lib/libglib-2.0.so.0.1400.1
    fun:g_main_loop_run
 }
+
+{
+   <insert a suppression name here>
+   Memcheck:Param
+   writev(vector[...])
+   obj:/lib/ld-2.6.1.so
+   obj:/usr/lib/libX11.so.6.2.0
+   fun:_X11TransWritev
+   fun:_XSend
+   obj:/usr/lib/libXrender.so.1.3.0
+   fun:XRenderSetPictureClipRectangles
+   obj:/usr/lib/libcairo.so.2.11.5
+   obj:/usr/lib/libcairo.so.2.11.5
+   obj:/usr/lib/libcairo.so.2.11.5
+   obj:/usr/lib/libcairo.so.2.11.5
+   obj:/usr/lib/libcairo.so.2.11.5
+   obj:/usr/lib/libcairo.so.2.11.5
+}
+
