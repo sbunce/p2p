@@ -27,6 +27,7 @@
 #include "client_buffer.h"
 #include "client_index.h"
 #include "download.h"
+#include "download_file.h"
 #include "exploration.h"
 #include "global.h"
 

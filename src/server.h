@@ -103,7 +103,6 @@ private:
 	int send_pending;
 
 	/*
-	decode_int          - turns four char's in to a 32bit integer starting at 'begin'
 	disconnect          - disconnect client and remove socket from master set
 	calculate_speed     - process the sendQueue and update Upload_Speed
 	main_thread         - where the party is at
@@ -114,7 +113,6 @@ private:
 	sendBlock           - sends a file_block to a client
 	stateTick           - do pending actions
 	*/
-	unsigned int decode_int(const int & begin, char recvBuffer[]);
 	void disconnect(const int & socketfd);
 	void calculate_speed(const int & socketfd, const int & file_ID, const int & file_block);
 	void main_thread();

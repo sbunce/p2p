@@ -91,10 +91,8 @@ private:
 	std::list<download_holder> Download;
 
 	/*
-	encode_int       - converts 32bit integer to 4 chars
 	rotate_downloads - moves Download_iter through Download in a circular fashion
 	*/
-	std::string encode_int(const unsigned int & number);
 	void rotate_downloads();
 };
 #endif

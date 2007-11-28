@@ -6,7 +6,7 @@ CCL = g++
 
 #GPROF = -pg
 
-OBJECTS = main.o client.o client_buffer.o download.o client_index.o \
+OBJECTS = main.o client.o client_buffer.o download.o download_file.o client_index.o \
 	exploration.o gui.o gui_about.o hash.o server.o server_index.o sha.o \
 	super_block.o
 
@@ -23,14 +23,17 @@ main.o: main.cc gui.o
 client.o: client.cc client.h client_buffer.o client_index.o exploration.o global.h 
 	$(CC) client.cc
 
-client_buffer.o: client_buffer.cc client_buffer.h download.o global.h
+client_buffer.o: client_buffer.cc client_buffer.h download.o global.h conversion.h
 	$(CC) client_buffer.cc
 
 client_index.o: client_index.cc client_index.h download.o exploration.o global.h
 	$(CC) client_index.cc
 
-download.o: download.cc download.h hash.o super_block.o global.h
+download.o: download.cc download.h global.h
 	$(CC) download.cc
+
+download_file.o: download_file.cc download_file.h hash.o super_block.o global.h
+	$(CC) download_file.cc
 
 exploration.o: exploration.cc exploration.h global.h
 	$(CC) exploration.cc
@@ -44,7 +47,7 @@ gui_about.o: gui_about.cc gui_about.h global.h
 hash.o: hash.cc hash.h sha.o global.h
 	$(CC) hash.cc
 
-server.o: server.cc server.h server_index.o global.h
+server.o: server.cc server.h server_index.o global.h conversion.h
 	$(CC) server.cc
 
 server_index.o: server_index.cc server_index.h global.h

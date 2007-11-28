@@ -50,20 +50,20 @@ private:
 
 	//treeviews for different tabs
 	class Gtk::TreeView * searchView;
-	class Gtk::ScrolledWindow * scrolledwindow1;
+	class Gtk::ScrolledWindow * search_scrolledWindow;
 	class Gtk::TreeView * downloadView;
-	class Gtk::ScrolledWindow * scrolledwindow2;
+	class Gtk::ScrolledWindow * download_scrolledWindow;
 	class Gtk::TreeView * uploadView;
-	class Gtk::ScrolledWindow * scrolledwindow3;
+	class Gtk::ScrolledWindow * upload_scrolledWindow;
 	class Gtk::TreeView * trackerView;
-	class Gtk::ScrolledWindow * scrolledwindow4;
+	class Gtk::ScrolledWindow * tracker_scrolledWindow;
 
 	//boxes (divides the window)
 	class Gtk::HBox * search_HBox;  //separates the search input and search button
 	class Gtk::HBox * tracker_HBox; //separates the tracker input and add button
-	class Gtk::VBox * search_VBox;  //VBox which goes inside the search ScrolledWindow
+	class Gtk::VBox * search_VBox;  //VBox which goes inside search_scrolledWindow
 	class Gtk::VBox * main_VBox;    //VBox for the main window (separates top from bottom)
-	class Gtk::VBox * tracker_VBox; //VBox which goes inside the tracker ScrolledWindow
+	class Gtk::VBox * tracker_VBox; //VBox which goes inside the tracker_scrolledWindow
 
 	//bottom bar that displays status etc
 	class Gtk::Statusbar * statusbar;

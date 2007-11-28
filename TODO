@@ -1,9 +1,13 @@
 BUGS
 
--The server needs a stop() function to stop it's thread.
+-Add a stop function to the server to stop the server thread. Make it so servers
+can be properly created and destroyed.
 
 
 NEEDED FEATURES
+
+-Work on migrating functions which should be generic to download. Work on
+clientBuffer interaction with download.
 
 -There should be a 1 second timer that makes the clientBuffer wait
 between requests of the last block.
@@ -31,5 +35,6 @@ trusts etc. Have an option to limit trust levels to direct trust only, one
 level inheritance and all level inheritance.
 
 -A hash tree should be used to minimize the amount of data a person has to get
-from an authoritative source.
+from an authoritative source. Template bst, add function to retrieve child
+tree nodes.
 

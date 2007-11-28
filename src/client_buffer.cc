@@ -1,7 +1,7 @@
-#include <bitset>
 #include <iostream>
 
 #include "client_buffer.h"
+#include "conversion.h"
 
 client_buffer::client_buffer(const std::string & server_IP_in, atomic<int> * send_pending_in)
 {
@@ -29,22 +29,6 @@ void client_buffer::add_download(const unsigned int & file_ID, download * new_do
 const bool client_buffer::empty()
 {
 	return Download.empty();
-}
-
-std::string client_buffer::encode_int(const unsigned int & number)
-{
-	std::string encodedNumber;
-	std::bitset<32> bs = number;
-	std::bitset<32> bs_temp;
-
-	for(int x=0; x<4; ++x){
-		bs_temp = bs;
-		bs_temp <<= 8*x;
-		bs_temp >>= 24;
-		encodedNumber += (unsigned char)bs_temp.to_ulong();
-	}
-
-	return encodedNumber;
 }
 
 const std::string & client_buffer::get_IP()
@@ -85,7 +69,7 @@ void client_buffer::prepare_request()
 		rotate_downloads();
 		latest_requested = Download_iter->Download->get_request();
 		bytes_expected = Download_iter->Download->get_bytes_expected();
-		send_buff = global::P_SBL + encode_int(Download_iter->file_ID) + encode_int(latest_requested);
+		send_buff = global::P_SBL + conversion::encode_int(Download_iter->file_ID) + conversion::encode_int(latest_requested);
 		++(*send_pending);
 		ready = false;
 	}

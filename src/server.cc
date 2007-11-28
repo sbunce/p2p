@@ -6,6 +6,7 @@
 #include <sstream>
 #include <time.h>
 
+#include "conversion.h"
 #include "server.h"
 
 server::server()
@@ -300,21 +301,6 @@ bool server::new_conn(const int & listener)
 	return true;
 }
 
-unsigned int server::decode_int(const int & begin, char recvBuffer[])
-{
-	std::bitset<32> bs(0);
-	std::bitset<32> bs_temp;
-
-	int y = 3;
-	for(int x=begin; x<begin+4; ++x){
-		bs_temp = (unsigned char)recvBuffer[x];
-		bs_temp <<= 8*y--;
-		bs |= bs_temp;
-	}
-
-	return (unsigned int)bs.to_ulong();
-}
-
 void server::main_thread()
 {
 	//set listening socket
@@ -478,8 +464,8 @@ void server::process_request(const int & socketfd, char recvBuffer[], const int 
 
 		if(recvBuffer[0] == global::P_SBL){
 
-			int file_ID = decode_int(1, recvBuffer);
-			int blockNumber = decode_int(5, recvBuffer);
+			int file_ID = conversion::decode_int(1, recvBuffer);
+			int blockNumber = conversion::decode_int(5, recvBuffer);
 
 			prepare_send_buffer(socketfd, file_ID, blockNumber);
 

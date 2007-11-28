@@ -44,13 +44,13 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 
 	//treeviews for different tabs
 	searchView = Gtk::manage(new class Gtk::TreeView());
-	scrolledwindow1 = Gtk::manage(new class Gtk::ScrolledWindow());
+	search_scrolledWindow = Gtk::manage(new class Gtk::ScrolledWindow());
 	downloadView = Gtk::manage(new class Gtk::TreeView());
-	scrolledwindow2 = Gtk::manage(new class Gtk::ScrolledWindow());
+	download_scrolledWindow = Gtk::manage(new class Gtk::ScrolledWindow());
 	uploadView = Gtk::manage(new class Gtk::TreeView());
-	scrolledwindow3 = Gtk::manage(new class Gtk::ScrolledWindow());
+	upload_scrolledWindow = Gtk::manage(new class Gtk::ScrolledWindow());
 	trackerView = Gtk::manage(new class Gtk::TreeView());
-	scrolledwindow4 = Gtk::manage(new class Gtk::ScrolledWindow());
+	tracker_scrolledWindow = Gtk::manage(new class Gtk::ScrolledWindow());
 
 	//boxes (divides the window)
 	search_HBox = Gtk::manage(new class Gtk::HBox(false, 0));
@@ -101,52 +101,52 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	searchView->set_rules_hint(true);       //true sets alternating row background color
 	searchView->set_reorderable(false);     //allow moving of TreeView elements
 	searchView->set_enable_search(false);   //allow searching of TreeView contents
-	scrolledwindow1->set_flags(Gtk::CAN_FOCUS);
-	scrolledwindow1->set_shadow_type(Gtk::SHADOW_IN);
-	scrolledwindow1->set_policy(Gtk::POLICY_ALWAYS, Gtk::POLICY_ALWAYS);
-	scrolledwindow1->property_window_placement().set_value(Gtk::CORNER_TOP_LEFT);
-	scrolledwindow1->add(*searchView);
+	search_scrolledWindow->set_flags(Gtk::CAN_FOCUS);
+	search_scrolledWindow->set_shadow_type(Gtk::SHADOW_IN);
+	search_scrolledWindow->set_policy(Gtk::POLICY_ALWAYS, Gtk::POLICY_ALWAYS);
+	search_scrolledWindow->property_window_placement().set_value(Gtk::CORNER_TOP_LEFT);
+	search_scrolledWindow->add(*searchView);
 	//download
 	downloadView->set_flags(Gtk::CAN_FOCUS);
 	downloadView->set_headers_visible(false);
 	downloadView->set_rules_hint(true);
 	downloadView->set_reorderable(true);
 	downloadView->set_enable_search(false);
-	scrolledwindow2->set_flags(Gtk::CAN_FOCUS);
-	scrolledwindow2->set_shadow_type(Gtk::SHADOW_IN);
-	scrolledwindow2->set_policy(Gtk::POLICY_ALWAYS, Gtk::POLICY_ALWAYS);
-	scrolledwindow2->property_window_placement().set_value(Gtk::CORNER_TOP_LEFT);
-	scrolledwindow2->add(*downloadView);
+	download_scrolledWindow->set_flags(Gtk::CAN_FOCUS);
+	download_scrolledWindow->set_shadow_type(Gtk::SHADOW_IN);
+	download_scrolledWindow->set_policy(Gtk::POLICY_ALWAYS, Gtk::POLICY_ALWAYS);
+	download_scrolledWindow->property_window_placement().set_value(Gtk::CORNER_TOP_LEFT);
+	download_scrolledWindow->add(*downloadView);
 	//upload
 	uploadView->set_flags(Gtk::CAN_FOCUS);
 	uploadView->set_headers_visible(false);
 	uploadView->set_rules_hint(true);
 	uploadView->set_reorderable(false);
 	uploadView->set_enable_search(false);
-	scrolledwindow3->set_flags(Gtk::CAN_FOCUS);
-	scrolledwindow3->set_shadow_type(Gtk::SHADOW_IN);
-	scrolledwindow3->set_policy(Gtk::POLICY_ALWAYS, Gtk::POLICY_ALWAYS);
-	scrolledwindow3->property_window_placement().set_value(Gtk::CORNER_TOP_LEFT);
-	scrolledwindow3->add(*uploadView);
+	upload_scrolledWindow->set_flags(Gtk::CAN_FOCUS);
+	upload_scrolledWindow->set_shadow_type(Gtk::SHADOW_IN);
+	upload_scrolledWindow->set_policy(Gtk::POLICY_ALWAYS, Gtk::POLICY_ALWAYS);
+	upload_scrolledWindow->property_window_placement().set_value(Gtk::CORNER_TOP_LEFT);
+	upload_scrolledWindow->add(*uploadView);
 	//tracker
 	trackerView->set_flags(Gtk::CAN_FOCUS);
 	trackerView->set_headers_visible(false);
 	trackerView->set_rules_hint(true);
 	trackerView->set_reorderable(true);
 	trackerView->set_enable_search(false);
-	scrolledwindow4->set_flags(Gtk::CAN_FOCUS);
-	scrolledwindow4->set_shadow_type(Gtk::SHADOW_IN);
-	scrolledwindow4->set_policy(Gtk::POLICY_ALWAYS, Gtk::POLICY_ALWAYS);
-	scrolledwindow4->property_window_placement().set_value(Gtk::CORNER_TOP_LEFT);
-	scrolledwindow4->add(*trackerView);
+	tracker_scrolledWindow->set_flags(Gtk::CAN_FOCUS);
+	tracker_scrolledWindow->set_shadow_type(Gtk::SHADOW_IN);
+	tracker_scrolledWindow->set_policy(Gtk::POLICY_ALWAYS, Gtk::POLICY_ALWAYS);
+	tracker_scrolledWindow->property_window_placement().set_value(Gtk::CORNER_TOP_LEFT);
+	tracker_scrolledWindow->add(*trackerView);
 
 	//add search input/button/TreeView to the window for searching
 	search_VBox->pack_start(*search_HBox, Gtk::PACK_SHRINK, 0);
-	search_VBox->pack_start(*scrolledwindow1);
+	search_VBox->pack_start(*search_scrolledWindow);
 
 	//add tracker input/button/TreeView to the window for adding trackers
 	tracker_VBox->pack_start(*tracker_HBox, Gtk::PACK_SHRINK, 0);
-	tracker_VBox->pack_start(*scrolledwindow4);
+	tracker_VBox->pack_start(*tracker_scrolledWindow);
 
 	//tab properties
 	//search
@@ -176,9 +176,9 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	//add elements to the notebook
 	notebook->append_page(*search_VBox, *searchTab);
 	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
-	notebook->append_page(*scrolledwindow2, *downloadTab);
+	notebook->append_page(*download_scrolledWindow, *downloadTab);
 	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
-	notebook->append_page(*scrolledwindow3, *uploadTab);
+	notebook->append_page(*upload_scrolledWindow, *uploadTab);
 	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
 	notebook->append_page(*tracker_VBox, *trackerTab);
 	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
@@ -189,7 +189,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	main_VBox->pack_start(*statusbar, Gtk::PACK_SHRINK, 0);
 
 	//window properties
-	window->set_title(global::WINDOW_TITLE);
+	window->set_title(global::NAME);
 	window->resize(800, 600);
 	window->set_modal(false);
 	window->property_window_position().set_value(Gtk::WIN_POS_NONE);
@@ -226,10 +226,10 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	tracker_VBox->show();
 	main_VBox->show();
 
-	scrolledwindow1->show();
-	scrolledwindow2->show();
-	scrolledwindow3->show();
-	scrolledwindow4->show();
+	search_scrolledWindow->show();
+	download_scrolledWindow->show();
+	upload_scrolledWindow->show();
+	tracker_scrolledWindow->show();
 
 	notebook->show();
 	statusbar->show();

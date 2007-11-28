@@ -414,7 +414,7 @@ bool client::start_download(exploration::info_buffer info)
 	int lastSuperBlock = lastBlock / global::SUPERBLOCK_SIZE;
 	int current_super_block = info.current_super_block;
 
-	download * Download = new download(
+	download * Download = new download_file(
 		info.hash,
 		info.file_name,
 		filePath,
