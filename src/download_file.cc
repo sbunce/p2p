@@ -29,7 +29,6 @@ download_file::download_file(const std::string & hash_in, const std::string & fi
 
 	//defaults
 	download_complete = false;
-	download_speed = 0;
 
 #ifdef UNRELIABLE_CLIENT
 	std::srand(time(0));
@@ -39,7 +38,7 @@ download_file::download_file(const std::string & hash_in, const std::string & fi
 	SHA.Init(global::HASH_TYPE);
 }
 
-void download_file::add_block(const int & blockNumber, std::string & block)
+void download_file::response(const int & request_number, std::string & block)
 {
 	calculate_speed();
 
@@ -62,7 +61,7 @@ void download_file::add_block(const int & blockNumber, std::string & block)
 
 	//add the block to the appropriate super_block
 	for(std::deque<super_block>::iterator iter0 = Super_Buffer.begin(); iter0 != Super_Buffer.end(); ++iter0){
-		if(iter0->add_block(blockNumber, block)){
+		if(iter0->add_block(request_number, block)){
 			break;
 		}
 	}
@@ -71,7 +70,7 @@ void download_file::add_block(const int & blockNumber, std::string & block)
 #endif
 
 	//the Super_Buffer may be empty if the last block is requested more than once
-	if(blockNumber == last_block && !Super_Buffer.empty()){
+	if(request_number == last_block && !Super_Buffer.empty()){
 		write_super_block(Super_Buffer.back().container);
 		Super_Buffer.pop_back();
 		download_complete = true;
@@ -79,52 +78,12 @@ void download_file::add_block(const int & blockNumber, std::string & block)
 	}
 }
 
-void download_file::calculate_speed()
-{
-	time_t currentTime = time(0);
-
-	bool updated = false;
-	//if the vectors are empty
-	if(Download_Second.empty()){
-		Download_Second.push_back(currentTime);
-		Second_Bytes.push_back(global::BUFFER_SIZE);
-		updated = true;
-	}
-
-	//get rid of information that's older than what to average
-	if(currentTime - Download_Second.front() >= global::SPEED_AVERAGE + 2){
-		Download_Second.erase(Download_Second.begin());
-		Second_Bytes.erase(Second_Bytes.begin());
-	}
-
-	//if still on the same second
-	if(!updated && Download_Second.back() == currentTime){
-		Second_Bytes.back() += global::BUFFER_SIZE;
-		updated = true;
-	}
-
-	//no entry for current second, add one
-	if(!updated){
-		Download_Second.push_back(currentTime);
-		Second_Bytes.push_back(global::BUFFER_SIZE);
-	}
-
-	//count up all the bytes excluding the first and last second
-	int totalBytes = 0;
-	for(int x = 1; x <= Download_Second.size() - 1; ++x){
-		totalBytes += Second_Bytes[x];
-	}
-
-	//divide by the time
-	download_speed = totalBytes / global::SPEED_AVERAGE;
-}
-
 bool download_file::complete()
 {
 	return download_complete;
 }
 
-const int & download_file::get_bytes_expected()
+const int & download_file::bytes_expected()
 {
 	if(latest_request == last_block){
 		return last_block_size;

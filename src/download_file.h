@@ -20,9 +20,9 @@ public:
 		const int & current_super_block_in, atomic<bool> * download_complete_flag_in);
 
 	/*
-	add_block          - add complete fileBlocks to the superBlocks
+	response          - add complete fileBlocks to the superBlocks
 	completed          - returns true if download completed
-	get_bytes_expected - returns the number of bytes to expect for the latest request
+	bytes_expected - returns the number of bytes to expect for the latest request
 	get_file_name      - returns the file_name of the download
 	get_file_size      - returns the file_size of the file being downloaded(bytes)
 	get_hash           - returns the hash (UID) of this download
@@ -31,9 +31,9 @@ public:
 	get_speed          - returns the speed of this download
 	stop               - stops the download by marking it as completed
 	*/
-	virtual void add_block(const int & blockNumber, std::string & block);
+	virtual void response(const int & request_number, std::string & block);
 	virtual bool complete();
-	virtual const int & get_bytes_expected();
+	virtual const int & bytes_expected();
 	virtual const std::string & get_file_name();
 	virtual const int & get_file_size();
 	virtual const std::string & get_hash();
@@ -62,8 +62,6 @@ private:
 	*/
 	atomic<bool> * download_complete_flag;
 
-	//used for speed calculation (automatically set in ctor)
-	int download_speed;     //speed of download(bytes per second)
 	bool download_complete; //true when the download is completed
 
 	/*
@@ -75,15 +73,9 @@ private:
 	*/
 	std::deque<super_block> Super_Buffer;
 
-	//these vectors are parallel and used for download speed calculation
-	std::vector<int> Download_Second; //second at which Second_Bytes were downloaded
-	std::vector<int> Second_Bytes;    //bytes in the second
-
 	/*
-	calculate_speed - calculates the download speed
 	writeTree       - writes a super_block to file
 	*/
-	void calculate_speed();
 	void write_super_block(std::string container[]);
 };
 #endif

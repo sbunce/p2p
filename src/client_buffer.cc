@@ -7,7 +7,6 @@ client_buffer::client_buffer(const std::string & server_IP_in, atomic<int> * sen
 {
 	server_IP = server_IP_in;
 	send_pending = send_pending_in;
-	bytes_expected = 0;
 	latest_requested = 0;
 	recv_buff.reserve(global::BUFFER_SIZE);
 	send_buff.reserve(global::C_CTRL_SIZE);
@@ -43,13 +42,13 @@ const time_t & client_buffer::get_last_seen()
 
 void client_buffer::post_recv()
 {
-	if(recv_buff.size() == bytes_expected){
-		Download_iter->Download->add_block(latest_requested, recv_buff);
+	if(recv_buff.size() == Download_iter->Download->bytes_expected()){
+		Download_iter->Download->response(latest_requested, recv_buff);
 		recv_buff.clear();
 		ready = true;
 	}
 
-	if(recv_buff.size() > bytes_expected){
+	if(recv_buff.size() > Download_iter->Download->bytes_expected()){
 		abuse = true;
 	}
 
@@ -68,7 +67,6 @@ void client_buffer::prepare_request()
 	if(ready && !terminating){
 		rotate_downloads();
 		latest_requested = Download_iter->Download->get_request();
-		bytes_expected = Download_iter->Download->get_bytes_expected();
 		send_buff = global::P_SBL + conversion::encode_int(Download_iter->file_ID) + conversion::encode_int(latest_requested);
 		++(*send_pending);
 		ready = false;

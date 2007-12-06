@@ -45,10 +45,7 @@ private:
 	//IP associated with this serverElement
 	std::string server_IP;
 
-	/*
-	Unix timestamp of when the last communication was received from the server
-	associated with this client_buffer.
-	*/
+	//when the last communication was received from the server, used for timeout
 	time_t last_seen;
 
 	/*
@@ -69,7 +66,6 @@ private:
 	atomic<int> * send_pending;
 
 	unsigned int latest_requested; //what block was most recently requested
-	unsigned int bytes_expected;   //how many bytes needed to fulfill request
 
 	class download_holder
 	{
@@ -86,7 +82,6 @@ private:
 
 	//what Download this socket is currently serving
 	std::list<download_holder>::iterator Download_iter;
-
 	//all downloads that this client_buffer is serving
 	std::list<download_holder> Download;
 

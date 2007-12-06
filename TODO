@@ -9,14 +9,9 @@ NEEDED FEATURES
 -Work on migrating functions which should be generic to download. Work on
 clientBuffer interaction with download.
 
--There should be a 1 second timer that makes the clientBuffer wait
-between requests of the last block.
-
--exploration should be moved inside the client.
-
--client_buffer needs to be generalized.
-
--documentation on all the gui ctor stuff and header stuff needs to be done.
+-There should be a 1 second timer that makes the client_buffer wait between 
+requests of the last block so the last block doesn't get requested from everyone
+all at once.
 
 
 DEFERRED FEATURES
