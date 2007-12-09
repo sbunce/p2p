@@ -18,6 +18,11 @@ client_buffer::client_buffer(const std::string & server_IP_in, atomic<int> * sen
 	last_seen = time(0);
 }
 
+client_buffer::~client_buffer()
+{
+	unreg_all();
+}
+
 void client_buffer::add_download(const unsigned int & file_ID, download * new_download)
 {
 	download_holder DownloadHolder(file_ID, new_download);
@@ -42,13 +47,13 @@ const time_t & client_buffer::get_last_seen()
 
 void client_buffer::post_recv()
 {
-	if(recv_buff.size() == Download_iter->Download->bytes_expected()){
+	if(recv_buff.size() == bytes_expected){
 		Download_iter->Download->response(latest_requested, recv_buff);
 		recv_buff.clear();
 		ready = true;
 	}
 
-	if(recv_buff.size() > Download_iter->Download->bytes_expected()){
+	if(recv_buff.size() > bytes_expected){
 		abuse = true;
 	}
 
@@ -67,6 +72,7 @@ void client_buffer::prepare_request()
 	if(ready && !terminating){
 		rotate_downloads();
 		latest_requested = Download_iter->Download->get_request();
+		bytes_expected = Download_iter->Download->bytes_expected();
 		send_buff = global::P_SBL + conversion::encode_int(Download_iter->file_ID) + conversion::encode_int(latest_requested);
 		++(*send_pending);
 		ready = false;
@@ -86,7 +92,6 @@ void client_buffer::rotate_downloads()
 
 const bool client_buffer::terminate_download(const std::string & hash)
 {
-	//if currently on this download then still expecting bytes
 	if(hash == Download_iter->Download->get_hash()){
 		if(ready){ //if not expecting any more bytes
 			Download_iter->Download->unreg_conn(server_IP);
@@ -115,7 +120,7 @@ const bool client_buffer::terminate_download(const std::string & hash)
 	return true;
 }
 
-void client_buffer::unregister_all()
+void client_buffer::unreg_all()
 {
 	std::list<download_holder>::iterator iter_cur, iter_end;
 	iter_cur = Download.begin();

@@ -65,73 +65,73 @@ template<class T> const T atomic<T>::get_value()
 //operators to interact with the type atomic class holds
 template<class T> const T atomic<T>::operator = (const T & rval)
 {
-	{ boost::mutex::scoped_lock lock(Mutex);
+//	{ boost::mutex::scoped_lock lock(Mutex);
 	return x = rval;
-	}
+//	}
 }
 template<class T> bool atomic<T>::operator == (const T & rval)
 {
-	{ boost::mutex::scoped_lock lock(Mutex);
+//	{ boost::mutex::scoped_lock lock(Mutex);
 	return x == rval;
-	}
+//	}
 }
 template<class T> bool atomic<T>::operator != (const T & rval)
 {
-	{ boost::mutex::scoped_lock lock(Mutex);
+//	{ boost::mutex::scoped_lock lock(Mutex);
 	return x != rval;
-	}
+//	}
 }
 template<class T> const T atomic<T>::operator ++ (void)
 {
-	{ boost::mutex::scoped_lock lock(Mutex);
+//	{ boost::mutex::scoped_lock lock(Mutex);
 	return ++x;
-	}
+//	}
 }
 template<class T> const T atomic<T>::operator ++ (int)
 {
-	{ boost::mutex::scoped_lock lock(Mutex);
+//	{ boost::mutex::scoped_lock lock(Mutex);
 	return x++;
-	}
+//	}
 }
 template<class T> const T atomic<T>::operator -- (void)
 {
-	{ boost::mutex::scoped_lock lock(Mutex);
+//	{ boost::mutex::scoped_lock lock(Mutex);
 	return --x;
-	}
+//	}
 }
 template<class T> const T atomic<T>::operator -- (int)
 {
-	{ boost::mutex::scoped_lock lock(Mutex);
+//	{ boost::mutex::scoped_lock lock(Mutex);
 	return x--;
-	}
+//	}
 }
 template<class T> atomic<T>::operator bool ()
 {
-	{ boost::mutex::scoped_lock lock(Mutex);
+//	{ boost::mutex::scoped_lock lock(Mutex);
 	if(x){ return true;}
 	else{ return false;}
-	}
+//	}
 }
 
 //operators to interact with other atomic classes
 template<class T> const atomic<T> & atomic<T>::operator = (atomic<T> & rval)
 {
-	{ boost::mutex::scoped_lock lock(Mutex);
+//	{ boost::mutex::scoped_lock lock(Mutex);
 	x = rval.get_value();
 	return *this;
-	}
+//	}
 }
 template<class T> bool atomic<T>::operator == (atomic<T> & rval)
 {
-	{ boost::mutex::scoped_lock lock(Mutex);
+//	{ boost::mutex::scoped_lock lock(Mutex);
 	return x == rval.get_value();
-	}
+//	}
 }
 template<class T> bool atomic<T>::operator != (atomic<T> & rval)
 {
-	{ boost::mutex::scoped_lock lock(Mutex);
+//	{ boost::mutex::scoped_lock lock(Mutex);
 	return x != rval.get_value();
-	}
+//	}
 }
 template<class T> std::ostream & operator << (std::ostream & lval, atomic<T> & rval)
 {

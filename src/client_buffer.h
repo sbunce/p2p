@@ -16,6 +16,7 @@ public:
 	std::string send_buff; //buffer for partial sends
 
 	client_buffer(const std::string & server_IP_in, atomic<int> * send_pending_in);
+	~client_buffer();
 
 	/*
 	add_download       - associate a download with this client_buffer
@@ -28,8 +29,6 @@ public:
 	terminate_download - removes a download_holder from Download which corresponds to hash
 	                     returns true if the it can delete the download or if it doesn't exist
 	                     returns false if the ClientBuffer is expecting data from the server
-	unregister_all     - unregisters this connection with all associated downloads
-	                     this needs to be run before deleting this client_buffer
 	*/
 	void add_download(const unsigned int & file_ID, download * new_download);
 	const bool empty();
@@ -39,7 +38,7 @@ public:
 	void post_send();
 	void prepare_request();
 	const bool terminate_download(const std::string & hash);
-	void unregister_all();
+
 
 private:
 	//IP associated with this serverElement
@@ -66,6 +65,7 @@ private:
 	atomic<int> * send_pending;
 
 	unsigned int latest_requested; //what block was most recently requested
+	unsigned int bytes_expected;   //how many bytes needed to fulfill request
 
 	class download_holder
 	{
@@ -87,7 +87,9 @@ private:
 
 	/*
 	rotate_downloads - moves Download_iter through Download in a circular fashion
+	unregister_all   - unregisters this connection with all associated downloads
 	*/
 	void rotate_downloads();
+	void unreg_all();
 };
 #endif

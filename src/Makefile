@@ -20,19 +20,19 @@ main: $(OBJECTS)
 main.o: main.cc gui.o
 	$(CC) main.cc `pkg-config gtkmm-2.4 --cflags`
 
-client.o: client.cc client.h client_buffer.o client_index.o exploration.o global.h 
+client.o: client.cc client.h client_buffer.o client_index.o exploration.o atomic.h global.h
 	$(CC) client.cc
 
-client_buffer.o: client_buffer.cc client_buffer.h download.o global.h conversion.h
+client_buffer.o: client_buffer.cc client_buffer.h download.o global.h atomic.h conversion.h
 	$(CC) client_buffer.cc
 
 client_index.o: client_index.cc client_index.h download.o exploration.o global.h
 	$(CC) client_index.cc
 
-download.o: download.cc download.h global.h
+download.o: download.cc download.h atomic.h global.h
 	$(CC) download.cc
 
-download_file.o: download_file.cc download_file.h hash.o super_block.o global.h
+download_file.o: download_file.cc download_file.h hash.o super_block.o atomic.h global.h
 	$(CC) download_file.cc
 
 exploration.o: exploration.cc exploration.h global.h

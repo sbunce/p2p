@@ -88,14 +88,14 @@ private:
 		download * Download;
 		std::string server_IP;
 		std::string file_ID;
-		bool processing; //checked to make sure two connection attemps aren't made concurrently
+		bool processing; //used to make sure two concurrent connections can't happen
 	};
 
 	/*
 	Holds connections which need to be made. If multiple connections to the same
 	server need to be made they're put in the same inner list.
 	*/
-	std::list<std::list<pending_connection *> > Pending_Connection;
+	std::list<pending_connection *> Pending_Connection;
 
 	sha SHA;                 //creates messageDigests
 	client_index Client_Index; //gives client access to the database
@@ -136,21 +136,15 @@ private:
 	disconnect         - disconnects a socket, modifies Client_Buffer
 	main_thread        - main client thread that sends/receives data and triggers events
 	new_conn           - create a connection with a server, modifies Client_Buffer
-	                   - returns false if cannot connect to server
 	prepare_requests   - touches each Client_Buffer element to trigger new requests(if needed)
 	remove_complete    - removes downloads that are complete(or stopped)
-	server_conn_thread - sets up new downloads (monitors scheduledDownload)
-	start_new_conn     - associates a new server with a download(connects to server)
-	                   - returns false if the download associated with hash isn't found
 	*/
 	void check_timeouts();
 	inline void disconnect(const int & socket_FD);
 	void main_thread();
-	bool new_conn(pending_connection * PC);
+	void new_conn(pending_connection * PC);
 	void prepare_requests();
 	void remove_complete();
-	void server_conn_thread();
-	bool start_new_conn(const std::string hash, std::string server_IP, std::string file_ID);
 
 	//each mutex names the object it locks in the format boost::mutex <object>Mutex
 	boost::mutex CB_D_mutex; //for both Client_Buffer and Download_Buffer

@@ -20,7 +20,7 @@ string name()
 string hash()
 
 -Return a string with a complete request(to be sent over wire).
-string new_request()
+string request()
 
 -Current speed of the download in bytes/second.
 unsigned int speed()

@@ -3,6 +3,9 @@ BUGS
 -Add a stop function to the server to stop the server thread. Make it so servers
 can be properly created and destroyed.
 
+-Starting new downloads needs to be simplified. Consider somehow making the
+new_conn start in multiple threads itself. Not sure.
+
 
 NEEDED FEATURES
 
