@@ -413,7 +413,7 @@ bool gui::download_info_refresh()
 
 		//get all the server_IP information in one string
 		std::string combined_IP;
-		std::list<std::string>::iterator IP_iter_cur, IP_iter_end;
+		std::vector<std::string>::iterator IP_iter_cur, IP_iter_end;
 		IP_iter_cur = info_iter_cur->server_IP.begin();
 		IP_iter_end = info_iter_cur->server_IP.end();
 		while(IP_iter_cur != IP_iter_end){

@@ -90,22 +90,14 @@ bool client::get_download_info(std::vector<info_buffer> & download_info)
 	iter_cur = Download_Buffer.begin();
 	iter_end = Download_Buffer.end();
 	while(iter_cur != iter_end){
-		float bytesDownloaded = (*iter_cur)->get_latest_request() * (global::BUFFER_SIZE - global::S_CTRL_SIZE);
-		int file_size = (*iter_cur)->get_file_size();
-		float percent = (bytesDownloaded / file_size) * 100;
-		int percent_complete = int(percent);
+
 		info_buffer info;
-		info.hash = (*iter_cur)->get_hash();
-		info.server_IP.splice(info.server_IP.end(), (*iter_cur)->get_IPs());
-		info.file_name = (*iter_cur)->get_file_name();
-		info.file_size = file_size;
-		if(percent_complete > 100){
-			info.percent_complete = 100;
-		}
-		else{
-			info.percent_complete = percent_complete;
-		}
-		info.speed = (*iter_cur)->get_speed();
+		info.hash = (*iter_cur)->hash();
+		(*iter_cur)->IP_list(info.server_IP);
+		info.file_name = (*iter_cur)->name();
+		info.file_size = (*iter_cur)->total_size();
+		info.percent_complete = (*iter_cur)->percent_complete();
+		info.speed = (*iter_cur)->speed();
 		download_info.push_back(info);
 		++iter_cur;
 	}
@@ -123,7 +115,7 @@ int client::get_total_speed()
 	iter_cur = Download_Buffer.begin();
 	iter_end = Download_Buffer.end();
 	while(iter_cur != iter_end){
-		speed += (*iter_cur)->get_speed();
+		speed += (*iter_cur)->speed();
 		++iter_cur;
 	}
 	}//end lock scope
@@ -298,7 +290,7 @@ void client::new_conn(pending_connection * PC)
 		}
 		else{
 			#ifdef DEBUG
-			std::cout << "info: client::new_conn() created socket " << socket_FD << " for " << PC->server_IP << "\n";
+			std::cout << "info: client::new_conn() created socket " << new_socket_FD << " for " << PC->server_IP << "\n";
 			#endif
 			FD_SET(new_socket_FD, &master_FDS);
 
@@ -309,16 +301,22 @@ void client::new_conn(pending_connection * PC)
 				FD_max = new_socket_FD;
 			}
 
-			Client_Buffer.insert(std::make_pair(new_socket_FD, new client_buffer(PC->server_IP, send_pending)));
+			Client_Buffer.insert(std::make_pair(new_socket_FD, new client_buffer(new_socket_FD, PC->server_IP, send_pending)));
 			}//end lock scope
 		}
 	}
 
 	//add download to socket, whether is is a new socket or an existing one
 	if(new_socket_FD != 0){
+
+		//register this connection with the download
+		download_file * temp = (download_file *)PC->Download;
+		temp->reg_conn(new_socket_FD, PC->server_IP, atoi(PC->file_ID.c_str()));
+		//PC->Download->reg_conn(new_socket_FD, PC->server_IP, atoi(PC->file_ID.c_str()));
+
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(CB_D_mutex);
-		Client_Buffer[new_socket_FD]->add_download(atoi(PC->file_ID.c_str()), PC->Download);
+		Client_Buffer[new_socket_FD]->add_download(PC->Download);
 		}//end lock scope
 	}
 
@@ -365,7 +363,7 @@ void client::remove_complete()
 	iter_end = Download_Buffer.end();
 	while(iter_cur != iter_end){
 		if((*iter_cur)->complete()){
-			completeHash.push_back((*iter_cur)->get_hash());
+			completeHash.push_back((*iter_cur)->hash());
 		}
 		++iter_cur;
 	}
@@ -399,8 +397,8 @@ void client::remove_complete()
 			iter_cur = Download_Buffer.begin();
 			iter_end = Download_Buffer.end();
 			while(iter_cur != iter_end){
-				if(*hash_iter_cur == (*iter_cur)->get_hash()){
-					Client_Index.terminate_download((*iter_cur)->get_hash());
+				if(*hash_iter_cur == (*iter_cur)->hash()){
+					Client_Index.terminate_download((*iter_cur)->hash());
 					delete *iter_cur;
 					Download_Buffer.erase(iter_cur);
 					break;
@@ -512,7 +510,7 @@ void client::stop_download(const std::string & hash)
 	iter_cur = Download_Buffer.begin();
 	iter_end = Download_Buffer.end();
 	while(iter_cur != iter_end){
-		if(hash == (*iter_cur)->get_hash()){
+		if(hash == (*iter_cur)->hash()){
 			(*iter_cur)->stop();
 			break;
 		}

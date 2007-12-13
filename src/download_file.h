@@ -3,10 +3,12 @@
 
 #include <deque>
 #include <list>
+#include <map>
 #include <string>
 #include <vector>
 
 #include "atomic.h"
+#include "conversion.h"
 #include "download.h"
 #include "super_block.h"
 #include "global.h"
@@ -14,39 +16,63 @@
 class download_file : public download
 {
 public:
-	download_file(const std::string & hash_in, const std::string & file_name_in, 
+	/*
+	Download_complete_flag is a special bool used to signal that the client
+	should check for the presence of a completed download.
+	*/
+	download_file(const std::string & file_hash_in, const std::string & file_name_in, 
 		const std::string & file_path_in, const int & file_size_in, const int & latest_request_in,
 		const int & last_block_in, const int & last_block_size_in, const int & last_super_block_in,
 		const int & current_super_block_in, atomic<bool> * download_complete_flag_in);
 
-	/*
-	response          - add complete fileBlocks to the superBlocks
-	completed          - returns true if download completed
-	bytes_expected - returns the number of bytes to expect for the latest request
-	get_file_name      - returns the file_name of the download
-	get_file_size      - returns the file_size of the file being downloaded(bytes)
-	get_hash           - returns the hash (UID) of this download
-	get_latest_request - returns latest_request
-	getRequst          - returns the number of a needed block
-	get_speed          - returns the speed of this download
-	stop               - stops the download by marking it as completed
-	*/
-	virtual void response(const int & request_number, std::string & block);
+	//documentation for virtual functions in abstract base class
 	virtual bool complete();
-	virtual const int & bytes_expected();
-	virtual const std::string & get_file_name();
-	virtual const int & get_file_size();
-	virtual const std::string & get_hash();
-	virtual const int & get_latest_request();
-	virtual const int get_request();
-	virtual const int & get_speed();
+	virtual const int bytes_expected();
+	virtual const std::string & hash();
+	virtual void IP_list(std::vector<std::string> & list);
+	virtual const std::string & name();
+	virtual int percent_complete();
+	virtual bool request(const int & socket, std::string & request);
+	virtual bool response(const int & socket, std::string & block);
 	virtual void stop();
+	virtual const int & total_size();
+	virtual void unreg_conn(const int & socket);
+
+	//reg_conn - registers a server with this download
+	void reg_conn(int socket, std::string & server_IP, unsigned int file_ID);
 
 private:
-	sha SHA; //creates message digests for superBlocks
+	//used to hold information from a registered socket
+	class connection
+	{
+	public:
+		connection(std::string & server_IP_in, unsigned int file_ID_in)
+		{
+			server_IP = server_IP_in;
+			file_ID = file_ID_in;
+		}
+
+		std::string server_IP;
+		unsigned int file_ID;
+
+		//the latest file block requested from this server
+		unsigned int latest_request;
+	};
+
+	/*
+	clientBuffers register/unregister with the download by storing information
+	here. This is useful to make it easy to get at network information without
+	having to store any network logic in the download.
+
+	this maps the socket number to a connection
+	*/
+	std::map<int, connection> Connection;
+
+	//creates message digests for superBlocks
+	sha SHA;
 
 	//these must be set before the download begins and will be set by ctor
-	std::string hash;        //unique identifier of the file and message digest
+	std::string file_hash;   //unique identifier of the file and message digest
 	std::string file_name;   //name of the file
 	std::string file_path;   //path to write file to on local system
 	int file_size;           //size of the file(bytes)
@@ -62,20 +88,17 @@ private:
 	*/
 	atomic<bool> * download_complete_flag;
 
-	bool download_complete; //true when the download is completed
+	//true when the download is completed
+	bool download_complete;
 
-	/*
-	This will grow to SUPERBUFFER_SIZE if there are missing blocks in a super_block.
-	This buffer is maintained to avoid the problem of rerequesting blocks that slow
-	hosts havn't yet sent. Hopefully a slow host will finish sending it's block by
-	the time SUPERBUFFER_SIZE superBlocks have completed. If it hasn't then it will
-	get requested from a different host.
-	*/
+	//will hold 0, 1, or 2 super_blocks. This is manipulated by needed_block().
 	std::deque<super_block> Super_Buffer;
 
 	/*
-	writeTree       - writes a super_block to file
+	needed_block - returns number of a needed block
+	writeTree    - writes a super_block to file
 	*/
+	unsigned int needed_block();
 	void write_super_block(std::string container[]);
 };
 #endif

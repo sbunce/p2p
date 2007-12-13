@@ -15,7 +15,7 @@ public:
 	std::string recv_buff; //buffer for partial recvs
 	std::string send_buff; //buffer for partial sends
 
-	client_buffer(const std::string & server_IP_in, atomic<int> * send_pending_in);
+	client_buffer(int socket_in, std::string & server_IP_in, atomic<int> * send_pending_in);
 	~client_buffer();
 
 	/*
@@ -30,7 +30,7 @@ public:
 	                     returns true if the it can delete the download or if it doesn't exist
 	                     returns false if the ClientBuffer is expecting data from the server
 	*/
-	void add_download(const unsigned int & file_ID, download * new_download);
+	void add_download(download * new_download);
 	const bool empty();
 	const std::string & get_IP();
 	const time_t & get_last_seen();
@@ -43,6 +43,9 @@ public:
 private:
 	//IP associated with this serverElement
 	std::string server_IP;
+
+	//socket number of this element
+	int socket;
 
 	//when the last communication was received from the server, used for timeout
 	time_t last_seen;
@@ -64,26 +67,13 @@ private:
 	//determines whether the client will send, full description on client.h
 	atomic<int> * send_pending;
 
-	unsigned int latest_requested; //what block was most recently requested
-	unsigned int bytes_expected;   //how many bytes needed to fulfill request
-
-	class download_holder
-	{
-	public:
-		download_holder(const unsigned int & file_ID_in, download * Download_in)
-		{
-			file_ID = file_ID_in;
-			Download = Download_in;
-		}
-
-		unsigned int file_ID;
-		download * Download;
-	};
+	//how many bytes needed to fulfill latest request
+	unsigned int bytes_expected;
 
 	//what Download this socket is currently serving
-	std::list<download_holder>::iterator Download_iter;
+	std::list<download *>::iterator Download_iter;
 	//all downloads that this client_buffer is serving
-	std::list<download_holder> Download;
+	std::list<download *> Download;
 
 	/*
 	rotate_downloads - moves Download_iter through Download in a circular fashion

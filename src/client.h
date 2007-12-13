@@ -39,7 +39,7 @@ public:
 	{
 	public:
 		std::string hash;
-		std::list<std::string> server_IP;
+		std::vector<std::string> server_IP;
 		std::string file_name;
 		int file_size;        //bytes
 		int speed;            //bytes per second
@@ -72,7 +72,9 @@ private:
 	time_t current_time;
 	time_t previous_time;
 
-	//starting download information stored in this
+
+//DEBUG, get rid of this container, replace with parameter passing and inline function
+	//information to start a download_file
 	class pending_connection
 	{
 	public:

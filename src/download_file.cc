@@ -10,13 +10,13 @@
 
 #include "download_file.h"
 
-download_file::download_file(const std::string & hash_in, const std::string & file_name_in, 
+download_file::download_file(const std::string & file_hash_in, const std::string & file_name_in, 
 	const std::string & file_path_in, const int & file_size_in, const int & latest_request_in,
 	const int & last_block_in, const int & last_block_size_in, const int & last_super_block_in,
 	const int & current_super_block_in, atomic<bool> * download_complete_flag_in)
 {
 	//non-defaults
-	hash = hash_in;
+	file_hash = file_hash_in;
 	file_name = file_name_in;
 	file_path = file_path_in;
 	file_size = file_size_in;
@@ -38,9 +38,71 @@ download_file::download_file(const std::string & hash_in, const std::string & fi
 	SHA.Init(global::HASH_TYPE);
 }
 
-void download_file::response(const int & request_number, std::string & block)
+bool download_file::complete()
 {
-	calculate_speed();
+	return download_complete;
+}
+
+const int download_file::bytes_expected()
+{
+	if(latest_request == last_block){
+		return last_block_size;
+	}
+	else{
+		return global::BUFFER_SIZE;
+	}
+}
+
+const std::string & download_file::hash()
+{
+	return file_hash;
+}
+
+void download_file::IP_list(std::vector<std::string> & list)
+{
+	std::map<int, connection>::iterator iter_cur, iter_end;
+	iter_cur = Connection.begin();
+	iter_end = Connection.end();
+	while(iter_cur != iter_end){
+		list.push_back(iter_cur->second.server_IP);
+		++iter_cur;
+	}
+}
+
+const std::string & download_file::name()
+{
+	return file_name;
+}
+
+int download_file::percent_complete()
+{
+	return (int)(((latest_request * global::BUFFER_SIZE)/(float)file_size)*100);
+}
+
+bool download_file::request(const int & socket, std::string & request)
+{
+	std::map<int, connection>::iterator iter = Connection.find(socket);
+
+	if(iter == Connection.end()){
+#ifdef DEBUG
+	std::cout << "info: download_file::request() socket not registered";
+#endif
+		return false;
+	}
+
+	iter->second.latest_request = needed_block();
+	request = global::P_SBL + conversion::encode_int(iter->second.file_ID) + conversion::encode_int(iter->second.latest_request);
+	return true;
+}
+
+bool download_file::response(const int & socket, std::string & block)
+{
+	std::map<int, connection>::iterator iter = Connection.find(socket);
+
+	if(iter == Connection.end()){
+		std::cout << "info: download_file::response() socket not registered\n";
+		return false;
+	}
 
 #ifdef UNRELIABLE_CLIENT
 	int random = rand() % 100;
@@ -61,7 +123,7 @@ void download_file::response(const int & request_number, std::string & block)
 
 	//add the block to the appropriate super_block
 	for(std::deque<super_block>::iterator iter0 = Super_Buffer.begin(); iter0 != Super_Buffer.end(); ++iter0){
-		if(iter0->add_block(request_number, block)){
+		if(iter0->add_block(iter->second.latest_request, block)){
 			break;
 		}
 	}
@@ -70,50 +132,19 @@ void download_file::response(const int & request_number, std::string & block)
 #endif
 
 	//the Super_Buffer may be empty if the last block is requested more than once
-	if(request_number == last_block && !Super_Buffer.empty()){
+	if(iter->second.latest_request == last_block && !Super_Buffer.empty()){
 		write_super_block(Super_Buffer.back().container);
 		Super_Buffer.pop_back();
 		download_complete = true;
 		*download_complete_flag = true;
 	}
+
+	calculate_speed();
+
+	return true;
 }
 
-bool download_file::complete()
-{
-	return download_complete;
-}
-
-const int & download_file::bytes_expected()
-{
-	if(latest_request == last_block){
-		return last_block_size;
-	}
-	else{
-		return global::BUFFER_SIZE;
-	}
-}
-
-const std::string & download_file::get_file_name()
-{
-	return file_name;
-}
-
-const int & download_file::get_file_size()
-{
-	return file_size;
-}
-
-const std::string & download_file::get_hash()
-{
-	return hash;
-}
-
-const int & download_file::get_latest_request()
-{
-	return latest_request;
-}
-
-const int download_file::get_request()
+unsigned int download_file::needed_block()
 {
 	/*
 	Write out the oldest superBlocks if they're complete. It's possible the
@@ -219,11 +250,6 @@ const int download_file::get_request()
 	}
 }
 
-const int & download_file::get_speed()
-{
-	return download_speed;
-}
-
 void download_file::stop()
 {
 	namespace fs = boost::filesystem;
@@ -237,9 +263,6 @@ void download_file::stop()
 
 void download_file::write_super_block(std::string container[])
 {
-#ifdef DEBUG_VERBOSE
-	std::cout << "info: download_file::write_super_block() was called\n";
-#endif
 /*
 	//get the messageDigest of the super_block
 	for(int x=0; x<global::SUPERBLOCK_SIZE; x++){
@@ -251,7 +274,6 @@ void download_file::write_super_block(std::string container[])
 	std::ofstream fout(file_path.c_str(), std::ios::app);
 
 	if(fout.is_open()){
-
 		for(int x=0; x<global::SUPERBLOCK_SIZE; ++x){
 			fout.write(container[x].c_str(), container[x].size());
 		}
@@ -262,5 +284,21 @@ void download_file::write_super_block(std::string container[])
 		std::cout << "error: download_file::writeTree() error opening file\n";
 #endif
 	}
+}
+
+void download_file::reg_conn(int socket, std::string & server_IP, unsigned int file_ID)
+{
+	connection temp(server_IP, file_ID);
+	Connection.insert(std::make_pair(socket, temp));
+}
+
+const int & download_file::total_size()
+{
+	return file_size;
+}
+
+void download_file::unreg_conn(const int & socket)
+{
+	Connection.erase(socket);
 }
 
