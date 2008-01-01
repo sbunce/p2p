@@ -3,15 +3,17 @@ BUGS
 -Add a stop function to the server to stop the server thread. Make it so servers
 can be properly created and destroyed.
 
+-Unreliable client test bugged. Last packet not getting written to file.
 
-NEEDED FEATURES
 
--Work on migrating functions which should be generic to download. Work on
-clientBuffer interaction with download.
+HARD BUGS
 
--There should be a 1 second timer that makes the client_buffer wait between 
-requests of the last block so the last block doesn't get requested from everyone
-all at once.
+-download_file has it's last block requested multiple times from all connected
+server. The super_block idea needs to be trashed in favor of something else.
+Perhaps a reverse priority queue with rules based on how big it gets.
+
+-download_file rerequest system isn't very good. If there is a missing block
+then that block will get rerequested from all connected servers.
 
 
 DEFERRED FEATURES
@@ -29,7 +31,7 @@ the files of the trackers that tracker trusts and the files that that tracker
 trusts etc. Have an option to limit trust levels to direct trust only, one
 level inheritance and all level inheritance.
 
--A hash tree should be used to minimize the amount of data a person has to get
-from an authoritative source. Template bst, add function to retrieve child
-tree nodes.
-
+-client::new_conn should effectively be made generic by creating a abstract base
+class for the server elements. Try to hide put the code to set up a download in
+this class so there won't have to be a function in client for every piece of the
+protocol.

@@ -6,7 +6,16 @@ then
 fi
 
 cd src
-make -j2
+
+if [ "$1" == "clean" ]
+then
+	make clean
+elif [ "$1" == "server" ]
+then
+	make -j2 server
+else
+	make -j2
+fi
 
 exit 0
 

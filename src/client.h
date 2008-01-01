@@ -72,8 +72,6 @@ private:
 	time_t current_time;
 	time_t previous_time;
 
-
-//DEBUG, get rid of this container, replace with parameter passing and inline function
 	//information to start a download_file
 	class pending_connection
 	{
@@ -99,7 +97,7 @@ private:
 	*/
 	std::list<pending_connection *> Pending_Connection;
 
-	sha SHA;                 //creates messageDigests
+	sha SHA;                   //creates messageDigests
 	client_index Client_Index; //gives client access to the database
 
 	/*

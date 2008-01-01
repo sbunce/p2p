@@ -56,7 +56,7 @@ void client::check_timeouts()
 	}//end lock scope
 }
 
-//this function should only be used from within a CB_D_mutex.
+//this should only be used from within a CB_D_mutex.
 inline void client::disconnect(const int & socket_FD)
 {
 	#ifdef DEBUG
@@ -312,7 +312,6 @@ void client::new_conn(pending_connection * PC)
 		//register this connection with the download
 		download_file * temp = (download_file *)PC->Download;
 		temp->reg_conn(new_socket_FD, PC->server_IP, atoi(PC->file_ID.c_str()));
-		//PC->Download->reg_conn(new_socket_FD, PC->server_IP, atoi(PC->file_ID.c_str()));
 
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(CB_D_mutex);

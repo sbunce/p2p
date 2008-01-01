@@ -14,11 +14,6 @@ public:
 	download();
 
 	/*
-	In addition to the pure virtuals the derived class must include a non-virtual
-	reg_conn function. This function can be called in the client upon
-	instantiation of the specific download to load information specific to the
-	type of download.
-
 	complete         - returns true if download complete (or if stop called)
 	bytes_expected   - bytes expected in response to latest request
 	hash             - returns a unique identifier to the download (uses SHA)
@@ -53,7 +48,6 @@ public:
 	std::vector<int> Second_Bytes;    //bytes in the second
 
 protected:
-
 	/*
 	calculate_speed - calculates the download speed, should be called by response()
 	*/

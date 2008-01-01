@@ -122,7 +122,7 @@ void server::calculate_speed(const int & socketfd, const int & file_ID, const in
 		std::string file_name;
 
 		//only add an element if we have the file requested
-		if(Server_Index.getFileInfo(file_ID, file_size, filePath)){
+		if(Server_Index.file_info(file_ID, file_size, filePath)){
 
 			speedElement temp;
 			temp.file_name = filePath.substr(filePath.find_last_of("/")+1);
@@ -418,7 +418,7 @@ int server::prepare_send_buffer(const int & socketfd, const int & file_ID, const
 	//get file_size/filePath that corresponds to file_ID
 	int file_size;
 	std::string filePath;
-	if(!Server_Index.getFileInfo(file_ID, file_size, filePath)){
+	if(!Server_Index.file_info(file_ID, file_size, filePath)){
 		//file was not found
 		Send_Buffer[socketfd] += global::P_FNF;
 		return 0;

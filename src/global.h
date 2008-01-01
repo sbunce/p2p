@@ -31,7 +31,7 @@ namespace global
 	const int MAX_CONNECTIONS = 50;   //maximum number of connections both incoming/outgoing
 	const int P2P_PORT = 6969;        //port client connects to and server receives on
 	const int GUI_TICK = 100;         //time(in milliseconds) between gui updates
-	const int SPEED_AVERAGE = 5;      //how many seconds to average upload/download speed over
+	const int SPEED_AVERAGE = 8;      //how many seconds to average upload/download speed over
 	const int COMPLETE_REMOVE = 5;    //how many seconds to wait before removing a complete upload/download
 	const int TIMEOUT = 25;           //server timeout will be between 1X and 2X this value
 	const int SHARE_REFRESH = 1200;   //number of seconds between updating share information

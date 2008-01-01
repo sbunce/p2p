@@ -107,8 +107,8 @@ bool download_file::response(const int & socket, std::string & block)
 #ifdef UNRELIABLE_CLIENT
 	int random = rand() % 100;
 	if(random < global::UNRELIABLE_CLIENT_VALUE){
-		std::cout << "testing: client::add_block(): OOPs! I dropped fileBlock " << blockNumber << "\n";
-		if(blockNumber == last_block){
+		std::cout << "testing: client::add_block(): OOPs! I dropped fileBlock " << iter->second.latest_request << "\n";
+		if(iter->second.latest_request == last_block){
 			block.clear();
 		}
 		else{
@@ -265,7 +265,7 @@ void download_file::write_super_block(std::string container[])
 {
 /*
 	//get the messageDigest of the super_block
-	for(int x=0; x<global::SUPERBLOCK_SIZE; x++){
+	for(int x=0; x<global::SUPERBLOCK_SIZE; ++x){
 		SHA.Update((const sha_byte *) container[x].c_str(), container[x].size());
 	}
 	SHA.End();
