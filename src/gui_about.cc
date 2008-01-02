@@ -23,8 +23,8 @@ gui_about::gui_about()
 
 	"Acknowledgements:\n\n" +
 
-	"SHA C++ implementation\n" +
-	"Keith Oxenrider - http://sol-biotech.com/code\n" +
+	"SHA (Secure Hash Algorithm) Implementation\n" +
+	"Keith Oxenrider  - http://sol-biotech.com/code\n" +
 	"Aaron D. Gifford - http://www.aarongifford.com/computers/sha.html\n\n" +
 
 	"SQLite embeddable SQL database\n" +

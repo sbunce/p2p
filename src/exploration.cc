@@ -38,7 +38,7 @@ exploration::exploration()
 	}
 }
 
-void exploration::asteriskToPercent(std::string & search_word)
+void exploration::asterisk_to_percent(std::string & search_word)
 {
 	for(std::string::iterator iter0 = search_word.begin(); iter0 != search_word.end(); ++iter0){
 		if(*iter0 == '*'){
@@ -50,7 +50,7 @@ void exploration::asteriskToPercent(std::string & search_word)
 void exploration::search(std::string & search_word, std::list<info_buffer> & info)
 {
 	Search_Results.clear();
-	asteriskToPercent(search_word);
+	asterisk_to_percent(search_word);
 
 #ifdef DEBUG
 	std::cout << "info: exploration::search(): search entered: \"" << search_word << "\"\n";

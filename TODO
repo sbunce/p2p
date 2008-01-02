@@ -12,9 +12,6 @@ HARD BUGS
 server. The super_block idea needs to be trashed in favor of something else.
 Perhaps a reverse priority queue with rules based on how big it gets.
 
--download_file rerequest system isn't very good. If there is a missing block
-then that block will get rerequested from all connected servers.
-
 
 DEFERRED FEATURES
 
@@ -31,7 +28,3 @@ the files of the trackers that tracker trusts and the files that that tracker
 trusts etc. Have an option to limit trust levels to direct trust only, one
 level inheritance and all level inheritance.
 
--client::new_conn should effectively be made generic by creating a abstract base
-class for the server elements. Try to hide put the code to set up a download in
-this class so there won't have to be a function in client for every piece of the
-protocol.

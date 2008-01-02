@@ -1,5 +1,5 @@
-#ifndef H_DOWNLOADFILE
-#define H_DOWNLOADFILE
+#ifndef H_DOWNLOAD_FILE
+#define H_DOWNLOAD_FILE
 
 #include <deque>
 #include <list>
@@ -10,6 +10,7 @@
 #include "atomic.h"
 #include "conversion.h"
 #include "download.h"
+#include "download_file_conn.h"
 #include "super_block.h"
 #include "global.h"
 
@@ -24,6 +25,7 @@ public:
 		const std::string & file_path_in, const int & file_size_in, const int & latest_request_in,
 		const int & last_block_in, const int & last_block_size_in, const int & last_super_block_in,
 		const int & current_super_block_in, atomic<bool> * download_complete_flag_in);
+	~download_file();
 
 	//documentation for virtual functions in abstract base class
 	virtual bool complete();
@@ -36,39 +38,9 @@ public:
 	virtual bool response(const int & socket, std::string & block);
 	virtual void stop();
 	virtual const int & total_size();
-	virtual void unreg_conn(const int & socket);
-
-	//reg_conn - registers a server with this download
-	void reg_conn(int socket, std::string & server_IP, unsigned int file_ID);
 
 private:
-	//used to hold information from a registered socket
-	class connection
-	{
-	public:
-		connection(std::string & server_IP_in, unsigned int file_ID_in)
-		{
-			server_IP = server_IP_in;
-			file_ID = file_ID_in;
-		}
-
-		std::string server_IP;
-		unsigned int file_ID;
-
-		//the latest file block requested from this server
-		unsigned int latest_request;
-	};
-
-	/*
-	clientBuffers register/unregister with the download by storing information
-	here. This is useful to make it easy to get at network information without
-	having to store any network logic in the download.
-
-	this maps the socket number to a connection
-	*/
-	std::map<int, connection> Connection;
-
-	//creates message digests for superBlocks
+	//creates hashes for superBlocks
 	sha SHA;
 
 	//these must be set before the download begins and will be set by ctor

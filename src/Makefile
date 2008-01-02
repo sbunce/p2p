@@ -8,7 +8,8 @@ CCL = g++
 #GPROF = -pg
 
 #objects for the full program
-OBJECTS = main.o client.o client_buffer.o download.o download_file.o client_index.o \
+OBJECTS = main.o client.o client_buffer.o download.o download_conn.o \
+	download_file.o download_file_conn.o client_index.o \
 	exploration.o gui.o gui_about.o hash.o server.o server_index.o sha.o \
 	super_block.o
 
@@ -36,20 +37,30 @@ main.o: main.cc gui.o
 main_server.o: main_server.cc server.o
 	$(CC) main_server.cc `pkg-config gtkmm-2.4 --cflags`
 
-client.o: client.cc client.h download.o download_file.o client_buffer.o client_index.o exploration.o atomic.h global.h
+client.o: client.cc client.h download.o download_conn.o download_file.o \
+	download_file_conn.o client_buffer.o client_index.o exploration.o atomic.h \
+	global.h
 	$(CC) client.cc
 
-client_buffer.o: client_buffer.cc client_buffer.h download.o atomic.h conversion.h global.h
+client_buffer.o: client_buffer.cc client_buffer.h download.o atomic.h \
+	conversion.h global.h
 	$(CC) client_buffer.cc
 
 client_index.o: client_index.cc client_index.h download.o exploration.o global.h
 	$(CC) client_index.cc
 
-download.o: download.cc download.h atomic.h global.h
+download.o: download.cc download.h atomic.h download_conn.o global.h
 	$(CC) download.cc
 
-download_file.o: download_file.cc download_file.h download.o hash.o super_block.o atomic.h conversion.h global.h
+download_conn.o: download_conn.cc download_conn.h
+	$(CC) download_conn.cc
+
+download_file.o: download_file.cc download_file.h download.o hash.o \
+	super_block.o atomic.h conversion.h global.h
 	$(CC) download_file.cc
+
+download_file_conn.o: download_file_conn.cc download_file_conn.h download_conn.o
+	$(CC) download_file_conn.cc
 
 exploration.o: exploration.cc exploration.h global.h
 	$(CC) exploration.cc

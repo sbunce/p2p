@@ -27,7 +27,9 @@
 #include "client_buffer.h"
 #include "client_index.h"
 #include "download.h"
+#include "download_conn.h"
 #include "download_file.h"
+#include "download_file_conn.h"
 #include "exploration.h"
 #include "global.h"
 
@@ -54,7 +56,7 @@ public:
 	get_total_speed   - returns the total download speed(in bytes per second)
 	start             - start the threads needed for the client
 	stop              - stops all threads, must be called before destruction
-	start_download    - schedules a download to be started
+	start_download    - schedules a download_file to be started
 	stop_download     - marks a download as completed so it will be stopped
 	*/
 	bool get_download_info(std::vector<info_buffer> & download_info);
@@ -72,30 +74,12 @@ private:
 	time_t current_time;
 	time_t previous_time;
 
-	//information to start a download_file
-	class pending_connection
-	{
-	public:
-		pending_connection(download * Download_in, std::string & server_IP_in,
-			std::string & file_ID_in)
-		{
-			Download = Download_in;
-			server_IP = server_IP_in;
-			file_ID = file_ID_in;
-			processing = false;
-		}
-
-		download * Download;
-		std::string server_IP;
-		std::string file_ID;
-		bool processing; //used to make sure two concurrent connections can't happen
-	};
-
 	/*
 	Holds connections which need to be made. If multiple connections to the same
 	server need to be made they're put in the same inner list.
 	*/
-	std::list<pending_connection *> Pending_Connection;
+	//std::list<pending_connection *> Pending_Connection;
+	std::list<download_conn *> Pending_Connection;
 
 	sha SHA;                   //creates messageDigests
 	client_index Client_Index; //gives client access to the database
@@ -142,13 +126,13 @@ private:
 	void check_timeouts();
 	inline void disconnect(const int & socket_FD);
 	void main_thread();
-	void new_conn(pending_connection * PC);
+	void new_conn(download_conn * DC);
 	void prepare_requests();
 	void remove_complete();
 
 	//each mutex names the object it locks in the format boost::mutex <object>Mutex
 	boost::mutex CB_D_mutex; //for both Client_Buffer and Download_Buffer
-	boost::mutex PC_mutex;   //locks access to pending_connection instances
+	boost::mutex DC_mutex;   //locks access to download_conn instances
 
 	/*
 	Locks access to everything NOT stop_threads. This is used by stop() to terminate

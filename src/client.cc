@@ -229,7 +229,7 @@ void client::main_thread()
 	--threads;
 }
 
-void client::new_conn(pending_connection * PC)
+void client::new_conn(download_conn * DC)
 {
 	++threads;
 
@@ -238,12 +238,12 @@ void client::new_conn(pending_connection * PC)
 		bool found = false;
 
 		{//begin lock scope
-		boost::mutex::scoped_lock lock(PC_mutex);
-		std::list<pending_connection *>::iterator iter_cur, iter_end;
+		boost::mutex::scoped_lock lock(DC_mutex);
+		std::list<download_conn *>::iterator iter_cur, iter_end;
 		iter_cur = Pending_Connection.begin();
 		iter_end = Pending_Connection.end();
 		while(iter_cur != iter_end){
-			if((*iter_cur)->server_IP == PC->server_IP && (*iter_cur)->processing){
+			if((*iter_cur)->server_IP == DC->server_IP && (*iter_cur)->processing){
 				found = true;
 				break;
 			}
@@ -252,7 +252,7 @@ void client::new_conn(pending_connection * PC)
 
 		//proceed to trying to make a connection
 		if(!found){
-			PC->processing = true;
+			DC->processing = true;
 			break;
 		}
 		}//end lock scope
@@ -269,7 +269,7 @@ void client::new_conn(pending_connection * PC)
 	boost::mutex::scoped_lock lock(CB_D_mutex);
 	for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 		if(FD_ISSET(socket_FD, &master_FDS)){
-			if(PC->server_IP == Client_Buffer[socket_FD]->get_IP()){
+			if(DC->server_IP == Client_Buffer[socket_FD]->get_IP()){
 				new_socket_FD = socket_FD;
 			}
 		}
@@ -282,7 +282,7 @@ void client::new_conn(pending_connection * PC)
 		new_socket_FD = socket(PF_INET, SOCK_STREAM, 0);
 		dest_addr.sin_family = AF_INET;
 		dest_addr.sin_port = htons(global::P2P_PORT);
-		dest_addr.sin_addr.s_addr = inet_addr(PC->server_IP.c_str());
+		dest_addr.sin_addr.s_addr = inet_addr(DC->server_IP.c_str());
 		memset(&(dest_addr.sin_zero),'\0',8);
 
 		if(connect(new_socket_FD, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0){
@@ -290,7 +290,7 @@ void client::new_conn(pending_connection * PC)
 		}
 		else{
 			#ifdef DEBUG
-			std::cout << "info: client::new_conn() created socket " << new_socket_FD << " for " << PC->server_IP << "\n";
+			std::cout << "info: client::new_conn() created socket " << new_socket_FD << " for " << DC->server_IP << "\n";
 			#endif
 			FD_SET(new_socket_FD, &master_FDS);
 
@@ -301,7 +301,7 @@ void client::new_conn(pending_connection * PC)
 				FD_max = new_socket_FD;
 			}
 
-			Client_Buffer.insert(std::make_pair(new_socket_FD, new client_buffer(new_socket_FD, PC->server_IP, send_pending)));
+			Client_Buffer.insert(std::make_pair(new_socket_FD, new client_buffer(new_socket_FD, DC->server_IP, send_pending)));
 			}//end lock scope
 		}
 	}
@@ -310,23 +310,22 @@ void client::new_conn(pending_connection * PC)
 	if(new_socket_FD != 0){
 
 		//register this connection with the download
-		download_file * temp = (download_file *)PC->Download;
-		temp->reg_conn(new_socket_FD, PC->server_IP, atoi(PC->file_ID.c_str()));
+		DC->Download->reg_conn(new_socket_FD, DC);
 
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(CB_D_mutex);
-		Client_Buffer[new_socket_FD]->add_download(PC->Download);
+		Client_Buffer[new_socket_FD]->add_download(DC->Download);
 		}//end lock scope
 	}
 
 	//remove the element from Pending_Connection
 	{//begin lock scope
-	boost::mutex::scoped_lock lock(PC_mutex);
-	std::list<pending_connection *>::iterator iter_cur, iter_end;
+	boost::mutex::scoped_lock lock(DC_mutex);
+	std::list<download_conn *>::iterator iter_cur, iter_end;
 	iter_cur = Pending_Connection.begin();
 	iter_end = Pending_Connection.end();
 	while(iter_cur != iter_end){
-		if(*iter_cur == PC){
+		if(*iter_cur == DC){
 			Pending_Connection.erase(iter_cur);
 			break;
 		}
@@ -479,20 +478,20 @@ bool client::start_download(exploration::info_buffer info)
 	}//end lock scope
 
 	//queue pending connections
-	std::vector<pending_connection *> temp_PC;
+	std::vector<download_conn *> temp_DC;
 	{//begin lock scope
-	boost::mutex::scoped_lock lock(PC_mutex);
+	boost::mutex::scoped_lock lock(DC_mutex);
 	for(int x = 0; x < info.server_IP.size(); ++x){
-		pending_connection * PC = new pending_connection(Download, info.server_IP[x], info.file_ID[x]);
-		Pending_Connection.push_back(PC);
-		temp_PC.push_back(PC);
+		download_conn * DC = new download_file_conn(Download, info.server_IP[x], atoi(info.file_ID[x].c_str()));
+		Pending_Connection.push_back(DC);
+		temp_DC.push_back(DC);
 	}
 	}//end lock scope
 
 	//connect
-	std::vector<pending_connection *>::iterator iter_cur, iter_end;
-	iter_cur = temp_PC.begin();
-	iter_end = temp_PC.end();
+	std::vector<download_conn *>::iterator iter_cur, iter_end;
+	iter_cur = temp_DC.begin();
+	iter_end = temp_DC.end();
 	while(iter_cur != iter_end){
 		boost::thread T(boost::bind(&client::new_conn, this, *iter_cur));
 		++iter_cur;

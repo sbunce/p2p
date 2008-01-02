@@ -70,6 +70,6 @@ private:
 	/*
 	percentToAsterisk - converts all '*' in a string to '%'
 	*/
-	void asteriskToPercent(std::string & search_word);
+	void asterisk_to_percent(std::string & search_word);
 };
 #endif

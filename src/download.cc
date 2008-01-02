@@ -5,6 +5,17 @@ download::download()
 	download_speed = 0;
 }
 
+download::~download()
+{
+	std::map<int, download_conn *>::iterator iter_cur, iter_end;
+	iter_cur = Connection.begin();
+	iter_end = Connection.end();
+	while(iter_cur != iter_end){
+		delete iter_cur->second;
+		++iter_cur;	
+	}
+}
+
 void download::calculate_speed()
 {
 	time_t currentTime = time(0);
@@ -50,3 +61,12 @@ const int & download::speed()
 	return download_speed;
 }
 
+void download::reg_conn(const int & socket, download_conn * Download_conn)
+{
+	Connection.insert(std::make_pair(socket, Download_conn));
+}
+
+void download::unreg_conn(const int & socket)
+{
+	Connection.erase(socket);
+}
