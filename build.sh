@@ -10,11 +10,9 @@ cd src
 if [ "$1" == "clean" ]
 then
 	make clean
-elif [ "$1" == "server" ]
-then
-	make -j2 server
 else
 	make -j2
+	make -j2 server
 fi
 
 exit 0

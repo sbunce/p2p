@@ -23,7 +23,7 @@ client::~client()
 {
 	for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 		if(FD_ISSET(socket_FD, &master_FDS)){
-			delete Client_Buffer[socket_FD];
+			disconnect(socket_FD);
 		}
 	}
 
@@ -74,8 +74,12 @@ inline void client::disconnect(const int & socket_FD)
 		}
 	}
 
-	delete Client_Buffer[socket_FD];
-	Client_Buffer.erase(socket_FD);
+	std::map<int, client_buffer *>::iterator CB_iter = Client_Buffer.find(socket_FD);
+
+	if(CB_iter != Client_Buffer.end()){
+		delete CB_iter->second;
+		Client_Buffer.erase(socket_FD);
+	}
 }
 
 bool client::get_download_info(std::vector<info_buffer> & download_info)
@@ -90,7 +94,6 @@ bool client::get_download_info(std::vector<info_buffer> & download_info)
 	iter_cur = Download_Buffer.begin();
 	iter_end = Download_Buffer.end();
 	while(iter_cur != iter_end){
-
 		info_buffer info;
 		info.hash = (*iter_cur)->hash();
 		(*iter_cur)->IP_list(info.server_IP);
@@ -190,11 +193,12 @@ void client::main_thread()
 		}
 
 		//process reads/writes
-		char recv_buff[global::BUFFER_SIZE];
+		char recv_buff[global::C_MAX_SIZE];
+		std::map<int, client_buffer *>::iterator CB_iter;
 		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &read_FDS)){
-				int nbytes = recv(socket_FD, recv_buff, global::BUFFER_SIZE, 0);
-				if(nbytes <= 0){
+				int n_bytes = recv(socket_FD, recv_buff, global::C_MAX_SIZE, 0);
+				if(n_bytes <= 0){
 					{//begin lock scope
 					boost::mutex::scoped_lock lock(CB_D_mutex);
 					disconnect(socket_FD);
@@ -203,22 +207,25 @@ void client::main_thread()
 				else{
 					{//begin lock scope
 					boost::mutex::scoped_lock lock(CB_D_mutex);
-					Client_Buffer[socket_FD]->recv_buff.append(recv_buff, nbytes);
-					Client_Buffer[socket_FD]->post_recv();
+					CB_iter = Client_Buffer.find(socket_FD);
+					CB_iter->second->recv_buff.append(recv_buff, n_bytes);
+					CB_iter->second->post_recv();
 					}//end lock scope
 				}
 			}
 			if(FD_ISSET(socket_FD, &write_FDS)){
 				{//begin lock scope
 				boost::mutex::scoped_lock lock(CB_D_mutex);
-				if(!Client_Buffer[socket_FD]->send_buff.empty()){
-					int nbytes = send(socket_FD, Client_Buffer[socket_FD]->send_buff.c_str(), Client_Buffer[socket_FD]->send_buff.size(), 0);
-					if(nbytes <= 0){
+				CB_iter = Client_Buffer.find(socket_FD);
+
+				if(!CB_iter->second->send_buff.empty()){
+					int n_bytes = send(socket_FD, CB_iter->second->send_buff.c_str(), CB_iter->second->send_buff.size(), 0);
+					if(n_bytes <= 0){
 						disconnect(socket_FD);
 					}
 					else{ //remove bytes sent from buffer
-						Client_Buffer[socket_FD]->send_buff.erase(0, nbytes);
-						Client_Buffer[socket_FD]->post_send();
+						CB_iter->second->send_buff.erase(0, n_bytes);
+						CB_iter->second->post_send();
 					}
 				}
 				}//end lock scope
@@ -264,57 +271,60 @@ void client::new_conn(download_conn * DC)
 	}
 
 	//if the socket is already connected, add the download but do not make a new connection
-	int new_socket_FD = 0;
+	int new_FD = 0;
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(CB_D_mutex);
 	for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 		if(FD_ISSET(socket_FD, &master_FDS)){
 			if(DC->server_IP == Client_Buffer[socket_FD]->get_IP()){
-				new_socket_FD = socket_FD;
+				new_FD = socket_FD;
 			}
 		}
 	}
 	}//end lock scope
 
 	//create new connection if no existing connection exists
-	if(new_socket_FD == 0){
+	if(new_FD == 0){
 		sockaddr_in dest_addr;
-		new_socket_FD = socket(PF_INET, SOCK_STREAM, 0);
+		new_FD = socket(PF_INET, SOCK_STREAM, 0);
 		dest_addr.sin_family = AF_INET;
 		dest_addr.sin_port = htons(global::P2P_PORT);
 		dest_addr.sin_addr.s_addr = inet_addr(DC->server_IP.c_str());
 		memset(&(dest_addr.sin_zero),'\0',8);
 
-		if(connect(new_socket_FD, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0){
-			new_socket_FD = 0; //this indicates a failed connection
+		if(connect(new_FD, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0){
+			new_FD = 0; //this indicates a failed connection
 		}
 		else{
 			#ifdef DEBUG
-			std::cout << "info: client::new_conn() created socket " << new_socket_FD << " for " << DC->server_IP << "\n";
+			std::cout << "info: client::new_conn() created socket " << new_FD << " for " << DC->server_IP << "\n";
 			#endif
-			FD_SET(new_socket_FD, &master_FDS);
 
 			{//begin lock scope
 			boost::mutex::scoped_lock lock(CB_D_mutex);
 			//make sure FD_max is always the highest socket number
-			if(new_socket_FD > FD_max){
-				FD_max = new_socket_FD;
+			if(new_FD > FD_max){
+				FD_max = new_FD;
 			}
-
-			Client_Buffer.insert(std::make_pair(new_socket_FD, new client_buffer(new_socket_FD, DC->server_IP, send_pending)));
+			Client_Buffer.insert(std::make_pair(new_FD, new client_buffer(new_FD, DC->server_IP, send_pending)));
 			}//end lock scope
+
+			if(!FD_ISSET(new_FD, &master_FDS)){
+				FD_SET(new_FD, &master_FDS);
+			}
 		}
 	}
 
-	//add download to socket, whether is is a new socket or an existing one
-	if(new_socket_FD != 0){
-
+	/*
+	Register download connection with the Client_Buffer.
+	*/
+	if(new_FD != 0){
 		//register this connection with the download
-		DC->Download->reg_conn(new_socket_FD, DC);
+		DC->Download->reg_conn(new_FD, DC);
 
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(CB_D_mutex);
-		Client_Buffer[new_socket_FD]->add_download(DC->Download);
+		Client_Buffer[new_FD]->add_download(DC->Download);
 		}//end lock scope
 	}
 
@@ -443,32 +453,34 @@ bool client::start_download(exploration::info_buffer info)
 	}
 
 	//get file path, stop if file not found
-	std::string filePath;
-	if(!Client_Index.get_file_path(info.hash, filePath)){
+	std::string file_path;
+	if(!Client_Index.get_file_path(info.hash, file_path)){
 		return false;
 	}
 
-	//create an empty file for this download
-	std::fstream fout(filePath.c_str(), std::ios::out);
-	fout.close();
+	//create an empty file for this download, if a file doesn't already exist
+	std::fstream fin(file_path.c_str(), std::ios::in);
+	if(fin.is_open()){
+		fin.close();
+	}
+	else{
+		std::fstream fout(file_path.c_str(), std::ios::out);
+		fout.close();
+	}
 
-	int file_size = atoi(info.file_size.c_str());
-	int latest_request = info.latest_request;
-	int lastBlock = atoi(info.file_size.c_str())/(global::BUFFER_SIZE - global::S_CTRL_SIZE);
-	int lastBlockSize = atoi(info.file_size.c_str()) % (global::BUFFER_SIZE - global::S_CTRL_SIZE) + global::S_CTRL_SIZE;
-	int lastSuperBlock = lastBlock / global::SUPERBLOCK_SIZE;
-	int current_super_block = info.current_super_block;
+	unsigned long file_size = strtoul(info.file_size.c_str(), NULL, 10);
+	unsigned int latest_request = info.latest_request;
+	unsigned int last_block = atol(info.file_size.c_str())/(global::P_BLS_SIZE - 1); //(global::P_BLS_SIZE - 1) because control size is 1 byte
+	unsigned int last_block_size = atol(info.file_size.c_str()) % (global::P_BLS_SIZE - 1) + 1;
 
 	download * Download = new download_file(
 		info.hash,
 		info.file_name,
-		filePath,
+		file_path,
 		file_size,
 		latest_request,
-		lastBlock,
-		lastBlockSize,
-		lastSuperBlock,
-		current_super_block,
+		last_block,
+		last_block_size,
 		download_complete
 	);
 

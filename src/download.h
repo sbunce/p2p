@@ -32,7 +32,7 @@ public:
 	request          - full request should be put in request
 	                 - return false upon fatal error
 	response         - response to the latest request passed to this
-	                 - return false upon fatal error
+	                 - return false if no request
 	speed            - download speed in bytes per second
 	stop             - causes download to stop (when stopped complete() = true)
 	total_size       - the total amount needing to be downloaded
@@ -47,7 +47,7 @@ public:
 	virtual bool response(const int & socket, std::string & block) = 0;
 	virtual const int & speed();
 	virtual void stop() = 0;
-	virtual const int & total_size() = 0;
+	virtual const unsigned long & total_size() = 0;
 
 	/*
 	reg_conn   - registers a server with this download
@@ -71,7 +71,7 @@ protected:
 	/*
 	calculate_speed - calculates the download speed, should be called by response()
 	*/
-	void calculate_speed();
+	void calculate_speed(const int packet_size);
 
 private:
 	//these vectors are parallel and used for download speed calculation

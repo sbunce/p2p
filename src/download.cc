@@ -16,7 +16,7 @@ download::~download()
 	}
 }
 
-void download::calculate_speed()
+void download::calculate_speed(const int packet_size)
 {
 	time_t currentTime = time(0);
 
@@ -24,7 +24,7 @@ void download::calculate_speed()
 	//if the vectors are empty
 	if(Download_Second.empty()){
 		Download_Second.push_back(currentTime);
-		Second_Bytes.push_back(global::BUFFER_SIZE);
+		Second_Bytes.push_back(packet_size);
 		updated = true;
 	}
 
@@ -36,14 +36,14 @@ void download::calculate_speed()
 
 	//if still on the same second
 	if(!updated && Download_Second.back() == currentTime){
-		Second_Bytes.back() += global::BUFFER_SIZE;
+		Second_Bytes.back() += packet_size;
 		updated = true;
 	}
 
 	//no entry for current second, add one
 	if(!updated){
 		Download_Second.push_back(currentTime);
-		Second_Bytes.push_back(global::BUFFER_SIZE);
+		Second_Bytes.push_back(packet_size);
 	}
 
 	//count up all the bytes excluding the first and last second

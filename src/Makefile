@@ -9,9 +9,8 @@ CCL = g++
 
 #objects for the full program
 OBJECTS = main.o client.o client_buffer.o download.o download_conn.o \
-	download_file.o download_file_conn.o client_index.o \
-	exploration.o gui.o gui_about.o hash.o server.o server_index.o sha.o \
-	super_block.o
+	download_file.o download_file_conn.o client_index.o exploration.o \
+	gui.o gui_about.o hash.o server.o server_index.o sha.o
 
 #objects for the command line server
 SERVER_OBJECTS = main_server.o hash.o server.o server_index.o sha.o
@@ -56,7 +55,7 @@ download_conn.o: download_conn.cc download_conn.h
 	$(CC) download_conn.cc
 
 download_file.o: download_file.cc download_file.h download.o hash.o \
-	super_block.o atomic.h conversion.h global.h
+	atomic.h conversion.h global.h
 	$(CC) download_file.cc
 
 download_file_conn.o: download_file_conn.cc download_file_conn.h download_conn.o
@@ -82,9 +81,6 @@ server_index.o: server_index.cc server_index.h global.h
 
 sha.o: sha.cc sha.h global.h
 	$(CC) sha.cc
-
-super_block.o: super_block.cc super_block.h global.h
-	$(CC) super_block.cc
 
 clean:
 	rm -v *.o

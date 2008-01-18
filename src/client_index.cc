@@ -103,8 +103,7 @@ void client_index::initial_fill_buff_callBack(int & columns_retrieved, char ** q
 		fs::path path_boost = fs::system_complete(fs::path(global::CLIENT_DOWNLOAD_DIRECTORY + IB.file_name, fs::native));
 		IB.file_size.assign(query_response[2]);
 		unsigned int currentBytes = fs::file_size(path_boost);
-		IB.latest_request = currentBytes / (global::BUFFER_SIZE - global::S_CTRL_SIZE);
-		IB.current_super_block = currentBytes / ( (global::BUFFER_SIZE - global::S_CTRL_SIZE) * global::SUPERBLOCK_SIZE );
+		IB.latest_request = currentBytes / (global::P_BLS_SIZE - 1); //(global::P_BLS_SIZE - 1) because control size is 1 byte
 
 		std::string undelim_server_IP(query_response[3]);
 		std::string undelim_file_ID(query_response[4]);

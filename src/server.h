@@ -8,6 +8,7 @@
 //std
 #include <deque>
 #include <list>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -51,7 +52,7 @@ public:
 
 private:
 	//used by Upload_Speed to track the progress of an upload
-	class speedElement
+	class speed_element
 	{
 	public:
 		//the gui will need this when displaying the upload
@@ -71,19 +72,19 @@ private:
 	};
 
 	//used by calculate_speed() to track upload speeds
-	std::list<speedElement> Upload_Speed;
+	std::list<speed_element> Upload_Speed;
 
 	/*
 	Stores pending responses. The partial send buffers can be accessed by socket
-	number with Send_Buffer[socketNumber];
+	number with Send_Buff[socketNumber];
 	*/
-	std::vector<std::string> Send_Buffer;
+	std::map<int, std::string> Send_Buff;
 
 	/*
 	Stores partial requests. The partial requests can be accessed by socket number
-	with Recv_Buffer[socketNumber];
+	with Recv_Buff[socketNumber];
 	*/
-	std::vector<std::string> Recv_Buffer;
+	std::map<int, std::string> Recv_Buff;
 
 	//how many are connections currently established
 	int connections;
@@ -117,11 +118,11 @@ private:
 	void calculate_speed(const int & socketfd, const int & file_ID, const int & file_block);
 	void main_thread();
 	bool new_conn(const int & listener);
-	int prepare_send_buffer(const int & socketfd, const int & file_ID, const int & blockNumber);
+	int prepare_file_block(std::map<int, std::string>::iterator & SB_iter, const int & socket_FD, const int & file_ID, const int & blockNumber);
 	void process_request(const int & socketfd, char recvBuffer[], const int & nbytes);
 
-	boost::mutex SB_mutex; //mutex for all usage of Send_Buffer
-	boost::mutex RB_mutex; //mutex for all usage of Recv_Buffer
+	boost::mutex SB_mutex; //mutex for all usage of Send_Buff
+	boost::mutex RB_mutex; //mutex for all usage of Recv_Buff
 	boost::mutex US_mutex; //mutex for all usage of Upload_Speed
 
 	//keeps track of shared files

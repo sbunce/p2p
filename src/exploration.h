@@ -20,7 +20,6 @@ public:
 			//defaults which don't need to be set on new downloads
 			resumed = false;
 			latest_request = 0;
-			current_super_block = 0;
 		}
 
 		bool resumed; //if this info_buffer is being used to resume a download
@@ -29,7 +28,6 @@ public:
 		std::string file_name;
 		std::string file_size;
 		unsigned int latest_request; //what block was most recently requested
-		int current_super_block;
 
 		//information unique to the server, these vectors are parallel
 		std::vector<std::string> server_IP;

@@ -8,8 +8,8 @@ client_buffer::client_buffer(int socket_in, std::string & server_IP_in, atomic<i
 	socket = socket_in;
 	server_IP = server_IP_in;
 	send_pending = send_pending_in;
-	recv_buff.reserve(global::BUFFER_SIZE);
-	send_buff.reserve(global::C_CTRL_SIZE);
+	recv_buff.reserve(global::C_MAX_SIZE);
+	send_buff.reserve(global::S_MAX_SIZE);
 	Download_iter = Download.begin();
 	ready = true;
 	abuse = false;
@@ -67,11 +67,33 @@ void client_buffer::post_send()
 void client_buffer::prepare_request()
 {
 	if(ready && !terminating){
+
+		//serve the next download in line
 		rotate_downloads();
-		(*Download_iter)->request(socket, send_buff);
-		bytes_expected = (*Download_iter)->bytes_expected();
-		++(*send_pending);
-		ready = false;
+
+		//attempt to get a request
+		if((*Download_iter)->request(socket, send_buff)){
+			bytes_expected = (*Download_iter)->bytes_expected();
+			++(*send_pending);
+			ready = false;
+		}
+		else{ //if request not gotten try getting request from another download
+
+			std::list<download *>::iterator Download_iter_temp = Download_iter;
+			rotate_downloads();
+			while(Download_iter != Download_iter_temp){
+
+				//try other downloads until a request is gotten
+				if((*Download_iter)->request(socket, send_buff)){
+					bytes_expected = (*Download_iter)->bytes_expected();
+					++(*send_pending);
+					ready = false;
+					break;
+				}
+
+				rotate_downloads();
+			}
+		}
 	}
 }
 

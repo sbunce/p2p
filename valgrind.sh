@@ -1,5 +1,5 @@
 #!/bin/bash
 
-valgrind --suppressions=valgrind_suppressions ./simple-p2p
+valgrind --suppressions=valgrind_suppressions ./p2p
 
 exit 0

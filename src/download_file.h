@@ -1,7 +1,6 @@
 #ifndef H_DOWNLOAD_FILE
 #define H_DOWNLOAD_FILE
 
-#include <deque>
 #include <list>
 #include <map>
 #include <string>
@@ -11,7 +10,6 @@
 #include "conversion.h"
 #include "download.h"
 #include "download_file_conn.h"
-#include "super_block.h"
 #include "global.h"
 
 class download_file : public download
@@ -21,10 +19,10 @@ public:
 	Download_complete_flag is a special bool used to signal that the client
 	should check for the presence of a completed download.
 	*/
-	download_file(const std::string & file_hash_in, const std::string & file_name_in, 
-		const std::string & file_path_in, const int & file_size_in, const int & latest_request_in,
-		const int & last_block_in, const int & last_block_size_in, const int & last_super_block_in,
-		const int & current_super_block_in, atomic<bool> * download_complete_flag_in);
+	download_file(std::string & file_hash_in, std::string & file_name_in, 
+		std::string & file_path_in, unsigned long & file_size_in,
+		unsigned int & latest_request_in, unsigned int & last_block_in,
+		unsigned int & last_block_size_in, atomic<bool> * download_complete_flag_in);
 	~download_file();
 
 	//documentation for virtual functions in abstract base class
@@ -37,22 +35,29 @@ public:
 	virtual bool request(const int & socket, std::string & request);
 	virtual bool response(const int & socket, std::string & block);
 	virtual void stop();
-	virtual const int & total_size();
+	virtual const unsigned long & total_size();
 
 private:
 	//creates hashes for superBlocks
 	sha SHA;
 
 	//these must be set before the download begins and will be set by ctor
-	std::string file_hash;   //unique identifier of the file and message digest
-	std::string file_name;   //name of the file
-	std::string file_path;   //path to write file to on local system
-	int file_size;           //size of the file(bytes)
-	int latest_request;      //most recently requested block
-	int last_block;          //the last block number
-	int last_block_size;     //holds the exact size of the last fileBlock(in bytes)
-	int last_super_block;    //holds the number of the last super_block
-	int current_super_block; //what super_block clientBuffer is currently on
+	std::string file_hash; //unique identifier of the file and message digest
+	std::string file_name; //name of the file
+	std::string file_path; //path to write file to on local system
+	unsigned long file_size;      //size of the file(bytes)
+
+	/*
+	This variable is a bit tricky. It is incremented after storing it's value in
+	a download_file_conn->latest_request so if you want to know the real
+	latest_request after a request() has been run you need to do latest_request - 1.
+	*/
+	unsigned int latest_request;
+
+	unsigned int next_request;    //next block to be requested
+	long latest_written;          //most recently requested block
+	unsigned int last_block;      //the last block number
+	unsigned int last_block_size; //holds the exact size of the last fileBlock(in bytes)
 
 	/*
 	Tells the client that a download is complete, used when download is complete.
@@ -63,15 +68,13 @@ private:
 	//true when the download is completed
 	bool download_complete;
 
-	//will hold 0, 1, or 2 super_blocks. This is manipulated by needed_block().
-	std::deque<super_block> Super_Buffer;
+	//maps received block numbers to the actual file block
+	std::map<unsigned int, std::string> received_blocks;
 
 	/*
-	needed_block - returns number of a needed block
-	writeTree    - writes a super_block to file
+	writeTree - writes a file block
 	*/
-	unsigned int needed_block();
-	void write_super_block(std::string container[]);
+	void write_block(std::string & file_block);
 };
 #endif
 
