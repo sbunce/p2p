@@ -38,6 +38,8 @@ for buffer size that kills slow servers when a fast server is connected. I want
 to target requests such that slow server can still participate in the download.
 
 
-PORTABILITY SNAGS
+PORTABILITY PROBLEMS
 
 -Paths have forward slashes in them in globals.h
+
+-timer.h totally unportable

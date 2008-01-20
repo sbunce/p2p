@@ -1,6 +1,7 @@
 #ifndef H_DOWNLOAD
 #define H_DOWNLOAD
 
+#include <deque>
 #include <list>
 #include <string>
 #include <map>
@@ -38,14 +39,17 @@ public:
 	total_size       - the total amount needing to be downloaded
 	*/
 	virtual bool complete() = 0;
-	virtual const int bytes_expected() = 0;
+	virtual unsigned int bytes_expected() = 0;
 	virtual const std::string & hash() = 0;
+
+//I should not call this parameter a lit, it's confusing
 	virtual void IP_list(std::vector<std::string> & list) = 0;
+
 	virtual const std::string & name() = 0;
-	virtual int percent_complete() = 0;
+	virtual unsigned int percent_complete() = 0;
 	virtual bool request(const int & socket, std::string & request) = 0;
 	virtual bool response(const int & socket, std::string & block) = 0;
-	virtual const int & speed();
+	virtual const unsigned int & speed();
 	virtual void stop() = 0;
 	virtual const unsigned long & total_size() = 0;
 
@@ -71,12 +75,13 @@ protected:
 	/*
 	calculate_speed - calculates the download speed, should be called by response()
 	*/
-	void calculate_speed(const int packet_size);
+	void calculate_speed(const unsigned int & packet_size);
+
+	//speed of download(bytes per second)
+	unsigned int download_speed;
 
 private:
-	//these vectors are parallel and used for download speed calculation
-	int download_speed;               //speed of download(bytes per second)
-	std::vector<int> Download_Second; //second at which Second_Bytes were downloaded
-	std::vector<int> Second_Bytes;    //bytes in the second
+	//pair<second, bytes in second>
+	std::deque<std::pair<unsigned int, unsigned int> > Download_Speed;
 };
 #endif

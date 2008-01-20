@@ -8,7 +8,7 @@ namespace global
 {
 	/* *********** BEGIN DEBUGGING OPTIONS *********** */
 	#define DEBUG
-	#define UNRELIABLE_CLIENT
+	//#define UNRELIABLE_CLIENT
 	/* ************ END DEBUGGING OPTIONS ************ */
 
 	const std::string NAME = "p2p";

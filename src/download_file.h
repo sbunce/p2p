@@ -3,6 +3,7 @@
 
 #include <list>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -27,11 +28,11 @@ public:
 
 	//documentation for virtual functions in abstract base class
 	virtual bool complete();
-	virtual const int bytes_expected();
+	virtual unsigned int bytes_expected();
 	virtual const std::string & hash();
 	virtual void IP_list(std::vector<std::string> & list);
 	virtual const std::string & name();
-	virtual int percent_complete();
+	virtual unsigned int percent_complete();
 	virtual bool request(const int & socket, std::string & request);
 	virtual bool response(const int & socket, std::string & block);
 	virtual void stop();
@@ -47,15 +48,8 @@ private:
 	std::string file_path; //path to write file to on local system
 	unsigned long file_size;      //size of the file(bytes)
 
-	/*
-	This variable is a bit tricky. It is incremented after storing it's value in
-	a download_file_conn->latest_request so if you want to know the real
-	latest_request after a request() has been run you need to do latest_request - 1.
-	*/
-	unsigned int latest_request;
-
-	unsigned int next_request;    //next block to be requested
-	long latest_written;          //most recently requested block
+	unsigned int latest_request;  //the most recent block requested
+	unsigned int latest_written;  //most recently requested block
 	unsigned int last_block;      //the last block number
 	unsigned int last_block_size; //holds the exact size of the last fileBlock(in bytes)
 
@@ -69,11 +63,15 @@ private:
 	bool download_complete;
 
 	//maps received block numbers to the actual file block
+	std::set<unsigned int> requested_blocks;
 	std::map<unsigned int, std::string> received_blocks;
 
 	/*
-	writeTree - writes a file block
+	request_choose_block              - chooses a file block to request based on download_conn speed and download_speed
+	                                    returns false if download complete or no new requests to be made
+	writeTree                         - writes a file block
 	*/
+	bool request_choose_block(download_file_conn * conn);
 	void write_block(std::string & file_block);
 };
 #endif

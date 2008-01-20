@@ -77,7 +77,7 @@ void client_buffer::prepare_request()
 			++(*send_pending);
 			ready = false;
 		}
-		else{ //if request not gotten try getting request from another download
+		else{ //if request not gotten try getting request for another download
 
 			std::list<download *>::iterator Download_iter_temp = Download_iter;
 			rotate_downloads();

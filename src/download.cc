@@ -3,6 +3,8 @@
 download::download()
 {
 	download_speed = 0;
+	Download_Speed.push_front(std::make_pair(0, 0));
+	Download_Speed.push_front(std::make_pair(time(0), 0));
 }
 
 download::~download()
@@ -16,47 +18,28 @@ download::~download()
 	}
 }
 
-void download::calculate_speed(const int packet_size)
+void download::calculate_speed(const unsigned int & packet_size)
 {
-	time_t currentTime = time(0);
+	/*
+	This function keeps track of how many bytes are downloaded in one second. It
+	has a vector that keeps track of bytes in the current second and bytes in the
+	previous second. Because the current second will always be incomplete, the
+	previous second will be considered the download speed.
+	*/
 
-	bool updated = false;
-	//if the vectors are empty
-	if(Download_Second.empty()){
-		Download_Second.push_back(currentTime);
-		Second_Bytes.push_back(packet_size);
-		updated = true;
+	if(Download_Speed.front().first != time(0)){
+		//on a new second
+		Download_Speed.pop_back();
+		Download_Speed.push_front(std::make_pair(time(0), packet_size));
+	}
+	else{
+		Download_Speed.front().second += packet_size;
 	}
 
-	//get rid of information that's older than what to average
-	if(currentTime - Download_Second.front() >= global::SPEED_AVERAGE + 2){
-		Download_Second.erase(Download_Second.begin());
-		Second_Bytes.erase(Second_Bytes.begin());
-	}
-
-	//if still on the same second
-	if(!updated && Download_Second.back() == currentTime){
-		Second_Bytes.back() += packet_size;
-		updated = true;
-	}
-
-	//no entry for current second, add one
-	if(!updated){
-		Download_Second.push_back(currentTime);
-		Second_Bytes.push_back(packet_size);
-	}
-
-	//count up all the bytes excluding the first and last second
-	int totalBytes = 0;
-	for(int x = 1; x <= Download_Second.size() - 1; ++x){
-		totalBytes += Second_Bytes[x];
-	}
-
-	//divide by the time
-	download_speed = totalBytes / global::SPEED_AVERAGE;
+	download_speed = Download_Speed.back().second;
 }
 
-const int & download::speed()
+const unsigned int & download::speed()
 {
 	return download_speed;
 }
