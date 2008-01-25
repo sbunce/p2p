@@ -10,8 +10,6 @@ can be properly created and destroyed.
 
 BUGS
 
--Resumed downloading is broken. Files truncated on resume.
-
 
 DEFERRED FEATURES
 
@@ -28,18 +26,24 @@ the files of the trackers that tracker trusts and the files that that tracker
 trusts etc. Have an option to limit trust levels to direct trust only, one
 level inheritance and all level inheritance.
 
+-Implement pipelining. The idea is that you request a big group of file blocks
+from a server and then request new blocks as blocks start to come in. This gets
+rid of the dead time on the line that exists from the time after you receive a
+block to the time the server gets a request for a new block. I think this can be
+done having a queue, first request first response. Whenever a request is made
+put a pointer to the download in the queue.
 
--Keep track of the current download speed from a server by timestamping download_file_conn
-whenever latest_request is updated (and later calculating speed in response). From
-this time target new requests such that the requests line up with the expected
-progress of the file download. This is an attempt to somehow put servers operating
-at different speeds on equal footing algorithmically. I don't want a hard limit
-for buffer size that kills slow servers when a fast server is connected. I want
-to target requests such that slow server can still participate in the download.
+-Give the client_buffer the ability to encapsulate requests in to one packet.
+Have a command which is used for multipackets that is variable packet length.
+This would help for pipelining because you could combine many request packets
+in to one.
 
 
 PORTABILITY PROBLEMS
 
--Paths have forward slashes in them in globals.h
+-Paths have forward slashes in them in globals.h, read boost::filesystem docs
+and fix this you lazy slog.
 
--timer.h totally unportable
+-Casting BS.to_ulong() to a char in conversion.h is not portable between
+architectures of different endianness.
+

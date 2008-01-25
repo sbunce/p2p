@@ -86,16 +86,11 @@ unsigned int download_file::percent_complete()
 
 bool download_file::request_choose_block(download_file_conn * conn)
 {
-//std::cout << "latest_written: " << latest_written << "\n";
-
 	if(latest_written == last_block){
-//std::cout << "request_choose_block signalling complete\n";
 		download_complete = true;
 		*download_complete_flag = true;
 		return false;
 	}
-
-//DEBUG, server speed may need to be averaged over multiple packets, it's pretty bouncy, average it like download speed
 
 	/*
 	Determine what block to download by determining where the the download will be when the
@@ -123,21 +118,12 @@ bool download_file::request_choose_block(download_file_conn * conn)
 
 //std::cout << "optimal_next_block: " << optimal_next_block << "\n";
 
-/*
-when I back off I rerequest stuff because when I'm backing off requested blocks may not
-have been received
-*/
-
 	//attempt to find a block lower than or equal to optimal_next_block to request
 	unsigned int request = optimal_next_block;
 	std::pair<std::set<unsigned int>::iterator, bool> Pair;
 	while(true){
-
-//std::cout << "backtrack to: " << request << "\n";
-
-		//(unsigned int)0 - 1 means we backed off past the first request number
+		//(unsigned int)0 - 1 means it backed off past the first request number
 		if(request == latest_written || request == (unsigned int)0 - 1){
-//std::cout << "EXITING FIRST ON " << request << "\n";
 			break;
 		}
 
@@ -156,11 +142,7 @@ have been received
 	//attempt to find a block higher than optimal_next_block to request
 	request = optimal_next_block;
 	while(true){
-
-//std::cout << "forwardtrack to: " << request << "\n";
-
 		if(request == last_block + 1){
-//std::cout << "EXITING SECOND ON " << request << "\n";
 			return false;
 		}
 
@@ -187,35 +169,10 @@ bool download_file::request(const int & socket, std::string & request)
 		exit(1);
 	}
 
-/*
-	//check if last block already requested
-	if(latest_request - 1 == last_block){
-		if(latest_written == last_block){
-			//download complete, don't make request and signal complete
-			download_complete = true;
-			*download_complete_flag = true;
-			return false;
-		}
-		conn->latest_request = last_block;
-	}
-	else{
-		//last block not yet reached
-		conn->latest_request = latest_request++;
-	}
-
-	conn->time = timer::milli_time(); //marks the start time of the request
-	request = global::P_SBL + conversion::encode_int(conn->file_ID) + conversion::encode_int(conn->latest_request);
-	return true;
-*/
-
 	if(!request_choose_block(conn)){
-		//download_complete, no request to be made
-//std::cout << "NOMORE\n";
+		//no more requests to be made
 		return false;
 	}
-
-//std::cout << "latest_request: " << latest_request << "\n";
-//std::cout << "last_block:     " << last_block << "\n";
 
 	request = global::P_SBL + conversion::encode_int(conn->file_ID) + conversion::encode_int(conn->latest_request);
 	return true;
@@ -238,8 +195,7 @@ bool download_file::response(const int & socket, std::string & block)
 		exit(1);
 	}
 
-	//std::cout << "server: " << conn->server_IP << " request: " << conn->latest_request << " time: " << timer::difference(conn->time, timer::milli_time()) << "ms\n";
-	//conn->time = timer::difference(conn->time, timer::milli_time());
+	//update speed for the server
 	conn->calculate_speed(global::P_BLS_SIZE);
 
 	//trim off protocol information
@@ -254,29 +210,30 @@ bool download_file::response(const int & socket, std::string & block)
 	while(iter_cur != iter_end){
 		if(iter_cur->first == latest_written + 1){
 			write_block(iter_cur->second);
-//std::cout << "writing: " << iter_cur->first << "\n";
 			latest_written = iter_cur->first;
 			requested_blocks.erase(iter_cur->first);
 			received_blocks.erase(iter_cur);
 			iter_cur = received_blocks.begin();
 		}
 		else{
-//std::cout << "stuck on: " << iter_cur->first << "\n";
 			break;
 		}
 	}
 
-//by adding buffer sizes after processing of the buffer overall efficiency of requests can be determined
-static unsigned int buffer_efficiency;
-if(received_blocks.size() > 1){
-	buffer_efficiency += received_blocks.size();
-}
-
+//BEGIN DEBUG
+	//by adding buffer sizes after processing of the buffer overall efficiency of requests can be determined
+	static unsigned int buffer_efficiency;
+	if(received_blocks.size() > 1){
+		buffer_efficiency += received_blocks.size();
+	}
+//END DEBUG
 
 	//check if the download is complete
 	if(latest_written == last_block){
+
+//DEBUG
 std::cout << "buffer_efficiency: " << buffer_efficiency << "\n";
-std::cout << "response signalling complete\n";
+
 		download_complete = true;
 		*download_complete_flag = true;
 	}
