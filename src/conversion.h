@@ -14,7 +14,7 @@ namespace conversion
 
 inline std::string encode_int(const unsigned int & number)
 {
-	std::string encodedNumber;
+	std::string encoded_number;
 	std::bitset<32> bs = number;
 	std::bitset<32> bs_temp;
 
@@ -22,20 +22,20 @@ inline std::string encode_int(const unsigned int & number)
 		bs_temp = bs;
 		bs_temp <<= 8*x;
 		bs_temp >>= 24;
-		encodedNumber += (unsigned char)bs_temp.to_ulong();
+		encoded_number += (unsigned char)bs_temp.to_ulong();
 	}
 
-	return encodedNumber;
+	return encoded_number;
 }
 
-inline unsigned int decode_int(const int & begin, char recvBuffer[])
+inline unsigned int decode_int(std::string recv_buff)
 {
 	std::bitset<32> bs(0);
 	std::bitset<32> bs_temp;
 
 	int y = 3;
-	for(int x=begin; x<begin+4; ++x){
-		bs_temp = (unsigned char)recvBuffer[x];
+	for(int x=0; x<recv_buff.size(); ++x){
+		bs_temp = (unsigned char)recv_buff[x];
 		bs_temp <<= 8*y--;
 		bs |= bs_temp;
 	}

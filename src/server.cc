@@ -299,8 +299,8 @@ void server::main_thread()
 
 	FD_SET(listener, &master_FDS);
 	FD_max = listener;
-	char recv_buff[global::S_MAX_SIZE];
-   int nbytes;
+	char recv_buff[global::S_MAX_SIZE*global::PIPELINE_SIZE];
+   int n_bytes;
 
 #ifdef DEBUG
 	std::cout << "info: server::start_thread(): server created listener socket number " << listener << "\n";
@@ -338,27 +338,27 @@ void server::main_thread()
 					new_conn(socket_FD);
 				}
 				else{ //existing socket sending data
-					if((nbytes = recv(socket_FD, recv_buff, global::S_MAX_SIZE, 0)) <= 0){
+					if((n_bytes = recv(socket_FD, recv_buff, global::S_MAX_SIZE*global::PIPELINE_SIZE, 0)) <= 0){
 						disconnect(socket_FD);
 						//it's possible the disconnected socket was in write_FDS, try to remove it
 						FD_CLR(socket_FD, &write_FDS);
 					}
 					else{ //incoming data from client socket
-						process_request(socket_FD, recv_buff, nbytes);
+						process_request(socket_FD, recv_buff, n_bytes);
 					}
 				}
 			}
 
-			//do not check for writes on listener, there is no corresponding Send_Buff element (would cause segfault)
+			//do not check for writes on listener, there is no corresponding Send_Buff element
 			if(FD_ISSET(socket_FD, &write_FDS) && socket_FD != listener){
 				std::map<int, std::string>::iterator SB_iter = Send_Buff.find(socket_FD);
 
 				if(!SB_iter->second.empty()){
-					if((nbytes = send(socket_FD, SB_iter->second.c_str(), SB_iter->second.size(), 0)) <= 0){
+					if((n_bytes = send(socket_FD, SB_iter->second.c_str(), SB_iter->second.size(), 0)) <= 0){
 						disconnect(socket_FD);
 					}
 					else{ //remove bytes sent from buffer
-						SB_iter->second.erase(0, nbytes);
+						SB_iter->second.erase(0, n_bytes);
 						if(SB_iter->second.empty()){
 							--send_pending;
 						}
@@ -369,38 +369,37 @@ void server::main_thread()
 	}
 }
 
-int server::prepare_file_block(std::map<int, std::string>::iterator & SB_iter, const int & socket_FD, const int & file_ID, const int & blockNumber)
+int server::prepare_file_block(std::map<int, std::string>::iterator & SB_iter, const int & socket_FD, const int & file_ID, const int & block_number)
 {
-	//make sure no residual in the buffer
-	SB_iter->second.clear();
+	int start_size = SB_iter->second.size();
 
 	//get file_size/filePath that corresponds to file_ID
 	int file_size;
-	std::string filePath;
-	if(!Server_Index.file_info(file_ID, file_size, filePath)){
+	std::string file_path;
+	if(!Server_Index.file_info(file_ID, file_size, file_path)){
 		//file was not found
 		SB_iter->second += global::P_FNF;
 		return 0;
 	}
 
-	//check for valid block request ((global::BUFFER_SIZE - 1) because control size is 1 byte)
-	if(blockNumber*(global::P_BLS_SIZE - 1) > file_size){
+	//check for valid file block request
+	if(block_number*(global::P_BLS_SIZE - 1) > file_size){
 		//a block past the end of file was requested
 		SB_iter->second += global::P_DNE;
 		return 0;
 	}
 
-	SB_iter->second += global::P_BLS; //add control data
-	std::ifstream fin(filePath.c_str());
+	SB_iter->second += global::P_BLS;
+	std::ifstream fin(file_path.c_str());
 	if(fin.is_open()){
 		//seek to the file_block the client wants
-		fin.seekg(blockNumber*(global::P_BLS_SIZE - 1));
+		fin.seekg(block_number*(global::P_BLS_SIZE - 1));
 
 		//fill the buffer
 		char ch;
 		while(fin.get(ch)){
 			SB_iter->second += ch;
-			if(SB_iter->second.size() == global::P_BLS_SIZE){
+			if(SB_iter->second.size() - start_size == global::P_BLS_SIZE){
 				break;
 			}
 		}
@@ -408,23 +407,34 @@ int server::prepare_file_block(std::map<int, std::string>::iterator & SB_iter, c
 	}
 
 	//update speed calculation (assumes there is a response)
-	calculate_speed(socket_FD, file_ID, blockNumber);
+	calculate_speed(socket_FD, file_ID, block_number);
 
 	return 0;
 }
 
 void server::process_request(const int & socket_FD, char recv_buff[], const int & nbytes)
 {
-	std::map<int, std::string>::iterator SB_iter = Send_Buff.find(socket_FD);
+	std::map<int, std::string>::iterator RB_iter = Recv_Buff.find(socket_FD);
+	RB_iter->second.append(recv_buff, nbytes);
 
-	if(recv_buff[0] == global::P_SBL && nbytes == global::P_SBL_SIZE){
-		int file_ID = conversion::decode_int(1, recv_buff);
-		int blockNumber = conversion::decode_int(5, recv_buff);
-		prepare_file_block(SB_iter, socket_FD, file_ID, blockNumber);
-		++send_pending;
+	//process recv buffer until it's empty or it contains no complete requests
+	bool send_pending_temp = false;
+	while(RB_iter->second.size()){
+		if(RB_iter->second[0] == global::P_SBL && nbytes >= global::P_SBL_SIZE){
+			std::map<int, std::string>::iterator SB_iter = Send_Buff.find(socket_FD);
+			int file_ID = conversion::decode_int(RB_iter->second.substr(1,4));
+			int block_number = conversion::decode_int(RB_iter->second.substr(5,4));
+			prepare_file_block(SB_iter, socket_FD, file_ID, block_number);
+			RB_iter->second.erase(0, global::P_SBL_SIZE);
+			send_pending_temp = true;
+		}
+		else{
+			break;
+		}
 	}
-	else{
-		SB_iter->second.append(recv_buff);
+
+	if(send_pending_temp){
+		++send_pending;
 	}
 }
 

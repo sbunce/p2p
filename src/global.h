@@ -15,6 +15,7 @@ namespace global
 	const std::string VERSION = "0.00 pre-alpha";
 
 	const int MAX_CONNECTIONS = 50; //maximum number of connections the server will accept
+	const int PIPELINE_SIZE = 5;    //how many pre-requests can be done
 	const int P2P_PORT = 6969;      //port client connects to and server receives on
 	const int GUI_TICK = 100;       //time(in milliseconds) between gui updates
 	const int SPEED_AVERAGE = 2;    //how many seconds to average upload/download speed over

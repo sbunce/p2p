@@ -3,6 +3,7 @@
 
 //std
 #include <ctime>
+#include <queue>
 #include <list>
 
 #include "atomic.h"
@@ -67,13 +68,14 @@ private:
 	//determines whether the client will send, full description on client.h
 	atomic<int> * send_pending;
 
-	//how many bytes needed to fulfill latest request
-	unsigned int bytes_expected;
-
 	//what Download this socket is currently serving
 	std::list<download *>::iterator Download_iter;
+
 	//all downloads that this client_buffer is serving
 	std::list<download *> Download;
+
+	//holds downloads in order of pending response paired with how many bytes are expected
+	std::queue<std::pair<int, download *> > Pipeline;
 
 	/*
 	rotate_downloads - moves Download_iter through Download in a circular fashion

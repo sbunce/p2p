@@ -48,7 +48,7 @@ public:
 	virtual const std::string & name() = 0;
 	virtual unsigned int percent_complete() = 0;
 	virtual bool request(const int & socket, std::string & request) = 0;
-	virtual bool response(const int & socket, std::string & block) = 0;
+	virtual bool response(const int & socket, std::string block) = 0;
 	virtual const unsigned int & speed();
 	virtual void stop() = 0;
 	virtual const unsigned long & total_size() = 0;

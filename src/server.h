@@ -7,6 +7,7 @@
 
 //std
 #include <deque>
+#include <queue>
 #include <list>
 #include <map>
 #include <string>
@@ -118,7 +119,7 @@ private:
 	void calculate_speed(const int & socketfd, const int & file_ID, const int & file_block);
 	void main_thread();
 	bool new_conn(const int & listener);
-	int prepare_file_block(std::map<int, std::string>::iterator & SB_iter, const int & socket_FD, const int & file_ID, const int & blockNumber);
+	int prepare_file_block(std::map<int, std::string>::iterator & SB_iter, const int & socket_FD, const int & file_ID, const int & block_number);
 	void process_request(const int & socketfd, char recvBuffer[], const int & nbytes);
 
 	boost::mutex SB_mutex; //mutex for all usage of Send_Buff

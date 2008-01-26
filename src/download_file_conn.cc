@@ -5,6 +5,7 @@ download_file_conn::download_file_conn(download * download_in, std::string serve
 	Download = download_in;
 	server_IP = server_IP_in;
 	file_ID = file_ID_in;
+	download_speed = 0;
 
 	Download_Speed.push_front(std::make_pair(0, 0));
 	Download_Speed.push_front(std::make_pair(time(0), 0));

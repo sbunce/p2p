@@ -194,10 +194,11 @@ void client::main_thread()
 
 		//process reads/writes
 		char recv_buff[global::C_MAX_SIZE];
+		int n_bytes;
 		std::map<int, client_buffer *>::iterator CB_iter;
 		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &read_FDS)){
-				int n_bytes = recv(socket_FD, recv_buff, global::C_MAX_SIZE, 0);
+				n_bytes = recv(socket_FD, recv_buff, global::C_MAX_SIZE, 0);
 				if(n_bytes <= 0){
 					{//begin lock scope
 					boost::mutex::scoped_lock lock(CB_D_mutex);
@@ -219,7 +220,7 @@ void client::main_thread()
 				CB_iter = Client_Buffer.find(socket_FD);
 
 				if(!CB_iter->second->send_buff.empty()){
-					int n_bytes = send(socket_FD, CB_iter->second->send_buff.c_str(), CB_iter->second->send_buff.size(), 0);
+					n_bytes = send(socket_FD, CB_iter->second->send_buff.c_str(), CB_iter->second->send_buff.size(), 0);
 					if(n_bytes <= 0){
 						disconnect(socket_FD);
 					}

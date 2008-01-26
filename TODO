@@ -7,6 +7,8 @@ can be properly created and destroyed.
 
 -Add a client_buffer feature to allow download to check for errors.
 
+-Determine if the server speed calculation requires a deque. Will a queue do?
+
 
 BUGS
 

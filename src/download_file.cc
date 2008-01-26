@@ -130,7 +130,7 @@ bool download_file::request_choose_block(download_file_conn * conn)
 		Pair = requested_blocks.insert(request);
 
 		if(Pair.second){
-			conn->latest_request = request;
+			conn->latest_request.push(request);
 			latest_request = request;
 			return true;
 		}
@@ -149,7 +149,7 @@ bool download_file::request_choose_block(download_file_conn * conn)
 		Pair = requested_blocks.insert(request);
 
 		if(Pair.second){
-			conn->latest_request = request;
+			conn->latest_request.push(request);
 			latest_request = request;
 			return true;
 		}
@@ -174,11 +174,14 @@ bool download_file::request(const int & socket, std::string & request)
 		return false;
 	}
 
-	request = global::P_SBL + conversion::encode_int(conn->file_ID) + conversion::encode_int(conn->latest_request);
+//std::cout << "conn->file_ID:               " << conn->file_ID << "\n";
+//std::cout << "conn->latest_request.back(): " << conn->latest_request.back() << "\n";
+
+	request = global::P_SBL + conversion::encode_int(conn->file_ID) + conversion::encode_int(conn->latest_request.back());
 	return true;
 }
 
-bool download_file::response(const int & socket, std::string & block)
+bool download_file::response(const int & socket, std::string block)
 {
 	#ifdef UNRELIABLE_CLIENT
 	if(std::rand() % 100 == 0){
@@ -201,7 +204,10 @@ bool download_file::response(const int & socket, std::string & block)
 	//trim off protocol information
 	block.erase(0, 1);
 
-	received_blocks.insert(std::make_pair(conn->latest_request, block));
+//DEBUG, is a check needed to make sure conn->latest_request not empty?
+
+	received_blocks.insert(std::make_pair(conn->latest_request.front(), block));
+	conn->latest_request.pop();
 
 	//flush as much of the file block buffer as possible
 	std::map<unsigned int, std::string>::iterator iter_cur, iter_end;

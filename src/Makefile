@@ -54,7 +54,7 @@ download.o: download.cc download.h atomic.h download_conn.o global.h
 download_conn.o: download_conn.cc download_conn.h
 	$(CC) download_conn.cc
 
-download_file.o: download_file.cc download_file.h download.o hash.o \
+download_file.o: download_file.cc download_file.h download.o download_file_conn.o hash.o \
 	atomic.h conversion.h global.h
 	$(CC) download_file.cc
 

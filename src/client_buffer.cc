@@ -44,13 +44,19 @@ const time_t & client_buffer::get_last_seen()
 
 void client_buffer::post_recv()
 {
-	if(recv_buff.size() == bytes_expected){
-		(*Download_iter)->response(socket, recv_buff);
-		recv_buff.clear();
+	while(recv_buff.size() >= Pipeline.front().first){
+		Pipeline.front().second->response(socket, recv_buff.substr(0, Pipeline.front().first));
+		recv_buff.erase(0, Pipeline.front().first);
+		Pipeline.pop();
 		ready = true;
+
+		if(Pipeline.empty()){
+			break;
+		}
 	}
 
-	if(recv_buff.size() > bytes_expected){
+	//if recv_buff larger than largest case the server is doing something naughty
+	if(recv_buff.size() > global::PIPELINE_SIZE * global::C_MAX_SIZE){
 		abuse = true;
 	}
 
@@ -66,33 +72,37 @@ void client_buffer::post_send()
 
 void client_buffer::prepare_request()
 {
+	std::string request;
 	if(ready && !terminating){
-
-		//serve the next download in line
-		rotate_downloads();
-
-		//attempt to get a request
-		if((*Download_iter)->request(socket, send_buff)){
-			bytes_expected = (*Download_iter)->bytes_expected();
-			++(*send_pending);
-			ready = false;
-		}
-		else{ //if request not gotten try getting request for another download
-
-			std::list<download *>::iterator Download_iter_temp = Download_iter;
+		int count = 0;
+		while(Pipeline.size() < global::PIPELINE_SIZE && ++count <= global::PIPELINE_SIZE){
+			//serve the next download in line
 			rotate_downloads();
-			while(Download_iter != Download_iter_temp){
 
-				//try other downloads until a request is gotten
-				if((*Download_iter)->request(socket, send_buff)){
-					bytes_expected = (*Download_iter)->bytes_expected();
-					++(*send_pending);
-					ready = false;
-					break;
-				}
-
-				rotate_downloads();
+			//attempt to get a request
+			if((*Download_iter)->request(socket, request)){
+				send_buff += request;
+				Pipeline.push(std::make_pair((*Download_iter)->bytes_expected(),*Download_iter));
+				ready = false;
 			}
+			else{
+				//rotate until a request is gotten or a full rotation has been done
+				std::list<download *>::iterator Download_iter_temp = Download_iter;
+				rotate_downloads();
+				while(Download_iter != Download_iter_temp){
+					if((*Download_iter)->request(socket, request)){
+						send_buff += request;
+						Pipeline.push(std::make_pair((*Download_iter)->bytes_expected(),*Download_iter));
+						ready = false;
+						break;
+					}
+					rotate_downloads();
+				}
+			}
+		}
+
+		if(send_buff.size() != 0){
+			++(*send_pending);
 		}
 	}
 }
