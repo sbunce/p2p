@@ -120,7 +120,7 @@ private:
 	void main_thread();
 	bool new_conn(const int & listener);
 	int prepare_file_block(std::map<int, std::string>::iterator & SB_iter, const int & socket_FD, const int & file_ID, const int & block_number);
-	void process_request(const int & socketfd, char recvBuffer[], const int & nbytes);
+	void process_request(const int & socketfd, char recvBuffer[], const int & n_bytes);
 
 	boost::mutex SB_mutex; //mutex for all usage of Send_Buff
 	boost::mutex RB_mutex; //mutex for all usage of Recv_Buff

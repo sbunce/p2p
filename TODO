@@ -9,8 +9,12 @@ can be properly created and destroyed.
 
 -Determine if the server speed calculation requires a deque. Will a queue do?
 
+-Add a check for PIPELINE_SIZE * C_MAX_SIZE in the server.
+
 
 BUGS
+
+-Upload speed is incorrect.
 
 
 DEFERRED FEATURES
@@ -28,18 +32,6 @@ the files of the trackers that tracker trusts and the files that that tracker
 trusts etc. Have an option to limit trust levels to direct trust only, one
 level inheritance and all level inheritance.
 
--Implement pipelining. The idea is that you request a big group of file blocks
-from a server and then request new blocks as blocks start to come in. This gets
-rid of the dead time on the line that exists from the time after you receive a
-block to the time the server gets a request for a new block. I think this can be
-done having a queue, first request first response. Whenever a request is made
-put a pointer to the download in the queue.
-
--Give the client_buffer the ability to encapsulate requests in to one packet.
-Have a command which is used for multipackets that is variable packet length.
-This would help for pipelining because you could combine many request packets
-in to one.
-
 
 PORTABILITY PROBLEMS
 
@@ -49,3 +41,4 @@ and fix this you lazy slog.
 -Casting BS.to_ulong() to a char in conversion.h is not portable between
 architectures of different endianness.
 
+-close() is called closesocket() on windows.

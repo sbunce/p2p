@@ -42,8 +42,14 @@ const time_t & client_buffer::get_last_seen()
 	return last_seen;
 }
 
-void client_buffer::post_recv()
+int client_buffer::post_recv()
 {
+	//make sure the server didn't respond out of turn, don't try to do Pipeline.front() on an empty Pipeline
+	if(Pipeline.empty()){
+		abuse = true;
+		return 0;
+	}
+
 	while(recv_buff.size() >= Pipeline.front().first){
 		Pipeline.front().second->response(socket, recv_buff.substr(0, Pipeline.front().first));
 		recv_buff.erase(0, Pipeline.front().first);

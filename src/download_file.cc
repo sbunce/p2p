@@ -174,9 +174,6 @@ bool download_file::request(const int & socket, std::string & request)
 		return false;
 	}
 
-//std::cout << "conn->file_ID:               " << conn->file_ID << "\n";
-//std::cout << "conn->latest_request.back(): " << conn->latest_request.back() << "\n";
-
 	request = global::P_SBL + conversion::encode_int(conn->file_ID) + conversion::encode_int(conn->latest_request.back());
 	return true;
 }
@@ -204,8 +201,6 @@ bool download_file::response(const int & socket, std::string block)
 	//trim off protocol information
 	block.erase(0, 1);
 
-//DEBUG, is a check needed to make sure conn->latest_request not empty?
-
 	received_blocks.insert(std::make_pair(conn->latest_request.front(), block));
 	conn->latest_request.pop();
 
@@ -226,19 +221,20 @@ bool download_file::response(const int & socket, std::string block)
 		}
 	}
 
-//BEGIN DEBUG
+	#ifdef DEBUG
 	//by adding buffer sizes after processing of the buffer overall efficiency of requests can be determined
 	static unsigned int buffer_efficiency;
 	if(received_blocks.size() > 1){
 		buffer_efficiency += received_blocks.size();
 	}
-//END DEBUG
+	#endif
 
 	//check if the download is complete
 	if(latest_written == last_block){
 
-//DEBUG
-std::cout << "buffer_efficiency: " << buffer_efficiency << "\n";
+		#ifdef DEBUG
+		std::cout << "buffer_efficiency: " << buffer_efficiency << "\n";
+		#endif
 
 		download_complete = true;
 		*download_complete_flag = true;

@@ -55,7 +55,7 @@ void server::calculate_speed(const int & socket_FD, const int & file_ID, const i
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(US_mutex);
 
-	time_t currentTime = time(0);
+	time_t current_time = time(0);
 
 	//get IP of the socket
 	struct sockaddr_in addr;
@@ -73,11 +73,11 @@ void server::calculate_speed(const int & socket_FD, const int & file_ID, const i
 			found = true;
 
 			//check time and update byte count
-			if(iter_cur->download_second.front() == currentTime){
+			if(iter_cur->download_second.front() == current_time){
 				iter_cur->second_bytes.front() += global::P_BLS_SIZE;
 			}
 			else{
-				iter_cur->download_second.push_front(currentTime);
+				iter_cur->download_second.push_front(current_time);
 				iter_cur->second_bytes.push_front(global::P_BLS_SIZE);
 			}
 
@@ -85,14 +85,13 @@ void server::calculate_speed(const int & socket_FD, const int & file_ID, const i
 
 			//get rid of elements older than SPEED_AVERAGE seconds
 			//+2 on SPEED_AVERAGE because first and last second will be discarded
-			if(iter_cur->download_second.back() <= currentTime - (global::SPEED_AVERAGE + 2)){
+			if(iter_cur->download_second.back() <= current_time - (global::SPEED_AVERAGE + 2)){
 				iter_cur->download_second.pop_back();
 				iter_cur->second_bytes.pop_back();
 			}
 
 			break;
 		}
-
 		++iter_cur;
 	}
 
@@ -110,7 +109,7 @@ void server::calculate_speed(const int & socket_FD, const int & file_ID, const i
 			temp.client_IP = inet_ntoa(addr.sin_addr);
 			temp.file_ID = file_ID;
 			temp.file_block = file_block;
-			temp.download_second.push_back(currentTime);
+			temp.download_second.push_back(current_time);
 			temp.second_bytes.push_back(global::P_BLS_SIZE);
 			temp.file_size = file_size;
 			temp.file_block = file_block;
@@ -412,15 +411,15 @@ int server::prepare_file_block(std::map<int, std::string>::iterator & SB_iter, c
 	return 0;
 }
 
-void server::process_request(const int & socket_FD, char recv_buff[], const int & nbytes)
+void server::process_request(const int & socket_FD, char recv_buff[], const int & n_bytes)
 {
 	std::map<int, std::string>::iterator RB_iter = Recv_Buff.find(socket_FD);
-	RB_iter->second.append(recv_buff, nbytes);
+	RB_iter->second.append(recv_buff, n_bytes);
 
 	//process recv buffer until it's empty or it contains no complete requests
 	bool send_pending_temp = false;
 	while(RB_iter->second.size()){
-		if(RB_iter->second[0] == global::P_SBL && nbytes >= global::P_SBL_SIZE){
+		if(RB_iter->second[0] == global::P_SBL && n_bytes >= global::P_SBL_SIZE){
 			std::map<int, std::string>::iterator SB_iter = Send_Buff.find(socket_FD);
 			int file_ID = conversion::decode_int(RB_iter->second.substr(1,4));
 			int block_number = conversion::decode_int(RB_iter->second.substr(5,4));

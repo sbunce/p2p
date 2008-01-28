@@ -35,7 +35,7 @@ public:
 	const bool empty();
 	const std::string & get_IP();
 	const time_t & get_last_seen();
-	void post_recv();
+	int post_recv();
 	void post_send();
 	void prepare_request();
 	const bool terminate_download(const std::string & hash);
