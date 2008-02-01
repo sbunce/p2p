@@ -306,7 +306,6 @@ bool gui::download_click(GdkEventButton * event)
 		downloadsPopupMenu.popup(event->button, event->time);
 
 		//select the row when the user right clicks on it
-		//without this user would have to left click then right click
 		int x, y;
 		Gtk::TreeModel::Path path;
 		Gtk::TreeViewColumn columnObject;
@@ -314,10 +313,8 @@ bool gui::download_click(GdkEventButton * event)
 		if(downloadView->get_path_at_pos((int)event->x, (int)event->y, path, column, x, y)){
 			downloadView->set_cursor(path);
 		}
-
 		return true;
 	}
-
 	return false;
 }
 
@@ -327,7 +324,6 @@ bool gui::search_click(GdkEventButton * event)
 		searchPopupMenu.popup(event->button, event->time);
 
 		//select the row when the user right clicks on it
-		//without this user would have to left click then right click
 		int x, y;
 		Gtk::TreeModel::Path path;
 		Gtk::TreeViewColumn columnObject;
@@ -335,10 +331,8 @@ bool gui::search_click(GdkEventButton * event)
 		if(searchView->get_path_at_pos((int)event->x, (int)event->y, path, column, x, y)){
 			searchView->set_cursor(path);
 		}
-
 		return true;
 	}
-
 	return false;
 }
 
@@ -660,13 +654,14 @@ bool gui::upload_info_refresh()
 			//check if server_IP and file_ID match the row
 			if(client_IP_retrieved == info_iter_cur->client_IP && file_ID_retrieved == info_iter_cur->file_ID){
 				upload_found = true;
+				break;
 			}
 			++info_iter_cur;
 		}
 
 		//if upload info wasn't found for row delete it
 		if(!upload_found){
-			Children_iter_cur = downloadList->erase(Children_iter_cur);
+			Children_iter_cur = uploadList->erase(Children_iter_cur);
 		}
 		else{
 			++Children_iter_cur;

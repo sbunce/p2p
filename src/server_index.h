@@ -9,7 +9,7 @@
 #include <sqlite3.h>
 
 #include "global.h"
-#include "hash.h"
+#include "hash_tree.h"
 
 class server_index
 {
@@ -22,7 +22,7 @@ public:
 	start       - starts index_share_thread
 	*/
 	bool is_indexing();
-	bool file_info(const int & file_ID, int & file_size, std::string & file_path);
+	bool file_info(const unsigned int & file_ID, unsigned long & file_size, std::string & file_path);
 	void start();
 
 private:
@@ -66,11 +66,11 @@ private:
 	*/
 	bool add_entry_entry_exists;
 	bool file_info_entry_exists;
-	int file_info_file_size;
+	unsigned long file_info_file_size;
 	std::string file_info_file_path;
 
 	sqlite3 * sqlite3_DB; //sqlite database pointer to be passed to functions like sqlite3_exec
-	hash Hash;            //hash generator for blocks and whole files
+	hash_tree Hash_Tree;  //generates hash trees
 
 	/*
 	add_entry           - adds an entry to the database if none exists for the file

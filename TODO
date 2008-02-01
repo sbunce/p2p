@@ -7,21 +7,26 @@ can be properly created and destroyed.
 
 -Add a client_buffer feature to allow download to check for errors.
 
--Determine if the server speed calculation requires a deque. Will a queue do?
+-The latency block requester in download_file is broken since pipelineing was
+implemented.
 
--Add a check for PIPELINE_SIZE * C_MAX_SIZE in the server.
+-See if the integer fields in sqlite DB are large enough.
 
 
 BUGS
 
--Upload speed is incorrect.
+-Upload speed is incorrect. Redo algorithm.
+
+-Problem with downloads missing a packet and buffering huge. The error is
+non-deterministic.
 
 
 DEFERRED FEATURES
 
 -Needs to be a check so that when the user tries to download the same thing
-twice the second download doesn't get appended to the first. Make a database
-to store downloaded file information to check against.
+twice the second download doesn't get appended to the first. This will naturally
+be added when hashes are checked. If a file we want to download has a root hash
+that exists in the hashes folder then file was already downloaded.
 
 
 IDEAS
@@ -36,9 +41,14 @@ level inheritance and all level inheritance.
 PORTABILITY PROBLEMS
 
 -Paths have forward slashes in them in globals.h, read boost::filesystem docs
-and fix this you lazy slog.
+and fix this.
 
 -Casting BS.to_ulong() to a char in conversion.h is not portable between
 architectures of different endianness.
 
 -close() is called closesocket() on windows.
+
+
+PERFORMANCE CONERNS
+
+

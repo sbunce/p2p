@@ -24,13 +24,11 @@ public:
 		std::string & file_path_in, unsigned long & file_size_in,
 		unsigned int & latest_request_in, unsigned int & last_block_in,
 		unsigned int & last_block_size_in, atomic<bool> * download_complete_flag_in);
-	~download_file();
 
 	//documentation for virtual functions in abstract base class
 	virtual bool complete();
 	virtual unsigned int bytes_expected();
 	virtual const std::string & hash();
-	virtual void IP_list(std::vector<std::string> & list);
 	virtual const std::string & name();
 	virtual unsigned int percent_complete();
 	virtual bool request(const int & socket, std::string & request);
@@ -43,10 +41,10 @@ private:
 	sha SHA;
 
 	//these must be set before the download begins and will be set by ctor
-	std::string file_hash; //unique identifier of the file and message digest
-	std::string file_name; //name of the file
-	std::string file_path; //path to write file to on local system
-	unsigned long file_size;      //size of the file(bytes)
+	std::string file_hash;   //unique identifier of the file and message digest
+	std::string file_name;   //name of the file
+	std::string file_path;   //path to write file to on local system
+	unsigned long file_size; //size of the file(bytes)
 
 	unsigned int latest_request;  //the most recent block requested
 	unsigned int latest_written;  //most recently requested block
@@ -67,9 +65,9 @@ private:
 	std::map<unsigned int, std::string> received_blocks;
 
 	/*
-	request_choose_block              - chooses a file block to request based on download_conn speed and download_speed
-	                                    returns false if download complete or no new requests to be made
-	writeTree                         - writes a file block
+	request_choose_block - chooses a file block to request based on download_conn speed and download_speed
+	                       returns false if download complete or no new requests to be made
+	writeTree            - writes a file block
 	*/
 	bool request_choose_block(download_file_conn * conn);
 	void write_block(std::string & file_block);

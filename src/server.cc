@@ -1,6 +1,7 @@
 //std
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <time.h>
 
 #include "conversion.h"
@@ -26,9 +27,12 @@ void server::disconnect(const int & socket_FD)
 	set and decrementing connections.
 	*/
 	if(FD_ISSET(socket_FD, &master_FDS)){
+		FD_CLR(socket_FD, &master_FDS);
+		FD_CLR(socket_FD, &read_FDS);
+		FD_CLR(socket_FD, &write_FDS);
+
 		--connections;
 		close(socket_FD);
-		FD_CLR(socket_FD, &master_FDS);
 	}
 
 	//reduce FD_max if possible
@@ -41,7 +45,11 @@ void server::disconnect(const int & socket_FD)
 
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(SB_mutex);
-	Send_Buff.erase(socket_FD);
+	std::map<int, std::string>::iterator SB_iter = Send_Buff.find(socket_FD);
+	if(SB_iter != Send_Buff.end()){
+		--send_pending;
+		Send_Buff.erase(socket_FD);
+	}
 	}//end lock scope
 
 	{//begin lock scope
@@ -50,7 +58,7 @@ void server::disconnect(const int & socket_FD)
 	}//end lock scope
 }
 
-void server::calculate_speed(const int & socket_FD, const int & file_ID, const int & file_block)
+void server::calculate_speed_file(const int & socket_FD, const int & file_ID, const int & file_block, const unsigned long & file_size, const std::string & file_path)
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(US_mutex);
@@ -63,33 +71,27 @@ void server::calculate_speed(const int & socket_FD, const int & file_ID, const i
 	getpeername(socket_FD, (struct sockaddr*)&addr, &len);
 
 	bool found = false;
-	std::list<speed_element>::iterator iter_cur, iter_end;
+	std::list<speed_element_file>::iterator iter_cur, iter_end;
 	iter_cur = Upload_Speed.begin();
 	iter_end = Upload_Speed.end();
 	while(iter_cur != iter_end){
 
 		//if element found update it
 		if(iter_cur->client_IP == inet_ntoa(addr.sin_addr) && iter_cur->file_ID == file_ID){
-			found = true;
 
-			//check time and update byte count
-			if(iter_cur->download_second.front() == current_time){
-				iter_cur->second_bytes.front() += global::P_BLS_SIZE;
+			if(iter_cur->Speed.back().first == current_time){
+				iter_cur->Speed.back().second += global::P_BLS_SIZE;
 			}
 			else{
-				iter_cur->download_second.push_front(current_time);
-				iter_cur->second_bytes.push_front(global::P_BLS_SIZE);
+				iter_cur->Speed.push_back(std::make_pair(current_time, global::P_BLS_SIZE));
+			}
+
+			if(iter_cur->Speed.size() > global::SPEED_AVERAGE + 1){
+				iter_cur->Speed.pop_front();
 			}
 
 			iter_cur->file_block = file_block;
-
-			//get rid of elements older than SPEED_AVERAGE seconds
-			//+2 on SPEED_AVERAGE because first and last second will be discarded
-			if(iter_cur->download_second.back() <= current_time - (global::SPEED_AVERAGE + 2)){
-				iter_cur->download_second.pop_back();
-				iter_cur->second_bytes.pop_back();
-			}
-
+			found = true;
 			break;
 		}
 		++iter_cur;
@@ -97,63 +99,54 @@ void server::calculate_speed(const int & socket_FD, const int & file_ID, const i
 
 	//make a new element if there is no speed element for this client
 	if(!found){
-		int file_size;
-		std::string filePath;
-		std::string file_name;
-
-		//only add an element if we have the file requested
-		if(Server_Index.file_info(file_ID, file_size, filePath)){
-
-			speed_element temp;
-			temp.file_name = filePath.substr(filePath.find_last_of("/")+1);
-			temp.client_IP = inet_ntoa(addr.sin_addr);
-			temp.file_ID = file_ID;
-			temp.file_block = file_block;
-			temp.download_second.push_back(current_time);
-			temp.second_bytes.push_back(global::P_BLS_SIZE);
-			temp.file_size = file_size;
-			temp.file_block = file_block;
-
-			Upload_Speed.push_back(temp);
-		}
+		Upload_Speed.push_back(speed_element_file(
+			file_path.substr(file_path.find_last_of("/")+1),
+			inet_ntoa(addr.sin_addr),
+			file_ID,
+			file_size,
+			file_block
+		));
+		Upload_Speed.back().Speed.push_back(std::make_pair(current_time, global::P_BLS_SIZE));
 	}
 	}//end lock scope
 }
 
 int server::get_total_speed()
 {
-	int totalBytes = 0;
+	int total_bytes = 0;
 
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(US_mutex);
-	std::list<speed_element>::iterator iter_cur, iter_end;
+	std::list<speed_element_file>::iterator iter_cur, iter_end;
 	iter_cur = Upload_Speed.begin();
 	iter_end = Upload_Speed.end();
 	while(iter_cur != iter_end){
-		int DS_size = iter_cur->download_second.size();
-		for(int x=1; x<DS_size - 1; ++x){
-			totalBytes += iter_cur->second_bytes[x];
+		//add up bytes for SPEED_AVERAGE seconds (except for incomplete second)
+		for(int x=0; x<iter_cur->Speed.size() - 1; ++x){
+			total_bytes += iter_cur->Speed[x].second;
 		}
 		++iter_cur;
 	}
 	}//end lock scope
 
-	int speed = totalBytes / global::SPEED_AVERAGE;
+	int speed = total_bytes / global::SPEED_AVERAGE;
+
 	return speed;
 }
 
-bool server::get_upload_info(std::vector<info_buffer> & uploadInfo)
+bool server::get_upload_info(std::vector<info_buffer> & upload_info)
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(US_mutex);
 
-	//remove completed downloads from Upload_Speed
 	time_t current_time = time(0);
-	std::list<speed_element>::iterator iter_cur, iter_end;
+
+	//remove completed downloads from Upload_Speed
+	std::list<speed_element_file>::iterator iter_cur, iter_end;
 	iter_cur = Upload_Speed.begin();
 	iter_end = Upload_Speed.end();
 	while(iter_cur != iter_end){
-		if(iter_cur->download_second.front() < (int)current_time - global::COMPLETE_REMOVE){
+		if(iter_cur->Speed.back().first < (int)current_time - global::COMPLETE_REMOVE){
 			iter_cur = Upload_Speed.erase(iter_cur);
 		}
 		else{
@@ -168,30 +161,32 @@ bool server::get_upload_info(std::vector<info_buffer> & uploadInfo)
 	iter_cur = Upload_Speed.begin();
 	iter_end = Upload_Speed.end();
 	while(iter_cur != iter_end){
-		float percent = ((iter_cur->file_block * global::P_BLS_SIZE) / (float)iter_cur->file_size) * 100;
+		float percent = ((iter_cur->file_block * (global::P_BLS_SIZE - 1)) / (float)iter_cur->file_size) * 100;
 		if(percent > 100){
 			percent = 100;
 		}
 
-		//add up bytes for SPEED_AVERAGE seconds
-		int totalBytes = 0;
-		int DS_size = iter_cur->download_second.size();
-		for(int x=1; x<DS_size - 1; ++x){
-			totalBytes += iter_cur->second_bytes[x];
+		//add up bytes for SPEED_AVERAGE seconds (except for incomplete second)
+		int total_bytes = 0;
+		for(int x=0; x<iter_cur->Speed.size() - 1; ++x){
+			total_bytes += iter_cur->Speed[x].second;
 		}
 
 		//take average
-		totalBytes = totalBytes / global::SPEED_AVERAGE;
+		total_bytes = total_bytes / global::SPEED_AVERAGE;
 
-		info_buffer info;
-		info.client_IP = iter_cur->client_IP;
-		info.file_ID = iter_cur->file_ID;
-		info.file_name = iter_cur->file_name;
-		info.file_size = iter_cur->file_size;
-		info.speed = totalBytes;
-		info.percent_complete = (int)percent;
+		std::ostringstream file_ID_temp;
+		file_ID_temp << iter_cur->file_ID;
 
-		uploadInfo.push_back(info);
+		upload_info.push_back(info_buffer(
+			iter_cur->client_IP,
+			file_ID_temp.str(),
+			iter_cur->file_name,
+			iter_cur->file_size,
+			total_bytes,
+			(int)percent
+		));
+
 		++iter_cur;
 	}
 	}//end lock scope
@@ -253,9 +248,9 @@ bool server::new_conn(const int & listener)
 			FD_max = new_FD;
 		}
 
-#ifdef DEBUG
+		#ifdef DEBUG
 		std::cout << "info: server::new_conn(): " << inet_ntoa(remoteaddr.sin_addr) << " socket " << new_FD << " connected\n";
-#endif
+		#endif
 	}
 
 	return true;
@@ -301,9 +296,9 @@ void server::main_thread()
 	char recv_buff[global::S_MAX_SIZE*global::PIPELINE_SIZE];
    int n_bytes;
 
-#ifdef DEBUG
+	#ifdef DEBUG
 	std::cout << "info: server::start_thread(): server created listener socket number " << listener << "\n";
-#endif
+	#endif
 
 	while(true){
 		read_FDS = master_FDS;
@@ -338,9 +333,12 @@ void server::main_thread()
 				}
 				else{ //existing socket sending data
 					if((n_bytes = recv(socket_FD, recv_buff, global::S_MAX_SIZE*global::PIPELINE_SIZE, 0)) <= 0){
+						#ifdef DEBUG
+						if(n_bytes == -1){
+							perror("recv");
+						}
+						#endif
 						disconnect(socket_FD);
-						//it's possible the disconnected socket was in write_FDS, try to remove it
-						FD_CLR(socket_FD, &write_FDS);
 					}
 					else{ //incoming data from client socket
 						process_request(socket_FD, recv_buff, n_bytes);
@@ -351,9 +349,9 @@ void server::main_thread()
 			//do not check for writes on listener, there is no corresponding Send_Buff element
 			if(FD_ISSET(socket_FD, &write_FDS) && socket_FD != listener){
 				std::map<int, std::string>::iterator SB_iter = Send_Buff.find(socket_FD);
-
 				if(!SB_iter->second.empty()){
-					if((n_bytes = send(socket_FD, SB_iter->second.c_str(), SB_iter->second.size(), 0)) <= 0){
+					//MSG_NOSIGNAL needed because abrupt client disconnect causes SIGPIPE
+					if((n_bytes = send(socket_FD, SB_iter->second.c_str(), SB_iter->second.size(), MSG_NOSIGNAL)) < 0){
 						disconnect(socket_FD);
 					}
 					else{ //remove bytes sent from buffer
@@ -373,11 +371,14 @@ int server::prepare_file_block(std::map<int, std::string>::iterator & SB_iter, c
 	int start_size = SB_iter->second.size();
 
 	//get file_size/filePath that corresponds to file_ID
-	int file_size;
+	unsigned long file_size;
 	std::string file_path;
 	if(!Server_Index.file_info(file_ID, file_size, file_path)){
 		//file was not found
 		SB_iter->second += global::P_FNF;
+
+		std::cout << "fatal error: server::prepare_file_block() couldn't find file in index" << std::endl;
+		exit(1);
 		return 0;
 	}
 
@@ -385,13 +386,16 @@ int server::prepare_file_block(std::map<int, std::string>::iterator & SB_iter, c
 	if(block_number*(global::P_BLS_SIZE - 1) > file_size){
 		//a block past the end of file was requested
 		SB_iter->second += global::P_DNE;
+
+		std::cout << "fatal error: server::prepare_file_block() invalid block number requested" << std::endl;
+		exit(1);
 		return 0;
 	}
 
 	SB_iter->second += global::P_BLS;
 	std::ifstream fin(file_path.c_str());
 	if(fin.is_open()){
-		//seek to the file_block the client wants
+		//seek to the file_block the client wants (-1 for command space)
 		fin.seekg(block_number*(global::P_BLS_SIZE - 1));
 
 		//fill the buffer
@@ -404,9 +408,13 @@ int server::prepare_file_block(std::map<int, std::string>::iterator & SB_iter, c
 		}
 		fin.close();
 	}
+	else{
+		std::cout << "fatal error: server::prepare_file_block() couldn't open file" << std::endl;
+		exit(1);
+	}
 
 	//update speed calculation (assumes there is a response)
-	calculate_speed(socket_FD, file_ID, block_number);
+	calculate_speed_file(socket_FD, file_ID, block_number, file_size, file_path);
 
 	return 0;
 }
@@ -415,6 +423,12 @@ void server::process_request(const int & socket_FD, char recv_buff[], const int 
 {
 	std::map<int, std::string>::iterator RB_iter = Recv_Buff.find(socket_FD);
 	RB_iter->second.append(recv_buff, n_bytes);
+
+	//disconnect servers that over-pipeline
+	if(RB_iter->second.size() > global::S_MAX_SIZE*global::PIPELINE_SIZE){
+		std::cout << "error: server::process_request() detected abusive client" << std::endl;
+		disconnect(socket_FD);
+	}
 
 	//process recv buffer until it's empty or it contains no complete requests
 	bool send_pending_temp = false;

@@ -51,12 +51,30 @@ void download::calculate_speed(const unsigned int & packet_size)
 	std::deque<std::pair<unsigned int, unsigned int> >::reverse_iterator iter_cur, iter_end;
 	iter_cur = Download_Speed.rbegin();
 	iter_end = Download_Speed.rend();
+	int count = 0;
 	while(iter_cur != iter_end && iter_cur->first != current_time){
 		total_bytes += iter_cur->second;
+		++count;
 		++iter_cur;
 	}
 
-	download_speed = total_bytes / Download_Speed.size();
+	if(count != 0){
+		download_speed = total_bytes / count;
+	}
+	else{
+		download_speed = 0;
+	}
+}
+
+void download::IP_list(std::vector<std::string> & list)
+{
+	std::map<int, download_conn *>::iterator iter_cur, iter_end;
+	iter_cur = Connection.begin();
+	iter_end = Connection.end();
+	while(iter_cur != iter_end){
+		list.push_back(iter_cur->second->server_IP);
+		++iter_cur;
+	}
 }
 
 const unsigned int & download::speed()

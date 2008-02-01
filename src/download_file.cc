@@ -35,12 +35,7 @@ download_file::download_file(std::string & file_hash_in, std::string & file_name
 #endif
 
 	//set the hash type
-	SHA.Init(global::HASH_TYPE);
-}
-
-download_file::~download_file()
-{
-
+	SHA.init(global::HASH_TYPE);
 }
 
 bool download_file::complete()
@@ -61,17 +56,6 @@ unsigned int download_file::bytes_expected()
 const std::string & download_file::hash()
 {
 	return file_hash;
-}
-
-void download_file::IP_list(std::vector<std::string> & list)
-{
-	std::map<int, download_conn *>::iterator iter_cur, iter_end;
-	iter_cur = Connection.begin();
-	iter_end = Connection.end();
-	while(iter_cur != iter_end){
-		list.push_back(iter_cur->second->server_IP);
-		++iter_cur;
-	}
 }
 
 const std::string & download_file::name()
@@ -201,8 +185,14 @@ bool download_file::response(const int & socket, std::string block)
 	//trim off protocol information
 	block.erase(0, 1);
 
-	received_blocks.insert(std::make_pair(conn->latest_request.front(), block));
+	std::pair<std::map<unsigned int, std::string>::iterator,bool> RB_ins;
+	RB_ins = received_blocks.insert(std::make_pair(conn->latest_request.front(), block));
 	conn->latest_request.pop();
+
+	if(!RB_ins.second){
+		//insertion failed, another host responded faster
+//DEBUG, do something 
+	}
 
 	//flush as much of the file block buffer as possible
 	std::map<unsigned int, std::string>::iterator iter_cur, iter_end;
@@ -221,21 +211,8 @@ bool download_file::response(const int & socket, std::string block)
 		}
 	}
 
-	#ifdef DEBUG
-	//by adding buffer sizes after processing of the buffer overall efficiency of requests can be determined
-	static unsigned int buffer_efficiency;
-	if(received_blocks.size() > 1){
-		buffer_efficiency += received_blocks.size();
-	}
-	#endif
-
 	//check if the download is complete
 	if(latest_written == last_block){
-
-		#ifdef DEBUG
-		std::cout << "buffer_efficiency: " << buffer_efficiency << "\n";
-		#endif
-
 		download_complete = true;
 		*download_complete_flag = true;
 	}

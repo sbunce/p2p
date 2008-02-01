@@ -1,8 +1,7 @@
+#include <iostream>
+
 #include "sha.h"
 
-using namespace std;
-
-//BEGIN hash constants for SHA-1
 //hash constants K for SHA-1
 const sha_word32 K1_0_TO_19  = 0x5a827999UL;
 const sha_word32 K1_20_TO_39 = 0x6ed9eba1UL;
@@ -14,9 +13,7 @@ const static sha_word32 sha1_initial_hash_value[5] = {
 	0x67452301UL, 0xefcdab89UL, 0x98badcfeUL, 0x10325476UL,
 	0xc3d2e1f0UL
 };
-//END hash constants for SHA-1
 
-//BEGIN hash constants for SHA-2
 //hash constant words K for SHA-224 and SHA-256
 const static sha_word32 K256[64] = {
 	0x428a2f98UL, 0x71374491UL, 0xb5c0fbcfUL, 0xe9b5dba5UL,
@@ -170,7 +167,6 @@ const static sha_word64 sha512_initial_hash_value[8] = {
 	0x1f83d9abfb41bd6bULL, 0x5be0cd19137e2179ULL
 };
 #endif
-//END hash constants for SHA-2
 
 /*
 Constant used by SHA224/256/384/512_End() functions for converting the
@@ -178,7 +174,38 @@ digest to a readable hexadecimal character string.
 */
 static const char *sha_hex_digits = "0123456789ABCDEF";
 
-void sha::SHA1_Internal_Transform(const sha_word32 *data){
+sha::sha()
+{
+	m_Type = enuSHA_NONE;
+	m_boolIsBigEndian = true;
+	m_boolEnded = false;
+
+	//run-time check for endian-ness
+	unsigned int test = 1;
+	unsigned char *ptr = (unsigned char *)&test;
+	if(ptr[0]){
+		m_boolIsBigEndian = false;
+	}
+
+	//these checks here because I wasn't able to figure out how to
+	//check at compile time
+	if(sizeof(sha_byte) != 1){
+		throw std::runtime_error("sha_byte != 1!");
+	}
+	if(sizeof(sha_word32) != 4){
+		throw std::runtime_error("sha_word32 != 4!");
+	}
+	if(sizeof(sha_word64) != 8){
+		throw std::runtime_error("sha_word64 != 8!");
+	}
+
+	memset(m_chrRawHash, 0, SHA512_DIGESTC_LENGTH);
+	memset(m_chrHexHash, 0, SHA512_DIGESTC_STRING_LENGTH);
+	memset(m_digest, 0, SHA512_DIGESTC_LENGTH);
+}
+
+void sha::SHA1_Internal_Transform(const sha_word32 *data)
+{
 	sha_word32	a, b, c, d, e;
 	sha_word32 *state = (sha_word32*)ctx.state;
 	sha_word32	T1, T2, *W1=(sha_word32*)ctx.buffer;
@@ -192,32 +219,47 @@ void sha::SHA1_Internal_Transform(const sha_word32 *data){
 	e = state[4];
 	j = 0;
 
-	do {
-		if (m_boolIsBigEndian) W1[j] = *data++;
-		else REVERSE32(*data++, W1[j]); //copy data while converting to host byte order
+	do{
+		if(m_boolIsBigEndian){
+			W1[j] = *data++;
+		}
+		else{
+			REVERSE32(*data++, W1[j]); //copy data while converting to host byte order
+		}
+
 		T1 = ROTL32(5, a) + Ch(b, c, d) + e + K1_0_TO_19 + W1[j];
 		e = d;
 		d = c;
 		c = ROTL32(30, b);
 		b = a;
 		a = T1;
-		j++;
-	} while (j < 16);
+		++j;
+	}while(j < 16);
 
-	do {
+	do{
 		T1 = W1[(j+13)&0x0f] ^ W1[(j+8)&0x0f] ^ W1[(j+2)&0x0f] ^ W1[j&0x0f];
-		if (j < 20)	 T2 = Ch(b,c,d)     + K1_0_TO_19;
-		else if (j < 40) T2 = Parity(b,c,d) + K1_20_TO_39;
-		else if (j < 60) T2 = Maj(b,c,d)    + K1_40_TO_59;
-		else		 T2 = Parity(b,c,d) + K1_60_TO_79;
+
+		if(j < 20){
+			T2 = Ch(b,c,d) + K1_0_TO_19;
+		}
+		else if(j < 40){
+			T2 = Parity(b,c,d) + K1_20_TO_39;
+		}
+		else if(j < 60){
+			T2 = Maj(b,c,d) + K1_40_TO_59;
+		}
+		else{
+			T2 = Parity(b,c,d) + K1_60_TO_79;
+		}
+
 		T1 = ROTL32(5, a) + T2 + e + (W1[j&0x0f] = ROTL32(1, T1));
 		e = d;
 		d = c;
 		c = ROTL32(30, b);
 		b = a;
 		a = T1;
-		j++;
-	} while (j < 80);
+		++j;
+	}while(j < 80);
 
     state[0] += a;
     state[1] += b;
@@ -226,7 +268,8 @@ void sha::SHA1_Internal_Transform(const sha_word32 *data){
     state[4] += e;
 }
 
-void sha::SHA256_Internal_Transform(const sha_word32* data) {
+void sha::SHA256_Internal_Transform(const sha_word32* data)
+{
 	sha_word32	a, b, c, d, e, f, g, h, s0, s1;
 	sha_word32 *state = (sha_word32*)ctx.state;
 	sha_word32	T1, T2, *W256=(sha_word32*)ctx.buffer;;
@@ -243,9 +286,13 @@ void sha::SHA256_Internal_Transform(const sha_word32* data) {
 	h = state[7];
 
 	j = 0;
-	do {
-		if (m_boolIsBigEndian) W256[j] = *data++;
-		else REVERSE32(*data++,W256[j]); //copy data while converting to host byte order
+	do{
+		if(m_boolIsBigEndian){
+			W256[j] = *data++;
+		}
+		else{
+			REVERSE32(*data++,W256[j]); //copy data while converting to host byte order
+		}
 
 		T1 = h + Sigma1_256(e) + Ch(e, f, g) + K256[j] + W256[j];
 		T2 = Sigma0_256(a) + Maj(a, b, c);
@@ -258,10 +305,10 @@ void sha::SHA256_Internal_Transform(const sha_word32* data) {
 		b = a;
 		a = T1 + T2;
 
-		j++;
-	} while (j < 16);
+		++j;
+	}while(j < 16);
 
-	do {
+	do{
 		//part of the message block expansion:
 		s0 = W256[(j+1)&0x0f];
 		s0 = sigma0_256(s0);
@@ -281,8 +328,8 @@ void sha::SHA256_Internal_Transform(const sha_word32* data) {
 		b = a;
 		a = T1 + T2;
 
-		j++;
-	} while (j < 64);
+		++j;
+	}while(j < 64);
 
 	//compute the current intermediate hash value
 	state[0] += a;
@@ -295,7 +342,8 @@ void sha::SHA256_Internal_Transform(const sha_word32* data) {
 	state[7] += h;
 }
 
-void sha::SHA512_Internal_Transform(const sha_word64* data) {
+void sha::SHA512_Internal_Transform(const sha_word64* data)
+{
 	sha_word64	a, b, c, d, e, f, g, h, s0, s1;
 	sha_word64 *state = (sha_word64 *)ctx.state;
 	sha_word64	T1, T2, *W512 = (sha_word64*)ctx.buffer;
@@ -312,12 +360,12 @@ void sha::SHA512_Internal_Transform(const sha_word64* data) {
 	h = state[7];
 
 	j = 0;
-
-	do {
-		if (m_boolIsBigEndian){
+	do{
+		if(m_boolIsBigEndian){
 		    W512[j] = *data;
-		    data++;
-		}else{
+		    ++data;
+		}
+		else{
 		    REVERSE64(*data++, W512[j]); //copy and convert TO host byte order
 		}
 
@@ -332,10 +380,10 @@ void sha::SHA512_Internal_Transform(const sha_word64* data) {
 		b = a;
 		a = T1 + T2;
 
-		j++;
-	} while (j < 16);
+		++j;
+	}while(j < 16);
 
-	do {
+	do{
 		//part of the message block expansion
 		s0 = W512[(j+1)&0x0f];
 		s0 = sigma0_512(s0);
@@ -355,8 +403,8 @@ void sha::SHA512_Internal_Transform(const sha_word64* data) {
 		b = a;
 		a = T1 + T2;
 
-		j++;
-	} while (j < 80);
+		++j;
+	}while(j < 80);
 
 	//compute the current intermediate hash value
 	state[0] += a;
@@ -369,48 +417,64 @@ void sha::SHA512_Internal_Transform(const sha_word64* data) {
 	state[7] += h;
 }
 
-
-void sha::SHA256_Internal_Last(bool isSha1) {
+void sha::SHA256_Internal_Last(bool isSha1)
+{
 	sha_word32 usedspace;
 
 	usedspace = (sha_word32)(ctx.bitcount[0] >> 3) % 64;
-	if (usedspace == 0) {
+	if(usedspace == 0){
 		MEMSET_BZERO(ctx.buffer, 56);
 		ctx.buffer[0] = 0x80;
-	}else {
+	}
+	else{
 		ctx.buffer[usedspace++] = 0x80;
-		if (usedspace <= 56) {
+		if(usedspace <= 56){
 		    MEMSET_BZERO(&ctx.buffer[usedspace], 56 - usedspace);
-		}else {
-			if (usedspace < 64) {
+		}
+		else{
+			if(usedspace < 64){
 				MEMSET_BZERO(&ctx.buffer[usedspace], 64 - usedspace);
 	 	   }
-			if (isSha1) SHA1_Internal_Transform((sha_word32*)ctx.buffer);
-			else SHA256_Internal_Transform((sha_word32*)ctx.buffer);
+			if(isSha1){
+				SHA1_Internal_Transform((sha_word32*)ctx.buffer);
+			}
+			else{
+				SHA256_Internal_Transform((sha_word32*)ctx.buffer);
+			}
 			MEMSET_BZERO(ctx.buffer, 56);
 		}
 	}
 
-	if (!m_boolIsBigEndian) REVERSE64(ctx.bitcount[0],ctx.bitcount[0]);
-		*(sha_word64*)&ctx.buffer[56] = ctx.bitcount[0];
-	if (isSha1) SHA1_Internal_Transform((sha_word32*)ctx.buffer);
-	else SHA256_Internal_Transform((sha_word32*)ctx.buffer);
+	if(!m_boolIsBigEndian){
+		REVERSE64(ctx.bitcount[0],ctx.bitcount[0]);
+	}
+
+	*(sha_word64*)&ctx.buffer[56] = ctx.bitcount[0];
+
+	if(isSha1){
+		SHA1_Internal_Transform((sha_word32*)ctx.buffer);
+	}
+	else{
+		SHA256_Internal_Transform((sha_word32*)ctx.buffer);
+	}
 }
 
-
-void sha::SHA512_Internal_Last() {
-	sha_word32	  usedspace;
+void sha::SHA512_Internal_Last()
+{
+	sha_word32 usedspace;
 
 	usedspace = (sha_word32)(ctx.bitcount[0] >> 3) % 128;
-	if (usedspace == 0) {
+	if(usedspace == 0){
 		MEMSET_BZERO(ctx.buffer, 112);
 		ctx.buffer[0] = 0x80;
-	}else{
+	}
+	else{
 		ctx.buffer[usedspace++] = 0x80;
-		if (usedspace <= 112) {
+		if(usedspace <= 112){
 	 	   MEMSET_BZERO(&ctx.buffer[usedspace], 112 - usedspace);
-		}else {
-			if (usedspace < 128) {
+		}
+		else{
+			if(usedspace < 128){
 				MEMSET_BZERO(&ctx.buffer[usedspace], 128 - usedspace);
 			}
 			SHA512_Internal_Transform((sha_word64*)ctx.buffer);
@@ -419,7 +483,7 @@ void sha::SHA512_Internal_Last() {
 		usedspace = 0;
 	}
 
-	if (!m_boolIsBigEndian){
+	if(!m_boolIsBigEndian){
 		REVERSE64(ctx.bitcount[0],ctx.bitcount[0]);
 		REVERSE64(ctx.bitcount[1],ctx.bitcount[1]);
 	}
@@ -429,89 +493,105 @@ void sha::SHA512_Internal_Last() {
 	SHA512_Internal_Transform((sha_word64*)ctx.buffer);
 }
 
-void sha::SHA32bit_Update(const sha_byte *data, size_t len, bool isSha1) {
+void sha::SHA32bit_Update(const sha_byte *data, size_t len, bool isSha1)
+{
 	sha_word32 freespace, usedspace;
 
-	if (len<1){return;} //calling with no data is valid - we do nothing
+	if(len<1){
+		return;
+	} //calling with no data is valid - we do nothing
 
 	usedspace = (sha_word32)(ctx.bitcount[0] >> 3) % 64;
-	if (usedspace > 0) { //calculate how much free space is available in the buffer
+	if(usedspace > 0){ //calculate how much free space is available in the buffer
 		freespace = 64 - usedspace;
-		if (len >= freespace) { //fill the buffer completely and process it
+		if(len >= freespace){ //fill the buffer completely and process it
 			MEMCPY_BCOPY(&ctx.buffer[usedspace], data, freespace);
 			ctx.bitcount[0] += freespace << 3;
 			len -= freespace;
 			data += freespace;
-			if (isSha1) SHA1_Internal_Transform((sha_word32 *)ctx.buffer);
-			else SHA256_Internal_Transform((sha_word32 *)ctx.buffer);
-		}else { //the buffer is not yet full
+			if(isSha1){
+				SHA1_Internal_Transform((sha_word32 *)ctx.buffer);
+			}
+			else{
+				SHA256_Internal_Transform((sha_word32 *)ctx.buffer);
+			}
+		}
+		else{ //the buffer is not yet full
 			MEMCPY_BCOPY(&ctx.buffer[usedspace], data, len);
 			ctx.bitcount[0] += len << 3;
 			return;
 		}
 	}
-	while (len >= 64) { //process as many complete blocks as we can
-		if (isSha1) SHA1_Internal_Transform((sha_word32*)data);
-		else SHA256_Internal_Transform((sha_word32*)data);
+	while(len >= 64){ //process as many complete blocks as we can
+		if(isSha1){
+			SHA1_Internal_Transform((sha_word32*)data);
+		}
+		else{
+			SHA256_Internal_Transform((sha_word32*)data);
+		}
 		ctx.bitcount[0] += 512;
 		len -= 64;
 		data += 64;
 	}
-	if (len > 0) { //there's left-overs, so save 'em
+	if(len > 0){ //there's left-overs, so save 'em
 		MEMCPY_BCOPY(&ctx.buffer, data, len);
 		ctx.bitcount[0] += len << 3;
 	}
 }
 
-void sha::SHA64bit_Update(const sha_byte *data, size_t len) {
+void sha::SHA64bit_Update(const sha_byte *data, size_t len)
+{
 	sha_word32 freespace, usedspace;
 
-	if (len < 1){return;} //calling with no data is valid - we do nothing
+	if(len < 1){
+		return;
+	} //calling with no data is valid - we do nothing
 
 	usedspace = (sha_word32)(ctx.bitcount[0] >> 3) % 128;
-	if (usedspace > 0) { //calculate how much free space is available in the buffer
+	if(usedspace > 0){ //calculate how much free space is available in the buffer
 		freespace = 128 - usedspace;
-		if (len >= freespace) { //fill the buffer completely and process it
+		if(len >= freespace){ //fill the buffer completely and process it
 			MEMCPY_BCOPY(&ctx.buffer[usedspace], data, freespace);
 			ADDINC128(ctx.bitcount, freespace << 3);
 			len -= freespace;
 			data += freespace;
 			SHA512_Internal_Transform((sha_word64*)ctx.buffer);
-		}else { //the buffer is not yet full
+		}
+		else{ //the buffer is not yet full
 			MEMCPY_BCOPY(&ctx.buffer[usedspace], data, len);
 			ADDINC128(ctx.bitcount, len << 3);
 			return;
 		}
 	}
-	while (len >= 128) { //process as many complete blocks as we can
-	SHA512_Internal_Transform((sha_word64*)data);
-	ADDINC128(ctx.bitcount, 1024);
-	len -= 128;
-	data += 128;
+	while(len >= 128){ //process as many complete blocks as we can
+		SHA512_Internal_Transform((sha_word64*)data);
+		ADDINC128(ctx.bitcount, 1024);
+		len -= 128;
+		data += 128;
 	}
-	if (len > 0) { //there's left-overs, so save 'em
+	if(len > 0){ //there's left-overs, so save 'em
 		MEMCPY_BCOPY(ctx.buffer, data, len);
 		ADDINC128(ctx.bitcount, len << 3);
 	}
 }
 
-//BEGIN public interfaces
-void sha::Init(SHA_TYPE type){
+void sha::init(SHA_TYPE type)
+{
 	m_Type = type;
 	m_boolEnded = false;
 	MEMSET_BZERO(&ctx, sizeof(SHA_CTX));
 	switch (m_Type){
-	case enuSHA1   : MEMCPY_BCOPY(ctx.state, sha1_initial_hash_value, sizeof(sha_word32) * 5); break;
-	case enuSHA224 : MEMCPY_BCOPY(ctx.state, sha224_initial_hash_value, sizeof(sha_word32) * 8); break;
-	case enuSHA256 : MEMCPY_BCOPY(ctx.state, sha256_initial_hash_value, sizeof(sha_word32) * 8); break;
-	case enuSHA384 : MEMCPY_BCOPY(ctx.state, sha384_initial_hash_value, sizeof(sha_word64) * 8); break;
-	case enuSHA512 : MEMCPY_BCOPY(ctx.state, sha512_initial_hash_value, sizeof(sha_word64) * 8); break;
+	case enuSHA1   : MEMCPY_BCOPY(ctx.state, sha1_initial_hash_value, sizeof(sha_word32) * 5); hash_len = SHA1_DIGESTC_LENGTH; break;
+	case enuSHA224 : MEMCPY_BCOPY(ctx.state, sha224_initial_hash_value, sizeof(sha_word32) * 8); hash_len = SHA224_DIGESTC_LENGTH; break;
+	case enuSHA256 : MEMCPY_BCOPY(ctx.state, sha256_initial_hash_value, sizeof(sha_word32) * 8); hash_len = SHA256_DIGESTC_LENGTH; break;
+	case enuSHA384 : MEMCPY_BCOPY(ctx.state, sha384_initial_hash_value, sizeof(sha_word64) * 8); hash_len = SHA384_DIGESTC_LENGTH; break;
+	case enuSHA512 : MEMCPY_BCOPY(ctx.state, sha512_initial_hash_value, sizeof(sha_word64) * 8); hash_len = SHA512_DIGESTC_LENGTH; break;
 	default : throw std::runtime_error("Invalid SHA_TYPE type!");
 	}
 }
 
-
-void sha::Update(const sha_byte* data, size_t len){
+void sha::update(const sha_byte* data, size_t len)
+{
 	switch (m_Type){
 	case enuSHA1   : SHA32bit_Update(data, len, true); break;
 	case enuSHA224 : SHA32bit_Update(data, len); break;
@@ -522,16 +602,17 @@ void sha::Update(const sha_byte* data, size_t len){
 	}
 }
 
-void sha::End(){
+void sha::end()
+{
 	sha_byte *d = m_digest;
 	char *buf = m_chrHexHash;
 	int i, j, diglen, statecnt=8;
-	bool is64bit=false;
-	sha_word32 *state32=(sha_word32 *)ctx.state;
-	sha_word64 *state64=(sha_word64 *)ctx.state;
+	bool is64bit = false;
+	sha_word32 *state32 = (sha_word32 *)ctx.state;
+	sha_word64 *state64 = (sha_word64 *)ctx.state;
 
 	switch (m_Type){
-	case enuSHA1   : {
+	case enuSHA1 : {
 		SHA256_Internal_Last(true);
 		statecnt = 5;
 		diglen = SHA1_DIGESTC_LENGTH;
@@ -561,55 +642,96 @@ void sha::End(){
 	}
 	default : throw std::runtime_error("Invalid SHA_TYPE type!");
 	}
-	if (m_boolIsBigEndian){
+	if(m_boolIsBigEndian){
 		MEMCPY_BCOPY(&m_digest, &ctx.state, diglen);
-	}else{
+	}
+	else{
 		sha_byte *dp = m_digest, *ptr;
-		for (i=0; i<statecnt; i++){
-			if (is64bit) ptr = (sha_byte *)&state64[i];
-			else ptr = (sha_byte *)&state32[i];
-			for (j = is64bit ? 7 : 3; j>-1; --j) *dp++ = ptr[j];
+		for (i=0; i<statecnt; ++i){
+			if(is64bit){
+				ptr = (sha_byte *)&state64[i];
+			}
+			else{
+				ptr = (sha_byte *)&state32[i];
+			}
+			for(j = is64bit ? 7 : 3; j>-1; --j){
+				*dp++ = ptr[j];
+			}
 		}
 	}
 
-	for (i=0; i<diglen; i++) {
-	*buf++ = sha_hex_digits[(*d & 0xf0) >> 4];
-	*buf++ = sha_hex_digits[*d & 0x0f];
-	d++;
+	for(i=0; i<diglen; ++i){
+		*buf++ = sha_hex_digits[(*d & 0xf0) >> 4];
+		*buf++ = sha_hex_digits[*d & 0x0f];
+		++d;
 	}
+
 	*buf = (char)0;
 	m_strHash = m_chrHexHash;
 	m_boolEnded = true;
 }
 
-const string &sha::GetHash(SHA_TYPE type, const sha_byte* data, size_t len){
-	Init(type);
-	Update(data, len);
-	End();
-	return m_strHash;
-}
-
-const char *sha::HexHash(){
-	if (!m_boolEnded) throw std::runtime_error("Unfinished execution!");
+const char *sha::hex_hash()
+{
+	if(!m_boolEnded){
+		throw std::runtime_error("Unfinished execution!");
+	}
 	return m_strHash.c_str();
 }
 
-const string &sha::StringHash(){
-	if (!m_boolEnded) throw std::runtime_error("Unfinished execution!");
+const std::string & sha::string_hex_hash()
+{
+	if(!m_boolEnded){
+		throw std::runtime_error("Unfinished execution!");
+	}
 	return m_strHash;
 }
 
-const char *sha::RawHash(int &length){
-	if (!m_boolEnded) throw std::runtime_error("Unfinished execution!");
-	switch (m_Type){
-	case enuSHA1   : length = SHA1_DIGESTC_LENGTH;	 break;
-	case enuSHA224 : length = SHA224_DIGESTC_LENGTH; break;
-	case enuSHA256 : length = SHA256_DIGESTC_LENGTH; break;
-	case enuSHA384 : length = SHA384_DIGESTC_LENGTH; break;
-	case enuSHA512 : length = SHA512_DIGESTC_LENGTH; break;
-	default : length = 0;
+const char * sha::raw_hash()
+{
+	if(!m_boolEnded){
+		throw std::runtime_error("Unfinished execution!");
 	}
+
 	return (const char *)m_digest;
 }
-//END public interfaces
+
+const char * sha::raw_hash_no_null()
+{
+	if(!m_boolEnded){
+		throw std::runtime_error("Unfinished execution!");
+	}
+
+	bool null_hash = true;
+	for(int x=0; x<hash_len; ++x){
+		if(m_digest[x] != '\0'){
+			null_hash = false;
+			break;
+		}
+	}
+
+	if(null_hash){
+std::cout << "found null hash\n";
+		for(int x=0; x<hash_len; ++x){
+			m_digest[x] = (char)1;
+		}	
+	}
+
+	return (const char *)m_digest;
+}
+
+const std::string & sha::string_raw_hash()
+{
+	if(!m_boolEnded){
+		throw std::runtime_error("Unfinished execution!");
+	}
+
+	m_strRawHash.assign((const char *)m_digest, hash_len);
+	return m_strRawHash;
+}
+
+const int & sha::hash_length()
+{
+	return hash_len;
+}
 

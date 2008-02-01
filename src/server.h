@@ -7,7 +7,6 @@
 
 //std
 #include <deque>
-#include <queue>
 #include <list>
 #include <map>
 #include <string>
@@ -32,10 +31,21 @@ public:
 	class info_buffer
 	{
 	public:
+		info_buffer(std::string client_IP_in, std::string file_ID_in, std::string file_name_in,
+			unsigned long file_size_in, int speed_in, int percent_complete_in)
+		{
+			client_IP = client_IP_in;
+			file_ID = file_ID_in;
+			file_name = file_name_in;
+			file_size = file_size_in;
+			speed = speed_in;
+			percent_complete = percent_complete_in;
+		}
+
 		std::string client_IP;
 		std::string file_ID;
 		std::string file_name;
-		int file_size;
+		unsigned long file_size;
 		int speed;
 		int percent_complete;
 	};
@@ -46,34 +56,45 @@ public:
 	                  returns false if no uploads
 	get_total_speed - returns the total speed of all uploads(in bytes per second)
 	*/
-	bool get_upload_info(std::vector<info_buffer> & uploadInfo);
+	bool get_upload_info(std::vector<info_buffer> & upload_info);
 	int get_total_speed();
 	bool is_indexing();
 	void start();
 
 private:
 	//used by Upload_Speed to track the progress of an upload
-	class speed_element
+	class speed_element_file
 	{
 	public:
+		speed_element_file(std::string file_name_in, std::string client_IP_in,
+			unsigned int file_ID_in, unsigned long file_size_in, unsigned long file_block_in)
+		{
+			file_name = file_name_in;
+			client_IP = client_IP_in;
+			file_ID = file_ID_in;
+			file_size = file_size_in;
+			file_block = file_block_in;
+		}
+
 		//the gui will need this when displaying the upload
 		std::string file_name;
 
 		//used to idenfity what upload this is
 		std::string client_IP;
-		int file_ID;
+		unsigned int file_ID;
 
-		//these vectors are parallel and used for upload speed calculation
-		std::deque<int> download_second; //second at which second_bytes were uploaded
-		std::deque<int> second_bytes;    //bytes in the second
+		//std::pair<second, bytes in second>
+		std::deque<std::pair<int, int> > Speed;
 
 		//used to calculate percent complete
-		int file_size;  //size of file
-		int file_block; //what file_block was last requested
+		unsigned long file_size;  //size of file
+		unsigned long file_block; //what file_block was last requested
 	};
 
+//DEBUG, if keeping track of more than one type of upload then virtualize the speed elements
+
 	//used by calculate_speed() to track upload speeds
-	std::list<speed_element> Upload_Speed;
+	std::list<speed_element_file> Upload_Speed;
 
 	/*
 	Stores pending responses. The partial send buffers can be accessed by socket
@@ -116,7 +137,7 @@ private:
 	stateTick           - do pending actions
 	*/
 	void disconnect(const int & socketfd);
-	void calculate_speed(const int & socketfd, const int & file_ID, const int & file_block);
+	void calculate_speed_file(const int & socket_FD, const int & file_ID, const int & file_block, const unsigned long & file_size, const std::string & file_path);
 	void main_thread();
 	bool new_conn(const int & listener);
 	int prepare_file_block(std::map<int, std::string>::iterator & SB_iter, const int & socket_FD, const int & file_ID, const int & block_number);

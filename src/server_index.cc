@@ -31,7 +31,7 @@ server_index::server_index()
 		std::cout << "error: server_index::server_index() #3 failed with sqlite3 error " << returnCode << "\n";
 #endif
 	}
-	if((returnCode = sqlite3_exec(sqlite3_DB, "CREATE UNIQUE INDEX IF NOT EXISTS pathIndex ON share (path)", NULL, NULL, NULL)) != 0){
+	if((returnCode = sqlite3_exec(sqlite3_DB, "CREATE UNIQUE INDEX IF NOT EXISTS path_index ON share (path)", NULL, NULL, NULL)) != 0){
 #ifdef DEBUG
 		std::cout << "error: server_index::server_index() #4 failed with sqlite3 error " << returnCode << "\n";
 #endif
@@ -57,7 +57,7 @@ void server_index::add_entry(const int & size, const std::string & path)
 
 	if(!add_entry_entry_exists){
 		query.str("");
-		query << "INSERT INTO share (hash, size, path) VALUES ('" << Hash.hash_file(path) << "', '" << size << "', '" << path << "')";
+		query << "INSERT INTO share (hash, size, path) VALUES ('" << Hash_Tree.create_hash_tree(path) << "', '" << size << "', '" << path << "')";
 
 		if((returnCode = sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL)) != 0){
 #ifdef DEBUG
@@ -72,7 +72,7 @@ void server_index::add_entry_call_back(int & columns_retrieved, char ** query_re
 	add_entry_entry_exists = true;
 }
 
-bool server_index::file_info(const int & file_ID, int & file_size, std::string & file_path)
+bool server_index::file_info(const unsigned int & file_ID, unsigned long & file_size, std::string & file_path)
 {
 	std::ostringstream query;
 	file_info_entry_exists = false;
@@ -80,10 +80,10 @@ bool server_index::file_info(const int & file_ID, int & file_size, std::string &
 	//locate the record
 	query << "SELECT size, path FROM share WHERE ID LIKE \"" << file_ID << "\" LIMIT 1";
 
-	int returnCode;
-	if((returnCode = sqlite3_exec(sqlite3_DB, query.str().c_str(), file_info_call_back_wrapper, (void *)this, NULL)) != 0){
+	int return_code;
+	if((return_code = sqlite3_exec(sqlite3_DB, query.str().c_str(), file_info_call_back_wrapper, (void *)this, NULL)) != 0){
 #ifdef DEBUG
-		std::cout << "error: server_index::file_info() failed with sqlite3 error " << returnCode << "\n";
+		std::cout << "error: server_index::file_info() failed with sqlite3 error " << return_code << "\n";
 #endif
 	}
 

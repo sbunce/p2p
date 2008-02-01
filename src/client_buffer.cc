@@ -81,7 +81,7 @@ void client_buffer::prepare_request()
 	std::string request;
 	if(ready && !terminating){
 		int count = 0;
-		while(Pipeline.size() < global::PIPELINE_SIZE && ++count <= global::PIPELINE_SIZE){
+		while(Pipeline.size() <= global::PIPELINE_SIZE && ++count <= global::PIPELINE_SIZE){
 			//serve the next download in line
 			rotate_downloads();
 
