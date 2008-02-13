@@ -17,6 +17,7 @@ client::client()
 	threads = 0;
 	current_time = time(0);
 	previous_time = time(0);
+	Thread_Pool.init(global::NEW_CONN_THREADS);
 }
 
 client::~client()
@@ -176,7 +177,7 @@ void client::main_thread()
 			write_FDS = master_FDS;
 			if((select(FD_max+1, &read_FDS, &write_FDS, NULL, &tv)) == -1){
 				if(errno != EINTR){ //EINTR is caused by gprof
-					perror("select");
+					perror("client select");
 					exit(1);
 				}
 			}
@@ -186,7 +187,7 @@ void client::main_thread()
 			read_FDS = master_FDS;
 			if((select(FD_max+1, &read_FDS, NULL, NULL, &tv)) == -1){
 				if(errno != EINTR){ //EINTR is caused by gprof
-					perror("select");
+					perror("client select");
 					exit(1);
 				}
 			}
@@ -199,11 +200,15 @@ void client::main_thread()
 		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &read_FDS)){
 				n_bytes = recv(socket_FD, recv_buff, global::C_MAX_SIZE, 0);
-				if(n_bytes <= 0){
+				if(n_bytes == 0){
 					{//begin lock scope
 					boost::mutex::scoped_lock lock(CB_D_mutex);
 					disconnect(socket_FD);
 					}//end lock scope
+				}
+				else if(n_bytes == -1){
+					perror("client recv");
+					exit(1);
 				}
 				else{
 					{//begin lock scope
@@ -221,8 +226,12 @@ void client::main_thread()
 
 				if(!CB_iter->second->send_buff.empty()){
 					n_bytes = send(socket_FD, CB_iter->second->send_buff.c_str(), CB_iter->second->send_buff.size(), 0);
-					if(n_bytes <= 0){
+					if(n_bytes == 0){
 						disconnect(socket_FD);
+					}
+					else if(n_bytes == -1){
+						perror("client send");
+						exit(1);
 					}
 					else{ //remove bytes sent from buffer
 						CB_iter->second->send_buff.erase(0, n_bytes);
@@ -237,9 +246,21 @@ void client::main_thread()
 	--threads;
 }
 
-void client::new_conn(download_conn * DC)
+void client::new_conn()
 {
 	++threads;
+
+	download_conn * DC;
+
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(DC_mutex);
+	DC = Connection_Queue.front();
+	Connection_Queue.pop();
+	}//end lock scope
+
+	//convert hostname to IP if given hostname, otherwise just keep IP
+	hostent * he = gethostbyname(DC->server_IP.c_str());
+	DC->server_IP = inet_ntoa(*((struct in_addr *)he->h_addr));
 
 	//delay connection if connection to this server already in progress.
 	while(true){
@@ -248,10 +269,10 @@ void client::new_conn(download_conn * DC)
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(DC_mutex);
 		std::list<download_conn *>::iterator iter_cur, iter_end;
-		iter_cur = Pending_Connection.begin();
-		iter_end = Pending_Connection.end();
+		iter_cur = Connection_Current_Attempt.begin();
+		iter_end = Connection_Current_Attempt.end();
 		while(iter_cur != iter_end){
-			if((*iter_cur)->server_IP == DC->server_IP && (*iter_cur)->processing){
+			if((*iter_cur)->server_IP == DC->server_IP){
 				found = true;
 				break;
 			}
@@ -260,7 +281,7 @@ void client::new_conn(download_conn * DC)
 
 		//proceed to trying to make a connection
 		if(!found){
-			DC->processing = true;
+
 			break;
 		}
 		}//end lock scope
@@ -271,7 +292,7 @@ void client::new_conn(download_conn * DC)
 		}
 	}
 
-	//if the socket is already connected, add the download but do not make a new connection
+	//check if there is an existing connection to the server
 	int new_FD = 0;
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(CB_D_mutex);
@@ -284,7 +305,7 @@ void client::new_conn(download_conn * DC)
 	}
 	}//end lock scope
 
-	//create new connection if no existing connection exists
+	//if no existing connection was found, try to make a new one
 	if(new_FD == 0){
 		sockaddr_in dest_addr;
 		new_FD = socket(PF_INET, SOCK_STREAM, 0);
@@ -317,27 +338,34 @@ void client::new_conn(download_conn * DC)
 	}
 
 	/*
-	Register download connection with the Client_Buffer.
+	If a connection was made or an existing connection was found then add the
+	download to the client_buffer.
 	*/
 	if(new_FD != 0){
-		//register this connection with the download
 		DC->Download->reg_conn(new_FD, DC);
-
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(CB_D_mutex);
 		Client_Buffer[new_FD]->add_download(DC->Download);
 		}//end lock scope
 	}
+	else{
+		#ifdef DEBUG
+		std::cout << "info: client::new_conn() connect to " << DC->server_IP << " failed\n";
+		#endif
+	}
 
-	//remove the element from Pending_Connection
+	/*
+	Connection attempt completed, remove it from Connection_Current_Attempt to
+	allow other connection attempts to this server to proceed.
+	*/
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(DC_mutex);
 	std::list<download_conn *>::iterator iter_cur, iter_end;
-	iter_cur = Pending_Connection.begin();
-	iter_end = Pending_Connection.end();
+	iter_cur = Connection_Current_Attempt.begin();
+	iter_end = Connection_Current_Attempt.end();
 	while(iter_cur != iter_end){
 		if(*iter_cur == DC){
-			Pending_Connection.erase(iter_cur);
+			Connection_Current_Attempt.erase(iter_cur);
 			break;
 		}
 		++iter_cur;
@@ -366,13 +394,13 @@ void client::remove_complete()
 	//locate completed downloads
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(CB_D_mutex);
-	std::list<std::string> completeHash;
+	std::list<std::string> complete_hash;
 	std::list<download *>::iterator iter_cur, iter_end;
 	iter_cur = Download_Buffer.begin();
 	iter_end = Download_Buffer.end();
 	while(iter_cur != iter_end){
 		if((*iter_cur)->complete()){
-			completeHash.push_back((*iter_cur)->hash());
+			complete_hash.push_back((*iter_cur)->hash());
 		}
 		++iter_cur;
 	}
@@ -382,8 +410,8 @@ void client::remove_complete()
 	remove the Download element.
 	*/
 	std::list<std::string>::iterator hash_iter_cur, hash_iter_end;
-	hash_iter_cur = completeHash.begin();
-	hash_iter_end = completeHash.end();
+	hash_iter_cur = complete_hash.begin();
+	hash_iter_end = complete_hash.end();
 	while(hash_iter_cur != hash_iter_end){
 		bool terminated = true;
 		//attempt to terminate the download with all Client_Buffer elements
@@ -415,15 +443,15 @@ void client::remove_complete()
 				++iter_cur;
 			}
 
-			//remove the completeHash element, termination successful
-			hash_iter_cur = completeHash.erase(hash_iter_cur);
+			//remove the complete_hash element, termination successful
+			hash_iter_cur = complete_hash.erase(hash_iter_cur);
 		}
 		else{ //termination failed
 			++hash_iter_cur;
 		}
 	}
 
-	if(completeHash.empty()){
+	if(complete_hash.empty()){
 		*download_complete = false;
 	}
 	}//end lock scope
@@ -437,8 +465,8 @@ void client::start()
 void client::stop()
 {
 	stop_threads = true;
+	Thread_Pool.stop();
 
-	//spin-lock idea, wait for threads to terminate
 	while(threads){
 		usleep(100);
 	}
@@ -490,25 +518,17 @@ bool client::start_download(exploration::info_buffer info)
 	Download_Buffer.push_back(Download);
 	}//end lock scope
 
-	//queue pending connections
-	std::vector<download_conn *> temp_DC;
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(DC_mutex);
 	for(int x = 0; x < info.server_IP.size(); ++x){
 		download_conn * DC = new download_file_conn(Download, info.server_IP[x], atoi(info.file_ID[x].c_str()));
-		Pending_Connection.push_back(DC);
-		temp_DC.push_back(DC);
+		Connection_Queue.push(DC);
+
+		//queue a job in the thread pool
+		void (client::*memfun_ptr)() = &client::new_conn;
+		Thread_Pool.queue_job(this, memfun_ptr);
 	}
 	}//end lock scope
-
-	//connect
-	std::vector<download_conn *>::iterator iter_cur, iter_end;
-	iter_cur = temp_DC.begin();
-	iter_end = temp_DC.end();
-	while(iter_cur != iter_end){
-		boost::thread T(boost::bind(&client::new_conn, this, *iter_cur));
-		++iter_cur;
-	}
 
 	return true;
 }

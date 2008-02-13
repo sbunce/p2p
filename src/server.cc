@@ -11,6 +11,8 @@ server::server()
 {
 	connections = 0;
 	send_pending = 0;
+	stop_threads = false;
+	threads = 0;
 	FD_ZERO(&master_FDS);
 	Server_Index.start();
 }
@@ -36,7 +38,7 @@ void server::disconnect(const int & socket_FD)
 	}
 
 	//reduce FD_max if possible
-	for(int x=FD_max; x != 0; --x){
+	for(int x = FD_max; x != 0; --x){
 		if(FD_ISSET(x, &master_FDS)){
 			FD_max = x;
 			break;
@@ -45,11 +47,11 @@ void server::disconnect(const int & socket_FD)
 
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(SB_mutex);
-	std::map<int, std::string>::iterator SB_iter = Send_Buff.find(socket_FD);
-	if(SB_iter != Send_Buff.end()){
+	std::map<int, send_buff_element>::iterator SB_iter = Send_Buff.find(socket_FD);
+	if(!SB_iter->second.buff.empty()){
 		--send_pending;
-		Send_Buff.erase(socket_FD);
 	}
+	Send_Buff.erase(SB_iter);
 	}//end lock scope
 
 	{//begin lock scope
@@ -58,17 +60,12 @@ void server::disconnect(const int & socket_FD)
 	}//end lock scope
 }
 
-void server::calculate_speed_file(const int & socket_FD, const int & file_ID, const int & file_block, const unsigned long & file_size, const std::string & file_path)
+int server::calculate_speed_file(std::string & client_IP, const unsigned int & file_ID, const unsigned int & file_block, const unsigned long & file_size, const std::string & file_path)
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(US_mutex);
 
 	time_t current_time = time(0);
-
-	//get IP of the socket
-	struct sockaddr_in addr;
-	socklen_t len = sizeof(addr);
-	getpeername(socket_FD, (struct sockaddr*)&addr, &len);
 
 	bool found = false;
 	std::list<speed_element_file>::iterator iter_cur, iter_end;
@@ -77,7 +74,7 @@ void server::calculate_speed_file(const int & socket_FD, const int & file_ID, co
 	while(iter_cur != iter_end){
 
 		//if element found update it
-		if(iter_cur->client_IP == inet_ntoa(addr.sin_addr) && iter_cur->file_ID == file_ID){
+		if(iter_cur->client_IP == client_IP && iter_cur->file_ID == file_ID){
 
 			if(iter_cur->Speed.back().first == current_time){
 				iter_cur->Speed.back().second += global::P_BLS_SIZE;
@@ -101,7 +98,7 @@ void server::calculate_speed_file(const int & socket_FD, const int & file_ID, co
 	if(!found){
 		Upload_Speed.push_back(speed_element_file(
 			file_path.substr(file_path.find_last_of("/")+1),
-			inet_ntoa(addr.sin_addr),
+			client_IP,
 			file_ID,
 			file_size,
 			file_block
@@ -162,7 +159,7 @@ bool server::get_upload_info(std::vector<info_buffer> & upload_info)
 	iter_end = Upload_Speed.end();
 	while(iter_cur != iter_end){
 		float percent = ((iter_cur->file_block * (global::P_BLS_SIZE - 1)) / (float)iter_cur->file_size) * 100;
-		if(percent > 100){
+		if(percent >= 99){
 			percent = 100;
 		}
 
@@ -201,11 +198,11 @@ bool server::is_indexing()
 
 bool server::new_conn(const int & listener)
 {
-	struct sockaddr_in remoteaddr;
+	sockaddr_in remoteaddr;
 	socklen_t len = sizeof(remoteaddr);
 
 	//make a new socket for incoming connection
-	int new_FD = accept(listener, (struct sockaddr *)&remoteaddr, &len);
+	int new_FD = accept(listener, (sockaddr *)&remoteaddr, &len);
 
 	if(new_FD == -1){
 		perror("accept");
@@ -217,7 +214,7 @@ bool server::new_conn(const int & listener)
 	sockaddr_in temp_addr;
 	for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 		if(FD_ISSET(socket_FD, &master_FDS)){
-			getpeername(socket_FD, (struct sockaddr*)&temp_addr, &len);
+			getpeername(socket_FD, (sockaddr*)&temp_addr, &len);
 			if(strcmp(new_IP.c_str(), inet_ntoa(temp_addr.sin_addr)) == 0){
 #ifdef DEBUG
 				std::cout << "error: server::new_conn(): client " << new_IP << " attempted multiple connections\n";
@@ -233,12 +230,13 @@ bool server::new_conn(const int & listener)
 
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(SB_mutex);
-		Send_Buff.insert(std::make_pair(new_FD, std::string()));
+		Send_Buff.insert(std::make_pair(new_FD, send_buff_element(new_IP)));
 		}//end lock scope
 
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(RB_mutex);
 		Recv_Buff.insert(std::make_pair(new_FD, std::string()));
+		Recv_Buff[new_FD].reserve(global::S_MAX_SIZE * global::PIPELINE_SIZE);
 		}//end lock scope
 
 		FD_SET(new_FD, &master_FDS);
@@ -258,6 +256,8 @@ bool server::new_conn(const int & listener)
 
 void server::main_thread()
 {
+	++threads;
+
 	//set listening socket
 	int listener;
 	if((listener = socket(PF_INET, SOCK_STREAM, 0)) == -1){
@@ -301,6 +301,10 @@ void server::main_thread()
 	#endif
 
 	while(true){
+		if(stop_threads){
+			break;
+		}
+
 		read_FDS = master_FDS;
 		write_FDS = master_FDS;
 		/*
@@ -311,7 +315,7 @@ void server::main_thread()
 			if((select(FD_max+1, &read_FDS, &write_FDS, NULL, NULL)) == -1){
 				//gprof will send PROF signal, this will ignore it
 				if(errno != EINTR){
-					perror("select");
+					perror("server select");
 					exit(1);
 				}
 			}
@@ -320,7 +324,7 @@ void server::main_thread()
 			if((select(FD_max+1, &read_FDS, NULL, NULL, NULL)) == -1){
 				//gprof will send PROF signal, this will ignore it
 				if(errno != EINTR){
-					perror("select");
+					perror("server select");
 					exit(1);
 				}
 			}
@@ -333,11 +337,9 @@ void server::main_thread()
 				}
 				else{ //existing socket sending data
 					if((n_bytes = recv(socket_FD, recv_buff, global::S_MAX_SIZE*global::PIPELINE_SIZE, 0)) <= 0){
-						#ifdef DEBUG
 						if(n_bytes == -1){
-							perror("recv");
+							perror("server recv");
 						}
-						#endif
 						disconnect(socket_FD);
 					}
 					else{ //incoming data from client socket
@@ -347,16 +349,20 @@ void server::main_thread()
 			}
 
 			//do not check for writes on listener, there is no corresponding Send_Buff element
+			std::map<int, send_buff_element>::iterator SB_iter;
 			if(FD_ISSET(socket_FD, &write_FDS) && socket_FD != listener){
-				std::map<int, std::string>::iterator SB_iter = Send_Buff.find(socket_FD);
-				if(!SB_iter->second.empty()){
+				SB_iter = Send_Buff.find(socket_FD);
+				if(!SB_iter->second.buff.empty()){
 					//MSG_NOSIGNAL needed because abrupt client disconnect causes SIGPIPE
-					if((n_bytes = send(socket_FD, SB_iter->second.c_str(), SB_iter->second.size(), MSG_NOSIGNAL)) < 0){
+					if((n_bytes = send(socket_FD, SB_iter->second.buff.c_str(), SB_iter->second.buff.size(), MSG_NOSIGNAL)) < 0){
+						if(n_bytes == -1){
+							perror("server send");
+						}
 						disconnect(socket_FD);
 					}
 					else{ //remove bytes sent from buffer
-						SB_iter->second.erase(0, n_bytes);
-						if(SB_iter->second.empty()){
+						SB_iter->second.buff.erase(0, n_bytes);
+						if(SB_iter->second.buff.empty()){
 							--send_pending;
 						}
 					}
@@ -364,58 +370,47 @@ void server::main_thread()
 			}
 		}
 	}
+
+	--threads;
 }
 
-int server::prepare_file_block(std::map<int, std::string>::iterator & SB_iter, const int & socket_FD, const int & file_ID, const int & block_number)
+int server::prepare_file_block(std::map<int, send_buff_element>::iterator & SB_iter, const int & socket_FD, const unsigned int & file_ID, const unsigned int & block_number)
 {
-	int start_size = SB_iter->second.size();
+	int start_size = SB_iter->second.buff.size();
 
 	//get file_size/filePath that corresponds to file_ID
 	unsigned long file_size;
 	std::string file_path;
 	if(!Server_Index.file_info(file_ID, file_size, file_path)){
 		//file was not found
-		SB_iter->second += global::P_FNF;
-
-		std::cout << "fatal error: server::prepare_file_block() couldn't find file in index" << std::endl;
-		exit(1);
+		SB_iter->second.buff += global::P_FNF;
 		return 0;
 	}
 
 	//check for valid file block request
 	if(block_number*(global::P_BLS_SIZE - 1) > file_size){
 		//a block past the end of file was requested
-		SB_iter->second += global::P_DNE;
-
-		std::cout << "fatal error: server::prepare_file_block() invalid block number requested" << std::endl;
-		exit(1);
+		SB_iter->second.buff += global::P_DNE;
 		return 0;
 	}
 
-	SB_iter->second += global::P_BLS;
+	SB_iter->second.buff += global::P_BLS;
 	std::ifstream fin(file_path.c_str());
 	if(fin.is_open()){
 		//seek to the file_block the client wants (-1 for command space)
 		fin.seekg(block_number*(global::P_BLS_SIZE - 1));
-
-		//fill the buffer
-		char ch;
-		while(fin.get(ch)){
-			SB_iter->second += ch;
-			if(SB_iter->second.size() - start_size == global::P_BLS_SIZE){
-				break;
-			}
-		}
+		fin.read(prepare_file_block_buff, global::P_BLS_SIZE - 1);
+		SB_iter->second.buff.append(prepare_file_block_buff, fin.gcount());
 		fin.close();
 	}
 	else{
+		std::cout << "socket: " << socket_FD << "\n";
 		std::cout << "fatal error: server::prepare_file_block() couldn't open file" << std::endl;
 		exit(1);
 	}
 
 	//update speed calculation (assumes there is a response)
-	calculate_speed_file(socket_FD, file_ID, block_number, file_size, file_path);
-
+	calculate_speed_file(SB_iter->second.client_IP, file_ID, block_number, file_size, file_path);
 	return 0;
 }
 
@@ -434,9 +429,9 @@ void server::process_request(const int & socket_FD, char recv_buff[], const int 
 	bool send_pending_temp = false;
 	while(RB_iter->second.size()){
 		if(RB_iter->second[0] == global::P_SBL && n_bytes >= global::P_SBL_SIZE){
-			std::map<int, std::string>::iterator SB_iter = Send_Buff.find(socket_FD);
-			int file_ID = conversion::decode_int(RB_iter->second.substr(1,4));
-			int block_number = conversion::decode_int(RB_iter->second.substr(5,4));
+			std::map<int, send_buff_element>::iterator SB_iter = Send_Buff.find(socket_FD);
+			unsigned int file_ID = conversion::decode_int(RB_iter->second.substr(1,4));
+			unsigned int block_number = conversion::decode_int(RB_iter->second.substr(5,4));
 			prepare_file_block(SB_iter, socket_FD, file_ID, block_number);
 			RB_iter->second.erase(0, global::P_SBL_SIZE);
 			send_pending_temp = true;
@@ -454,5 +449,29 @@ void server::process_request(const int & socket_FD, char recv_buff[], const int 
 void server::start()
 {
 	boost::thread T(boost::bind(&server::main_thread, this));
+}
+
+void server::stop()
+{
+	stop_threads = true;
+
+	/*
+	Make a connection to the local server to trigger select() to return so that
+	the main_thread loop can be exited. This makes it so that no timeout on the
+	select functions are necessary.
+	*/
+	sockaddr_in dest_addr;
+	int new_FD = socket(PF_INET, SOCK_STREAM, 0);
+	dest_addr.sin_family = AF_INET;
+	dest_addr.sin_port = htons(global::P2P_PORT);
+	dest_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	memset(&(dest_addr.sin_zero),'\0',8);
+	connect(new_FD, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+
+	while(threads){
+		usleep(100);
+	}
+
+	Server_Index.stop();
 }
 

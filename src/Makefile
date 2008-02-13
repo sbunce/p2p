@@ -1,7 +1,9 @@
-#build dependencies(ubuntu package names)
+#build dependencies(debian package names)
 #g++ libgtkmm-2.4-dev libboost-thread-dev libboost-filesystem-dev libsqlite3-dev
+#
+#sqlite on debian etch is bugged for single CPU machines
 
-CC = g++ -O3 -c
+CC = g++ -c -O3
 CCL = g++
 
 #enable gprof by uncommenting this
@@ -24,11 +26,11 @@ SERVER_LINKER_OPTIONS = -lboost_filesystem -lboost_thread -D_REENTRANT -lsqlite3
 
 main: $(OBJECTS)
 	$(CCL) $(OBJECTS) $(GPROF) -o ../p2p $(LINKER_OPTIONS)
-	@echo "\nBuilding p2p complete.\n"
+	@echo "Building p2p complete."
 
 server: $(SERVER_OBJECTS)
 	$(CCL) $(SERVER_OBJECTS) $(GPROF) -o ../p2p_server $(SERVER_LINKER_OPTIONS)
-	@echo "\nBuilding p2p server complete.\n"
+	@echo "Building p2p server complete."
 
 main.o: main.cc gui.o
 	$(CC) main.cc `pkg-config gtkmm-2.4 --cflags`
@@ -38,7 +40,7 @@ main_server.o: main_server.cc server.o
 
 client.o: client.cc client.h download.o download_conn.o download_file.o \
 	download_file_conn.o client_buffer.o client_index.o exploration.o atomic.h \
-	global.h
+	thread_pool.h global.h
 	$(CC) client.cc
 
 client_buffer.o: client_buffer.cc client_buffer.h download.o atomic.h \
@@ -78,10 +80,10 @@ gui_about.o: gui_about.cc gui_about.h global.h
 hash_tree.o: hash_tree.cc hash_tree.h sha.o global.h
 	$(CC) hash_tree.cc
 
-server.o: server.cc server.h server_index.o conversion.h global.h
+server.o: server.cc server.h server_index.o conversion.h atomic.h global.h
 	$(CC) server.cc
 
-server_index.o: server_index.cc server_index.h global.h
+server_index.o: server_index.cc server_index.h atomic.h global.h
 	$(CC) server_index.cc
 
 sha.o: sha.cc sha.h global.h
@@ -89,4 +91,3 @@ sha.o: sha.cc sha.h global.h
 
 clean:
 	rm -v *.o
-

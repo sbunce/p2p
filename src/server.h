@@ -21,12 +21,15 @@
 //contains enum type for error codes select() might return
 #include <errno.h>
 
+#include "atomic.h"
 #include "global.h"
 #include "server_index.h"
 
 class server
 {
 public:
+	server();
+
 	//used to pass information to user interface
 	class info_buffer
 	{
@@ -50,18 +53,42 @@ public:
 		int percent_complete;
 	};
 
-	server();
 	/*
-	get_upload_info - updates and returns upload information
-	                  returns false if no uploads
-	get_total_speed - returns the total speed of all uploads(in bytes per second)
+	get_upload_info - retrieves information on all current uploads
+	                  returns true if upload_info updated
+	get_total_speed - returns the total speed of all uploads (bytes per second)
+	is_indexing     - returns true if the server is indexing files
+	start           - starts the server
+	stop            - stops the server (blocks until server shut down)
 	*/
 	bool get_upload_info(std::vector<info_buffer> & upload_info);
 	int get_total_speed();
 	bool is_indexing();
 	void start();
+	void stop();
 
 private:
+	//holds data associated with a connection
+	class send_buff_element
+	{
+	public:
+		send_buff_element(std::string client_IP_in)
+		{
+			client_IP = client_IP_in;
+			buff.reserve(global::C_MAX_SIZE * global::PIPELINE_SIZE);
+		}
+
+		std::string buff;
+		std::string client_IP;
+	};
+
+	//main send/recv buffers associated with the socket number
+	std::map<int, send_buff_element> Send_Buff;
+	std::map<int, std::string> Recv_Buff;
+
+	atomic<bool> stop_threads; //if true this will trigger thread termination
+	atomic<int> threads;       //how many threads are currently running
+
 	//used by Upload_Speed to track the progress of an upload
 	class speed_element_file
 	{
@@ -91,22 +118,8 @@ private:
 		unsigned long file_block; //what file_block was last requested
 	};
 
-//DEBUG, if keeping track of more than one type of upload then virtualize the speed elements
-
 	//used by calculate_speed() to track upload speeds
 	std::list<speed_element_file> Upload_Speed;
-
-	/*
-	Stores pending responses. The partial send buffers can be accessed by socket
-	number with Send_Buff[socketNumber];
-	*/
-	std::map<int, std::string> Send_Buff;
-
-	/*
-	Stores partial requests. The partial requests can be accessed by socket number
-	with Recv_Buff[socketNumber];
-	*/
-	std::map<int, std::string> Recv_Buff;
 
 	//how many are connections currently established
 	int connections;
@@ -125,6 +138,9 @@ private:
 	*/
 	int send_pending;
 
+	//buffer for reading file blocks from the HDD
+	char prepare_file_block_buff[global::P_BLS_SIZE - 1];
+
 	/*
 	disconnect          - disconnect client and remove socket from master set
 	calculate_speed     - process the sendQueue and update Upload_Speed
@@ -137,10 +153,10 @@ private:
 	stateTick           - do pending actions
 	*/
 	void disconnect(const int & socketfd);
-	void calculate_speed_file(const int & socket_FD, const int & file_ID, const int & file_block, const unsigned long & file_size, const std::string & file_path);
+	int calculate_speed_file(std::string & client_IP, const unsigned int & file_ID, const unsigned int & file_block, const unsigned long & file_size, const std::string & file_path);
 	void main_thread();
 	bool new_conn(const int & listener);
-	int prepare_file_block(std::map<int, std::string>::iterator & SB_iter, const int & socket_FD, const int & file_ID, const int & block_number);
+	int prepare_file_block(std::map<int, send_buff_element>::iterator & SB_iter, const int & socket_FD, const unsigned int & file_ID, const unsigned int & block_number);
 	void process_request(const int & socketfd, char recvBuffer[], const int & n_bytes);
 
 	boost::mutex SB_mutex; //mutex for all usage of Send_Buff

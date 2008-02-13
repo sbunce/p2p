@@ -46,6 +46,7 @@ private:
 	std::string file_path;   //path to write file to on local system
 	unsigned long file_size; //size of the file(bytes)
 
+	//don't worry about these
 	unsigned int latest_request;  //the most recent block requested
 	unsigned int latest_written;  //most recently requested block
 	unsigned int last_block;      //the last block number
@@ -61,13 +62,14 @@ private:
 	bool download_complete;
 
 	//maps received block numbers to the actual file block
-	std::set<unsigned int> requested_blocks;
-	std::map<unsigned int, std::string> received_blocks;
+	std::set<unsigned int> requested_blocks;                  //blocks that have been requested
+	std::multiset<unsigned int> rerequest;                    //blocks needing to be rerequested
+	std::multimap<unsigned int, std::string> received_blocks; //recieved block numbers associated with the actual block
 
 	/*
-	request_choose_block - chooses a file block to request based on download_conn speed and download_speed
-	                       returns false if download complete or no new requests to be made
-	writeTree            - writes a file block
+	request_choose_block   - chooses a file block to request based on download_conn speed and download_speed
+	                         returns false if download complete or no new requests to be made
+	writeTree              - writes a file block
 	*/
 	bool request_choose_block(download_file_conn * conn);
 	void write_block(std::string & file_block);

@@ -14,14 +14,16 @@ namespace global
 	const std::string NAME = "p2p";
 	const std::string VERSION = "0.00 pre-alpha";
 
-	const int MAX_CONNECTIONS = 50; //maximum number of connections the server will accept
-	const int PIPELINE_SIZE = 8;    //how many pre-requests can be done(PIPELINE_SIZE * C_MAX_SIZE should not be > 2^16) (1 disables)
-	const int P2P_PORT = 6969;      //port client connects to and server receives on
-	const int GUI_TICK = 100;       //time(in milliseconds) between gui updates
-	const int SPEED_AVERAGE = 2;    //how many seconds to average upload/download speed over
-	const int COMPLETE_REMOVE = 5;  //how many seconds to wait before removing a complete upload
-	const int TIMEOUT = 25;         //server timeout will be between 1X and 2X this value
-	const int SHARE_REFRESH = 1200; //number of seconds between updating share information
+	const int MAX_CONNECTIONS = 50;  //maximum number of connections the server will accept
+	const int NEW_CONN_THREADS = 10; //how many threads are in the thread pool for making new client connections
+	const int PIPELINE_SIZE = 32;    //how many pre-requests can be done(1 disables pipelining)
+	const int REREQUEST_FACTOR = 32; //to what factor the server can be "later than normal" in sending a download_file packet
+	const int P2P_PORT = 6969;       //port client connects to and server receives on
+	const int GUI_TICK = 100;        //time(in milliseconds) between gui updates
+	const int SPEED_AVERAGE = 2;     //how many seconds to average upload/download speed over
+	const int COMPLETE_REMOVE = 5;   //how many seconds to wait before removing a complete upload
+	const int TIMEOUT = 25;          //server timeout will be between 1X and 2X this value
+	const int SHARE_REFRESH = 1200;  //number of seconds between updating share information
 
 	//protocol commands, client -> server
 
@@ -53,4 +55,3 @@ namespace global
 	const std::string DATABASE_PATH = "database";
 }
 #endif
-

@@ -1,7 +1,7 @@
 #ifndef H_DOWNLOAD_FILE_CONN
 #define H_DOWNLOAD_FILE_CONN
 
-#include <queue>
+#include <deque>
 #include <string>
 
 #include "download.h"
@@ -16,7 +16,7 @@ public:
 	unsigned int file_ID;
 
 	//the latest file block requested from this server
-	std::queue<unsigned int> latest_request;
+	std::deque<unsigned int> latest_request;
 
 	//speed of the individual server(bytes per second)
 	unsigned int download_speed;

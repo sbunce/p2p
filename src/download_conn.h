@@ -17,13 +17,8 @@ class download_conn
 public:
 	download_conn();
 
-	//true if connect() is in progress, only used during connection phase
-	bool processing;
-
-	//holds the IP of the server to connect to, generally set in derived class ctor
-	std::string server_IP;
-
-	//the download this connection is associated with, generally set in derived class ctor
-	download * Download;
+	bool processing;       //only used during initial connection phase
+	std::string server_IP; //must be present in all derived classes
+	download * Download;   //the download this connection is associated with
 };
 #endif

@@ -15,6 +15,7 @@ public:
 	/*
 	check_hash_tree  - returns true if a bad pair of hashes found (stored in bad_hash)
 	                   this function should NEVER be called until a full hash tree exists
+	                   if called multiple times this function doesn't rescan, unless different root hash given
 	create_hash_tree - creates a hash tree for the file pointed to by file_path
 	                   returns the root node hash
 	replace_hash     - used to replace bad hashes found by check_hash_tree

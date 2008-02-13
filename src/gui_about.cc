@@ -18,7 +18,16 @@ gui_about::gui_about()
 	about_refTextBuff = Gtk::TextBuffer::create();
 
 	about_refTextBuff->set_text(
-	global::NAME + " version: " + global::VERSION + " © 2006 Seth Bunce\n\n"
+	global::NAME + " version: " + global::VERSION + " © Seth Bunce 2006\n\n\n" +
+
+	"Acknowledgements:\n\n" +
+
+	"SHA C++ Implementation\n" +
+	"  Keith Oxenrider  - http://sol-biotech.com/code\n" +
+	"  Aaron D. Gifford - http://www.aarongifford.com/computers/sha.html\n\n" +
+
+	"SQLite Embeddable SQL DB\n" +
+	"  Richard Hipp - http://www.hwaci.com/drh/\n\n\n"
 	);
 
 	about_textView.set_buffer(about_refTextBuff);

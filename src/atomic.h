@@ -4,7 +4,7 @@
 /*
 This container locks access to a variable. Operators have been overloaded such
 that the container can be treated like the variable you put in to it. Not all
-operators are present for all types.
+operators are present for all types. Most notably bool and int work.
 */
 
 //std

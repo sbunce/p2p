@@ -76,31 +76,45 @@ bool download_file::request_choose_block(download_file_conn * conn)
 		return false;
 	}
 
-	/*
-	Determine what block to download by determining where the the download will be when the
-	server will likely respond and picking a block close to that.
-	*/
-	unsigned int download_bytes_per_msec = (unsigned int)(download_speed / 1000);
-	unsigned int server_bytes_per_msec = 0;
-	if(conn->speed() != 0){
-		server_bytes_per_msec = (unsigned int)(global::P_BLS_SIZE / conn->speed() / 1000);
+	//check for needed rerequests
+	if(!rerequest.empty()){
+		/*
+		Only rerequest a block from a server that hasn't had a block it was supposed
+		to serve rerequested. A rerequest is an indicator that a server is having
+		problems so we do not trust it with a rerequest until it has caught up on
+		the blocks it was supposed to send.
+		*/
+		std::deque<unsigned int>::iterator iter_cur, iter_end;
+		iter_cur = conn->latest_request.begin();
+		iter_end = conn->latest_request.end();
+		while(iter_cur != iter_end){
+			if(*iter_cur == *rerequest.begin()){
+				return false;
+			}
+			++iter_cur;
+		}
+
+		#ifdef DEBUG
+		std::cout << "re-requesting: " << *rerequest.begin() << "\n";
+		#endif
+		conn->latest_request.push_back(*rerequest.begin());
+		rerequest.erase(rerequest.begin());
+		return true;
 	}
 
-//std::cout << "download_bytes_per_msec: " << download_bytes_per_msec << "\n";
-//std::cout << "server_bytes_per_msec:   " << server_bytes_per_msec << "\n";
+/*************************************************************
+Lag prediction request lead prediction should be placed here.
 
-	unsigned int next_block_lead = 1;
-	if(server_bytes_per_msec != 0){
-		next_block_lead = (int)(download_bytes_per_msec / server_bytes_per_msec) + 1;
-	}
-	unsigned int optimal_next_block = latest_written + next_block_lead;
+
+*************************************************************/
+
+
+	unsigned int optimal_next_block = latest_written + 1; //this should be equal to optimal predicted next block
 
 	//make sure optimal_last_block
 	if(optimal_next_block > last_block){
 		optimal_next_block = last_block;
 	}
-
-//std::cout << "optimal_next_block: " << optimal_next_block << "\n";
 
 	//attempt to find a block lower than or equal to optimal_next_block to request
 	unsigned int request = optimal_next_block;
@@ -114,7 +128,7 @@ bool download_file::request_choose_block(download_file_conn * conn)
 		Pair = requested_blocks.insert(request);
 
 		if(Pair.second){
-			conn->latest_request.push(request);
+			conn->latest_request.push_back(request);
 			latest_request = request;
 			return true;
 		}
@@ -133,7 +147,7 @@ bool download_file::request_choose_block(download_file_conn * conn)
 		Pair = requested_blocks.insert(request);
 
 		if(Pair.second){
-			conn->latest_request.push(request);
+			conn->latest_request.push_back(request);
 			latest_request = request;
 			return true;
 		}
@@ -164,12 +178,6 @@ bool download_file::request(const int & socket, std::string & request)
 
 bool download_file::response(const int & socket, std::string block)
 {
-	#ifdef UNRELIABLE_CLIENT
-	if(std::rand() % 100 == 0){
-		return false;
-	}
-	#endif
-
 	//locate the server that this response is from
 	std::map<int, download_conn *>::iterator iter = Connection.find(socket);
 	download_file_conn * conn = (download_file_conn *)iter->second;
@@ -179,23 +187,26 @@ bool download_file::response(const int & socket, std::string block)
 		exit(1);
 	}
 
-	//update speed for the server
-	conn->calculate_speed(global::P_BLS_SIZE);
-
-	//trim off protocol information
-	block.erase(0, 1);
-
-	std::pair<std::map<unsigned int, std::string>::iterator,bool> RB_ins;
-	RB_ins = received_blocks.insert(std::make_pair(conn->latest_request.front(), block));
-	conn->latest_request.pop();
-
-	if(!RB_ins.second){
-		//insertion failed, another host responded faster
-//DEBUG, do something 
+	#ifdef UNRELIABLE_CLIENT
+	if(std::rand() % 100 == 0){
+		conn->latest_request.pop();
+		return false;
 	}
+	#endif
+
+	conn->calculate_speed(global::P_BLS_SIZE); //update server speed
+	calculate_speed(global::P_BLS_SIZE);       //update download speed
+
+	block.erase(0, 1); //trim command
+	received_blocks.insert(std::make_pair(conn->latest_request.front(), block));
+	conn->latest_request.pop_front();
+
+	#ifdef DEBUG
+	static int wasted_bytes = 0;
+	#endif
 
 	//flush as much of the file block buffer as possible
-	std::map<unsigned int, std::string>::iterator iter_cur, iter_end;
+	std::multimap<unsigned int, std::string>::iterator iter_cur, iter_end;
 	iter_cur = received_blocks.begin();
 	iter_end = received_blocks.end();
 	while(iter_cur != iter_end){
@@ -203,6 +214,17 @@ bool download_file::response(const int & socket, std::string block)
 			write_block(iter_cur->second);
 			latest_written = iter_cur->first;
 			requested_blocks.erase(iter_cur->first);
+
+			//the block was received so there is no more need to rerequest it
+			rerequest.erase(iter_cur->first);
+
+			received_blocks.erase(iter_cur);
+			iter_cur = received_blocks.begin();
+		}
+		else if(iter_cur->first <= latest_written){
+			#ifdef DEBUG
+			wasted_bytes += global::P_BLS_SIZE - 1;
+			#endif
 			received_blocks.erase(iter_cur);
 			iter_cur = received_blocks.begin();
 		}
@@ -211,13 +233,33 @@ bool download_file::response(const int & socket, std::string block)
 		}
 	}
 
+	int check_interval = (Connection.size() * global::REREQUEST_FACTOR);
+	if(received_blocks.size() % check_interval == 0 && received_blocks.size() != 0 && latest_written != (unsigned int)0 - 1){
+		if(received_blocks.size() / check_interval == 1){
+			//do not rerequest the block multiple times at this point
+			if(rerequest.find(latest_written + 1) != rerequest.end()){
+				rerequest.insert(latest_written + 1);
+			}
+		}
+		else{
+			//check for missing blocks in the oldest check_interval
+			for(int x=latest_written + 1; x<latest_written + check_interval; ++x){
+				if(rerequest.find(x) == rerequest.end()){
+					rerequest.insert(x);
+				}
+			}
+		}
+	}
+
 	//check if the download is complete
 	if(latest_written == last_block){
+		#ifdef DEBUG
+		std::cout << "wasted: " << wasted_bytes / 1024 << "kB\n";
+		#endif
 		download_complete = true;
 		*download_complete_flag = true;
 	}
 
-	calculate_speed(global::P_BLS_SIZE);
 	return true;
 }
 

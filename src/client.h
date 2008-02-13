@@ -12,6 +12,7 @@
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netdb.h>
 
 //contains enum type for error codes select() might return
 #include <errno.h>
@@ -32,6 +33,7 @@
 #include "download_file_conn.h"
 #include "exploration.h"
 #include "global.h"
+#include "thread_pool.h"
 
 class client
 {
@@ -70,16 +72,13 @@ private:
 	atomic<bool> stop_threads; //if true this will trigger thread termination
 	atomic<int> threads;       //how many threads are currently running
 
-	//holds the current time(set in main_thread), used for server timeouts
+	//used for timeouts
 	time_t current_time;
 	time_t previous_time;
 
-	/*
-	Holds connections which need to be made. If multiple connections to the same
-	server need to be made they're put in the same inner list.
-	*/
-	//std::list<pending_connection *> Pending_Connection;
-	std::list<download_conn *> Pending_Connection;
+	//holds connections which need to be made
+	std::queue<download_conn *> Connection_Queue;
+	std::list<download_conn *> Connection_Current_Attempt;
 
 	sha SHA;                   //creates messageDigests
 	client_index Client_Index; //gives client access to the database
@@ -115,6 +114,9 @@ private:
 	//true if a download is complete, handed to all downloads
 	atomic<bool> * download_complete;
 
+	//used to initiate new connections
+	thread_pool<client> Thread_Pool;
+
 	/*
 	check_timeouts     - checks all servers to see if they've timed out and removes/disconnects if they have
 	disconnect         - disconnects a socket, modifies Client_Buffer
@@ -126,18 +128,12 @@ private:
 	void check_timeouts();
 	inline void disconnect(const int & socket_FD);
 	void main_thread();
-	void new_conn(download_conn * DC);
+	void new_conn();
 	void prepare_requests();
 	void remove_complete();
 
 	//each mutex names the object it locks in the format boost::mutex <object>Mutex
 	boost::mutex CB_D_mutex; //for both Client_Buffer and Download_Buffer
 	boost::mutex DC_mutex;   //locks access to download_conn instances
-
-	/*
-	Locks access to everything NOT stop_threads. This is used by stop() to terminate
-	all threads.
-	*/
-	boost::mutex stop_mutex;
 };
 #endif
