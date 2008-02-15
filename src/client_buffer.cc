@@ -84,14 +84,24 @@ void client_buffer::prepare_request()
 	std::string request;
 	int count = 0;
 	if(!Download.empty()){
+		int empty_nonempty = false;
 		while(Pipeline.size() <= global::PIPELINE_SIZE && ++count <= global::PIPELINE_SIZE){
 			rotate_downloads();
+
+//change the request function to include the possibility of different response sizes depending on command
+
 			if((*Download_iter)->request(socket, request)){
+				if(send_buff.size() == 0){
+					empty_nonempty = true;
+				}
+
 				send_buff += request;
 				Pipeline.push_back(std::make_pair((*Download_iter)->bytes_expected(),*Download_iter));
 			}
 		}
-		if(send_buff.size() != 0){
+
+		//if the send_buff went from empty to nonempty
+		if(empty_nonempty){
 			++(*send_pending);
 		}
 	}

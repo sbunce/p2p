@@ -92,6 +92,9 @@ This has the problem of checking extra times when the number of connected
 servers fluctuates. For example say there is a check, and right after that another
 server is connected, then a check will be done after R more blocks are received.
 
+Re-requests are done from servers that hadn't already had the late block
+requested from it.
+
 
 NOT COMPLETED
 
@@ -110,8 +113,4 @@ the complexity from the downloads. The only requirement for downloads is
 that they maintain their own request queues such that they can provide the
 client buffer with multiple requests before the client_buffer returns any
 responses.
-
-	
-
-
 

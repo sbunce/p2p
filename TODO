@@ -25,6 +25,9 @@ the files of the trackers that tracker trusts and the files that that tracker
 trusts etc. Have an option to limit trust levels to direct trust only, one
 level inheritance and all level inheritance.
 
+-Think about making the client_buffer aware of command lengths. Perhaps it
+should be able to determine size based on command just like the server does.
+
 
 PORTABILITY PROBLEMS
 

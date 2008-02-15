@@ -209,8 +209,16 @@ bool server::new_conn(const int & listener)
 		return false;
 	}
 
-	//make sure the client isn't already connected
+	//do not accept connections from localhost
 	std::string new_IP(inet_ntoa(remoteaddr.sin_addr));
+	if(new_IP.substr(0,3) == "127"){
+#ifdef DEBUG
+		std::cout << "error: server::new_conn(): refusing connection from localhost\n";
+#endif
+		return false;
+	}
+
+	//make sure the client isn't already connected
 	sockaddr_in temp_addr;
 	for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 		if(FD_ISSET(socket_FD, &master_FDS)){
