@@ -42,23 +42,15 @@ const time_t & client_buffer::get_last_seen()
 
 int client_buffer::post_recv()
 {
-	//make sure the server didn't respond out of turn, don't try to do Pipeline.front() on an empty Pipeline
+	last_seen = time(0);
+
 	if(Pipeline.empty()){
+		//server responded out of turn
 		#ifdef DEBUG
 		std::cout << "error: client_buffer::post_recv() set abuse flag 1 on " << server_IP << "\n";
 		#endif
 		abuse = true;
 		return 0;
-	}
-
-	while(recv_buff.size() >= Pipeline.front().first){
-		Pipeline.front().second->response(socket, recv_buff.substr(0, Pipeline.front().first));
-		recv_buff.erase(0, Pipeline.front().first);
-		Pipeline.pop_front();
-
-		if(Pipeline.empty()){
-			break;
-		}
 	}
 
 	//if recv_buff larger than largest case the server is doing something naughty
@@ -69,7 +61,41 @@ int client_buffer::post_recv()
 		abuse = true;
 	}
 
-	last_seen = time(0);
+	while(true){
+		//find out how many bytes are expected for the command the server sent
+		std::vector<std::pair<char, int> >::iterator iter_cur, iter_end;
+		iter_cur = Pipeline.front().expected.begin();
+		iter_end = Pipeline.front().expected.end();
+		while(iter_cur != iter_end){
+			if(iter_cur->first == recv_buff[0]){
+				break;
+			}
+			++iter_cur;
+		}
+
+		if(iter_cur != iter_end){
+			//not enough bytes yet received for command
+			if(recv_buff.size() < iter_cur->second){
+				break;
+			}
+		}
+		else if(iter_cur == iter_end){
+			//command not found, server sent unexpected command
+			#ifdef DEBUG
+			std::cout << "error: client_buffer::post_recv() set abuse flag 3 on " << server_IP << "\n";
+			#endif
+			abuse = true;
+			return 0;
+		}
+
+		Pipeline.front().Download->response(socket, recv_buff.substr(0, iter_cur->second));
+		recv_buff.erase(0, iter_cur->second);
+		Pipeline.pop_front();
+
+		if(Pipeline.empty() || recv_buff.size() == 0){
+			break;
+		}
+	}
 }
 
 void client_buffer::post_send()
@@ -87,20 +113,19 @@ void client_buffer::prepare_request()
 		int empty_nonempty = false;
 		while(Pipeline.size() <= global::PIPELINE_SIZE && ++count <= global::PIPELINE_SIZE){
 			rotate_downloads();
-
-//change the request function to include the possibility of different response sizes depending on command
-
-			if((*Download_iter)->request(socket, request)){
+			pending_response PR;
+			PR.Download = *Download_iter;
+			if((*Download_iter)->request(socket, request, PR.expected)){
 				if(send_buff.size() == 0){
 					empty_nonempty = true;
 				}
 
 				send_buff += request;
-				Pipeline.push_back(std::make_pair((*Download_iter)->bytes_expected(),*Download_iter));
+				Pipeline.push_back(PR);
 			}
 		}
 
-		//if the send_buff went from empty to nonempty
+		//if the send_buff went from empty to nonempty signal client that a send is pending
 		if(empty_nonempty){
 			++(*send_pending);
 		}
@@ -132,11 +157,11 @@ const bool client_buffer::terminate_download(const std::string & hash)
 	while(PT_iter_cur != PT_iter_end){
 		if(hash == (*PT_iter_cur)->hash()){
 			//download already in progress of termination, check pipeline
-			std::deque<std::pair<int, download *> >::iterator P_iter_cur, P_iter_end;
+			std::deque<pending_response>::iterator P_iter_cur, P_iter_end;
 			P_iter_cur = Pipeline.begin();
 			P_iter_end = Pipeline.end();
 			while(P_iter_cur != P_iter_end){
-				if(hash == P_iter_cur->second->hash()){
+				if(hash == P_iter_cur->Download->hash()){
 					//download found in pipeline, do not terminate yet
 					return false;
 				}
@@ -163,11 +188,11 @@ const bool client_buffer::terminate_download(const std::string & hash)
 	while(D_iter_cur != D_iter_end){
 		if(hash == (*D_iter_cur)->hash()){
 			//check to see if download is in the Pipeline
-			std::deque<std::pair<int, download *> >::iterator P_iter_cur, P_iter_end;
+			std::deque<pending_response>::iterator P_iter_cur, P_iter_end;
 			P_iter_cur = Pipeline.begin();
 			P_iter_end = Pipeline.end();
 			while(P_iter_cur != P_iter_end){
-				if(hash == P_iter_cur->second->hash()){
+				if(hash == P_iter_cur->Download->hash()){
 					//download found in pipeline
 					Pending_Termination.push_back(*D_iter_cur);
 					Download.erase(D_iter_cur);

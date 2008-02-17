@@ -25,7 +25,6 @@ public:
 
 	/*
 	complete         - returns true if download complete (or if stop called)
-	bytes_expected   - bytes expected in response to latest request
 	hash             - returns a unique identifier to the download
 	IP_list          - appends all IPs registered with this download to list
 	name             - returns the name of this download
@@ -39,13 +38,12 @@ public:
 	total_size       - the total amount needing to be downloaded
 	*/
 	virtual bool complete() = 0;
-	virtual unsigned int bytes_expected() = 0;
 	virtual const std::string & hash() = 0;
 	virtual void IP_list(std::vector<std::string> & list);
 	virtual const std::string & name() = 0;
 	virtual unsigned int percent_complete() = 0;
-	virtual bool request(const int & socket, std::string & request) = 0;
-	virtual bool response(const int & socket, std::string block) = 0;
+	virtual bool request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected) = 0;
+	virtual void response(const int & socket, std::string block) = 0;
 	virtual const unsigned int & speed();
 	virtual void stop() = 0;
 	virtual const unsigned long & total_size() = 0;

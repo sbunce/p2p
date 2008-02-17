@@ -1,10 +1,5 @@
 TODO
 
--Add a client_buffer feature to allow download to check for errors.
-
--Write good protocol documentation and a COMPLETE explanation of the download_file
-re-request algorithm.
-
 
 BUGS
 
@@ -24,9 +19,6 @@ structure such that if the user adds a tracker the user will also get to see
 the files of the trackers that tracker trusts and the files that that tracker
 trusts etc. Have an option to limit trust levels to direct trust only, one
 level inheritance and all level inheritance.
-
--Think about making the client_buffer aware of command lengths. Perhaps it
-should be able to determine size based on command just like the server does.
 
 
 PORTABILITY PROBLEMS

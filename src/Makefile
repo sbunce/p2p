@@ -10,12 +10,14 @@ CCL = g++
 #GPROF = -pg
 
 #objects for the full program
-OBJECTS = main.o client.o client_buffer.o download.o download_conn.o \
-	download_file.o download_file_conn.o download_hash_tree.o client_index.o \
-	exploration.o gui.o gui_about.o hash_tree.o server.o server_index.o sha.o
+OBJECTS = main.o client.o client_buffer.o DB_access.o download.o \
+	download_conn.o download_file.o download_file_conn.o download_hash_tree.o \
+	client_index.o exploration.o gui.o gui_about.o hash_tree.o server.o \
+	server_index.o sha.o
 
 #objects for the command line server
-SERVER_OBJECTS = main_server.o hash_tree.o server.o server_index.o sha.o
+SERVER_OBJECTS = main_server.o DB_access.o hash_tree.o server.o server_index.o \
+	sha.o
 
 #linker options for the full program
 LINKER_OPTIONS = `pkg-config gtkmm-2.4 --cflags --libs` -lboost_filesystem \
@@ -50,15 +52,17 @@ client_buffer.o: client_buffer.cc client_buffer.h download.o atomic.h \
 client_index.o: client_index.cc client_index.h download.o exploration.o global.h
 	$(CC) client_index.cc
 
+DB_access.o: DB_access.cc DB_access.h global.h
+	$(CC) DB_access.cc
+
 download.o: download.cc download.h atomic.h download_conn.o global.h
 	$(CC) download.cc
 
 download_conn.o: download_conn.cc download_conn.h
 	$(CC) download_conn.cc
 
-download_file.o: download_file.cc download_file.h download.o \
-	download_file_conn.o hash_tree.o \
-	atomic.h conversion.h global.h
+download_file.o: download_file.cc DB_access.o download_file.h download.o \
+	download_file_conn.o hash_tree.o atomic.h conversion.h global.h
 	$(CC) download_file.cc
 
 download_file_conn.o: download_file_conn.cc download_file_conn.h download_conn.o

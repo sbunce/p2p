@@ -31,12 +31,12 @@ unsigned int download_hash_tree::percent_complete()
 
 }
 
-bool download_hash_tree::request(const int & socket, std::string & request)
+bool download_hash_tree::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected)
 {
 
 }
 
-bool download_hash_tree::response(const int & socket, std::string block)
+void download_hash_tree::response(const int & socket, std::string block)
 {
 
 }

@@ -6,10 +6,7 @@
 
 namespace global
 {
-	/* *********** BEGIN DEBUGGING OPTIONS *********** */
 	#define DEBUG
-	//#define UNRELIABLE_CLIENT
-	/* ************ END DEBUGGING OPTIONS ************ */
 
 	const std::string NAME = "p2p";
 	const std::string VERSION = "0.00 pre-alpha";
@@ -25,23 +22,19 @@ namespace global
 	const int TIMEOUT = 25;          //server timeout will be between 1X and 2X this value
 	const int SHARE_REFRESH = 1200;  //number of seconds between updating share information
 
-	//protocol commands, client -> server
-
-	/* P_SBL is the command to request a file block. The request is 9 bytes.
-	XYYYYZZZZ
-	X - command byte (P_SBL command)
-	Y - file ID (4 bytes)
-	Z - block number (4 bytes) */
+	//protocol commands client -> server
 	const char P_SBL = (char)1;
 	const int P_SBL_SIZE = 9;
 
-	//protocol commands, server -> client
-	const char P_DNE = (char)2;  //file block does not exist (server still downloading file)
-	const char P_FNF = (char)3;  //server does not have file with that ID
-	const char P_BLS = (char)4;  //block send (remainder of packet is a file block)
-	const int P_BLS_SIZE = 8192; //size of a P_BLS packet (last block packet may be smaller)
+	//protocol commands for download_file, server -> client
+	const char P_DNE = (char)2;
+	const int P_DNE_SIZE = 1;
+	const char P_FNF = (char)3;
+	const int P_FNF_SIZE = 1;
+	const char P_BLS = (char)4;
+	const int P_BLS_SIZE = 8192;
 
-	//size of the largest possibe packet the server and client can receive (buffer sizes)
+	//size of the largest possibe packet the server and client can receive
 	const int S_MAX_SIZE = P_SBL_SIZE;
 	const int C_MAX_SIZE = P_BLS_SIZE;
 

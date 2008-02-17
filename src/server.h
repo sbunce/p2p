@@ -22,6 +22,7 @@
 #include <errno.h>
 
 #include "atomic.h"
+#include "DB_access.h"
 #include "global.h"
 #include "server_index.h"
 
@@ -165,5 +166,8 @@ private:
 
 	//keeps track of shared files
 	server_index Server_Index;
+
+	//contains database functions
+	DB_access DB_Access;
 };
 #endif

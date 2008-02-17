@@ -30,9 +30,9 @@ download_file::download_file(std::string & file_hash_in, std::string & file_name
 	//defaults
 	download_complete = false;
 
-#ifdef UNRELIABLE_CLIENT
-	std::srand(time(0));
-#endif
+	#ifdef DEBUG
+	wasted_bytes = 0;
+	#endif
 
 	//set the hash type
 	SHA.init(global::HASH_TYPE);
@@ -41,16 +41,6 @@ download_file::download_file(std::string & file_hash_in, std::string & file_name
 bool download_file::complete()
 {
 	return download_complete;
-}
-
-unsigned int download_file::bytes_expected()
-{
-	if(latest_request == last_block){
-		return last_block_size;
-	}
-	else{
-		return global::P_BLS_SIZE;
-	}
 }
 
 const std::string & download_file::hash()
@@ -157,7 +147,7 @@ Lag prediction request lead prediction should be placed here.
 	}
 }
 
-bool download_file::request(const int & socket, std::string & request)
+bool download_file::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected)
 {
 	std::map<int, download_conn *>::iterator iter = Connection.find(socket);
 	download_file_conn * conn = (download_file_conn *)iter->second;
@@ -173,37 +163,75 @@ bool download_file::request(const int & socket, std::string & request)
 	}
 
 	request = global::P_SBL + conversion::encode_int(conn->file_ID) + conversion::encode_int(conn->latest_request.back());
+
+	int size;
+	if(latest_request == last_block){
+		size = last_block_size;
+	}
+	else{
+		size = global::P_BLS_SIZE;
+	}
+
+	//expected response information
+	expected.push_back(std::make_pair(global::P_BLS, size));
+	expected.push_back(std::make_pair(global::P_DNE, global::P_DNE_SIZE));
+	expected.push_back(std::make_pair(global::P_FNF, global::P_FNF_SIZE));
+
 	return true;
 }
 
-bool download_file::response(const int & socket, std::string block)
+void download_file::response(const int & socket, std::string block)
+{
+	if(block[0] == global::P_BLS){
+		//a block was received
+		block.erase(0, 1); //trim command
+		response_BLS(socket, block);
+	}
+	else if(block[0] == global::P_DNE){
+		//server doesn't yet have this block
+
+//DEBUG, the download has to be made unready for a certain time
+
+		std::map<int, download_conn *>::iterator iter = Connection.find(socket);
+		download_file_conn * conn = (download_file_conn *)iter->second;
+
+		#ifdef DEBUG
+		std::cout << "info: download_file::response(): received a P_DNE command from " << conn->server_IP << "\n";
+		#endif
+	}
+	else if(block[0] == global::P_FNF){
+		//server is reporting that it doesn't have the file
+
+//DEBUG, need to delete the file from the DB for this host
+
+		std::map<int, download_conn *>::iterator iter = Connection.find(socket);
+		download_file_conn * conn = (download_file_conn *)iter->second;
+
+		#ifdef DEBUG
+		std::cout << "info: download_file::response(): received a P_FNF command from " << conn->server_IP << "\n";
+		#endif
+	}
+	else{
+		std::cout << "fatal error: download_file::response(): client buffer passed a bad command\n";
+	}
+}
+
+void download_file::response_BLS(const int & socket, std::string & block)
 {
 	//locate the server that this response is from
 	std::map<int, download_conn *>::iterator iter = Connection.find(socket);
 	download_file_conn * conn = (download_file_conn *)iter->second;
 
 	if(iter == Connection.end()){
-		std::cout << "fatal error: download_file::response() socket not registered\n";
+		std::cout << "fatal error: download_file::response_BLS() socket not registered\n";
 		exit(1);
 	}
 
-	#ifdef UNRELIABLE_CLIENT
-	if(std::rand() % 100 == 0){
-		conn->latest_request.pop();
-		return false;
-	}
-	#endif
+	conn->calculate_speed(block.size()); //update server speed
+	calculate_speed(block.size());       //update download speed
 
-	conn->calculate_speed(global::P_BLS_SIZE); //update server speed
-	calculate_speed(global::P_BLS_SIZE);       //update download speed
-
-	block.erase(0, 1); //trim command
 	received_blocks.insert(std::make_pair(conn->latest_request.front(), block));
 	conn->latest_request.pop_front();
-
-	#ifdef DEBUG
-	static int wasted_bytes = 0;
-	#endif
 
 	//flush as much of the file block buffer as possible
 	std::multimap<unsigned int, std::string>::iterator iter_cur, iter_end;
@@ -254,13 +282,11 @@ bool download_file::response(const int & socket, std::string block)
 	//check if the download is complete
 	if(latest_written == last_block){
 		#ifdef DEBUG
-		std::cout << "wasted: " << wasted_bytes / 1024 << "kB\n";
+		std::cout << "wasted: " << wasted_bytes / 1024 / 1024 << "mB\n";
 		#endif
 		download_complete = true;
 		*download_complete_flag = true;
 	}
-
-	return true;
 }
 
 void download_file::stop()

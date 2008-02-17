@@ -55,7 +55,19 @@ private:
 	std::list<download *>::iterator Download_iter; //last download a request was gotten from
 
 	//holds downloads in order of pending response paired with how many bytes are expected
-	std::deque<std::pair<int, download *> > Pipeline;
+	//std::deque<std::pair<int, download *> > Pipeline;
+
+	class pending_response
+	{
+	public:
+		//the command and how many bytes are associated with it
+		std::vector<std::pair<char, int> > expected;
+
+		//the download that made the request
+		download * Download;
+	};
+
+	std::deque<pending_response> Pipeline;
 
 	/*
 	Temporary holder for downloads that need to be terminated. This can be due to the user canceling

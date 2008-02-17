@@ -1,6 +1,8 @@
 #ifndef H_DOWNLOAD_HASH_TREE
 #define H_DOWNLOAD_HASH_TREE
 
+#include <vector>
+
 #include "atomic.h"
 #include "download.h"
 #include "hash_tree.h"
@@ -16,8 +18,8 @@ public:
 	virtual const std::string & hash();
 	virtual const std::string & name();
 	virtual unsigned int percent_complete();
-	virtual bool request(const int & socket, std::string & request);
-	virtual bool response(const int & socket, std::string block);
+	virtual bool request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected);
+	virtual void response(const int & socket, std::string block);
 	virtual void stop();
 	virtual const unsigned long & total_size();
 

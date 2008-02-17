@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "atomic.h"
+#include "DB_access.h"
 #include "conversion.h"
 #include "download.h"
 #include "download_file_conn.h"
@@ -27,16 +28,19 @@ public:
 
 	//documentation for virtual functions in abstract base class
 	virtual bool complete();
-	virtual unsigned int bytes_expected();
 	virtual const std::string & hash();
 	virtual const std::string & name();
 	virtual unsigned int percent_complete();
-	virtual bool request(const int & socket, std::string & request);
-	virtual bool response(const int & socket, std::string block);
+	virtual bool request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected);
+	virtual void response(const int & socket, std::string block);
 	virtual void stop();
 	virtual const unsigned long & total_size();
 
 private:
+	#ifdef DEBUG
+	unsigned int wasted_bytes;
+	#endif
+
 	//creates hashes for superBlocks
 	sha SHA;
 
@@ -69,10 +73,15 @@ private:
 	/*
 	request_choose_block   - chooses a file block to request based on download_conn speed and download_speed
 	                         returns false if download complete or no new requests to be made
+	response_BLS           - processes a file block response
 	writeTree              - writes a file block
 	*/
 	bool request_choose_block(download_file_conn * conn);
+	void response_BLS(const int & socket, std::string & block);
 	void write_block(std::string & file_block);
+
+	//provides access to the database
+	DB_access DB_Access;
 };
 #endif
 
