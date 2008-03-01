@@ -1,12 +1,8 @@
 #build dependencies(debian package names)
 #g++ libgtkmm-2.4-dev libboost-thread-dev libboost-filesystem-dev libsqlite3-dev
-#
-#sqlite on debian etch is bugged for single CPU machines
 
 CC = g++ -c -O3
 CCL = g++
-
-#enable gprof by uncommenting this
 #GPROF = -pg
 
 #objects for the full program

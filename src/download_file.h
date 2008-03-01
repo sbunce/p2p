@@ -71,10 +71,10 @@ private:
 	std::multimap<unsigned int, std::string> received_blocks; //recieved block numbers associated with the actual block
 
 	/*
-	request_choose_block   - chooses a file block to request based on download_conn speed and download_speed
-	                         returns false if download complete or no new requests to be made
-	response_BLS           - processes a file block response
-	writeTree              - writes a file block
+	request_choose_block - chooses a file block to request based on download_conn speed and download_speed
+	                       returns false if download complete or no new requests to be made
+	response_BLS         - processes a file block response
+	writeTree            - writes a file block
 	*/
 	bool request_choose_block(download_file_conn * conn);
 	void response_BLS(const int & socket, std::string & block);

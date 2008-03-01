@@ -190,7 +190,7 @@ void download_file::response(const int & socket, std::string block)
 	else if(block[0] == global::P_DNE){
 		//server doesn't yet have this block
 
-//DEBUG, the download has to be made unready for a certain time
+//DEBUG, the server has to be made unready for a certain time
 
 		std::map<int, download_conn *>::iterator iter = Connection.find(socket);
 		download_file_conn * conn = (download_file_conn *)iter->second;
@@ -202,7 +202,7 @@ void download_file::response(const int & socket, std::string block)
 	else if(block[0] == global::P_FNF){
 		//server is reporting that it doesn't have the file
 
-//DEBUG, need to delete the file from the DB for this host
+//DEBUG, need to delete the IP/file ID associated from this file
 
 		std::map<int, download_conn *>::iterator iter = Connection.find(socket);
 		download_file_conn * conn = (download_file_conn *)iter->second;

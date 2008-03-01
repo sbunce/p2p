@@ -13,24 +13,24 @@ DB_access::DB_access()
 	}
 }
 
-bool DB_access::file_info(const unsigned int & file_ID, unsigned long & file_size, std::string & file_path)
+bool DB_access::share_file_info(const unsigned int & file_ID, unsigned long & file_size, std::string & file_path)
 {
 	std::ostringstream query;
-	file_info_entry_exists = false;
+	share_file_info_entry_exists = false;
 
 	//locate the record
 	query << "SELECT size, path FROM share WHERE ID LIKE \"" << file_ID << "\" LIMIT 1";
 
 	int return_code;
-	if((return_code = sqlite3_exec(sqlite3_DB, query.str().c_str(), file_info_call_back_wrapper, (void *)this, NULL)) != 0){
+	if((return_code = sqlite3_exec(sqlite3_DB, query.str().c_str(), share_file_info_call_back_wrapper, (void *)this, NULL)) != 0){
 #ifdef DEBUG
 		std::cout << "error: server_index::file_info() failed with sqlite3 error " << return_code << "\n";
 #endif
 	}
 
-	if(file_info_entry_exists){
-		file_size = file_info_file_size;
-		file_path = file_info_file_path;
+	if(share_file_info_entry_exists){
+		file_size = share_file_info_file_size;
+		file_path = share_file_info_file_path;
 		return true;
 	}
 	else{
@@ -38,9 +38,9 @@ bool DB_access::file_info(const unsigned int & file_ID, unsigned long & file_siz
 	}
 }
 
-void DB_access::file_info_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
+void DB_access::share_file_info_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
-	file_info_entry_exists = true;
-	file_info_file_size = strtoul(query_response[0], NULL, 0);
-	file_info_file_path.assign(query_response[1]);
+	share_file_info_entry_exists = true;
+	share_file_info_file_size = strtoul(query_response[0], NULL, 0);
+	share_file_info_file_path.assign(query_response[1]);
 }

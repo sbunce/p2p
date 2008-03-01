@@ -389,7 +389,7 @@ int server::prepare_file_block(std::map<int, send_buff_element>::iterator & SB_i
 	//get file_size/filePath that corresponds to file_ID
 	unsigned long file_size;
 	std::string file_path;
-	if(!DB_Access.file_info(file_ID, file_size, file_path)){
+	if(!DB_Access.share_file_info(file_ID, file_size, file_path)){
 		//file was not found
 		SB_iter->second.buff += global::P_FNF;
 		return 0;

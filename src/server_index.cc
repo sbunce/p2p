@@ -128,6 +128,12 @@ void server_index::index_share()
 {
 	++threads;
 
+	//index when thread started
+	indexing = true;
+	remove_missing();
+	index_share_recurse(global::SERVER_SHARE_DIRECTORY);
+	indexing = false;
+
 	int seconds_slept = 0;
 	while(true){
 		if(stop_thread){
