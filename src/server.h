@@ -22,6 +22,7 @@
 #include <errno.h>
 
 #include "atomic.h"
+#include "conversion.h"
 #include "DB_access.h"
 #include "global.h"
 #include "server_index.h"
@@ -164,10 +165,13 @@ private:
 	boost::mutex RB_mutex; //mutex for all usage of Recv_Buff
 	boost::mutex US_mutex; //mutex for all usage of Upload_Speed
 
-	//keeps track of shared files
-	server_index Server_Index;
+	//conversions used for crafting requests and reading responses
+	conversion Conversion;
 
 	//contains database functions
 	DB_access DB_Access;
+
+	//keeps track of shared files
+	server_index Server_Index;
 };
 #endif

@@ -438,8 +438,8 @@ void server::process_request(const int & socket_FD, char recv_buff[], const int 
 	while(RB_iter->second.size()){
 		if(RB_iter->second[0] == global::P_SBL && n_bytes >= global::P_SBL_SIZE){
 			std::map<int, send_buff_element>::iterator SB_iter = Send_Buff.find(socket_FD);
-			unsigned int file_ID = conversion::decode_int(RB_iter->second.substr(1,4));
-			unsigned int block_number = conversion::decode_int(RB_iter->second.substr(5,4));
+			unsigned int file_ID = Conversion.decode_int(RB_iter->second.substr(1,4));
+			unsigned int block_number = Conversion.decode_int(RB_iter->second.substr(5,4));
 			prepare_file_block(SB_iter, socket_FD, file_ID, block_number);
 			RB_iter->second.erase(0, global::P_SBL_SIZE);
 			send_pending_temp = true;

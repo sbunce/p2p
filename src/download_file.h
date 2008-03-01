@@ -41,9 +41,6 @@ private:
 	unsigned int wasted_bytes;
 	#endif
 
-	//creates hashes for superBlocks
-	sha SHA;
-
 	//these must be set before the download begins and will be set by ctor
 	std::string file_hash;   //unique identifier of the file and message digest
 	std::string file_name;   //name of the file
@@ -80,8 +77,14 @@ private:
 	void response_BLS(const int & socket, std::string & block);
 	void write_block(std::string & file_block);
 
+	//conversions used for crafting requests and reading responses
+	conversion Conversion;
+
 	//provides access to the database
 	DB_access DB_Access;
+
+	//creates hashes for superBlocks
+	sha SHA;
 };
 #endif
 
