@@ -6,8 +6,10 @@
 #include <sstream>
 #include <vector>
 
-#include "gui.h"
+//custom
 #include "gui_about.h"
+
+#include "gui.h"
 
 gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 {
@@ -288,7 +290,7 @@ void gui::download_file()
 			Glib::ustring hash_retrieved;
 			row.get_value(0, hash_retrieved);
 
-			std::list<exploration::info_buffer>::iterator iter_cur, iter_end;
+			std::list<DB_access::download_info_buffer>::iterator iter_cur, iter_end;
 			iter_cur = Search_Info.begin();
 			iter_end = Search_Info.end();
 			while(iter_cur != iter_end){
@@ -709,7 +711,7 @@ void gui::search_info_refresh()
 	//clear all results
 	searchList->clear();
 
-	std::list<exploration::info_buffer>::iterator info_iter_cur, info_iter_end;
+	std::list<DB_access::download_info_buffer>::iterator info_iter_cur, info_iter_end;
 	info_iter_cur = Search_Info.begin();
 	info_iter_end = Search_Info.end();
 	while(info_iter_cur != info_iter_end){
@@ -794,6 +796,6 @@ void gui::search_input()
 {
 	std::string inputText = searchEntry->get_text();
 	searchEntry->set_text("");
-	Exploration.search(inputText, Search_Info);
+	DB_Access.search(inputText, Search_Info);
 	search_info_refresh();
 }

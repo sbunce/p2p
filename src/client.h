@@ -14,7 +14,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
-//contains enum type for error codes select() might return
+//contains error codes select() might return
 #include <errno.h>
 
 //std
@@ -24,14 +24,14 @@
 #include <string>
 #include <vector>
 
+//custom
 #include "atomic.h"
 #include "client_buffer.h"
-#include "client_index.h"
+#include "DB_access.h"
 #include "download.h"
 #include "download_conn.h"
 #include "download_file.h"
 #include "download_file_conn.h"
-#include "exploration.h"
 #include "global.h"
 #include "thread_pool.h"
 
@@ -65,7 +65,7 @@ public:
 	int get_total_speed();
 	void start();
 	void stop();
-	bool start_download(exploration::info_buffer info);
+	bool start_download(DB_access::download_info_buffer info);
 	void stop_download(const std::string & hash);
 
 private:
@@ -79,9 +79,6 @@ private:
 	//holds connections which need to be made
 	std::queue<download_conn *> Connection_Queue;
 	std::list<download_conn *> Connection_Current_Attempt;
-
-	sha SHA;                   //creates messageDigests
-	client_index Client_Index; //gives client access to the database
 
 	/*
 	All the information relevant to each socket accessible with the socket fd int
@@ -118,12 +115,12 @@ private:
 	thread_pool<client> Thread_Pool;
 
 	/*
-	check_timeouts     - checks all servers to see if they've timed out and removes/disconnects if they have
-	disconnect         - disconnects a socket, modifies Client_Buffer
-	main_thread        - main client thread that sends/receives data and triggers events
-	new_conn           - create a connection with a server, modifies Client_Buffer
-	prepare_requests   - touches each Client_Buffer element to trigger new requests(if needed)
-	remove_complete    - removes downloads that are complete(or stopped)
+	check_timeouts   - checks all servers to see if they've timed out and removes/disconnects if they have
+	disconnect       - disconnects a socket, modifies Client_Buffer
+	main_thread      - main client thread that sends/receives data and triggers events
+	new_conn         - create a connection with a server, modifies Client_Buffer
+	prepare_requests - touches each Client_Buffer element to trigger new requests(if needed)
+	remove_complete  - removes downloads that are complete(or stopped)
 	*/
 	void check_timeouts();
 	inline void disconnect(const int & socket_FD);
@@ -135,5 +132,8 @@ private:
 	//each mutex names the object it locks in the format boost::mutex <object>Mutex
 	boost::mutex CB_D_mutex; //for both Client_Buffer and Download_Buffer
 	boost::mutex DC_mutex;   //locks access to download_conn instances
+
+	sha SHA;             //creates message digests
+	DB_access DB_Access; //gives client access to the database
 };
 #endif

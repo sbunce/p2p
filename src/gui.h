@@ -8,10 +8,11 @@
 #include <list>
 #include <string>
 
+//custom
 #include "client.h"
+#include "DB_access.h"
 #include "global.h"
 #include "server.h"
-#include "exploration.h"
 
 class gui : public Gtk::Window
 {
@@ -114,9 +115,9 @@ private:
 
 	client Client;
 	server Server;
-	exploration Exploration;
+	DB_access DB_Access;
 
 	//holds the information from the last search
-	std::list<exploration::info_buffer> Search_Info;
+	std::list<DB_access::download_info_buffer> Search_Info;
 };
 #endif

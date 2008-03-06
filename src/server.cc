@@ -4,7 +4,9 @@
 #include <sstream>
 #include <time.h>
 
+//custom
 #include "conversion.h"
+
 #include "server.h"
 
 server::server()
@@ -12,6 +14,7 @@ server::server()
 	connections = 0;
 	send_pending = 0;
 	stop_threads = false;
+	total_speed = 0;
 	threads = 0;
 	FD_ZERO(&master_FDS);
 	Server_Index.start();
@@ -19,9 +22,7 @@ server::server()
 
 void server::disconnect(const int & socket_FD)
 {
-#ifdef DEBUG
-	std::cout << "info: server::disconnect(): server disconnecting socket number " << socket_FD << "\n";
-#endif
+	global::debug_message(global::INFO,__FILE__,__FUNCTION__,"disconnecting socket ",socket_FD);
 
 	/*
 	It is possible for disconnect() to get called more than once when a socket
@@ -75,7 +76,6 @@ int server::calculate_speed_file(std::string & client_IP, const unsigned int & f
 
 		//if element found update it
 		if(iter_cur->client_IP == client_IP && iter_cur->file_ID == file_ID){
-
 			if(iter_cur->Speed.back().first == current_time){
 				iter_cur->Speed.back().second += global::P_BLS_SIZE;
 			}
@@ -110,25 +110,7 @@ int server::calculate_speed_file(std::string & client_IP, const unsigned int & f
 
 int server::get_total_speed()
 {
-	int total_bytes = 0;
-
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(US_mutex);
-	std::list<speed_element_file>::iterator iter_cur, iter_end;
-	iter_cur = Upload_Speed.begin();
-	iter_end = Upload_Speed.end();
-	while(iter_cur != iter_end){
-		//add up bytes for SPEED_AVERAGE seconds (except for incomplete second)
-		for(int x=0; x<iter_cur->Speed.size() - 1; ++x){
-			total_bytes += iter_cur->Speed[x].second;
-		}
-		++iter_cur;
-	}
-	}//end lock scope
-
-	int speed = total_bytes / global::SPEED_AVERAGE;
-
-	return speed;
+	return Speed_Calculator.speed();
 }
 
 bool server::get_upload_info(std::vector<info_buffer> & upload_info)
@@ -212,9 +194,7 @@ bool server::new_conn(const int & listener)
 	//do not accept connections from localhost
 	std::string new_IP(inet_ntoa(remoteaddr.sin_addr));
 	if(new_IP.substr(0,3) == "127"){
-#ifdef DEBUG
-		std::cout << "error: server::new_conn(): refusing connection from localhost\n";
-#endif
+		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"refusing connection from localhost");
 		return false;
 	}
 
@@ -224,9 +204,7 @@ bool server::new_conn(const int & listener)
 		if(FD_ISSET(socket_FD, &master_FDS)){
 			getpeername(socket_FD, (sockaddr*)&temp_addr, &len);
 			if(strcmp(new_IP.c_str(), inet_ntoa(temp_addr.sin_addr)) == 0){
-#ifdef DEBUG
-				std::cout << "error: server::new_conn(): client " << new_IP << " attempted multiple connections\n";
-#endif
+				global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"server ",new_IP," attempted multiple connections");
 				close(new_FD);
 				return false;
 			}
@@ -254,9 +232,7 @@ bool server::new_conn(const int & listener)
 			FD_max = new_FD;
 		}
 
-		#ifdef DEBUG
-		std::cout << "info: server::new_conn(): " << inet_ntoa(remoteaddr.sin_addr) << " socket " << new_FD << " connected\n";
-		#endif
+		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"client ",inet_ntoa(remoteaddr.sin_addr)," socket ",new_FD," connected");
 	}
 
 	return true;
@@ -304,10 +280,10 @@ void server::main_thread()
 	char recv_buff[global::S_MAX_SIZE*global::PIPELINE_SIZE];
    int n_bytes;
 
-	#ifdef DEBUG
-	std::cout << "info: server::start_thread(): server created listener socket number " << listener << "\n";
-	#endif
+	global::debug_message(global::INFO,__FILE__,__FUNCTION__,"created listening socket ",listener);
 
+	int speed_limit = 2 * 1024 * global::UPLOAD_SPEED;
+	int send_limit = 0;
 	while(true){
 		if(stop_threads){
 			break;
@@ -361,14 +337,37 @@ void server::main_thread()
 			if(FD_ISSET(socket_FD, &write_FDS) && socket_FD != listener){
 				SB_iter = Send_Buff.find(socket_FD);
 				if(!SB_iter->second.buff.empty()){
+					//speed limiting
+					send_limit = 0;
+					if(Speed_Calculator.speed() < speed_limit){
+						send_limit = (speed_limit - Speed_Calculator.speed()) / 50;
+						if(send_limit > SB_iter->second.buff.size()){
+							send_limit = SB_iter->second.buff.size();
+						}
+					}
+
+					/*
+					The most that can be sent this iteration is 1/50th of the max
+					data limit in this second. We do however check much more than that
+					because some sends may not be as big as 1/50th of the max. This
+					allows the data rate to be close to the limit(if connection is
+					faster than the limit) even when some iterations are sending less
+					than 1/50th of the data limit.
+
+					This sleep can also save CPU time because there normally wouldn't
+					need to be more than one iteration per 1/50th.
+					*/
+					usleep(1000000 / (50*32));
+
 					//MSG_NOSIGNAL needed because abrupt client disconnect causes SIGPIPE
-					if((n_bytes = send(socket_FD, SB_iter->second.buff.c_str(), SB_iter->second.buff.size(), MSG_NOSIGNAL)) < 0){
+					if((n_bytes = send(socket_FD, SB_iter->second.buff.c_str(), send_limit, MSG_NOSIGNAL)) < 0){
 						if(n_bytes == -1){
 							perror("server send");
 						}
 						disconnect(socket_FD);
 					}
 					else{ //remove bytes sent from buffer
+						Speed_Calculator.update(n_bytes);
 						SB_iter->second.buff.erase(0, n_bytes);
 						if(SB_iter->second.buff.empty()){
 							--send_pending;
@@ -412,9 +411,7 @@ int server::prepare_file_block(std::map<int, send_buff_element>::iterator & SB_i
 		fin.close();
 	}
 	else{
-		std::cout << "socket: " << socket_FD << "\n";
-		std::cout << "fatal error: server::prepare_file_block() couldn't open file" << std::endl;
-		exit(1);
+		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"could not open file \"",file_path,"\"");
 	}
 
 	//update speed calculation (assumes there is a response)
@@ -429,7 +426,7 @@ void server::process_request(const int & socket_FD, char recv_buff[], const int 
 
 	//disconnect servers that over-pipeline
 	if(RB_iter->second.size() > global::S_MAX_SIZE*global::PIPELINE_SIZE){
-		std::cout << "error: server::process_request() detected abusive client" << std::endl;
+		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"disconnecting abusive socket ",socket_FD);
 		disconnect(socket_FD);
 	}
 
@@ -477,9 +474,8 @@ void server::stop()
 	connect(new_FD, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
 
 	while(threads){
-		usleep(100);
+		usleep(global::SPINLOCK_TIME);
 	}
 
 	Server_Index.stop();
 }
-

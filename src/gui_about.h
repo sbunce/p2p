@@ -1,6 +1,7 @@
 #ifndef H_GUI_ABOUT
 #define H_GUI_ABOUT
 
+//Gtk
 #include <gtkmm.h>
 
 class gui_about : public Gtk::Window

@@ -33,8 +33,7 @@ unsigned int conversion::decode_int(std::string encoded)
 {
 	#ifdef DEBUG
 	if(encoded.size() != 4){
-		std::cout << "conversion::decode_int(): fatal error impproper byte length\n";
-		exit(1);
+		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"improper byte length");
 	}
 	#endif
 

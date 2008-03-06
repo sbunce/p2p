@@ -1,15 +1,18 @@
 #ifndef H_DOWNLOAD
 #define H_DOWNLOAD
 
+//std
 #include <deque>
 #include <list>
 #include <string>
 #include <map>
 #include <vector>
 
+//custom
 #include "atomic.h"
 #include "download_conn.h"
 #include "global.h"
+#include "speed_calculator.h"
 
 /*
 Forward declaration for download_conn. A circular dependency exists between
@@ -44,7 +47,7 @@ public:
 	virtual unsigned int percent_complete() = 0;
 	virtual bool request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected) = 0;
 	virtual void response(const int & socket, std::string block) = 0;
-	virtual const unsigned int & speed();
+	virtual const unsigned int speed();
 	virtual void stop() = 0;
 	virtual const unsigned long & total_size() = 0;
 
@@ -67,16 +70,7 @@ protected:
 	*/
 	std::map<int, download_conn *> Connection;
 
-	/*
-	calculate_speed - calculates the download speed, should be called by response()
-	*/
-	void calculate_speed(const unsigned int & packet_size);
-
-	//speed of download(bytes per second)
-	unsigned int download_speed;
-
-private:
-	//pair<second, bytes in second>
-	std::deque<std::pair<unsigned int, unsigned int> > Download_Speed;
+	//can be called by response to calculate speed for the download
+	speed_calculator Speed_Calculator;
 };
 #endif

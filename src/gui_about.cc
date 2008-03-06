@@ -1,4 +1,6 @@
+//custom
 #include "global.h"
+
 #include "gui_about.h"
 
 gui_about::gui_about()

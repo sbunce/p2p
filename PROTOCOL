@@ -20,57 +20,13 @@ RRN - relative record number (determines a byte offset when multiplied by a
 /******************************************************************************/
 GENERAL PROTOCOL INFORMATION
 
-All encoded numbers are unsigned and are in network byte order, or big endian.
+All encoded numbers are unsigned and are in big endian.
 
 Requests to the server are pipelined. The maximum number of unresponded to
 commands which can be sent is global::PIPELINE_SIZE. If more than this number
 of requests is sent the client will be considered abusive and disconnected. To
 maximize performance global::PIPELINE_SIZE requests are sent upon download start
 and a new request is sent every time a response is received.
-
-/******************************************************************************/
-
-P_SBL, Send Block
-client -> server
-
-Request a file block from the server by sending the file ID and RRN of the block.
-
-	  0   1   2   3   4   6   7   8   9
-	+---+---+---+---+---+---+---+---+---+
-	| C |    file ID    |      RRN      |
-	+---+---+---+---+---+---+---+---+---+
-
-Possible Responses:
-
-P_BLS, Block Send
-
-The server is sending us the block requested.
-
-	  0   1   2   3   .........  8192
-	+---+---+---+---+---+---+---+---+
-	| C |        file block         |
-	+---+---+---+---+---+---+---+---+
-
-
-P_DNE, Block Does Not Exist
-
-The server sends this when it is in progress of downloading the file but doesn't
-yet have the block requested.
-
-	  0
-	+---+
-	| C |
-	+---+
-
-
-P_FNF, File Not Found
-
-The server doesn't have the requested file.
-
-	  0
-	+---+
-	| C |
-	+---+
 
 /******************************************************************************/
 RE-REQUEST ALGORITHM
@@ -114,3 +70,74 @@ that they maintain their own request queues such that they can provide the
 client buffer with multiple requests before the client_buffer returns any
 responses.
 
+/******************************************************************************/
+SPEED COMPENSATION ALGORITHM
+
+Some servers are faster than others. This causes a problem when requesting
+blocks from servers in order of what block is needed next. A slow server might
+take a long time to send a block. To compensate for this it is necessary to
+request blocks farther in the future from slower servers.
+
+To determine how far in the future to lead a request:
+
+	L = D/S , where
+	          L is the number of blocks to lead
+	          D is the download speed, or sum of all individual server speeds
+	          S is the speed of the individual server
+
+L is to be calculated as a float so that values >= .5 can be rounded up and
+values < .5 can be rounded down.
+
+If there have been previous requests to the server made the optimal next block
+would be the latest request + L. If no requests had yet been made to the server
+the optimal next block would be the latest written block + L.
+
+If the optimal next block has already been requested then the block one lower
+should be checked for availablility, if that one was already requested then a
+block one higher should be checked. Blocks should be checked in this order until
+a available block is found.
+
+/******************************************************************************/
+P_SBL, Send Block
+client -> server
+
+Request a file block from the server by sending the file ID and RRN of the block.
+
+	  0   1   2   3   4   6   7   8   9
+	+---+---+---+---+---+---+---+---+---+
+	| C |    file ID    |      RRN      |
+	+---+---+---+---+---+---+---+---+---+
+
+Possible Responses:
+
+P_BLS, Block Send
+
+The server is sending us the block requested.
+
+	  0   1   2   3   .........  8192
+	+---+---+---+---+---+---+---+---+
+	| C |        file block         |
+	+---+---+---+---+---+---+---+---+
+
+
+P_DNE, Block Does Not Exist
+
+The server sends this when it is in progress of downloading the file but doesn't
+yet have the block requested.
+
+	  0
+	+---+
+	| C |
+	+---+
+
+
+P_FNF, File Not Found
+
+The server doesn't have the requested file.
+
+	  0
+	+---+
+	| C |
+	+---+
+
+/******************************************************************************/

@@ -1,10 +1,10 @@
-//std
-#include <fstream>
-#include <iostream>
-
 //boost
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
+
+//std
+#include <fstream>
+#include <iostream>
 
 #include "hash_tree.h"
 
@@ -128,8 +128,7 @@ std::string hash_tree::create_hash_tree(std::string file_name)
 	}while(fin.good());
 
 	if(fin.bad() || !fin.eof()){
-		std::cout << "fatal error: hash_tree::create_hash_tree() problem reading file\n";
-		exit(1);
+		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"error reading file");
 	}
 
 	//will contain the root hash in hex format
@@ -264,8 +263,7 @@ unsigned long hash_tree::locate_start(std::string root_hash)
 			}
 
 			if(end_RRN > max_possible_RRN){
-				std::cout << "fatal error: corrupt hash file " << root_hash << "\n";
-				exit(1);
+				global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"corrupt hash tree");
 			}
 		}
 		else{
@@ -280,8 +278,7 @@ unsigned long hash_tree::locate_start(std::string root_hash)
 			}
 
 			if(end_RRN > max_possible_RRN){
-				std::cout << "fatal error: corrupt hash file " << root_hash << "\n";
-				exit(1);
+				global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"corrupt hash tree");
 			}
 		}
 	}

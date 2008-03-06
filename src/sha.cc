@@ -711,7 +711,6 @@ const char * sha::raw_hash_no_null()
 	}
 
 	if(null_hash){
-std::cout << "found null hash\n";
 		for(int x=0; x<hash_len; ++x){
 			m_digest[x] = (char)1;
 		}	

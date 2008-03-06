@@ -1,9 +1,5 @@
 TODO
 
--Combine exploration in to DB_access and get rid of exploration.
-
-BUGS
-
 
 DEFERRED FEATURES
 
@@ -11,6 +7,9 @@ DEFERRED FEATURES
 twice the second download doesn't get appended to the first. This will naturally
 be added when hashes are checked. If a file we want to download has a root hash
 that exists in the hashes folder then the file was already downloaded.
+
+-The download needs to remove a file from the DB when it receives a P_FNF. It
+needs to delay a request when a P_DNE is received.
 
 
 IDEAS
@@ -20,13 +19,3 @@ structure such that if the user adds a tracker the user will also get to see
 the files of the trackers that tracker trusts and the files that that tracker
 trusts etc. Have an option to limit trust levels to direct trust only, one
 level inheritance and all level inheritance.
-
-
-PORTABILITY PROBLEMS
-
--Casting BS.to_ulong() to a char in conversion.h is not portable between
-architectures of different endianness.
-
-
-PERFORMANCE CONERNS
-

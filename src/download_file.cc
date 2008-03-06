@@ -84,66 +84,89 @@ bool download_file::request_choose_block(download_file_conn * conn)
 			++iter_cur;
 		}
 
-		#ifdef DEBUG
-		std::cout << "re-requesting: " << *rerequest.begin() << "\n";
-		#endif
+		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"re-requesting block ",*rerequest.begin());
+
 		conn->latest_request.push_back(*rerequest.begin());
 		rerequest.erase(rerequest.begin());
 		return true;
 	}
 
-/*************************************************************
-Lag prediction request lead prediction should be placed here.
+	unsigned int optimal_next_block = 0;
 
+	#ifdef SPEED_COMPENSATION
+	unsigned int download_speed = Speed_Calculator.speed();
+	unsigned int server_speed = conn->Speed_Calculator.speed();
+	float block_lead = (float)download_speed/(float)server_speed;
+	unsigned int optimal_lead = 0;
 
-*************************************************************/
+	//round .5 up
+	if(block_lead - (int)block_lead > 0.5){
+		optimal_lead = (unsigned int)(block_lead + 1);
+	}
+	else{
+		optimal_lead = (unsigned int)block_lead;
+	}
 
+	if(!conn->latest_request.empty()){
+		if(conn->latest_request.back() > latest_written){
+			optimal_next_block = conn->latest_request.back() + optimal_lead;
+		}
+		else{
+			optimal_next_block = latest_request + optimal_lead;
+		}
+	}
+	else{
+		optimal_next_block = latest_request + optimal_lead;
+	}
+	#endif
 
-	unsigned int optimal_next_block = latest_written + 1; //this should be equal to optimal predicted next block
+	if(optimal_next_block == 0){
+		optimal_next_block = latest_written + 1;
+	}
 
 	//make sure optimal_last_block
 	if(optimal_next_block > last_block){
 		optimal_next_block = last_block;
 	}
 
-	//attempt to find a block lower than or equal to optimal_next_block to request
-	unsigned int request = optimal_next_block;
+	/*
+	If optimal next block has already been requested find the next closes block
+	that hasn't been requested. Favor lower blocks over higher blocks if there is
+	a tie.
+	*/
+	unsigned int request_lower = optimal_next_block;
+	unsigned int request_upper = optimal_next_block;
 	std::pair<std::set<unsigned int>::iterator, bool> Pair;
 	while(true){
-		//(unsigned int)0 - 1 means it backed off past the first request number
-		if(request == latest_written || request == (unsigned int)0 - 1){
-			break;
+
+		//do not use numbers lower than beginning
+		if(request_lower != (unsigned int)0-1 && request_lower != latest_written){
+			Pair = requested_blocks.insert(request_lower);
+			if(Pair.second){
+				conn->latest_request.push_back(request_lower);
+				latest_request = request_lower;
+				return true;
+			}
 		}
 
-		Pair = requested_blocks.insert(request);
-
-		if(Pair.second){
-			conn->latest_request.push_back(request);
-			latest_request = request;
-			return true;
+		if(request_upper <= last_block){
+			Pair = requested_blocks.insert(request_upper);
+			if(Pair.second){
+				conn->latest_request.push_back(request_upper);
+				latest_request = request_upper;
+				return true;
+			}
 		}
 		else{
-			--request;
-		}
-	}
-
-	//attempt to find a block higher than optimal_next_block to request
-	request = optimal_next_block;
-	while(true){
-		if(request == last_block + 1){
 			return false;
 		}
 
-		Pair = requested_blocks.insert(request);
+		//only go lower if not lower than beginning
+		if(request_lower != (unsigned int)0-1 && request_lower != latest_written){
+			--request_lower;
+		}
 
-		if(Pair.second){
-			conn->latest_request.push_back(request);
-			latest_request = request;
-			return true;
-		}
-		else{
-			++request;
-		}
+		++request_upper;
 	}
 }
 
@@ -153,8 +176,7 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 	download_file_conn * conn = (download_file_conn *)iter->second;
 
 	if(iter == Connection.end()){
-		std::cout << "fatal error: download_file::request() socket not registered";
-		exit(1);
+		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"socket not registered");
 	}
 
 	if(!request_choose_block(conn)){
@@ -195,9 +217,7 @@ void download_file::response(const int & socket, std::string block)
 		std::map<int, download_conn *>::iterator iter = Connection.find(socket);
 		download_file_conn * conn = (download_file_conn *)iter->second;
 
-		#ifdef DEBUG
-		std::cout << "info: download_file::response(): received a P_DNE command from " << conn->server_IP << "\n";
-		#endif
+		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"received P_DNE from ",conn->server_IP);
 	}
 	else if(block[0] == global::P_FNF){
 		//server is reporting that it doesn't have the file
@@ -207,12 +227,10 @@ void download_file::response(const int & socket, std::string block)
 		std::map<int, download_conn *>::iterator iter = Connection.find(socket);
 		download_file_conn * conn = (download_file_conn *)iter->second;
 
-		#ifdef DEBUG
-		std::cout << "info: download_file::response(): received a P_FNF command from " << conn->server_IP << "\n";
-		#endif
+		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"received P_FNF from ",conn->server_IP);
 	}
 	else{
-		std::cout << "fatal error: download_file::response(): client buffer passed a bad command\n";
+		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"client_buffer passed a bad command");
 	}
 }
 
@@ -223,12 +241,11 @@ void download_file::response_BLS(const int & socket, std::string & block)
 	download_file_conn * conn = (download_file_conn *)iter->second;
 
 	if(iter == Connection.end()){
-		std::cout << "fatal error: download_file::response_BLS() socket not registered\n";
-		exit(1);
+		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"socket not registered");
 	}
 
-	conn->calculate_speed(block.size()); //update server speed
-	calculate_speed(block.size());       //update download speed
+	conn->Speed_Calculator.update(block.size()); //update server speed
+	Speed_Calculator.update(block.size());       //update download speed
 
 	received_blocks.insert(std::make_pair(conn->latest_request.front(), block));
 	conn->latest_request.pop_front();
@@ -281,9 +298,7 @@ void download_file::response_BLS(const int & socket, std::string & block)
 
 	//check if the download is complete
 	if(latest_written == last_block){
-		#ifdef DEBUG
-		std::cout << "wasted: " << wasted_bytes / 1024 / 1024 << "mB\n";
-		#endif
+		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"wasted ",wasted_bytes/1024," kB");
 		download_complete = true;
 		*download_complete_flag = true;
 	}
@@ -306,9 +321,7 @@ void download_file::write_block(std::string & file_block)
 		fout.close();
 	}
 	else{
-#ifdef DEBUG
-		std::cout << "error: download_file::writeTree() error opening file\n";
-#endif
+		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"error opening file");
 	}
 }
 

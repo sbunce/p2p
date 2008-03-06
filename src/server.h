@@ -18,14 +18,16 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-//contains enum type for error codes select() might return
+//contains error codes select() might return
 #include <errno.h>
 
+//custom
 #include "atomic.h"
 #include "conversion.h"
 #include "DB_access.h"
 #include "global.h"
 #include "server_index.h"
+#include "speed_calculator.h"
 
 class server
 {
@@ -123,6 +125,9 @@ private:
 	//used by calculate_speed() to track upload speeds
 	std::list<speed_element_file> Upload_Speed;
 
+	//holds the total upload speed
+	unsigned int total_speed;
+
 	//how many are connections currently established
 	int connections;
 
@@ -151,8 +156,6 @@ private:
 	                    - returns true if connection suceeded
 	prepare_send_buffer - prepares a response to a file block request
 	process_request     - interprets the request from a client and buffers it
-	sendBlock           - sends a file_block to a client
-	stateTick           - do pending actions
 	*/
 	void disconnect(const int & socketfd);
 	int calculate_speed_file(std::string & client_IP, const unsigned int & file_ID, const unsigned int & file_block, const unsigned long & file_size, const std::string & file_path);
@@ -165,13 +168,9 @@ private:
 	boost::mutex RB_mutex; //mutex for all usage of Recv_Buff
 	boost::mutex US_mutex; //mutex for all usage of Upload_Speed
 
-	//conversions used for crafting requests and reading responses
 	conversion Conversion;
-
-	//contains database functions
 	DB_access DB_Access;
-
-	//keeps track of shared files
 	server_index Server_Index;
+	speed_calculator Speed_Calculator;
 };
 #endif

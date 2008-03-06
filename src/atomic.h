@@ -7,12 +7,12 @@ that the container can be treated like the variable you put in to it. Not all
 operators are present for all types. Most notably bool and int work.
 */
 
-//std
-#include <iostream>
-
 //boost
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
+
+//std
+#include <iostream>
 
 //predecl
 template<class T> class atomic;

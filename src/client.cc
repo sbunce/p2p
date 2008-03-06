@@ -1,3 +1,7 @@
+//boost
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+
 //std
 #include <iostream>
 #include <fstream>
@@ -7,6 +11,9 @@
 
 client::client()
 {
+	//create the download directory if it doesn't exist
+	boost::filesystem::create_directory(global::CLIENT_DOWNLOAD_DIRECTORY);
+
 	FD_max = 0;
 	FD_ZERO(&master_FDS);
 	send_pending = new atomic<int>;
@@ -47,9 +54,7 @@ void client::check_timeouts()
 	for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 		if(FD_ISSET(socket_FD, &master_FDS)){
 			if(current_time - Client_Buffer[socket_FD]->get_last_seen() >= global::TIMEOUT){
-				#ifdef DEBUG
-				std::cout << "error: client::check_timeouts() triggering disconnect of socket " << socket_FD << "\n";
-				#endif
+				global::debug_message(global::INFO,__FILE__,__FUNCTION__,"triggering timeout of socket ", socket_FD);
 				disconnect(socket_FD);
 			}
 		}
@@ -60,9 +65,7 @@ void client::check_timeouts()
 //this should only be used from within a CB_D_mutex.
 inline void client::disconnect(const int & socket_FD)
 {
-	#ifdef DEBUG
-	std::cout << "info: client disconnecting socket number " << socket_FD << "\n";
-	#endif
+	global::debug_message(global::INFO,__FILE__,__FUNCTION__, "disconnecting socket ", socket_FD);
 
 	close(socket_FD);
 	FD_CLR(socket_FD, &master_FDS);
@@ -132,9 +135,9 @@ void client::main_thread()
 	++threads;
 
 	//reconnect downloads that havn't finished
-	std::list<exploration::info_buffer> resumed_download;
-	Client_Index.initial_fill_buff(resumed_download);
-	std::list<exploration::info_buffer>::iterator iter_cur, iter_end;
+	std::list<DB_access::download_info_buffer> resumed_download;
+	DB_Access.download_initial_fill_buff(resumed_download);
+	std::list<DB_access::download_info_buffer>::iterator iter_cur, iter_end;
 	iter_cur = resumed_download.begin();
 	iter_end = resumed_download.end();
 	while(iter_cur != iter_end){
@@ -199,7 +202,7 @@ void client::main_thread()
 		std::map<int, client_buffer *>::iterator CB_iter;
 		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &read_FDS)){
-				n_bytes = recv(socket_FD, recv_buff, global::C_MAX_SIZE, 0);
+				n_bytes = recv(socket_FD, recv_buff, global::C_MAX_SIZE, MSG_NOSIGNAL);
 				if(n_bytes == 0){
 					{//begin lock scope
 					boost::mutex::scoped_lock lock(CB_D_mutex);
@@ -225,7 +228,7 @@ void client::main_thread()
 				CB_iter = Client_Buffer.find(socket_FD);
 
 				if(!CB_iter->second->send_buff.empty()){
-					n_bytes = send(socket_FD, CB_iter->second->send_buff.c_str(), CB_iter->second->send_buff.size(), 0);
+					n_bytes = send(socket_FD, CB_iter->second->send_buff.c_str(), CB_iter->second->send_buff.size(), MSG_NOSIGNAL);
 					if(n_bytes == 0){
 						disconnect(socket_FD);
 					}
@@ -318,10 +321,7 @@ void client::new_conn()
 			new_FD = 0; //this indicates a failed connection
 		}
 		else{
-			#ifdef DEBUG
-			std::cout << "info: client::new_conn() created socket " << new_FD << " for " << DC->server_IP << "\n";
-			#endif
-
+			global::debug_message(global::INFO,__FILE__,__FUNCTION__,"created socket ",new_FD," for ",DC->server_IP);
 			{//begin lock scope
 			boost::mutex::scoped_lock lock(CB_D_mutex);
 			//make sure FD_max is always the highest socket number
@@ -349,9 +349,7 @@ void client::new_conn()
 		}//end lock scope
 	}
 	else{
-		#ifdef DEBUG
-		std::cout << "info: client::new_conn() connect to " << DC->server_IP << " failed\n";
-		#endif
+		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"connect to ",DC->server_IP," failed");
 	}
 
 	/*
@@ -435,7 +433,7 @@ void client::remove_complete()
 			iter_end = Download_Buffer.end();
 			while(iter_cur != iter_end){
 				if(*hash_iter_cur == (*iter_cur)->hash()){
-					Client_Index.terminate_download((*iter_cur)->hash());
+					DB_Access.download_terminate_download((*iter_cur)->hash());
 					delete *iter_cur;
 					Download_Buffer.erase(iter_cur);
 					break;
@@ -468,22 +466,22 @@ void client::stop()
 	Thread_Pool.stop();
 
 	while(threads){
-		usleep(100);
+		usleep(global::SPINLOCK_TIME);
 	}
 }
 
-bool client::start_download(exploration::info_buffer info)
+bool client::start_download(DB_access::download_info_buffer info)
 {
 	//make sure file isn't already downloading
 	if(!info.resumed){
-		if(!Client_Index.start_download(info)){
+		if(!DB_Access.download_start_download(info)){
 			return false;
 		}
 	}
 
 	//get file path, stop if file not found
 	std::string file_path;
-	if(!Client_Index.get_file_path(info.hash, file_path)){
+	if(!DB_Access.download_get_file_path(info.hash, file_path)){
 		return false;
 	}
 

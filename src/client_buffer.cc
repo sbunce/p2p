@@ -1,7 +1,10 @@
+//std
 #include <iostream>
 
-#include "client_buffer.h"
+//custom
 #include "conversion.h"
+
+#include "client_buffer.h"
 
 client_buffer::client_buffer(int socket_in, std::string & server_IP_in, atomic<int> * send_pending_in)
 {
@@ -46,18 +49,14 @@ int client_buffer::post_recv()
 
 	if(Pipeline.empty()){
 		//server responded out of turn
-		#ifdef DEBUG
-		std::cout << "error: client_buffer::post_recv() set abuse flag 1 on " << server_IP << "\n";
-		#endif
+		global::debug_message(global::ERROR,__FILE__,__FUNCTION__,"abusive server (responded when pipeline empty) ",server_IP);
 		abuse = true;
 		return 0;
 	}
 
 	//if recv_buff larger than largest case the server is doing something naughty
 	if(recv_buff.size() > global::PIPELINE_SIZE * global::C_MAX_SIZE){
-		#ifdef DEBUG
-		std::cout << "error: client_buffer::post_recv() set abuse flag 2 on " << server_IP << "\n";
-		#endif
+		global::debug_message(global::ERROR,__FILE__,__FUNCTION__,"abusive server (exceeded maximum buffer size) ",server_IP);
 		abuse = true;
 	}
 
@@ -81,9 +80,7 @@ int client_buffer::post_recv()
 		}
 		else if(iter_cur == iter_end){
 			//command not found, server sent unexpected command
-			#ifdef DEBUG
-			std::cout << "error: client_buffer::post_recv() set abuse flag 3 on " << server_IP << "\n";
-			#endif
+			global::debug_message(global::ERROR,__FILE__,__FUNCTION__,"abusive server (incorrect length of command) ", server_IP);
 			abuse = true;
 			return 0;
 		}

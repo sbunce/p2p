@@ -1,8 +1,8 @@
 //Gtk
 #include <gtkmm.h>
 
+//custom
 #include "gui.h"
-#include "server.h"
 
 int main(int argc, char* argv[])
 {
