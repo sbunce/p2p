@@ -1,5 +1,8 @@
 TODO
 
+-Speed limiting can be done by controlling maximum send size on send() and
+recv(). Use speed calculator in server.
+
 
 DEFERRED FEATURES
 
@@ -10,6 +13,8 @@ that exists in the hashes folder then the file was already downloaded.
 
 -The download needs to remove a file from the DB when it receives a P_FNF. It
 needs to delay a request when a P_DNE is received.
+
+-Blacklisting of abusive clients/servers.
 
 
 IDEAS

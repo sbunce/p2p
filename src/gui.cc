@@ -775,10 +775,10 @@ bool gui::update_status_bar()
 	serverSpeed_s << serverSpeed << " kB/s";
 
 	if(Server.is_indexing()){
-		status = "  Download Speed: " + clientSpeed_s.str() + " Upload Speed: " + serverSpeed_s.str() + "  Indexing/Hashing ";
+		status = "  D: " + clientSpeed_s.str() + " U: " + serverSpeed_s.str() + "  Hashing ";
 	}
 	else{
-		status = "  Download Speed: " + clientSpeed_s.str() + " Upload Speed: " + serverSpeed_s.str();
+		status = "  D: " + clientSpeed_s.str() + " U: " + serverSpeed_s.str();
 	}
 
 	statusbar->pop();

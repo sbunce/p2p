@@ -33,6 +33,7 @@
 #include "download_file.h"
 #include "download_file_conn.h"
 #include "global.h"
+#include "speed_calculator.h"
 #include "thread_pool.h"
 
 class client
@@ -133,7 +134,8 @@ private:
 	boost::mutex CB_D_mutex; //for both Client_Buffer and Download_Buffer
 	boost::mutex DC_mutex;   //locks access to download_conn instances
 
-	sha SHA;             //creates message digests
-	DB_access DB_Access; //gives client access to the database
+	sha SHA;
+	DB_access DB_Access;
+	speed_calculator Speed_Calculator;
 };
 #endif

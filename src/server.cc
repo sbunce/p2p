@@ -110,6 +110,7 @@ int server::calculate_speed_file(std::string & client_IP, const unsigned int & f
 
 int server::get_total_speed()
 {
+	Speed_Calculator.update(0);
 	return Speed_Calculator.speed();
 }
 
@@ -282,8 +283,7 @@ void server::main_thread()
 
 	global::debug_message(global::INFO,__FILE__,__FUNCTION__,"created listening socket ",listener);
 
-	int speed_limit = 2 * 1024 * global::UPLOAD_SPEED;
-	int send_limit = 0;
+	int send_limit = 0; //how many bytes can be sent on an iteration
 	while(true){
 		if(stop_threads){
 			break;
@@ -337,27 +337,8 @@ void server::main_thread()
 			if(FD_ISSET(socket_FD, &write_FDS) && socket_FD != listener){
 				SB_iter = Send_Buff.find(socket_FD);
 				if(!SB_iter->second.buff.empty()){
-					//speed limiting
-					send_limit = 0;
-					if(Speed_Calculator.speed() < speed_limit){
-						send_limit = (speed_limit - Speed_Calculator.speed()) / 50;
-						if(send_limit > SB_iter->second.buff.size()){
-							send_limit = SB_iter->second.buff.size();
-						}
-					}
 
-					/*
-					The most that can be sent this iteration is 1/50th of the max
-					data limit in this second. We do however check much more than that
-					because some sends may not be as big as 1/50th of the max. This
-					allows the data rate to be close to the limit(if connection is
-					faster than the limit) even when some iterations are sending less
-					than 1/50th of the data limit.
-
-					This sleep can also save CPU time because there normally wouldn't
-					need to be more than one iteration per 1/50th.
-					*/
-					usleep(1000000 / (50*32));
+					send_limit = Speed_Calculator.rate_control(global::UPLOAD_SPEED, SB_iter->second.buff.size());
 
 					//MSG_NOSIGNAL needed because abrupt client disconnect causes SIGPIPE
 					if((n_bytes = send(socket_FD, SB_iter->second.buff.c_str(), send_limit, MSG_NOSIGNAL)) < 0){

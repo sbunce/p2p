@@ -6,6 +6,15 @@
 speed_calculator::speed_calculator()
 {
 	average_speed = 0;
+	transfer_limit = 0;
+}
+
+void speed_calculator::reset()
+{
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(AS_mutex);
+	average_speed = 0;
+	}//end lock scope
 }
 
 unsigned int speed_calculator::speed()
@@ -63,4 +72,30 @@ void speed_calculator::update(const unsigned int & byte_count)
 		average_speed = 0;
 	}
 	}//end lock scope
+}
+
+unsigned int speed_calculator::rate_control(const int & rate, const int & max_possible_transfer)
+{
+	if(average_speed == 0){
+		transfer_limit = rate / global::MAX_TPS * 2;
+	}
+
+	if(average_speed < rate){
+		++transfer_limit;
+std::cout << "transfer_limit: " << transfer_limit << "\n";
+	}
+	else{
+		--transfer_limit;
+std::cout << "transfer_limit: " << transfer_limit << "\n";
+	}
+
+	if(transfer_limit < 0){
+		transfer_limit = 0;
+	}
+	else if(transfer_limit > max_possible_transfer){
+		transfer_limit = max_possible_transfer;
+	}
+
+	usleep(1000000 / global::MAX_TPS);
+	return transfer_limit;
 }

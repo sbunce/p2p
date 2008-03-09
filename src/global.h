@@ -16,18 +16,20 @@ namespace global
 	const std::string NAME = "p2p";
 	const std::string VERSION = "0.00 pre-alpha";
 
-	const int MAX_CONNECTIONS = 50;  //maximum number of connections the server will accept
-	const int NEW_CONN_THREADS = 10; //how many threads are in the thread pool for making new client connections
-	const int PIPELINE_SIZE = 32;    //how many pre-requests can be done(1 disables pipelining)
-	const int REREQUEST_FACTOR = 64; //to what factor the server can be "later than normal" in sending a download_file packet
-	const int P2P_PORT = 6969;       //port client connects to and server receives on
-	const int GUI_TICK = 100;        //time(in milliseconds) between gui updates
-	const int SPEED_AVERAGE = 4;     //how many seconds to average upload/download speed over
-	const int COMPLETE_REMOVE = 4;   //how many seconds to wait before removing a complete upload
-	const int TIMEOUT = 16;          //how long before an unresponsive server times out
-	const int SHARE_REFRESH = 1200;  //number of seconds between updating share information
-	const int SPINLOCK_TIME = 1000;  //microsecond timeout on all spinlocks
-	const int UPLOAD_SPEED = 500;    //upload speed (Kb/s)
+	const int MAX_CONNECTIONS = 50;      //maximum number of connections the server will accept
+	const int NEW_CONN_THREADS = 10;     //how many threads are in the thread pool for making new client connections
+	const int PIPELINE_SIZE = 32;        //how many pre-requests can be done(1 disables pipelining)
+	const int REREQUEST_FACTOR = 64;     //to what factor the server can be "later than normal" in sending download_file packet
+	const int P2P_PORT = 6969;           //port client connects to and server receives on
+	const int GUI_TICK = 100;            //time(in milliseconds) between gui updates
+	const int SPEED_AVERAGE = 4;         //how many seconds to average upload/download speed over
+	const int COMPLETE_REMOVE = 4;       //how many seconds to wait before removing a complete upload
+	const int TIMEOUT = 16;              //how long before an unresponsive server times out
+	const int SHARE_REFRESH = 1200;      //number of seconds between updating share information
+	const int SPINLOCK_TIME = 1000;      //microsecond timeout on all spinlocks
+	const int UPLOAD_SPEED = 500*1024;   //upload speed limit (B/s)
+	const int DOWNLOAD_SPEED = 300*1024; //download speed limit (B/s)
+	const int MAX_TPS = 100;             //max times per second server will send and client will receive
 
 	//protocol commands client -> server
 	const char P_SBL = (char)1;

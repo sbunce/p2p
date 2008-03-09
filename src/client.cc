@@ -145,6 +145,8 @@ void client::main_thread()
 		++iter_cur;
 	}
 
+	int speed_limit = 2 * 1024 * global::DOWNLOAD_SPEED;
+	int recv_limit = 0;
 	while(true){
 		if(stop_threads){
 			break;
@@ -202,18 +204,20 @@ void client::main_thread()
 		std::map<int, client_buffer *>::iterator CB_iter;
 		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &read_FDS)){
-				n_bytes = recv(socket_FD, recv_buff, global::C_MAX_SIZE, MSG_NOSIGNAL);
-				if(n_bytes == 0){
+
+				recv_limit = Speed_Calculator.rate_control(global::DOWNLOAD_SPEED, global::C_MAX_SIZE);
+
+				if((n_bytes = recv(socket_FD, recv_buff, recv_limit, MSG_NOSIGNAL)) <= 0){
+					if(n_bytes == -1){
+						perror("client recv");
+					}
 					{//begin lock scope
 					boost::mutex::scoped_lock lock(CB_D_mutex);
 					disconnect(socket_FD);
 					}//end lock scope
 				}
-				else if(n_bytes == -1){
-					perror("client recv");
-					exit(1);
-				}
 				else{
+					Speed_Calculator.update(n_bytes);
 					{//begin lock scope
 					boost::mutex::scoped_lock lock(CB_D_mutex);
 					CB_iter = Client_Buffer.find(socket_FD);
@@ -226,15 +230,11 @@ void client::main_thread()
 				{//begin lock scope
 				boost::mutex::scoped_lock lock(CB_D_mutex);
 				CB_iter = Client_Buffer.find(socket_FD);
-
 				if(!CB_iter->second->send_buff.empty()){
-					n_bytes = send(socket_FD, CB_iter->second->send_buff.c_str(), CB_iter->second->send_buff.size(), MSG_NOSIGNAL);
-					if(n_bytes == 0){
-						disconnect(socket_FD);
-					}
-					else if(n_bytes == -1){
-						perror("client send");
-						exit(1);
+					if((n_bytes = send(socket_FD, CB_iter->second->send_buff.c_str(), CB_iter->second->send_buff.size(), MSG_NOSIGNAL)) < 0){
+						if(n_bytes == -1){
+							perror("client send");
+						}
 					}
 					else{ //remove bytes sent from buffer
 						CB_iter->second->send_buff.erase(0, n_bytes);

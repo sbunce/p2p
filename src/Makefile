@@ -37,8 +37,8 @@ main_server.o: main_server.cc server.o
 	$(CC) main_server.cc
 
 client.o: client.cc client.h DB_access.o download.o download_conn.o \
-	download_file.o download_file_conn.o client_buffer.o atomic.h thread_pool.h \
-	global.h
+	download_file.o download_file_conn.o client_buffer.o  speed_calculator.o \
+	atomic.h thread_pool.h global.h
 	$(CC) client.cc
 
 client_buffer.o: client_buffer.cc client_buffer.h conversion.o download.o \
