@@ -120,6 +120,7 @@ private:
 	disconnect       - disconnects a socket, modifies Client_Buffer
 	main_thread      - main client thread that sends/receives data and triggers events
 	new_conn         - create a connection with a server, modifies Client_Buffer
+	new_conn_block_concurrent - if two download_conn's with the same IP pass the second one gets blocked until new_conn_unblock called with first one
 	prepare_requests - touches each Client_Buffer element to trigger new requests(if needed)
 	remove_complete  - removes downloads that are complete(or stopped)
 	*/
@@ -127,6 +128,8 @@ private:
 	inline void disconnect(const int & socket_FD);
 	void main_thread();
 	void new_conn();
+	void new_conn_block_concurrent(download_conn * DC);
+	void new_conn_unblock(download_conn * DC);
 	void prepare_requests();
 	void remove_complete();
 

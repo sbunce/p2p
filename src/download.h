@@ -70,7 +70,6 @@ protected:
 	*/
 	std::map<int, download_conn *> Connection;
 
-	//can be called by response to calculate speed for the download
 	speed_calculator Speed_Calculator;
 };
 #endif

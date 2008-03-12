@@ -205,7 +205,7 @@ bool server::new_conn(const int & listener)
 		if(FD_ISSET(socket_FD, &master_FDS)){
 			getpeername(socket_FD, (sockaddr*)&temp_addr, &len);
 			if(strcmp(new_IP.c_str(), inet_ntoa(temp_addr.sin_addr)) == 0){
-				global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"server ",new_IP," attempted multiple connections");
+				global::debug_message(global::INFO,__FILE__,__FUNCTION__,"server ",new_IP," attempted multiple connections");
 				close(new_FD);
 				return false;
 			}
@@ -289,13 +289,13 @@ void server::main_thread()
 			break;
 		}
 
-		read_FDS = master_FDS;
-		write_FDS = master_FDS;
 		/*
-		This if(send_pending) exists to save a LOT of CPU time by not checking
-		if sockets are ready to write when we don't need to write anything.
+		This if(send_pending) exists to saves CPU time by not checking if sockets
+		are ready to write when we don't need to write anything.
 		*/
 		if(send_pending != 0){
+			read_FDS = master_FDS;
+			write_FDS = master_FDS;
 			if((select(FD_max+1, &read_FDS, &write_FDS, NULL, NULL)) == -1){
 				//gprof will send PROF signal, this will ignore it
 				if(errno != EINTR){
@@ -305,6 +305,8 @@ void server::main_thread()
 			}
 		}
 		else{
+			FD_ZERO(&write_FDS);
+			read_FDS = master_FDS;
 			if((select(FD_max+1, &read_FDS, NULL, NULL, NULL)) == -1){
 				//gprof will send PROF signal, this will ignore it
 				if(errno != EINTR){
@@ -337,9 +339,7 @@ void server::main_thread()
 			if(FD_ISSET(socket_FD, &write_FDS) && socket_FD != listener){
 				SB_iter = Send_Buff.find(socket_FD);
 				if(!SB_iter->second.buff.empty()){
-
-					send_limit = Speed_Calculator.rate_control(global::UPLOAD_SPEED, SB_iter->second.buff.size());
-
+					send_limit = Speed_Calculator.rate_control(global::UP_SPEED, SB_iter->second.buff.size());
 					//MSG_NOSIGNAL needed because abrupt client disconnect causes SIGPIPE
 					if((n_bytes = send(socket_FD, SB_iter->second.buff.c_str(), send_limit, MSG_NOSIGNAL)) < 0){
 						if(n_bytes == -1){

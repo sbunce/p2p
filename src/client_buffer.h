@@ -7,7 +7,6 @@
 #include <list>
 
 //custom
-#include "atomic.h"
 #include "download.h"
 #include "global.h"
 
@@ -23,8 +22,8 @@ public:
 	/*
 	add_download       - associate a download with this client_buffer
 	empty              - return true if Download is empty
-	get_last_seen      - returns the unix timestamp of when this server last responded
 	get_IP             - returns the IP address associated with this client_buffer
+	get_last_seen      - returns the unix timestamp of when this server last responded
 	post_recv          - does actions which may need to be done after a recv
 	post_send          - does actions which may need to be done after a send
 	prepare_request    - if another request it needed rotate downloads and get a request
@@ -46,7 +45,7 @@ private:
 	int socket;                 //socket number of this element
 	time_t last_seen;           //used for timeout
 	bool abuse;                 //if true a disconnect is triggered
-	atomic<int> * send_pending; //must be incremented when send_buff goes from empty to non-empty
+	atomic<int> * send_pending; //signals client that there is data to send
 
 	/*
 	The Download container is effectively a ring. The rotate_downloads() function will move

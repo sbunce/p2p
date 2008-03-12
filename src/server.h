@@ -137,13 +137,8 @@ private:
 	fd_set write_FDS;    //set when socket can write without blocking
 	int FD_max;          //holds the number of the maximum socket
 
-	/*
-	This is a count of how many sends there are waiting. This exists for the
-	purpose of having an alternate select() call that doesn't involve write_FDS
-	because using write_FDS hogs CPU. However when there is data to write it is
-	proper to use write_FDS.
-	*/
-	int send_pending;
+	//counter for how many sends need to be done
+	atomic<int> send_pending;
 
 	//buffer for reading file blocks from the HDD
 	char prepare_file_block_buff[global::P_BLS_SIZE - 1];

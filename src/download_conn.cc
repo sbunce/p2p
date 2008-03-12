@@ -2,5 +2,5 @@
 
 download_conn::download_conn()
 {
-	processing = false;
+
 }

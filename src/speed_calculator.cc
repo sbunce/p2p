@@ -1,4 +1,5 @@
 //std
+#include <cmath>
 #include <deque>
 
 #include "speed_calculator.h"
@@ -6,15 +7,8 @@
 speed_calculator::speed_calculator()
 {
 	average_speed = 0;
-	transfer_limit = 0;
-}
-
-void speed_calculator::reset()
-{
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(AS_mutex);
-	average_speed = 0;
-	}//end lock scope
+	rate_control_counter = 0;
+	rate_control_damper = 1;
 }
 
 unsigned int speed_calculator::speed()
@@ -74,28 +68,41 @@ void speed_calculator::update(const unsigned int & byte_count)
 	}//end lock scope
 }
 
-unsigned int speed_calculator::rate_control(const int & rate, const int & max_possible_transfer)
+unsigned int speed_calculator::rate_control(const int & rate, int max_possible_transfer)
 {
+	++rate_control_counter;
+	unsigned int transfer = 0;
+
 	if(average_speed == 0){
-		transfer_limit = rate / global::MAX_TPS * 2;
+		rate_control_damper = 1;
 	}
 
-	if(average_speed < rate){
-		++transfer_limit;
-std::cout << "transfer_limit: " << transfer_limit << "\n";
-	}
-	else{
-		--transfer_limit;
-std::cout << "transfer_limit: " << transfer_limit << "\n";
+	if(!Second_Bytes.empty()){
+		if(Second_Bytes.front().second < rate){
+			transfer = rate - Second_Bytes.front().second;
+		}
 	}
 
-	if(transfer_limit < 0){
-		transfer_limit = 0;
-	}
-	else if(transfer_limit > max_possible_transfer){
-		transfer_limit = max_possible_transfer;
+	if(transfer > max_possible_transfer){
+		transfer = max_possible_transfer;
 	}
 
-	usleep(1000000 / global::MAX_TPS);
-	return transfer_limit;
+	//save CPU by sleeping so long as it doesn't hurt transfer speed
+	if(transfer == 0){
+		if(rate_control_counter % rate_control_damper == 0){
+			usleep(1);
+
+			if(1 - (float)(rate - average_speed)/(float)(rate + average_speed) < 0.95){
+				++rate_control_damper;
+			}
+			else{
+				--rate_control_damper;
+				if(rate_control_damper < 1){
+					rate_control_damper = 1;
+				}
+			}
+		}
+	}
+
+	return transfer;
 }

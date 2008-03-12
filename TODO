@@ -1,7 +1,11 @@
 TODO
 
--Speed limiting can be done by controlling maximum send size on send() and
-recv(). Use speed calculator in server.
+-Rerequest algorithm doesn't tollerate changes in # of servers connected.
+
+-Hosts sometimes don't resolve correctly (resolves to 127.0.1.1)
+
+-Rate limiting is still not working correctly. Sleep not working properly.
+Measure how many times it's actually sleeping.
 
 
 DEFERRED FEATURES

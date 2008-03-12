@@ -115,19 +115,8 @@ bool client::get_download_info(std::vector<info_buffer> & download_info)
 
 int client::get_total_speed()
 {
-	int speed = 0;
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(CB_D_mutex);
-	std::list<download *>::iterator iter_cur, iter_end;
-	iter_cur = Download_Buffer.begin();
-	iter_end = Download_Buffer.end();
-	while(iter_cur != iter_end){
-		speed += (*iter_cur)->speed();
-		++iter_cur;
-	}
-	}//end lock scope
-
-	return speed;
+	Speed_Calculator.update(0);
+	return Speed_Calculator.speed();
 }
 
 void client::main_thread()
@@ -145,7 +134,6 @@ void client::main_thread()
 		++iter_cur;
 	}
 
-	int speed_limit = 2 * 1024 * global::DOWNLOAD_SPEED;
 	int recv_limit = 0;
 	while(true){
 		if(stop_threads){
@@ -174,8 +162,8 @@ void client::main_thread()
 		tv.tv_usec = 0;
 
 		/*
-		This if(send_pending) exists to save a LOT of CPU time by not checking
-		if sockets are ready to write when we don't need to write anything.
+		This if(send_pending) exists to saves CPU time by not checking if sockets
+		are ready to write when we don't need to write anything.
 		*/
 		if(*send_pending != 0){
 			read_FDS = master_FDS;
@@ -204,26 +192,25 @@ void client::main_thread()
 		std::map<int, client_buffer *>::iterator CB_iter;
 		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &read_FDS)){
-
-				recv_limit = Speed_Calculator.rate_control(global::DOWNLOAD_SPEED, global::C_MAX_SIZE);
-
-				if((n_bytes = recv(socket_FD, recv_buff, recv_limit, MSG_NOSIGNAL)) <= 0){
-					if(n_bytes == -1){
-						perror("client recv");
+				if((recv_limit = Speed_Calculator.rate_control(global::DOWN_SPEED, global::C_MAX_SIZE)) != 0){
+					if((n_bytes = recv(socket_FD, recv_buff, recv_limit, MSG_NOSIGNAL)) <= 0){
+						if(n_bytes == -1){
+							perror("client recv");
+						}
+						{//begin lock scope
+						boost::mutex::scoped_lock lock(CB_D_mutex);
+						disconnect(socket_FD);
+						}//end lock scope
 					}
-					{//begin lock scope
-					boost::mutex::scoped_lock lock(CB_D_mutex);
-					disconnect(socket_FD);
-					}//end lock scope
-				}
-				else{
-					Speed_Calculator.update(n_bytes);
-					{//begin lock scope
-					boost::mutex::scoped_lock lock(CB_D_mutex);
-					CB_iter = Client_Buffer.find(socket_FD);
-					CB_iter->second->recv_buff.append(recv_buff, n_bytes);
-					CB_iter->second->post_recv();
-					}//end lock scope
+					else{
+						Speed_Calculator.update(n_bytes);
+						{//begin lock scope
+						boost::mutex::scoped_lock lock(CB_D_mutex);
+						CB_iter = Client_Buffer.find(socket_FD);
+						CB_iter->second->recv_buff.append(recv_buff, n_bytes);
+						CB_iter->second->post_recv();
+						}//end lock scope
+					}
 				}
 			}
 			if(FD_ISSET(socket_FD, &write_FDS)){
@@ -252,7 +239,6 @@ void client::main_thread()
 void client::new_conn()
 {
 	++threads;
-
 	download_conn * DC;
 
 	{//begin lock scope
@@ -261,50 +247,33 @@ void client::new_conn()
 	Connection_Queue.pop();
 	}//end lock scope
 
-	//convert hostname to IP if given hostname, otherwise just keep IP
+	//resolve hostname
 	hostent * he = gethostbyname(DC->server_IP.c_str());
+	if(he == NULL){
+		herror("gethostbyname");
+	}
 	DC->server_IP = inet_ntoa(*((struct in_addr *)he->h_addr));
 
-	//delay connection if connection to this server already in progress.
-	while(true){
-		bool found = false;
+	/*
+	If two DC with the same IP call this function the second one gets blocked
+	until the first one finishes it's connection attempt and is passed to
+	new_conn_unblock().
+	*/
+	new_conn_block_concurrent(DC);
 
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(DC_mutex);
-		std::list<download_conn *>::iterator iter_cur, iter_end;
-		iter_cur = Connection_Current_Attempt.begin();
-		iter_end = Connection_Current_Attempt.end();
-		while(iter_cur != iter_end){
-			if((*iter_cur)->server_IP == DC->server_IP){
-				found = true;
-				break;
-			}
-			++iter_cur;
-		}
-
-		//proceed to trying to make a connection
-		if(!found){
-
-			break;
-		}
-		}//end lock scope
-
-		//connection to this server in progess
-		if(found){
-			sleep(1);
-		}
-	}
+	int new_FD = 0;
 
 	//check if there is an existing connection to the server
-	int new_FD = 0;
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(CB_D_mutex);
-	for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
-		if(FD_ISSET(socket_FD, &master_FDS)){
-			if(DC->server_IP == Client_Buffer[socket_FD]->get_IP()){
-				new_FD = socket_FD;
-			}
+	std::map<int, client_buffer *>::iterator iter_cur, iter_end;
+	iter_cur = Client_Buffer.begin();
+	iter_end = Client_Buffer.end();
+	while(iter_cur != iter_end){
+		if(DC->server_IP == iter_cur->second->get_IP()){
+			new_FD = iter_cur->first;
 		}
+		++iter_cur;
 	}
 	}//end lock scope
 
@@ -352,10 +321,42 @@ void client::new_conn()
 		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"connect to ",DC->server_IP," failed");
 	}
 
-	/*
-	Connection attempt completed, remove it from Connection_Current_Attempt to
-	allow other connection attempts to this server to proceed.
-	*/
+	new_conn_unblock(DC);
+
+	--threads;
+}
+
+void client::new_conn_block_concurrent(download_conn * DC)
+{
+	//delay connection if connection to this server already in progress.
+	while(true){
+		bool found = false;
+		{//begin lock scope
+		boost::mutex::scoped_lock lock(DC_mutex);
+		std::list<download_conn *>::iterator iter_cur, iter_end;
+		iter_cur = Connection_Current_Attempt.begin();
+		iter_end = Connection_Current_Attempt.end();
+		while(iter_cur != iter_end){
+			if((*iter_cur)->server_IP == DC->server_IP){
+				found = true;
+				break;
+			}
+			++iter_cur;
+		}
+
+		if(!found){
+			break;
+		}
+		}//end lock scope
+
+		if(found){
+			usleep(global::SPINLOCK_TIME);
+		}
+	}
+}
+
+void client::new_conn_unblock(download_conn * DC)
+{
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(DC_mutex);
 	std::list<download_conn *>::iterator iter_cur, iter_end;
@@ -369,8 +370,6 @@ void client::new_conn()
 		++iter_cur;
 	}
 	}//end lock scope
-
-	--threads;
 }
 
 void client::prepare_requests()
@@ -412,18 +411,21 @@ void client::remove_complete()
 	hash_iter_end = complete_hash.end();
 	while(hash_iter_cur != hash_iter_end){
 		bool terminated = true;
+
 		//attempt to terminate the download with all Client_Buffer elements
-		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
-			if(FD_ISSET(socket_FD, &master_FDS)){
-				if(Client_Buffer[socket_FD]->terminate_download(*hash_iter_cur)){
-					if(Client_Buffer[socket_FD]->empty()){
-						disconnect(socket_FD);
-					}
-				}
-				else{
-					terminated = false;
+		std::map<int, client_buffer *>::iterator iter_cur, iter_end;
+		iter_cur = Client_Buffer.begin();
+		iter_end = Client_Buffer.end();
+		while(iter_cur != iter_end){
+			if(iter_cur->second->terminate_download(*hash_iter_cur)){
+				if(iter_cur->second->empty()){
+					disconnect(iter_cur->first);
 				}
 			}
+			else{
+				terminated = false;
+			}
+			++iter_cur;
 		}
 
 		if(terminated){
@@ -464,7 +466,6 @@ void client::stop()
 {
 	stop_threads = true;
 	Thread_Pool.stop();
-
 	while(threads){
 		usleep(global::SPINLOCK_TIME);
 	}
@@ -497,7 +498,10 @@ bool client::start_download(DB_access::download_info_buffer info)
 
 	unsigned long file_size = strtoul(info.file_size.c_str(), NULL, 10);
 	unsigned int latest_request = info.latest_request;
-	unsigned int last_block = atol(info.file_size.c_str())/(global::P_BLS_SIZE - 1); //(global::P_BLS_SIZE - 1) because control size is 1 byte
+
+	//(global::P_BLS_SIZE - 1) because control size is 1 byte
+	unsigned int last_block = atol(info.file_size.c_str())/(global::P_BLS_SIZE - 1);
+
 	unsigned int last_block_size = atol(info.file_size.c_str()) % (global::P_BLS_SIZE - 1) + 1;
 
 	download * Download = new download_file(
@@ -547,4 +551,3 @@ void client::stop_download(const std::string & hash)
 	}
 	}//end lock scope
 }
-

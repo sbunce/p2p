@@ -79,13 +79,8 @@ private:
 	void response_BLS(const int & socket, std::string & block);
 	void write_block(std::string & file_block);
 
-	//conversions used for crafting requests and reading responses
 	conversion Conversion;
-
-	//provides access to the database
 	DB_access DB_Access;
-
-	//creates hashes for superBlocks
 	sha SHA;
 };
 #endif
