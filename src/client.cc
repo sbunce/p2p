@@ -239,6 +239,10 @@ void client::main_thread()
 void client::new_conn()
 {
 	++threads;
+
+	//use a tcp connection for DNS requests
+	sethostent(1);
+
 	download_conn * DC;
 
 	{//begin lock scope
@@ -322,6 +326,14 @@ void client::new_conn()
 	}
 
 	new_conn_unblock(DC);
+
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(DC_mutex);
+	//if no more connections to be made close DNS connection
+	if(Connection_Queue.empty()){
+		endhostent();
+	}
+	}//end lock scope
 
 	--threads;
 }

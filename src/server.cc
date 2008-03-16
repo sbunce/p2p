@@ -284,6 +284,7 @@ void server::main_thread()
 	global::debug_message(global::INFO,__FILE__,__FUNCTION__,"created listening socket ",listener);
 
 	int send_limit = 0; //how many bytes can be sent on an iteration
+	std::map<int, send_buff_element>::iterator SB_iter;
 	while(true){
 		if(stop_threads){
 			break;
@@ -335,11 +336,11 @@ void server::main_thread()
 			}
 
 			//do not check for writes on listener, there is no corresponding Send_Buff element
-			std::map<int, send_buff_element>::iterator SB_iter;
 			if(FD_ISSET(socket_FD, &write_FDS) && socket_FD != listener){
 				SB_iter = Send_Buff.find(socket_FD);
 				if(!SB_iter->second.buff.empty()){
 					send_limit = Speed_Calculator.rate_control(global::UP_SPEED, SB_iter->second.buff.size());
+
 					//MSG_NOSIGNAL needed because abrupt client disconnect causes SIGPIPE
 					if((n_bytes = send(socket_FD, SB_iter->second.buff.c_str(), send_limit, MSG_NOSIGNAL)) < 0){
 						if(n_bytes == -1){

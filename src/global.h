@@ -27,8 +27,8 @@ namespace global
 	const int TIMEOUT = 16;               //how long before an unresponsive server times out
 	const int SHARE_REFRESH = 1200;       //number of seconds between updating share information
 	const int SPINLOCK_TIME = 1000;       //microsecond timeout on all spinlocks
-	const int UP_SPEED = 1000*1024+512;   //upload speed limit (B/s) (1040 because 1024 + 16 header size) (+512 to target middle of kB)
-	const int DOWN_SPEED = 8000*1024+512; //download speed limit (B/s)
+	const int UP_SPEED = 9999*1024+512;   //upload speed limit (B/s)
+	const int DOWN_SPEED = 9999*1024+512; //download speed limit (B/s)
 
 	//protocol commands client -> server
 	const char P_SBL = (char)1;
@@ -67,7 +67,7 @@ namespace global
 
 	inline void print_type(debug_message_type type)
 	{
-		if(type == INFO){ std::cout <<       "info:  "; }
+		if(type == INFO){ std::cout <<       "info: "; }
 		else if(type == ERROR){ std::cout << "error: "; }
 		else if(type == FATAL){ std::cout << "fatal: "; }
 	}

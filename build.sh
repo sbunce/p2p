@@ -6,16 +6,11 @@ then
 fi
 
 cd src
+make -j2
 
-if [ "$1" == "clean" ]
+if [ `ls -l |grep -c p2p*` != 0 ]
 then
-	make clean
-elif [ "$1" == "server" ]
-then
-	make -j2 server
-else
-	make -j2
+	cp p2p* ..
 fi
 
 exit 0
-

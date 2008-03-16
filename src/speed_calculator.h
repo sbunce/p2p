@@ -30,7 +30,9 @@ private:
 	boost::mutex AS_mutex;
 
 	//used by rate_control to control interval between usleep()'s
-	unsigned long rate_control_counter;
-	unsigned int rate_control_damper;
+	unsigned long rate_control_count;
+	int rate_control_damper;
+	unsigned int rate_control_try_speed;
+	unsigned long rate_control_try_time;
 };
 #endif
