@@ -22,7 +22,6 @@
 #include <errno.h>
 
 //custom
-#include "atomic.h"
 #include "conversion.h"
 #include "DB_access.h"
 #include "global.h"
@@ -90,8 +89,8 @@ private:
 	std::map<int, send_buff_element> Send_Buff;
 	std::map<int, std::string> Recv_Buff;
 
-	atomic<bool> stop_threads; //if true this will trigger thread termination
-	atomic<int> threads;       //how many threads are currently running
+	volatile bool stop_threads; //if true this will trigger thread termination
+	volatile int threads;       //how many threads are currently running
 
 	//used by Upload_Speed to track the progress of an upload
 	class speed_element_file
@@ -138,25 +137,25 @@ private:
 	int FD_max;          //holds the number of the maximum socket
 
 	//counter for how many sends need to be done
-	atomic<int> send_pending;
+	volatile int send_pending;
 
 	//buffer for reading file blocks from the HDD
 	char prepare_file_block_buff[global::P_BLS_SIZE - 1];
 
 	/*
-	disconnect          - disconnect client and remove socket from master set
-	calculate_speed     - process the sendQueue and update Upload_Speed
-	main_thread         - where the party is at
-	new_conn            - sets up socket for client
-	                    - returns true if connection suceeded
-	prepare_send_buffer - prepares a response to a file block request
-	process_request     - interprets the request from a client and buffers it
+	disconnect         - disconnect client and remove socket from master set
+	calculate_speed    - process the sendQueue and update Upload_Speed
+	main_thread        - where the party is at
+	new_conn           - sets up socket for client
+	                   - returns true if connection suceeded
+	prepare_file_block - prepares a response to a file block request
+	process_request    - interprets the request from a client and buffers it
 	*/
 	void disconnect(const int & socketfd);
-	int calculate_speed_file(std::string & client_IP, const unsigned int & file_ID, const unsigned int & file_block, const unsigned long & file_size, const std::string & file_path);
+	void calculate_speed_file(std::string & client_IP, const unsigned int & file_ID, const unsigned int & file_block, const unsigned long & file_size, const std::string & file_path);
 	void main_thread();
 	bool new_conn(const int & listener);
-	int prepare_file_block(std::map<int, send_buff_element>::iterator & SB_iter, const int & socket_FD, const unsigned int & file_ID, const unsigned int & block_number);
+	void prepare_file_block(std::map<int, send_buff_element>::iterator & SB_iter, const int & socket_FD, const unsigned int & file_ID, const unsigned int & block_number);
 	void process_request(const int & socketfd, char recvBuffer[], const int & n_bytes);
 
 	boost::mutex SB_mutex; //mutex for all usage of Send_Buff

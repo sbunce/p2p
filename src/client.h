@@ -25,13 +25,11 @@
 #include <vector>
 
 //custom
-#include "atomic.h"
 #include "client_buffer.h"
 #include "DB_access.h"
 #include "download.h"
 #include "download_conn.h"
-#include "download_file.h"
-#include "download_file_conn.h"
+#include "download_prep.h"
 #include "global.h"
 #include "speed_calculator.h"
 #include "thread_pool.h"
@@ -66,12 +64,12 @@ public:
 	int get_total_speed();
 	void start();
 	void stop();
-	bool start_download(DB_access::download_info_buffer info);
+	bool start_download(DB_access::download_info_buffer & info);
 	void stop_download(const std::string & hash);
 
 private:
-	atomic<bool> stop_threads; //if true this will trigger thread termination
-	atomic<int> threads;       //how many threads are currently running
+	volatile bool stop_threads; //if true this will trigger thread termination
+	volatile int threads;       //how many threads are currently running
 
 	//used for timeouts
 	time_t current_time;
@@ -107,10 +105,10 @@ private:
 	then there are no sends pending and write_FDS doesn't need to be used. These
 	are given to the client_buffer elements so they can increment it.
 	*/
-	atomic<int> * send_pending;
+	volatile int * send_pending;
 
 	//true if a download is complete, handed to all downloads
-	atomic<bool> * download_complete;
+	volatile bool * download_complete;
 
 	//used to initiate new connections
 	thread_pool<client> Thread_Pool;
@@ -139,6 +137,7 @@ private:
 
 	sha SHA;
 	DB_access DB_Access;
+	download_prep Download_Prep;
 	speed_calculator Speed_Calculator;
 };
 #endif

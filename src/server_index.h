@@ -9,7 +9,6 @@
 #include <string>
 
 //custom
-#include "atomic.h"
 #include "DB_access.h"
 #include "global.h"
 
@@ -27,16 +26,16 @@ public:
 	void stop();
 
 private:
-	atomic<bool> stop_thread; //if true this will trigger thread termination
-	atomic<int> threads;      //how many threads are currently running
-	atomic<bool> indexing;    //true if server_index is currently indexing files
+	volatile bool stop_thread; //if true this will trigger thread termination
+	volatile int threads;      //how many threads are currently running
+	volatile bool indexing;    //true if server_index is currently indexing files
 
 	/*
 	index_share         - removes files listed in index that don't exist in share
 	index_share_recurse - recursive function to locate all files in share(calls add_entry)
 	*/
 	void index_share();
-	int index_share_recurse(const std::string directory_name);
+	void index_share_recurse(std::string directory_name);
 
 	DB_access DB_Access;
 };

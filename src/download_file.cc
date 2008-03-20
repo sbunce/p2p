@@ -14,7 +14,7 @@
 download_file::download_file(std::string & file_hash_in, std::string & file_name_in, 
 	std::string & file_path_in, unsigned long & file_size_in, unsigned int & latest_request_in,
 	unsigned int & last_block_in, unsigned int & last_block_size_in,
-	atomic<bool> * download_complete_flag_in)
+	volatile bool * download_complete_flag_in)
 {
 	//non-defaults
 	file_hash = file_hash_in;
@@ -204,6 +204,11 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 
 void download_file::response(const int & socket, std::string block)
 {
+	//don't do anything if download is complete
+	if(download_complete){
+		return;
+	}
+
 	if(block[0] == global::P_BLS){
 		//a block was received
 		block.erase(0, 1); //trim command

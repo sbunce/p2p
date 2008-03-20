@@ -145,7 +145,7 @@ std::string hash_tree::create_hash_tree(std::string file_name)
 	return root_hash;
 }
 
-int hash_tree::create_hash_tree_recurse(std::fstream & scratch, std::streampos row_start, std::streampos row_end, std::string & root_hash)
+void hash_tree::create_hash_tree_recurse(std::fstream & scratch, std::streampos row_start, std::streampos row_end, std::string & root_hash)
 {
 	//holds one hash
 	char chunk[hash_length];
@@ -156,7 +156,7 @@ int hash_tree::create_hash_tree_recurse(std::fstream & scratch, std::streampos r
 
 	//stopping case, if one hash passed in it's the root hash
 	if(row_end - row_start == hash_length){
-		return 0;
+		return;
 	}
 
 	//if passed an odd amount of hashes append a NULL hash to inicate termination
@@ -226,7 +226,7 @@ int hash_tree::create_hash_tree_recurse(std::fstream & scratch, std::streampos r
 
 	fout.close();
 
-	return 0;
+	return;
 }
 
 unsigned long hash_tree::locate_start(std::string root_hash)

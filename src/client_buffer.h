@@ -13,7 +13,7 @@
 class client_buffer
 {
 public:
-	client_buffer(int socket_in, std::string & server_IP_in, atomic<int> * send_pending_in);
+	client_buffer(int socket_in, std::string & server_IP_in, volatile int * send_pending_in);
 	~client_buffer();
 
 	std::string recv_buff; //buffer for partial recvs
@@ -32,20 +32,20 @@ public:
 	                     returns false if the client_buffer is expecting data from the server
 	*/
 	void add_download(download * new_download);
-	const bool empty();
+	bool empty();
 	const std::string & get_IP();
 	const time_t & get_last_seen();
-	int post_recv();
+	void post_recv();
 	void post_send();
 	void prepare_request();
-	const bool terminate_download(const std::string & hash);
+	bool terminate_download(const std::string & hash);
 
 private:
-	std::string server_IP;      //IP associated with this client_buffer
-	int socket;                 //socket number of this element
-	time_t last_seen;           //used for timeout
-	bool abuse;                 //if true a disconnect is triggered
-	atomic<int> * send_pending; //signals client that there is data to send
+	std::string server_IP;       //IP associated with this client_buffer
+	int socket;                  //socket number of this element
+	time_t last_seen;            //used for timeout
+	bool abuse;                  //if true a disconnect is triggered
+	volatile int * send_pending; //signals client that there is data to send
 
 	/*
 	The Download container is effectively a ring. The rotate_downloads() function will move

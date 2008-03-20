@@ -64,6 +64,7 @@ public:
 	                            - returns true if record found else false
 	download_initial_fill_buff  - returns download information for all in progress downloads
 	download_start_download     - adds a download to the database
+	                            - returns false if the download already started
 	download_terminate_download - removes the download entry from the database
 	*/
 	bool download_get_file_path(const std::string & hash, std::string & path);

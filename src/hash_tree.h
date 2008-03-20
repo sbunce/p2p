@@ -15,7 +15,7 @@ public:
 
 	/*
 	check_hash_tree  - returns true if a bad pair of hashes found (stored in bad_hash)
-	                   this function should NEVER be called until a full hash tree exists
+	                   this function should not be called until a full hash tree exists
 	                   if called multiple times this function doesn't rescan, unless different root hash given
 	create_hash_tree - creates a hash tree for the file pointed to by file_path
 	                   returns the root node hash
@@ -51,7 +51,7 @@ private:
 	locate_start             - returns the RRN of the start of the file hashes
 	*/
 	bool check_hash(char parent[], char left_child[], char right_child[]);
-	int create_hash_tree_recurse(std::fstream & scratch, std::streampos row_start, std::streampos row_end, std::string & root_hash);
+	void create_hash_tree_recurse(std::fstream & scratch, std::streampos row_start, std::streampos row_end, std::string & root_hash);
 	unsigned long locate_start(std::string root_hash);
 };
 #endif

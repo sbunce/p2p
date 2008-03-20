@@ -61,7 +61,7 @@ void server::disconnect(const int & socket_FD)
 	}//end lock scope
 }
 
-int server::calculate_speed_file(std::string & client_IP, const unsigned int & file_ID, const unsigned int & file_block, const unsigned long & file_size, const std::string & file_path)
+void server::calculate_speed_file(std::string & client_IP, const unsigned int & file_ID, const unsigned int & file_block, const unsigned long & file_size, const std::string & file_path)
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(US_mutex);
@@ -363,7 +363,7 @@ void server::main_thread()
 	--threads;
 }
 
-int server::prepare_file_block(std::map<int, send_buff_element>::iterator & SB_iter, const int & socket_FD, const unsigned int & file_ID, const unsigned int & block_number)
+void server::prepare_file_block(std::map<int, send_buff_element>::iterator & SB_iter, const int & socket_FD, const unsigned int & file_ID, const unsigned int & block_number)
 {
 	int start_size = SB_iter->second.buff.size();
 
@@ -373,14 +373,14 @@ int server::prepare_file_block(std::map<int, send_buff_element>::iterator & SB_i
 	if(!DB_Access.share_file_info(file_ID, file_size, file_path)){
 		//file was not found
 		SB_iter->second.buff += global::P_FNF;
-		return 0;
+		return;
 	}
 
 	//check for valid file block request
 	if(block_number*(global::P_BLS_SIZE - 1) > file_size){
 		//a block past the end of file was requested
 		SB_iter->second.buff += global::P_DNE;
-		return 0;
+		return;
 	}
 
 	SB_iter->second.buff += global::P_BLS;
@@ -398,7 +398,7 @@ int server::prepare_file_block(std::map<int, send_buff_element>::iterator & SB_i
 
 	//update speed calculation (assumes there is a response)
 	calculate_speed_file(SB_iter->second.client_IP, file_ID, block_number, file_size, file_path);
-	return 0;
+	return;
 }
 
 void server::process_request(const int & socket_FD, char recv_buff[], const int & n_bytes)

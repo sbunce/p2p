@@ -20,7 +20,7 @@ server_index::server_index()
 	threads = 0;
 }
 
-int server_index::index_share_recurse(const std::string directory_name)
+void server_index::index_share_recurse(std::string directory_name)
 {
 	namespace fs = boost::filesystem;
 
@@ -30,7 +30,7 @@ int server_index::index_share_recurse(const std::string directory_name)
 #ifdef DEBUG
 		std::cout << "error: fileIndex::index_share(): can't locate " << full_path.string() << "\n";
 #endif
-		return -1;
+		return;
 	}
 
 	if(fs::is_directory(full_path)){
@@ -62,7 +62,7 @@ int server_index::index_share_recurse(const std::string directory_name)
 #endif
 	}
 
-	return 0;
+	return;
 }
 
 bool server_index::is_indexing()

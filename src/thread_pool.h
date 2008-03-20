@@ -10,7 +10,6 @@
 #include <queue>
 
 //custom
-#include "atomic.h"
 #include "global.h"
 
 template<class T> class thread_pool
@@ -38,8 +37,8 @@ public:
 	void queue_job(T * Obj, void (T::*memfun_ptr)());
 
 private:
-	atomic<bool> stop_threads;      //true when threads are being stopped
-	atomic<int> threads; //how many threads are currently running
+	volatile bool stop_threads; //true when threads are being stopped
+	volatile int threads;       //how many threads are currently running
 
 	/*
 	Work queue which contains an object pointer and a member function to run in

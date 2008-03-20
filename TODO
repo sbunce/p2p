@@ -1,9 +1,10 @@
 TODO
 
--Rerequest algorithm doesn't tollerate changes in # of servers connected.
+-Break the rerequest logic in to it's own class. Then get the hash tree download
+working using this class.
 
--Hosts sometimes don't resolve correctly (resolves to 127.0.1.1). I suspect this
-is due to making each request on a new connection.
+-Make pipeline size based on max response data expected instead of a set number
+of commands.
 
 
 DEFERRED FEATURES
@@ -18,6 +19,8 @@ needs to delay a request when a P_DNE is received.
 
 -Blacklisting of abusive clients/servers.
 
+-Rerequest algorithm doesn't tollerate changes in # of servers connected.
+
 
 IDEAS
 
@@ -30,3 +33,8 @@ level inheritance and all level inheritance.
 -Don't allow people to download who have the P2P port blocked. Make a ping
 command the server can send to the client. The client should return a pong
 otherwise it doesn't get to download.
+
+-Download priority can be done by adding a "stickyness" to downloads in the
+client_buffer. Have a value associated with downloads which makes them take
+more calls to rotate_downloads() to actually rotate. Downloads should start on
+normal. Possible settings low = 1, normal = 2, medium = 3, and high = 4.

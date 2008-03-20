@@ -9,7 +9,6 @@
 #include <vector>
 
 //custom
-#include "atomic.h"
 #include "DB_access.h"
 #include "conversion.h"
 #include "download.h"
@@ -26,7 +25,7 @@ public:
 	download_file(std::string & file_hash_in, std::string & file_name_in, 
 		std::string & file_path_in, unsigned long & file_size_in,
 		unsigned int & latest_request_in, unsigned int & last_block_in,
-		unsigned int & last_block_size_in, atomic<bool> * download_complete_flag_in);
+		unsigned int & last_block_size_in, volatile bool * download_complete_flag_in);
 
 	//documentation for virtual functions in abstract base class
 	virtual bool complete();
@@ -59,7 +58,7 @@ private:
 	Tells the client that a download is complete, used when download is complete.
 	Full description in client.h.
 	*/
-	atomic<bool> * download_complete_flag;
+	volatile bool * download_complete_flag;
 
 	//true when the download is completed
 	bool download_complete;

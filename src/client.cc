@@ -16,15 +16,14 @@ client::client()
 
 	FD_max = 0;
 	FD_ZERO(&master_FDS);
-	send_pending = new atomic<int>;
-	*send_pending = 0;
-	download_complete = new atomic<bool>;
-	*download_complete = false;
+	send_pending = new volatile int(0);
+	download_complete = new volatile bool(false);
 	stop_threads = false;
 	threads = 0;
 	current_time = time(0);
 	previous_time = time(0);
 	Thread_Pool.init(global::NEW_CONN_THREADS);
+	Download_Prep.init(download_complete);
 }
 
 client::~client()
@@ -240,9 +239,6 @@ void client::new_conn()
 {
 	++threads;
 
-	//use a tcp connection for DNS requests
-	sethostent(1);
-
 	download_conn * DC;
 
 	{//begin lock scope
@@ -256,6 +252,12 @@ void client::new_conn()
 	if(he == NULL){
 		herror("gethostbyname");
 	}
+
+	if(strncmp(inet_ntoa(*((struct in_addr *)he->h_addr)), "127", 3) == 0){
+		//could not be resolved
+		return;
+	}
+
 	DC->server_IP = inet_ntoa(*((struct in_addr *)he->h_addr));
 
 	/*
@@ -326,14 +328,6 @@ void client::new_conn()
 	}
 
 	new_conn_unblock(DC);
-
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(DC_mutex);
-	//if no more connections to be made close DNS connection
-	if(Connection_Queue.empty()){
-		endhostent();
-	}
-	}//end lock scope
 
 	--threads;
 }
@@ -483,49 +477,12 @@ void client::stop()
 	}
 }
 
-bool client::start_download(DB_access::download_info_buffer info)
+bool client::start_download(DB_access::download_info_buffer & info)
 {
-	//make sure file isn't already downloading
-	if(!info.resumed){
-		if(!DB_Access.download_start_download(info)){
-			return false;
-		}
-	}
-
-	//get file path, stop if file not found
-	std::string file_path;
-	if(!DB_Access.download_get_file_path(info.hash, file_path)){
+	download * Download;
+	if(!(Download = Download_Prep.start_file(info))){
 		return false;
 	}
-
-	//create an empty file for this download, if a file doesn't already exist
-	std::fstream fin(file_path.c_str(), std::ios::in);
-	if(fin.is_open()){
-		fin.close();
-	}
-	else{
-		std::fstream fout(file_path.c_str(), std::ios::out);
-		fout.close();
-	}
-
-	unsigned long file_size = strtoul(info.file_size.c_str(), NULL, 10);
-	unsigned int latest_request = info.latest_request;
-
-	//(global::P_BLS_SIZE - 1) because control size is 1 byte
-	unsigned int last_block = atol(info.file_size.c_str())/(global::P_BLS_SIZE - 1);
-
-	unsigned int last_block_size = atol(info.file_size.c_str()) % (global::P_BLS_SIZE - 1) + 1;
-
-	download * Download = new download_file(
-		info.hash,
-		info.file_name,
-		file_path,
-		file_size,
-		latest_request,
-		last_block,
-		last_block_size,
-		download_complete
-	);
 
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(CB_D_mutex);
@@ -534,11 +491,16 @@ bool client::start_download(DB_access::download_info_buffer info)
 
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(DC_mutex);
+
+	if(info.server_IP.size() != info.file_ID.size()){
+		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"server_IP # != file_ID #");
+	}
+
 	for(int x = 0; x < info.server_IP.size(); ++x){
 		download_conn * DC = new download_file_conn(Download, info.server_IP[x], atoi(info.file_ID[x].c_str()));
 		Connection_Queue.push(DC);
 
-		//queue a job in the thread pool
+		//queue a job in the thread pool for the new connection
 		void (client::*memfun_ptr)() = &client::new_conn;
 		Thread_Pool.queue_job(this, memfun_ptr);
 	}

@@ -252,7 +252,7 @@ bool DB_access::download_start_download(download_info_buffer & info)
 		return true;
 	}
 	else{
-		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"query error on insert, sqlite error: ",return_code);
+		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"query error on insert, sqlite error: ",return_code);
 		return false;
 	}
 }

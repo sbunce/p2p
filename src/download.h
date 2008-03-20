@@ -9,7 +9,6 @@
 #include <vector>
 
 //custom
-#include "atomic.h"
 #include "download_conn.h"
 #include "global.h"
 #include "speed_calculator.h"

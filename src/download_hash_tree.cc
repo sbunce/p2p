@@ -1,6 +1,6 @@
 #include "download_hash_tree.h"
 
-download_hash_tree::download_hash_tree(std::string root_hash_in, atomic<bool> * download_complete_flag_in)
+download_hash_tree::download_hash_tree(std::string root_hash_in, bool * download_complete_flag_in)
 {
 	root_hash = root_hash_in;
 	download_complete_flag = download_complete_flag_in;

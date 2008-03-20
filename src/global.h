@@ -11,7 +11,7 @@
 namespace global
 {
 	#define DEBUG
-	//#define SPEED_COMPENSATION
+	#define SPEED_COMPENSATION
 
 	const std::string NAME = "p2p";
 	const std::string VERSION = "0.00 pre-alpha";

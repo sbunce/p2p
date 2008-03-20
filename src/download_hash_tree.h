@@ -5,14 +5,13 @@
 #include <vector>
 
 //custom
-#include "atomic.h"
 #include "download.h"
 #include "hash_tree.h"
 
 class download_hash_tree : public download
 {
 public:
-	download_hash_tree(std::string root_hash_in, atomic<bool> * download_complete_flag_in);
+	download_hash_tree(std::string root_hash_in, bool * download_complete_flag_in);
 
 	//documentation for virtual functions in abstract base class
 	virtual bool complete();
@@ -33,6 +32,6 @@ private:
 	Tells the client that a download is complete, used when download is complete.
 	Full description in client.h.
 	*/
-	atomic<bool> * download_complete_flag;
+	bool * download_complete_flag;
 };
 #endif

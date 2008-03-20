@@ -6,7 +6,7 @@
 
 #include "client_buffer.h"
 
-client_buffer::client_buffer(int socket_in, std::string & server_IP_in, atomic<int> * send_pending_in)
+client_buffer::client_buffer(int socket_in, std::string & server_IP_in, volatile int * send_pending_in)
 {
 	socket = socket_in;
 	server_IP = server_IP_in;
@@ -28,7 +28,7 @@ void client_buffer::add_download(download * new_download)
 	Download_iter = Download.begin();
 }
 
-const bool client_buffer::empty()
+bool client_buffer::empty()
 {
 	return Download.empty();
 }
@@ -43,7 +43,7 @@ const time_t & client_buffer::get_last_seen()
 	return last_seen;
 }
 
-int client_buffer::post_recv()
+void client_buffer::post_recv()
 {
 	last_seen = time(0);
 
@@ -51,13 +51,14 @@ int client_buffer::post_recv()
 		//server responded out of turn
 		global::debug_message(global::ERROR,__FILE__,__FUNCTION__,"abusive server (responded when pipeline empty) ",server_IP);
 		abuse = true;
-		return 0;
+		return;
 	}
 
 	//if recv_buff larger than largest case the server is doing something naughty
 	if(recv_buff.size() > global::PIPELINE_SIZE * global::C_MAX_SIZE){
 		global::debug_message(global::ERROR,__FILE__,__FUNCTION__,"abusive server (exceeded maximum buffer size) ",server_IP);
 		abuse = true;
+		return;
 	}
 
 	while(true){
@@ -82,7 +83,7 @@ int client_buffer::post_recv()
 			//command not found, server sent unexpected command
 			global::debug_message(global::ERROR,__FILE__,__FUNCTION__,"abusive server (incorrect length of command) ", server_IP);
 			abuse = true;
-			return 0;
+			return;
 		}
 
 		Pipeline.front().Download->response(socket, recv_buff.substr(0, iter_cur->second));
@@ -140,7 +141,7 @@ void client_buffer::rotate_downloads()
 	}
 }
 
-const bool client_buffer::terminate_download(const std::string & hash)
+bool client_buffer::terminate_download(const std::string & hash)
 {
 	/*
 	Case 1:
