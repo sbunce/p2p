@@ -14,6 +14,7 @@
 #include "download.h"
 #include "download_file_conn.h"
 #include "global.h"
+#include "request_gen.h"
 
 class download_file : public download
 {
@@ -38,10 +39,6 @@ public:
 	virtual const unsigned long & total_size();
 
 private:
-	#ifdef DEBUG
-	unsigned int wasted_bytes;
-	#endif
-
 	//these must be set before the download begins and will be set by ctor
 	std::string file_hash;   //unique identifier of the file and message digest
 	std::string file_name;   //name of the file
@@ -49,8 +46,6 @@ private:
 	unsigned long file_size; //size of the file(bytes)
 
 	//don't worry about these
-	unsigned int latest_request;  //the most recent block requested
-	unsigned int latest_written;  //most recently requested block
 	unsigned int last_block;      //the last block number
 	unsigned int last_block_size; //holds the exact size of the last fileBlock(in bytes)
 
@@ -63,23 +58,16 @@ private:
 	//true when the download is completed
 	bool download_complete;
 
-	//maps received block numbers to the actual file block
-	std::set<unsigned int> requested_blocks;                  //blocks that have been requested
-	std::multiset<unsigned int> rerequest;                    //blocks needing to be rerequested
-	std::multimap<unsigned int, std::string> received_blocks; //recieved block numbers associated with the actual block
-
 	/*
-	request_choose_block - chooses a file block to request based on download_conn speed and download_speed
-	                       returns false if download complete or no new requests to be made
 	response_BLS         - processes a file block response
 	writeTree            - writes a file block
 	*/
-	bool request_choose_block(download_file_conn * conn);
 	void response_BLS(const int & socket, std::string & block);
-	void write_block(std::string & file_block);
+	void write_block(unsigned int block_number, std::string & block);
 
 	conversion Conversion;
 	DB_access DB_Access;
+	request_gen Request_Gen;
 	sha SHA;
 };
 #endif

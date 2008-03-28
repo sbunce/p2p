@@ -18,6 +18,9 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+//used to prompt select() to return
+#include <signal.h>
+
 //contains error codes select() might return
 #include <errno.h>
 

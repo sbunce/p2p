@@ -1,10 +1,11 @@
 TODO
 
--Break the rerequest logic in to it's own class. Then get the hash tree download
-working using this class.
+-The client_buffer needs to be adjusted to pipeline more when sending commands
+that expect smaller responses.
 
--Make pipeline size based on max response data expected instead of a set number
-of commands.
+-Get rid of boost::tokenize dependency in DB_access.cc.
+
+-The client is not terminating on GUI close intermittantly.
 
 
 DEFERRED FEATURES
@@ -19,7 +20,8 @@ needs to delay a request when a P_DNE is received.
 
 -Blacklisting of abusive clients/servers.
 
--Rerequest algorithm doesn't tollerate changes in # of servers connected.
+-Add to the protocol a command which retrieves a file_ID from the server that is
+associated with a hash the client sends the server.
 
 
 IDEAS
@@ -38,3 +40,7 @@ otherwise it doesn't get to download.
 client_buffer. Have a value associated with downloads which makes them take
 more calls to rotate_downloads() to actually rotate. Downloads should start on
 normal. Possible settings low = 1, normal = 2, medium = 3, and high = 4.
+
+-I want to have sharing such that someone just selects a folder(s) to share and
+forgets about it. Perhaps combine this with allowing people to publish tracked
+files on websites so you can still find the obscure stuff.

@@ -2,7 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <time.h>
+#include <ctime>
 
 //custom
 #include "conversion.h"
@@ -406,29 +406,39 @@ void server::process_request(const int & socket_FD, char recv_buff[], const int 
 	std::map<int, std::string>::iterator RB_iter = Recv_Buff.find(socket_FD);
 	RB_iter->second.append(recv_buff, n_bytes);
 
-	//disconnect servers that over-pipeline
+	//disconnect clients that have pipelined more than is allowed
 	if(RB_iter->second.size() > global::S_MAX_SIZE*global::PIPELINE_SIZE){
 		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"disconnecting abusive socket ",socket_FD);
 		disconnect(socket_FD);
+
+//blacklist needs to be done here
+	}
+
+	//needed to determine if the buffer went from empty to non-empty
+	std::map<int, send_buff_element>::iterator SB_iter = Send_Buff.find(socket_FD);
+	bool empty_buff;
+	if(SB_iter->second.buff.size() == 0){
+		empty_buff = true;
+	}
+	else{
+		empty_buff = false;
 	}
 
 	//process recv buffer until it's empty or it contains no complete requests
-	bool send_pending_temp = false;
 	while(RB_iter->second.size()){
 		if(RB_iter->second[0] == global::P_SBL && n_bytes >= global::P_SBL_SIZE){
-			std::map<int, send_buff_element>::iterator SB_iter = Send_Buff.find(socket_FD);
 			unsigned int file_ID = Conversion.decode_int(RB_iter->second.substr(1,4));
 			unsigned int block_number = Conversion.decode_int(RB_iter->second.substr(5,4));
 			prepare_file_block(SB_iter, socket_FD, file_ID, block_number);
 			RB_iter->second.erase(0, global::P_SBL_SIZE);
-			send_pending_temp = true;
 		}
 		else{
 			break;
 		}
 	}
 
-	if(send_pending_temp){
+	//if buff went from empty to non-empty a new send needs to be done
+	if(empty_buff && SB_iter->second.buff.size() != 0){
 		++send_pending;
 	}
 }
@@ -442,18 +452,8 @@ void server::stop()
 {
 	stop_threads = true;
 
-	/*
-	Make a connection to the local server to trigger select() to return so that
-	the main_thread loop can be exited. This makes it so that no timeout on the
-	select functions are necessary.
-	*/
-	sockaddr_in dest_addr;
-	int new_FD = socket(PF_INET, SOCK_STREAM, 0);
-	dest_addr.sin_family = AF_INET;
-	dest_addr.sin_port = htons(global::P2P_PORT);
-	dest_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-	memset(&(dest_addr.sin_zero),'\0',8);
-	connect(new_FD, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+	//get select() to return if it's blocking
+	raise(SIGINT);
 
 	while(threads){
 		usleep(global::SPINLOCK_TIME);

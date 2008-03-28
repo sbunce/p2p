@@ -8,8 +8,8 @@ CCL = g++
 #objects for full program
 OBJECTS = client_buffer.o client.o conversion.o DB_access.o download_conn.o \
 	download_file_conn.o download_file.o download_hash_tree.o download_prep.o \
-	download.o gui_about.o gui.o hash_tree.o main.o server_index.o server.o \
-	sha.o speed_calculator.o
+	download.o gui_about.o gui.o hash_tree.o main.o request_gen.o \
+	server_index.o server.o sha.o speed_calculator.o
 
 #linker options for full program
 LINKER_OPTIONS = `pkg-config gtkmm-2.4 --cflags --libs` -lboost_filesystem \
@@ -59,7 +59,7 @@ download_conn.o: download_conn.cc download_conn.h $(GLOBAL)
 	$(CC) download_conn.cc
 
 download_file.o: download_file.cc download_file.h conversion.h DB_access.h \
-	download_file_conn.h download.h hash_tree.h $(GLOBAL)
+	download_file_conn.h download.h hash_tree.h request_gen.h $(GLOBAL)
 	$(CC) download_file.cc
 
 download_file_conn.o: download_file_conn.cc download_file_conn.h \
@@ -83,6 +83,9 @@ gui_about.o: gui_about.cc gui_about.h $(GLOBAL)
 
 hash_tree.o: hash_tree.cc hash_tree.h sha.h $(GLOBAL)
 	$(CC) hash_tree.cc
+
+request_gen.o: request_gen.cc request_gen.h $(GLOBAL)
+	$(CC) request_gen.cc
 
 server.o: server.cc server.h conversion.h server_index.h speed_calculator.h \
 	$(GLOBAL)

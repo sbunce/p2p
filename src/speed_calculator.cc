@@ -1,5 +1,6 @@
 //std
 #include <cmath>
+#include <ctime>
 #include <deque>
 
 #include "speed_calculator.h"
@@ -80,7 +81,7 @@ unsigned int speed_calculator::rate_control(const int & rate, int max_possible_t
 	global::SPEED_AVERAGE seconds.
 	*/
 	if(average_speed == 0){
-		rate_control_damper = 1;
+		rate_control_damper = 80;
 	}
 
 	//maximum possible transfer to keep average_speed under rate
@@ -94,18 +95,6 @@ unsigned int speed_calculator::rate_control(const int & rate, int max_possible_t
 		//max transfer that can be sent is max_possible_transfer
 		transfer = max_possible_transfer;
 	}
-	else{
-		/*
-		In the context of the client, this will be triggered if there are no more
-		bytes to be received in the current second.
-
-		In the context of the server, this will be triggered if the pipeline is
-		almost empty. This is a normal occurrence when the server rate limit is
-		below the real bandwidth limit.
-		*/
-		usleep(1000);
-	}
-
 
 	/*
 	By limiting the rate the select() loop is made to iterate more often. To
@@ -137,7 +126,7 @@ unsigned int speed_calculator::rate_control(const int & rate, int max_possible_t
 
 	//sleep every rate_control_damper calls to this function
 	if(rate_control_count % rate_control_damper == 0){
-		usleep(1);
+		usleep(1000);
 	}
 
 	return transfer;
