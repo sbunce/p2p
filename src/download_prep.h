@@ -20,16 +20,18 @@ public:
 	download_prep();
 
 	//must be called before any other member function
-	void init(volatile bool * download_complete_in);
+	void init(volatile int * download_complete_in);
 
 	/*
 	start_file - creates a download based on download_info_buffer
 	             returns NULL pointer if no download could be created
+	stop       - stops all downloads, does different actions depending on download type
 	*/
-	download * start_file(DB_access::download_info_buffer & info);
+	download * start_file(DB_access::download_info_buffer & info, std::vector<download_conn *> & servers);
+	download * stop(download * Download);
 
 private:
-	volatile bool * download_complete;
+	volatile int * download_complete;
 	DB_access DB_Access;
 };
 #endif

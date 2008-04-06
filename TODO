@@ -3,9 +3,13 @@ TODO
 -The client_buffer needs to be adjusted to pipeline more when sending commands
 that expect smaller responses.
 
--Get rid of boost::tokenize dependency in DB_access.cc.
+-Hash trees for missing files need to be deleted.
 
--The client is not terminating on GUI close intermittantly.
+-Hashes need to be regenerated for files that have changed size (files hashed
+while they were copying).
+
+-server_index won't terminate promptly if it's in the middle of generating a hash
+tree. Pass a thread termination bool in to the hash tree.
 
 
 DEFERRED FEATURES

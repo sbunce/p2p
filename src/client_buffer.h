@@ -13,7 +13,7 @@
 class client_buffer
 {
 public:
-	client_buffer(int socket_in, std::string & server_IP_in, volatile int * send_pending_in);
+	client_buffer(const int & socket_in, const std::string & server_IP_in, volatile int * send_pending_in);
 	~client_buffer();
 
 	std::string recv_buff; //buffer for partial recvs
@@ -27,9 +27,7 @@ public:
 	post_recv          - does actions which may need to be done after a recv
 	post_send          - does actions which may need to be done after a send
 	prepare_request    - if another request it needed rotate downloads and get a request
-	terminate_download - removes a download_holder from Download which corresponds to hash
-	                     returns true if the it can delete the download or if it doesn't exist
-	                     returns false if the client_buffer is expecting data from the server
+	terminate_download - removes the download which corresponds to hash
 	*/
 	void add_download(download * new_download);
 	bool empty();
@@ -38,7 +36,7 @@ public:
 	void post_recv();
 	void post_send();
 	void prepare_request();
-	bool terminate_download(const std::string & hash);
+	void terminate_download(download * term_DL);
 
 private:
 	std::string server_IP;       //IP associated with this client_buffer
@@ -68,12 +66,6 @@ private:
 	};
 
 	std::deque<pending_response> Pipeline;
-
-	/*
-	Temporary holder for downloads that need to be terminated. This can be due to the user canceling
-	the download or the download completing.
-	*/
-	std::list<download *> Pending_Termination;
 
 	/*
 	rotate_downloads - moves Download_iter through Download in a circular fashion

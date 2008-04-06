@@ -11,23 +11,14 @@
 
 #include "download_file.h"
 
-download_file::download_file(std::string & file_hash_in, std::string & file_name_in, 
-	std::string & file_path_in, unsigned long & file_size_in, unsigned int & latest_request_in,
-	unsigned int & last_block_in, unsigned int & last_block_size_in,
-	volatile bool * download_complete_flag_in)
+download_file::download_file(const std::string & file_hash_in, const std::string & file_name_in, 
+const std::string & file_path_in, const unsigned long & file_size_in, const unsigned int & latest_request_in,
+const unsigned int & last_block_in, const unsigned int & last_block_size_in,
+volatile int * download_file_complete_in)
+: file_hash(file_hash_in), file_name(file_name_in), file_path(file_path_in),
+file_size(file_size_in), last_block(last_block_in), last_block_size(last_block_size_in),
+download_file_complete(download_file_complete_in), download_complete(false)
 {
-	//non-defaults
-	file_hash = file_hash_in;
-	file_name = file_name_in;
-	file_path = file_path_in;
-	file_size = file_size_in;
-	last_block = last_block_in;
-	last_block_size = last_block_size_in;
-	download_complete_flag = download_complete_flag_in;
-
-	//defaults
-	download_complete = false;
-
 	SHA.init(global::HASH_TYPE);
 	Request_Gen.init(latest_request_in, last_block, global::TIMEOUT);
 }
@@ -49,7 +40,7 @@ const std::string & download_file::name()
 
 unsigned int download_file::percent_complete()
 {
-	return (int)(((Request_Gen.highest_request() * global::P_BLS_SIZE)/(float)file_size)*100);
+	return (unsigned int)(((Request_Gen.highest_request() * global::P_BLS_SIZE)/(float)file_size)*100);
 }
 
 bool download_file::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected)
@@ -71,8 +62,7 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 	int size;
 	if(conn->latest_request.back() == last_block){
 		size = last_block_size;
-	}
-	else{
+	}else{
 		size = global::P_BLS_SIZE;
 	}
 
@@ -95,8 +85,7 @@ void download_file::response(const int & socket, std::string block)
 		//a block was received
 		block.erase(0, 1); //trim command
 		response_BLS(socket, block);
-	}
-	else if(block[0] == global::P_DNE){
+	}else if(block[0] == global::P_DNE){
 		//server doesn't yet have this block
 /*
 DEBUG, the server has to be made unready for a certain time. This will have to
@@ -107,8 +96,7 @@ do with waiting until the server has the block.
 		download_file_conn * conn = (download_file_conn *)iter->second;
 
 		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"received P_DNE from ",conn->server_IP);
-	}
-	else if(block[0] == global::P_FNF){
+	}else if(block[0] == global::P_FNF){
 		//server is reporting that it doesn't have the file
 
 //DEBUG, need to delete the IP/file ID associated from this file
@@ -117,8 +105,7 @@ do with waiting until the server has the block.
 		download_file_conn * conn = (download_file_conn *)iter->second;
 
 		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"received P_FNF from ",conn->server_IP);
-	}
-	else{
+	}else{
 		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"client_buffer passed a bad command");
 	}
 }
@@ -145,7 +132,7 @@ void download_file::response_BLS(const int & socket, std::string & block)
 	//check if the download is complete
 	if(Request_Gen.complete()){
 		download_complete = true;
-		*download_complete_flag = true;
+		++(*download_file_complete);
 	}
 }
 
@@ -155,7 +142,7 @@ void download_file::stop()
 	download_complete = true;
 	fs::path path = fs::system_complete(fs::path(file_path, fs::native));
 	fs::remove(path);
-	*download_complete_flag = true;
+	++(*download_file_complete);
 }
 
 void download_file::write_block(unsigned int block_number, std::string & block)
@@ -164,8 +151,7 @@ void download_file::write_block(unsigned int block_number, std::string & block)
 	if(fout.is_open()){
 		fout.seekp(block_number * (global::P_BLS_SIZE - 1), std::ios::beg);
 		fout.write(block.c_str(), block.size());
-	}
-	else{
+	}else{
 		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"error opening file");
 	}
 }

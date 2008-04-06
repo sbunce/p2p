@@ -6,9 +6,6 @@
 #ifndef H_DB_ACCESS
 #define H_DB_ACCESS
 
-//boost
-#include <boost/tokenizer.hpp>
-
 //sqlite
 #include <sqlite3.h>
 
@@ -31,11 +28,8 @@ public:
 	{
 	public:
 		download_info_buffer()
-		{
-			//defaults which don't need to be set on new downloads
-			resumed = false;
-			latest_request = 0;
-		}
+		: resumed(false), latest_request(0)
+		{}
 
 		bool resumed; //if this info_buffer is being used to resume a download
 

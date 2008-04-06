@@ -728,9 +728,3 @@ const std::string & sha::string_raw_hash()
 	m_strRawHash.assign((const char *)m_digest, hash_len);
 	return m_strRawHash;
 }
-
-const int & sha::hash_length()
-{
-	return hash_len;
-}
-

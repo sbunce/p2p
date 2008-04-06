@@ -67,7 +67,7 @@ download_file_conn.o: download_file_conn.cc download_file_conn.h \
 	$(CC) download_file_conn.cc
 
 download_hash_tree.o: download_hash_tree.cc download_hash_tree.h download.h \
-	hash_tree.h $(GLOBAL)
+	hash_tree.h sha.h $(GLOBAL)
 	$(CC) download_hash_tree.cc
 
 download_prep.o: download_prep.cc download_prep.h DB_access.h download.h \

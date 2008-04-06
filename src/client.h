@@ -18,6 +18,7 @@
 #include <errno.h>
 
 //std
+#include <deque>
 #include <ctime>
 #include <list>
 #include <map>
@@ -41,6 +42,12 @@ public:
 	class info_buffer
 	{
 	public:
+		info_buffer(const std::string & hash_in, const std::string & file_name_in,
+		const int & file_size_in, const int & speed_in, const int & percent_complete_in)
+		: hash(hash_in), file_name(file_name_in), file_size(file_size_in),
+		speed(speed_in), percent_complete(percent_complete_in)
+		{}
+
 		std::string hash;
 		std::vector<std::string> server_IP;
 		std::string file_name;
@@ -76,7 +83,7 @@ private:
 	time_t previous_time;
 
 	//holds connections which need to be made
-	std::queue<download_conn *> Connection_Queue;
+	std::deque<download_conn *> Connection_Queue;
 	std::list<download_conn *> Connection_Current_Attempt;
 
 	/*
@@ -87,7 +94,7 @@ private:
 	no particular order.
 
 	Access to both of these must be locked with the same mutex
-	(CB_D_mutex).
+	(CB_DB_mutex).
 	*/
 	std::map<int, client_buffer *> Client_Buffer;
 	std::list<download *> Download_Buffer;
@@ -108,32 +115,46 @@ private:
 	volatile int * send_pending;
 
 	//true if a download is complete, handed to all downloads
-	volatile bool * download_complete;
+	volatile int * download_complete;
 
 	//used to initiate new connections
 	thread_pool<client> Thread_Pool;
 
 	/*
-	check_timeouts   - checks all servers to see if they've timed out and removes/disconnects if they have
-	disconnect       - disconnects a socket, modifies Client_Buffer
-	main_thread      - main client thread that sends/receives data and triggers events
-	new_conn         - create a connection with a server, modifies Client_Buffer
-	new_conn_block_concurrent - if two download_conn's with the same IP pass the second one gets blocked until new_conn_unblock called with first one
-	prepare_requests - touches each Client_Buffer element to trigger new requests(if needed)
-	remove_complete  - removes downloads that are complete(or stopped)
+	check_timeouts      - checks all servers to see if they've timed out and removes/disconnects if they have
+	DC_add_existing     - tries to add a DC to an existing client_buffer
+	                      returns true if succeeded, else false
+	DC_block_concurrent - will block the second or greater DC that passes with the same server_IP
+	                      lets a new DC by whenever the DC blocking is unblocked with DC_unblock
+	DC_unblock          - allows DC_block_concurrent to release a DC being blocked
+	disconnect          - disconnects a socket, modifies Client_Buffer
+	main_thread         - main client thread that sends/receives data and triggers events
+	new_conn            - connects to the server specified by the DC
+	prepare_requests    - touches each Client_Buffer element to trigger new requests(if needed)
+	process_CQ          - connects to servers for DC's or initiates adding a DC to existing client_buffer
+	                      one Thread_Pool job should be scheduled for each DC in Connection_Queue
+	remove_complete     - removes downloads that are complete(or stopped)
 	*/
 	void check_timeouts();
+	bool DC_add_existing(download_conn * DC);
+	void DC_block_concurrent(download_conn * DC);
+	void DC_unblock(download_conn * DC);
 	inline void disconnect(const int & socket_FD);
 	void main_thread();
-	void new_conn();
-	void new_conn_block_concurrent(download_conn * DC);
-	void new_conn_unblock(download_conn * DC);
+	void new_conn(download_conn * DC);
 	void prepare_requests();
+	void process_CQ();
 	void remove_complete();
 
 	//each mutex names the object it locks in the format boost::mutex <object>Mutex
-	boost::mutex CB_D_mutex; //for both Client_Buffer and Download_Buffer
-	boost::mutex DC_mutex;   //locks access to download_conn instances
+	boost::mutex CB_DB_mutex; //for both Client_Buffer and Download_Buffer
+	boost::mutex DC_mutex;    //locks access to download_conn instances
+
+	/*
+	The gethostbyname() name resolving function is not thread-safe. Without this
+	you sometimes get garbled addresses returned.
+	*/
+	boost::mutex gethostbyname_mutex;
 
 	sha SHA;
 	DB_access DB_Access;

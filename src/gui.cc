@@ -457,8 +457,7 @@ bool gui::download_info_refresh()
 			std::ostringstream file_size_s;
 			if(file_size < 1){
 				file_size_s << std::setprecision(2) << file_size << " mB";
-			}
-			else{
+			}else{
 				file_size_s << (int)file_size << " mB";
 			}
 
@@ -507,8 +506,7 @@ bool gui::download_info_refresh()
 		//if download info wasn't found for row delete it
 		if(!downloadFound){
 			Children_iter_cur = downloadList->erase(Children_iter_cur);
-		}
-		else{
+		}else{
 			++Children_iter_cur;
 		}
 	}
@@ -613,8 +611,7 @@ bool gui::upload_info_refresh()
 			std::ostringstream file_size_s;
 			if(file_size < 1){
 				file_size_s << std::setprecision(2) << file_size << " mB";
-			}
-			else{
+			}else{
 				file_size_s << (int)file_size << " mB";
 			}
 
@@ -666,8 +663,7 @@ bool gui::upload_info_refresh()
 		//if upload info wasn't found for row delete it
 		if(!upload_found){
 			Children_iter_cur = uploadList->erase(Children_iter_cur);
-		}
-		else{
+		}else{
 			++Children_iter_cur;
 		}
 	}
@@ -742,8 +738,7 @@ void gui::search_info_refresh()
 		std::ostringstream file_size_s;
 		if(file_size < 1){
 			file_size_s << std::setprecision(2) << file_size << " mB";
-		}
-		else{
+		}else{
 			file_size_s << (int)file_size << " mB";
 		}
 
@@ -776,8 +771,7 @@ bool gui::update_status_bar()
 
 	if(Server.is_indexing()){
 		status = "  D: " + clientSpeed_s.str() + " U: " + serverSpeed_s.str() + "  Hashing ";
-	}
-	else{
+	}else{
 		status = "  D: " + clientSpeed_s.str() + " U: " + serverSpeed_s.str();
 	}
 

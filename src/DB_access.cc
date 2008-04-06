@@ -3,6 +3,7 @@
 #include <boost/filesystem/path.hpp>
 
 //std
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -194,20 +195,20 @@ void DB_access::download_initial_fill_buff_call_back(int & columns_retrieved, ch
 		unsigned int currentBytes = fs::file_size(path_boost);
 		IB.latest_request = currentBytes / (global::P_BLS_SIZE - 1); //(global::P_BLS_SIZE - 1) because control size is 1 byte
 
-		std::string undelim_server_IP(query_response[3]);
-		std::string undelim_file_ID(query_response[4]);
-
-		boost::char_separator<char> sep(","); //delimiter for servers and file_IDs
-		boost::tokenizer<boost::char_separator<char> > server_IP_tokens(undelim_server_IP, sep);
-		boost::tokenizer<boost::char_separator<char> >::iterator server_IP_iter = server_IP_tokens.begin();
-		while(server_IP_iter != server_IP_tokens.end()){
-			IB.server_IP.push_back(*server_IP_iter++);
+		//get servers
+		char delims[] = ",";
+		char * result = NULL;
+		result = strtok(query_response[3], delims);
+		while(result != NULL){
+			IB.server_IP.push_back(result);
+			result = strtok(NULL, delims);
 		}
 
-		boost::tokenizer<boost::char_separator<char> > file_ID_tokens(undelim_file_ID, sep);
-		boost::tokenizer<boost::char_separator<char> >::iterator file_ID_iter = file_ID_tokens.begin();
-		while(file_ID_iter != file_ID_tokens.end()){
-			IB.file_ID.push_back(*file_ID_iter++);
+		//get file_ID's associated with servers
+		result = strtok(query_response[4], delims);
+		while(result != NULL){
+			IB.file_ID.push_back(result);
+			result = strtok(NULL, delims);
 		}
 
 		download_initial_fill_buff_resumed_download.push_back(IB);
@@ -302,18 +303,20 @@ void DB_access::search_call_back(int & columns_retrieved, char ** query_response
 	temp.file_name.append(query_response[1]);
 	temp.file_size.append(query_response[2]);
 
-	std::string undelim_server_IP(query_response[3]);
-	std::string undelim_file_ID(query_response[4]);
+	//get servers
+	char delims[] = ",";
+	char * result = NULL;
+	result = strtok(query_response[3], delims);
+	while(result != NULL){
+		temp.server_IP.push_back(result);
+		result = strtok(NULL, delims);
+	}
 
-	boost::char_separator<char> sep(",");
-	boost::tokenizer<boost::char_separator<char> > server_IP_tokens(undelim_server_IP, sep);
-	boost::tokenizer<boost::char_separator<char> >::iterator server_IP_iter = server_IP_tokens.begin();
-	boost::tokenizer<boost::char_separator<char> > file_ID_tokens(undelim_file_ID, sep);
-	boost::tokenizer<boost::char_separator<char> >::iterator file_ID_iter = file_ID_tokens.begin();	
-
-	while(server_IP_iter != server_IP_tokens.end()){
-		temp.server_IP.push_back(*server_IP_iter++);
-		temp.file_ID.push_back(*file_ID_iter++);
+	//get file file_ID's associated with servers
+	result = strtok(query_response[4], delims);
+	while(result != NULL){
+		temp.file_ID.push_back(result);
+		result = strtok(NULL, delims);
 	}
 
 	search_results.push_back(temp);

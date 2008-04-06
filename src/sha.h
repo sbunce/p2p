@@ -39,6 +39,7 @@ sol-biotech.com/code.
 #ifndef H_SHA2
 #define H_SHA2
 
+//std
 #include <stdexcept>
 
 //NOTE: You may need to define things by hand for your system:
@@ -90,7 +91,7 @@ public:
 	};
 	const char * GetTypeString()
 	{
-		switch (m_Type){
+		switch(m_Type){
 		case sha::enuSHA1	: return "SHA160";
 		case sha::enuSHA224 : return "SHA224";
 		case sha::enuSHA256 : return "SHA256";
@@ -99,6 +100,18 @@ public:
 		default : return "Unknown!";
 		}
 	};
+
+	static int hash_length(SHA_TYPE type)
+	{
+		switch(type){
+		case sha::enuSHA1	: return 20;
+		case sha::enuSHA224 : return 28;
+		case sha::enuSHA256 : return 32;
+		case sha::enuSHA384 : return 48;
+		case sha::enuSHA512 : return 64;
+		default : return 0;
+		}
+	}
 
 	/*
 	These three functions can be called in order to calculate a hash for multiple
@@ -121,9 +134,6 @@ public:
 	const char * raw_hash();
 	const char * raw_hash_no_null();
 	const std::string & string_raw_hash();
-
-	//returns how many bytes the binary representation of the hash takes up
-	const int & hash_length();
 
 private:
 	SHA_TYPE m_Type;
@@ -207,7 +217,7 @@ private:
 	#ifdef _VC6
 	inline void REVERSE64(sha_word64 w, sha_word64 &x){
 		w = (w >> 32) | (w << 32);
-		w =   ((w & 0xff00ff00ff00ff00ui64) >> 8) |
+		w = ((w & 0xff00ff00ff00ff00ui64) >> 8) |
 			((w & 0x00ff00ff00ff00ffui64) << 8);
 			(x) = ((w & 0xffff0000ffff0000ui64) >> 16) |
 			((w & 0x0000ffff0000ffffui64) << 16);
@@ -215,7 +225,7 @@ private:
 	#else
 	inline void REVERSE64(sha_word64 w, sha_word64 &x){
 		w = (w >> 32) | (w << 32);
-		w =   ((w & 0xff00ff00ff00ff00ULL) >> 8) |
+		w = ((w & 0xff00ff00ff00ff00ULL) >> 8) |
 			((w & 0x00ff00ff00ff00ffULL) << 8);
 			(x) = ((w & 0xffff0000ffff0000ULL) >> 16) |
 			((w & 0x0000ffff0000ffffULL) << 16);

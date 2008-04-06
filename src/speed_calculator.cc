@@ -6,12 +6,10 @@
 #include "speed_calculator.h"
 
 speed_calculator::speed_calculator()
+: average_speed(0), rate_control_count(0), rate_control_damper(0), rate_control_try_speed(0),
+rate_control_try_time(time(0))
 {
-	average_speed = 0;
-	rate_control_count = 0;
-	rate_control_damper = 0;
-	rate_control_try_speed = 0;
-	rate_control_try_time = time(0);
+
 }
 
 unsigned int speed_calculator::speed()
@@ -39,8 +37,7 @@ void speed_calculator::update(const unsigned int & byte_count)
 	if(Second_Bytes.front().first != current_time){
 		//on a new second
 		Second_Bytes.push_front(std::make_pair(current_time, byte_count));
-	}
-	else{
+	}else{
 		Second_Bytes.front().second += byte_count;
 	}
 
@@ -64,8 +61,7 @@ void speed_calculator::update(const unsigned int & byte_count)
 	boost::mutex::scoped_lock lock(AS_mutex);
 	if(count != 0){
 		average_speed = total_bytes / count;
-	}
-	else{
+	}else{
 		average_speed = 0;
 	}
 	}//end lock scope
@@ -106,8 +102,7 @@ unsigned int speed_calculator::rate_control(const int & rate, int max_possible_t
 		//there is a bias toward speeding up
 		if(average_speed >= rate_control_try_speed){
 			rate_control_damper -= 1;
-		}
-		else{
+		}else{
 			rate_control_damper += 2;
 		}
 
@@ -118,8 +113,7 @@ unsigned int speed_calculator::rate_control(const int & rate, int max_possible_t
 	//damper = 1 means that there is always a sleep, it should not go below 1
 	if(rate_control_damper < 1){
 		rate_control_damper = 1;
-	}
-	else if(rate_control_damper > 100){
+	}else if(rate_control_damper > 100){
 		//reasonable limit for rate_control_damper
 		rate_control_damper = 100;
 	}

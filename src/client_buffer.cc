@@ -6,15 +6,13 @@
 
 #include "client_buffer.h"
 
-client_buffer::client_buffer(int socket_in, std::string & server_IP_in, volatile int * send_pending_in)
+client_buffer::client_buffer(const int & socket_in, const std::string & server_IP_in,
+volatile int * send_pending_in)
+: server_IP(server_IP_in), socket(socket_in), send_pending(send_pending_in),
+abuse(false), last_seen(time(0))
 {
-	socket = socket_in;
-	server_IP = server_IP_in;
-	send_pending = send_pending_in;
 	recv_buff.reserve(global::C_MAX_SIZE);
 	send_buff.reserve(global::S_MAX_SIZE);
-	abuse = false;
-	last_seen = time(0);
 }
 
 client_buffer::~client_buffer()
@@ -62,7 +60,7 @@ void client_buffer::post_recv()
 	}
 
 	while(true){
-		//find out how many bytes are expected for the command the server sent
+		//find out how many bytes are expected for this command
 		std::vector<std::pair<char, int> >::iterator iter_cur, iter_end;
 		iter_cur = Pipeline.front().expected.begin();
 		iter_end = Pipeline.front().expected.end();
@@ -74,20 +72,27 @@ void client_buffer::post_recv()
 		}
 
 		if(iter_cur != iter_end){
-			//not enough bytes yet received for command
+			//not enough bytes yet received to fulfill download's request
 			if(recv_buff.size() < iter_cur->second){
 				break;
 			}
-		}
-		else if(iter_cur == iter_end){
+		}else if(iter_cur == iter_end){
 			//command not found, server sent unexpected command
 			global::debug_message(global::ERROR,__FILE__,__FUNCTION__,"abusive server (incorrect length of command) ", server_IP);
 			abuse = true;
 			return;
 		}
 
-		Pipeline.front().Download->response(socket, recv_buff.substr(0, iter_cur->second));
-		recv_buff.erase(0, iter_cur->second);
+		if(Pipeline.front().Download == NULL){
+			//terminated download detected, discard response
+			recv_buff.erase(0, iter_cur->second);
+
+		}else{
+			//pass response to download
+			Pipeline.front().Download->response(socket, recv_buff.substr(0, iter_cur->second));
+			recv_buff.erase(0, iter_cur->second);
+		}
+
 		Pipeline.pop_front();
 
 		if(Pipeline.empty() || recv_buff.size() == 0){
@@ -139,76 +144,36 @@ void client_buffer::rotate_downloads()
 	}
 }
 
-bool client_buffer::terminate_download(const std::string & hash)
+void client_buffer::terminate_download(download * term_DL)
 {
 	/*
-	Case 1:
-	The download was put in the Pending_Termination container because there were still
-	bytes expected for it. Check to see if still expecting bytes, if not then terminate
-	the download.
+	If this download is in the Pipeline set the download pointer to NULL to
+	indicate that incoming data for the download should be discarded.
 	*/
-	std::list<download *>::iterator PT_iter_cur, PT_iter_end;
-	PT_iter_cur = Pending_Termination.begin();
-	PT_iter_end = Pending_Termination.end();
-	while(PT_iter_cur != PT_iter_end){
-		if(hash == (*PT_iter_cur)->hash()){
-			//download already in progress of termination, check pipeline
-			std::deque<pending_response>::iterator P_iter_cur, P_iter_end;
-			P_iter_cur = Pipeline.begin();
-			P_iter_end = Pipeline.end();
-			while(P_iter_cur != P_iter_end){
-				if(hash == P_iter_cur->Download->hash()){
-					//download found in pipeline, do not terminate yet
-					return false;
-				}
-				++P_iter_cur;
-			}
-			//download not found in Pipeline, terminate
-			(*PT_iter_cur)->unreg_conn(socket);
-			Pending_Termination.erase(PT_iter_cur);
-			return true;
+	std::deque<pending_response>::iterator P_iter_cur, P_iter_end;
+	P_iter_cur = Pipeline.begin();
+	P_iter_end = Pipeline.end();
+	while(P_iter_cur != P_iter_end){
+		if(P_iter_cur->Download == term_DL){
+			P_iter_cur->Download = NULL;
 		}
-		++PT_iter_cur;
+		++P_iter_cur;
 	}
 
-	/*
-	Case 2:
-	The download is not in Pending_Termination so this is the first attempt to terminate
-	the download. Find the download and check to see if it is in the Pipeline. If the download
-	is in the Pipeline then move it to Pending_Termination and erase if from the Download
-	container. If the download is not in the Pipeline then delete it from Download.
-	*/
+	//remove the download
 	std::list<download *>::iterator D_iter_cur, D_iter_end;
 	D_iter_cur = Download.begin();
 	D_iter_end = Download.end();
 	while(D_iter_cur != D_iter_end){
-		if(hash == (*D_iter_cur)->hash()){
-			//check to see if download is in the Pipeline
-			std::deque<pending_response>::iterator P_iter_cur, P_iter_end;
-			P_iter_cur = Pipeline.begin();
-			P_iter_end = Pipeline.end();
-			while(P_iter_cur != P_iter_end){
-				if(hash == P_iter_cur->Download->hash()){
-					//download found in pipeline
-					Pending_Termination.push_back(*D_iter_cur);
-					Download.erase(D_iter_cur);
-					Download_iter = Download.begin(); //iterator may have been invalidated
-					return false;
-				}
-				++P_iter_cur;
-			}
-
-			//download not found in Pipeline, terminate
-			(*D_iter_cur)->unreg_conn(socket);
-			Download.erase(D_iter_cur);
-			Download_iter = Download.begin(); //iterator may have been invalidated
-			return true;
+		if(*D_iter_cur == term_DL){
+			D_iter_cur = Download.erase(D_iter_cur);
+		}else{
+			++D_iter_cur;
 		}
-		++D_iter_cur;
 	}
 
-	//the download is not registered with this client_buffer
-	return true;
+	//reset Download_iter since it was invalidated
+	Download_iter = Download.begin();
 }
 
 void client_buffer::unreg_all()
@@ -221,4 +186,3 @@ void client_buffer::unreg_all()
 		++iter_cur;
 	}
 }
-

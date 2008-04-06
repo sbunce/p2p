@@ -13,7 +13,7 @@
 class download_file_conn : public download_conn
 {
 public:
-	download_file_conn(download * download_in, std::string server_IP_in, unsigned int file_ID_in);
+	download_file_conn(download * download_in, const std::string & server_IP_in, const unsigned int & file_ID_in);
 
 	//the file_ID on the server (different servers have different ID for same file)
 	unsigned int file_ID;

@@ -18,7 +18,10 @@ class download_conn
 public:
 	download_conn();
 
-	std::string server_IP; //must be present in all derived classes
-	download * Download;   //the download this connection is associated with
+	//socket and server_IP this download_conn is associated with
+	int socket_FD;
+	std::string server_IP;
+
+	download * Download;
 };
 #endif

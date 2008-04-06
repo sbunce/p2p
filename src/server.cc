@@ -10,12 +10,8 @@
 #include "server.h"
 
 server::server()
+: connections(0), send_pending(0), stop_threads(false), total_speed(0), threads(0)
 {
-	connections = 0;
-	send_pending = 0;
-	stop_threads = false;
-	total_speed = 0;
-	threads = 0;
 	FD_ZERO(&master_FDS);
 	Server_Index.start();
 }
@@ -78,8 +74,7 @@ void server::calculate_speed_file(std::string & client_IP, const unsigned int & 
 		if(iter_cur->client_IP == client_IP && iter_cur->file_ID == file_ID){
 			if(iter_cur->Speed.back().first == current_time){
 				iter_cur->Speed.back().second += global::P_BLS_SIZE;
-			}
-			else{
+			}else{
 				iter_cur->Speed.push_back(std::make_pair(current_time, global::P_BLS_SIZE));
 			}
 
@@ -128,8 +123,7 @@ bool server::get_upload_info(std::vector<info_buffer> & upload_info)
 	while(iter_cur != iter_end){
 		if(iter_cur->Speed.back().first < (int)current_time - global::COMPLETE_REMOVE){
 			iter_cur = Upload_Speed.erase(iter_cur);
-		}
-		else{
+		}else{
 			++iter_cur;
 		}
 	}
@@ -304,8 +298,7 @@ void server::main_thread()
 					exit(1);
 				}
 			}
-		}
-		else{
+		}else{
 			FD_ZERO(&write_FDS);
 			read_FDS = master_FDS;
 			if((select(FD_max+1, &read_FDS, NULL, NULL, NULL)) == -1){
@@ -321,15 +314,13 @@ void server::main_thread()
 			if(FD_ISSET(socket_FD, &read_FDS)){
 				if(socket_FD == listener){ //new client connected
 					new_conn(socket_FD);
-				}
-				else{ //existing socket sending data
+				}else{ //existing socket sending data
 					if((n_bytes = recv(socket_FD, recv_buff, global::S_MAX_SIZE*global::PIPELINE_SIZE, 0)) <= 0){
 						if(n_bytes == -1){
 							perror("server recv");
 						}
 						disconnect(socket_FD);
-					}
-					else{ //incoming data from client socket
+					}else{ //incoming data from client socket
 						process_request(socket_FD, recv_buff, n_bytes);
 					}
 				}
@@ -347,8 +338,7 @@ void server::main_thread()
 							perror("server send");
 						}
 						disconnect(socket_FD);
-					}
-					else{ //remove bytes sent from buffer
+					}else{ //remove bytes sent from buffer
 						Speed_Calculator.update(n_bytes);
 						SB_iter->second.buff.erase(0, n_bytes);
 						if(SB_iter->second.buff.empty()){
@@ -391,8 +381,7 @@ void server::prepare_file_block(std::map<int, send_buff_element>::iterator & SB_
 		fin.read(prepare_file_block_buff, global::P_BLS_SIZE - 1);
 		SB_iter->second.buff.append(prepare_file_block_buff, fin.gcount());
 		fin.close();
-	}
-	else{
+	}else{
 		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"could not open file \"",file_path,"\"");
 	}
 
@@ -419,8 +408,7 @@ void server::process_request(const int & socket_FD, char recv_buff[], const int 
 	bool empty_buff;
 	if(SB_iter->second.buff.size() == 0){
 		empty_buff = true;
-	}
-	else{
+	}else{
 		empty_buff = false;
 	}
 
@@ -431,8 +419,7 @@ void server::process_request(const int & socket_FD, char recv_buff[], const int 
 			unsigned int block_number = Conversion.decode_int(RB_iter->second.substr(5,4));
 			prepare_file_block(SB_iter, socket_FD, file_ID, block_number);
 			RB_iter->second.erase(0, global::P_SBL_SIZE);
-		}
-		else{
+		}else{
 			break;
 		}
 	}
@@ -454,10 +441,8 @@ void server::stop()
 
 	//get select() to return if it's blocking
 	raise(SIGINT);
-
 	while(threads){
 		usleep(global::SPINLOCK_TIME);
 	}
-
 	Server_Index.stop();
 }

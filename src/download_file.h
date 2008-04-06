@@ -20,13 +20,13 @@ class download_file : public download
 {
 public:
 	/*
-	Download_complete_flag is a special bool used to signal that the client
+	download_file_complete is a special bool used to signal that the client
 	should check for the presence of a completed download.
 	*/
-	download_file(std::string & file_hash_in, std::string & file_name_in, 
-		std::string & file_path_in, unsigned long & file_size_in,
-		unsigned int & latest_request_in, unsigned int & last_block_in,
-		unsigned int & last_block_size_in, volatile bool * download_complete_flag_in);
+	download_file(const std::string & file_hash_in, const std::string & file_name_in, 
+		const std::string & file_path_in, const unsigned long & file_size_in,
+		const unsigned int & latest_request_in, const unsigned int & last_block_in,
+		const unsigned int & last_block_size_in, volatile int * download_file_complete_in);
 
 	//documentation for virtual functions in abstract base class
 	virtual bool complete();
@@ -53,7 +53,7 @@ private:
 	Tells the client that a download is complete, used when download is complete.
 	Full description in client.h.
 	*/
-	volatile bool * download_complete_flag;
+	volatile int * download_file_complete;
 
 	//true when the download is completed
 	bool download_complete;
@@ -71,4 +71,3 @@ private:
 	sha SHA;
 };
 #endif
-

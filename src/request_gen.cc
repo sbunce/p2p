@@ -5,8 +5,9 @@
 #include "request_gen.h"
 
 request_gen::request_gen()
+: latest_request(0)
 {
-	latest_request = 0;
+
 }
 
 void request_gen::check_re_requests()
@@ -27,8 +28,7 @@ bool request_gen::complete()
 {
 	if(latest_request == max_request && requests.empty() && re_requests.empty()){
 		return true;
-	}
-	else{
+	}else{
 		return false;
 	}
 }
@@ -92,8 +92,7 @@ bool request_gen::new_request(std::deque<unsigned int> & prev_requests)
 		requests.insert(std::make_pair(latest_request, time(0)));
 		++latest_request;
 		return true;
-	}
-	else{
+	}else{
 		return new_request_check_existing(prev_requests);
 	}
 }

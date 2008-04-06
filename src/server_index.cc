@@ -11,25 +11,19 @@
 #include "server_index.h"
 
 server_index::server_index()
+: indexing(false), stop_thread(false), threads(0)
 {
 	//create the share directory if it doesn't exist
 	boost::filesystem::create_directory(global::SERVER_SHARE_DIRECTORY);
-
-	indexing = false;
-	stop_thread = false;
-	threads = 0;
 }
 
 void server_index::index_share_recurse(std::string directory_name)
 {
 	namespace fs = boost::filesystem;
-
 	fs::path full_path = fs::system_complete(fs::path(directory_name, fs::native));
 
 	if(!fs::exists(full_path)){
-#ifdef DEBUG
-		std::cout << "error: fileIndex::index_share(): can't locate " << full_path.string() << "\n";
-#endif
+		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"can't locate ", full_path.string());
 		return;
 	}
 
@@ -42,24 +36,18 @@ void server_index::index_share_recurse(std::string directory_name)
 					std::string sub_directory;
 					sub_directory = directory_name + directory_iter->leaf() + "/";
 					index_share_recurse(sub_directory);
-				}
-				else{
+				}else{
 					//determine size
 					fs::path file_path = fs::system_complete(fs::path(directory_name + directory_iter->leaf(), fs::native));
 					DB_Access.share_add_entry(fs::file_size(file_path), file_path.string());
 				}
 			}
 			catch(std::exception & ex){
-#ifdef DEBUG
-				std::cout << "error: server_index::index_share_recurse(): file " << directory_iter->leaf() << " caused exception " << ex.what() << "\n";
-#endif
+				global::debug_message(global::INFO,__FILE__,__FUNCTION__,"when trying to read file ",directory_iter->leaf()," caught exception ",ex.what());
 			}
 		}
-	}
-	else{
-#ifdef DEBUG
-		std::cout << "error: fileIndex::index_share(): index points to file when it should point at directory\n";    
-#endif
+	}else{
+		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"index location is a file when it needs to be a directory");
 	}
 
 	return;
@@ -88,7 +76,6 @@ void server_index::index_share()
 
 		sleep(1);
 		++seconds_slept;
-
 		if(seconds_slept > global::SHARE_REFRESH){
 			seconds_slept = 0;
 			indexing = true;
@@ -104,8 +91,7 @@ void server_index::index_share()
 void server_index::start()
 {
 	if(threads != 0){
-		std::cout << "fatal error: server_index::start(): cannot start multiple indexing threads\n";
-		exit(1);
+		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"attempted to start the indexing thread twice");
 	}
 
 	boost::thread T(boost::bind(&server_index::index_share, this));

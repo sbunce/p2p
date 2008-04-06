@@ -17,8 +17,7 @@ std::string conversion::encode_int(const unsigned int & number)
 		encoded[1] = IC.byte[2];
 		encoded[2] = IC.byte[1];
 		encoded[3] = IC.byte[0];
-	}
-	else{
+	}else{
 		encoded[0] = IC.byte[0];
 		encoded[1] = IC.byte[1];
 		encoded[2] = IC.byte[2];
@@ -38,14 +37,12 @@ unsigned int conversion::decode_int(std::string encoded)
 	#endif
 
 	int_char IC;
-
 	if(ENDIANNESS == LITTLE_ENDIAN_ENUM){
 		IC.byte[0] = (unsigned char)encoded[3];
 		IC.byte[1] = (unsigned char)encoded[2];
 		IC.byte[2] = (unsigned char)encoded[1];
 		IC.byte[3] = (unsigned char)encoded[0];
-	}
-	else{
+	}else{
 		IC.byte[0] = (unsigned char)encoded[0];
 		IC.byte[1] = (unsigned char)encoded[1];
 		IC.byte[2] = (unsigned char)encoded[2];
@@ -58,11 +55,9 @@ unsigned int conversion::decode_int(std::string encoded)
 conversion::endianness conversion::check_endianness()
 {
 	int_char IC = { 1U };
-
 	if(IC.byte[0] == 1U){
 		return LITTLE_ENDIAN_ENUM;
-	}
-	else{
+	}else{
 		return BIG_ENDIAN_ENUM;
 	}
 }
