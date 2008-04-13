@@ -36,6 +36,8 @@ class server
 public:
 	server();
 
+
+//DEBUG, all this junk should be stored in the buffer
 	//used to pass information to user interface
 	class info_buffer
 	{
@@ -74,6 +76,33 @@ public:
 	void stop();
 
 private:
+
+
+//new junk
+	class buffer
+	{
+	public:
+		buffer(std::string client_IP_in)
+		: client_IP(client_IP_in)
+		{
+			send_buff.reserve(global::C_MAX_SIZE * global::PIPELINE_SIZE);
+			recv_buff.reserve(global::S_MAX_SIZE * global::PIPELINE_SIZE);
+		}
+
+		std::string client_IP;
+		std::string send_buff, recv_buff;
+
+		/*
+		Stores file ID's and hash ID's that have been assigned to the client. The
+		char will store a number from 0-255.
+		*/
+		std::map<char, std::string> ID;
+	};
+
+
+
+
+
 	//holds data associated with a connection
 	class send_buff_element
 	{
@@ -143,7 +172,7 @@ private:
 	volatile int send_pending;
 
 	//buffer for reading file blocks from the HDD
-	char prepare_file_block_buff[global::P_BLS_SIZE - 1];
+	char prepare_file_block_buff[global::P_BLOCK_SIZE - 1];
 
 	/*
 	disconnect         - disconnect client and remove socket from master set

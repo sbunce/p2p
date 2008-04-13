@@ -2,7 +2,7 @@
 #define H_DOWNLOAD_PREP
 
 //std
-#include <vector>
+#include <list>
 
 //download types
 #include "download.h"
@@ -24,11 +24,13 @@ public:
 
 	/*
 	start_file - creates a download based on download_info_buffer
-	             returns NULL pointer if no download could be created
+	             returns false if download already running, else true and Download set and servers filled
 	stop       - stops all downloads, does different actions depending on download type
+	             returns false if no download needs to be started in response to the download stopping
+	             if true then Download_start will be set and servers filled
 	*/
-	download * start_file(DB_access::download_info_buffer & info, std::vector<download_conn *> & servers);
-	download * stop(download * Download);
+	bool start_file(DB_access::download_info_buffer & info, download *& Download, std::list<download_conn *> & servers);
+	bool stop(download * Download_stop, download *& Download_start, std::list<download_conn *> & servers);
 
 private:
 	volatile int * download_complete;

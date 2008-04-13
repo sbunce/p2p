@@ -28,6 +28,8 @@ const std::string & file_name, volatile bool * download_complete_flag_in)
 
 bool download_hash_tree::complete()
 {
+
+//DEBUG, bad idea to do a hash check here, it wastes compute time and nothing done with results
 	std::pair<unsigned long, unsigned long> bad_hash;
 	return !Hash_Tree.check_hash_tree(root_hash, hash_tree_count, bad_hash);
 }
@@ -35,6 +37,11 @@ bool download_hash_tree::complete()
 const std::string & download_hash_tree::hash()
 {
 	return root_hash;
+}
+
+unsigned int download_hash_tree::max_response_size()
+{
+	//figure this out
 }
 
 const std::string & download_hash_tree::name()

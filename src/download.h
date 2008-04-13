@@ -42,11 +42,12 @@ public:
 	virtual bool complete() = 0;
 	virtual const std::string & hash() = 0;
 	virtual void IP_list(std::vector<std::string> & list);
+	virtual unsigned int max_response_size() = 0;
 	virtual const std::string & name() = 0;
 	virtual unsigned int percent_complete() = 0;
 	virtual bool request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected) = 0;
 	virtual void response(const int & socket, std::string block) = 0;
-	virtual const unsigned int speed();
+	virtual unsigned int speed();
 	virtual void stop() = 0;
 	virtual const unsigned long & total_size() = 0;
 

@@ -15,7 +15,7 @@ hash_tree::hash_tree()
 
 	SHA.init(global::HASH_TYPE);
 	hash_len = sha::hash_length(global::HASH_TYPE);
-	block_size = global::P_BLS_SIZE - 1;
+	block_size = global::P_BLOCK_SIZE - 1;
 }
 
 bool hash_tree::check_exists(std::string root_hash)

@@ -33,6 +33,11 @@ const std::string & download_file::hash()
 	return file_hash;
 }
 
+unsigned int download_file::max_response_size()
+{
+	return global::P_BLOCK_SIZE;
+}
+
 const std::string & download_file::name()
 {
 	return file_name;
@@ -40,7 +45,7 @@ const std::string & download_file::name()
 
 unsigned int download_file::percent_complete()
 {
-	return (unsigned int)(((Request_Gen.highest_request() * global::P_BLS_SIZE)/(float)file_size)*100);
+	return (unsigned int)(((Request_Gen.highest_request() * global::P_BLOCK_SIZE)/(float)file_size)*100);
 }
 
 bool download_file::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected)
@@ -57,19 +62,19 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 		return false;
 	}
 
-	request = global::P_SBL + Conversion.encode_int(conn->file_ID) + Conversion.encode_int(conn->latest_request.back());
+	request = global::P_SEND_BLOCK + Conversion.encode_int(conn->file_ID) + Conversion.encode_int(conn->latest_request.back());
 
 	int size;
 	if(conn->latest_request.back() == last_block){
 		size = last_block_size;
 	}else{
-		size = global::P_BLS_SIZE;
+		size = global::P_BLOCK_SIZE;
 	}
 
 	//expected response information
-	expected.push_back(std::make_pair(global::P_BLS, size));
-	expected.push_back(std::make_pair(global::P_DNE, global::P_DNE_SIZE));
-	expected.push_back(std::make_pair(global::P_FNF, global::P_FNF_SIZE));
+	expected.push_back(std::make_pair(global::P_BLOCK, size));
+	expected.push_back(std::make_pair(global::P_FILE_DOES_NOT_EXIST, global::P_FILE_DOES_NOT_EXIST_SIZE));
+	expected.push_back(std::make_pair(global::P_FILE_NOT_FOUND, global::P_FILE_NOT_FOUND_SIZE));
 
 	return true;
 }
@@ -81,11 +86,11 @@ void download_file::response(const int & socket, std::string block)
 		return;
 	}
 
-	if(block[0] == global::P_BLS){
+	if(block[0] == global::P_BLOCK){
 		//a block was received
 		block.erase(0, 1); //trim command
 		response_BLS(socket, block);
-	}else if(block[0] == global::P_DNE){
+	}else if(block[0] == global::P_FILE_DOES_NOT_EXIST){
 		//server doesn't yet have this block
 /*
 DEBUG, the server has to be made unready for a certain time. This will have to
@@ -96,7 +101,7 @@ do with waiting until the server has the block.
 		download_file_conn * conn = (download_file_conn *)iter->second;
 
 		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"received P_DNE from ",conn->server_IP);
-	}else if(block[0] == global::P_FNF){
+	}else if(block[0] == global::P_FILE_NOT_FOUND){
 		//server is reporting that it doesn't have the file
 
 //DEBUG, need to delete the IP/file ID associated from this file
@@ -149,7 +154,7 @@ void download_file::write_block(unsigned int block_number, std::string & block)
 {
 	std::fstream fout(file_path.c_str(), std::ios::in | std::ios::out | std::ios::binary);
 	if(fout.is_open()){
-		fout.seekp(block_number * (global::P_BLS_SIZE - 1), std::ios::beg);
+		fout.seekp(block_number * (global::P_BLOCK_SIZE - 1), std::ios::beg);
 		fout.write(block.c_str(), block.size());
 	}else{
 		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"error opening file");

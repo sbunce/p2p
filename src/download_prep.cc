@@ -14,19 +14,19 @@ void download_prep::init(volatile int * download_complete_in)
 	download_complete = download_complete_in;
 }
 
-download * download_prep::start_file(DB_access::download_info_buffer & info, std::vector<download_conn *> & servers)
+bool download_prep::start_file(DB_access::download_info_buffer & info, download *& Download, std::list<download_conn *> & servers)
 {
 	//make sure file isn't already downloading
 	if(!info.resumed){
 		if(!DB_Access.download_start_download(info)){
-			return NULL;
+			return false;
 		}
 	}
 
 	//get file path, stop if file not found
 	std::string file_path;
 	if(!DB_Access.download_get_file_path(info.hash, file_path)){
-		return NULL;
+		return false;
 	}
 
 	//create an empty file for this download, if a file doesn't already exist
@@ -42,10 +42,10 @@ download * download_prep::start_file(DB_access::download_info_buffer & info, std
 	unsigned int latest_request = info.latest_request;
 
 	//(global::P_BLS_SIZE - 1) because control size is 1 byte
-	unsigned int last_block = atol(info.file_size.c_str())/(global::P_BLS_SIZE - 1);
-	unsigned int last_block_size = atol(info.file_size.c_str()) % (global::P_BLS_SIZE - 1) + 1;
+	unsigned int last_block = atol(info.file_size.c_str())/(global::P_BLOCK_SIZE - 1);
+	unsigned int last_block_size = atol(info.file_size.c_str()) % (global::P_BLOCK_SIZE - 1) + 1;
 
-	download * Download = new download_file(
+	Download = new download_file(
 		info.hash,
 		info.file_name,
 		file_path,
@@ -64,16 +64,18 @@ download * download_prep::start_file(DB_access::download_info_buffer & info, std
 		servers.push_back(new download_file_conn(Download, info.server_IP[x], atoi(info.file_ID[x].c_str())));
 	}
 
-	return Download;
+	return true;
 }
 
-download * download_prep::stop(download * Download)
+bool download_prep::stop(download * Download_stop, download *& Download_start, std::list<download_conn *> & servers)
 {
-	if(typeid(*Download) == typeid(download_hash_tree)){
+	if(typeid(*Download_stop) == typeid(download_hash_tree)){
+//DEBUG, need to start a download_file here
 
-	}else if(typeid(*Download) == typeid(download_file)){
-		DB_Access.download_terminate_download(Download->hash());
-		delete Download;
-		return NULL;
+		return true;
+	}else if(typeid(*Download_stop) == typeid(download_file)){
+		DB_Access.download_terminate_download(Download_stop->hash());
+		delete Download_stop;
+		return false;
 	}
 }

@@ -86,8 +86,8 @@ template<class T> void thread_pool<T>::pool()
 {
 	++threads;
 
-	void (T::*memfun_ptr)(); //member function pointer
-	T * Obj;                 //object pointer
+	void (T::*memfun_ptr)();
+	T * Obj;
 
 	while(true){
 
@@ -99,9 +99,7 @@ template<class T> void thread_pool<T>::pool()
 
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(Mutex);
-
 		if(!work_queue.empty()){
-			//this needs to be outside the mutex
 			Obj = work_queue.front().first;
 			memfun_ptr = work_queue.front().second;
 			work_queue.pop();

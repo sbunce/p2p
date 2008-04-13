@@ -21,53 +21,53 @@ public:
 	~gui();
 
 private:
-	class Gtk::Window * window;     //main window
-	class Gtk::MenuBar * menubar;   //main menu, holds Gtk::Menu
-	class Gtk::Notebook * notebook; //main tabs, holds Gtk::Label
+	Gtk::Window * window;     //main window
+	Gtk::MenuBar * menubar;   //main menu, holds Gtk::Menu
+	Gtk::Notebook * notebook; //main tabs, holds Gtk::Label
 
 	//file menu
-	class Gtk::Menu * fileMenu;
-	class Gtk::MenuItem * fileMenuItem;
-	class Gtk::ImageMenuItem * quit;
+	Gtk::Menu * fileMenu;
+	Gtk::MenuItem * fileMenuItem;
+	Gtk::ImageMenuItem * quit;
 
 	//help menu
-	class Gtk::Menu * helpMenu;
-	class Gtk::MenuItem * helpMenuItem;
-	class Gtk::MenuItem * about;
+	Gtk::Menu * helpMenu;
+	Gtk::MenuItem * helpMenuItem;
+	Gtk::MenuItem * about;
 
 	//notebook tabs
-	class Gtk::Label * searchTab;
-	class Gtk::Label * downloadTab;
-	class Gtk::Label * uploadTab;
-	class Gtk::Label * trackerTab;
+	Gtk::Label * searchTab;
+	Gtk::Label * downloadTab;
+	Gtk::Label * uploadTab;
+	Gtk::Label * trackerTab;
 	
 	//search
-	class Gtk::Entry * searchEntry;   //input box for searches
-	class Gtk::Button * searchButton; //search button
+	Gtk::Entry * searchEntry;   //input box for searches
+	Gtk::Button * searchButton; //search button
 
 	//tracker add
-	class Gtk::Entry * trackerEntry;   //input box for trackers
-	class Gtk::Button * trackerButton; //tracker button
+	Gtk::Entry * trackerEntry;   //input box for trackers
+	Gtk::Button * trackerButton; //tracker button
 
 	//treeviews for different tabs
-	class Gtk::TreeView * searchView;
-	class Gtk::ScrolledWindow * search_scrolledWindow;
-	class Gtk::TreeView * downloadView;
-	class Gtk::ScrolledWindow * download_scrolledWindow;
-	class Gtk::TreeView * uploadView;
-	class Gtk::ScrolledWindow * upload_scrolledWindow;
-	class Gtk::TreeView * trackerView;
-	class Gtk::ScrolledWindow * tracker_scrolledWindow;
+	Gtk::TreeView * searchView;
+	Gtk::ScrolledWindow * search_scrolledWindow;
+	Gtk::TreeView * downloadView;
+	Gtk::ScrolledWindow * download_scrolledWindow;
+	Gtk::TreeView * uploadView;
+	Gtk::ScrolledWindow * upload_scrolledWindow;
+	Gtk::TreeView * trackerView;
+	Gtk::ScrolledWindow * tracker_scrolledWindow;
 
 	//boxes (divides the window)
-	class Gtk::HBox * search_HBox;  //separates the search input and search button
-	class Gtk::HBox * tracker_HBox; //separates the tracker input and add button
-	class Gtk::VBox * search_VBox;  //VBox which goes inside search_scrolledWindow
-	class Gtk::VBox * main_VBox;    //VBox for the main window (separates top from bottom)
-	class Gtk::VBox * tracker_VBox; //VBox which goes inside the tracker_scrolledWindow
+	Gtk::HBox * search_HBox;  //separates the search input and search button
+	Gtk::HBox * tracker_HBox; //separates the tracker input and add button
+	Gtk::VBox * search_VBox;  //VBox which goes inside search_scrolledWindow
+	Gtk::VBox * main_VBox;    //VBox for the main window (separates top from bottom)
+	Gtk::VBox * tracker_VBox; //VBox which goes inside the tracker_scrolledWindow
 
 	//bottom bar that displays status etc
-	class Gtk::Statusbar * statusbar;
+	Gtk::Statusbar * statusbar;
 
 	//popup menus for when user right clicks on treeviews
 	Gtk::Menu downloadsPopupMenu;

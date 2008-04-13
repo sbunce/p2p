@@ -42,10 +42,10 @@ public:
 	//returns how many hashes there would be in a hash tree of size file_size
 	static unsigned long file_size_to_hash_tree_count(unsigned long file_size)
 	{
-		unsigned long file_hashes = file_size / (global::P_BLS_SIZE - 1);
+		unsigned long file_hashes = file_size / (global::P_BLOCK_SIZE - 1);
 
 		//there may be a partial last block which must also be hashed
-		if(file_size % (global::P_BLS_SIZE - 1) != 0){
+		if(file_size % (global::P_BLOCK_SIZE - 1) != 0){
 			++file_hashes;
 		}
 

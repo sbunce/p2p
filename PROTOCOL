@@ -1,58 +1,18 @@
 PROTOCOL DOCUMENTATION
 
 /******************************************************************************/
-DOCUMENT FORMAT
-
-Command, Full Name
-Direction (ie client -> server would indicate from the client to the server)
-Description
-Byte-Diagram
-Possible Responses
-Byte-Diagram for Possible Response
-
-/******************************************************************************/
-DEFINITIONS
-
-ID  - Short for identification.
-RRN - relative record number (determines a byte offset when multiplied by a
-      block size).
-
-/******************************************************************************/
 GENERAL PROTOCOL INFORMATION
 
 All encoded numbers are unsigned and are in big endian.
 
 Requests to the server are pipelined. The maximum number of unresponded to
 commands which can be sent is global::PIPELINE_SIZE. If more than this number
-of requests is sent the client will be considered abusive and disconnected. To
-maximize performance global::PIPELINE_SIZE requests are sent upon download start
-and a new request is sent every time a response is received.
+of requests is sent the client will be considered abusive and disconnected.
 
 /******************************************************************************/
 RE-REQUEST ALGORITHM
 
-A server may be extremely slow or disconnected but not timed out. If either of
-these happen it's necessary to re-request the blocks expected from the tardy
-server.
-
-The re-request algorithm is based on buffer size and scales with how many servers
-the download_file is connected to. Re-requests are linear and will done when:
-
-	B mod(Q) = 0 , where B is the buffer size and
-
-	Q = C * R , where
-	            C is the number of servers that are sending blocks
-	            R is the re-request factor (constant)
-
-This has the problem of checking extra times when the number of connected
-servers fluctuates. For example say there is a check, and right after that another
-server is connected, then a check will be done after R more blocks are received.
-
-Re-requests are done from servers that hadn't already had the late block
-requested from it.
-
-
-NOT COMPLETED
+Blocks are rerequested that haven't been received after X seconds. Done.
 
 /******************************************************************************/
 PIPELINING
@@ -60,9 +20,9 @@ PIPELINING
 Pipelining is done to avoid dead time (time where no data is being transferred).
 Dead time happens with "stop-n-go" protocols where a client will only send a new
 request when the response to the previous request is gotten. Pipelining solves
-this by having the client send out many requests initially, and then sending
-new requests as responses are received. In this way the server maintains a queue
-of requests it can process even if new requests are delayed.
+this by having the client send out many requests initially, and then sending a
+new request as whenever a response is received. In this way the server maintains
+a queue of requests it can process even if new requests are delayed.
 
 Pipelining in this program is done in the client_buffer class to hide most of
 the complexity from the downloads. The only requirement for downloads is
@@ -71,21 +31,48 @@ client buffer with multiple requests before the client_buffer returns any
 responses.
 
 /******************************************************************************/
-P_SBL, Send Block
+P_SEND_FILE_ID
 client -> server
+Request the file ID that corresponds to a hash. It's nicer to send a file ID
+each request rather than the whole hash. The file ID is much smaller.
 
-Request a file block from the server by sending the file ID and RRN of the block.
-
-	  0   1   2   3   4   6   7   8   9
-	+---+---+---+---+---+---+---+---+---+
-	| C |    file ID    |      RRN      |
-	+---+---+---+---+---+---+---+---+---+
+	  0   1   2   3   ........    21
+	+---+---+---+---+---+---+---+---+
+	| C |         root hash         |
+	+---+---+---+---+---+---+---+---+
 
 Possible Responses:
 
-P_BLS, Block Send
+P_FILE_ID
+The file ID requested.
 
-The server is sending us the block requested.
+	  0   1
+	+---+---+
+	| C | F | , where F = file ID
+	+---+---+
+
+P_FILE_NOT_FOUND
+The server doesn't have the requested file.
+
+	  0
+	+---+
+	| C |
+	+---+
+
+/******************************************************************************/
+P_SEND_BLOCK
+client -> server
+Request a file block from the server.
+
+	  0   1   2   3   4   6
+	+---+---+---+---+---+---+
+	| C | F |      RRN      | , where F = file ID
+	+---+---+---+---+---+---+
+
+Possible Responses:
+
+P_BLOCK
+The block requested. May be shorter than 8192 if on the last block.
 
 	  0   1   2   3   .........  8192
 	+---+---+---+---+---+---+---+---+
@@ -93,10 +80,9 @@ The server is sending us the block requested.
 	+---+---+---+---+---+---+---+---+
 
 
-P_DNE, Block Does Not Exist
-
-The server sends this when it is in progress of downloading the file but doesn't
-yet have the block requested.
+P_BLOCK_DOES_NOT_EXIST
+The server has the file but has not yet downloaded this block. This should
+trigger a 5 second delay before trying again.
 
 	  0
 	+---+
@@ -104,9 +90,111 @@ yet have the block requested.
 	+---+
 
 
-P_FNF, File Not Found
+P_FILE_NOT_FOUND
+The server doesn't have the file which corresponds to the file ID.
 
-The server doesn't have the requested file.
+	  0
+	+---+
+	| C |
+	+---+
+
+/******************************************************************************/
+P_SEND_HASH_TREE_ID
+client -> server
+Request the hash ID that corresponds to a hash tree. It's nicer to send a
+hash ID each request rather than the whole hash. The hash ID is much smaller.
+
+	  0   1   2   3   ........    21
+	+---+---+---+---+---+---+---+---+
+	| C |         root hash         |
+	+---+---+---+---+---+---+---+---+
+
+Possible Responses:
+
+P_HASH_TREE_ID
+The hash_tree_ID requested.
+
+	  0   1
+	+---+---+
+	| C | H | , where H = hash ID
+	+---+---+
+
+P_HASH_TREE_NOT_FOUND
+The server doesn't have the requested hash tree.
+
+	  0
+	+---+
+	| C |
+	+---+
+
+/******************************************************************************/
+P_SEND_HASH_BLOCK
+client -> server
+Request a block of 256 hashes from the server.
+
+	  0   1   .....  21  22  23  24  25  26
+	+---+---+---+---+---+---+---+---+---+---+
+	| C | H |         start hash #          | , where H = hash ID
+	+---+---+---+---+---+---+---+---+---+---+
+
+Possible Responses:
+
+P_HASH_BLOCK
+The requested hashes. May be shorter than 1001 if the end of the tree is
+encountered.
+
+	  0   1   ..............  5121
+	+---+---+---+---+---+----+----+
+	| C |    requested hashes     |
+	+---+---+---+---+---+----+----+
+
+P_HASH_BLOCK_DOES_NOT_EXIST
+The server has part of the hash tree but not this block of hashes.
+
+	  0
+	+---+
+	| C |
+	+---+
+
+P_HASH_TREE_NOT_FOUND
+The server doesn't have the hash tree.
+
+	  0
+	+---+
+	| C |
+	+---+
+
+/******************************************************************************/
+P_SEND_HASH
+client -> server
+Request a hash tree hash from the server. Should be used to replace single bad
+hashes but not to request every hash.
+
+	  0   1   .....  21  22  23  24  25  26
+	+---+---+---+---+---+---+---+---+---+---+
+	| C | H |            hash #             | , where H = hash ID
+	+---+---+---+---+---+---+---+---+---+---+
+
+Possible Responses:
+
+P_HASH
+The requested hash.
+
+	  0   1   .........   21
+	+---+---+---+---+---+----+
+	| C |   requested hash   |
+	+---+---+---+---+---+----+
+
+P_HASH_DOES_NOT_EXIST
+The server has part of the hash tree but not this hash.
+
+	  0
+	+---+
+	| C |
+	+---+
+
+P_HASH_TREE_NOT_FOUND
+The server doesn't have the hash tree. This should trigger P_SEND_HASH_TREE_ID.
 
 	  0
 	+---+

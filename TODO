@@ -1,7 +1,9 @@
 TODO
 
 -The client_buffer needs to be adjusted to pipeline more when sending commands
-that expect smaller responses.
+that expect smaller responses. This needs some thought because downloads might
+expect different responses. Perhaps add a function to downloads that returns
+their max possible response size and operate on that.
 
 -Hash trees for missing files need to be deleted.
 
@@ -10,6 +12,11 @@ while they were copying).
 
 -server_index won't terminate promptly if it's in the middle of generating a hash
 tree. Pass a thread termination bool in to the hash tree.
+
+-Have a last seen field for files. When a file is missing don't delete the
+record but instead mark it with a flag for scheduled deletion and a time stamp.
+If the file hasn't been seen in a long time (multiple times the share refresh
+interval) then it should be deleted from the database.
 
 
 DEFERRED FEATURES

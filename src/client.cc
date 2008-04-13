@@ -412,8 +412,8 @@ void client::remove_complete()
 
 	/*
 	STEP 2:
-	Remove any pending_connections for this download. In progress connections
-	will be cancelled by setting their download pointer to NULL.
+	Remove any pending_connections for download. In progress connections will be
+	cancelled by setting their download pointer to NULL.
 	*/
 	std::list<download *>::iterator CD_iter_cur, CD_iter_end;
 	CD_iter_cur = Complete_Download.begin();
@@ -475,19 +475,38 @@ void client::remove_complete()
 		DB_iter_end = Download_Buffer.end();
 		while(DB_iter_cur != DB_iter_end){
 			if(*DB_iter_cur == *CD_iter_cur){
+				/*
+				It is possible that terminating a download can trigger starting of
+				another download. If this happens the stop function will return that
+				download and the servers associated with that download. If the new
+				download triggered has any of the same servers associated with it
+				the DC's for that server will be added to client_buffers so that no
+				reconnecting has to be done.
+				*/
+				std::list<download_conn *> servers;
+				download * Download_start;
+				if(Download_Prep.stop(*DB_iter_cur, Download_start, servers)){
+					//attempt to place all servers in a exiting client_buffer
+					std::list<download_conn *>::iterator iter_cur, iter_end;
+					iter_cur = servers.begin();
+					iter_end = servers.end();
+					while(iter_cur != iter_end){
+						if(DC_add_existing(*iter_cur)){
+							iter_cur = servers.erase(iter_cur);
+						}else{
+							++iter_cur;
+						}
+					}
 
-
-/*
-DEBUG, it's possible this triggers another download start. Add in junk (it's the
-junk, that makes the junkie) to account for that. Once Download is started and
-associated servers registered the client_buffer will no longer get removed. This
-will allow seamless transition from something like a download_hash_tree to a
-download_file.
-
-Use the above text for description.
-*/
-
-				Download_Prep.stop(*DB_iter_cur);
+					//queue servers that don't have an existing client_buffer
+					iter_cur = servers.begin();
+					iter_end = servers.end();
+					while(iter_cur != iter_end){
+						Connection_Queue.push_back(*iter_cur);
+						Thread_Pool.queue_job(this, &client::process_CQ);
+						++iter_cur;
+					}
+				}
 				Download_Buffer.erase(DB_iter_cur);
 				break;
 			}
@@ -533,8 +552,8 @@ void client::stop()
 bool client::start_download(DB_access::download_info_buffer & info)
 {
 	download * Download;
-	std::vector<download_conn *> servers;
-	if(!(Download = Download_Prep.start_file(info, servers))){
+	std::list<download_conn *> servers;
+	if(!Download_Prep.start_file(info, Download, servers)){
 		return false;
 	}
 
@@ -545,16 +564,13 @@ bool client::start_download(DB_access::download_info_buffer & info)
 
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(DC_mutex);
-	std::vector<download_conn *>::iterator iter_cur, iter_end;
+	//queue jobs to connect to servers
+	std::list<download_conn *>::iterator iter_cur, iter_end;
 	iter_cur = servers.begin();
 	iter_end = servers.end();
 	while(iter_cur != iter_end){
 		Connection_Queue.push_back(*iter_cur);
-
-		//queue a job in the thread pool for the new connection
-		void (client::*memfun_ptr)() = &client::process_CQ;
-		Thread_Pool.queue_job(this, memfun_ptr);
-
+		Thread_Pool.queue_job(this, &client::process_CQ);
 		++iter_cur;
 	}
 	}//end lock scope

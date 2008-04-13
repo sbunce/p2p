@@ -29,20 +29,20 @@ namespace global
 	const int DOWN_SPEED = 9999*1024+512; //download speed limit (B/s)
 
 	//protocol commands client -> server
-	const char P_SBL = (char)1;
-	const int P_SBL_SIZE = 9;
+	const char P_SEND_BLOCK = (char)1;
+	const int P_SEND_BLOCK_SIZE = 9;
 
-	//protocol commands for download_file, server -> client
-	const char P_DNE = (char)2;
-	const int P_DNE_SIZE = 1;
-	const char P_FNF = (char)3;
-	const int P_FNF_SIZE = 1;
-	const char P_BLS = (char)4;
-	const int P_BLS_SIZE = 8192;
+	//protocol commands server -> client
+	const char P_FILE_DOES_NOT_EXIST = (char)2;
+	const int P_FILE_DOES_NOT_EXIST_SIZE = 1;
+	const char P_FILE_NOT_FOUND = (char)3;
+	const int P_FILE_NOT_FOUND_SIZE = 1;
+	const char P_BLOCK = (char)4;
+	const int P_BLOCK_SIZE = 8192;
 
 	//size of the largest possibe packet the server and client can receive
-	const int S_MAX_SIZE = P_SBL_SIZE;
-	const int C_MAX_SIZE = P_BLS_SIZE;
+	const int S_MAX_SIZE = P_SEND_BLOCK_SIZE;
+	const int C_MAX_SIZE = P_BLOCK_SIZE;
 
 	//hash type to be used for hash tree
 	const sha::SHA_TYPE HASH_TYPE = sha::enuSHA1;

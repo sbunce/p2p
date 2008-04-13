@@ -193,7 +193,7 @@ void DB_access::download_initial_fill_buff_call_back(int & columns_retrieved, ch
 		fs::path path_boost = fs::system_complete(fs::path(global::CLIENT_DOWNLOAD_DIRECTORY + IB.file_name, fs::native));
 		IB.file_size.assign(query_response[2]);
 		unsigned int currentBytes = fs::file_size(path_boost);
-		IB.latest_request = currentBytes / (global::P_BLS_SIZE - 1); //(global::P_BLS_SIZE - 1) because control size is 1 byte
+		IB.latest_request = currentBytes / (global::P_BLOCK_SIZE - 1); //(global::P_BLOCK_SIZE - 1) because control size is 1 byte
 
 		//get servers
 		char delims[] = ",";

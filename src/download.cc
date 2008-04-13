@@ -27,7 +27,7 @@ void download::IP_list(std::vector<std::string> & list)
 	}
 }
 
-const unsigned int download::speed()
+unsigned int download::speed()
 {
 	return Speed_Calculator.speed();
 }

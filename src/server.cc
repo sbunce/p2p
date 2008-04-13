@@ -73,9 +73,9 @@ void server::calculate_speed_file(std::string & client_IP, const unsigned int & 
 		//if element found update it
 		if(iter_cur->client_IP == client_IP && iter_cur->file_ID == file_ID){
 			if(iter_cur->Speed.back().first == current_time){
-				iter_cur->Speed.back().second += global::P_BLS_SIZE;
+				iter_cur->Speed.back().second += global::P_BLOCK_SIZE;
 			}else{
-				iter_cur->Speed.push_back(std::make_pair(current_time, global::P_BLS_SIZE));
+				iter_cur->Speed.push_back(std::make_pair(current_time, global::P_BLOCK_SIZE));
 			}
 
 			if(iter_cur->Speed.size() > global::SPEED_AVERAGE + 1){
@@ -98,7 +98,7 @@ void server::calculate_speed_file(std::string & client_IP, const unsigned int & 
 			file_size,
 			file_block
 		));
-		Upload_Speed.back().Speed.push_back(std::make_pair(current_time, global::P_BLS_SIZE));
+		Upload_Speed.back().Speed.push_back(std::make_pair(current_time, global::P_BLOCK_SIZE));
 	}
 	}//end lock scope
 }
@@ -135,7 +135,7 @@ bool server::get_upload_info(std::vector<info_buffer> & upload_info)
 	iter_cur = Upload_Speed.begin();
 	iter_end = Upload_Speed.end();
 	while(iter_cur != iter_end){
-		float percent = ((iter_cur->file_block * (global::P_BLS_SIZE - 1)) / (float)iter_cur->file_size) * 100;
+		float percent = ((iter_cur->file_block * (global::P_BLOCK_SIZE - 1)) / (float)iter_cur->file_size) * 100;
 		if(percent >= 99){
 			percent = 100;
 		}
@@ -362,23 +362,23 @@ void server::prepare_file_block(std::map<int, send_buff_element>::iterator & SB_
 	std::string file_path;
 	if(!DB_Access.share_file_info(file_ID, file_size, file_path)){
 		//file was not found
-		SB_iter->second.buff += global::P_FNF;
+		SB_iter->second.buff += global::P_FILE_NOT_FOUND;
 		return;
 	}
 
 	//check for valid file block request
-	if(block_number*(global::P_BLS_SIZE - 1) > file_size){
+	if(block_number*(global::P_BLOCK_SIZE - 1) > file_size){
 		//a block past the end of file was requested
-		SB_iter->second.buff += global::P_DNE;
+		SB_iter->second.buff += global::P_FILE_DOES_NOT_EXIST;
 		return;
 	}
 
-	SB_iter->second.buff += global::P_BLS;
+	SB_iter->second.buff += global::P_BLOCK;
 	std::ifstream fin(file_path.c_str());
 	if(fin.is_open()){
 		//seek to the file_block the client wants (-1 for command space)
-		fin.seekg(block_number*(global::P_BLS_SIZE - 1));
-		fin.read(prepare_file_block_buff, global::P_BLS_SIZE - 1);
+		fin.seekg(block_number*(global::P_BLOCK_SIZE - 1));
+		fin.read(prepare_file_block_buff, global::P_BLOCK_SIZE - 1);
 		SB_iter->second.buff.append(prepare_file_block_buff, fin.gcount());
 		fin.close();
 	}else{
@@ -405,27 +405,27 @@ void server::process_request(const int & socket_FD, char recv_buff[], const int 
 
 	//needed to determine if the buffer went from empty to non-empty
 	std::map<int, send_buff_element>::iterator SB_iter = Send_Buff.find(socket_FD);
-	bool empty_buff;
+	bool initial_empty_buff;
 	if(SB_iter->second.buff.size() == 0){
-		empty_buff = true;
+		initial_empty_buff = true;
 	}else{
-		empty_buff = false;
+		initial_empty_buff = false;
 	}
 
 	//process recv buffer until it's empty or it contains no complete requests
 	while(RB_iter->second.size()){
-		if(RB_iter->second[0] == global::P_SBL && n_bytes >= global::P_SBL_SIZE){
+		if(RB_iter->second[0] == global::P_SEND_BLOCK && n_bytes >= global::P_SEND_BLOCK_SIZE){
 			unsigned int file_ID = Conversion.decode_int(RB_iter->second.substr(1,4));
 			unsigned int block_number = Conversion.decode_int(RB_iter->second.substr(5,4));
 			prepare_file_block(SB_iter, socket_FD, file_ID, block_number);
-			RB_iter->second.erase(0, global::P_SBL_SIZE);
+			RB_iter->second.erase(0, global::P_SEND_BLOCK_SIZE);
 		}else{
 			break;
 		}
 	}
 
 	//if buff went from empty to non-empty a new send needs to be done
-	if(empty_buff && SB_iter->second.buff.size() != 0){
+	if(initial_empty_buff && SB_iter->second.buff.size() != 0){
 		++send_pending;
 	}
 }

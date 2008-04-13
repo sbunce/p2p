@@ -17,52 +17,52 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	Client.start();
 
 	window = this;
-	menubar = Gtk::manage(new class Gtk::MenuBar());
-	notebook = Gtk::manage(new class Gtk::Notebook());
+	menubar = Gtk::manage(new Gtk::MenuBar());
+	notebook = Gtk::manage(new Gtk::Notebook());
 
 	//file menu
-	fileMenu = Gtk::manage(new class Gtk::Menu());
+	fileMenu = Gtk::manage(new Gtk::Menu());
 	fileMenuItem = NULL;
 	quit = NULL;
 
 	//help menu
-	helpMenu = Gtk::manage(new class Gtk::Menu());
+	helpMenu = Gtk::manage(new Gtk::Menu());
 	helpMenuItem = NULL;
 	about = NULL;
 
 	//notebook tabs
-	searchTab = Gtk::manage(new class Gtk::Label((" Search ")));
-	downloadTab = Gtk::manage(new class Gtk::Label((" Downloads ")));
-	uploadTab = Gtk::manage(new class Gtk::Label((" Uploads ")));
-	trackerTab = Gtk::manage(new class Gtk::Label((" Trackers ")));
+	searchTab = Gtk::manage(new Gtk::Label((" Search ")));
+	downloadTab = Gtk::manage(new Gtk::Label((" Downloads ")));
+	uploadTab = Gtk::manage(new Gtk::Label((" Uploads ")));
+	trackerTab = Gtk::manage(new Gtk::Label((" Trackers ")));
 
 	//search related
-	searchEntry = Gtk::manage(new class Gtk::Entry());
-	searchButton = Gtk::manage(new class Gtk::Button(("Search")));
+	searchEntry = Gtk::manage(new Gtk::Entry());
+	searchButton = Gtk::manage(new Gtk::Button(("Search")));
 
 	//tracker related
-	trackerEntry = Gtk::manage(new class Gtk::Entry());
-	trackerButton = Gtk::manage(new class Gtk::Button(("Add")));
+	trackerEntry = Gtk::manage(new Gtk::Entry());
+	trackerButton = Gtk::manage(new Gtk::Button(("Add")));
 
 	//treeviews for different tabs
-	searchView = Gtk::manage(new class Gtk::TreeView());
-	search_scrolledWindow = Gtk::manage(new class Gtk::ScrolledWindow());
-	downloadView = Gtk::manage(new class Gtk::TreeView());
-	download_scrolledWindow = Gtk::manage(new class Gtk::ScrolledWindow());
-	uploadView = Gtk::manage(new class Gtk::TreeView());
-	upload_scrolledWindow = Gtk::manage(new class Gtk::ScrolledWindow());
-	trackerView = Gtk::manage(new class Gtk::TreeView());
-	tracker_scrolledWindow = Gtk::manage(new class Gtk::ScrolledWindow());
+	searchView = Gtk::manage(new Gtk::TreeView());
+	search_scrolledWindow = Gtk::manage(new Gtk::ScrolledWindow());
+	downloadView = Gtk::manage(new Gtk::TreeView());
+	download_scrolledWindow = Gtk::manage(new Gtk::ScrolledWindow());
+	uploadView = Gtk::manage(new Gtk::TreeView());
+	upload_scrolledWindow = Gtk::manage(new Gtk::ScrolledWindow());
+	trackerView = Gtk::manage(new Gtk::TreeView());
+	tracker_scrolledWindow = Gtk::manage(new Gtk::ScrolledWindow());
 
 	//boxes (divides the window)
-	search_HBox = Gtk::manage(new class Gtk::HBox(false, 0));
-	tracker_HBox = Gtk::manage(new class Gtk::HBox(false, 0));
-	search_VBox = Gtk::manage(new class Gtk::VBox(false, 0));
-	main_VBox = Gtk::manage(new class Gtk::VBox(false, 0));
-	tracker_VBox = Gtk::manage(new class Gtk::VBox(false, 0));
+	search_HBox = Gtk::manage(new Gtk::HBox(false, 0));
+	tracker_HBox = Gtk::manage(new Gtk::HBox(false, 0));
+	search_VBox = Gtk::manage(new Gtk::VBox(false, 0));
+	main_VBox = Gtk::manage(new Gtk::VBox(false, 0));
+	tracker_VBox = Gtk::manage(new Gtk::VBox(false, 0));
 
 	//bottom bar that displays status etc
-	statusbar = Gtk::manage(new class Gtk::Statusbar());
+	statusbar = Gtk::manage(new Gtk::Statusbar());
 
 	//add items to File menu
 	fileMenu->items().push_back(Gtk::Menu_Helpers::StockMenuElem(Gtk::StockID("gtk-quit")));
