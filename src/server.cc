@@ -18,7 +18,7 @@ server::server()
 
 void server::disconnect(const int & socket_FD)
 {
-	global::debug_message(global::INFO,__FILE__,__FUNCTION__,"disconnecting socket ",socket_FD);
+	logger::debug(LOGGER_P1,"disconnecting socket ",socket_FD);
 
 	/*
 	It is possible for disconnect() to get called more than once when a socket
@@ -189,7 +189,7 @@ bool server::new_conn(const int & listener)
 	//do not accept connections from localhost
 	std::string new_IP(inet_ntoa(remoteaddr.sin_addr));
 	if(new_IP.substr(0,3) == "127"){
-		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"refusing connection from localhost");
+		logger::debug(LOGGER_P1,"refusing connection from localhost");
 		return false;
 	}
 
@@ -199,7 +199,7 @@ bool server::new_conn(const int & listener)
 		if(FD_ISSET(socket_FD, &master_FDS)){
 			getpeername(socket_FD, (sockaddr*)&temp_addr, &len);
 			if(strcmp(new_IP.c_str(), inet_ntoa(temp_addr.sin_addr)) == 0){
-				global::debug_message(global::INFO,__FILE__,__FUNCTION__,"server ",new_IP," attempted multiple connections");
+				logger::debug(LOGGER_P1,"server ",new_IP," attempted multiple connections");
 				close(new_FD);
 				return false;
 			}
@@ -227,7 +227,7 @@ bool server::new_conn(const int & listener)
 			FD_max = new_FD;
 		}
 
-		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"client ",inet_ntoa(remoteaddr.sin_addr)," socket ",new_FD," connected");
+		logger::debug(LOGGER_P1,"client ",inet_ntoa(remoteaddr.sin_addr)," socket ",new_FD," connected");
 	}
 
 	return true;
@@ -275,7 +275,7 @@ void server::main_thread()
 	char recv_buff[global::S_MAX_SIZE*global::PIPELINE_SIZE];
    int n_bytes;
 
-	global::debug_message(global::INFO,__FILE__,__FUNCTION__,"created listening socket ",listener);
+	logger::debug(LOGGER_P1,"created listening socket ",listener);
 
 	int send_limit = 0; //how many bytes can be sent on an iteration
 	std::map<int, send_buff_element>::iterator SB_iter;
@@ -382,7 +382,8 @@ void server::prepare_file_block(std::map<int, send_buff_element>::iterator & SB_
 		SB_iter->second.buff.append(prepare_file_block_buff, fin.gcount());
 		fin.close();
 	}else{
-		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"could not open file \"",file_path,"\"");
+		logger::debug(LOGGER_P1,"could not open file \"",file_path,"\"");
+		assert(false);
 	}
 
 	//update speed calculation (assumes there is a response)
@@ -397,7 +398,7 @@ void server::process_request(const int & socket_FD, char recv_buff[], const int 
 
 	//disconnect clients that have pipelined more than is allowed
 	if(RB_iter->second.size() > global::S_MAX_SIZE*global::PIPELINE_SIZE){
-		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"disconnecting abusive socket ",socket_FD);
+		logger::debug(LOGGER_P1,"disconnecting abusive socket ",socket_FD);
 		disconnect(socket_FD);
 
 //blacklist needs to be done here

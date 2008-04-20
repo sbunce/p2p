@@ -11,6 +11,7 @@
 //custom
 #include "DB_access.h"
 #include "global.h"
+#include "hash_tree.h"
 
 class server_index
 {
@@ -38,6 +39,7 @@ private:
 	void index_share_recurse(std::string directory_name);
 
 	DB_access DB_Access;
+	hash_tree Hash_Tree;
 };
 #endif
 

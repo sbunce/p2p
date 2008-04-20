@@ -10,6 +10,7 @@
 
 //custom
 #include "download_conn.h"
+#include "download_info.h"
 #include "global.h"
 #include "speed_calculator.h"
 
@@ -28,7 +29,7 @@ public:
 	/*
 	complete         - returns true if download complete (or if stop called)
 	hash             - returns a unique identifier to the download
-	IP_list          - appends all IPs registered with this download to list
+	info             - returns Download_Info for this download (pushes on to vector)
 	name             - returns the name of this download
 	percent_complete - returns int 1 to 100
 	request          - full request should be put in request
@@ -41,7 +42,7 @@ public:
 	*/
 	virtual bool complete() = 0;
 	virtual const std::string & hash() = 0;
-	virtual void IP_list(std::vector<std::string> & list);
+	virtual void IP_list(std::vector<std::string> & IP);
 	virtual unsigned int max_response_size() = 0;
 	virtual const std::string & name() = 0;
 	virtual unsigned int percent_complete() = 0;
@@ -70,6 +71,10 @@ protected:
 	*/
 	std::map<int, download_conn *> Connection;
 
+	/*
+	This can be used by the derived class to calculate speed for the individual
+	download. Downloads may opt not to use this.
+	*/
 	speed_calculator Speed_Calculator;
 };
 #endif

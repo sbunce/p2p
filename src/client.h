@@ -30,6 +30,7 @@
 #include "DB_access.h"
 #include "download.h"
 #include "download_conn.h"
+#include "download_info.h"
 #include "download_prep.h"
 #include "global.h"
 #include "speed_calculator.h"
@@ -38,41 +39,23 @@
 class client
 {
 public:
-	//used to pass information to user interface
-	class info_buffer
-	{
-	public:
-		info_buffer(const std::string & hash_in, const std::string & file_name_in,
-		const int & file_size_in, const int & speed_in, const int & percent_complete_in)
-		: hash(hash_in), file_name(file_name_in), file_size(file_size_in),
-		speed(speed_in), percent_complete(percent_complete_in)
-		{}
-
-		std::string hash;
-		std::vector<std::string> server_IP;
-		std::string file_name;
-		int file_size;        //bytes
-		int speed;            //bytes per second
-		int percent_complete; //0-100
-	};
-
 	client();
 	~client();
 	/*
-	get_download_info - returns download info for all files in sendBuffer
-	                  - returns false if no downloads
-	get_total_speed   - returns the total download speed(in bytes per second)
+	current_downloads - returns download info for all files in Download_Buffer
 	start             - start the threads needed for the client
 	stop              - stops all threads, must be called before destruction
 	start_download    - schedules a download_file to be started
 	stop_download     - marks a download as completed so it will be stopped
+	total_speed       - returns the total download speed(in bytes per second)
 	*/
-	bool get_download_info(std::vector<info_buffer> & download_info);
-	int get_total_speed();
+	void current_downloads(std::vector<download_info> & info);
+	void search(std::string search_word, std::vector<download_info> & Search_Info);
 	void start();
 	void stop();
-	bool start_download(DB_access::download_info_buffer & info);
-	void stop_download(const std::string & hash);
+	bool start_download(download_info & info);
+	void stop_download(std::string hash);
+	int total_speed();
 
 private:
 	volatile bool stop_threads; //if true this will trigger thread termination
@@ -120,6 +103,21 @@ private:
 	//used to initiate new connections
 	thread_pool<client> Thread_Pool;
 
+	//each mutex names the object it locks in the format boost::mutex <object>Mutex
+	boost::mutex CB_DB_mutex; //for both Client_Buffer and Download_Buffer
+	boost::mutex DC_mutex;    //locks access to download_conn instances
+
+	/*
+	The gethostbyname() name resolving function is not thread-safe. Without this
+	you sometimes get garbled addresses returned.
+	*/
+	boost::mutex gethostbyname_mutex;
+
+	sha SHA;
+	DB_access DB_Access;
+	download_prep Download_Prep;
+	speed_calculator Speed_Calculator;
+
 	/*
 	check_timeouts      - checks all servers to see if they've timed out and removes/disconnects if they have
 	DC_add_existing     - tries to add a DC to an existing client_buffer
@@ -145,20 +143,5 @@ private:
 	void prepare_requests();
 	void process_CQ();
 	void remove_complete();
-
-	//each mutex names the object it locks in the format boost::mutex <object>Mutex
-	boost::mutex CB_DB_mutex; //for both Client_Buffer and Download_Buffer
-	boost::mutex DC_mutex;    //locks access to download_conn instances
-
-	/*
-	The gethostbyname() name resolving function is not thread-safe. Without this
-	you sometimes get garbled addresses returned.
-	*/
-	boost::mutex gethostbyname_mutex;
-
-	sha SHA;
-	DB_access DB_Access;
-	download_prep Download_Prep;
-	speed_calculator Speed_Calculator;
 };
 #endif

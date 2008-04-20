@@ -72,7 +72,8 @@ bool request_gen::new_request_check_existing(std::deque<unsigned int> & prev_req
 	}
 
 	prev_requests.push_back(re_requests.begin()->first);
-	global::debug_message(global::INFO,__FILE__,__FUNCTION__,"re_requesting ",re_requests.begin()->first);
+
+	logger::debug(LOGGER_P1,"re_requesting ",re_requests.begin()->first);
 	re_requests.erase(re_requests.begin()->first);
 	return true;
 }

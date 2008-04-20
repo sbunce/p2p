@@ -13,11 +13,10 @@
 
 download_file::download_file(const std::string & file_hash_in, const std::string & file_name_in, 
 const std::string & file_path_in, const unsigned long & file_size_in, const unsigned int & latest_request_in,
-const unsigned int & last_block_in, const unsigned int & last_block_size_in,
-volatile int * download_file_complete_in)
-: file_hash(file_hash_in), file_name(file_name_in), file_path(file_path_in),
-file_size(file_size_in), last_block(last_block_in), last_block_size(last_block_size_in),
-download_file_complete(download_file_complete_in), download_complete(false)
+const unsigned int & last_block_in, const unsigned int & last_block_size_in, volatile int * download_file_complete_in)
+: file_hash(file_hash_in), file_name(file_name_in), file_path(file_path_in), file_size(file_size_in),
+last_block(last_block_in), last_block_size(last_block_size_in), download_file_complete(download_file_complete_in),
+download_complete(false)
 {
 	SHA.init(global::HASH_TYPE);
 	Request_Gen.init(latest_request_in, last_block, global::TIMEOUT);
@@ -54,7 +53,8 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 	download_file_conn * conn = (download_file_conn *)iter->second;
 
 	if(iter == Connection.end()){
-		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"socket not registered");
+		logger::debug(LOGGER_P1,"socket not registered");
+		assert(false);
 	}
 
 	if(!Request_Gen.new_request(conn->latest_request)){
@@ -100,7 +100,8 @@ do with waiting until the server has the block.
 		std::map<int, download_conn *>::iterator iter = Connection.find(socket);
 		download_file_conn * conn = (download_file_conn *)iter->second;
 
-		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"received P_DNE from ",conn->server_IP);
+		logger::debug(LOGGER_P1,"received P_FILE_DOES_NOT_EXIST from ",conn->server_IP);
+
 	}else if(block[0] == global::P_FILE_NOT_FOUND){
 		//server is reporting that it doesn't have the file
 
@@ -109,9 +110,10 @@ do with waiting until the server has the block.
 		std::map<int, download_conn *>::iterator iter = Connection.find(socket);
 		download_file_conn * conn = (download_file_conn *)iter->second;
 
-		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"received P_FNF from ",conn->server_IP);
+		logger::debug(LOGGER_P1,"received P_FILE_NOT_FOUND from ",conn->server_IP);
 	}else{
-		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"client_buffer passed a bad command");
+		logger::debug(LOGGER_P1,"client_buffer passed a bad command");
+		assert(false);
 	}
 }
 
@@ -122,7 +124,8 @@ void download_file::response_BLS(const int & socket, std::string & block)
 	download_file_conn * conn = (download_file_conn *)iter->second;
 
 	if(iter == Connection.end()){
-		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"socket not registered");
+		logger::debug(LOGGER_P1,"socket not registered");
+		assert(false);
 	}
 
 	conn->Speed_Calculator.update(block.size()); //update server speed
@@ -157,7 +160,8 @@ void download_file::write_block(unsigned int block_number, std::string & block)
 		fout.seekp(block_number * (global::P_BLOCK_SIZE - 1), std::ios::beg);
 		fout.write(block.c_str(), block.size());
 	}else{
-		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"error opening file");
+		logger::debug(LOGGER_P1,"error opening file ",file_path);
+		assert(false);
 	}
 }
 

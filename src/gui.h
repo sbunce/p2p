@@ -10,7 +10,7 @@
 
 //custom
 #include "client.h"
-#include "DB_access.h"
+#include "download_info.h"
 #include "global.h"
 #include "server.h"
 
@@ -115,9 +115,8 @@ private:
 
 	client Client;
 	server Server;
-	DB_access DB_Access;
 
 	//holds the information from the last search
-	std::list<DB_access::download_info_buffer> Search_Info;
+	std::vector<download_info> Search_Info;
 };
 #endif

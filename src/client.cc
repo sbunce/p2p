@@ -49,11 +49,38 @@ void client::check_timeouts()
 	for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 		if(FD_ISSET(socket_FD, &master_FDS)){
 			if(current_time - Client_Buffer[socket_FD]->get_last_seen() >= global::TIMEOUT){
-				global::debug_message(global::INFO,__FILE__,__FUNCTION__,"triggering timeout of socket ", socket_FD);
+				logger::debug(LOGGER_P1,"triggering timeout of socket ",socket_FD);
 				disconnect(socket_FD);
 				Client_Buffer.erase(socket_FD);
 			}
 		}
+	}
+	}//end lock scope
+}
+
+void client::current_downloads(std::vector<download_info> & info)
+{
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(CB_DB_mutex);
+	if(Download_Buffer.size() == 0){
+		return;
+	}
+
+	std::list<download *>::iterator iter_cur, iter_end;
+	iter_cur = Download_Buffer.begin();
+	iter_end = Download_Buffer.end();
+	while(iter_cur != iter_end){
+		download_info Download_Info(
+			(*iter_cur)->hash(),
+			(*iter_cur)->name(),
+			(*iter_cur)->total_size(),
+			(*iter_cur)->speed(),
+			(*iter_cur)->percent_complete()
+		);
+
+		(*iter_cur)->IP_list(Download_Info.server_IP);
+		info.push_back(Download_Info);
+		++iter_cur;
 	}
 	}//end lock scope
 }
@@ -101,11 +128,11 @@ void client::DC_block_concurrent(download_conn * DC)
 		}
 
 		if(!found){
+			Connection_Current_Attempt.push_back(DC);
 			break;
 		}
 		}//end lock scope
 
-		//exiting DC with same server_IP found, sleep then check again
 		usleep(global::SPINLOCK_TIME);
 	}
 }
@@ -129,7 +156,7 @@ void client::DC_unblock(download_conn * DC)
 
 inline void client::disconnect(const int & socket_FD)
 {
-	global::debug_message(global::INFO,__FILE__,__FUNCTION__, "disconnecting socket ", socket_FD);
+	logger::debug(LOGGER_P1,"disconnecting socket ",socket_FD);
 
 	close(socket_FD);
 	FD_CLR(socket_FD, &master_FDS);
@@ -145,49 +172,14 @@ inline void client::disconnect(const int & socket_FD)
 	}
 }
 
-bool client::get_download_info(std::vector<info_buffer> & download_info)
-{
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(CB_DB_mutex);
-	if(Download_Buffer.size() == 0){
-		return false;
-	}
-
-	std::list<download *>::iterator iter_cur, iter_end;
-	iter_cur = Download_Buffer.begin();
-	iter_end = Download_Buffer.end();
-	while(iter_cur != iter_end){
-		info_buffer info(
-			(*iter_cur)->hash(),
-			(*iter_cur)->name(),
-			(*iter_cur)->total_size(),
-			(*iter_cur)->speed(),
-			(*iter_cur)->percent_complete()
-		);
-		(*iter_cur)->IP_list(info.server_IP);
-		download_info.push_back(info);
-
-		++iter_cur;
-	}
-	}//end lock scope
-
-	return true;
-}
-
-int client::get_total_speed()
-{
-	Speed_Calculator.update(0);
-	return Speed_Calculator.speed();
-}
-
 void client::main_thread()
 {
 	++threads;
 
 	//reconnect downloads that havn't finished
-	std::list<DB_access::download_info_buffer> resumed_download;
+	std::list<download_info> resumed_download;
 	DB_Access.download_initial_fill_buff(resumed_download);
-	std::list<DB_access::download_info_buffer>::iterator iter_cur, iter_end;
+	std::list<download_info>::iterator iter_cur, iter_end;
 	iter_cur = resumed_download.begin();
 	iter_end = resumed_download.end();
 	while(iter_cur != iter_end){
@@ -319,10 +311,10 @@ void client::new_conn(download_conn * DC)
 	memset(&(dest_addr.sin_zero),'\0',8);
 
 	if(connect(DC->socket_FD, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0){
-		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"connection to ",DC->server_IP, " failed");
+		logger::debug(LOGGER_P1,"connection to ",DC->server_IP," failed");
 		return;
 	}else{
-		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"created socket ",DC->socket_FD," for ",DC->server_IP);
+		logger::debug(LOGGER_P1,"created socket ",DC->socket_FD," for ",DC->server_IP);
 		if(DC->socket_FD > FD_max){
 			FD_max = DC->socket_FD;
 		}
@@ -535,6 +527,11 @@ void client::remove_complete()
 	}//end lock scope
 }
 
+void client::search(std::string search_word, std::vector<download_info> & Search_Info)
+{
+	DB_Access.search(search_word, Search_Info);
+}
+
 void client::start()
 {
 	boost::thread T1(boost::bind(&client::main_thread, this));
@@ -549,7 +546,7 @@ void client::stop()
 	}
 }
 
-bool client::start_download(DB_access::download_info_buffer & info)
+bool client::start_download(download_info & info)
 {
 	download * Download;
 	std::list<download_conn *> servers;
@@ -578,7 +575,7 @@ bool client::start_download(DB_access::download_info_buffer & info)
 	return true;
 }
 
-void client::stop_download(const std::string & hash)
+void client::stop_download(std::string hash)
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(CB_DB_mutex);
@@ -593,4 +590,10 @@ void client::stop_download(const std::string & hash)
 		++iter_cur;
 	}
 	}//end lock scope
+}
+
+int client::total_speed()
+{
+	Speed_Calculator.update(0);
+	return Speed_Calculator.speed();
 }

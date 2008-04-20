@@ -1,5 +1,9 @@
 TODO
 
+-Add file_ID protocol stuff first.
+
+-GUI lags on starting download when hashing is going.
+
 -The client_buffer needs to be adjusted to pipeline more when sending commands
 that expect smaller responses. This needs some thought because downloads might
 expect different responses. Perhaps add a function to downloads that returns
@@ -10,14 +14,6 @@ their max possible response size and operate on that.
 -Hashes need to be regenerated for files that have changed size (files hashed
 while they were copying).
 
--server_index won't terminate promptly if it's in the middle of generating a hash
-tree. Pass a thread termination bool in to the hash tree.
-
--Have a last seen field for files. When a file is missing don't delete the
-record but instead mark it with a flag for scheduled deletion and a time stamp.
-If the file hasn't been seen in a long time (multiple times the share refresh
-interval) then it should be deleted from the database.
-
 
 DEFERRED FEATURES
 
@@ -26,13 +22,7 @@ twice the second download doesn't get appended to the first. This will naturally
 be added when hashes are checked. If a file we want to download has a root hash
 that exists in the hashes folder then the file was already downloaded.
 
--The download needs to remove a file from the DB when it receives a P_FNF. It
-needs to delay a request when a P_DNE is received.
-
 -Blacklisting of abusive clients/servers.
-
--Add to the protocol a command which retrieves a file_ID from the server that is
-associated with a hash the client sends the server.
 
 
 IDEAS
@@ -55,3 +45,7 @@ normal. Possible settings low = 1, normal = 2, medium = 3, and high = 4.
 -I want to have sharing such that someone just selects a folder(s) to share and
 forgets about it. Perhaps combine this with allowing people to publish tracked
 files on websites so you can still find the obscure stuff.
+
+-Let the user set up bandwidth profiles that can be quickly selected. The user
+could create one for games/night time/bla bla. Then have a timer that can select
+the profile based on time of day.

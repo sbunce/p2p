@@ -64,10 +64,10 @@ P_SEND_BLOCK
 client -> server
 Request a file block from the server.
 
-	  0   1   2   3   4   6
-	+---+---+---+---+---+---+
-	| C | F |      RRN      | , where F = file ID
-	+---+---+---+---+---+---+
+	  0   1   2   3   4   6   7   8   9   10
+	+---+---+---+---+---+---+---+---+---+---+
+	| C | F |              RRN              | , where F = file ID
+	+---+---+---+---+---+---+---+---+---+---+
 
 Possible Responses:
 

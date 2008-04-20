@@ -21,11 +21,13 @@ public:
 	                          returns the root node hash
 	file_size_to_hash_count - returns how many hashes there would be for a file of size file_size
 	replace_hash            - used to replace bad hashes found by check_hash_tree
+	stop                    - sets stop_thread to true and allows create hash tree to exit early
 	*/
 	bool check_exists(std::string root_hash);
 	bool check_hash_tree(std::string root_hash, unsigned long hash_count, std::pair<unsigned long, unsigned long> & bad_hash);
 	std::string create_hash_tree(std::string file_path);
 	void replace_hash(std::string root_hash, const unsigned long & number, char hash[]);
+	void stop();
 
 	//returns how many file hashes there would be for a file of size file_size
 	static unsigned int file_size_to_hash_count(unsigned long file_size)
@@ -77,6 +79,12 @@ public:
 	}
 
 private:
+	/*
+	If a thread is in a long create_hash_tree call then this will cause it to
+	terminate early.
+	*/
+	volatile bool stop_thread;
+
 	sha SHA;
 
 	int hash_len;   //how many bytes the raw hash is

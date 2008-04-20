@@ -14,7 +14,7 @@ void download_prep::init(volatile int * download_complete_in)
 	download_complete = download_complete_in;
 }
 
-bool download_prep::start_file(DB_access::download_info_buffer & info, download *& Download, std::list<download_conn *> & servers)
+bool download_prep::start_file(download_info & info, download *& Download, std::list<download_conn *> & servers)
 {
 	//make sure file isn't already downloading
 	if(!info.resumed){
@@ -38,27 +38,22 @@ bool download_prep::start_file(DB_access::download_info_buffer & info, download 
 		fout.close();
 	}
 
-	unsigned long file_size = strtoul(info.file_size.c_str(), NULL, 10);
-	unsigned int latest_request = info.latest_request;
-
 	//(global::P_BLS_SIZE - 1) because control size is 1 byte
-	unsigned int last_block = atol(info.file_size.c_str())/(global::P_BLOCK_SIZE - 1);
-	unsigned int last_block_size = atol(info.file_size.c_str()) % (global::P_BLOCK_SIZE - 1) + 1;
+	uint64_t last_block = info.size/(global::P_BLOCK_SIZE - 1);
+	uint64_t last_block_size = info.size % (global::P_BLOCK_SIZE - 1) + 1;
 
 	Download = new download_file(
 		info.hash,
-		info.file_name,
+		info.name,
 		file_path,
-		file_size,
-		latest_request,
+		info.size,
+		info.latest_request,
 		last_block,
 		last_block_size,
 		download_complete
 	);
 
-	if(info.server_IP.size() != info.file_ID.size()){
-		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"server_IP # != file_ID #");
-	}
+	assert(info.server_IP.size() == info.file_ID.size());
 
 	for(int x = 0; x < info.server_IP.size(); ++x){
 		servers.push_back(new download_file_conn(Download, info.server_IP[x], atoi(info.file_ID[x].c_str())));

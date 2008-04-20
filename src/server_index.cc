@@ -19,11 +19,15 @@ server_index::server_index()
 
 void server_index::index_share_recurse(std::string directory_name)
 {
+	if(stop_thread){
+		return;
+	}
+
 	namespace fs = boost::filesystem;
 	fs::path full_path = fs::system_complete(fs::path(directory_name, fs::native));
 
 	if(!fs::exists(full_path)){
-		global::debug_message(global::INFO,__FILE__,__FUNCTION__,"can't locate ", full_path.string());
+		logger::debug(LOGGER_P1,"can't locate ", full_path.string());
 		return;
 	}
 
@@ -39,15 +43,20 @@ void server_index::index_share_recurse(std::string directory_name)
 				}else{
 					//determine size
 					fs::path file_path = fs::system_complete(fs::path(directory_name + directory_iter->leaf(), fs::native));
-					DB_Access.share_add_entry(fs::file_size(file_path), file_path.string());
+					std::string hash = Hash_Tree.create_hash_tree(file_path.string());
+					if(stop_thread){
+						return;
+					}
+
+					DB_Access.share_add_entry(hash, fs::file_size(file_path), file_path.string());
 				}
 			}
 			catch(std::exception & ex){
-				global::debug_message(global::INFO,__FILE__,__FUNCTION__,"when trying to read file ",directory_iter->leaf()," caught exception ",ex.what());
+				logger::debug(LOGGER_P1,"when trying to read file ",directory_iter->leaf()," caught exception ",ex.what());
 			}
 		}
 	}else{
-		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"index location is a file when it needs to be a directory");
+		logger::debug(LOGGER_P1,"index location is a file when it needs to be a directory");
 	}
 
 	return;
@@ -90,16 +99,14 @@ void server_index::index_share()
 
 void server_index::start()
 {
-	if(threads != 0){
-		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"attempted to start the indexing thread twice");
-	}
-
+	assert(threads == 0);
 	boost::thread T(boost::bind(&server_index::index_share, this));
 }
 
 void server_index::stop()
 {
 	stop_thread = true;
+	Hash_Tree.stop();
 
 	while(threads){
 		usleep(global::SPINLOCK_TIME);

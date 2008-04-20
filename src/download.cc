@@ -16,13 +16,13 @@ download::~download()
 	}
 }
 
-void download::IP_list(std::vector<std::string> & list)
+void download::IP_list(std::vector<std::string> & IP)
 {
 	std::map<int, download_conn *>::iterator iter_cur, iter_end;
 	iter_cur = Connection.begin();
 	iter_end = Connection.end();
 	while(iter_cur != iter_end){
-		list.push_back(iter_cur->second->server_IP);
+		IP.push_back(iter_cur->second->server_IP);
 		++iter_cur;
 	}
 }

@@ -290,7 +290,7 @@ void gui::download_file()
 			Glib::ustring hash_retrieved;
 			row.get_value(0, hash_retrieved);
 
-			std::list<DB_access::download_info_buffer>::iterator iter_cur, iter_end;
+			std::vector<download_info>::iterator iter_cur, iter_end;
 			iter_cur = Search_Info.begin();
 			iter_end = Search_Info.end();
 			while(iter_cur != iter_end){
@@ -386,10 +386,10 @@ void gui::download_info_setup()
 bool gui::download_info_refresh()
 {
 	//update download info
-	std::vector<client::info_buffer> info;
-	Client.get_download_info(info);
+	std::vector<download_info> info;
+	Client.current_downloads(info);
 
-	std::vector<client::info_buffer>::iterator info_iter_cur, info_iter_end;
+	std::vector<download_info>::iterator info_iter_cur, info_iter_end;
 	info_iter_cur = info.begin();
 	info_iter_end = info.end();
 	while(info_iter_cur != info_iter_end){
@@ -453,7 +453,7 @@ bool gui::download_info_refresh()
 			Gtk::TreeModel::Row row = *(downloadList->append());
 
 			//convert file_size from B to MB
-			float file_size = info_iter_cur->file_size / 1024 / 1024;
+			float file_size = info_iter_cur->size / 1024 / 1024;
 			std::ostringstream file_size_s;
 			if(file_size < 1){
 				file_size_s << std::setprecision(2) << file_size << " mB";
@@ -463,7 +463,7 @@ bool gui::download_info_refresh()
 
 			row[hash_t] = info_iter_cur->hash;
 			row[server_IP_t] = combined_IP;
-			row[file_name_t] = info_iter_cur->file_name;
+			row[file_name_t] = info_iter_cur->name;
 			row[file_size_t] = file_size_s.str();
 			row[download_speed_t] = downloadSpeed_s.str();
 			row[percent_complete_t] = info_iter_cur->percent_complete;
@@ -491,7 +491,7 @@ bool gui::download_info_refresh()
 		row.get_value(0, hash_retrieved);
 
 		//loop through the download info and check if we have an entry for download
-		std::vector<client::info_buffer>::iterator info_iter_cur, info_iter_end;
+		std::vector<download_info>::iterator info_iter_cur, info_iter_end;
 		info_iter_cur = info.begin();
 		info_iter_end = info.end();
 		bool downloadFound = false;
@@ -707,7 +707,7 @@ void gui::search_info_refresh()
 	//clear all results
 	searchList->clear();
 
-	std::list<DB_access::download_info_buffer>::iterator info_iter_cur, info_iter_end;
+	std::vector<download_info>::iterator info_iter_cur, info_iter_end;
 	info_iter_cur = Search_Info.begin();
 	info_iter_end = Search_Info.end();
 	while(info_iter_cur != info_iter_end){
@@ -733,7 +733,7 @@ void gui::search_info_refresh()
 		column.add(server_IP_t);
 
 		//convert file_size from Bytes to megaBytes
-		float file_size = atof(info_iter_cur->file_size.c_str());
+		float file_size = info_iter_cur->size;
 		file_size = file_size / 1024 / 1024;
 		std::ostringstream file_size_s;
 		if(file_size < 1){
@@ -745,7 +745,7 @@ void gui::search_info_refresh()
 		//add row
 		Gtk::TreeModel::Row row = *(searchList->append());
 		row[hash_t] = info_iter_cur->hash;
-		row[file_name_t] = info_iter_cur->file_name;
+		row[file_name_t] = info_iter_cur->name;
 		row[file_size_t] = file_size_s.str();
 		row[server_IP_t] = server_IP;
 
@@ -758,7 +758,7 @@ bool gui::update_status_bar()
 	std::string status; //holds entire status line
 
 	//get the total client download speed
-	int clientSpeed = Client.get_total_speed();
+	int clientSpeed = Client.total_speed();
 	clientSpeed = clientSpeed / 1024; //convert to kB
 	std::ostringstream clientSpeed_s;
 	clientSpeed_s << clientSpeed << " kB/s";
@@ -788,8 +788,8 @@ void gui::quit_program()
 
 void gui::search_input()
 {
-	std::string inputText = searchEntry->get_text();
+	std::string input_text = searchEntry->get_text();
 	searchEntry->set_text("");
-	DB_Access.search(inputText, Search_Info);
+	Client.search(input_text, Search_Info);
 	search_info_refresh();
 }

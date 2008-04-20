@@ -9,6 +9,7 @@
 #include "hash_tree.h"
 
 hash_tree::hash_tree()
+: stop_thread(false)
 {
 	//create hash directory if it doesn't already exist
 	boost::filesystem::create_directory(global::HASH_DIRECTORY.c_str());
@@ -67,7 +68,6 @@ bool hash_tree::check_hash_tree(std::string root_hash, unsigned long hash_count,
 
 	bool early_termination = false;
 	while(true){
-
 		hash_fstream.seekg(current_RRN * hash_len);
 		hash_fstream.read(hash, hash_len);
 
@@ -152,6 +152,10 @@ std::string hash_tree::create_hash_tree(std::string file_name)
 		| std::ios::out | std::ios::trunc | std::ios::binary);
 
 	do{
+		if(stop_thread){
+			return "";
+		}
+
 		fin.read(chunk, block_size);
 		SHA.init(sha::enuSHA1);
 		SHA.update((const unsigned char *)chunk, fin.gcount());
@@ -160,7 +164,8 @@ std::string hash_tree::create_hash_tree(std::string file_name)
 	}while(fin.good());
 
 	if(fin.bad() || !fin.eof()){
-		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"error reading file");
+		logger::debug(LOGGER_P1,"error reading newly created hash tree file");
+		assert(false);
 	}
 
 	std::string root_hash; //will contain the root hash in hex format
@@ -206,8 +211,11 @@ void hash_tree::create_hash_tree_recurse(std::fstream & scratch, std::streampos 
 	//loop through all hashes in the lower row and create the next highest row
 	scratch.seekg(scratch_read);
 	while(scratch_read != row_end){
-		//each new upper hash requires two lower hashes
+		if(stop_thread){
+			return;
+		}
 
+		//each new upper hash requires two lower hashes
 		//read hash 1
 		scratch.seekg(scratch_read);
 		scratch.read(chunk, hash_len);
@@ -304,7 +312,8 @@ unsigned long hash_tree::locate_start(std::string root_hash)
 			}
 
 			if(end_RRN > max_possible_RRN){
-				global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"corrupt hash tree");
+				logger::debug(LOGGER_P1,"corrupt hash tree");
+				assert(false);
 			}
 		}else{
 			unsigned long start_RRN_temp = start_RRN;
@@ -318,7 +327,8 @@ unsigned long hash_tree::locate_start(std::string root_hash)
 			}
 
 			if(end_RRN > max_possible_RRN){
-				global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"corrupt hash tree");
+				logger::debug(LOGGER_P1,"corrupt hash tree");
+				assert(false);
 			}
 		}
 	}
@@ -329,4 +339,9 @@ void hash_tree::replace_hash(std::string root_hash, const unsigned long & number
 	std::fstream hash_fstream((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::out | std::ios::binary);
 	hash_fstream.seekp(hash_len * number);
 	hash_fstream.write(hash, hash_len);
+}
+
+void hash_tree::stop()
+{
+	stop_thread = true;
 }

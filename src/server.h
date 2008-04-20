@@ -37,7 +37,7 @@ public:
 	server();
 
 
-//DEBUG, all this junk should be stored in the buffer
+//DEBUG, all this junk should be stored in buffer
 	//used to pass information to user interface
 	class info_buffer
 	{
@@ -95,10 +95,12 @@ private:
 		/*
 		Stores file ID's and hash ID's that have been assigned to the client. The
 		char will store a number from 0-255.
+		Note: this limits simultaneous DL's from a client to 256.
 		*/
 		std::map<char, std::string> ID;
 	};
 
+	std::map<int, buffer> Buffer;
 
 
 

@@ -47,14 +47,14 @@ void client_buffer::post_recv()
 
 	if(Pipeline.empty()){
 		//server responded out of turn
-		global::debug_message(global::ERROR,__FILE__,__FUNCTION__,"abusive server (responded when pipeline empty) ",server_IP);
+		logger::debug(LOGGER_P1," abusive server (responded when pipeline empty) ",server_IP);
 		abuse = true;
 		return;
 	}
 
 	//if recv_buff larger than largest case the server is doing something naughty
 	if(recv_buff.size() > global::PIPELINE_SIZE * global::C_MAX_SIZE){
-		global::debug_message(global::ERROR,__FILE__,__FUNCTION__,"abusive server (exceeded maximum buffer size) ",server_IP);
+		logger::debug(LOGGER_P1," abusive server (exceeded maximum buffer size) ",server_IP);
 		abuse = true;
 		return;
 	}
@@ -78,7 +78,7 @@ void client_buffer::post_recv()
 			}
 		}else if(iter_cur == iter_end){
 			//command not found, server sent unexpected command
-			global::debug_message(global::ERROR,__FILE__,__FUNCTION__,"abusive server (incorrect length of command) ", server_IP);
+			logger::debug(LOGGER_P1," abusive server (incorrect length of command) ", server_IP);
 			abuse = true;
 			return;
 		}
