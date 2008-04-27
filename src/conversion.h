@@ -2,7 +2,6 @@
 #define H_CONVERSION
 
 //std
-#include <bitset>
 #include <string>
 
 class conversion

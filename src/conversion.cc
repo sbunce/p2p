@@ -8,8 +8,7 @@ conversion::conversion()
 //converts 32bit unsigned int to 4 byte big endian int
 std::string conversion::encode_int(const unsigned int & number)
 {
-	std::bitset<32> bs(number);
-	int_char IC = { bs.to_ulong() };
+	int_char IC = { number };
 	std::string encoded("0000");
 
 	if(ENDIANNESS == LITTLE_ENDIAN_ENUM){
@@ -30,12 +29,6 @@ std::string conversion::encode_int(const unsigned int & number)
 //converts 4 byte big endian int to 32bit unsigned int
 unsigned int conversion::decode_int(std::string encoded)
 {
-	#ifdef DEBUG
-	if(encoded.size() != 4){
-		global::debug_message(global::FATAL,__FILE__,__FUNCTION__,"improper byte length");
-	}
-	#endif
-
 	int_char IC;
 	if(ENDIANNESS == LITTLE_ENDIAN_ENUM){
 		IC.byte[0] = (unsigned char)encoded[3];

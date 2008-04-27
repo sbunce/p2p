@@ -384,34 +384,48 @@ void client::process_CQ()
 
 void client::remove_complete()
 {
+	std::list<download *> complete_download;
+	remove_complete_step_1(complete_download);
+	remove_complete_step_2(complete_download);
+	remove_complete_step_3(complete_download);
+	remove_complete_step_4(complete_download);
+	remove_complete_step_5(complete_download);
+}
+
+inline void client::remove_complete_step_1(std::list<download *> & complete_download)
+{
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(CB_DB_mutex);
-
 	/*
 	STEP 1:
 	Determine what downloads are completed.
 	*/
-	std::list<download *> Complete_Download;
 	std::list<download *>::iterator DB_iter_cur, DB_iter_end;
 	DB_iter_cur = Download_Buffer.begin();
 	DB_iter_end = Download_Buffer.end();
 	while(DB_iter_cur != DB_iter_end){
 		if((*DB_iter_cur)->complete()){
-			Complete_Download.push_back(*DB_iter_cur);
+			complete_download.push_back(*DB_iter_cur);
+			--(*download_complete);
 		}
 		++DB_iter_cur;
 	}
+	}//end lock scope
+}
 
+inline void client::remove_complete_step_2(std::list<download *> & complete_download)
+{
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(CB_DB_mutex);
 	/*
 	STEP 2:
 	Remove any pending_connections for download. In progress connections will be
 	cancelled by setting their download pointer to NULL.
 	*/
 	std::list<download *>::iterator CD_iter_cur, CD_iter_end;
-	CD_iter_cur = Complete_Download.begin();
-	CD_iter_end = Complete_Download.end();
+	CD_iter_cur = complete_download.begin();
+	CD_iter_end = complete_download.end();
 	while(CD_iter_cur != CD_iter_end){
-
 		//pending connections
 		std::deque<download_conn *>::iterator CQ_iter_cur, CQ_iter_end;
 		CQ_iter_cur = Connection_Queue.begin();
@@ -438,7 +452,13 @@ void client::remove_complete()
 
 		++CD_iter_cur;
 	}
+	}//end lock scope
+}
 
+inline void client::remove_complete_step_3(std::list<download *> & complete_download)
+{
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(CB_DB_mutex);
 	/*
 	STEP 3:
 	Terminate the completed downloads with all client_buffers.
@@ -447,22 +467,31 @@ void client::remove_complete()
 	CB_iter_cur = Client_Buffer.begin();
 	CB_iter_end = Client_Buffer.end();
 	while(CB_iter_cur != CB_iter_end){
-		CD_iter_cur = Complete_Download.begin();
-		CD_iter_end = Complete_Download.end();
+		std::list<download *>::iterator CD_iter_cur, CD_iter_end;
+		CD_iter_cur = complete_download.begin();
+		CD_iter_end = complete_download.end();
 		while(CD_iter_cur != CD_iter_end){
 			CB_iter_cur->second->terminate_download(*CD_iter_cur);
 			++CD_iter_cur;
 		}
 		++CB_iter_cur;
 	}
+	}//end lock scope
+}
 
+inline void client::remove_complete_step_4(std::list<download *> & complete_download)
+{
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(CB_DB_mutex);
 	/*
 	STEP 4:
 	Remove the download from the Download_Buffer and send it to Download_Prep.stop().
 	*/
-	CD_iter_cur = Complete_Download.begin();
-	CD_iter_end = Complete_Download.end();
+	std::list<download *>::iterator CD_iter_cur, CD_iter_end;
+	CD_iter_cur = complete_download.begin();
+	CD_iter_end = complete_download.end();
 	while(CD_iter_cur != CD_iter_end){
+		std::list<download *>::iterator DB_iter_cur, DB_iter_end;
 		DB_iter_cur = Download_Buffer.begin();
 		DB_iter_end = Download_Buffer.end();
 		while(DB_iter_cur != DB_iter_end){
@@ -506,11 +535,18 @@ void client::remove_complete()
 		}
 		++CD_iter_cur;
 	}
+	}//end lock scope
+}
 
+inline void client::remove_complete_step_5(std::list<download *> & complete_download)
+{
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(CB_DB_mutex);
 	/*
 	STEP 5:
 	Disconnect empty client_buffer's.
 	*/
+	std::map<int, client_buffer *>::iterator CB_iter_cur, CB_iter_end;
 	CB_iter_cur = Client_Buffer.begin();
 	CB_iter_end = Client_Buffer.end();
 	while(CB_iter_cur != CB_iter_end){
@@ -522,8 +558,6 @@ void client::remove_complete()
 			++CB_iter_cur;
 		}
 	}
-
-	*download_complete = 0;
 	}//end lock scope
 }
 
@@ -534,6 +568,7 @@ void client::search(std::string search_word, std::vector<download_info> & Search
 
 void client::start()
 {
+	assert(threads == 0);
 	boost::thread T1(boost::bind(&client::main_thread, this));
 }
 
@@ -594,6 +629,11 @@ void client::stop_download(std::string hash)
 
 int client::total_speed()
 {
+	/*
+	If there is no I/O the speed won't get updated. This will update the speed
+	as long as the client cares to check it.
+	*/
 	Speed_Calculator.update(0);
+
 	return Speed_Calculator.speed();
 }

@@ -132,6 +132,7 @@ private:
 	process_CQ          - connects to servers for DC's or initiates adding a DC to existing client_buffer
 	                      one Thread_Pool job should be scheduled for each DC in Connection_Queue
 	remove_complete     - removes downloads that are complete(or stopped)
+	remove_complete_step 1 to 5 - documentation in functions
 	*/
 	void check_timeouts();
 	bool DC_add_existing(download_conn * DC);
@@ -143,5 +144,10 @@ private:
 	void prepare_requests();
 	void process_CQ();
 	void remove_complete();
+	inline void remove_complete_step_1(std::list<download *> & complete_download);
+	inline void remove_complete_step_2(std::list<download *> & complete_download);
+	inline void remove_complete_step_3(std::list<download *> & complete_download);
+	inline void remove_complete_step_4(std::list<download *> & complete_download);
+	inline void remove_complete_step_5(std::list<download *> & complete_download);
 };
 #endif

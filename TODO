@@ -1,8 +1,10 @@
 TODO
 
--Add file_ID protocol stuff first.
+-Think about making a SHA1 implementation. Strong suspicions that the one being
+used is slow.
 
--GUI lags on starting download when hashing is going.
+-When a connection to a server fails pending connection attempts for that server
+should be stopped.
 
 -The client_buffer needs to be adjusted to pipeline more when sending commands
 that expect smaller responses. This needs some thought because downloads might
@@ -13,16 +15,6 @@ their max possible response size and operate on that.
 
 -Hashes need to be regenerated for files that have changed size (files hashed
 while they were copying).
-
-
-DEFERRED FEATURES
-
--Needs to be a check so that when the user tries to download the same thing
-twice the second download doesn't get appended to the first. This will naturally
-be added when hashes are checked. If a file we want to download has a root hash
-that exists in the hashes folder then the file was already downloaded.
-
--Blacklisting of abusive clients/servers.
 
 
 IDEAS
@@ -36,15 +28,6 @@ level inheritance and all level inheritance.
 -Don't allow people to download who have the P2P port blocked. Make a ping
 command the server can send to the client. The client should return a pong
 otherwise it doesn't get to download.
-
--Download priority can be done by adding a "stickyness" to downloads in the
-client_buffer. Have a value associated with downloads which makes them take
-more calls to rotate_downloads() to actually rotate. Downloads should start on
-normal. Possible settings low = 1, normal = 2, medium = 3, and high = 4.
-
--I want to have sharing such that someone just selects a folder(s) to share and
-forgets about it. Perhaps combine this with allowing people to publish tracked
-files on websites so you can still find the obscure stuff.
 
 -Let the user set up bandwidth profiles that can be quickly selected. The user
 could create one for games/night time/bla bla. Then have a timer that can select
