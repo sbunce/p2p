@@ -288,8 +288,45 @@ void client::main_thread()
 	--threads;
 }
 
+bool client::known_unresponsive(const std::string & IP)
+{	
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(KU_mutex);
+
+	//remove elements that are too old
+	Known_Unresponsive.erase(Known_Unresponsive.begin(),
+		Known_Unresponsive.upper_bound(time(0) - global::UNRESPONSIVE_TIMEOUT));
+
+	//see if IP is in the list
+	std::map<time_t,std::string>::iterator iter_cur, iter_end;
+	iter_cur = Known_Unresponsive.begin();
+	iter_end = Known_Unresponsive.end();
+	while(iter_cur != iter_end){
+		if(iter_cur->second == IP){
+			return true;
+		}
+		else{
+			++iter_cur;
+		}
+	}
+
+	}//end lock scope
+
+	return false;
+}
+
 void client::new_conn(download_conn * DC)
 {
+	/*
+	If this DC is for a server that is known to have rejected a previous
+	connection attempt to it within the last minute then don't attempt another
+	connection.
+	*/
+	if(known_unresponsive(DC->server_IP)){
+		logger::debug(LOGGER_P1,"stopping connection to known unresponsive server ",DC->server_IP);
+		return;
+	}
+
 	hostent * he;
 
 	{//begin lock scope
@@ -299,7 +336,17 @@ void client::new_conn(download_conn * DC)
 	}//end lock scope
 
 	if(he == NULL){
+		{//begin lock scope
+		boost::mutex::scoped_lock lock(KU_mutex);
+		Known_Unresponsive.insert(std::make_pair(time(0), DC->server_IP));
+		}//end lock scope
 		herror("gethostbyname");
+		return;
+	}else if(strncmp(inet_ntoa(*(struct in_addr*)he->h_addr), "127", 3) == 0){
+		{//begin lock scope
+		boost::mutex::scoped_lock lock(KU_mutex);
+		Known_Unresponsive.insert(std::make_pair(time(0), DC->server_IP));
+		}//end lock scope
 		return;
 	}
 
@@ -312,6 +359,12 @@ void client::new_conn(download_conn * DC)
 
 	if(connect(DC->socket_FD, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0){
 		logger::debug(LOGGER_P1,"connection to ",DC->server_IP," failed");
+
+		{//begin lock scope
+		boost::mutex::scoped_lock lock(KU_mutex);
+		Known_Unresponsive.insert(std::make_pair(time(0), DC->server_IP));
+		}//end lock scope
+
 		return;
 	}else{
 		logger::debug(LOGGER_P1,"created socket ",DC->socket_FD," for ",DC->server_IP);
@@ -353,7 +406,6 @@ void client::prepare_requests()
 
 void client::process_CQ()
 {
-	++threads;
 	download_conn * DC;
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(DC_mutex);
@@ -378,8 +430,6 @@ void client::process_CQ()
 
 	//allow DC_block_concurrent to send next DC with same server_IP
 	DC_unblock(DC);
-
-	--threads;
 }
 
 void client::remove_complete()

@@ -1,16 +1,5 @@
 TODO
 
--Think about making a SHA1 implementation. Strong suspicions that the one being
-used is slow.
-
--When a connection to a server fails pending connection attempts for that server
-should be stopped.
-
--The client_buffer needs to be adjusted to pipeline more when sending commands
-that expect smaller responses. This needs some thought because downloads might
-expect different responses. Perhaps add a function to downloads that returns
-their max possible response size and operate on that.
-
 -Hash trees for missing files need to be deleted.
 
 -Hashes need to be regenerated for files that have changed size (files hashed

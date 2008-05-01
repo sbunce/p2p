@@ -32,10 +32,10 @@ public:
 	//returns how many file hashes there would be for a file of size file_size
 	static unsigned int file_size_to_hash_count(unsigned long file_size)
 	{
-		unsigned int hashes = file_size / hash_length();
+		unsigned int hashes = file_size / 20;
 
 		//add one hash for a partial last file block
-		if(file_size % hash_length() != 0){
+		if(file_size % 20 != 0){
 			++hashes;
 		}
 		return hashes;
@@ -70,12 +70,6 @@ public:
 		++total_hashes;
 
 		return total_hashes;
-	}
-
-	//wraps the sha::hash_length() function so classes that use hash_tree don't have to know about sha
-	static int hash_length()
-	{
-		return sha::hash_length(global::HASH_TYPE);
 	}
 
 private:

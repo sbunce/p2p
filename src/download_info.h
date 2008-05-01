@@ -40,9 +40,5 @@ public:
 	//these are set when the download is running
 	int percent_complete;
 	int speed;
-
-private:
-	//this enforces proper construction
-	download_info();
 };
 #endif

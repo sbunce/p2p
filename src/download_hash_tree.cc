@@ -6,7 +6,7 @@ const std::string & file_name, volatile bool * download_complete_flag_in)
 {
 	hash_name = file_name + "HASH";
 	hash_tree_count = hash_tree::file_size_to_hash_tree_count(file_size);
-	hash_tree_size = hash_tree_count * hash_tree::hash_length();
+	hash_tree_size = hash_tree_count * 20;
 
 	if(Hash_Tree.check_exists(root_hash)){
 		//the hash tree already exists, see if it's complete and correct

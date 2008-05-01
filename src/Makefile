@@ -1,5 +1,5 @@
 #GPROF = -pg
-CXXFLAGS = `pkg-config gtkmm-2.4 --cflags`
+CXXFLAGS = `pkg-config gtkmm-2.4 --cflags` -O3 #-Werror -ansi -pedantic
 
 OBJECTS = \
 	client_buffer.o \

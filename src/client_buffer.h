@@ -69,9 +69,10 @@ private:
 
 	/*
 	rotate_downloads - moves Download_iter through Download in a circular fashion
+	                   returns true if looped back to beginning
 	unregister_all   - unregisters this connection with all associated downloads
 	*/
-	void rotate_downloads();
+	bool rotate_downloads();
 	void unreg_all();
 
 	boost::mutex T_mutex; //mutex for termination function

@@ -15,6 +15,7 @@
 #include "download_file_conn.h"
 #include "global.h"
 #include "request_gen.h"
+#include "sha.h"
 
 class download_file : public download
 {

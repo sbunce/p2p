@@ -18,7 +18,6 @@ const unsigned int & last_block_in, const unsigned int & last_block_size_in, vol
 last_block(last_block_in), last_block_size(last_block_size_in), download_file_complete(download_file_complete_in),
 download_complete(false)
 {
-	SHA.init(global::HASH_TYPE);
 	Request_Gen.init(latest_request_in, last_block, global::TIMEOUT);
 }
 

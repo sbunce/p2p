@@ -110,38 +110,46 @@ void client_buffer::post_send()
 
 void client_buffer::prepare_request()
 {
-	std::string request;
-	int count = 0;
-	if(!Download.empty()){
-		int empty_to_nonempty = false;
-		while(Pipeline.size() <= global::PIPELINE_SIZE && ++count <= global::PIPELINE_SIZE){
-			rotate_downloads();
-			pending_response PR;
-			PR.Download = *Download_iter;
-			if((*Download_iter)->request(socket, request, PR.expected)){
-				if(send_buff.size() == 0){
-					empty_to_nonempty = true;
-				}
-				send_buff += request;
-				Pipeline.push_back(PR);
-			}
-		}
+	if(Download.empty()){
+		return;
+	}
 
-		//if the send_buff went from empty to nonempty signal client that a send is pending
-		if(empty_to_nonempty){
-			++(*send_pending);
+	//stop infinite loop when all downloads waiting
+	bool buffer_change = true;
+
+	int initial_empty = (send_buff.size() == 0);
+	while(Pipeline.size() <= global::PIPELINE_SIZE){
+		std::string request;
+		if(rotate_downloads()){
+			if(!buffer_change){
+				break;
+			}
+			buffer_change = false;
 		}
+		pending_response PR;
+		PR.Download = *Download_iter;
+		if((*Download_iter)->request(socket, request, PR.expected)){
+			send_buff += request;
+			Pipeline.push_back(PR);
+			buffer_change = true;
+		}
+	}
+
+	if(initial_empty && send_buff.size() != 0){
+		++(*send_pending);
 	}
 }
 
-void client_buffer::rotate_downloads()
+bool client_buffer::rotate_downloads()
 {
 	if(!Download.empty()){
 		++Download_iter;
 	}
 	if(Download_iter == Download.end()){
 		Download_iter = Download.begin();
+		return true;
 	}
+	return false;
 }
 
 void client_buffer::terminate_download(download * term_DL)

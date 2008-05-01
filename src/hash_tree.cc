@@ -14,8 +14,7 @@ hash_tree::hash_tree()
 	//create hash directory if it doesn't already exist
 	boost::filesystem::create_directory(global::HASH_DIRECTORY.c_str());
 
-	SHA.init(global::HASH_TYPE);
-	hash_len = sha::hash_length(global::HASH_TYPE);
+	hash_len = 20;
 	block_size = global::P_BLOCK_SIZE - 1;
 }
 
@@ -27,12 +26,14 @@ bool hash_tree::check_exists(std::string root_hash)
 
 inline bool hash_tree::check_hash(char parent[], char left_child[], char right_child[])
 {
+	//SHA.generate(std::string(left_child)+std::string(right_child));
+
 	SHA.init(global::HASH_TYPE);
 	SHA.update((const unsigned char *)left_child, hash_len);
 	SHA.update((const unsigned char *)right_child, hash_len);
 	SHA.end();
 
-	if(memcmp(parent, SHA.raw_hash_no_null(), hash_len) == 0){
+	if(memcmp(parent, SHA.raw_hash(), hash_len) == 0){
 		return true;
 	}else{
 		return false;

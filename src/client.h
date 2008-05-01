@@ -59,7 +59,7 @@ public:
 
 private:
 	volatile bool stop_threads; //if true this will trigger thread termination
-	volatile int threads;       //how many threads are currently running
+	volatile int threads;       //how many threads are currently running (currently one possible)
 
 	//used for timeouts
 	time_t current_time;
@@ -97,26 +97,31 @@ private:
 	*/
 	volatile int * send_pending;
 
-	//true if a download is complete, handed to all downloads
+	//this is incremented in downloads when they're complete to indicate need to terminate
 	volatile int * download_complete;
 
 	//used to initiate new connections
 	thread_pool<client> Thread_Pool;
 
-	//each mutex names the object it locks in the format boost::mutex <object>Mutex
-	boost::mutex CB_DB_mutex; //for both Client_Buffer and Download_Buffer
-	boost::mutex DC_mutex;    //locks access to download_conn instances
+	//mutex for both Client_Buffer and Download_Buffer
+	boost::mutex CB_DB_mutex;
+
+	//mutex for download_conn's that DON'T belong to a client_buffer
+	boost::mutex DC_mutex;
 
 	/*
-	The gethostbyname() name resolving function is not thread-safe. Without this
-	you sometimes get garbled addresses returned.
+	The gethostbyname() name resolving function is not thread-safe. Without
+	locking access to it garbled addresses are sometimes returned.
 	*/
 	boost::mutex gethostbyname_mutex;
 
-	sha SHA;
-	DB_access DB_Access;
-	download_prep Download_Prep;
-	speed_calculator Speed_Calculator;
+	/*
+	Used by the known_unresponsive function to check for servers that have
+	recently rejected a connection. The purpose of this is to avoid unnecessary
+	connection attempts.
+	*/
+	boost::mutex KU_mutex; //mutex for Known_Unresponsive
+	std::map<time_t,std::string> Known_Unresponsive;
 
 	/*
 	check_timeouts      - checks all servers to see if they've timed out and removes/disconnects if they have
@@ -126,6 +131,7 @@ private:
 	                      lets a new DC by whenever the DC blocking is unblocked with DC_unblock
 	DC_unblock          - allows DC_block_concurrent to release a DC being blocked
 	disconnect          - disconnects a socket, modifies Client_Buffer
+	known_unresponsive  - returns true if a connection to the server failed within global::UNRESPONSIVE_TIMEOUT time
 	main_thread         - main client thread that sends/receives data and triggers events
 	new_conn            - connects to the server specified by the DC
 	prepare_requests    - touches each Client_Buffer element to trigger new requests(if needed)
@@ -133,12 +139,14 @@ private:
 	                      one Thread_Pool job should be scheduled for each DC in Connection_Queue
 	remove_complete     - removes downloads that are complete(or stopped)
 	remove_complete_step 1 to 5 - documentation in functions
+	remove_pending_connections - stop pending connection attemps to an IP
 	*/
 	void check_timeouts();
 	bool DC_add_existing(download_conn * DC);
 	void DC_block_concurrent(download_conn * DC);
 	void DC_unblock(download_conn * DC);
 	inline void disconnect(const int & socket_FD);
+	bool known_unresponsive(const std::string & IP);
 	void main_thread();
 	void new_conn(download_conn * DC);
 	void prepare_requests();
@@ -149,5 +157,10 @@ private:
 	inline void remove_complete_step_3(std::list<download *> & complete_download);
 	inline void remove_complete_step_4(std::list<download *> & complete_download);
 	inline void remove_complete_step_5(std::list<download *> & complete_download);
+
+	sha SHA;
+	DB_access DB_Access;
+	download_prep Download_Prep;
+	speed_calculator Speed_Calculator;
 };
 #endif

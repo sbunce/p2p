@@ -47,10 +47,7 @@ this by having the client send out many requests initially, and then sending a
 new request as whenever a response is received. In this way the server maintains
 a queue of requests it can process even if new requests are delayed.
 
-The maximum pipeline size is 16 * (max server response size). The max server
-response size is the maximum possible response size to a command. It is possible
-to pipeline more commands if the maximum possible response size to the commands
-is smaller.
+The maximum pipeline size is 32 commands.
 
 /******************************************************************************/
 TIMEOUT
