@@ -1,7 +1,3 @@
-//boost
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
-
 //std
 #include <fstream>
 #include <iostream>
@@ -15,6 +11,30 @@ server_index::server_index()
 {
 	//create the share directory if it doesn't exist
 	boost::filesystem::create_directory(global::SERVER_SHARE_DIRECTORY);
+}
+
+static bool file_exists(const std::string & path)
+{
+	std::fstream fin(path.c_str(), std::ios::in);
+	return fin.is_open();
+}
+
+void server_index::generate_hash(const boost::filesystem::path & file_path)
+{
+	namespace fs = boost::filesystem;
+
+	//no entry for file exists, create hash tree
+	std::string hash = Hash_Tree.create_hash_tree(file_path.string());
+
+	//make sure user didn't move the file while it was hashing
+	if(file_exists(file_path.string())){
+		//file still present
+		DB_Access.share_add_entry(hash, fs::file_size(file_path), file_path.string());
+	}else{
+		//file missing delete hash tree
+		fs::path path = fs::system_complete(fs::path(global::HASH_DIRECTORY+hash, fs::native));
+		fs::remove(path);
+	}
 }
 
 void server_index::index_share_recurse(std::string directory_name)
@@ -43,12 +63,23 @@ void server_index::index_share_recurse(std::string directory_name)
 				}else{
 					//determine size
 					fs::path file_path = fs::system_complete(fs::path(directory_name + directory_iter->leaf(), fs::native));
-					std::string hash = Hash_Tree.create_hash_tree(file_path.string());
+
+					std::string existing_hash;
+					if(!DB_Access.share_file_exists(existing_hash, file_path.string())){
+						generate_hash(file_path);
+					}else{
+						//entry exists, make sure hash file exists
+						std::fstream fin((global::HASH_DIRECTORY+existing_hash).c_str(), std::ios::in);
+						if(!fin.is_open()){
+							//hash file doesn't exist, delete entry from DB and generate new hash tree
+							DB_Access.share_delete_hash(existing_hash);
+							generate_hash(file_path);
+						}
+					}
+
 					if(stop_thread){
 						return;
 					}
-
-					DB_Access.share_add_entry(hash, fs::file_size(file_path), file_path.string());
 				}
 			}
 			catch(std::exception & ex){
@@ -57,6 +88,7 @@ void server_index::index_share_recurse(std::string directory_name)
 		}
 	}else{
 		logger::debug(LOGGER_P1,"index location is a file when it needs to be a directory");
+		assert(false);
 	}
 
 	return;
@@ -76,13 +108,11 @@ void server_index::index_share()
 	DB_Access.share_remove_missing();
 	index_share_recurse(global::SERVER_SHARE_DIRECTORY);
 	indexing = false;
-
 	int seconds_slept = 0;
 	while(true){
 		if(stop_thread){
 			break;
 		}
-
 		sleep(1);
 		++seconds_slept;
 		if(seconds_slept > global::SHARE_REFRESH){

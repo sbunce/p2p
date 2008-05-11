@@ -52,15 +52,14 @@ DB_access::DB_access()
 
 void DB_access::share_add_entry(const std::string & hash, const int & size, const std::string & path)
 {
-	{//begin lock scope
 	boost::mutex::scoped_lock lock(Mutex);
 
-	std::ostringstream query;
+
 	share_add_entry_entry_exists = false;
 
 	//determine if the entry already exists
+	std::ostringstream query;
 	query << "SELECT * FROM share WHERE path LIKE \"" << path << "\" LIMIT 1;";
-
 	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), share_add_entry_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,"#1 ",sqlite3_errmsg(sqlite3_DB));
 	}
@@ -73,8 +72,6 @@ void DB_access::share_add_entry(const std::string & hash, const int & size, cons
 			logger::debug(LOGGER_P1,"#2 ",sqlite3_errmsg(sqlite3_DB));
 		}
 	}
-
-	}//end lock scope
 }
 
 void DB_access::share_add_entry_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
@@ -82,17 +79,44 @@ void DB_access::share_add_entry_call_back(int & columns_retrieved, char ** query
 	share_add_entry_entry_exists = true;
 }
 
-bool DB_access::share_file_info(const unsigned int & file_ID, unsigned long & file_size, std::string & file_path)
+void DB_access::share_delete_hash(const std::string & hash)
 {
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(Mutex);
+	std::ostringstream query;
+	query << "DELETE FROM share WHERE hash = \"" << hash << "\";";
+	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
+		logger::debug(LOGGER_P1,"#1 ",sqlite3_errmsg(sqlite3_DB));
+	}
+}
+
+bool DB_access::share_file_exists(std::string & existing_hash, const std::string & path)
+{
+	existing_hash.clear();
+	existing_hash_ptr = &existing_hash;
+	share_file_exists_ = false;
 
 	std::ostringstream query;
+	query << "SELECT hash from share WHERE path = \"" << path << "\";";
+	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), share_file_exists_call_back_wrapper, (void *)this, NULL) != 0){
+		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
+	}
+	return share_file_exists_;
+}
+
+void DB_access::share_file_exists_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
+{
+	*existing_hash_ptr = query_response[0];
+	share_file_exists_ = true;
+}
+
+bool DB_access::share_file_info(const unsigned int & file_ID, unsigned long & file_size, std::string & file_path)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+
 	share_file_info_entry_exists = false;
 
 	//locate the record
+	std::ostringstream query;
 	query << "SELECT size, path FROM share WHERE ID LIKE \"" << file_ID << "\" LIMIT 1;";
-
 	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), share_file_info_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
@@ -105,8 +129,6 @@ bool DB_access::share_file_info(const unsigned int & file_ID, unsigned long & fi
 	else{
 		return false;
 	}
-
-	}//end lock scope
 }
 
 void DB_access::share_file_info_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
@@ -118,35 +140,36 @@ void DB_access::share_file_info_call_back(int & columns_retrieved, char ** query
 
 void DB_access::share_remove_missing()
 {
-	if(sqlite3_exec(sqlite3_DB, "SELECT path FROM share;", share_remove_missing_call_back_wrapper, (void *)this, NULL) != 0){
+	if(sqlite3_exec(sqlite3_DB, "SELECT hash, path FROM share;", share_remove_missing_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
 }
 
 void DB_access::share_remove_missing_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
-	{//begin lock scope
 	boost::mutex::scoped_lock lock(Mutex);
 
-	std::fstream temp(query_response[0]);
+	std::fstream fin(query_response[1]);
 
-	if(temp.is_open()){
-		temp.close();
+	if(fin.is_open()){
+		fin.close();
 	}
 	else{
+		//remove hash tree
+		namespace fs = boost::filesystem;
+		fs::path path = fs::system_complete(fs::path(global::HASH_DIRECTORY+std::string(query_response[0]), fs::native));
+		fs::remove(path);
+
 		std::ostringstream query;
-		query << "DELETE FROM share WHERE path = \"" << query_response[0] << "\";";
+		query << "DELETE FROM share WHERE hash = \"" << query_response[0] << "\";";
 		if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
 			logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 		}
 	}
-
-	}//end lock scope
 }
 
 bool DB_access::download_get_file_path(const std::string & hash, std::string & path)
 {
-	{//begin lock scope
 	boost::mutex::scoped_lock lock(Mutex);
 
 	std::ostringstream query;
@@ -166,8 +189,6 @@ bool DB_access::download_get_file_path(const std::string & hash, std::string & p
 	else{
 		logger::debug(LOGGER_P1,"download record not found");
 	}
-
-	}//end lock scope
 }
 
 void DB_access::download_get_file_path_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
@@ -178,16 +199,12 @@ void DB_access::download_get_file_path_call_back(int & columns_retrieved, char *
 
 void DB_access::download_initial_fill_buff(std::list<download_info> & resumed_download)
 {
-	{//begin lock scope
 	boost::mutex::scoped_lock lock(Mutex);
 
 	if(sqlite3_exec(sqlite3_DB, "SELECT * FROM download;", download_initial_fill_buff_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
-
 	resumed_download.splice(resumed_download.end(), download_initial_fill_buff_resumed_download);
-
-	}//end lock scope
 }
 
 void DB_access::download_initial_fill_buff_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
@@ -243,7 +260,6 @@ void DB_access::download_initial_fill_buff_call_back(int & columns_retrieved, ch
 
 bool DB_access::download_start_download(download_info & info)
 {
-	{//begin lock scope
 	boost::mutex::scoped_lock lock(Mutex);
 
 	std::ostringstream query;
@@ -274,13 +290,10 @@ bool DB_access::download_start_download(download_info & info)
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 		return false;
 	}
-
-	}//end lock scope
 }
 
 void DB_access::download_terminate_download(const std::string & hash)
 {
-	{//begin lock scope
 	boost::mutex::scoped_lock lock(Mutex);
 
 	std::ostringstream query;
@@ -289,13 +302,10 @@ void DB_access::download_terminate_download(const std::string & hash)
 	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
-
-	}//end lock scope
 }
 
 void DB_access::search(std::string & search_word, std::vector<download_info> & search_results)
 {
-	{//begin lock scope
 	boost::mutex::scoped_lock lock(Mutex);
 
 	search_results.clear();
@@ -317,8 +327,6 @@ void DB_access::search(std::string & search_word, std::vector<download_info> & s
 			logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 		}
 	}
-
-	}//end lock scope
 }
 
 void DB_access::search_call_back(int & columns_retrieved, char ** query_response, char ** column_name)

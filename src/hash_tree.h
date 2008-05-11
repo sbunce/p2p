@@ -79,9 +79,6 @@ private:
 	*/
 	volatile bool stop_thread;
 
-	sha SHA;
-
-	int hash_len;   //how many bytes the raw hash is
 	int block_size; //how many bytes in one file block
 
 	/*
@@ -106,5 +103,7 @@ private:
 	inline bool check_hash(char parent[], char left_child[], char right_child[]);
 	void create_hash_tree_recurse(std::fstream & scratch, std::streampos row_start, std::streampos row_end, std::string & root_hash);
 	unsigned long locate_start(std::string root_hash);
+
+	sha SHA;
 };
 #endif

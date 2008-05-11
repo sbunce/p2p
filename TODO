@@ -1,9 +1,7 @@
 TODO
 
--Hash trees for missing files need to be deleted.
-
--Hashes need to be regenerated for files that have changed size (files hashed
-while they were copying).
+-Rename download_prep to download_factory since it is close to that design
+pattern.
 
 
 IDEAS
@@ -21,3 +19,6 @@ otherwise it doesn't get to download.
 -Let the user set up bandwidth profiles that can be quickly selected. The user
 could create one for games/night time/bla bla. Then have a timer that can select
 the profile based on time of day.
+
+-Think about using a locking pointer on the download ABC. The downloads are the
+reason for all the complicated locks on the Download_Buffer and Client_Buffer.

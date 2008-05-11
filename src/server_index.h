@@ -4,6 +4,8 @@
 //boost
 #include <boost/thread/thread.hpp>
 #include <boost/bind.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 
 //std
 #include <string>
@@ -35,6 +37,7 @@ private:
 	index_share         - removes files listed in index that don't exist in share
 	index_share_recurse - recursive function to locate all files in share(calls add_entry)
 	*/
+	void generate_hash(const boost::filesystem::path & file_path);
 	void index_share();
 	void index_share_recurse(std::string directory_name);
 

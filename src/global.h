@@ -1,6 +1,9 @@
 #ifndef H_GLOBALS
 #define H_GLOBALS
 
+//uncomment to disable all asserts
+//#define NDEBUG
+
 //std
 #include <cassert>
 #include <iostream>
@@ -16,7 +19,7 @@ namespace global
 	const std::string VERSION = "0.00 pre-alpha";
 
 	const int MAX_CONNECTIONS = 50;       //maximum number of connections the server will accept
-	const int NEW_CONN_THREADS = 10;      //how many threads are in the thread pool for making new client connections
+	const int NEW_CONN_THREADS = 2;       //how many threads are in the thread pool for making new client connections
 	const int PIPELINE_SIZE = 32;         //how many pre-requests can be done
 	const int P2P_PORT = 6969;            //port client connects to and server receives on
 	const int GUI_TICK = 100;             //time(in milliseconds) between gui updates
@@ -24,7 +27,7 @@ namespace global
 	const int COMPLETE_REMOVE = 4;        //how many seconds to wait before removing a complete upload
 	const int TIMEOUT = 8;                //how long before an unresponsive server times out
 	const int UNRESPONSIVE_TIMEOUT = 60;  //if cannot connect to server, minimum time before retry 
-	const int SHARE_REFRESH = 1200;       //number of seconds between updating share information
+	const int SHARE_REFRESH = 10;         //number of seconds between updating share information
 	const int SPINLOCK_TIME = 1000;       //microsecond timeout on all spinlocks
 	const int UP_SPEED = 9999*1024+512;   //upload speed limit (B/s)
 	const int DOWN_SPEED = 9999*1024+512; //download speed limit (B/s)
@@ -44,9 +47,6 @@ namespace global
 	//size of the largest possibe packet the server and client can receive
 	const int S_MAX_SIZE = P_SEND_BLOCK_SIZE;
 	const int C_MAX_SIZE = P_BLOCK_SIZE;
-
-	//hash type to be used for hash tree
-	static const sha::SHA_TYPE HASH_TYPE = sha::enuSHA1;
 
 	//default locations
 	const std::string CLIENT_DOWNLOAD_DIRECTORY = "download/";

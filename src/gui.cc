@@ -192,7 +192,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 
 	//window properties
 	window->set_title(global::NAME);
-	window->resize(800, 300);
+	window->resize(800, 600);
 	window->set_modal(false);
 	window->property_window_position().set_value(Gtk::WIN_POS_NONE);
 	window->set_resizable(true);

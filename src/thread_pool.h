@@ -15,7 +15,6 @@
 template<class T> class thread_pool
 {
 public:
-	thread_pool();          //does not star threads, use init()
 	thread_pool(int start); //starts threads
 
 	/*
@@ -53,21 +52,7 @@ private:
 	void pool();
 };
 
-template<class T> thread_pool<T>::thread_pool()
-{
-	stop_threads = false;
-	threads = 0;
-}
-
 template<class T> thread_pool<T>::thread_pool(int start)
-{
-	thread_pool();
-	for(int x=0; x<start; ++x){
-		boost::thread Thread(boost::bind(&thread_pool::pool, this));
-	}
-}
-
-template<class T> void thread_pool<T>::init(int start)
 {
 	for(int x=0; x<start; ++x){
 		boost::thread Thread(boost::bind(&thread_pool::pool, this));
@@ -88,23 +73,18 @@ template<class T> void thread_pool<T>::pool()
 
 	void (T::*memfun_ptr)();
 	T * Obj;
-
 	while(true){
-
 		usleep(global::SPINLOCK_TIME);
-
 		if(stop_threads){
 			break;
 		}
-
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(Mutex);
 		if(!work_queue.empty()){
 			Obj = work_queue.front().first;
 			memfun_ptr = work_queue.front().second;
 			work_queue.pop();
-		}
-		else{
+		}else{
 			continue;
 		}
 		}//end lock scope
