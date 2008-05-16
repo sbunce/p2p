@@ -7,9 +7,9 @@ gui_about::gui_about()
 {
 	window = this;
 
-	window->set_title(("about"));
+	window->set_title(("About "+global::NAME));
 	window->resize(500, 350);
-	window->set_modal(false);
+	window->set_modal(true);
 	window->set_keep_above(true);
 	window->set_position(Gtk::WIN_POS_CENTER_ALWAYS);
 
@@ -29,8 +29,7 @@ gui_about::gui_about()
 	about_buttonBox.pack_start(buttonClose, Gtk::PACK_SHRINK);
 
 	buttonClose.set_label("Close");
-	buttonClose.signal_clicked().connect(sigc::mem_fun(*this,
-		&gui_about::on_button_close));
+	buttonClose.signal_clicked().connect(sigc::mem_fun(*this, &gui_about::on_button_close));
 
 	show_all_children();
 }

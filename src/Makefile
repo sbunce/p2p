@@ -12,8 +12,10 @@ OBJECTS = \
 	download_hash_tree.o \
 	download_prep.o \
 	download.o \
+	gui.o \
 	gui_about.o \
-	gui.o hash_tree.o \
+	gui_preferences.o \
+	hash_tree.o \
 	logger.o \
 	main.o \
 	request_gen.o \

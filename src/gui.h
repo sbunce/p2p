@@ -30,6 +30,11 @@ private:
 	Gtk::MenuItem * fileMenuItem;
 	Gtk::ImageMenuItem * quit;
 
+	//settings menu
+	Gtk::Menu * settingsMenu;
+	Gtk::MenuItem * settingsMenuItem;
+	Gtk::MenuItem * preferences;
+
 	//help menu
 	Gtk::Menu * helpMenu;
 	Gtk::MenuItem * helpMenuItem;
@@ -80,21 +85,23 @@ private:
 	Glib::RefPtr<Gtk::ListStore> trackerList;
 
 	/*functions associated with Gtk signals
-	about_program   - user clicked Help/About
-	cancel_download - when user clicks Cancel on a download in downloadView
-	download_file   - when user clicks Download on a entry in searchView
-	download_click  - interprets downloadView input, can pop up a menu
-	quit_program    - when user clicks File/Quit
-	search_input    - when user clicks searchButton or hits enter while on searchEntry
-	search_click    - interprets searchView input, can pop up a menu
+	help_about           - user clicked Help/About
+	cancel_download      - when user clicks Cancel on a download in downloadView
+	download_file        - when user clicks Download on a entry in searchView
+	download_click       - interprets downloadView input, can pop up a menu on right click
+	file_quit            - when user clicks File/Quit
+	search_input         - when user clicks searchButton or hits enter while on searchEntry
+	search_click         - interprets searchView input, can pop up a menu on right click
+	settings_preferences - user clicked Settings/Preferences
 	*/
-	void about_program();
+	void help_about();
 	void cancel_download();
 	void download_file();
 	bool download_click(GdkEventButton * event);
-	void quit_program();
+	void file_quit();
 	void search_input();
 	bool search_click(GdkEventButton * event);
+	void settings_preferences();
 
 	/*
 	download_info_setup   - sets up the download tab treeview columns

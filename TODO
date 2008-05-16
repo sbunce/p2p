@@ -1,5 +1,14 @@
 TODO
 
+-Make a static member function in the client_buffer and move the download buffer
+to it as a singleton std::set. When downloads are added to any client_buffer
+have the client_buffer add them to the set (or try and fail if it already exists).
+
+-Make a non-virtual lock function in the download ABC. Correction, have a member
+variable mutex because boost 1.33 doesn't support a normal lock and unlock. Use
+a scoped lock in the client_buffer that uses this mutex. Actually, how would it
+be possible to lock the container when a removal is happening?
+
 -Rename download_prep to download_factory since it is close to that design
 pattern.
 
@@ -19,6 +28,3 @@ otherwise it doesn't get to download.
 -Let the user set up bandwidth profiles that can be quickly selected. The user
 could create one for games/night time/bla bla. Then have a timer that can select
 the profile based on time of day.
-
--Think about using a locking pointer on the download ABC. The downloads are the
-reason for all the complicated locks on the Download_Buffer and Client_Buffer.

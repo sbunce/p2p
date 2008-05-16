@@ -8,6 +8,7 @@
 
 //custom
 #include "gui_about.h"
+#include "gui_preferences.h"
 
 #include "gui.h"
 
@@ -24,6 +25,11 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	fileMenu = Gtk::manage(new Gtk::Menu());
 	fileMenuItem = NULL;
 	quit = NULL;
+
+	//settings menu
+	settingsMenu = Gtk::manage(new Gtk::Menu());
+	settingsMenuItem = NULL;
+	preferences = NULL;
 
 	//help menu
 	helpMenu = Gtk::manage(new Gtk::Menu());
@@ -69,8 +75,14 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	quit = (Gtk::ImageMenuItem *)&fileMenu->items().back();
 	menubar->items().push_back(Gtk::Menu_Helpers::MenuElem(("_File"), *fileMenu));
 	fileMenuItem = (Gtk::MenuItem *)&menubar->items().back();
+	menubar->items().push_back(Gtk::Menu_Helpers::MenuElem(("_Settings"), *settingsMenu));
+	settingsMenuItem = (Gtk::MenuItem *)&menubar->items().back();
 	menubar->items().push_back(Gtk::Menu_Helpers::MenuElem(("_Help"), *helpMenu));
 	helpMenuItem = (Gtk::MenuItem *)&menubar->items().back();
+
+	//add items to Settings menu
+	settingsMenu->items().push_back(Gtk::Menu_Helpers::MenuElem(("_Preferences")));
+	preferences = (Gtk::MenuItem *)&settingsMenu->items().back();
 
 	//add items to Help menu
 	helpMenu->items().push_back(Gtk::Menu_Helpers::MenuElem(("_About")));
@@ -200,45 +212,12 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	window->add(*main_VBox);
 
 	//set objects to be visible
-	window->show();
-	quit->show();
-	fileMenuItem->show();
-	about->show();
-	helpMenuItem->show();
-	menubar->show();
+	show_all_children();
 
-	searchEntry->show();
-	searchButton->show();
-	trackerEntry->show();
-	trackerButton->show();
-
-	searchView->show();
-	downloadView->show();
-	uploadView->show();
-	trackerView->show();
-
-	searchTab->show();
-	downloadTab->show();
-	uploadTab->show();
-	trackerTab->show();
-
-	search_HBox->show();
-	search_VBox->show();
-	tracker_HBox->show();
-	tracker_VBox->show();
-	main_VBox->show();
-
-	search_scrolledWindow->show();
-	download_scrolledWindow->show();
-	upload_scrolledWindow->show();
-	tracker_scrolledWindow->show();
-
-	notebook->show();
-	statusbar->show();
-
-	//Gtk signals
-	quit->signal_activate().connect(sigc::mem_fun(*this, &gui::quit_program), false);
-	about->signal_activate().connect(sigc::mem_fun(*this, &gui::about_program), false);
+	//signaled functions
+	quit->signal_activate().connect(sigc::mem_fun(*this, &gui::file_quit), false);
+	preferences->signal_activate().connect(sigc::mem_fun(*this, &gui::settings_preferences), false);
+	about->signal_activate().connect(sigc::mem_fun(*this, &gui::help_about), false);
 	searchEntry->signal_activate().connect(sigc::mem_fun(*this, &gui::search_input), false);
 	searchButton->signal_clicked().connect(sigc::mem_fun(*this, &gui::search_input), false);
 
@@ -258,12 +237,6 @@ gui::~gui()
 	//stop all client and server threads before terminating
 	Client.stop();
 	Server.stop();
-}
-
-void gui::about_program()
-{
-	gui_about * aboutWindow = new gui_about;
-	Gtk::Main::run(*aboutWindow);
 }
 
 void gui::cancel_download()
@@ -316,24 +289,6 @@ bool gui::download_click(GdkEventButton * event)
 		Gtk::TreeViewColumn * column = &columnObject;
 		if(downloadView->get_path_at_pos((int)event->x, (int)event->y, path, column, x, y)){
 			downloadView->set_cursor(path);
-		}
-		return true;
-	}
-	return false;
-}
-
-bool gui::search_click(GdkEventButton * event)
-{
-	if(event->type == GDK_BUTTON_PRESS && event->button == 3){
-		searchPopupMenu.popup(event->button, event->time);
-
-		//select the row when the user right clicks on it
-		int x, y;
-		Gtk::TreeModel::Path path;
-		Gtk::TreeViewColumn columnObject;
-		Gtk::TreeViewColumn * column = &columnObject;
-		if(searchView->get_path_at_pos((int)event->x, (int)event->y, path, column, x, y)){
-			searchView->set_cursor(path);
 		}
 		return true;
 	}
@@ -514,6 +469,17 @@ bool gui::download_info_refresh()
 	return true;
 }
 
+void gui::file_quit()
+{
+	hide();
+}
+
+void gui::help_about()
+{
+	gui_about * aboutWindow = new gui_about;
+	Gtk::Main::run(*aboutWindow);
+}
+
 void gui::upload_info_setup()
 {
 	//set up column
@@ -671,6 +637,24 @@ bool gui::upload_info_refresh()
 	return true;
 }
 
+bool gui::search_click(GdkEventButton * event)
+{
+	if(event->type == GDK_BUTTON_PRESS && event->button == 3){
+		searchPopupMenu.popup(event->button, event->time);
+
+		//select the row when the user right clicks on it
+		int x, y;
+		Gtk::TreeModel::Path path;
+		Gtk::TreeViewColumn columnObject;
+		Gtk::TreeViewColumn * column = &columnObject;
+		if(searchView->get_path_at_pos((int)event->x, (int)event->y, path, column, x, y)){
+			searchView->set_cursor(path);
+		}
+		return true;
+	}
+	return false;
+}
+
 void gui::search_info_setup()
 {
 	//set up column
@@ -753,6 +737,20 @@ void gui::search_info_refresh()
 	}
 }
 
+void gui::search_input()
+{
+	std::string input_text = searchEntry->get_text();
+	searchEntry->set_text("");
+	Client.search(input_text, Search_Info);
+	search_info_refresh();
+}
+
+void gui::settings_preferences()
+{
+	gui_preferences * preferencesWindow = new gui_preferences;
+	Gtk::Main::run(*preferencesWindow);
+}
+
 bool gui::update_status_bar()
 {
 	std::string status; //holds entire status line
@@ -779,17 +777,4 @@ bool gui::update_status_bar()
 	statusbar->push(status);
 
 	return true;
-}
-
-void gui::quit_program()
-{
-	hide();
-}
-
-void gui::search_input()
-{
-	std::string input_text = searchEntry->get_text();
-	searchEntry->set_text("");
-	Client.search(input_text, Search_Info);
-	search_info_refresh();
 }

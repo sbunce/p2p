@@ -3,18 +3,15 @@
 
 #include "logger.h"
 
-/*
-Set static logger pointer to zero to indicate the singleton hasn't yet been
-instantiated
-*/
 volatile logger * logger::logger_instance = NULL;
+boost::mutex logger::Mutex;
 
 logger::logger()
 {
 
 }
 
-void logger::write_log(std::string message)
+void logger::write_log(const std::string & message)
 {
 	std::cout << message << "\n";
 }
