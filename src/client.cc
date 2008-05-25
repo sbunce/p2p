@@ -14,6 +14,7 @@ client::client()
 FD_max(0),
 send_pending(new volatile int(0)),
 download_complete(new volatile int(0)),
+Download_Factory(download_complete),
 stop_threads(false),
 threads(0),
 current_time(time(0)),
@@ -23,8 +24,8 @@ Thread_Pool(global::NEW_CONN_THREADS)
 	//create the download directory if it doesn't exist
 	boost::filesystem::create_directory(global::CLIENT_DOWNLOAD_DIRECTORY);
 
+	//socket bitvector must be initialized before use
 	FD_ZERO(&master_FDS);
-	Download_Prep.init(download_complete);
 }
 
 client::~client()
@@ -50,8 +51,6 @@ client::~client()
 
 void client::check_timeouts()
 {
-	boost::mutex::scoped_lock lock(CB_DB_mutex);
-
 	for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 		if(FD_ISSET(socket_FD, &master_FDS)){
 			if(current_time - Client_Buffer[socket_FD]->get_last_seen() >= global::TIMEOUT){
@@ -65,35 +64,19 @@ void client::check_timeouts()
 
 void client::current_downloads(std::vector<download_info> & info)
 {
-	boost::mutex::scoped_lock lock(CB_DB_mutex);
-
-	std::list<download *>::iterator iter_cur, iter_end;
-	iter_cur = Download_Buffer.begin();
-	iter_end = Download_Buffer.end();
-	while(iter_cur != iter_end){
-		download_info Download_Info(
-			(*iter_cur)->hash(),
-			(*iter_cur)->name(),
-			(*iter_cur)->total_size(),
-			(*iter_cur)->speed(),
-			(*iter_cur)->percent_complete()
-		);
-
-		(*iter_cur)->IP_list(Download_Info.server_IP);
-		info.push_back(Download_Info);
-		++iter_cur;
-	}
+	client_buffer::current_downloads(info);
 }
 
 bool client::DC_add_existing(download_conn * DC)
 {
-	boost::mutex::scoped_lock lock(CB_DB_mutex);
-
 	std::map<int, client_buffer *>::iterator iter_cur, iter_end;
 	iter_cur = Client_Buffer.begin();
 	iter_end = Client_Buffer.end();
 	while(iter_cur != iter_end){
 		if(DC->server_IP == iter_cur->second->get_IP()){
+			//mutex to guarantee DC->Download not set to NULL after download cancelled check
+			boost::mutex::scoped_lock lock(DC_mutex);
+
 			//if download cancelled don't add it
 			if(DC->Download == NULL){
 				return true;
@@ -249,37 +232,27 @@ void client::main_thread()
 						if(n_bytes == -1){
 							perror("client recv");
 						}
-						{//begin lock scope
-						boost::mutex::scoped_lock lock(CB_DB_mutex);
 						disconnect(socket_FD);
 						Client_Buffer.erase(socket_FD);
-						}//end lock scope
 					}else{
 						Speed_Calculator.update(n_bytes);
-						{//begin lock scope
-						boost::mutex::scoped_lock lock(CB_DB_mutex);
-						CB_iter = Client_Buffer.find(socket_FD);
-						CB_iter->second->recv_buff.append(recv_buff, n_bytes);
-						CB_iter->second->post_recv();
-						}//end lock scope
+
+						Client_Buffer[socket_FD]->recv_buff.append(recv_buff, n_bytes);
+						Client_Buffer[socket_FD]->post_recv();
 					}
 				}
 			}
 			if(FD_ISSET(socket_FD, &write_FDS)){
-				{//begin lock scope
-				boost::mutex::scoped_lock lock(CB_DB_mutex);
-				CB_iter = Client_Buffer.find(socket_FD);
-				if(!CB_iter->second->send_buff.empty()){
-					if((n_bytes = send(socket_FD, CB_iter->second->send_buff.c_str(), CB_iter->second->send_buff.size(), MSG_NOSIGNAL)) < 0){
+				if(!Client_Buffer[socket_FD]->send_buff.empty()){
+					if((n_bytes = send(socket_FD, Client_Buffer[socket_FD]->send_buff.c_str(), Client_Buffer[socket_FD]->send_buff.size(), MSG_NOSIGNAL)) < 0){
 						if(n_bytes == -1){
 							perror("client send");
 						}
 					}else{ //remove bytes sent from buffer
-						CB_iter->second->send_buff.erase(0, n_bytes);
-						CB_iter->second->post_send();
+						Client_Buffer[socket_FD]->send_buff.erase(0, n_bytes);
+						Client_Buffer[socket_FD]->post_send();
 					}
 				}
-				}//end lock scope
 			}
 		}
 	}
@@ -367,8 +340,6 @@ void client::new_conn(download_conn * DC)
 			FD_max = DC->socket_FD;
 		}
 
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(CB_DB_mutex);
 		if(DC->Download == NULL){
 			//connetion cancelled during connection, clean up and exit
 			disconnect(DC->socket_FD);
@@ -378,7 +349,6 @@ void client::new_conn(download_conn * DC)
 			DC->Download->reg_conn(DC->socket_FD, DC);
 			Client_Buffer[DC->socket_FD]->add_download(DC->Download);
 		}
-		}//end lock scope
 
 		FD_SET(DC->socket_FD, &master_FDS);
 		return;
@@ -387,8 +357,6 @@ void client::new_conn(download_conn * DC)
 
 void client::prepare_requests()
 {
-	boost::mutex::scoped_lock lock(CB_DB_mutex);
-
 	std::map<int, client_buffer *>::iterator iter_cur, iter_end;
 	iter_cur = Client_Buffer.begin();
 	iter_end = Client_Buffer.end();
@@ -428,52 +396,33 @@ void client::process_CQ()
 
 void client::remove_complete()
 {
-	std::list<download *> complete_download;
-	remove_complete_step_1(complete_download);
-	remove_complete_step_2(complete_download);
-	remove_complete_step_3(complete_download);
-	remove_complete_step_4(complete_download);
-	remove_complete_step_5(complete_download);
-}
-
-inline void client::remove_complete_step_1(std::list<download *> & complete_download)
-{
-	boost::mutex::scoped_lock lock(CB_DB_mutex);
 	/*
 	STEP 1:
-	Determine what downloads are completed.
+	Locate any complete downloads.
 	*/
-	std::list<download *>::iterator DB_iter_cur, DB_iter_end;
-	DB_iter_cur = Download_Buffer.begin();
-	DB_iter_end = Download_Buffer.end();
-	while(DB_iter_cur != DB_iter_end){
-		if((*DB_iter_cur)->complete()){
-			complete_download.push_back(*DB_iter_cur);
-			--(*download_complete);
-		}
-		++DB_iter_cur;
-	}
-}
+	std::list<download *> complete;
+	client_buffer::find_complete(complete);
 
-inline void client::remove_complete_step_2(std::list<download *> & complete_download)
-{
-	boost::mutex::scoped_lock lock(CB_DB_mutex);
+	//decrement download_complete count for downloads that will be terminated
+	*download_complete -= complete.size();
 
+	{
 	/*
 	STEP 2:
 	Remove any pending_connections for download. In progress connections will be
-	cancelled by setting their download pointer to NULL.
+	cancelled by setting their download pointer to NULL. The new_conn function
+	will interpret this NULL.
 	*/
-	std::list<download *>::iterator CD_iter_cur, CD_iter_end;
-	CD_iter_cur = complete_download.begin();
-	CD_iter_end = complete_download.end();
-	while(CD_iter_cur != CD_iter_end){
+	std::list<download *>::iterator C_iter_cur, C_iter_end;
+	C_iter_cur = complete.begin();
+	C_iter_end = complete.end();
+	while(C_iter_cur != C_iter_end){
 		//pending connections
 		std::deque<download_conn *>::iterator CQ_iter_cur, CQ_iter_end;
 		CQ_iter_cur = Connection_Queue.begin();
 		CQ_iter_end = Connection_Queue.end();
 		while(CQ_iter_cur != CQ_iter_end){
-			if((*CQ_iter_cur)->Download == *CD_iter_cur){
+			if((*CQ_iter_cur)->Download == *C_iter_cur){
 				CQ_iter_cur = Connection_Queue.erase(CQ_iter_cur);
 			}else{
 				++CQ_iter_cur;
@@ -485,21 +434,20 @@ inline void client::remove_complete_step_2(std::list<download *> & complete_down
 		CQA_iter_cur = Connection_Current_Attempt.begin();
 		CQA_iter_end = Connection_Current_Attempt.end();
 		while(CQA_iter_cur != CQA_iter_end){
-			if((*CQA_iter_cur)->Download == *CD_iter_cur){
+			if((*CQA_iter_cur)->Download == *C_iter_cur){
+				//this must be locked both here and where the Download is checked for NULL
+				boost::mutex::scoped_lock lock(DC_mutex);
 				(*CQA_iter_cur)->Download = NULL;
 			}else{
 				++CQA_iter_cur;
 			}
 		}
 
-		++CD_iter_cur;
+		++C_iter_cur;
 	}
-}
+	}
 
-inline void client::remove_complete_step_3(std::list<download *> & complete_download)
-{
-	boost::mutex::scoped_lock lock(CB_DB_mutex);
-
+	{
 	/*
 	STEP 3:
 	Terminate the completed downloads with all client_buffers.
@@ -508,79 +456,67 @@ inline void client::remove_complete_step_3(std::list<download *> & complete_down
 	CB_iter_cur = Client_Buffer.begin();
 	CB_iter_end = Client_Buffer.end();
 	while(CB_iter_cur != CB_iter_end){
-		std::list<download *>::iterator CD_iter_cur, CD_iter_end;
-		CD_iter_cur = complete_download.begin();
-		CD_iter_end = complete_download.end();
-		while(CD_iter_cur != CD_iter_end){
-			CB_iter_cur->second->terminate_download(*CD_iter_cur);
-			++CD_iter_cur;
+		std::list<download *>::iterator C_iter_cur, C_iter_end;
+		C_iter_cur = complete.begin();
+		C_iter_end = complete.end();
+		while(C_iter_cur != C_iter_end){
+			CB_iter_cur->second->terminate_download(*C_iter_cur);
+			++C_iter_cur;
 		}
 		++CB_iter_cur;
 	}
-}
+	}
 
-inline void client::remove_complete_step_4(std::list<download *> & complete_download)
-{
-	boost::mutex::scoped_lock lock(CB_DB_mutex);
-
+	{
 	/*
 	STEP 4:
-	Remove the download from the Download_Buffer and send it to Download_Prep.stop().
+	Remove the download from the client_buffer unique download set and possibly
+	start another download if one is triggered.
 	*/
-	std::list<download *>::iterator CD_iter_cur, CD_iter_end;
-	CD_iter_cur = complete_download.begin();
-	CD_iter_end = complete_download.end();
-	while(CD_iter_cur != CD_iter_end){
-		std::list<download *>::iterator DB_iter_cur, DB_iter_end;
-		DB_iter_cur = Download_Buffer.begin();
-		DB_iter_end = Download_Buffer.end();
-		while(DB_iter_cur != DB_iter_end){
-			if(*DB_iter_cur == *CD_iter_cur){
-				/*
-				It is possible that terminating a download can trigger starting of
-				another download. If this happens the stop function will return that
-				download and the servers associated with that download. If the new
-				download triggered has any of the same servers associated with it
-				the DC's for that server will be added to client_buffers so that no
-				reconnecting has to be done.
-				*/
-				std::list<download_conn *> servers;
-				download * Download_start;
-				if(Download_Prep.stop(*DB_iter_cur, Download_start, servers)){
-					//attempt to place all servers in a exiting client_buffer
-					std::list<download_conn *>::iterator iter_cur, iter_end;
-					iter_cur = servers.begin();
-					iter_end = servers.end();
-					while(iter_cur != iter_end){
-						if(DC_add_existing(*iter_cur)){
-							iter_cur = servers.erase(iter_cur);
-						}else{
-							++iter_cur;
-						}
-					}
+	std::list<download *>::iterator C_iter_cur, C_iter_end;
+	C_iter_cur = complete.begin();
+	C_iter_end = complete.end();
+	while(C_iter_cur != C_iter_end){
+		//remove download from the unique download set
+		client_buffer::remove_download_unique(*C_iter_cur);
 
-					//queue servers that don't have an existing client_buffer
-					iter_cur = servers.begin();
-					iter_end = servers.end();
-					while(iter_cur != iter_end){
-						Connection_Queue.push_back(*iter_cur);
-						Thread_Pool.queue_job(this, &client::process_CQ);
-						++iter_cur;
-					}
+		/*
+		It is possible that terminating a download can trigger starting of
+		another download. If this happens the stop function will return that
+		download and the servers associated with that download. If the new
+		download triggered has any of the same servers associated with it
+		the DC's for that server will be added to client_buffers so that no
+		reconnecting has to be done.
+		*/
+		std::list<download_conn *> servers;
+		download * Download_start;
+		if(Download_Factory.stop(*C_iter_cur, Download_start, servers)){
+			//attempt to place all servers in a exiting client_buffer
+			std::list<download_conn *>::iterator iter_cur, iter_end;
+			iter_cur = servers.begin();
+			iter_end = servers.end();
+			while(iter_cur != iter_end){
+				if(DC_add_existing(*iter_cur)){
+					iter_cur = servers.erase(iter_cur);
+				}else{
+					++iter_cur;
 				}
-				Download_Buffer.erase(DB_iter_cur);
-				break;
 			}
-			++DB_iter_cur;
+
+			//queue servers that don't have an existing client_buffer
+			iter_cur = servers.begin();
+			iter_end = servers.end();
+			while(iter_cur != iter_end){
+				Connection_Queue.push_back(*iter_cur);
+				Thread_Pool.queue_job(this, &client::process_CQ);
+				++iter_cur;
+			}
 		}
-		++CD_iter_cur;
+		++C_iter_cur;
 	}
-}
+	}
 
-inline void client::remove_complete_step_5(std::list<download *> & complete_download)
-{
-	boost::mutex::scoped_lock lock(CB_DB_mutex);
-
+	{
 	/*
 	STEP 5:
 	Disconnect empty client_buffer's.
@@ -596,6 +532,7 @@ inline void client::remove_complete_step_5(std::list<download *> & complete_down
 		}else{
 			++CB_iter_cur;
 		}
+	}
 	}
 }
 
@@ -623,45 +560,31 @@ bool client::start_download(download_info & info)
 {
 	download * Download;
 	std::list<download_conn *> servers;
-	if(!Download_Prep.start_file(info, Download, servers)){
+	if(!Download_Factory.start_file(info, Download, servers)){
 		return false;
 	}
 
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(CB_DB_mutex);
-	Download_Buffer.push_back(Download);
-	}//end lock scope
+	client_buffer::add_download_unique(Download);
 
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(DC_mutex);
 	//queue jobs to connect to servers
 	std::list<download_conn *>::iterator iter_cur, iter_end;
 	iter_cur = servers.begin();
 	iter_end = servers.end();
 	while(iter_cur != iter_end){
+		{//begin lock scope
+		boost::mutex::scoped_lock lock(DC_mutex);
 		Connection_Queue.push_back(*iter_cur);
+		}//end lock scope
 		Thread_Pool.queue_job(this, &client::process_CQ);
 		++iter_cur;
 	}
-	}//end lock scope
 
 	return true;
 }
 
 void client::stop_download(std::string hash)
 {
-	boost::mutex::scoped_lock lock(CB_DB_mutex);
-
-	std::list<download *>::iterator iter_cur, iter_end;
-	iter_cur = Download_Buffer.begin();
-	iter_end = Download_Buffer.end();
-	while(iter_cur != iter_end){
-		if(hash == (*iter_cur)->hash()){
-			(*iter_cur)->stop();
-			break;
-		}
-		++iter_cur;
-	}
+	client_buffer::stop_download(hash);
 }
 
 int client::total_speed()

@@ -24,7 +24,10 @@ void server_index::generate_hash(const boost::filesystem::path & file_path)
 	namespace fs = boost::filesystem;
 
 	//no entry for file exists, create hash tree
-	std::string hash = Hash_Tree.create_hash_tree(file_path.string());
+	std::string hash;
+	if(!Hash_Tree.create_hash_tree(file_path.string(), hash)){
+		return;
+	}
 
 	//make sure user didn't move the file while it was hashing
 	if(file_exists(file_path.string())){
@@ -39,11 +42,12 @@ void server_index::generate_hash(const boost::filesystem::path & file_path)
 
 void server_index::index_share_recurse(std::string directory_name)
 {
+	namespace fs = boost::filesystem;
+
 	if(stop_thread){
 		return;
 	}
 
-	namespace fs = boost::filesystem;
 	fs::path full_path = fs::system_complete(fs::path(directory_name, fs::native));
 
 	if(!fs::exists(full_path)){
@@ -61,20 +65,32 @@ void server_index::index_share_recurse(std::string directory_name)
 					sub_directory = directory_name + directory_iter->leaf() + "/";
 					index_share_recurse(sub_directory);
 				}else{
-					//determine size
+					//determine if a hash tree needs to be generated
 					fs::path file_path = fs::system_complete(fs::path(directory_name + directory_iter->leaf(), fs::native));
-
 					std::string existing_hash;
-					if(!DB_Access.share_file_exists(existing_hash, file_path.string())){
-						generate_hash(file_path);
-					}else{
-						//entry exists, make sure hash file exists
+					uint64_t existing_size;
+					if(DB_Access.share_file_exists(file_path.string(), existing_hash, existing_size)){
+						//database entry exists, make sure there is a corresponding hash tree file
 						std::fstream fin((global::HASH_DIRECTORY+existing_hash).c_str(), std::ios::in);
 						if(!fin.is_open()){
-							//hash file doesn't exist, delete entry from DB and generate new hash tree
+							//hash tree is missing
+							DB_Access.share_delete_hash(existing_hash); //delete the entry
+							generate_hash(file_path);                   //regenerate hash for file
+						}
+						fin.close();
+
+						/*
+						Regenerate the hash if the file has changed size. The most
+						common cause of this is that the file was hashed while it was
+						copying.
+						*/
+						if(existing_size != fs::file_size(file_path)){
 							DB_Access.share_delete_hash(existing_hash);
 							generate_hash(file_path);
 						}
+					}else{
+						//hash tree doesn't yet exist, generate one
+						generate_hash(file_path);
 					}
 
 					if(stop_thread){
@@ -96,7 +112,17 @@ void server_index::index_share_recurse(std::string directory_name)
 
 bool server_index::is_indexing()
 {
-	return indexing;
+	/*
+	This puts a 1 to 2 second delay on telling the caller that hashing is
+	happening. This is needed because otherwise directory scans will trigger this
+	function to return true when no hashing is happening.
+	*/
+	if(indexing){
+		if(time(0) - indexing_start > 1){
+			return true;
+		}
+	}
+	return false;
 }
 
 void server_index::index_share()
@@ -117,6 +143,7 @@ void server_index::index_share()
 		++seconds_slept;
 		if(seconds_slept > global::SHARE_REFRESH){
 			seconds_slept = 0;
+			indexing_start = time(0);
 			indexing = true;
 			DB_Access.share_remove_missing();
 			index_share_recurse(global::SERVER_SHARE_DIRECTORY);

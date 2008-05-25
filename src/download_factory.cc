@@ -2,19 +2,15 @@
 #include <fstream>
 #include <typeinfo>
 
-#include "download_prep.h"
+#include "download_factory.h"
 
-download_prep::download_prep()
+download_factory::download_factory(volatile int * download_complete_in)
+: download_complete(download_complete_in)
 {
 
 }
 
-void download_prep::init(volatile int * download_complete_in)
-{
-	download_complete = download_complete_in;
-}
-
-bool download_prep::start_file(download_info & info, download *& Download, std::list<download_conn *> & servers)
+bool download_factory::start_file(download_info & info, download *& Download, std::list<download_conn *> & servers)
 {
 	//make sure file isn't already downloading
 	if(!info.resumed){
@@ -62,7 +58,7 @@ bool download_prep::start_file(download_info & info, download *& Download, std::
 	return true;
 }
 
-bool download_prep::stop(download * Download_stop, download *& Download_start, std::list<download_conn *> & servers)
+bool download_factory::stop(download * Download_stop, download *& Download_start, std::list<download_conn *> & servers)
 {
 	if(typeid(*Download_stop) == typeid(download_hash_tree)){
 //DEBUG, need to start a download_file here

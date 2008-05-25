@@ -18,14 +18,15 @@ public:
 	check_hash_tree         - returns true if bad hash or missing hash found (bad_hash set to possible bad hashes)
 	                          returns false if no bad hash found in the hash tree	                          
 	create_hash_tree        - creates a hash tree for the file pointed to by file_path
-	                          returns the root node hash
+	                          returns true and sets root_hash if tree created
+	                          calling stop() while tree generating can trigger return of false
 	file_size_to_hash_count - returns how many hashes there would be for a file of size file_size
 	replace_hash            - used to replace bad hashes found by check_hash_tree
 	stop                    - sets stop_thread to true and allows create hash tree to exit early
 	*/
 	bool check_exists(std::string root_hash);
 	bool check_hash_tree(std::string root_hash, unsigned long hash_count, std::pair<unsigned long, unsigned long> & bad_hash);
-	std::string create_hash_tree(std::string file_path);
+	bool create_hash_tree(std::string file_path, std::string & root_hash);
 	void replace_hash(std::string root_hash, const unsigned long & number, char hash[]);
 	void stop();
 

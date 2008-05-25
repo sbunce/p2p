@@ -6,13 +6,16 @@
 
 #include "client_buffer.h"
 
+std::set<download *> client_buffer::Unique_Download;
+boost::mutex client_buffer::D_mutex;
+
 client_buffer::client_buffer(const int & socket_in, const std::string & server_IP_in,
 volatile int * send_pending_in)
 : server_IP(server_IP_in), socket(socket_in), send_pending(send_pending_in),
 abuse(false), last_seen(time(0))
 {
-	recv_buff.reserve(global::C_MAX_SIZE);
-	send_buff.reserve(global::S_MAX_SIZE);
+	recv_buff.reserve(global::C_MAX_SIZE*global::PIPELINE_SIZE);
+	send_buff.reserve(global::S_MAX_SIZE*global::PIPELINE_SIZE);
 }
 
 client_buffer::~client_buffer()
@@ -22,12 +25,14 @@ client_buffer::~client_buffer()
 
 void client_buffer::add_download(download * new_download)
 {
+	boost::mutex::scoped_lock lock(D_mutex);
 	Download.push_back(new_download);
-	Download_iter = Download.begin();
+	Download_iter = Download.begin(); //if first download iterator must be set
 }
 
 bool client_buffer::empty()
 {
+	boost::mutex::scoped_lock lock(D_mutex);
 	return Download.empty();
 }
 
@@ -88,6 +93,7 @@ void client_buffer::post_recv()
 			recv_buff.erase(0, iter_cur->second);
 
 		}else{
+			boost::mutex::scoped_lock lock(D_mutex);
 			//pass response to download
 			Pipeline.front().Download->response(socket, recv_buff.substr(0, iter_cur->second));
 			recv_buff.erase(0, iter_cur->second);
@@ -110,9 +116,12 @@ void client_buffer::post_send()
 
 void client_buffer::prepare_request()
 {
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(D_mutex);
 	if(Download.empty()){
 		return;
 	}
+	}//end lock scope
 
 	//stop infinite loop when all downloads waiting
 	bool buffer_change = true;
@@ -126,6 +135,9 @@ void client_buffer::prepare_request()
 			}
 			buffer_change = false;
 		}
+
+		{//begin lock scope
+		boost::mutex::scoped_lock lock(D_mutex);
 		pending_response PR;
 		PR.Download = *Download_iter;
 		if((*Download_iter)->request(socket, request, PR.expected)){
@@ -133,6 +145,7 @@ void client_buffer::prepare_request()
 			Pipeline.push_back(PR);
 			buffer_change = true;
 		}
+		}//end lock scope
 	}
 
 	if(initial_empty && send_buff.size() != 0){
@@ -142,6 +155,7 @@ void client_buffer::prepare_request()
 
 bool client_buffer::rotate_downloads()
 {
+	boost::mutex::scoped_lock lock(D_mutex);
 	if(!Download.empty()){
 		++Download_iter;
 	}
@@ -154,6 +168,7 @@ bool client_buffer::rotate_downloads()
 
 void client_buffer::terminate_download(download * term_DL)
 {
+	boost::mutex::scoped_lock lock(D_mutex);
 	/*
 	If this download is in the Pipeline set the download pointer to NULL to
 	indicate that incoming data for the download should be discarded.
@@ -186,6 +201,7 @@ void client_buffer::terminate_download(download * term_DL)
 
 void client_buffer::unreg_all()
 {
+	boost::mutex::scoped_lock lock(D_mutex);
 	std::list<download *>::iterator iter_cur, iter_end;
 	iter_cur = Download.begin();
 	iter_end = Download.end();

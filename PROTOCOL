@@ -67,7 +67,7 @@ P_REQUEST_SLOT_HASH (2)
 client -> server
 
 Request a slot number for downloading a file or hash tree. The slot ID is 1 byte
-so 256 slots are supported.
+so 256 slots per connection are supported.
 
 	  0   1   2   3   ........    21
 	+---+---+---+---+---+---+---+---+

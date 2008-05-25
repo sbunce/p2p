@@ -1,10 +1,14 @@
 #ifndef H_CLIENT_BUFFER
 #define H_CLIENT_BUFFER
 
+//boost
+#include <boost/thread/mutex.hpp>
+
 //std
 #include <ctime>
 #include <deque>
 #include <list>
+#include <set>
 
 //custom
 #include "download.h"
@@ -16,6 +20,7 @@ public:
 	client_buffer(const int & socket_in, const std::string & server_IP_in, volatile int * send_pending_in);
 	~client_buffer();
 
+	//the client directly accesses these member variables to update them
 	std::string recv_buff; //buffer for partial recvs
 	std::string send_buff; //buffer for partial sends
 
@@ -38,12 +43,91 @@ public:
 	void prepare_request();
 	void terminate_download(download * term_DL);
 
+	/*
+	Adds a download to the Unique_Download set. This is not called by add_download
+	because it's possible a download will be started for which there are no
+	active servers.
+	*/
+	static void add_download_unique(download * new_download)
+	{
+		boost::mutex::scoped_lock lock(D_mutex);
+
+		Unique_Download.insert(new_download);
+	}
+
+	static void remove_download_unique(download * Download)
+	{
+		boost::mutex::scoped_lock lock(D_mutex);
+
+		Unique_Download.erase(Download);
+	}
+
+	//returns information about currently running downloads
+	static void current_downloads(std::vector<download_info> & info)
+	{
+		boost::mutex::scoped_lock lock(D_mutex);
+
+		std::set<download *>::iterator iter_cur, iter_end;
+		iter_cur = Unique_Download.begin();
+		iter_end = Unique_Download.end();
+		while(iter_cur != iter_end){
+			download_info Download_Info(
+				(*iter_cur)->hash(),
+				(*iter_cur)->name(),
+				(*iter_cur)->total_size(),
+				(*iter_cur)->speed(),
+				(*iter_cur)->percent_complete()
+			);
+
+			(*iter_cur)->IP_list(Download_Info.server_IP);
+			info.push_back(Download_Info);
+			++iter_cur;
+		}
+	}
+
+	//populates a list with hashes of complete downloads
+	static void find_complete(std::list<download *> & complete)
+	{
+		boost::mutex::scoped_lock lock(D_mutex);
+
+		std::set<download *>::iterator iter_cur, iter_end;
+		iter_cur = Unique_Download.begin();
+		iter_end = Unique_Download.end();
+		while(iter_cur != iter_end){
+			if((*iter_cur)->complete()){
+				complete.push_back(*iter_cur);
+			}
+			++iter_cur;
+		}
+	}
+
+	//stops the download associated with hash
+	static void stop_download(const std::string & hash)
+	{
+		boost::mutex::scoped_lock lock(D_mutex);
+
+		std::set<download *>::iterator iter_cur, iter_end;
+		iter_cur = Unique_Download.begin();
+		iter_end = Unique_Download.end();
+		while(iter_cur != iter_end){
+			if(hash == (*iter_cur)->hash()){
+				(*iter_cur)->stop();
+				break;
+			}
+			++iter_cur;
+		}
+	}
+
 private:
-	std::string server_IP;       //IP associated with this client_buffer
-	int socket;                  //socket number of this element
-	time_t last_seen;            //used for timeout
-	bool abuse;                  //if true a disconnect is triggered
-	volatile int * send_pending; //signals client that there is data to send
+	//lock for all access to any download (lock for Unique_Download and Download)
+	static boost::mutex D_mutex;
+
+	/*
+	This contains all downloads known by any client_buffer. Whenever a download
+	is added with add_download() it is inserted in this std::set. Because it's a
+	set there will be no duplicates.
+	*/
+	static std::set<download *> Unique_Download;
 
 	/*
 	The Download container is effectively a ring. The rotate_downloads() function will move
@@ -52,8 +136,11 @@ private:
 	std::list<download *> Download;                //all downloads that this client_buffer is serving
 	std::list<download *>::iterator Download_iter; //last download a request was gotten from
 
-	//holds downloads in order of pending response paired with how many bytes are expected
-	//std::deque<std::pair<int, download *> > Pipeline;
+	std::string server_IP;       //IP associated with this client_buffer
+	int socket;                  //socket number of this element
+	time_t last_seen;            //used for timeout
+	bool abuse;                  //if true a disconnect is triggered
+	volatile int * send_pending; //signals client that there is data to send
 
 	class pending_response
 	{
@@ -65,6 +152,11 @@ private:
 		download * Download;
 	};
 
+	/*
+	Past requests are stored here. The front of this queue will contain the oldest
+	requests. When a response comes in it will correspond to the pending_response
+	in the front of this queue.
+	*/
 	std::deque<pending_response> Pipeline;
 
 	/*
@@ -74,7 +166,5 @@ private:
 	*/
 	bool rotate_downloads();
 	void unreg_all();
-
-	boost::mutex T_mutex; //mutex for termination function
 };
 #endif

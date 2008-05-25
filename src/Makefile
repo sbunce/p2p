@@ -1,5 +1,5 @@
 #GPROF = -pg
-CXXFLAGS = `pkg-config gtkmm-2.4 --cflags` -O3 #-Werror -ansi -pedantic
+CXXFLAGS = `pkg-config gtkmm-2.4 --cflags` -O3 -Werror #-ansi -pedantic
 
 OBJECTS = \
 	client_buffer.o \
@@ -10,7 +10,7 @@ OBJECTS = \
 	download_file_conn.o \
 	download_file.o \
 	download_hash_tree.o \
-	download_prep.o \
+	download_factory.o \
 	download.o \
 	gui.o \
 	gui_about.o \

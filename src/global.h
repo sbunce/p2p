@@ -27,8 +27,8 @@ namespace global
 	const int COMPLETE_REMOVE = 4;        //how many seconds to wait before removing a complete upload
 	const int TIMEOUT = 8;                //how long before an unresponsive server times out
 	const int UNRESPONSIVE_TIMEOUT = 60;  //if cannot connect to server, minimum time before retry 
-	const int SHARE_REFRESH = 10;         //number of seconds between updating share information
-	const int SPINLOCK_TIME = 1000;       //microsecond timeout on all spinlocks
+	const int SHARE_REFRESH = 1;          //number of seconds between updating share information
+	const int SPINLOCK_TIME = 1000;       //microsecond timeout on all spinlocks (accuracy limited by scheduler tick rate)
 	const int UP_SPEED = 9999*1024+512;   //upload speed limit (B/s)
 	const int DOWN_SPEED = 9999*1024+512; //download speed limit (B/s)
 

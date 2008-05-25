@@ -1,16 +1,12 @@
 TODO
 
--Make a static member function in the client_buffer and move the download buffer
-to it as a singleton std::set. When downloads are added to any client_buffer
-have the client_buffer add them to the set (or try and fail if it already exists).
 
--Make a non-virtual lock function in the download ABC. Correction, have a member
-variable mutex because boost 1.33 doesn't support a normal lock and unlock. Use
-a scoped lock in the client_buffer that uses this mutex. Actually, how would it
-be possible to lock the container when a removal is happening?
+DEFERRED FEATURES
 
--Rename download_prep to download_factory since it is close to that design
-pattern.
+-Think about combining hash tree's in to one file. Maybe put them in DB? It's
+not reasonable to have one hash tree file sitting on the HDD for every file
+shared. Another possibility is some sort of compression library that'd give
+access to a file like it's in a directory, does zlib do this?
 
 
 IDEAS
@@ -19,7 +15,8 @@ IDEAS
 structure such that if the user adds a tracker the user will also get to see
 the files of the trackers that tracker trusts and the files that that tracker
 trusts etc. Have an option to limit trust levels to direct trust only, one
-level inheritance and all level inheritance.
+level inheritance and all level inheritance. Children should be able to point
+to their parents.
 
 -Don't allow people to download who have the P2P port blocked. Make a ping
 command the server can send to the client. The client should return a pong
@@ -28,3 +25,10 @@ otherwise it doesn't get to download.
 -Let the user set up bandwidth profiles that can be quickly selected. The user
 could create one for games/night time/bla bla. Then have a timer that can select
 the profile based on time of day.
+
+-Implement the minix scheduler in the client_bufffer. Three ring buffers. The
+first ring spins 5 times before letting the second ring spin once. The second
+ring spins 5 times before letting the third ring spin once. After a download
+has been served from rings one or two 5 times it gets moved to a lower ring.
+The idea behind this is that bulk jobs (download_file's) get a much lower
+priority than short jobs.

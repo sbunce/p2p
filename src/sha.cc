@@ -3,7 +3,7 @@
 
 #include "sha.h"
 
-int sha::HASH_LENGTH = 20;
+const int sha::HASH_LENGTH = 20;
 static char hex[] = "0123456789ABCDEF";
 
 sha::sha(unsigned int reserve_buffer)

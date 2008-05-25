@@ -15,13 +15,10 @@
 //custom
 #include "DB_access.h"
 
-class download_prep
+class download_factory
 {
 public:
-	download_prep();
-
-	//must be called before any other member function
-	void init(volatile int * download_complete_in);
+	download_factory(volatile int * download_complete_in);
 
 	/*
 	start_file - creates a download based on download_info_buffer

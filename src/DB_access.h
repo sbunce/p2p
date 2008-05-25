@@ -33,12 +33,12 @@ public:
 	share_delete_hash - deletes the record associated with hash
 	share_file_info   - sets file_size and file_path based on file_ID
 	                  - returns true if file found else false
-	share_file_exists - returns true and sets the existing_hash to the file has if file exists in share
+	share_file_exists - returns true and sets existing_hash and existing_size if the file exists in the database
 	remove_missing    - removes files from the database that aren't present in the share
 	*/
-	void share_add_entry(const std::string & hash, const int & size, const std::string & path);
+	void share_add_entry(const std::string & hash, const uint64_t & size, const std::string & path);
 	void share_delete_hash(const std::string & hash);
-	bool share_file_exists(std::string & existing_hash, const std::string & path);
+	bool share_file_exists(const std::string & path, std::string & existing_hash, uint64_t & existing_size);
 	bool share_file_info(const unsigned int & file_ID, unsigned long & file_size, std::string & file_path);
 	void share_remove_missing();
 
@@ -81,8 +81,9 @@ private:
 		this_class->share_file_exists_call_back(columns_retrieved, query_response, column_name);
 		return 0;
 	}
-	bool share_file_exists_;
-	std::string * existing_hash_ptr;
+	bool share_file_exists_cond;
+	std::string * share_file_exists_hash_ptr;
+	uint64_t * share_file_exists_size_ptr;
 
 	void share_file_info_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
 	static int share_file_info_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)

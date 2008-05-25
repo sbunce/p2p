@@ -136,7 +136,7 @@ bool hash_tree::check_hash_tree(std::string root_hash, unsigned long hash_count,
 	hash_fstream.close();
 }
 
-std::string hash_tree::create_hash_tree(std::string file_name)
+bool hash_tree::create_hash_tree(std::string file_name, std::string & root_hash)
 {
 	//holds one file block
 	char chunk[block_size];
@@ -149,16 +149,17 @@ std::string hash_tree::create_hash_tree(std::string file_name)
 	std::fstream scratch((global::HASH_DIRECTORY+"scratch").c_str(), std::ios::in
 		| std::ios::out | std::ios::trunc | std::ios::binary);
 
+	uint64_t blocks_read = 0;
 	do{
 		if(stop_thread){
-			return "";
+			return false;
 		}
-
 		fin.read(chunk, block_size);
 		SHA.init();
 		SHA.load(chunk, fin.gcount());
 		SHA.end();
 		scratch.write(SHA.raw_hash(), sha::HASH_LENGTH);
+		++blocks_read;
 	}while(fin.good());
 
 	if(fin.bad() || !fin.eof()){
@@ -166,7 +167,25 @@ std::string hash_tree::create_hash_tree(std::string file_name)
 		assert(false);
 	}
 
-	std::string root_hash; //will contain the root hash in hex format
+	//base case, the file size is less than one block
+	if(blocks_read == 1){
+		root_hash = SHA.hex_hash();
+		std::fstream fout((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::out | std::ios::app | std::ios::binary);
+		fout.write(SHA.raw_hash(), sha::HASH_LENGTH);
+
+		//clear the scratch file
+		scratch.close();
+		scratch.open((global::HASH_DIRECTORY+"scratch").c_str(), std::ios::trunc | std::ios::out);
+		scratch.close();
+		return true;
+	}
+
+	/*
+	When the deepest recursion depth hit by create_hash_tree_recurse a file for
+	the hash tree will be created. When create_hash_tree_recurse is recursing
+	back up this will stop every recursive call from trying to create a new hash
+	tree file.
+	*/
 	create_hash_tree_recurse_found = false;
 
 	//start recursive tree generating function
@@ -177,7 +196,7 @@ std::string hash_tree::create_hash_tree(std::string file_name)
 	scratch.open((global::HASH_DIRECTORY+"scratch").c_str(), std::ios::trunc | std::ios::out);
 	scratch.close();
 
-	return root_hash;
+	return !root_hash.empty();
 }
 
 void hash_tree::create_hash_tree_recurse(std::fstream & scratch, std::streampos row_start, std::streampos row_end, std::string & root_hash)
@@ -249,7 +268,7 @@ void hash_tree::create_hash_tree_recurse(std::fstream & scratch, std::streampos 
 	if(scratch_write - row_end == sha::HASH_LENGTH){
 		root_hash = SHA.hex_hash();
 
-		//do nothing if hash tree already exists
+		//do nothing if hash tree file already created
 		std::fstream fin((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::in);
 		if(fin.is_open()){
 			create_hash_tree_recurse_found = true;

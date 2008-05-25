@@ -23,7 +23,7 @@ DB_access::DB_access()
 	}
 
 	//make share table if it doesn't already exist
-	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS share (ID INTEGER PRIMARY KEY AUTOINCREMENT, hash TEXT, size INTEGER, path TEXT);", NULL, NULL, NULL) != 0){
+	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS share (ID INTEGER PRIMARY KEY AUTOINCREMENT, hash TEXT, size TEXT, path TEXT);", NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,"#3 ",sqlite3_errmsg(sqlite3_DB));
 	}
 	if(sqlite3_exec(sqlite3_DB, "CREATE UNIQUE INDEX IF NOT EXISTS path_index ON share (path);", NULL, NULL, NULL) != 0){
@@ -31,7 +31,7 @@ DB_access::DB_access()
 	}
 
 	//make download table if it doesn't already exist
-	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS download (hash TEXT, name TEXT, size INTEGER, server_IP TEXT, file_ID TEXT);", NULL, NULL, NULL) != 0){
+	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS download (hash TEXT, name TEXT, size TEXT, server_IP TEXT, file_ID TEXT);", NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,"#5 ",sqlite3_errmsg(sqlite3_DB));
 	}
 	if(sqlite3_exec(sqlite3_DB, "CREATE UNIQUE INDEX IF NOT EXISTS hash_index ON download (hash);", NULL, NULL, NULL) != 0){
@@ -39,7 +39,7 @@ DB_access::DB_access()
 	}
 
 	//make search table if it doesn't already exist
-	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS search (hash TEXT, name TEXT, size INTEGER, server_IP TEXT, file_ID TEXT);", NULL, NULL, NULL) != 0){
+	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS search (hash TEXT, name TEXT, size TEXT, server_IP TEXT, file_ID TEXT);", NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,"#7 ",sqlite3_errmsg(sqlite3_DB));
 	}
 	if(sqlite3_exec(sqlite3_DB, "CREATE UNIQUE INDEX IF NOT EXISTS search_hash_index ON search (hash);", NULL, NULL, NULL) != 0){
@@ -50,27 +50,30 @@ DB_access::DB_access()
 	}
 }
 
-void DB_access::share_add_entry(const std::string & hash, const int & size, const std::string & path)
+void DB_access::share_add_entry(const std::string & hash, const uint64_t & size, const std::string & path)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 
-
+	//if this is set to true after the query the entry exists in the database
 	share_add_entry_entry_exists = false;
 
 	//determine if the entry already exists
+	char * path_sqlite = sqlite3_mprintf("%q", path.c_str());
 	std::ostringstream query;
-	query << "SELECT * FROM share WHERE path LIKE \"" << path << "\" LIMIT 1;";
+	query << "SELECT * FROM share WHERE path = \"" << path_sqlite << "\" LIMIT 1;";
 	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), share_add_entry_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,"#1 ",sqlite3_errmsg(sqlite3_DB));
 	}
+	sqlite3_free(path_sqlite);
 
 	if(!share_add_entry_entry_exists){
-		query.str("");
-		query << "INSERT INTO share (hash, size, path) VALUES ('" << hash << "', '" << size << "', '" << path << "');";
-
+		char * path_sqlite = sqlite3_mprintf("%q", path.c_str());
+		std::ostringstream query;
+		query << "INSERT INTO share (hash, size, path) VALUES ('" << hash << "', '" << size << "', '" << path_sqlite << "');";
 		if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
 			logger::debug(LOGGER_P1,"#2 ",sqlite3_errmsg(sqlite3_DB));
 		}
+		sqlite3_free(path_sqlite);
 	}
 }
 
@@ -88,24 +91,25 @@ void DB_access::share_delete_hash(const std::string & hash)
 	}
 }
 
-bool DB_access::share_file_exists(std::string & existing_hash, const std::string & path)
+bool DB_access::share_file_exists(const std::string & path, std::string & existing_hash, uint64_t & existing_size)
 {
-	existing_hash.clear();
-	existing_hash_ptr = &existing_hash;
-	share_file_exists_ = false;
+	share_file_exists_cond = false;
+	share_file_exists_hash_ptr = &existing_hash;
+	share_file_exists_size_ptr = &existing_size;
 
-	std::ostringstream query;
-	query << "SELECT hash from share WHERE path = \"" << path << "\";";
-	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), share_file_exists_call_back_wrapper, (void *)this, NULL) != 0){
+	char * query = sqlite3_mprintf("SELECT hash, size FROM share WHERE path = \"%q\" LIMIT 1;", path.c_str());
+	if(sqlite3_exec(sqlite3_DB, query, share_file_exists_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
-	return share_file_exists_;
+	sqlite3_free(query);
+	return share_file_exists_cond;
 }
 
 void DB_access::share_file_exists_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
-	*existing_hash_ptr = query_response[0];
-	share_file_exists_ = true;
+	share_file_exists_cond = true;
+	*share_file_exists_hash_ptr = query_response[0];
+	*share_file_exists_size_ptr = strtoull(query_response[1], NULL, 10);
 }
 
 bool DB_access::share_file_info(const unsigned int & file_ID, unsigned long & file_size, std::string & file_path)
@@ -150,11 +154,7 @@ void DB_access::share_remove_missing_call_back(int & columns_retrieved, char ** 
 	boost::mutex::scoped_lock lock(Mutex);
 
 	std::fstream fin(query_response[1]);
-
-	if(fin.is_open()){
-		fin.close();
-	}
-	else{
+	if(!fin.is_open()){
 		//remove hash tree
 		namespace fs = boost::filesystem;
 		fs::path path = fs::system_complete(fs::path(global::HASH_DIRECTORY+std::string(query_response[0]), fs::native));
@@ -172,12 +172,11 @@ bool DB_access::download_get_file_path(const std::string & hash, std::string & p
 {
 	boost::mutex::scoped_lock lock(Mutex);
 
-	std::ostringstream query;
 	download_get_file_path_entry_exits = false;
 
 	//locate the record
+	std::ostringstream query;
 	query << "SELECT name FROM download WHERE hash = \"" << hash << "\" LIMIT 1;";
-
 	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), download_get_file_path_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
@@ -298,7 +297,6 @@ void DB_access::download_terminate_download(const std::string & hash)
 
 	std::ostringstream query;
 	query << "DELETE FROM download WHERE hash = \"" << hash << "\";";
-
 	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}

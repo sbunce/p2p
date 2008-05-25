@@ -8,6 +8,7 @@
 #include <boost/filesystem/path.hpp>
 
 //std
+#include <ctime>
 #include <string>
 
 //custom
@@ -31,7 +32,9 @@ public:
 private:
 	volatile bool stop_thread; //if true this will trigger thread termination
 	volatile int threads;      //how many threads are currently running
-	volatile bool indexing;    //true if server_index is currently indexing files
+
+	bool indexing;         //true if server_index is currently indexing files
+	time_t indexing_start; //time when indexing started
 
 	/*
 	index_share         - removes files listed in index that don't exist in share

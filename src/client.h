@@ -31,7 +31,7 @@
 #include "download.h"
 #include "download_conn.h"
 #include "download_info.h"
-#include "download_prep.h"
+#include "download_factory.h"
 #include "global.h"
 #include "speed_calculator.h"
 #include "thread_pool.h"
@@ -69,6 +69,9 @@ private:
 	std::deque<download_conn *> Connection_Queue;
 	std::list<download_conn *> Connection_Current_Attempt;
 
+	//mutex for download_conn's that don't yet belong to a client_buffer
+	boost::mutex DC_mutex;
+
 	/*
 	All the information relevant to each socket accessible with the socket fd int
 	example: Client_Buffer[socket_FD].something.
@@ -103,12 +106,6 @@ private:
 	//used to initiate new connections
 	thread_pool<client> Thread_Pool;
 
-	//mutex for both Client_Buffer and Download_Buffer
-	boost::mutex CB_DB_mutex;
-
-	//mutex for download_conn's that DON'T belong to a client_buffer
-	boost::mutex DC_mutex;
-
 	/*
 	The gethostbyname() name resolving function is not thread-safe. Without
 	locking access to it garbled addresses are sometimes returned.
@@ -121,7 +118,7 @@ private:
 	connection attempts.
 	*/
 	boost::mutex KU_mutex; //mutex for Known_Unresponsive
-	std::map<time_t,std::string> Known_Unresponsive;
+	std::map<time_t,std::string> Known_Unresponsive; //time mapped to hostname/IP
 
 	/*
 	check_timeouts      - checks all servers to see if they've timed out and removes/disconnects if they have
@@ -138,8 +135,6 @@ private:
 	process_CQ          - connects to servers for DC's or initiates adding a DC to existing client_buffer
 	                      one Thread_Pool job should be scheduled for each DC in Connection_Queue
 	remove_complete     - removes downloads that are complete(or stopped)
-	remove_complete_step 1 to 5 - documentation in functions
-	remove_pending_connections - stop pending connection attemps to an IP
 	*/
 	void check_timeouts();
 	bool DC_add_existing(download_conn * DC);
@@ -152,15 +147,10 @@ private:
 	void prepare_requests();
 	void process_CQ();
 	void remove_complete();
-	inline void remove_complete_step_1(std::list<download *> & complete_download);
-	inline void remove_complete_step_2(std::list<download *> & complete_download);
-	inline void remove_complete_step_3(std::list<download *> & complete_download);
-	inline void remove_complete_step_4(std::list<download *> & complete_download);
-	inline void remove_complete_step_5(std::list<download *> & complete_download);
 
 	sha SHA;
 	DB_access DB_Access;
-	download_prep Download_Prep;
+	download_factory Download_Factory;
 	speed_calculator Speed_Calculator;
 };
 #endif
