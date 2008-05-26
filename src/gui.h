@@ -89,7 +89,8 @@ private:
 	cancel_download      - when user clicks Cancel on a download in downloadView
 	download_file        - when user clicks Download on a entry in searchView
 	download_click       - interprets downloadView input, can pop up a menu on right click
-	file_quit            - when user clicks File/Quit
+	on_quit              - when user clicks File/Quit
+	on_delete_event      - overrides the event which happens on window close
 	search_input         - when user clicks searchButton or hits enter while on searchEntry
 	search_click         - interprets searchView input, can pop up a menu on right click
 	settings_preferences - user clicked Settings/Preferences
@@ -98,7 +99,8 @@ private:
 	void cancel_download();
 	void download_file();
 	bool download_click(GdkEventButton * event);
-	void file_quit();
+	void on_quit();
+	bool on_delete_event(GdkEventAny* event);
 	void search_input();
 	bool search_click(GdkEventButton * event);
 	void settings_preferences();

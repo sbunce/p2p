@@ -58,6 +58,14 @@ void server_index::index_share_recurse(std::string directory_name)
 	if(fs::is_directory(full_path)){
 		fs::directory_iterator end_iter;
 		for(fs::directory_iterator directory_iter(full_path); directory_iter != end_iter; directory_iter++){
+			/*
+			Directory scans happen frequently. The idea of putting a sleep here is
+			to slow them down. Most of the time is spent hashing files if there is
+			stuff needing to be hashed. After that is done there are constant
+			checks for updated files. This makes those checks such that they don't
+			contantly load the CPU.
+			*/
+			usleep(1);
 			try{
 				if(fs::is_directory(*directory_iter)){
 					//recurse to new directory
@@ -74,6 +82,7 @@ void server_index::index_share_recurse(std::string directory_name)
 						std::fstream fin((global::HASH_DIRECTORY+existing_hash).c_str(), std::ios::in);
 						if(!fin.is_open()){
 							//hash tree is missing
+							indexing = true;
 							DB_Access.share_delete_hash(existing_hash); //delete the entry
 							generate_hash(file_path);                   //regenerate hash for file
 						}
@@ -85,11 +94,13 @@ void server_index::index_share_recurse(std::string directory_name)
 						copying.
 						*/
 						if(existing_size != fs::file_size(file_path)){
+							indexing = true;
 							DB_Access.share_delete_hash(existing_hash);
 							generate_hash(file_path);
 						}
 					}else{
 						//hash tree doesn't yet exist, generate one
+						indexing = true;
 						generate_hash(file_path);
 					}
 
@@ -112,17 +123,7 @@ void server_index::index_share_recurse(std::string directory_name)
 
 bool server_index::is_indexing()
 {
-	/*
-	This puts a 1 to 2 second delay on telling the caller that hashing is
-	happening. This is needed because otherwise directory scans will trigger this
-	function to return true when no hashing is happening.
-	*/
-	if(indexing){
-		if(time(0) - indexing_start > 1){
-			return true;
-		}
-	}
-	return false;
+	return indexing;
 }
 
 void server_index::index_share()
@@ -143,8 +144,6 @@ void server_index::index_share()
 		++seconds_slept;
 		if(seconds_slept > global::SHARE_REFRESH){
 			seconds_slept = 0;
-			indexing_start = time(0);
-			indexing = true;
 			DB_Access.share_remove_missing();
 			index_share_recurse(global::SERVER_SHARE_DIRECTORY);
 			indexing = false;

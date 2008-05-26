@@ -1,5 +1,8 @@
 TODO
 
+-Make interface for client speed limit, server speed limit, share directory,
+download directory, and max connections.
+
 
 DEFERRED FEATURES
 

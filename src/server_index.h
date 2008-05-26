@@ -32,9 +32,7 @@ public:
 private:
 	volatile bool stop_thread; //if true this will trigger thread termination
 	volatile int threads;      //how many threads are currently running
-
-	bool indexing;         //true if server_index is currently indexing files
-	time_t indexing_start; //time when indexing started
+	bool indexing;             //true if server_index is currently indexing files
 
 	/*
 	index_share         - removes files listed in index that don't exist in share

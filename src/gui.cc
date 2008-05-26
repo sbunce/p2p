@@ -206,7 +206,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	window->set_title(global::NAME);
 	window->resize(800, 600);
 	window->set_modal(false);
-	window->property_window_position().set_value(Gtk::WIN_POS_NONE);
+	window->property_window_position().set_value(Gtk::WIN_POS_CENTER_ON_PARENT);
 	window->set_resizable(true);
 	window->property_destroy_with_parent().set_value(false);
 	window->add(*main_VBox);
@@ -215,7 +215,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	show_all_children();
 
 	//signaled functions
-	quit->signal_activate().connect(sigc::mem_fun(*this, &gui::file_quit), false);
+	quit->signal_activate().connect(sigc::mem_fun(*this, &gui::on_quit), false);
 	preferences->signal_activate().connect(sigc::mem_fun(*this, &gui::settings_preferences), false);
 	about->signal_activate().connect(sigc::mem_fun(*this, &gui::help_about), false);
 	searchEntry->signal_activate().connect(sigc::mem_fun(*this, &gui::search_input), false);
@@ -237,6 +237,17 @@ gui::~gui()
 	//stop all client and server threads before terminating
 	Client.stop();
 	Server.stop();
+}
+
+void gui::on_quit()
+{
+	hide();
+}
+
+bool gui::on_delete_event(GdkEventAny* event)
+{
+	on_quit();
+	return true;
 }
 
 void gui::cancel_download()
@@ -469,15 +480,11 @@ bool gui::download_info_refresh()
 	return true;
 }
 
-void gui::file_quit()
-{
-	hide();
-}
-
 void gui::help_about()
 {
-	gui_about * aboutWindow = new gui_about;
-	Gtk::Main::run(*aboutWindow);
+	gui_about * GUI_About = new gui_about();
+	Gtk::Main::run(*GUI_About);
+	delete GUI_About;
 }
 
 void gui::upload_info_setup()
@@ -747,8 +754,9 @@ void gui::search_input()
 
 void gui::settings_preferences()
 {
-	gui_preferences * preferencesWindow = new gui_preferences;
-	Gtk::Main::run(*preferencesWindow);
+	gui_preferences * GUI_Preferences = new gui_preferences();
+	Gtk::Main::run(*GUI_Preferences);
+	delete GUI_Preferences;
 }
 
 bool gui::update_status_bar()

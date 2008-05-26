@@ -9,6 +9,11 @@ class gui_about : public Gtk::Window
 public:
 	gui_about();
 
+	/*
+	close_window - close this window
+	*/
+	void close_window();
+
 private:
 	class Gtk::Window * window;
 
@@ -19,7 +24,5 @@ private:
 
 	Gtk::HButtonBox about_buttonBox;
 	Gtk::Button buttonClose;
-
-	void on_button_close();
 };
 #endif
