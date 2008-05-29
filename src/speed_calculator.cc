@@ -5,19 +5,31 @@
 
 #include "speed_calculator.h"
 
-speed_calculator::speed_calculator()
-: average_speed(0), rate_control_count(0), rate_control_damper(0), rate_control_try_speed(0),
+speed_calculator::speed_calculator(unsigned int speed_limit_in)
+:
+speed_limit(speed_limit_in),
+average_speed(0),
+rate_control_count(0),
+rate_control_damper(0),
+rate_control_try_speed(0),
 rate_control_try_time(time(0))
 {
 
 }
 
+unsigned int speed_calculator::get_speed_limit()
+{
+	return speed_limit;
+}
+
+void speed_calculator::set_speed_limit(const unsigned int & new_speed_limit)
+{
+	speed_limit = new_speed_limit;
+}
+
 unsigned int speed_calculator::speed()
 {
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(AS_mutex);
 	return average_speed;
-	}//end lock scope
 }
 
 void speed_calculator::update(const unsigned int & byte_count)
@@ -57,17 +69,14 @@ void speed_calculator::update(const unsigned int & byte_count)
 		++iter_cur;
 	}
 
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(AS_mutex);
 	if(count != 0){
 		average_speed = total_bytes / count;
 	}else{
 		average_speed = 0;
 	}
-	}//end lock scope
 }
 
-unsigned int speed_calculator::rate_control(const int & rate, int max_possible_transfer)
+unsigned int speed_calculator::rate_control(int max_possible_transfer)
 {
 	++rate_control_count;
 	unsigned int transfer = 0;
@@ -77,13 +86,13 @@ unsigned int speed_calculator::rate_control(const int & rate, int max_possible_t
 	global::SPEED_AVERAGE seconds.
 	*/
 	if(average_speed == 0){
-		rate_control_damper = 80;
+		rate_control_damper = 0;
 	}
 
 	//maximum possible transfer to keep average_speed under rate
 	if(!Second_Bytes.empty()){
-		if(Second_Bytes.front().second < rate){
-			transfer = rate - Second_Bytes.front().second;
+		if(Second_Bytes.front().second < speed_limit){
+			transfer = speed_limit - Second_Bytes.front().second;
 		}
 	}
 
@@ -120,7 +129,7 @@ unsigned int speed_calculator::rate_control(const int & rate, int max_possible_t
 
 	//sleep every rate_control_damper calls to this function
 	if(rate_control_count % rate_control_damper == 0){
-		usleep(1000);
+		usleep(1);
 	}
 
 	return transfer;

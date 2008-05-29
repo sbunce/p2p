@@ -3,16 +3,19 @@
 
 #include "gui_preferences.h"
 
-gui_preferences::gui_preferences()
+gui_preferences::gui_preferences(client * Client_in, server * Server_in)
 {
+	Client = Client_in;
+	Server = Server_in;
+
 	window = this;
-	downloads_entry = Gtk::manage(new Gtk::Entry());
-	share_entry = Gtk::manage(new Gtk::Entry());
+	download_directory_entry = Gtk::manage(new Gtk::Entry());
+	share_directory_entry = Gtk::manage(new Gtk::Entry());
 	download_speed_entry = Gtk::manage(new Gtk::Entry());
 	upload_speed_entry = Gtk::manage(new Gtk::Entry());
 	downloads_label = Gtk::manage(new Gtk::Label("Download Directory"));
 	share_label = Gtk::manage(new Gtk::Label("Share Directory"));
-	speed_label = Gtk::manage(new Gtk::Label("Speed Limits (kB/s)"));
+	speed_label = Gtk::manage(new Gtk::Label("Speed Limits"));
 	connection_limit_label = Gtk::manage(new Gtk::Label("Connection Limit"));
 	upload_speed_label = Gtk::manage(new Gtk::Label("UL"));
 	download_speed_label = Gtk::manage(new Gtk::Label("DL"));
@@ -29,17 +32,17 @@ gui_preferences::gui_preferences()
 	window->set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
 	window->add(*fixed);
 
-	downloads_entry->set_size_request(320,23);
-//	downloads_entry->set_text("");
+	download_directory_entry->set_size_request(320,23);
+	download_directory_entry->set_text(Client->get_download_directory());
 
-	share_entry->set_size_request(320,23);
-//	share_entry->set_text("");
+	share_directory_entry->set_size_request(320,23);
+	share_directory_entry->set_text(Server->get_share_directory());
 
 	download_speed_entry->set_size_request(75,23);
-//	download_speed_entry->set_text("");
+	download_speed_entry->set_text(Client->get_speed_limit());
 
 	upload_speed_entry->set_size_request(75,23);
-//	upload_speed_entry->set_text("");
+	upload_speed_entry->set_text(Server->get_speed_limit());
 
 	downloads_label->set_size_request(141,17);
 	downloads_label->set_alignment(0.5,0.5);
@@ -86,8 +89,8 @@ gui_preferences::gui_preferences()
 	connection_limit_hscale->set_draw_value(true);
 	connection_limit_hscale->set_value_pos(Gtk::POS_BOTTOM);
 
-	fixed->put(*downloads_entry, 16, 40);
-	fixed->put(*share_entry, 16, 104);
+	fixed->put(*download_directory_entry, 16, 40);
+	fixed->put(*share_directory_entry, 16, 104);
 	fixed->put(*download_speed_entry, 40, 184);
 	fixed->put(*upload_speed_entry, 40, 216);
 	fixed->put(*downloads_label, 8, 16);
@@ -105,21 +108,28 @@ gui_preferences::gui_preferences()
 
 	//signaled functions
 	apply_button->signal_clicked().connect(sigc::mem_fun(*this, &gui_preferences::apply_click), false);
-	cancel_button->signal_clicked().connect(sigc::mem_fun(*this, &gui_preferences::close_window), false);
+	cancel_button->signal_clicked().connect(sigc::mem_fun(*this, &gui_preferences::cancel_click), false);
 	ok_button->signal_clicked().connect(sigc::mem_fun(*this, &gui_preferences::ok_click), false);
 }
 
 void gui_preferences::apply_click()
 {
-	std::cout << "apply button clicked\n";
+	apply_settings();
 }
 
-void gui_preferences::close_window()
+void gui_preferences::apply_settings()
+{
+	Client->set_download_directory(download_directory_entry->get_text());
+	Client->set_speed_limit(download_speed_entry->get_text());
+}
+
+void gui_preferences::cancel_click()
 {
 	hide();
 }
 
 void gui_preferences::ok_click()
 {
-	std::cout << "ok button clicked\n";
+	apply_settings();
+	hide();
 }

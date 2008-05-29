@@ -10,7 +10,13 @@
 #include "server.h"
 
 server::server()
-: connections(0), send_pending(0), stop_threads(false), total_speed(0), threads(0)
+:
+connections(0),
+send_pending(0),
+stop_threads(false),
+total_speed(0),
+threads(0),
+Speed_Calculator(global::UP_SPEED)
 {
 	FD_ZERO(&master_FDS);
 	Server_Index.start();
@@ -101,6 +107,18 @@ void server::calculate_speed_file(std::string & client_IP, const unsigned int & 
 		Upload_Speed.back().Speed.push_back(std::make_pair(current_time, global::P_BLOCK_SIZE));
 	}
 	}//end lock scope
+}
+
+std::string server::get_share_directory()
+{
+	return global::SHARE_DIRECTORY;
+}
+
+std::string server::get_speed_limit()
+{
+	std::ostringstream sl;
+	sl << Speed_Calculator.get_speed_limit() / 1024;
+	return sl.str();
 }
 
 int server::get_total_speed()
@@ -330,7 +348,7 @@ void server::main_thread()
 			if(FD_ISSET(socket_FD, &write_FDS) && socket_FD != listener){
 				SB_iter = Send_Buff.find(socket_FD);
 				if(!SB_iter->second.buff.empty()){
-					send_limit = Speed_Calculator.rate_control(global::UP_SPEED, SB_iter->second.buff.size());
+					send_limit = Speed_Calculator.rate_control(SB_iter->second.buff.size());
 
 					//MSG_NOSIGNAL needed because abrupt client disconnect causes SIGPIPE
 					if((n_bytes = send(socket_FD, SB_iter->second.buff.c_str(), send_limit, MSG_NOSIGNAL)) < 0){

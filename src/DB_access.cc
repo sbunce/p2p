@@ -10,6 +10,17 @@
 
 #include "DB_access.h"
 
+//used to check if there is an entry in preference tables
+static int check_entry_exists(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
+{
+	if(strcmp(query_response[0], "0") == 0){
+		*((bool *)object_ptr) = false;
+	}else{
+		*((bool *)object_ptr) = true;
+	}
+	return 0;
+}
+
 DB_access::DB_access()
 {
 	//open DB
@@ -22,7 +33,7 @@ DB_access::DB_access()
 		logger::debug(LOGGER_P1,"#2 ",sqlite3_errmsg(sqlite3_DB));
 	}
 
-	//make share table if it doesn't already exist
+	//make share table
 	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS share (ID INTEGER PRIMARY KEY AUTOINCREMENT, hash TEXT, size TEXT, path TEXT);", NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,"#3 ",sqlite3_errmsg(sqlite3_DB));
 	}
@@ -30,7 +41,7 @@ DB_access::DB_access()
 		logger::debug(LOGGER_P1,"#4 ",sqlite3_errmsg(sqlite3_DB));
 	}
 
-	//make download table if it doesn't already exist
+	//make download table
 	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS download (hash TEXT, name TEXT, size TEXT, server_IP TEXT, file_ID TEXT);", NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,"#5 ",sqlite3_errmsg(sqlite3_DB));
 	}
@@ -38,7 +49,7 @@ DB_access::DB_access()
 		logger::debug(LOGGER_P1,"#6 ",sqlite3_errmsg(sqlite3_DB));
 	}
 
-	//make search table if it doesn't already exist
+	//make search table
 	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS search (hash TEXT, name TEXT, size TEXT, server_IP TEXT, file_ID TEXT);", NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,"#7 ",sqlite3_errmsg(sqlite3_DB));
 	}
@@ -47,6 +58,38 @@ DB_access::DB_access()
 	}
 	if(sqlite3_exec(sqlite3_DB, "CREATE INDEX IF NOT EXISTS search_name_index ON search (name);", NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,"#9 ",sqlite3_errmsg(sqlite3_DB));
+	}
+
+	//make client_preferences table
+	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS client_preferences (download_directory TEXT, speed_limit TEXT, max_connections TEXT);", NULL, NULL, NULL) != 0){
+		logger::debug(LOGGER_P1,"#10 ",sqlite3_errmsg(sqlite3_DB));
+	}
+	bool client_preferences_exist;
+	if(sqlite3_exec(sqlite3_DB, "SELECT count(1) FROM client_preferences;", check_entry_exists, (void *)&client_preferences_exist, NULL) != 0){
+		logger::debug(LOGGER_P1,"#11 ",sqlite3_errmsg(sqlite3_DB));
+	}
+	if(!client_preferences_exist){
+		std::stringstream query;
+		query << "INSERT INTO client_preferences VALUES('" << global::DOWNLOAD_DIRECTORY << "', '" << global::DOWN_SPEED << "', '" << global::MAX_CONNECTIONS << "');";
+		if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
+			logger::debug(LOGGER_P1,"#12 ",sqlite3_errmsg(sqlite3_DB));
+		}
+	}
+
+	//make server_preferences table
+	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS server_preferences (share_directory TEXT, speed_limit TEXT, max_connections TEXT);", NULL, NULL, NULL) != 0){
+		logger::debug(LOGGER_P1,"#10 ",sqlite3_errmsg(sqlite3_DB));
+	}
+	bool server_preferences_exist;
+	if(sqlite3_exec(sqlite3_DB, "SELECT count(1) FROM server_preferences;", check_entry_exists, (void *)&server_preferences_exist, NULL) != 0){
+		logger::debug(LOGGER_P1,"#11 ",sqlite3_errmsg(sqlite3_DB));
+	}
+	if(!client_preferences_exist){
+		std::stringstream query;
+		query << "INSERT INTO server_preferences VALUES('" << global::SHARE_DIRECTORY << "', '" << global::UP_SPEED << "', '" << global::MAX_CONNECTIONS << "');";
+		if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
+			logger::debug(LOGGER_P1,"#12 ",sqlite3_errmsg(sqlite3_DB));
+		}
 	}
 }
 
@@ -182,7 +225,7 @@ bool DB_access::download_get_file_path(const std::string & hash, std::string & p
 	}
 
 	if(download_get_file_path_entry_exits){
-		path = global::CLIENT_DOWNLOAD_DIRECTORY + download_get_file_path_file_name;
+		path = global::DOWNLOAD_DIRECTORY + download_get_file_path_file_name;
 		return true;
 	}
 	else{
@@ -211,14 +254,14 @@ void DB_access::download_initial_fill_buff_call_back(int & columns_retrieved, ch
 	namespace fs = boost::filesystem;
 
 	std::string path(query_response[1]);
-	path = global::CLIENT_DOWNLOAD_DIRECTORY + path;
+	path = global::DOWNLOAD_DIRECTORY + path;
 
 	//make sure the file is present
 	std::fstream fstream_temp(path.c_str());
 	if(fstream_temp.is_open()){ //partial file exists, add to downloadBuffer
 		fstream_temp.close();
 
-		fs::path path_boost = fs::system_complete(fs::path(global::CLIENT_DOWNLOAD_DIRECTORY + query_response[1], fs::native));
+		fs::path path_boost = fs::system_complete(fs::path(global::DOWNLOAD_DIRECTORY + query_response[1], fs::native));
 		uint64_t current_bytes = fs::file_size(path_boost);
 		uint64_t latest_request = current_bytes / (global::P_BLOCK_SIZE - 1); //(global::P_BLOCK_SIZE - 1) because control size is 1 byte
 
@@ -354,4 +397,27 @@ void DB_access::search_call_back(int & columns_retrieved, char ** query_response
 	}
 
 	search_results_ptr->push_back(Download_Info);
+}
+
+std::string & DB_access::client_preferences_get_download_directory()
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	if(sqlite3_exec(sqlite3_DB, "SELECT download_directory FROM client_preferences;", client_preferences_get_download_directory_call_back_wrapper, (void *)this, NULL) != 0){
+		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
+	}
+	return client_preferences_get_download_directory_download_directory;
+}
+
+void DB_access::client_preferences_get_download_directory_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
+{
+	client_preferences_get_download_directory_download_directory.assign(query_response[0]);
+}
+
+void DB_access::client_preferences_set_download_directory(const std::string & download_directory)
+{
+	std::ostringstream query;
+	query << "INSERT INTO client_preferences (download_directory) VALUES('" << download_directory << "');";
+	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
+		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
+	}
 }

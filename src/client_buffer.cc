@@ -11,8 +11,12 @@ boost::mutex client_buffer::D_mutex;
 
 client_buffer::client_buffer(const int & socket_in, const std::string & server_IP_in,
 volatile int * send_pending_in)
-: server_IP(server_IP_in), socket(socket_in), send_pending(send_pending_in),
-abuse(false), last_seen(time(0))
+:
+server_IP(server_IP_in),
+socket(socket_in),
+send_pending(send_pending_in),
+abuse(false),
+last_seen(time(0))
 {
 	recv_buff.reserve(global::C_MAX_SIZE*global::PIPELINE_SIZE);
 	send_buff.reserve(global::S_MAX_SIZE*global::PIPELINE_SIZE);
@@ -127,7 +131,7 @@ void client_buffer::prepare_request()
 	bool buffer_change = true;
 
 	int initial_empty = (send_buff.size() == 0);
-	while(Pipeline.size() <= global::PIPELINE_SIZE){
+	while(Pipeline.size() < global::PIPELINE_SIZE){
 		std::string request;
 		if(rotate_downloads()){
 			if(!buffer_change){

@@ -42,15 +42,24 @@ public:
 	client();
 	~client();
 	/*
-	current_downloads - returns download info for all files in Download_Buffer
-	start             - start the threads needed for the client
-	stop              - stops all threads, must be called before destruction
-	start_download    - schedules a download_file to be started
-	stop_download     - marks a download as completed so it will be stopped
-	total_speed       - returns the total download speed(in bytes per second)
+	current_downloads      - returns download info for all files in Download_Buffer
+	get_download_directory - returns the location where downloads are saved to
+	get_speed_limit        - returns the download speed limit
+	search                 - populates info with download_info that match the search_word
+	set_download_directory - sets the download directory
+	set_speed_limit        - sets a new download speed limit
+	start                  - start the threads needed for the client
+	stop                   - stops all threads, must be called before destruction
+	start_download         - schedules a download_file to be started
+	stop_download          - marks a download as completed so it will be stopped
+	total_speed            - returns the total download speed(in bytes per second)
 	*/
 	void current_downloads(std::vector<download_info> & info);
+	std::string & get_download_directory();
+	std::string get_speed_limit();
 	void search(std::string search_word, std::vector<download_info> & Search_Info);
+	void set_download_directory(const std::string & download_directory);
+	void set_speed_limit(const std::string & speed_limit);
 	void start();
 	void stop();
 	bool start_download(download_info & info);

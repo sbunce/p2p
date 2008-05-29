@@ -19,10 +19,11 @@ stop_threads(false),
 threads(0),
 current_time(time(0)),
 previous_time(time(0)),
-Thread_Pool(global::NEW_CONN_THREADS)
+Thread_Pool(global::NEW_CONN_THREADS),
+Speed_Calculator(global::DOWN_SPEED)
 {
 	//create the download directory if it doesn't exist
-	boost::filesystem::create_directory(global::CLIENT_DOWNLOAD_DIRECTORY);
+	boost::filesystem::create_directory(global::DOWNLOAD_DIRECTORY);
 
 	//socket bitvector must be initialized before use
 	FD_ZERO(&master_FDS);
@@ -56,6 +57,7 @@ void client::check_timeouts()
 			if(current_time - Client_Buffer[socket_FD]->get_last_seen() >= global::TIMEOUT){
 				logger::debug(LOGGER_P1,"triggering timeout of socket ",socket_FD);
 				disconnect(socket_FD);
+				delete Client_Buffer[socket_FD];
 				Client_Buffer.erase(socket_FD);
 			}
 		}
@@ -154,6 +156,18 @@ inline void client::disconnect(const int & socket_FD)
 	}
 }
 
+std::string & client::get_download_directory()
+{
+	return DB_Access.client_preferences_get_download_directory();
+}
+
+std::string client::get_speed_limit()
+{
+	std::ostringstream sl;
+	sl << Speed_Calculator.get_speed_limit() / 1024;
+	return sl.str();
+}
+
 void client::main_thread()
 {
 	++threads;
@@ -222,12 +236,12 @@ void client::main_thread()
 		}
 
 		//process reads/writes
-		char recv_buff[global::C_MAX_SIZE];
+		char recv_buff[global::C_MAX_SIZE*global::PIPELINE_SIZE];
 		int n_bytes;
 		std::map<int, client_buffer *>::iterator CB_iter;
 		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &read_FDS)){
-				if((recv_limit = Speed_Calculator.rate_control(global::DOWN_SPEED, global::C_MAX_SIZE)) != 0){
+				if((recv_limit = Speed_Calculator.rate_control(global::C_MAX_SIZE*global::PIPELINE_SIZE)) != 0){
 					if((n_bytes = recv(socket_FD, recv_buff, recv_limit, MSG_NOSIGNAL)) <= 0){
 						if(n_bytes == -1){
 							perror("client recv");
@@ -539,6 +553,20 @@ void client::remove_complete()
 void client::search(std::string search_word, std::vector<download_info> & Search_Info)
 {
 	DB_Access.search(search_word, Search_Info);
+}
+
+void client::set_download_directory(const std::string & download_directory)
+{
+	DB_Access.client_preferences_set_download_directory(download_directory);
+}
+
+void client::set_speed_limit(const std::string & speed_limit)
+{
+	std::stringstream ss(speed_limit);
+	unsigned int speed;
+	ss >> speed;
+	speed *= 1024;
+	Speed_Calculator.set_speed_limit(speed);
 }
 
 void client::start()

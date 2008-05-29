@@ -62,15 +62,19 @@ public:
 	};
 
 	/*
-	get_upload_info - retrieves information on all current uploads
-	                  returns true if upload_info updated
-	get_total_speed - returns the total speed of all uploads (bytes per second)
-	is_indexing     - returns true if the server is indexing files
-	start           - starts the server
-	stop            - stops the server (blocks until server shut down)
+	get_share_directory - 
+	get_speed_limit     - returns the upload speed limit
+	get_upload_info     - retrieves information on all current uploads
+	                      returns true if upload_info updated
+	get_total_speed     - returns the total speed of all uploads (bytes per second)
+	is_indexing         - returns true if the server is indexing files
+	start               - starts the server
+	stop                - stops the server (blocks until server shut down)
 	*/
-	bool get_upload_info(std::vector<info_buffer> & upload_info);
+	std::string get_share_directory();
+	std::string get_speed_limit();
 	int get_total_speed();
+	bool get_upload_info(std::vector<info_buffer> & upload_info);
 	bool is_indexing();
 	void start();
 	void stop();

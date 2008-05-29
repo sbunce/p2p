@@ -10,7 +10,7 @@ server_index::server_index()
 : indexing(false), stop_thread(false), threads(0)
 {
 	//create the share directory if it doesn't exist
-	boost::filesystem::create_directory(global::SERVER_SHARE_DIRECTORY);
+	boost::filesystem::create_directory(global::SHARE_DIRECTORY);
 }
 
 static bool file_exists(const std::string & path)
@@ -133,7 +133,7 @@ void server_index::index_share()
 	//index when thread started
 	indexing = true;
 	DB_Access.share_remove_missing();
-	index_share_recurse(global::SERVER_SHARE_DIRECTORY);
+	index_share_recurse(global::SHARE_DIRECTORY);
 	indexing = false;
 	int seconds_slept = 0;
 	while(true){
@@ -145,7 +145,7 @@ void server_index::index_share()
 		if(seconds_slept > global::SHARE_REFRESH){
 			seconds_slept = 0;
 			DB_Access.share_remove_missing();
-			index_share_recurse(global::SERVER_SHARE_DIRECTORY);
+			index_share_recurse(global::SHARE_DIRECTORY);
 			indexing = false;
 		}
 	}

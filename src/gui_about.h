@@ -16,12 +16,10 @@ public:
 
 private:
 	class Gtk::Window * window;
-
 	Gtk::VBox about_VBox;
 	Gtk::ScrolledWindow about_scrolledWindow;
 	Gtk::TextView about_textView;
 	Glib::RefPtr<Gtk::TextBuffer> about_refTextBuff;
-
 	Gtk::HButtonBox about_buttonBox;
 	Gtk::Button buttonClose;
 };

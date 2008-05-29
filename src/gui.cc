@@ -754,7 +754,7 @@ void gui::search_input()
 
 void gui::settings_preferences()
 {
-	gui_preferences * GUI_Preferences = new gui_preferences();
+	gui_preferences * GUI_Preferences = new gui_preferences(&Client, &Server);
 	Gtk::Main::run(*GUI_Preferences);
 	delete GUI_Preferences;
 }

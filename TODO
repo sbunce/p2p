@@ -1,8 +1,14 @@
 TODO
 
--Make interface for client speed limit, server speed limit, share directory,
-download directory, and max connections.
+-It seems like with the speed limiter that some servers can get starved of send
+time.
 
+-The sleep damper is taking ~10 seconds to kick in. There is high CPU usage
+immediately after changing bandwidth limit.
+
+-Currently no logic to disconnect abusive servers.
+
+-Finish connection gui_preferences to client and server.
 
 DEFERRED FEATURES
 

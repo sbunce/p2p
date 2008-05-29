@@ -1,8 +1,11 @@
 /*
-Prefixes denote what table will be read/written by the function. For example
-a share_ function deals with the share table.
+All functions should have the prefix of what table they read or modify.
+example: share_some_func works with the share table.
 
-All access to public functions must be Mutex'd.
+All access to public functions must be locked with mutex "Mutex".
+
+Variable naming for call_back functions is as follows:
+<function that initiated call_back>"_"<variable name>
 */
 
 #ifndef H_DB_ACCESS
@@ -59,6 +62,13 @@ public:
 	search - searches the database for names which match search_word
 	*/
 	void search(std::string & search_word, std::vector<download_info> & info);
+
+	/*
+	client_preferences_get_download_directory - return the path to the directory where downloads will be saved
+	client_preferences_set_download_directory - sets download directory
+	*/
+	std::string & client_preferences_get_download_directory();
+	void client_preferences_set_download_directory(const std::string & download_directory);
 
 private:
 	sqlite3 * sqlite3_DB; //pointer for all DB accesses
@@ -142,5 +152,15 @@ private:
 		return 0;
 	}
 	std::vector<download_info> * search_results_ptr;
+
+	//BEGIN client_preferences_ stuff
+	void client_preferences_get_download_directory_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
+	static int client_preferences_get_download_directory_call_back_wrapper(void * obj_ptr, int columns_retrieved, char ** query_response, char ** column_name)
+	{
+		DB_access * this_class = (DB_access *)obj_ptr;
+		this_class->client_preferences_get_download_directory_call_back(columns_retrieved, query_response, column_name);
+		return 0;
+	}
+	std::string client_preferences_get_download_directory_download_directory;
 };
 #endif

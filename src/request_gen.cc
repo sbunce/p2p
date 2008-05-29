@@ -5,7 +5,8 @@
 #include "request_gen.h"
 
 request_gen::request_gen()
-: latest_request(0)
+:
+latest_request(0)
 {
 
 }

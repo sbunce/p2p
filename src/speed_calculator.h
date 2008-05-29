@@ -10,24 +10,27 @@
 class speed_calculator
 {
 public:
-	speed_calculator();
+	speed_calculator(unsigned int speed_limit_in = 0);
 
 	/*
-	rate_control      - returns how many bytes can be sent to maintain rate
-	speed             - returns the speed averaged over the last global::SPEED_AVERAGE time
-	                    interval, average doesn't include current second
-	update            - adds a byte count to the average
+	get_speed_limit - returns the speed limit
+	rate_control    - returns how many bytes can be sent to maintain rate
+	speed           - returns the speed averaged over the last global::SPEED_AVERAGE time
+	                  interval, average doesn't include current second
+	update          - adds a byte count to the average
 	*/
-	unsigned int rate_control(const int & rate, int max_possible_transfer);
+	unsigned int get_speed_limit();
+	unsigned int rate_control(int max_possible_transfer);
+	void set_speed_limit(const unsigned int & new_speed_limit);
 	unsigned int speed();
 	void update(const unsigned int & byte_count);
 
 private:
+	volatile unsigned int speed_limit;
+
 	//pair<second, bytes in second>
 	std::deque<std::pair<unsigned int, unsigned int> > Second_Bytes;
-
-	unsigned int average_speed;
-	boost::mutex AS_mutex;
+	volatile unsigned int average_speed;
 
 	//used by rate_control to control interval between usleep()'s
 	unsigned long rate_control_count;

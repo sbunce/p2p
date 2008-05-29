@@ -14,8 +14,14 @@
 download_file::download_file(const std::string & file_hash_in, const std::string & file_name_in, 
 const std::string & file_path_in, const unsigned long & file_size_in, const unsigned int & latest_request_in,
 const unsigned int & last_block_in, const unsigned int & last_block_size_in, volatile int * download_file_complete_in)
-: file_hash(file_hash_in), file_name(file_name_in), file_path(file_path_in), file_size(file_size_in),
-last_block(last_block_in), last_block_size(last_block_size_in), download_file_complete(download_file_complete_in),
+:
+file_hash(file_hash_in),
+file_name(file_name_in),
+file_path(file_path_in),
+file_size(file_size_in),
+last_block(last_block_in),
+last_block_size(last_block_size_in),
+download_file_complete(download_file_complete_in),
 download_complete(false)
 {
 	Request_Gen.init(latest_request_in, last_block, global::TIMEOUT);
