@@ -10,7 +10,7 @@
 #include <signal.h>
 
 //custom
-#include "conversion.h"
+#include "convert.h"
 #include "DB_server_preferences.h"
 #include "DB_share.h"
 #include "global.h"
@@ -181,7 +181,7 @@ private:
 	boost::mutex RB_mutex; //mutex for all usage of Recv_Buff
 	boost::mutex US_mutex; //mutex for all usage of Upload_Speed
 
-	conversion Conversion;
+	convert<uint32_t> Convert_uint32;
 	DB_server_preferences DB_Server_Preferences;
 	DB_share DB_Share;
 	server_index Server_Index;

@@ -5,7 +5,7 @@
 #include <boost/thread/mutex.hpp>
 
 //custom
-#include "conversion.h"
+#include "convert.h"
 
 //std
 #include <ctime>

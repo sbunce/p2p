@@ -18,7 +18,7 @@
 #include <vector>
 
 //custom
-#include "conversion.h"
+#include "convert.h"
 #include "download.h"
 #include "download_file_conn.h"
 #include "global.h"
@@ -75,7 +75,7 @@ private:
 	void response_BLS(const int & socket, std::string & block);
 	void write_block(unsigned int block_number, std::string & block);
 
-	conversion Conversion;
+	convert<uint32_t> Convert_uint32;
 	request_gen Request_Gen;
 	sha SHA;
 };

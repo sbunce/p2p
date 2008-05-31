@@ -56,7 +56,7 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 		return false;
 	}
 
-	request = global::P_SEND_BLOCK + Conversion.encode_int(conn->file_ID) + Conversion.encode_int(conn->latest_request.back());
+	request = global::P_SEND_BLOCK + Convert_uint32.encode(conn->file_ID) + Convert_uint32.encode(conn->latest_request.back());
 
 	int size;
 	if(conn->latest_request.back() == last_block){

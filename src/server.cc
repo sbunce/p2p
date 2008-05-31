@@ -450,8 +450,8 @@ void server::process_request(const int & socket_FD, char recv_buff[], const int 
 	//process recv buffer until it's empty or it contains no complete requests
 	while(RB_iter->second.size()){
 		if(RB_iter->second[0] == global::P_SEND_BLOCK && n_bytes >= global::P_SEND_BLOCK_SIZE){
-			unsigned int file_ID = Conversion.decode_int(RB_iter->second.substr(1,4));
-			unsigned int block_number = Conversion.decode_int(RB_iter->second.substr(5,4));
+			unsigned int file_ID = Convert_uint32.decode(RB_iter->second.substr(1,4));
+			unsigned int block_number = Convert_uint32.decode(RB_iter->second.substr(5,4));
 			prepare_file_block(SB_iter, socket_FD, file_ID, block_number);
 			RB_iter->second.erase(0, global::P_SEND_BLOCK_SIZE);
 		}else{

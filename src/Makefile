@@ -4,7 +4,6 @@ CXXFLAGS = `pkg-config gtkmm-2.4 --cflags` -O3 -Werror
 OBJECTS = \
 	client_buffer.o \
 	client.o \
-	conversion.o \
 	DB_client_preferences.o \
 	DB_download.o \
 	DB_search.o \
@@ -35,7 +34,6 @@ LINKER_OPTIONS = \
 	-lsqlite3
 
 SERVER_OBJECTS = \
-	conversion.o \
 	DB_server_preferences.o \
 	DB_share.o \
 	hash_tree.o \
