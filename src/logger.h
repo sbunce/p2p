@@ -1,12 +1,3 @@
-/*
-The logger is a thread safe singleton that does logging. It instantiates itself
-when it's first called.
-
-Usage of the logger would look something like this:
-
-logger::log(LOGGER_P1," some debug messag",variable)
-*/
-
 #ifndef H_LOGGER
 #define H_LOGGER
 
@@ -17,6 +8,7 @@ logger::log(LOGGER_P1," some debug messag",variable)
 #include <boost/thread/mutex.hpp>
 
 //std
+#include <iostream>
 #include <sstream>
 #include <string>
 

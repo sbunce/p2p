@@ -1,6 +1,3 @@
-//std
-#include <iostream>
-
 #include "logger.h"
 
 volatile logger * logger::logger_instance = NULL;

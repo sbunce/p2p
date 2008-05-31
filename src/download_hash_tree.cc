@@ -2,7 +2,9 @@
 
 download_hash_tree::download_hash_tree(const std::string & root_hash_in, const unsigned long & file_size,
 const std::string & file_name, volatile bool * download_complete_flag_in)
-: root_hash(root_hash_in), download_complete_flag(download_complete_flag_in)
+:
+root_hash(root_hash_in),
+download_complete_flag(download_complete_flag_in)
 {
 	hash_name = file_name + "HASH";
 	hash_tree_count = hash_tree::file_size_to_hash_tree_count(file_size);

@@ -1,12 +1,3 @@
-//std
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <ctime>
-
-//custom
-#include "conversion.h"
-
 #include "server.h"
 
 server::server()
@@ -15,11 +6,11 @@ connections(0),
 send_pending(0),
 stop_threads(false),
 total_speed(0),
-threads(0),
-Speed_Calculator(global::UP_SPEED)
+threads(0)
 {
 	FD_ZERO(&master_FDS);
 	Server_Index.start();
+	Speed_Calculator.set_speed_limit(DB_Server_Preferences.get_speed_limit_uint());
 }
 
 void server::disconnect(const int & socket_FD)
@@ -109,9 +100,24 @@ void server::calculate_speed_file(std::string & client_IP, const unsigned int & 
 	}//end lock scope
 }
 
+int server::get_max_connections()
+{
+	return DB_Server_Preferences.get_max_connections();
+}
+
+void server::set_max_connections(int max_connections)
+{
+	DB_Server_Preferences.set_max_connections(max_connections);
+}
+
 std::string server::get_share_directory()
 {
-	return global::SHARE_DIRECTORY;
+	return DB_Server_Preferences.get_share_directory();
+}
+
+void server::set_share_directory(const std::string & share_directory)
+{
+	DB_Server_Preferences.set_share_directory(share_directory);
 }
 
 std::string server::get_speed_limit()
@@ -119,6 +125,16 @@ std::string server::get_speed_limit()
 	std::ostringstream sl;
 	sl << Speed_Calculator.get_speed_limit() / 1024;
 	return sl.str();
+}
+
+void server::set_speed_limit(const std::string & speed_limit)
+{
+	std::stringstream ss(speed_limit);
+	unsigned int speed;
+	ss >> speed;
+	speed *= 1024;
+	DB_Server_Preferences.set_speed_limit(speed);
+	Speed_Calculator.set_speed_limit(speed);
 }
 
 int server::get_total_speed()
@@ -378,7 +394,7 @@ void server::prepare_file_block(std::map<int, send_buff_element>::iterator & SB_
 	//get file_size/filePath that corresponds to file_ID
 	unsigned long file_size;
 	std::string file_path;
-	if(!DB_Access.share_file_info(file_ID, file_size, file_path)){
+	if(!DB_Share.file_info(file_ID, file_size, file_path)){
 		//file was not found
 		SB_iter->second.buff += global::P_FILE_NOT_FOUND;
 		return;

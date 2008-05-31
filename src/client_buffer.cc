@@ -1,9 +1,3 @@
-//std
-#include <iostream>
-
-//custom
-#include "conversion.h"
-
 #include "client_buffer.h"
 
 std::set<download *> client_buffer::Unique_Download;

@@ -1,18 +1,26 @@
 #ifndef H_GUI
 #define H_GUI
 
-//Gtk
-#include <gtkmm.h>
-
-//std
-#include <list>
-#include <string>
-
 //custom
 #include "client.h"
 #include "download_info.h"
 #include "global.h"
+#include "gui_about.h"
+#include "gui_preferences.h"
 #include "server.h"
+
+//Gtk
+#include <gtkmm.h>
+
+//std
+#include <algorithm>
+#include <ctime>
+#include <iomanip>
+#include <iostream>
+#include <list>
+#include <sstream>
+#include <string>
+#include <vector>
 
 class gui : public Gtk::Window
 {

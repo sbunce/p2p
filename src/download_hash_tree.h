@@ -1,13 +1,13 @@
 #ifndef H_DOWNLOAD_HASH_TREE
 #define H_DOWNLOAD_HASH_TREE
 
-//std
-#include <vector>
-
 //custom
 #include "download.h"
 #include "hash_tree.h"
 #include "request_gen.h"
+
+//std
+#include <vector>
 
 class download_hash_tree : public download
 {

@@ -1,6 +1,12 @@
 #ifndef H_DOWNLOAD
 #define H_DOWNLOAD
 
+//custom
+#include "download_conn.h"
+#include "download_info.h"
+#include "global.h"
+#include "speed_calculator.h"
+
 //std
 #include <deque>
 #include <list>
@@ -8,17 +14,7 @@
 #include <map>
 #include <vector>
 
-//custom
-#include "download_conn.h"
-#include "download_info.h"
-#include "global.h"
-#include "speed_calculator.h"
-
-/*
-Forward declaration for download_conn. A circular dependency exists between
-download_conn and download.
-*/
-class download_conn;
+class download_conn; //circular dependency
 
 class download
 {

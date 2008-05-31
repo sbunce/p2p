@@ -1,6 +1,3 @@
-//std
-#include <algorithm>
-
 #include "sha.h"
 
 const int sha::HASH_LENGTH = 20;

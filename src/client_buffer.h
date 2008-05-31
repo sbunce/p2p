@@ -4,9 +4,13 @@
 //boost
 #include <boost/thread/mutex.hpp>
 
+//custom
+#include "conversion.h"
+
 //std
 #include <ctime>
 #include <deque>
+#include <iostream>
 #include <list>
 #include <set>
 
@@ -51,14 +55,12 @@ public:
 	static void add_download_unique(download * new_download)
 	{
 		boost::mutex::scoped_lock lock(D_mutex);
-
 		Unique_Download.insert(new_download);
 	}
 
 	static void remove_download_unique(download * Download)
 	{
 		boost::mutex::scoped_lock lock(D_mutex);
-
 		Unique_Download.erase(Download);
 	}
 

@@ -2,6 +2,26 @@
 #define H_CLIENT
 
 //boost
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+
+//C
+#include <errno.h>
+
+//custom
+#include "client_buffer.h"
+#include "DB_download.h"
+#include "DB_client_preferences.h"
+#include "DB_search.h"
+#include "download.h"
+#include "download_conn.h"
+#include "download_info.h"
+#include "download_factory.h"
+#include "global.h"
+#include "speed_calculator.h"
+#include "thread_pool.h"
+
+//boost
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/bind.hpp>
@@ -14,27 +34,16 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
-//contains error codes select() might return
-#include <errno.h>
-
 //std
-#include <deque>
 #include <ctime>
+#include <deque>
+#include <fstream>
+#include <iostream>
 #include <list>
 #include <map>
+#include <sstream>
 #include <string>
 #include <vector>
-
-//custom
-#include "client_buffer.h"
-#include "DB_access.h"
-#include "download.h"
-#include "download_conn.h"
-#include "download_info.h"
-#include "download_factory.h"
-#include "global.h"
-#include "speed_calculator.h"
-#include "thread_pool.h"
 
 class client
 {
@@ -42,12 +51,14 @@ public:
 	client();
 	~client();
 	/*
-	current_downloads      - returns download info for all files in Download_Buffer
+	current_downloads      - returns download info for all downloads
+	get_max_connections    - returns maximum connections client will make
+	set_max_connections    - sets maximum connections client will make
 	get_download_directory - returns the location where downloads are saved to
-	get_speed_limit        - returns the download speed limit
-	search                 - populates info with download_info that match the search_word
 	set_download_directory - sets the download directory
-	set_speed_limit        - sets a new download speed limit
+	get_speed_limit        - returns the download speed limit (kilobytes/second)
+	set_speed_limit        - sets a new download speed limit (kilobytes/second)
+	search                 - populates info with download_info that match the search_word
 	start                  - start the threads needed for the client
 	stop                   - stops all threads, must be called before destruction
 	start_download         - schedules a download_file to be started
@@ -55,11 +66,13 @@ public:
 	total_speed            - returns the total download speed(in bytes per second)
 	*/
 	void current_downloads(std::vector<download_info> & info);
-	std::string & get_download_directory();
-	std::string get_speed_limit();
-	void search(std::string search_word, std::vector<download_info> & Search_Info);
+	int get_max_connections();
+	void set_max_connections(int max_connections);
+	std::string get_download_directory();
 	void set_download_directory(const std::string & download_directory);
+	std::string get_speed_limit();
 	void set_speed_limit(const std::string & speed_limit);
+	void search(std::string search_word, std::vector<download_info> & Search_Info);
 	void start();
 	void stop();
 	bool start_download(download_info & info);
@@ -127,7 +140,7 @@ private:
 	connection attempts.
 	*/
 	boost::mutex KU_mutex; //mutex for Known_Unresponsive
-	std::map<time_t,std::string> Known_Unresponsive; //time mapped to hostname/IP
+	std::map<time_t,std::string> Known_Unresponsive; //time mapped to IP
 
 	/*
 	check_timeouts      - checks all servers to see if they've timed out and removes/disconnects if they have
@@ -158,7 +171,9 @@ private:
 	void remove_complete();
 
 	sha SHA;
-	DB_access DB_Access;
+	DB_download DB_Download;
+	DB_client_preferences DB_Client_Preferences;
+	DB_search DB_Search;
 	download_factory Download_Factory;
 	speed_calculator Speed_Calculator;
 };

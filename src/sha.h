@@ -1,13 +1,3 @@
-/*
-It is very adviseable to compile this with -03.
-
-Test System: 2ghz Opteron, 256MB test data in memory, loaded in 1MB chunks with
-ctor reserving 1MB load_buffer memory.
-
-With -O3: 42.67MB/s
-Without -O3: 13.7MB/s
-*/
-
 #ifndef H_SHA
 #define H_SHA
 
@@ -15,10 +5,8 @@ Without -O3: 13.7MB/s
 #include <stdint.h>
 
 //std
+#include <algorithm>
 #include <string>
-
-//custom
-#include "conversion.h"
 
 class sha
 {

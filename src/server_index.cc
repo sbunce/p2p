@@ -1,9 +1,3 @@
-//std
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <string>
-
 #include "server_index.h"
 
 server_index::server_index()
@@ -32,7 +26,7 @@ void server_index::generate_hash(const boost::filesystem::path & file_path)
 	//make sure user didn't move the file while it was hashing
 	if(file_exists(file_path.string())){
 		//file still present
-		DB_Access.share_add_entry(hash, fs::file_size(file_path), file_path.string());
+		DB_Share.add_entry(hash, fs::file_size(file_path), file_path.string());
 	}else{
 		//file missing delete hash tree
 		fs::path path = fs::system_complete(fs::path(global::HASH_DIRECTORY+hash, fs::native));
@@ -77,13 +71,13 @@ void server_index::index_share_recurse(std::string directory_name)
 					fs::path file_path = fs::system_complete(fs::path(directory_name + directory_iter->leaf(), fs::native));
 					std::string existing_hash;
 					uint64_t existing_size;
-					if(DB_Access.share_file_exists(file_path.string(), existing_hash, existing_size)){
+					if(DB_Share.file_exists(file_path.string(), existing_hash, existing_size)){
 						//database entry exists, make sure there is a corresponding hash tree file
 						std::fstream fin((global::HASH_DIRECTORY+existing_hash).c_str(), std::ios::in);
 						if(!fin.is_open()){
 							//hash tree is missing
 							indexing = true;
-							DB_Access.share_delete_hash(existing_hash); //delete the entry
+							DB_Share.delete_hash(existing_hash); //delete the entry
 							generate_hash(file_path);                   //regenerate hash for file
 						}
 						fin.close();
@@ -95,7 +89,7 @@ void server_index::index_share_recurse(std::string directory_name)
 						*/
 						if(existing_size != fs::file_size(file_path)){
 							indexing = true;
-							DB_Access.share_delete_hash(existing_hash);
+							DB_Share.delete_hash(existing_hash);
 							generate_hash(file_path);
 						}
 					}else{
@@ -130,24 +124,15 @@ void server_index::index_share()
 {
 	++threads;
 
-	//index when thread started
-	indexing = true;
-	DB_Access.share_remove_missing();
-	index_share_recurse(global::SHARE_DIRECTORY);
 	indexing = false;
-	int seconds_slept = 0;
 	while(true){
 		if(stop_thread){
 			break;
 		}
+		DB_Share.remove_missing();
+		index_share_recurse(global::SHARE_DIRECTORY);
+		indexing = false;
 		sleep(1);
-		++seconds_slept;
-		if(seconds_slept > global::SHARE_REFRESH){
-			seconds_slept = 0;
-			DB_Access.share_remove_missing();
-			index_share_recurse(global::SHARE_DIRECTORY);
-			indexing = false;
-		}
 	}
 
 	--threads;

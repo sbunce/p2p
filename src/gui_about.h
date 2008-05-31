@@ -1,6 +1,9 @@
 #ifndef H_GUI_ABOUT
 #define H_GUI_ABOUT
 
+//custom
+#include "global.h"
+
 //Gtk
 #include <gtkmm.h>
 

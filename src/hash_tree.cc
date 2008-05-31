@@ -1,11 +1,3 @@
-//boost
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
-
-//std
-#include <fstream>
-#include <iostream>
-
 #include "hash_tree.h"
 
 hash_tree::hash_tree()

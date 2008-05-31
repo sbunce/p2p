@@ -1,12 +1,18 @@
 #ifndef H_HASH_TREE
 #define H_HASH_TREE
 
-//std
-#include <string>
+//boost
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 
 //custom
 #include "sha.h"
 #include "global.h"
+
+//std
+#include <fstream>
+#include <iostream>
+#include <string>
 
 class hash_tree
 {

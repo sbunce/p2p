@@ -40,5 +40,4 @@ void download::reg_conn(const int & socket, download_conn * Download_conn)
 void download::unreg_conn(const int & socket)
 {
 	Connection.erase(socket);
-std::cout << "ZORT\n";
 }

@@ -3,6 +3,7 @@
 
 //custom
 #include "client.h"
+#include "global.h"
 #include "server.h"
 
 //Gtk

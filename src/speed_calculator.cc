@@ -1,8 +1,3 @@
-//std
-#include <cmath>
-#include <ctime>
-#include <deque>
-
 #include "speed_calculator.h"
 
 speed_calculator::speed_calculator(unsigned int speed_limit_in)

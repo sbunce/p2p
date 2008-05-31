@@ -1,12 +1,3 @@
-//boost
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
-
-//std
-#include <iostream>
-#include <fstream>
-#include <sstream>
-
 #include "client.h"
 
 client::client()
@@ -19,14 +10,15 @@ stop_threads(false),
 threads(0),
 current_time(time(0)),
 previous_time(time(0)),
-Thread_Pool(global::NEW_CONN_THREADS),
-Speed_Calculator(global::DOWN_SPEED)
+Thread_Pool(global::NEW_CONN_THREADS)
 {
 	//create the download directory if it doesn't exist
 	boost::filesystem::create_directory(global::DOWNLOAD_DIRECTORY);
 
 	//socket bitvector must be initialized before use
 	FD_ZERO(&master_FDS);
+
+	Speed_Calculator.set_speed_limit(DB_Client_Preferences.get_speed_limit_uint());
 }
 
 client::~client()
@@ -156,9 +148,24 @@ inline void client::disconnect(const int & socket_FD)
 	}
 }
 
-std::string & client::get_download_directory()
+int client::get_max_connections()
 {
-	return DB_Access.client_preferences_get_download_directory();
+	return DB_Client_Preferences.get_max_connections();
+}
+
+void client::set_max_connections(int max_connections)
+{
+	DB_Client_Preferences.set_max_connections(max_connections);
+}
+
+std::string client::get_download_directory()
+{
+	return DB_Client_Preferences.get_download_directory();
+}
+
+void client::set_download_directory(const std::string & download_directory)
+{
+	DB_Client_Preferences.set_download_directory(download_directory);
 }
 
 std::string client::get_speed_limit()
@@ -168,13 +175,23 @@ std::string client::get_speed_limit()
 	return sl.str();
 }
 
+void client::set_speed_limit(const std::string & speed_limit)
+{
+	std::stringstream ss(speed_limit);
+	unsigned int speed;
+	ss >> speed;
+	speed *= 1024;
+	DB_Client_Preferences.set_speed_limit(speed);
+	Speed_Calculator.set_speed_limit(speed);
+}
+
 void client::main_thread()
 {
 	++threads;
 
 	//reconnect downloads that havn't finished
 	std::list<download_info> resumed_download;
-	DB_Access.download_initial_fill_buff(resumed_download);
+	DB_Download.initial_fill_buff(resumed_download);
 	std::list<download_info>::iterator iter_cur, iter_end;
 	iter_cur = resumed_download.begin();
 	iter_end = resumed_download.end();
@@ -552,21 +569,7 @@ void client::remove_complete()
 
 void client::search(std::string search_word, std::vector<download_info> & Search_Info)
 {
-	DB_Access.search(search_word, Search_Info);
-}
-
-void client::set_download_directory(const std::string & download_directory)
-{
-	DB_Access.client_preferences_set_download_directory(download_directory);
-}
-
-void client::set_speed_limit(const std::string & speed_limit)
-{
-	std::stringstream ss(speed_limit);
-	unsigned int speed;
-	ss >> speed;
-	speed *= 1024;
-	Speed_Calculator.set_speed_limit(speed);
+	DB_Search.search(search_word, Search_Info);
 }
 
 void client::start()

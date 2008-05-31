@@ -5,7 +5,11 @@ OBJECTS = \
 	client_buffer.o \
 	client.o \
 	conversion.o \
-	DB_access.o \
+	DB_client_preferences.o \
+	DB_download.o \
+	DB_search.o \
+	DB_server_preferences.o \
+	DB_share.o \
 	download_conn.o \
 	download_file_conn.o \
 	download_file.o \
@@ -32,7 +36,8 @@ LINKER_OPTIONS = \
 
 SERVER_OBJECTS = \
 	conversion.o \
-	DB_access.o \
+	DB_server_preferences.o \
+	DB_share.o \
 	hash_tree.o \
 	logger.o \
 	main_server.o \

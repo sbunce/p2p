@@ -1,6 +1,3 @@
-//custom
-#include "global.h"
-
 #include "gui_preferences.h"
 
 gui_preferences::gui_preferences(client * Client_in, server * Server_in)
@@ -15,7 +12,7 @@ gui_preferences::gui_preferences(client * Client_in, server * Server_in)
 	upload_speed_entry = Gtk::manage(new Gtk::Entry());
 	downloads_label = Gtk::manage(new Gtk::Label("Download Directory"));
 	share_label = Gtk::manage(new Gtk::Label("Share Directory"));
-	speed_label = Gtk::manage(new Gtk::Label("Speed Limits"));
+	speed_label = Gtk::manage(new Gtk::Label("Speed (kB/s)"));
 	connection_limit_label = Gtk::manage(new Gtk::Label("Connection Limit"));
 	upload_speed_label = Gtk::manage(new Gtk::Label("UL"));
 	download_speed_label = Gtk::manage(new Gtk::Label("DL"));
@@ -25,11 +22,11 @@ gui_preferences::gui_preferences(client * Client_in, server * Server_in)
 	connection_limit_hscale = Gtk::manage(new Gtk::HScale(1,1001,1));
 	fixed = Gtk::manage(new Gtk::Fixed());
 
-	window->resize(400, 300);
+	window->set_resizable(false);
 	window->set_title("Preferences");
 	window->set_modal(true);
 	window->set_keep_above(true);
-	window->set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
+	window->set_position(Gtk::WIN_POS_CENTER);
 	window->add(*fixed);
 
 	download_directory_entry->set_size_request(320,23);
@@ -88,6 +85,8 @@ gui_preferences::gui_preferences(client * Client_in, server * Server_in)
 	connection_limit_hscale->set_size_request(200,37);
 	connection_limit_hscale->set_draw_value(true);
 	connection_limit_hscale->set_value_pos(Gtk::POS_BOTTOM);
+	assert(Server->get_max_connections() == Client->get_max_connections());
+	connection_limit_hscale->set_value(Server->get_max_connections());
 
 	fixed->put(*download_directory_entry, 16, 40);
 	fixed->put(*share_directory_entry, 16, 104);
@@ -95,11 +94,11 @@ gui_preferences::gui_preferences(client * Client_in, server * Server_in)
 	fixed->put(*upload_speed_entry, 40, 216);
 	fixed->put(*downloads_label, 8, 16);
 	fixed->put(*share_label, 8, 80);
-	fixed->put(*speed_label, 8, 152);
-	fixed->put(*connection_limit_label, 160, 152);
+	fixed->put(*speed_label, 4, 152);
+	fixed->put(*connection_limit_label, 140, 152);
 	fixed->put(*upload_speed_label, 8, 216);
 	fixed->put(*download_speed_label, 8, 184);
-	fixed->put(*connection_limit_hscale, 176, 192);
+	fixed->put(*connection_limit_hscale, 150, 192);
 	fixed->put(*ok_button, 332, 256);
 	fixed->put(*cancel_button, 252, 256);
 	fixed->put(*apply_button, 180, 256);
@@ -121,6 +120,10 @@ void gui_preferences::apply_settings()
 {
 	Client->set_download_directory(download_directory_entry->get_text());
 	Client->set_speed_limit(download_speed_entry->get_text());
+	Client->set_max_connections((int)connection_limit_hscale->get_value());
+	Server->set_share_directory(share_directory_entry->get_text());
+	Server->set_speed_limit(upload_speed_entry->get_text());
+	Server->set_max_connections((int)connection_limit_hscale->get_value());
 }
 
 void gui_preferences::cancel_click()

@@ -1,15 +1,23 @@
 #ifndef H_DOWNLOAD_FILE
 #define H_DOWNLOAD_FILE
 
+//boost
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+
 //std
+#include <ctime>
+#include <fstream>
+#include <iostream>
 #include <list>
 #include <map>
 #include <set>
+#include <sstream>
 #include <string>
+#include <typeinfo>
 #include <vector>
 
 //custom
-#include "DB_access.h"
 #include "conversion.h"
 #include "download.h"
 #include "download_file_conn.h"
@@ -68,7 +76,6 @@ private:
 	void write_block(unsigned int block_number, std::string & block);
 
 	conversion Conversion;
-	DB_access DB_Access;
 	request_gen Request_Gen;
 	sha SHA;
 };

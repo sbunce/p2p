@@ -1,6 +1,3 @@
-//custom
-#include "global.h"
-
 #include "gui_about.h"
 
 gui_about::gui_about()
@@ -10,7 +7,7 @@ gui_about::gui_about()
 	window->resize(500, 350);
 	window->set_modal(true);
 	window->set_keep_above(true);
-	window->set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
+	window->set_position(Gtk::WIN_POS_CENTER);
 
 	add(about_VBox);
 	about_scrolledWindow.add(about_textView);

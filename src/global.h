@@ -6,7 +6,6 @@
 
 //std
 #include <cassert>
-#include <iostream>
 #include <string>
 
 //custom
@@ -30,7 +29,7 @@ namespace global
 	const std::string DATABASE_PATH = "database";
 
 	//constants
-	const int NEW_CONN_THREADS = 2;       //how many threads are in the thread pool for making new client connections
+	const int NEW_CONN_THREADS = 8;       //how many threads are in the thread pool for making new client connections
 	const int PIPELINE_SIZE = 32;         //how many pre-requests can be done
 	const int P2P_PORT = 6969;            //port client connects to and server receives on
 	const int GUI_TICK = 100;             //time(in milliseconds) between gui updates

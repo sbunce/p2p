@@ -5,12 +5,17 @@
 #include <boost/thread/thread.hpp>
 #include <boost/bind.hpp>
 
-//std
-#include <deque>
-#include <list>
-#include <map>
-#include <string>
-#include <vector>
+//C
+#include <errno.h>
+#include <signal.h>
+
+//custom
+#include "conversion.h"
+#include "DB_server_preferences.h"
+#include "DB_share.h"
+#include "global.h"
+#include "server_index.h"
+#include "speed_calculator.h"
 
 //networking
 #include <arpa/inet.h>
@@ -18,26 +23,22 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-//used to prompt select() to return
-#include <signal.h>
-
-//contains error codes select() might return
-#include <errno.h>
-
-//custom
-#include "conversion.h"
-#include "DB_access.h"
-#include "global.h"
-#include "server_index.h"
-#include "speed_calculator.h"
+//std
+#include <ctime>
+#include <deque>
+#include <fstream>
+#include <iostream>
+#include <list>
+#include <map>
+#include <sstream>
+#include <string>
+#include <vector>
 
 class server
 {
 public:
 	server();
 
-
-//DEBUG, all this junk should be stored in buffer
 	//used to pass information to user interface
 	class info_buffer
 	{
@@ -62,8 +63,12 @@ public:
 	};
 
 	/*
-	get_share_directory - 
-	get_speed_limit     - returns the upload speed limit
+	get_max_connections - returns maximum connections server will accept
+	set_max_connections - sets maximum connections server will accept
+	get_share_directory - returns the location to be shared/indexed
+	set_share_directory - sets the share directory
+	get_speed_limit     - returns the download speed limit (kilobytes/second)
+	set_speed_limit     - sets a new download speed limit (kilobytes/second)
 	get_upload_info     - retrieves information on all current uploads
 	                      returns true if upload_info updated
 	get_total_speed     - returns the total speed of all uploads (bytes per second)
@@ -71,8 +76,12 @@ public:
 	start               - starts the server
 	stop                - stops the server (blocks until server shut down)
 	*/
+	int get_max_connections();
+	void set_max_connections(int max_connections);
 	std::string get_share_directory();
+	void set_share_directory(const std::string & share_directory);
 	std::string get_speed_limit();
+	void set_speed_limit(const std::string & speed_limit);
 	int get_total_speed();
 	bool get_upload_info(std::vector<info_buffer> & upload_info);
 	bool is_indexing();
@@ -80,34 +89,6 @@ public:
 	void stop();
 
 private:
-
-
-//new junk
-	class buffer
-	{
-	public:
-		buffer(std::string client_IP_in)
-		: client_IP(client_IP_in)
-		{
-			send_buff.reserve(global::C_MAX_SIZE * global::PIPELINE_SIZE);
-			recv_buff.reserve(global::S_MAX_SIZE * global::PIPELINE_SIZE);
-		}
-
-		std::string client_IP;
-		std::string send_buff, recv_buff;
-
-		/*
-		Stores file ID's and hash ID's that have been assigned to the client. The
-		char will store a number from 0-255.
-		Note: this limits simultaneous DL's from a client to 256.
-		*/
-		std::map<char, std::string> ID;
-	};
-
-	std::map<int, buffer> Buffer;
-
-
-
 
 	//holds data associated with a connection
 	class send_buff_element
@@ -201,7 +182,8 @@ private:
 	boost::mutex US_mutex; //mutex for all usage of Upload_Speed
 
 	conversion Conversion;
-	DB_access DB_Access;
+	DB_server_preferences DB_Server_Preferences;
+	DB_share DB_Share;
 	server_index Server_Index;
 	speed_calculator Speed_Calculator;
 };

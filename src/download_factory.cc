@@ -1,11 +1,8 @@
-//std
-#include <fstream>
-#include <typeinfo>
-
 #include "download_factory.h"
 
 download_factory::download_factory(volatile int * download_complete_in)
-: download_complete(download_complete_in)
+:
+download_complete(download_complete_in)
 {
 
 }
@@ -14,14 +11,14 @@ bool download_factory::start_file(download_info & info, download *& Download, st
 {
 	//make sure file isn't already downloading
 	if(!info.resumed){
-		if(!DB_Access.download_start_download(info)){
+		if(!DB_Download.start_download(info)){
 			return false;
 		}
 	}
 
 	//get file path, stop if file not found
 	std::string file_path;
-	if(!DB_Access.download_get_file_path(info.hash, file_path)){
+	if(!DB_Download.get_file_path(info.hash, file_path)){
 		return false;
 	}
 
@@ -65,7 +62,7 @@ bool download_factory::stop(download * Download_stop, download *& Download_start
 
 		return true;
 	}else if(typeid(*Download_stop) == typeid(download_file)){
-		DB_Access.download_terminate_download(Download_stop->hash());
+		DB_Download.terminate_download(Download_stop->hash());
 		delete Download_stop;
 		return false;
 	}

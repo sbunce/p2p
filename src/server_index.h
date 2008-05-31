@@ -7,14 +7,17 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 
-//std
-#include <ctime>
-#include <string>
-
 //custom
-#include "DB_access.h"
+#include "DB_share.h"
 #include "global.h"
 #include "hash_tree.h"
+
+//std
+#include <ctime>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
 
 class server_index
 {
@@ -42,7 +45,7 @@ private:
 	void index_share();
 	void index_share_recurse(std::string directory_name);
 
-	DB_access DB_Access;
+	DB_share DB_Share;
 	hash_tree Hash_Tree;
 };
 #endif

@@ -1,8 +1,8 @@
 #ifndef H_DOWNLOAD_PREP
 #define H_DOWNLOAD_PREP
 
-//std
-#include <list>
+//custom
+#include "DB_download.h"
 
 //download types
 #include "download.h"
@@ -12,8 +12,10 @@
 #include "download_hash_tree.h"
 #include "download_info.h"
 
-//custom
-#include "DB_access.h"
+//std
+#include <fstream>
+#include <list>
+#include <typeinfo>
 
 class download_factory
 {
@@ -32,6 +34,7 @@ public:
 
 private:
 	volatile int * download_complete;
-	DB_access DB_Access;
+
+	DB_download DB_Download;
 };
 #endif

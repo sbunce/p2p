@@ -1,14 +1,15 @@
 TODO
 
--It seems like with the speed limiter that some servers can get starved of send
-time.
+-Currently no logic to disconnect abusive servers. Currently the client_buffer
+stops accepting data until they time out.
 
--The sleep damper is taking ~10 seconds to kick in. There is high CPU usage
-immediately after changing bandwidth limit.
+-client::set_max_connections() not fully working.
+-server::set_max_connections() not fully working.
+-client::set_download_directory() not fully working.
+-server::set_share_directory() not fully working.
 
--Currently no logic to disconnect abusive servers.
+-File not found not being handled.
 
--Finish connection gui_preferences to client and server.
 
 DEFERRED FEATURES
 

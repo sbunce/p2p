@@ -1,7 +1,3 @@
-//std
-#include <ctime>
-#include <iostream>
-
 #include "request_gen.h"
 
 request_gen::request_gen()

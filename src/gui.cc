@@ -1,15 +1,3 @@
-//std
-#include <algorithm>
-#include <ctime>
-#include <iomanip>
-#include <iostream>
-#include <sstream>
-#include <vector>
-
-//custom
-#include "gui_about.h"
-#include "gui_preferences.h"
-
 #include "gui.h"
 
 gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)

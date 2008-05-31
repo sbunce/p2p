@@ -1,8 +1,3 @@
-//std
-#include <ctime>
-#include <cstdlib>
-#include <iostream>
-
 //custom
 #include "server.h"
 

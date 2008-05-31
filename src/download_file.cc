@@ -1,14 +1,3 @@
-//boost
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
-
-//std
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <typeinfo>
-#include <time.h>
-
 #include "download_file.h"
 
 download_file::download_file(const std::string & file_hash_in, const std::string & file_name_in, 

@@ -7,6 +7,11 @@
 //custom
 #include "global.h"
 
+//std
+#include <cmath>
+#include <ctime>
+#include <deque>
+
 class speed_calculator
 {
 public:

@@ -2,7 +2,9 @@
 #define H_REQUEST_GEN
 
 //std
+#include <ctime>
 #include <deque>
+#include <iostream>
 #include <map>
 
 //custom

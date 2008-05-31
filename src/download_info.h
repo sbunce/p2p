@@ -1,12 +1,11 @@
-/*
-Holds all information needed to start a download. Many classes depend on this.
-*/
-
 #ifndef H_DOWNLOAD_INFO
 #define H_DOWNLOAD_INFO
 
 //custom
 #include "global.h"
+
+//std
+#include <vector>
 
 class download_info
 {
