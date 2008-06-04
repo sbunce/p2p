@@ -9,27 +9,19 @@ server_buffer::server_buffer(
 {
 	send_buff.reserve(global::C_MAX_SIZE * global::PIPELINE_SIZE);
 	recv_buff.reserve(global::S_MAX_SIZE * global::PIPELINE_SIZE);
-
-	for(int x=0; x<256; ++x){
-		Slot[x] = NULL;
-	}
 }
 
-server_buffer::~server_buffer()
+void server_buffer::close_slot(char slot_ID)
 {
-	for(int x=0; x<256; ++x){
-		if(Slot[x] != NULL){
-			delete Slot[x];
-		}
-	}
+	Slot[(int)(unsigned char)slot_ID].clear();
 }
 
 bool server_buffer::create_slot(char & slot_ID, std::string path)
 {
 	for(int x=0; x<256; ++x){
-		if(Slot[x] == NULL){
+		if(Slot[x].empty()){
 			slot_ID = (char)x;
-			Slot[x] = new std::string(path);
+			Slot[x] = path;
 			return true;
 		}
 	}
@@ -38,11 +30,10 @@ bool server_buffer::create_slot(char & slot_ID, std::string path)
 
 bool server_buffer::slot_valid(char slot_ID)
 {
-	return !(Slot[(int)slot_ID] == NULL);
+	return !Slot[(int)(unsigned char)slot_ID].empty();
 }
 
 std::string & server_buffer::path(char slot_ID)
 {
-	assert(Slot[(int)slot_ID] != NULL);
-	return *Slot[(int)slot_ID];
+	return Slot[(int)(unsigned char)slot_ID];
 }

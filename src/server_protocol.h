@@ -4,6 +4,7 @@
 //custom
 #include "convert.h"
 #include "DB_share.h"
+#include "global.h"
 #include "hex.h"
 #include "server_buffer.h"
 
@@ -29,6 +30,7 @@ private:
 	These functions correspond to the protocol command names. Documentation for
 	what they do can be found in the protocol documentation.
 	*/
+	void close_slot(server_buffer * SB);
 	void request_slot_file(server_buffer * SB);
 	void send_block(server_buffer * SB);
 

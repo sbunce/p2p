@@ -83,16 +83,13 @@ private:
 	volatile bool stop_threads; //if true this will trigger thread termination
 	volatile int threads;       //how many threads are currently running (currently one possible)
 
-	//used for timeouts
-	time_t current_time;
-	time_t previous_time;
-
 	//holds connections which need to be made
+	boost::mutex CQ_mutex;
 	std::deque<download_conn *> Connection_Queue;
-	std::list<download_conn *> Connection_Current_Attempt;
 
-	//mutex for download_conn's that don't yet belong to a client_buffer
-	boost::mutex DC_mutex;
+	//holds connections which are in progress of connecting
+	boost::mutex CCA_mutex;
+	std::list<download_conn *> Connection_Current_Attempt;
 
 	//socket number mapped to client_buffer
 	std::map<int, client_buffer *> Client_Buffer;
@@ -112,24 +109,15 @@ private:
 	*/
 	volatile int * send_pending;
 
-	//this is incremented in downloads when they're complete to indicate need to terminate
-	volatile int * download_complete;
-
 	//used to initiate new connections
 	thread_pool<client> Thread_Pool;
-
-	/*
-	The gethostbyname() name resolving function is not thread-safe. Without
-	locking access to it garbled addresses are sometimes returned.
-	*/
-	boost::mutex gethostbyname_mutex;
 
 	/*
 	Used by the known_unresponsive function to check for servers that have
 	recently rejected a connection. The purpose of this is to avoid unnecessary
 	connection attempts.
 	*/
-	boost::mutex KU_mutex; //mutex for Known_Unresponsive
+	boost::mutex KU_mutex;                           //mutex for Known_Unresponsive
 	std::map<time_t,std::string> Known_Unresponsive; //time mapped to IP
 
 	/*

@@ -13,20 +13,18 @@
 class request_gen
 {
 public:
-	request_gen();
+	request_gen(uint64_t min_request_in, uint64_t max_request_in, int timeout_in);
 
 	/*
 	complete        - returns true if there are no more requests to be made
 	fulfilled       - must be called whenever a request is fulfilled
-	init            - initialize the request generator with first and last request numbers
-	highest_request - returns latest_request
+	highest_request - returns the highest request given
 	new_request     - pushes a needed request number on the back of prev_request
 	                  returns false if no request needed
 	resize_buffer   - changes the maximum buffer size.
 	*/
 	bool complete();
 	void fulfilled(uint64_t fulfilled_request);
-	void init(uint64_t min_request_in, uint64_t max_request_in, int max_age_in);
 	uint64_t highest_request();
 	bool new_request(std::deque<uint64_t> & prev_request);
 
@@ -42,7 +40,7 @@ private:
 	uint64_t max_request;
 
 	//max age of a request (in seconds) before a re_request is made
-	int max_age;
+	int timeout;
 
 	std::map<uint64_t, time_t> requests;    //requests, associated with time request made
 	std::map<uint64_t, time_t> re_requests; //re_requested blocks, associated with time re_request made

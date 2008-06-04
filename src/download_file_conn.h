@@ -19,6 +19,12 @@ public:
 	bool slot_ID_requested; //true if slot_ID requested
 	bool slot_ID_received;  //true if slot_ID received
 
+	/*
+	The download will not be finished until a P_CLOSE_SLOT has been sent to all
+	servers.
+	*/
+	bool close_slot_sent;
+
 	//the latest file block requested from this server
 	std::deque<uint64_t> latest_request;
 

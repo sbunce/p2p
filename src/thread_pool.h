@@ -74,7 +74,7 @@ template<class T> void thread_pool<T>::pool()
 	void (T::*memfun_ptr)();
 	T * Obj;
 	while(true){
-		usleep(1);
+		sleep(1);
 		if(stop_threads){
 			break;
 		}

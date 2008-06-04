@@ -4,12 +4,9 @@ client::client()
 :
 	FD_max(0),
 	send_pending(new volatile int(0)),
-	download_complete(new volatile int(0)),
-	Download_Factory(download_complete),
+	Download_Factory(),
 	stop_threads(false),
 	threads(0),
-	current_time(time(0)),
-	previous_time(time(0)),
 	Thread_Pool(global::NEW_CONN_THREADS)
 {
 	//create the download directory if it doesn't exist
@@ -32,14 +29,13 @@ client::~client()
 
 	client_buffer::delete_downloads();
 	delete send_pending;
-	delete download_complete;
 }
 
 void client::check_timeouts()
 {
 	for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 		if(FD_ISSET(socket_FD, &master_FDS)){
-			if(current_time - Client_Buffer[socket_FD]->get_last_seen() >= global::TIMEOUT){
+			if(time(0) - Client_Buffer[socket_FD]->get_last_seen() >= global::TIMEOUT){
 				logger::debug(LOGGER_P1,"triggering timeout of socket ",socket_FD);
 				disconnect(socket_FD);
 				delete Client_Buffer[socket_FD];
@@ -61,8 +57,6 @@ bool client::DC_add_existing(download_conn * DC)
 	iter_end = Client_Buffer.end();
 	while(iter_cur != iter_end){
 		if(DC->server_IP == iter_cur->second->get_IP()){
-			//mutex to guarantee DC->Download not set to NULL after download cancelled check
-			boost::mutex::scoped_lock lock(DC_mutex);
 			//if download cancelled don't add it
 			if(DC->Download == NULL){
 				return true;
@@ -82,9 +76,9 @@ bool client::DC_add_existing(download_conn * DC)
 void client::DC_block_concurrent(download_conn * DC)
 {
 	while(true){
+		{
+		boost::mutex::scoped_lock lock(CCA_mutex);
 		bool found = false;
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(DC_mutex);
 		std::list<download_conn *>::iterator iter_cur, iter_end;
 		iter_cur = Connection_Current_Attempt.begin();
 		iter_end = Connection_Current_Attempt.end();
@@ -100,15 +94,15 @@ void client::DC_block_concurrent(download_conn * DC)
 			Connection_Current_Attempt.push_back(DC);
 			break;
 		}
-		}//end lock scope
+		}
 
-		usleep(1);
+		sleep(1);
 	}
 }
 
 void client::DC_unblock(download_conn * DC)
 {
-	boost::mutex::scoped_lock lock(DC_mutex);
+	boost::mutex::scoped_lock lock(CCA_mutex);
 	std::list<download_conn *>::iterator iter_cur, iter_end;
 	iter_cur = Connection_Current_Attempt.begin();
 	iter_end = Connection_Current_Attempt.end();
@@ -197,16 +191,8 @@ void client::main_thread()
 			break;
 		}
 
-		current_time = time(0);
-		if(current_time - previous_time > global::TIMEOUT){
-			check_timeouts();
-			previous_time = current_time;
-		}
-
-		if(*download_complete != 0){
-			remove_complete();
-		}
-
+		check_timeouts();
+		remove_complete();
 		prepare_requests();
 
 		/*
@@ -316,26 +302,23 @@ void client::new_conn(download_conn * DC)
 		return;
 	}
 
-	hostent * he;
+	//this mess is a reentrant version of gethostname that is added in glibc
+	hostent host_buf, *he;
+	char * tmp_host_buf;
+	int result_code, herr, host_buf_len;
+	host_buf_len = 1024;
+	tmp_host_buf = (char *)malloc(host_buf_len);
+	while((result_code = gethostbyname_r(DC->server_IP.c_str(), &host_buf, tmp_host_buf, host_buf_len, &he, &herr)) == ERANGE){
+		host_buf_len *= 2;
+		tmp_host_buf = (char *)realloc(tmp_host_buf, host_buf_len);
+	}
 
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(gethostbyname_mutex);
-	//resolve hostname
-	he = gethostbyname(DC->server_IP.c_str());
-	}//end lock scope
-
-	if(he == NULL){
+	if(he == NULL || strncmp(inet_ntoa(*(struct in_addr*)he->h_addr), "127", 3) == 0){
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(KU_mutex);
 		Known_Unresponsive.insert(std::make_pair(time(0), DC->server_IP));
 		}//end lock scope
-		herror("gethostbyname");
-		return;
-	}else if(strncmp(inet_ntoa(*(struct in_addr*)he->h_addr), "127", 3) == 0){
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(KU_mutex);
-		Known_Unresponsive.insert(std::make_pair(time(0), DC->server_IP));
-		}//end lock scope
+		free(tmp_host_buf);
 		return;
 	}
 
@@ -348,13 +331,10 @@ void client::new_conn(download_conn * DC)
 
 	if(connect(DC->socket_FD, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0){
 		logger::debug(LOGGER_P1,"connection to ",DC->server_IP," failed");
-
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(KU_mutex);
 		Known_Unresponsive.insert(std::make_pair(time(0), DC->server_IP));
 		}//end lock scope
-
-		return;
 	}else{
 		logger::debug(LOGGER_P1,"created socket ",DC->socket_FD," for ",DC->server_IP);
 		if(DC->socket_FD > FD_max){
@@ -364,16 +344,14 @@ void client::new_conn(download_conn * DC)
 		if(DC->Download == NULL){
 			//connetion cancelled during connection, clean up and exit
 			disconnect(DC->socket_FD);
-			return;
 		}else{
 			Client_Buffer.insert(std::make_pair(DC->socket_FD, new client_buffer(DC->socket_FD, DC->server_IP, send_pending)));
 			DC->Download->reg_conn(DC->socket_FD, DC);
 			Client_Buffer[DC->socket_FD]->add_download(DC->Download);
+			FD_SET(DC->socket_FD, &master_FDS);
 		}
-
-		FD_SET(DC->socket_FD, &master_FDS);
-		return;
 	}
+	free(tmp_host_buf);
 }
 
 void client::prepare_requests()
@@ -391,7 +369,7 @@ void client::process_CQ()
 {
 	download_conn * DC;
 	{//begin lock scope
-	boost::mutex::scoped_lock lock(DC_mutex);
+	boost::mutex::scoped_lock lock(CQ_mutex);
 	if(Connection_Queue.empty()){
 		return;
 	}
@@ -424,10 +402,13 @@ void client::remove_complete()
 	std::list<download *> complete;
 	client_buffer::find_complete(complete);
 
-	//decrement download_complete count for downloads that will be terminated
-	*download_complete -= complete.size();
+	if(complete.empty()){
+		return;
+	}
 
 	{
+	boost::mutex::scoped_lock lock_1(CQ_mutex);
+	boost::mutex::scoped_lock lock_2(CCA_mutex);
 	/*
 	STEP 2:
 	Remove any pending_connections for download. In progress connections will be
@@ -456,8 +437,6 @@ void client::remove_complete()
 		CQA_iter_end = Connection_Current_Attempt.end();
 		while(CQA_iter_cur != CQA_iter_end){
 			if((*CQA_iter_cur)->Download == *C_iter_cur){
-				//this must be locked both here and where the Download is checked for NULL
-				boost::mutex::scoped_lock lock(DC_mutex);
 				(*CQA_iter_cur)->Download = NULL;
 			}else{
 				++CQA_iter_cur;
@@ -593,7 +572,7 @@ bool client::start_download(download_info & info)
 	iter_end = servers.end();
 	while(iter_cur != iter_end){
 		{//begin lock scope
-		boost::mutex::scoped_lock lock(DC_mutex);
+		boost::mutex::scoped_lock lock(CQ_mutex);
 		Connection_Queue.push_back(*iter_cur);
 		}//end lock scope
 		Thread_Pool.queue_job(this, &client::process_CQ);
@@ -615,6 +594,5 @@ int client::total_speed()
 	as long as the client cares to check it.
 	*/
 	Speed_Calculator.update(0);
-
 	return Speed_Calculator.speed();
 }

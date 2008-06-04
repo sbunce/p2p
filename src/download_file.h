@@ -40,8 +40,7 @@ public:
 		const uint64_t & file_size_in,
 		const uint64_t & latest_request_in,
 		const uint64_t & last_block_in,
-		const unsigned int & last_block_size_in,
-		volatile int * download_file_complete_in
+		const unsigned int & last_block_size_in
 	);
 
 	//documentation for virtual functions in abstract base class
@@ -56,6 +55,12 @@ public:
 	virtual const uint64_t & total_size();
 
 private:
+	/*
+	After P_CLOSE_SLOT is sent to all servers and there are no pending responses
+	from any server this should be set to true.
+	*/
+	bool download_complete;
+
 	std::string file_hash;        //unique identifier of the file and message digest
 	std::string file_name;        //name of the file
 	std::string file_path;        //path to write file to on local system
@@ -64,19 +69,15 @@ private:
 	unsigned int last_block_size; //holds the exact size of the last fileBlock(in bytes)
 
 	/*
-	Tells the client that a download is complete, used when download is complete.
-	Full description in client.h.
+	When the file has finished downloading this will be set to true to indicate
+	that P_CLOSE_SLOT commands need to be sent to all servers.
 	*/
-	volatile int * download_file_complete;
-
-	//true when the download is completed
-	bool download_complete;
+	bool close_slots;
 
 	/*
-	response_BLS         - processes a file block response
-	writeTree            - writes a file block
+	check_complete - returns true if the download is ready to be removed
+	writeTree      - writes a file block
 	*/
-	void response_BLS(const int & socket, std::string & block);
 	void write_block(uint64_t block_number, std::string & block);
 
 	convert<uint64_t> Convert_uint64;

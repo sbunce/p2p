@@ -15,8 +15,7 @@ public:
 	download_hash_tree(
 		const std::string & root_hash_in,
 		const unsigned long & file_size,
-		const std::string & file_name,
-		volatile bool * download_complete_flag_in
+		const std::string & file_name
 	);
 
 	//documentation for virtual functions in abstract base class
@@ -40,13 +39,7 @@ private:
 	//used for percent complete calculation
 	uint64_t latest_hash_received;
 
-	/*
-	Tells the client that a download is complete, used when download is complete.
-	Full description in client.h.
-	*/
-	volatile bool * download_complete_flag;
-
-	request_gen Request_Gen;
+//	request_gen Request_Gen;
 	hash_tree Hash_Tree;
 };
 #endif

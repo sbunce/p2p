@@ -11,12 +11,23 @@ void server_protocol::process(server_buffer * SB)
 	while(SB->recv_buff.size()){
 		if(SB->recv_buff[0] == global::P_REQUEST_SLOT_FILE && SB->recv_buff.size() >= global::P_REQUEST_SLOT_FILE_SIZE){
 			request_slot_file(SB);
+			SB->recv_buff.erase(0, global::P_REQUEST_SLOT_FILE_SIZE);
 		}else if(SB->recv_buff[0] == global::P_SEND_BLOCK && SB->recv_buff.size() >= global::P_SEND_BLOCK_SIZE){
 			send_block(SB);
+			SB->recv_buff.erase(0, global::P_SEND_BLOCK_SIZE);
+		}else if(SB->recv_buff[0] == global::P_CLOSE_SLOT && SB->recv_buff.size() >= global::P_CLOSE_SLOT_SIZE){
+			close_slot(SB);
+			SB->recv_buff.erase(0, global::P_CLOSE_SLOT_SIZE);
 		}else{
 			break;
 		}
 	}
+}
+
+void server_protocol::close_slot(server_buffer * SB)
+{
+	logger::debug(LOGGER_P1,"closing slot ",(int)(unsigned char)SB->recv_buff[1], " for ",SB->client_IP);
+	SB->close_slot(SB->recv_buff[1]);
 }
 
 void server_protocol::request_slot_file(server_buffer * SB)
@@ -27,6 +38,7 @@ void server_protocol::request_slot_file(server_buffer * SB)
 		//hash found in share, create slot
 		char slot_ID;
 		if(SB->create_slot(slot_ID, path)){
+			logger::debug(LOGGER_P1,"granting slot ",(int)(unsigned char)slot_ID, " to ",SB->client_IP);
 			//slot available
 			SB->send_buff += global::P_SLOT_ID;
 			SB->send_buff += slot_ID;
@@ -38,7 +50,6 @@ void server_protocol::request_slot_file(server_buffer * SB)
 		//hash not found in share, send error
 		SB->send_buff += global::P_ERROR;
 	}
-	SB->recv_buff.erase(0, global::P_REQUEST_SLOT_FILE_SIZE);
 }
 
 void server_protocol::send_block(server_buffer * SB)
@@ -55,5 +66,4 @@ void server_protocol::send_block(server_buffer * SB)
 			fin.close();
 		}
 	}
-	SB->recv_buff.erase(0, global::P_SEND_BLOCK_SIZE);
 }

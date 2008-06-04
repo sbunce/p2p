@@ -41,12 +41,8 @@ public:
 	bool empty();
 	const std::string & get_IP();
 	const time_t & get_last_seen();
-
-
-//DEBUG, when a get_ function is added for buffers can these be called automatically?
 	void post_recv();
 	void post_send();
-
 	void prepare_request();
 	void terminate_download(download * term_DL);
 

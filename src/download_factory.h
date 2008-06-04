@@ -20,7 +20,7 @@
 class download_factory
 {
 public:
-	download_factory(volatile int * download_complete_in);
+	download_factory();
 
 	/*
 	start_file - creates a download based on download_info_buffer
@@ -33,8 +33,6 @@ public:
 	bool stop(download * Download_stop, download *& Download_start, std::list<download_conn *> & servers);
 
 private:
-	volatile int * download_complete;
-
 	DB_download DB_Download;
 };
 #endif

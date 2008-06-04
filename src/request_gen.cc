@@ -1,8 +1,11 @@
 #include "request_gen.h"
 
-request_gen::request_gen()
+request_gen::request_gen(uint64_t min_request_in, uint64_t max_request_in, int timeout_in)
 :
-latest_request(0)
+latest_request(min_request_in),
+min_request(min_request_in),
+max_request(max_request_in),
+timeout(timeout_in)
 {
 
 }
@@ -14,7 +17,7 @@ void request_gen::check_re_requests()
 	iter_cur = requests.begin();
 	iter_end = requests.end();
 	while(iter_cur != iter_end){
-		if(time(0) - iter_cur->second > max_age){
+		if(time(0) - iter_cur->second > timeout){
 			re_requests.insert(std::make_pair(iter_cur->first, time(0)));
 		}
 		++iter_cur;
@@ -34,16 +37,6 @@ void request_gen::fulfilled(uint64_t fulfilled_request)
 {
 	requests.erase(fulfilled_request);
 	re_requests.erase(fulfilled_request);
-}
-
-void request_gen::init(uint64_t min_request_in, uint64_t max_request_in, int max_age_in)
-{
-	min_request = latest_request = min_request_in;
-	max_request = max_request_in;
-	max_age = max_age_in;
-
-	requests.clear();
-	re_requests.clear();
 }
 
 uint64_t request_gen::highest_request()
@@ -81,18 +74,28 @@ bool request_gen::new_request_check_existing(std::deque<uint64_t> & prev_request
 bool request_gen::new_request(std::deque<uint64_t> & prev_requests)
 {
 	check_re_requests();
-
 	if(re_requests.empty()){
 		if(latest_request == max_request){
-			prev_requests.push_back(max_request);
-			requests.insert(std::make_pair(max_request, time(0)));
+			//max request reached
+			if(prev_requests.empty()){
+				return false;
+			}else{
+				if(prev_requests.back() != max_request){
+					//max_request hasn't yet been requested
+					prev_requests.push_back(max_request);
+					requests.insert(std::make_pair(max_request, time(0)));
+					return true;
+				}else{
+					//max request already requested
+					return false;
+				}
+			}
+		}else{
+			prev_requests.push_back(latest_request);
+			requests.insert(std::make_pair(latest_request, time(0)));
+			++latest_request;
 			return true;
 		}
-
-		prev_requests.push_back(latest_request);
-		requests.insert(std::make_pair(latest_request, time(0)));
-		++latest_request;
-		return true;
 	}else{
 		return new_request_check_existing(prev_requests);
 	}

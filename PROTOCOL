@@ -47,7 +47,7 @@ this by having the client send out many requests initially, and then sending a
 new request as whenever a response is received. In this way the server maintains
 a queue of requests it can process even if new requests are delayed.
 
-The maximum pipeline size is 32 commands.
+The maximum pipeline size is 16 commands.
 
 /******************************************************************************/
 TIMEOUT
@@ -98,7 +98,7 @@ The server doesn't have the requested file.
 P_CLOSE_SLOT (4)
 client -> server
 
-Tell the server to close a slot for either a hash tree or a file.
+Tell the server to close a slot.
 
 	  0   1
 	+---+---+

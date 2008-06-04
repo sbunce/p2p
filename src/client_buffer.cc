@@ -80,9 +80,9 @@ void client_buffer::post_recv()
 			if(recv_buff.size() < iter_cur->second){
 				break;
 			}
-		}else if(iter_cur == iter_end){
-			//command not found, server sent unexpected command
-			logger::debug(LOGGER_P1," abusive server (incorrect length of command) ", server_IP);
+		}else{
+			//server sent unexpected command
+			logger::debug(LOGGER_P1," abusive server ", server_IP, ", unexpected command ", (int)(unsigned char)recv_buff[0]);
 			abuse = true;
 			return;
 		}
@@ -120,7 +120,7 @@ void client_buffer::prepare_request()
 	}
 	}//end lock scope
 
-	//stop infinite loop when all downloads waiting
+	//needed to stop infinite loop when all downloads waiting
 	bool buffer_change = true;
 
 	int initial_empty = (send_buff.size() == 0);
@@ -139,7 +139,14 @@ void client_buffer::prepare_request()
 		PR.Download = *Download_iter;
 		if((*Download_iter)->request(socket, request, PR.expected)){
 			send_buff += request;
-			Pipeline.push_back(PR);
+
+			/*
+			It is possible that the download expectes no response to the command.
+			If it doesn't don't add the pending_response to the pipeline.
+			*/
+			if(!PR.expected.empty()){
+				Pipeline.push_back(PR);
+			}
 			buffer_change = true;
 		}
 		}//end lock scope

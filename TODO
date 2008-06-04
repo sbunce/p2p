@@ -1,5 +1,7 @@
 TODO
 
+-Add a setting for block timeout.
+
 -Check to make sure client and server can be started/stopped/deleted correctly.
 
 -Currently no logic to disconnect abusive servers. Currently the client_buffer

@@ -1,8 +1,6 @@
 #include "download_factory.h"
 
-download_factory::download_factory(volatile int * download_complete_in)
-:
-download_complete(download_complete_in)
+download_factory::download_factory()
 {
 
 }
@@ -42,8 +40,7 @@ bool download_factory::start_file(download_info & info, download *& Download, st
 		info.size,
 		info.latest_request,
 		last_block,
-		last_block_size,
-		download_complete
+		last_block_size
 	);
 
 	for(int x = 0; x < info.server_IP.size(); ++x){
