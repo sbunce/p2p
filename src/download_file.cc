@@ -1,17 +1,23 @@
 #include "download_file.h"
 
-download_file::download_file(const std::string & file_hash_in, const std::string & file_name_in, 
-const std::string & file_path_in, const unsigned long & file_size_in, const unsigned int & latest_request_in,
-const unsigned int & last_block_in, const unsigned int & last_block_size_in, volatile int * download_file_complete_in)
-:
-file_hash(file_hash_in),
-file_name(file_name_in),
-file_path(file_path_in),
-file_size(file_size_in),
-last_block(last_block_in),
-last_block_size(last_block_size_in),
-download_file_complete(download_file_complete_in),
-download_complete(false)
+download_file::download_file(
+	const std::string & file_hash_in,
+	const std::string & file_name_in, 
+	const std::string & file_path_in,
+	const uint64_t & file_size_in,
+	const uint64_t & latest_request_in,
+	const uint64_t & last_block_in,
+	const unsigned int & last_block_size_in,
+	volatile int * download_file_complete_in
+):
+	file_hash(file_hash_in),
+	file_name(file_name_in),
+	file_path(file_path_in),
+	file_size(file_size_in),
+	last_block(last_block_in),
+	last_block_size(last_block_size_in),
+	download_file_complete(download_file_complete_in),
+	download_complete(false)
 {
 	Request_Gen.init(latest_request_in, last_block, global::TIMEOUT);
 }
@@ -43,12 +49,20 @@ unsigned int download_file::percent_complete()
 
 bool download_file::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected)
 {
-	std::map<int, download_conn *>::iterator iter = Connection.find(socket);
-	download_file_conn * conn = (download_file_conn *)iter->second;
+	download_file_conn * conn = (download_file_conn *)Connection[socket];
 
-	if(iter == Connection.end()){
-		logger::debug(LOGGER_P1,"socket not registered");
-		assert(false);
+	if(!conn->slot_ID_requested){
+		//slot_ID not yet obtained from server
+		request = global::P_REQUEST_SLOT_FILE + hex::hex_to_binary(file_hash); //need binary file hash
+		conn->slot_ID_requested = true;
+		expected.push_back(std::make_pair(global::P_SLOT_ID, global::P_SLOT_ID_SIZE));
+		expected.push_back(std::make_pair(global::P_ERROR, 1));
+		return true;
+	}
+
+	if(!conn->slot_ID_received){
+		//slot_ID requested but not yet received
+		return false;
 	}
 
 	if(!Request_Gen.new_request(conn->latest_request)){
@@ -56,8 +70,9 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 		return false;
 	}
 
-	request = global::P_SEND_BLOCK + Convert_uint32.encode(conn->file_ID) + Convert_uint32.encode(conn->latest_request.back());
-
+	request += global::P_SEND_BLOCK;
+	request += conn->slot_ID;
+	request += Convert_uint64.encode(conn->latest_request.back());
 	int size;
 	if(conn->latest_request.back() == last_block){
 		size = last_block_size;
@@ -65,49 +80,29 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 		size = global::P_BLOCK_SIZE;
 	}
 
-	//expected response information
 	expected.push_back(std::make_pair(global::P_BLOCK, size));
-	expected.push_back(std::make_pair(global::P_FILE_DOES_NOT_EXIST, global::P_FILE_DOES_NOT_EXIST_SIZE));
-	expected.push_back(std::make_pair(global::P_FILE_NOT_FOUND, global::P_FILE_NOT_FOUND_SIZE));
-
+	expected.push_back(std::make_pair(global::P_ERROR, 1));
 	return true;
 }
 
 void download_file::response(const int & socket, std::string block)
 {
+	download_file_conn * conn = (download_file_conn *)Connection[socket];
+
 	//don't do anything if download is complete
 	if(download_complete){
 		return;
+	}
+
+	if(block[0] == global::P_SLOT_ID){
+		conn->slot_ID = block[1];
+		conn->slot_ID_received = true;
 	}
 
 	if(block[0] == global::P_BLOCK){
 		//a block was received
 		block.erase(0, 1); //trim command
 		response_BLS(socket, block);
-	}else if(block[0] == global::P_FILE_DOES_NOT_EXIST){
-		//server doesn't yet have this block
-/*
-DEBUG, the server has to be made unready for a certain time. This will have to
-do with waiting until the server has the block.
-*/
-
-		std::map<int, download_conn *>::iterator iter = Connection.find(socket);
-		download_file_conn * conn = (download_file_conn *)iter->second;
-
-		logger::debug(LOGGER_P1,"received P_FILE_DOES_NOT_EXIST from ",conn->server_IP);
-
-	}else if(block[0] == global::P_FILE_NOT_FOUND){
-		//server is reporting that it doesn't have the file
-
-//DEBUG, need to delete the IP/file ID associated from this file
-
-		std::map<int, download_conn *>::iterator iter = Connection.find(socket);
-		download_file_conn * conn = (download_file_conn *)iter->second;
-
-		logger::debug(LOGGER_P1,"received P_FILE_NOT_FOUND from ",conn->server_IP);
-	}else{
-		logger::debug(LOGGER_P1,"client_buffer passed a bad command");
-		assert(false);
 	}
 }
 
@@ -147,7 +142,7 @@ void download_file::stop()
 	++(*download_file_complete);
 }
 
-void download_file::write_block(unsigned int block_number, std::string & block)
+void download_file::write_block(uint64_t block_number, std::string & block)
 {
 	std::fstream fout(file_path.c_str(), std::ios::in | std::ios::out | std::ios::binary);
 	if(fout.is_open()){
@@ -159,7 +154,7 @@ void download_file::write_block(unsigned int block_number, std::string & block)
 	}
 }
 
-const unsigned long & download_file::total_size()
+const uint64_t & download_file::total_size()
 {
 	return file_size;
 }

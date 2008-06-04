@@ -17,7 +17,7 @@ public:
 
 	/*
 	complete        - returns true if there are no more requests to be made
-	fulfilled       - should be called whenver a request is fulfilled
+	fulfilled       - must be called whenever a request is fulfilled
 	init            - initialize the request generator with first and last request numbers
 	highest_request - returns latest_request
 	new_request     - pushes a needed request number on the back of prev_request
@@ -25,28 +25,27 @@ public:
 	resize_buffer   - changes the maximum buffer size.
 	*/
 	bool complete();
-	void fulfilled(unsigned int fulfilled_request);
-	void init(unsigned int min_request_in, unsigned int max_request_in, int max_age_in);
-	unsigned int highest_request();
-	bool new_request(std::deque<unsigned int> & prev_request);
-	void resize_buffer(int max_buffer_size_in);
+	void fulfilled(uint64_t fulfilled_request);
+	void init(uint64_t min_request_in, uint64_t max_request_in, int max_age_in);
+	uint64_t highest_request();
+	bool new_request(std::deque<uint64_t> & prev_request);
 
 private:
 	/*
 	The latest request returned by new_request. This will not be changed when
 	new_request returns a re_request. This can only go forward one at a time.
 	*/
-	unsigned int latest_request;
+	uint64_t latest_request;
 
 	//min and max request number
-	unsigned int min_request;
-	unsigned int max_request;
+	uint64_t min_request;
+	uint64_t max_request;
 
 	//max age of a request (in seconds) before a re_request is made
 	int max_age;
 
-	std::map<unsigned int, long> requests;    //requests, associated with time request made
-	std::map<unsigned int, long> re_requests; //re_requested blocks, associated with time re_request made
+	std::map<uint64_t, time_t> requests;    //requests, associated with time request made
+	std::map<uint64_t, time_t> re_requests; //re_requested blocks, associated with time re_request made
 
 	/*
 	check_re_requests          - fills re_requests
@@ -54,6 +53,6 @@ private:
 	                             returns false if rerequest found in prev_requests else true
 	*/
 	void check_re_requests();
-	bool new_request_check_existing(std::deque<unsigned int> & prev_requests);
+	bool new_request_check_existing(std::deque<uint64_t> & prev_requests);
 };
 #endif

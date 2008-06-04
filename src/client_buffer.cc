@@ -3,14 +3,16 @@
 std::set<download *> client_buffer::Unique_Download;
 boost::mutex client_buffer::D_mutex;
 
-client_buffer::client_buffer(const int & socket_in, const std::string & server_IP_in,
-volatile int * send_pending_in)
-:
-server_IP(server_IP_in),
-socket(socket_in),
-send_pending(send_pending_in),
-abuse(false),
-last_seen(time(0))
+client_buffer::client_buffer(
+	const int & socket_in,
+	const std::string & server_IP_in,
+	volatile int * send_pending_in
+):
+	server_IP(server_IP_in),
+	socket(socket_in),
+	send_pending(send_pending_in),
+	abuse(false),
+	last_seen(time(0))
 {
 	recv_buff.reserve(global::C_MAX_SIZE*global::PIPELINE_SIZE);
 	send_buff.reserve(global::S_MAX_SIZE*global::PIPELINE_SIZE);
@@ -47,7 +49,6 @@ const time_t & client_buffer::get_last_seen()
 void client_buffer::post_recv()
 {
 	last_seen = time(0);
-
 	if(Pipeline.empty()){
 		//server responded out of turn
 		logger::debug(LOGGER_P1," abusive server (responded when pipeline empty) ",server_IP);
@@ -89,7 +90,6 @@ void client_buffer::post_recv()
 		if(Pipeline.front().Download == NULL){
 			//terminated download detected, discard response
 			recv_buff.erase(0, iter_cur->second);
-
 		}else{
 			boost::mutex::scoped_lock lock(D_mutex);
 			//pass response to download
@@ -98,7 +98,6 @@ void client_buffer::post_recv()
 		}
 
 		Pipeline.pop_front();
-
 		if(Pipeline.empty() || recv_buff.size() == 0){
 			break;
 		}

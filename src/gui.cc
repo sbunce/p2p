@@ -192,7 +192,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 
 	//window properties
 	window->set_title(global::NAME);
-	window->resize(800, 600);
+	window->resize(800, 300);
 	window->set_modal(false);
 	window->property_window_position().set_value(Gtk::WIN_POS_CENTER_ON_PARENT);
 	window->set_resizable(true);
@@ -511,6 +511,7 @@ void gui::upload_info_setup()
 
 bool gui::upload_info_refresh()
 {
+/*
 	//update upload info
 	std::vector<server::info_buffer> info;
 	Server.get_upload_info(info);
@@ -628,7 +629,7 @@ bool gui::upload_info_refresh()
 			++Children_iter_cur;
 		}
 	}
-
+*/
 	return true;
 }
 

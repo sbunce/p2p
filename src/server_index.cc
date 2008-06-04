@@ -71,7 +71,7 @@ void server_index::index_share_recurse(std::string directory_name)
 					fs::path file_path = fs::system_complete(fs::path(directory_name + directory_iter->leaf(), fs::native));
 					std::string existing_hash;
 					uint64_t existing_size;
-					if(DB_Share.file_exists(file_path.string(), existing_hash, existing_size)){
+					if(DB_Share.lookup_path(file_path.string(), existing_hash, existing_size)){
 						//database entry exists, make sure there is a corresponding hash tree file
 						std::fstream fin((global::HASH_DIRECTORY+existing_hash).c_str(), std::ios::in);
 						if(!fin.is_open()){
@@ -150,6 +150,6 @@ void server_index::stop()
 	Hash_Tree.stop();
 
 	while(threads){
-		usleep(global::SPINLOCK_TIME);
+		usleep(1);
 	}
 }

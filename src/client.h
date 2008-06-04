@@ -94,18 +94,8 @@ private:
 	//mutex for download_conn's that don't yet belong to a client_buffer
 	boost::mutex DC_mutex;
 
-	/*
-	All the information relevant to each socket accessible with the socket fd int
-	example: Client_Buffer[socket_FD].something.
-
-	Download_Buffer stores all the downloads contained within the Client_Buffer in
-	no particular order.
-
-	Access to both of these must be locked with the same mutex
-	(CB_DB_mutex).
-	*/
+	//socket number mapped to client_buffer
 	std::map<int, client_buffer *> Client_Buffer;
-	std::list<download *> Download_Buffer;
 
 	//networking related
 	fd_set master_FDS; //master file descriptor set

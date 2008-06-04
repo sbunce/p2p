@@ -46,10 +46,8 @@ bool download_factory::start_file(download_info & info, download *& Download, st
 		download_complete
 	);
 
-	assert(info.server_IP.size() == info.file_ID.size());
-
 	for(int x = 0; x < info.server_IP.size(); ++x){
-		servers.push_back(new download_file_conn(Download, info.server_IP[x], atoi(info.file_ID[x].c_str())));
+		servers.push_back(new download_file_conn(Download, info.server_IP[x]));
 	}
 
 	return true;

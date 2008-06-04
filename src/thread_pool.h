@@ -74,7 +74,7 @@ template<class T> void thread_pool<T>::pool()
 	void (T::*memfun_ptr)();
 	T * Obj;
 	while(true){
-		usleep(global::SPINLOCK_TIME);
+		usleep(1);
 		if(stop_threads){
 			break;
 		}
@@ -99,7 +99,7 @@ template<class T> void thread_pool<T>::stop()
 {
 	stop_threads = true;
 	while(threads){
-		usleep(global::SPINLOCK_TIME);
+		usleep(1);
 	}
 }
 #endif

@@ -2,15 +2,15 @@
 
 client::client()
 :
-FD_max(0),
-send_pending(new volatile int(0)),
-download_complete(new volatile int(0)),
-Download_Factory(download_complete),
-stop_threads(false),
-threads(0),
-current_time(time(0)),
-previous_time(time(0)),
-Thread_Pool(global::NEW_CONN_THREADS)
+	FD_max(0),
+	send_pending(new volatile int(0)),
+	download_complete(new volatile int(0)),
+	Download_Factory(download_complete),
+	stop_threads(false),
+	threads(0),
+	current_time(time(0)),
+	previous_time(time(0)),
+	Thread_Pool(global::NEW_CONN_THREADS)
 {
 	//create the download directory if it doesn't exist
 	boost::filesystem::create_directory(global::DOWNLOAD_DIRECTORY);
@@ -30,14 +30,7 @@ client::~client()
 		}
 	}
 
-	std::list<download *>::iterator iter_cur, iter_end;
-	iter_cur = Download_Buffer.begin();
-	iter_end = Download_Buffer.end();
-	while(iter_cur != iter_end){
-		delete *iter_cur;
-		++iter_cur;
-	}
-
+	client_buffer::delete_downloads();
 	delete send_pending;
 	delete download_complete;
 }
@@ -70,7 +63,6 @@ bool client::DC_add_existing(download_conn * DC)
 		if(DC->server_IP == iter_cur->second->get_IP()){
 			//mutex to guarantee DC->Download not set to NULL after download cancelled check
 			boost::mutex::scoped_lock lock(DC_mutex);
-
 			//if download cancelled don't add it
 			if(DC->Download == NULL){
 				return true;
@@ -110,14 +102,13 @@ void client::DC_block_concurrent(download_conn * DC)
 		}
 		}//end lock scope
 
-		usleep(global::SPINLOCK_TIME);
+		usleep(1);
 	}
 }
 
 void client::DC_unblock(download_conn * DC)
 {
 	boost::mutex::scoped_lock lock(DC_mutex);
-
 	std::list<download_conn *>::iterator iter_cur, iter_end;
 	iter_cur = Connection_Current_Attempt.begin();
 	iter_end = Connection_Current_Attempt.end();
@@ -255,7 +246,6 @@ void client::main_thread()
 		//process reads/writes
 		char recv_buff[global::C_MAX_SIZE*global::PIPELINE_SIZE];
 		int n_bytes;
-		std::map<int, client_buffer *>::iterator CB_iter;
 		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &read_FDS)){
 				if((recv_limit = Speed_Calculator.rate_control(global::C_MAX_SIZE*global::PIPELINE_SIZE)) != 0){
@@ -583,7 +573,7 @@ void client::stop()
 	stop_threads = true;
 	Thread_Pool.stop();
 	while(threads){
-		usleep(global::SPINLOCK_TIME);
+		usleep(1);
 	}
 }
 

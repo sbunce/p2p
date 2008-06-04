@@ -10,7 +10,7 @@ latest_request(0)
 void request_gen::check_re_requests()
 {
 	//do re_requests on requests that are older than max_age.
-	std::map<unsigned int, long>::iterator iter_cur, iter_end;
+	std::map<uint64_t, time_t>::iterator iter_cur, iter_end;
 	iter_cur = requests.begin();
 	iter_end = requests.end();
 	while(iter_cur != iter_end){
@@ -30,29 +30,32 @@ bool request_gen::complete()
 	}
 }
 
-void request_gen::fulfilled(unsigned int fulfilled_request)
+void request_gen::fulfilled(uint64_t fulfilled_request)
 {
 	requests.erase(fulfilled_request);
 	re_requests.erase(fulfilled_request);
 }
 
-void request_gen::init(unsigned int min_request_in, unsigned int max_request_in, int max_age_in)
+void request_gen::init(uint64_t min_request_in, uint64_t max_request_in, int max_age_in)
 {
 	min_request = latest_request = min_request_in;
 	max_request = max_request_in;
 	max_age = max_age_in;
+
+	requests.clear();
+	re_requests.clear();
 }
 
-unsigned int request_gen::highest_request()
+uint64_t request_gen::highest_request()
 {
 	return latest_request;
 }
 
-bool request_gen::new_request_check_existing(std::deque<unsigned int> & prev_requests)
+bool request_gen::new_request_check_existing(std::deque<uint64_t> & prev_requests)
 {
 	//do not do re_requests from servers that are having a block re_requested
-	std::map<unsigned int, long>::iterator re_requests_iter_cur, re_requests_iter_end;
-	std::deque<unsigned int>::iterator prev_iter_cur, prev_iter_end;
+	std::map<uint64_t, time_t>::iterator re_requests_iter_cur, re_requests_iter_end;
+	std::deque<uint64_t>::iterator prev_iter_cur, prev_iter_end;
 
 	re_requests_iter_cur = re_requests.begin();
 	re_requests_iter_end = re_requests.end();
@@ -75,7 +78,7 @@ bool request_gen::new_request_check_existing(std::deque<unsigned int> & prev_req
 	return true;
 }
 
-bool request_gen::new_request(std::deque<unsigned int> & prev_requests)
+bool request_gen::new_request(std::deque<uint64_t> & prev_requests)
 {
 	check_re_requests();
 

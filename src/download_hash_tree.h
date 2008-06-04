@@ -12,8 +12,12 @@
 class download_hash_tree : public download
 {
 public:
-	download_hash_tree(const std::string & root_hash_in, const unsigned long & file_size,
-		const std::string & file_name, volatile bool * download_complete_flag_in);
+	download_hash_tree(
+		const std::string & root_hash_in,
+		const unsigned long & file_size,
+		const std::string & file_name,
+		volatile bool * download_complete_flag_in
+	);
 
 	//documentation for virtual functions in abstract base class
 	virtual bool complete();
@@ -24,17 +28,17 @@ public:
 	virtual bool request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected);
 	virtual void response(const int & socket, std::string block);
 	virtual void stop();
-	virtual const unsigned long & total_size();
+	virtual const uint64_t & total_size();
 
 private:
 	//set in ctor
 	std::string root_hash;         //root hash of the tree downloading
-	unsigned long hash_tree_count; //number of hashes in the tree
-	unsigned long hash_tree_size;  //size of the hash tree (bytes)
+	uint64_t hash_tree_count; //number of hashes in the tree
+	uint64_t hash_tree_size;  //size of the hash tree (bytes)
 	std::string hash_name;         //the name of this hash
 
 	//used for percent complete calculation
-	unsigned long latest_hash_received;
+	uint64_t latest_hash_received;
 
 	/*
 	Tells the client that a download is complete, used when download is complete.

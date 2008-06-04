@@ -22,6 +22,7 @@
 #include "download.h"
 #include "download_file_conn.h"
 #include "global.h"
+#include "hex.h"
 #include "request_gen.h"
 #include "sha.h"
 
@@ -32,10 +33,16 @@ public:
 	download_file_complete is a special bool used to signal that the client
 	should check for the presence of a completed download.
 	*/
-	download_file(const std::string & file_hash_in, const std::string & file_name_in, 
-		const std::string & file_path_in, const unsigned long & file_size_in,
-		const unsigned int & latest_request_in, const unsigned int & last_block_in,
-		const unsigned int & last_block_size_in, volatile int * download_file_complete_in);
+	download_file(
+		const std::string & file_hash_in,
+		const std::string & file_name_in, 
+		const std::string & file_path_in,
+		const uint64_t & file_size_in,
+		const uint64_t & latest_request_in,
+		const uint64_t & last_block_in,
+		const unsigned int & last_block_size_in,
+		volatile int * download_file_complete_in
+	);
 
 	//documentation for virtual functions in abstract base class
 	virtual bool complete();
@@ -46,17 +53,14 @@ public:
 	virtual bool request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected);
 	virtual void response(const int & socket, std::string block);
 	virtual void stop();
-	virtual const unsigned long & total_size();
+	virtual const uint64_t & total_size();
 
 private:
-	//these must be set before the download begins and will be set by ctor
-	std::string file_hash;   //unique identifier of the file and message digest
-	std::string file_name;   //name of the file
-	std::string file_path;   //path to write file to on local system
-	unsigned long file_size; //size of the file(bytes)
-
-	//don't worry about these
-	unsigned int last_block;      //the last block number
+	std::string file_hash;        //unique identifier of the file and message digest
+	std::string file_name;        //name of the file
+	std::string file_path;        //path to write file to on local system
+	uint64_t file_size;           //size of the file(bytes)
+	uint64_t last_block;          //the last block number
 	unsigned int last_block_size; //holds the exact size of the last fileBlock(in bytes)
 
 	/*
@@ -73,9 +77,9 @@ private:
 	writeTree            - writes a file block
 	*/
 	void response_BLS(const int & socket, std::string & block);
-	void write_block(unsigned int block_number, std::string & block);
+	void write_block(uint64_t block_number, std::string & block);
 
-	convert<uint32_t> Convert_uint32;
+	convert<uint64_t> Convert_uint64;
 	request_gen Request_Gen;
 	sha SHA;
 };

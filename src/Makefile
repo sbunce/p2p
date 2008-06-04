@@ -22,8 +22,10 @@ OBJECTS = \
 	logger.o \
 	main.o \
 	request_gen.o \
-	server_index.o \
 	server.o \
+	server_buffer.o \
+	server_index.o \
+	server_protocol.o \
 	sha.o \
 	speed_calculator.o
 
@@ -39,8 +41,10 @@ SERVER_OBJECTS = \
 	hash_tree.o \
 	logger.o \
 	main_server.o \
-	server_index.o \
 	server.o \
+	server_buffer.o \
+	server_index.o \
+	server_protocol.o \
 	sha.o \
 	speed_calculator.o
 

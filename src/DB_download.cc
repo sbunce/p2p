@@ -13,11 +13,8 @@ DB_download::DB_download()
 	}
 
 	//make download table
-	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS download (hash TEXT, name TEXT, size TEXT, server_IP TEXT, file_ID TEXT);", NULL, NULL, NULL) != 0){
+	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS download (hash TEXT, name TEXT, size TEXT, server TEXT);", NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,"#5 ",sqlite3_errmsg(sqlite3_DB));
-	}
-	if(sqlite3_exec(sqlite3_DB, "CREATE UNIQUE INDEX IF NOT EXISTS hash_index ON download (hash);", NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,"#6 ",sqlite3_errmsg(sqlite3_DB));
 	}
 }
 
@@ -91,14 +88,6 @@ void DB_download::initial_fill_buff_call_back(int & columns_retrieved, char ** q
 			Download_Info.server_IP.push_back(result);
 			result = strtok(NULL, delims);
 		}
-
-		//get file_ID's associated with servers
-		result = strtok(query_response[4], delims);
-		while(result != NULL){
-			Download_Info.file_ID.push_back(result);
-			result = strtok(NULL, delims);
-		}
-
 		initial_fill_buff_resumed_download.push_back(Download_Info);
 	}
 	else{ //partial file removed, delete entry from database
@@ -115,18 +104,9 @@ bool DB_download::start_download(download_info & info)
 	boost::mutex::scoped_lock lock(Mutex);
 
 	std::ostringstream query;
-	query << "INSERT INTO download (hash, name, size, server_IP, file_ID) VALUES ('" << info.hash << "', '" << info.name << "', " << info.size << ", '";
+	query << "INSERT INTO download (hash, name, size, server) VALUES ('" << info.hash << "', '" << info.name << "', " << info.size << ", '";
 	for(std::vector<std::string>::iterator iter0 = info.server_IP.begin(); iter0 != info.server_IP.end(); ++iter0){
 		if(iter0 + 1 != info.server_IP.end()){
-			query << *iter0 << ",";
-		}
-		else{
-			query << *iter0;
-		}
-	}
-	query << "', '";
-	for(std::vector<std::string>::iterator iter0 = info.file_ID.begin(); iter0 != info.file_ID.end(); ++iter0){
-		if(iter0 + 1 != info.file_ID.end()){
 			query << *iter0 << ",";
 		}
 		else{

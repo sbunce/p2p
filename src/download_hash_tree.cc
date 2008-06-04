@@ -1,10 +1,13 @@
 #include "download_hash_tree.h"
 
-download_hash_tree::download_hash_tree(const std::string & root_hash_in, const unsigned long & file_size,
-const std::string & file_name, volatile bool * download_complete_flag_in)
-:
-root_hash(root_hash_in),
-download_complete_flag(download_complete_flag_in)
+download_hash_tree::download_hash_tree(
+	const std::string & root_hash_in,
+	const unsigned long & file_size,
+	const std::string & file_name,
+	volatile bool * download_complete_flag_in
+):
+	root_hash(root_hash_in),
+	download_complete_flag(download_complete_flag_in)
 {
 	hash_name = file_name + "HASH";
 	hash_tree_count = hash_tree::file_size_to_hash_tree_count(file_size);
@@ -31,9 +34,6 @@ download_complete_flag(download_complete_flag_in)
 bool download_hash_tree::complete()
 {
 
-//DEBUG, bad idea to do a hash check here, it wastes compute time and nothing done with results
-	std::pair<unsigned long, unsigned long> bad_hash;
-	return !Hash_Tree.check_hash_tree(root_hash, hash_tree_count, bad_hash);
 }
 
 const std::string & download_hash_tree::hash()
@@ -43,7 +43,7 @@ const std::string & download_hash_tree::hash()
 
 unsigned int download_hash_tree::max_response_size()
 {
-	//figure this out
+
 }
 
 const std::string & download_hash_tree::name()
@@ -71,7 +71,7 @@ void download_hash_tree::stop()
 	*download_complete_flag = true;
 }
 
-const unsigned long & download_hash_tree::total_size()
+const uint64_t & download_hash_tree::total_size()
 {
 	return hash_tree_size;
 }

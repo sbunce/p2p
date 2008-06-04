@@ -14,7 +14,11 @@ public:
 	download_info(const bool & resumed_in, const std::string & hash_in,
 		const std::string & name_in, const uint64_t & size_in,
 		const uint64_t & latest_request_in)
-	: resumed(resumed_in), hash(hash_in), name(name_in), size(size_in),
+	:
+	resumed(resumed_in),
+	hash(hash_in),
+	name(name_in),
+	size(size_in),
 	latest_request(latest_request_in)
 	{}
 
@@ -22,7 +26,11 @@ public:
 	download_info(const std::string & hash_in,
 		const std::string & name_in, const uint64_t & size_in,
 		const int speed_in, const int & percent_complete_in)
-	: hash(hash_in), name(name_in), size(size_in), speed(speed_in),
+	:
+	hash(hash_in),
+	name(name_in),
+	size(size_in),
+	speed(speed_in),
 	percent_complete(percent_complete_in)
 	{}
 
@@ -34,7 +42,6 @@ public:
 
 	//information unique to the server, these vectors are parallel
 	std::vector<std::string> server_IP;
-	std::vector<std::string> file_ID;
 
 	//these are set when the download is running
 	int percent_complete;

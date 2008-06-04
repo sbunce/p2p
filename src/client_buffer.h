@@ -24,7 +24,6 @@ public:
 	client_buffer(const int & socket_in, const std::string & server_IP_in, volatile int * send_pending_in);
 	~client_buffer();
 
-	//the client directly accesses these member variables to update them
 	std::string recv_buff; //buffer for partial recvs
 	std::string send_buff; //buffer for partial sends
 
@@ -42,8 +41,12 @@ public:
 	bool empty();
 	const std::string & get_IP();
 	const time_t & get_last_seen();
+
+
+//DEBUG, when a get_ function is added for buffers can these be called automatically?
 	void post_recv();
 	void post_send();
+
 	void prepare_request();
 	void terminate_download(download * term_DL);
 
@@ -68,7 +71,6 @@ public:
 	static void current_downloads(std::vector<download_info> & info)
 	{
 		boost::mutex::scoped_lock lock(D_mutex);
-
 		std::set<download *>::iterator iter_cur, iter_end;
 		iter_cur = Unique_Download.begin();
 		iter_end = Unique_Download.end();
@@ -87,11 +89,22 @@ public:
 		}
 	}
 
+	//deletes all downloads in buffer
+	static void delete_downloads()
+	{
+		std::set<download *>::iterator iter_cur, iter_end;
+		iter_cur = Unique_Download.begin();
+		iter_end = Unique_Download.end();
+		while(iter_cur != iter_end){
+			delete *iter_cur;
+			++iter_cur;
+		}
+	}
+
 	//populates a list with hashes of complete downloads
 	static void find_complete(std::list<download *> & complete)
 	{
 		boost::mutex::scoped_lock lock(D_mutex);
-
 		std::set<download *>::iterator iter_cur, iter_end;
 		iter_cur = Unique_Download.begin();
 		iter_end = Unique_Download.end();
@@ -107,7 +120,6 @@ public:
 	static void stop_download(const std::string & hash)
 	{
 		boost::mutex::scoped_lock lock(D_mutex);
-
 		std::set<download *>::iterator iter_cur, iter_end;
 		iter_cur = Unique_Download.begin();
 		iter_end = Unique_Download.end();
@@ -147,7 +159,7 @@ private:
 	class pending_response
 	{
 	public:
-		//the command and how many bytes are associated with it
+		//possible command paired with size
 		std::vector<std::pair<char, int> > expected;
 
 		//the download that made the request

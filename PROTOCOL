@@ -95,7 +95,18 @@ The server doesn't have the requested file.
 	+---+
 
 /******************************************************************************/
-P_SEND_BLOCK (4)
+P_CLOSE_SLOT (4)
+client -> server
+
+Tell the server to close a slot for either a hash tree or a file.
+
+	  0   1
+	+---+---+
+	| C | S | , where S = slot ID
+	+---+---+
+
+/******************************************************************************/
+P_SEND_BLOCK (5)
 client -> server
 Request either a 5120 byte block from a file or a block of 256 hashes.
 
@@ -106,7 +117,7 @@ Request either a 5120 byte block from a file or a block of 256 hashes.
 
 Possible Responses:
 
-P_BLOCK (5)
+P_BLOCK (6)
 The block requested. May be shorter than 5121 if the block requested was the
 last block of a file or if there aren't 256 hashes left in a hash tree.
 
@@ -126,20 +137,20 @@ trigger a 8 second delay before trying again.
 	+---+
 
 /******************************************************************************/
-P_SEND_HASH (6)
+P_SEND_HASH (7)
 client -> server
 Request one hash from the server. Should be used to replace single bad hashes,
 not to request every hash. Clients should not be allowed to make this request
 on a file.
 
-	  0   1   2   3   4   .........  26
+	  0   1   2   3   4   .........  10
 	+---+---+---+---+---+---+---+---+---+
 	| C | S |            hash #         | , where S = slot ID
 	+---+---+---+---+---+---+---+---+---+
 
 Possible Responses:
 
-P_HASH (7)
+P_HASH (8)
 The requested hash.
 
 	  0   1   2   3    .........    21

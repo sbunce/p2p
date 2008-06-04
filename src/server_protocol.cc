@@ -1,0 +1,59 @@
+#include "server_protocol.h"
+
+server_protocol::server_protocol()
+{
+
+}
+
+void server_protocol::process(server_buffer * SB)
+{
+	//slice off one command at a time and process
+	while(SB->recv_buff.size()){
+		if(SB->recv_buff[0] == global::P_REQUEST_SLOT_FILE && SB->recv_buff.size() >= global::P_REQUEST_SLOT_FILE_SIZE){
+			request_slot_file(SB);
+		}else if(SB->recv_buff[0] == global::P_SEND_BLOCK && SB->recv_buff.size() >= global::P_SEND_BLOCK_SIZE){
+			send_block(SB);
+		}else{
+			break;
+		}
+	}
+}
+
+void server_protocol::request_slot_file(server_buffer * SB)
+{
+	uint64_t file_size;
+	std::string path;
+	if(DB_Share.lookup_hash(hex::binary_to_hex(SB->recv_buff.substr(1,20)), file_size, path)){
+		//hash found in share, create slot
+		char slot_ID;
+		if(SB->create_slot(slot_ID, path)){
+			//slot available
+			SB->send_buff += global::P_SLOT_ID;
+			SB->send_buff += slot_ID;
+		}else{
+			//all slots used up
+			SB->send_buff += global::P_ERROR;
+		}
+	}else{
+		//hash not found in share, send error
+		SB->send_buff += global::P_ERROR;
+	}
+	SB->recv_buff.erase(0, global::P_REQUEST_SLOT_FILE_SIZE);
+}
+
+void server_protocol::send_block(server_buffer * SB)
+{
+	uint64_t block_number = Convert_uint64.decode(SB->recv_buff.substr(2, 8));
+	if(SB->slot_valid(SB->recv_buff[1])){
+		SB->send_buff += global::P_BLOCK;
+		std::ifstream fin(SB->path(SB->recv_buff[1]).c_str());
+		if(fin.is_open()){
+			//seek to the file_block the client wants (-1 for command space)
+			fin.seekg(block_number*(global::P_BLOCK_SIZE - 1));
+			fin.read(send_block_buff, global::P_BLOCK_SIZE - 1);
+			SB->send_buff.append(send_block_buff, fin.gcount());
+			fin.close();
+		}
+	}
+	SB->recv_buff.erase(0, global::P_SEND_BLOCK_SIZE);
+}

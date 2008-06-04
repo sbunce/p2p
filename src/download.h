@@ -46,7 +46,7 @@ public:
 	virtual void response(const int & socket, std::string block) = 0;
 	virtual unsigned int speed();
 	virtual void stop() = 0;
-	virtual const unsigned long & total_size() = 0;
+	virtual const uint64_t & total_size() = 0;
 
 	/*
 	reg_conn   - registers a server with this download

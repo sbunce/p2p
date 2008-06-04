@@ -12,10 +12,10 @@ DB_search::DB_search()
 		logger::debug(LOGGER_P1,"#2 ",sqlite3_errmsg(sqlite3_DB));
 	}
 
-	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS search (hash TEXT, name TEXT, size TEXT, server_IP TEXT, file_ID TEXT);", NULL, NULL, NULL) != 0){
+	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS search (hash TEXT, name TEXT, size TEXT, server TEXT);", NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,"#7 ",sqlite3_errmsg(sqlite3_DB));
 	}
-	if(sqlite3_exec(sqlite3_DB, "CREATE UNIQUE INDEX IF NOT EXISTS search_hash_index ON search (hash);", NULL, NULL, NULL) != 0){
+	if(sqlite3_exec(sqlite3_DB, "CREATE INDEX IF NOT EXISTS search_hash_index ON search (hash);", NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,"#8 ",sqlite3_errmsg(sqlite3_DB));
 	}
 	if(sqlite3_exec(sqlite3_DB, "CREATE INDEX IF NOT EXISTS search_name_index ON search (name);", NULL, NULL, NULL) != 0){
@@ -66,13 +66,5 @@ void DB_search::search_call_back(int & columns_retrieved, char ** query_response
 		Download_Info.server_IP.push_back(result);
 		result = strtok(NULL, delims);
 	}
-
-	//get file file_ID's associated with servers
-	result = strtok(query_response[4], delims);
-	while(result != NULL){
-		Download_Info.file_ID.push_back(result);
-		result = strtok(NULL, delims);
-	}
-
 	search_results_ptr->push_back(Download_Info);
 }

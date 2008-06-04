@@ -13,13 +13,14 @@
 class download_file_conn : public download_conn
 {
 public:
-	download_file_conn(download * download_in, const std::string & server_IP_in, const unsigned int & file_ID_in);
+	download_file_conn(download * download_in, const std::string & server_IP_in);
 
-	//the file_ID on the server (different servers have different ID for same file)
-	unsigned int file_ID;
+	char slot_ID;           //slot ID the server gave for the file
+	bool slot_ID_requested; //true if slot_ID requested
+	bool slot_ID_received;  //true if slot_ID received
 
 	//the latest file block requested from this server
-	std::deque<unsigned int> latest_request;
+	std::deque<uint64_t> latest_request;
 
 	speed_calculator Speed_Calculator;
 };

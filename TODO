@@ -1,5 +1,7 @@
 TODO
 
+-Check to make sure client and server can be started/stopped/deleted correctly.
+
 -Currently no logic to disconnect abusive servers. Currently the client_buffer
 stops accepting data until they time out.
 
@@ -17,6 +19,8 @@ DEFERRED FEATURES
 not reasonable to have one hash tree file sitting on the HDD for every file
 shared. Another possibility is some sort of compression library that'd give
 access to a file like it's in a directory, does zlib do this?
+
+-Indexes on DB.
 
 
 IDEAS
