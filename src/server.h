@@ -16,6 +16,7 @@
 #include "server_index.h"
 #include "server_protocol.h"
 #include "speed_calculator.h"
+#include "upload_info.h"
 
 //networking
 #include <arpa/inet.h>
@@ -41,30 +42,29 @@ public:
 	~server();
 
 	/*
+	current_uploads     - returns current upload information
 	get_max_connections - returns maximum connections server will accept
 	set_max_connections - sets maximum connections server will accept
 	get_share_directory - returns the location to be shared/indexed
 	set_share_directory - sets the share directory
 	get_speed_limit     - returns the download speed limit (kilobytes/second)
 	set_speed_limit     - sets a new download speed limit (kilobytes/second)
-	get_upload_info     - retrieves information on all current uploads
-	                      returns true if upload_info updated
-	get_total_speed     - returns the total speed of all uploads (bytes per second)
 	is_indexing         - returns true if the server is indexing files
 	start               - starts the server
 	stop                - stops the server (blocks until server shut down)
+	total_speed         - returns the total speed of all uploads (bytes per second)
 	*/
+	void current_uploads(std::vector<upload_info> & info);
 	int get_max_connections();
 	void set_max_connections(int max_connections);
 	std::string get_share_directory();
 	void set_share_directory(const std::string & share_directory);
 	std::string get_speed_limit();
 	void set_speed_limit(const std::string & speed_limit);
-	int get_total_speed();
-//	bool get_upload_info(std::vector<info_buffer> & upload_info);
 	bool is_indexing();
 	void start();
 	void stop();
+	int total_speed();
 
 private:
 	std::map<int, server_buffer *> Server_Buffer;

@@ -23,6 +23,17 @@ server::~server()
 	}
 }
 
+void server::current_uploads(std::vector<upload_info> & info)
+{
+	std::map<int, server_buffer *>::iterator iter_cur, iter_end;
+	iter_cur = Server_Buffer.begin();
+	iter_end = Server_Buffer.end();
+	while(iter_cur != iter_end){
+		iter_cur->second->current_uploads(info);
+		++iter_cur;
+	}
+}
+
 void server::disconnect(const int & socket_FD)
 {
 	logger::debug(LOGGER_P1,"disconnecting socket ",socket_FD);
@@ -81,12 +92,6 @@ void server::set_speed_limit(const std::string & speed_limit)
 	speed *= 1024;
 	DB_Server_Preferences.set_speed_limit(speed);
 	Speed_Calculator.set_speed_limit(speed);
-}
-
-int server::get_total_speed()
-{
-	Speed_Calculator.update(0);
-	return Speed_Calculator.speed();
 }
 
 bool server::is_indexing()
@@ -297,4 +302,10 @@ void server::stop()
 		usleep(1);
 	}
 	Server_Index.stop();
+}
+
+int server::total_speed()
+{
+	Speed_Calculator.update(0);
+	return Speed_Calculator.speed();
 }

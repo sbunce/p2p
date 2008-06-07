@@ -27,7 +27,6 @@ namespace global
 	const int P2P_PORT = 6969;            //port client connects to and server receives on
 	const int GUI_TICK = 100;             //time(in milliseconds) between gui updates
 	const int SPEED_AVERAGE = 4;          //how many seconds to average upload/download speed over
-	const int COMPLETE_REMOVE = 4;        //how many seconds to wait before removing a complete upload
 	const int TIMEOUT = 16;               //how long before an unresponsive server times out
 	const int UNRESPONSIVE_TIMEOUT = 60;  //if connection to server fails, new connection attempts to it are stopped for this time
 
@@ -39,7 +38,6 @@ namespace global
 
 	//protocol commands client <-> server
 	const char P_ERROR = (char)0;
-	const int P_ERROR_SIZE = 1;
 
 	//protocol commands client -> server
 	const char P_REQUEST_SLOT_FILE = (char)1;

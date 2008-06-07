@@ -8,6 +8,7 @@
 #include "gui_about.h"
 #include "gui_preferences.h"
 #include "server.h"
+#include "upload_info.h"
 
 //Gtk
 #include <gtkmm.h>
@@ -29,8 +30,8 @@ public:
 	~gui();
 
 private:
-	Gtk::Window * window;     //main window
-	Gtk::MenuBar * menubar;   //main menu, holds Gtk::Menu
+	Gtk::Window * window;
+	Gtk::MenuBar * menubar;
 	Gtk::Notebook * notebook; //main tabs, holds Gtk::Label
 
 	//file menu

@@ -56,7 +56,7 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 		request = global::P_REQUEST_SLOT_FILE + hex::hex_to_binary(file_hash);
 		conn->slot_ID_requested = true;
 		expected.push_back(std::make_pair(global::P_SLOT_ID, global::P_SLOT_ID_SIZE));
-		expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
+		expected.push_back(std::make_pair(global::P_ERROR, 1));
 		return true;
 	}
 	if(!conn->slot_ID_received){
@@ -94,7 +94,7 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 			download_complete = true;
 		}
 
-		return false;
+		return true;
 	}
 
 	if(!Request_Gen.new_request(conn->latest_request)){

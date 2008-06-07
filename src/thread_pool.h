@@ -52,7 +52,11 @@ private:
 	void pool();
 };
 
-template<class T> thread_pool<T>::thread_pool(int start)
+template<class T> thread_pool<T>::thread_pool(
+	int start
+):
+	stop_threads(false),
+	threads(0)
 {
 	for(int x=0; x<start; ++x){
 		boost::thread Thread(boost::bind(&thread_pool::pool, this));

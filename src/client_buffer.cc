@@ -146,8 +146,8 @@ void client_buffer::prepare_request()
 			*/
 			if(!PR.expected.empty()){
 				Pipeline.push_back(PR);
+				buffer_change = true;
 			}
-			buffer_change = true;
 		}
 		}//end lock scope
 	}

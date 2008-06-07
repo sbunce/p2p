@@ -26,29 +26,32 @@ void server_protocol::process(server_buffer * SB)
 
 void server_protocol::close_slot(server_buffer * SB)
 {
-	logger::debug(LOGGER_P1,"closing slot ",(int)(unsigned char)SB->recv_buff[1], " for ",SB->client_IP);
+	logger::debug(LOGGER_P1,"closing slot ",(int)(unsigned char)SB->recv_buff[1], " for ",SB->IP);
 	SB->close_slot(SB->recv_buff[1]);
 }
 
 void server_protocol::request_slot_file(server_buffer * SB)
 {
-	uint64_t file_size;
+	uint64_t size;
 	std::string path;
-	if(DB_Share.lookup_hash(hex::binary_to_hex(SB->recv_buff.substr(1,20)), file_size, path)){
+	if(DB_Share.lookup_hash(hex::binary_to_hex(SB->recv_buff.substr(1,20)), size, path)){
 		//hash found in share, create slot
 		char slot_ID;
-		if(SB->create_slot(slot_ID, path)){
-			logger::debug(LOGGER_P1,"granting slot ",(int)(unsigned char)slot_ID, " to ",SB->client_IP);
+		if(SB->create_slot(slot_ID, hex::binary_to_hex(SB->recv_buff.substr(1,20)), size, path)){
+			logger::debug(LOGGER_P1,"granting slot ",(int)(unsigned char)slot_ID, " to ",SB->IP);
 			//slot available
 			SB->send_buff += global::P_SLOT_ID;
 			SB->send_buff += slot_ID;
+			SB->update_slot_speed(SB->recv_buff[1], global::P_REQUEST_SLOT_FILE_SIZE);
 		}else{
 			//all slots used up
 			SB->send_buff += global::P_ERROR;
+			SB->update_slot_speed(SB->recv_buff[1], 1);
 		}
 	}else{
 		//hash not found in share, send error
 		SB->send_buff += global::P_ERROR;
+		SB->update_slot_speed(SB->recv_buff[1], 1);
 	}
 }
 
@@ -56,6 +59,7 @@ void server_protocol::send_block(server_buffer * SB)
 {
 	uint64_t block_number = Convert_uint64.decode(SB->recv_buff.substr(2, 8));
 	if(SB->slot_valid(SB->recv_buff[1])){
+		SB->update_slot_percent_complete(SB->recv_buff[1], block_number);
 		SB->send_buff += global::P_BLOCK;
 		std::ifstream fin(SB->path(SB->recv_buff[1]).c_str());
 		if(fin.is_open()){
@@ -64,6 +68,7 @@ void server_protocol::send_block(server_buffer * SB)
 			fin.read(send_block_buff, global::P_BLOCK_SIZE - 1);
 			SB->send_buff.append(send_block_buff, fin.gcount());
 			fin.close();
+			SB->update_slot_speed(SB->recv_buff[1], fin.gcount());
 		}
 	}
 }
