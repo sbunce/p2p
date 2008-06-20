@@ -5,60 +5,83 @@ download_factory::download_factory()
 
 }
 
-bool download_factory::start_file(download_info & info, download *& Download, std::list<download_conn *> & servers)
+bool download_factory::start_hash(download_info & info, download *& Download, std::list<download_conn *> & servers)
 {
-	//make sure file isn't already downloading
-	if(!info.resumed){
-		if(!DB_Download.start_download(info)){
-			return false;
-		}
+	//make sure download isn't already running
+	if(!DB_Download.start_download(info)){
+		return false;
 	}
 
+	//create an empty file for this download, if a file doesn't already exist
+	std::fstream fin((global::HASH_DIRECTORY+info.hash).c_str(), std::ios::in);
+	if(fin.is_open()){
+		fin.close();
+	}else{
+		std::fstream fout((global::HASH_DIRECTORY+info.hash).c_str(), std::ios::out);
+		fout.close();
+	}
+
+	Download = new download_hash_tree(
+		info.hash,
+		info.size,
+		info.name
+	);
+
+	for(int x = 0; x < info.IP.size(); ++x){
+		servers.push_back(new download_hash_tree_conn(Download, info.IP[x]));
+	}
+
+	return true;
+}
+
+download_file * download_factory::start_file(download_hash_tree * DHT, std::list<download_conn *> & servers)
+{
 	//get file path, stop if file not found
 	std::string file_path;
-	if(!DB_Download.get_file_path(info.hash, file_path)){
+	if(!DB_Download.get_file_path(DHT->hash(), file_path)){
 		return false;
 	}
 
 	//create an empty file for this download, if a file doesn't already exist
 	std::fstream fin(file_path.c_str(), std::ios::in);
 	if(fin.is_open()){
-		fin.close();
+//need to do hash check here to determine highest valid block
 	}else{
 		std::fstream fout(file_path.c_str(), std::ios::out);
 		fout.close();
 	}
 
-	//(global::P_BLS_SIZE - 1) because control size is 1 byte
-	uint64_t last_block = info.size/(global::P_BLOCK_SIZE - 1);
-	uint64_t last_block_size = info.size % (global::P_BLOCK_SIZE - 1) + 1;
+	uint64_t last_block = DHT->file_size/(global::P_BLOCK_SIZE - 1);
+	uint64_t last_block_size = DHT->file_size % (global::P_BLOCK_SIZE - 1) + 1;
 
-	Download = new download_file(
-		info.hash,
-		info.name,
+	download_file * Download = new download_file(
+		DHT->hash(),
+		DHT->file_name,
 		file_path,
-		info.size,
-		info.latest_request,
+		DHT->file_size,
+		0,              //DEBUG, latest request, needs to be fixed
 		last_block,
 		last_block_size
 	);
 
-	for(int x = 0; x < info.server_IP.size(); ++x){
-		servers.push_back(new download_file_conn(Download, info.server_IP[x]));
+	std::vector<std::string> IP;
+	DHT->IP_list(IP);
+	for(int x = 0; x < IP.size(); ++x){
+		servers.push_back(new download_file_conn(Download, IP[x]));
 	}
 
-	return true;
+	return Download;
 }
 
-bool download_factory::stop(download * Download_stop, download *& Download_start, std::list<download_conn *> & servers)
+bool download_factory::stop(download * Download_Stop, download *& Download_Start, std::list<download_conn *> & servers)
 {
-	if(typeid(*Download_stop) == typeid(download_hash_tree)){
-//DEBUG, need to start a download_file here
-
+	if(typeid(*Download_Stop) == typeid(download_hash_tree)){
+		Download_Start = start_file((download_hash_tree *)Download_Stop, servers);
+		delete Download_Stop;
 		return true;
-	}else if(typeid(*Download_stop) == typeid(download_file)){
-		DB_Download.terminate_download(Download_stop->hash());
-		delete Download_stop;
+	}else if(typeid(*Download_Stop) == typeid(download_file)){
+		DB_Download.terminate_download(Download_Stop->hash());
+		delete Download_Stop;
 		return false;
 	}
 }

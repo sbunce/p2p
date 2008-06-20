@@ -5,6 +5,8 @@
 #include <boost/thread/mutex.hpp>
 
 //custom
+#include "download_file.h"
+#include "download_hash_tree.h"
 #include "convert.h"
 
 //std
@@ -13,6 +15,7 @@
 #include <iostream>
 #include <list>
 #include <set>
+#include <typeinfo>
 
 //custom
 #include "download.h"
@@ -71,16 +74,18 @@ public:
 		iter_cur = Unique_Download.begin();
 		iter_end = Unique_Download.end();
 		while(iter_cur != iter_end){
-			download_info Download_Info(
-				(*iter_cur)->hash(),
-				(*iter_cur)->name(),
-				(*iter_cur)->total_size(),
-				(*iter_cur)->speed(),
-				(*iter_cur)->percent_complete()
-			);
+			if(typeid(**iter_cur) == typeid(download_hash_tree) || typeid(**iter_cur) == typeid(download_file)){
+				download_info Download_Info(
+					(*iter_cur)->hash(),
+					(*iter_cur)->name(),
+					(*iter_cur)->size(),
+					(*iter_cur)->speed(),
+					(*iter_cur)->percent_complete()
+				);
 
-			(*iter_cur)->IP_list(Download_Info.server_IP);
-			info.push_back(Download_Info);
+				(*iter_cur)->IP_list(Download_Info.IP);
+				info.push_back(Download_Info);
+			}
 			++iter_cur;
 		}
 	}

@@ -10,38 +10,27 @@
 class download_info
 {
 public:
-	//ctor for starting a download
-	download_info(const bool & resumed_in, const std::string & hash_in,
-		const std::string & name_in, const uint64_t & size_in,
-		const uint64_t & latest_request_in)
-	:
-	resumed(resumed_in),
-	hash(hash_in),
-	name(name_in),
-	size(size_in),
-	latest_request(latest_request_in)
+	download_info(
+		const std::string & hash_in,
+		const std::string & name_in,
+		const uint64_t & size_in,
+		const int speed_in,
+		const int & percent_complete_in
+	):
+		hash(hash_in),
+		name(name_in),
+		size(size_in),
+		speed(speed_in),
+		percent_complete(percent_complete_in)
 	{}
 
-	//ctor for current download information
-	download_info(const std::string & hash_in,
-		const std::string & name_in, const uint64_t & size_in,
-		const int speed_in, const int & percent_complete_in)
-	:
-	hash(hash_in),
-	name(name_in),
-	size(size_in),
-	speed(speed_in),
-	percent_complete(percent_complete_in)
-	{}
-
-	bool resumed;            //true if download resumed
-	std::string hash;        //root hash of hash tree, unique identifier
-	std::string name;        //name of the file (ex: file.avi)
+	std::string hash;        //root hash of hash tree
+	std::string name;        //name of the file
 	uint64_t size;           //size of the file (bytes)
 	uint64_t latest_request; //what block was most recently requested
 
-	//information unique to the server, these vectors are parallel
-	std::vector<std::string> server_IP;
+	//information unique to the server
+	std::vector<std::string> IP;
 
 	//these are set when the download is running
 	int percent_complete;

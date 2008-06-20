@@ -168,14 +168,14 @@ void server::main_thread()
 		exit(1);
 	}
 
-	struct sockaddr_in myaddr;                 //server address
+	sockaddr_in myaddr;                        //server address
 	myaddr.sin_family = AF_INET;               //set ipv4
 	myaddr.sin_addr.s_addr = INADDR_ANY;       //set to listen on all available interfaces
 	myaddr.sin_port = htons(global::P2P_PORT); //set listening port
 	memset(&(myaddr.sin_zero), '\0', 8);
 
 	//set listener info to what we set above
-	if(bind(listener, (struct sockaddr *)&myaddr, sizeof(myaddr)) == -1){
+	if(bind(listener, (sockaddr *)&myaddr, sizeof(myaddr)) == -1){
 		perror("bind");
 		exit(1);
 	}
@@ -268,7 +268,7 @@ void server::main_thread()
 	--threads;
 }
 
-void server::process_request(const int & socket_FD, char recv_buff[], const int & n_bytes)
+void server::process_request(const int & socket_FD, char * recv_buff, const int & n_bytes)
 {
 	server_buffer * SB = Server_Buffer[socket_FD];
 	SB->recv_buff.append(recv_buff, n_bytes);

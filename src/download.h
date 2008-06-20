@@ -33,20 +33,19 @@ public:
 	response         - response to the latest request passed to this
 	                 - return false if no request
 	speed            - download speed in bytes per second
-	stop             - causes download to stop (when stopped complete() = true)
-	total_size       - the total amount needing to be downloaded
+	stop             - cause download to stop
+	size             - the total amount needing to be downloaded
 	*/
 	virtual bool complete() = 0;
 	virtual const std::string & hash() = 0;
 	virtual void IP_list(std::vector<std::string> & IP);
-	virtual unsigned int max_response_size() = 0;
 	virtual const std::string & name() = 0;
 	virtual unsigned int percent_complete() = 0;
 	virtual bool request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected) = 0;
 	virtual void response(const int & socket, std::string block) = 0;
 	virtual unsigned int speed();
 	virtual void stop() = 0;
-	virtual const uint64_t & total_size() = 0;
+	virtual const uint64_t size() = 0;
 
 	/*
 	reg_conn   - registers a server with this download

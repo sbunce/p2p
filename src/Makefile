@@ -1,5 +1,5 @@
 #GPROF = -pg
-CXXFLAGS = `pkg-config gtkmm-2.4 --cflags` -O3 -Werror
+CXXFLAGS = `pkg-config gtkmm-2.4 --cflags` -O3 -Werror -ansi -pedantic
 
 OBJECTS = \
 	client_buffer.o \
@@ -13,6 +13,7 @@ OBJECTS = \
 	download_file_conn.o \
 	download_file.o \
 	download_hash_tree.o \
+	download_hash_tree_conn.o \
 	download_factory.o \
 	download.o \
 	gui.o \
@@ -32,10 +33,12 @@ OBJECTS = \
 LINKER_OPTIONS = \
 	`pkg-config gtkmm-2.4 --libs` \
 	-lboost_filesystem \
-	-lboost_thread -D_REENTRANT \
+	-lboost_thread \
+	-D_REENTRANT \
 	-lsqlite3
 
 SERVER_OBJECTS = \
+	DB_download.o \
 	DB_server_preferences.o \
 	DB_share.o \
 	hash_tree.o \

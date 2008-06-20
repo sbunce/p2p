@@ -35,7 +35,7 @@ public:
 	void remove_missing();
 
 private:
-	sqlite3 * sqlite3_DB; //pointer for all DB accesses
+	sqlite3 * sqlite3_DB;
 	boost::mutex Mutex;   //mutex for all public functions
 
 	void lookup_path_call_back(int & columns_retrieved, char ** query_response, char ** column_name);

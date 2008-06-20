@@ -31,6 +31,7 @@ private:
 	what they do can be found in the protocol documentation.
 	*/
 	void close_slot(server_buffer * SB);
+	void request_slot_hash(server_buffer * SB);
 	void request_slot_file(server_buffer * SB);
 	void send_block(server_buffer * SB);
 

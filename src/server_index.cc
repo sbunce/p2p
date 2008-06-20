@@ -123,18 +123,25 @@ bool server_index::is_indexing()
 void server_index::index_share()
 {
 	++threads;
-
 	indexing = false;
 	while(true){
 		if(stop_thread){
 			break;
 		}
+
+		//remove share entries for files that no longer exist
 		DB_Share.remove_missing();
+
+		//create hashes
 		index_share_recurse(global::SHARE_DIRECTORY);
+
+		//remove hashes with no corresponding file
+//add stuff here
+
+
 		indexing = false;
 		sleep(1);
 	}
-
 	--threads;
 }
 

@@ -14,8 +14,8 @@ class download_conn
 public:
 	download_conn();
 
-	int socket_FD;
-	std::string server_IP;
+	int socket;
+	std::string IP;
 	download * Download;
 };
 #endif

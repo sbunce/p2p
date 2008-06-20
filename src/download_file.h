@@ -5,6 +5,15 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 
+//custom
+#include "convert.h"
+#include "download.h"
+#include "download_file_conn.h"
+#include "global.h"
+#include "hash_tree.h"
+#include "hex.h"
+#include "request_gen.h"
+
 //std
 #include <ctime>
 #include <fstream>
@@ -16,15 +25,6 @@
 #include <string>
 #include <typeinfo>
 #include <vector>
-
-//custom
-#include "convert.h"
-#include "download.h"
-#include "download_file_conn.h"
-#include "global.h"
-#include "hex.h"
-#include "request_gen.h"
-#include "sha.h"
 
 class download_file : public download
 {
@@ -46,13 +46,12 @@ public:
 	//documentation for virtual functions in abstract base class
 	virtual bool complete();
 	virtual const std::string & hash();
-	virtual unsigned int max_response_size();
 	virtual const std::string & name();
 	virtual unsigned int percent_complete();
 	virtual bool request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected);
 	virtual void response(const int & socket, std::string block);
 	virtual void stop();
-	virtual const uint64_t & total_size();
+	virtual const uint64_t size();
 
 private:
 	/*
@@ -61,7 +60,7 @@ private:
 	*/
 	bool download_complete;
 
-	std::string file_hash;        //unique identifier of the file and message digest
+	std::string file_hash;        //hash tree root hash
 	std::string file_name;        //name of the file
 	std::string file_path;        //path to write file to on local system
 	uint64_t file_size;           //size of the file(bytes)
@@ -82,6 +81,6 @@ private:
 
 	convert<uint64_t> Convert_uint64;
 	request_gen Request_Gen;
-	sha SHA;
+	hash_tree Hash_Tree;
 };
 #endif

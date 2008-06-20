@@ -85,7 +85,7 @@ private:
 
 	//holds connections which need to be made
 	boost::mutex CQ_mutex;
-	std::deque<download_conn *> Connection_Queue;
+	std::list<download_conn *> Connection_Queue;
 
 	//holds connections which are in progress of connecting
 	boost::mutex CCA_mutex;
@@ -147,6 +147,10 @@ private:
 	void prepare_requests();
 	void process_CQ();
 	void remove_complete();
+	void remove_complete_0(std::list<download *> & complete);
+	void remove_complete_1(std::list<download *> & complete);
+	void remove_complete_2(std::list<download *> & complete);
+	void remove_complete_3(std::list<download *> & complete);
 
 	sha SHA;
 	DB_download DB_Download;

@@ -94,7 +94,7 @@ private:
 	void disconnect(const int & socketfd);
 	void main_thread();
 	bool new_conn(const int & listener);
-	void process_request(const int & socketfd, char recvBuffer[], const int & n_bytes);
+	void process_request(const int & socketfd, char * recv_buff, const int & n_bytes);
 
 	DB_server_preferences DB_Server_Preferences;
 	server_index Server_Index;

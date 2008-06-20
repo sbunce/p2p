@@ -1,5 +1,5 @@
-#ifndef H_DOWNLOAD_FILE_CONN
-#define H_DOWNLOAD_FILE_CONN
+#ifndef H_DOWNLOAD_HASH_TREE_CONN
+#define H_DOWNLOAD_HASH_TREE_CONN
 
 //std
 #include <deque>
@@ -10,10 +10,10 @@
 #include "download_conn.h"
 #include "speed_calculator.h"
 
-class download_file_conn : public download_conn
+class download_hash_tree_conn : public download_conn
 {
 public:
-	download_file_conn(download * download_in, const std::string & IP_in);
+	download_hash_tree_conn(download * download_in, const std::string & IP_in);
 
 	char slot_ID;           //slot ID the server gave for the file
 	bool slot_ID_requested; //true if slot_ID requested

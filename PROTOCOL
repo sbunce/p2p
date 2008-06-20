@@ -21,21 +21,7 @@ one has length 11, the third one has length 2.
 /******************************************************************************/
 RE-REQUEST ALGORITHM
 
-Blocks are rerequested that haven't been received after 8 seconds.
-
-/******************************************************************************/
-GRAY LIST
-Servers on this list have disobeyed the protocol rules and were disconnected. A
-server on the gray list is still allowed to connect or be connected to. Each
-server on the gray list has an associated gray value. The gray value starts at
-0 and is incremented for every protocol violation. If this value reaches 8 then
-the server is moved to the black list. The gray value is decremented once per
-day. If the gray value is decremented when at 0 then the server is removed from
-the gray list.
-
-BLACK LIST
-Servers on this list will be denied a connection and no attempts will be made
-to connect to them. The black list entry expires after 4 days.
+Blocks are rerequested that haven't been received after 4 seconds.
 
 /******************************************************************************/
 PIPELINING
@@ -130,37 +116,6 @@ last block of a file or if there aren't 256 hashes left in a hash tree.
 P_ERROR (0)
 The server has the file but has not yet downloaded this block. This should
 trigger a 8 second delay before trying again.
-
-	  0
-	+---+
-	| C |
-	+---+
-
-/******************************************************************************/
-P_SEND_HASH (7)
-client -> server
-Request one hash from the server. Should be used to replace single bad hashes,
-not to request every hash. Clients should not be allowed to make this request
-on a file.
-
-	  0   1   2   3   4   .........  10
-	+---+---+---+---+---+---+---+---+---+
-	| C | S |            hash #         | , where S = slot ID
-	+---+---+---+---+---+---+---+---+---+
-
-Possible Responses:
-
-P_HASH (8)
-The requested hash.
-
-	  0   1   2   3    .........    21
-	+---+---+---+---+---+----+----+----+
-	| C |         requested hash       |
-	+---+---+---+---+---+----+----+----+
-
-P_ERROR (0)
-The server has part of the hash tree but not this hash. This should trigger a
-8 second delay befor trying again.
 
 	  0
 	+---+

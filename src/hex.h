@@ -67,5 +67,5 @@ namespace hex
 		}
 		return hash;
 	}
-};
+}
 #endif

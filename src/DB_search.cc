@@ -37,11 +37,11 @@ void DB_search::search(std::string & search_word, std::vector<download_info> & s
 		}
 	}
 
-	logger::debug(LOGGER_P1,"search entered: \"",search_word,"\"");
+	logger::debug(LOGGER_P1,"search entered: '",search_word,"'");
 
 	std::ostringstream query;
 	if(!search_word.empty()){
-		query << "SELECT * FROM search WHERE name LIKE \"%" << search_word << "%\";";
+		query << "SELECT * FROM search WHERE name LIKE '%" << search_word << "%';";
 		if(sqlite3_exec(sqlite3_DB, query.str().c_str(), search_call_back_wrapper, (void *)this, NULL) != 0){
 			logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 		}
@@ -51,11 +51,11 @@ void DB_search::search(std::string & search_word, std::vector<download_info> & s
 void DB_search::search_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
 	download_info Download_Info(
-		false,                                 //not resuming
 		query_response[0],                     //hash
 		query_response[1],                     //name
 		strtoull(query_response[2], NULL, 10), //size
-		0                                      //latest request
+		0,                                     //latest request
+		0
 	);
 
 	//get servers
@@ -63,7 +63,7 @@ void DB_search::search_call_back(int & columns_retrieved, char ** query_response
 	char * result = NULL;
 	result = strtok(query_response[3], delims);
 	while(result != NULL){
-		Download_Info.server_IP.push_back(result);
+		Download_Info.IP.push_back(result);
 		result = strtok(NULL, delims);
 	}
 	search_results_ptr->push_back(Download_Info);

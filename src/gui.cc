@@ -366,8 +366,8 @@ bool gui::download_info_refresh()
 		//get all the server_IP information in one string
 		std::string combined_IP;
 		std::vector<std::string>::iterator IP_iter_cur, IP_iter_end;
-		IP_iter_cur = info_iter_cur->server_IP.begin();
-		IP_iter_end = info_iter_cur->server_IP.end();
+		IP_iter_cur = info_iter_cur->IP.begin();
+		IP_iter_end = info_iter_cur->IP.end();
 		while(IP_iter_cur != IP_iter_end){
 			combined_IP += *IP_iter_cur + "|";
 			++IP_iter_cur;
@@ -377,6 +377,15 @@ bool gui::download_info_refresh()
 		int speed = info_iter_cur->speed / 1024;
 		std::ostringstream speed_s;
 		speed_s << speed << " kB/s";
+
+		//convert file_size from B to MB
+		float size = info_iter_cur->size / 1024 / 1024;
+		std::ostringstream size_s;
+		if(size < 1){
+			size_s << std::setprecision(2) << size << " mB";
+		}else{
+			size_s << (int)size << " mB";
+		}
 
 		//iterate through all the rows
 		bool entry_found = false;
@@ -394,7 +403,9 @@ bool gui::download_info_refresh()
 			//see if there is already an entry for the file in the download list
 			if(hash_retrieved == info_iter_cur->hash){
 				row[IP_t] = combined_IP;
+				row[name_t] = info_iter_cur->name;
 				row[speed_t] = speed_s.str();
+				row[size_t] = size_s.str();
 				row[percent_complete_t] = info_iter_cur->percent_complete;
 				entry_found = true;
 				break;
@@ -404,16 +415,6 @@ bool gui::download_info_refresh()
 
 		if(!entry_found){
 			Gtk::TreeModel::Row row = *(downloadList->append());
-
-			//convert file_size from B to MB
-			float size = info_iter_cur->size / 1024 / 1024;
-			std::ostringstream size_s;
-			if(size < 1){
-				size_s << std::setprecision(2) << size << " mB";
-			}else{
-				size_s << (int)size << " mB";
-			}
-
 			row[hash_t] = info_iter_cur->hash;
 			row[IP_t] = combined_IP;
 			row[name_t] = info_iter_cur->name;
@@ -685,8 +686,8 @@ void gui::search_info_refresh()
 	while(info_iter_cur != info_iter_end){
 
 		std::vector<std::string>::iterator IP_iter_cur, IP_iter_end;
-		IP_iter_cur = info_iter_cur->server_IP.begin();
-		IP_iter_end = info_iter_cur->server_IP.end();
+		IP_iter_cur = info_iter_cur->IP.begin();
+		IP_iter_end = info_iter_cur->IP.end();
 		std::string IP;
 		while(IP_iter_cur != IP_iter_end){
 			IP += *IP_iter_cur + "|";

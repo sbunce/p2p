@@ -2,22 +2,27 @@
 
 server_protocol::server_protocol()
 {
-
+	#ifdef CORRUPT_BLOCKS
+	srand(time(0));
+	#endif
 }
 
 void server_protocol::process(server_buffer * SB)
 {
 	//slice off one command at a time and process
 	while(SB->recv_buff.size()){
-		if(SB->recv_buff[0] == global::P_REQUEST_SLOT_FILE && SB->recv_buff.size() >= global::P_REQUEST_SLOT_FILE_SIZE){
+		if(SB->recv_buff[0] == global::P_CLOSE_SLOT && SB->recv_buff.size() >= global::P_CLOSE_SLOT_SIZE){
+			close_slot(SB);
+			SB->recv_buff.erase(0, global::P_CLOSE_SLOT_SIZE);
+		}else if(SB->recv_buff[0] == global::P_REQUEST_SLOT_HASH && SB->recv_buff.size() >= global::P_REQUEST_SLOT_HASH_SIZE){
+			request_slot_hash(SB);
+			SB->recv_buff.erase(0, global::P_REQUEST_SLOT_HASH_SIZE);
+		}else if(SB->recv_buff[0] == global::P_REQUEST_SLOT_FILE && SB->recv_buff.size() >= global::P_REQUEST_SLOT_FILE_SIZE){
 			request_slot_file(SB);
 			SB->recv_buff.erase(0, global::P_REQUEST_SLOT_FILE_SIZE);
 		}else if(SB->recv_buff[0] == global::P_SEND_BLOCK && SB->recv_buff.size() >= global::P_SEND_BLOCK_SIZE){
 			send_block(SB);
 			SB->recv_buff.erase(0, global::P_SEND_BLOCK_SIZE);
-		}else if(SB->recv_buff[0] == global::P_CLOSE_SLOT && SB->recv_buff.size() >= global::P_CLOSE_SLOT_SIZE){
-			close_slot(SB);
-			SB->recv_buff.erase(0, global::P_CLOSE_SLOT_SIZE);
 		}else{
 			break;
 		}
@@ -30,6 +35,29 @@ void server_protocol::close_slot(server_buffer * SB)
 	SB->close_slot(SB->recv_buff[1]);
 }
 
+void server_protocol::request_slot_hash(server_buffer * SB)
+{
+	std::string path = global::HASH_DIRECTORY+hex::binary_to_hex(SB->recv_buff.substr(1,20));
+	std::fstream fin(path.c_str(), std::ios::in);
+	if(fin.is_open()){
+		//hash tree exists, make slot
+		fin.seekg(0, std::ios::end);
+		uint64_t size = fin.tellg();
+		char slot_ID;
+		if(SB->create_slot(slot_ID, hex::binary_to_hex(SB->recv_buff.substr(1,20)), size, path)){
+			logger::debug(LOGGER_P1,"granting hash slot ",(int)(unsigned char)slot_ID, " to ",SB->IP);
+			SB->send_buff += global::P_SLOT_ID;
+			SB->send_buff += slot_ID;
+		}else{
+			//all slots used up
+			SB->send_buff += global::P_ERROR;
+		}
+	}else{
+		//hash tree doesn't exist
+		SB->send_buff += global::P_ERROR;
+	}
+}
+
 void server_protocol::request_slot_file(server_buffer * SB)
 {
 	uint64_t size;
@@ -38,20 +66,17 @@ void server_protocol::request_slot_file(server_buffer * SB)
 		//hash found in share, create slot
 		char slot_ID;
 		if(SB->create_slot(slot_ID, hex::binary_to_hex(SB->recv_buff.substr(1,20)), size, path)){
-			logger::debug(LOGGER_P1,"granting slot ",(int)(unsigned char)slot_ID, " to ",SB->IP);
-			//slot available
+			logger::debug(LOGGER_P1,"granting file slot ",(int)(unsigned char)slot_ID, " to ",SB->IP);
 			SB->send_buff += global::P_SLOT_ID;
 			SB->send_buff += slot_ID;
-			SB->update_slot_speed(SB->recv_buff[1], global::P_REQUEST_SLOT_FILE_SIZE);
+			SB->update_slot_speed(slot_ID, global::P_REQUEST_SLOT_FILE_SIZE);
 		}else{
 			//all slots used up
 			SB->send_buff += global::P_ERROR;
-			SB->update_slot_speed(SB->recv_buff[1], 1);
 		}
 	}else{
 		//hash not found in share, send error
 		SB->send_buff += global::P_ERROR;
-		SB->update_slot_speed(SB->recv_buff[1], 1);
 	}
 }
 
@@ -66,6 +91,13 @@ void server_protocol::send_block(server_buffer * SB)
 			//seek to the file_block the client wants (-1 for command space)
 			fin.seekg(block_number*(global::P_BLOCK_SIZE - 1));
 			fin.read(send_block_buff, global::P_BLOCK_SIZE - 1);
+
+			#ifdef CORRUPT_BLOCKS
+			if(rand() % 100 == 0){
+				send_block_buff[0] = (char)0;
+			}
+			#endif
+
 			SB->send_buff.append(send_block_buff, fin.gcount());
 			fin.close();
 			SB->update_slot_speed(SB->recv_buff[1], fin.gcount());

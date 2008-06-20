@@ -33,7 +33,7 @@ void DB_share::add_entry(const std::string & hash, const uint64_t & size, const 
 	//determine if the entry already exists
 	char * path_sqlite = sqlite3_mprintf("%q", path.c_str());
 	std::ostringstream query;
-	query << "SELECT * FROM share WHERE path = \"" << path_sqlite << "\" LIMIT 1;";
+	query << "SELECT * FROM share WHERE path = '" << path_sqlite << "' LIMIT 1;";
 	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), add_entry_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,"#1 ",sqlite3_errmsg(sqlite3_DB));
 	}
@@ -58,7 +58,7 @@ void DB_share::add_entry_call_back(int & columns_retrieved, char ** query_respon
 void DB_share::delete_hash(const std::string & hash)
 {
 	std::ostringstream query;
-	query << "DELETE FROM share WHERE hash = \"" << hash << "\";";
+	query << "DELETE FROM share WHERE hash = '" << hash << "';";
 	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,"#1 ",sqlite3_errmsg(sqlite3_DB));
 	}
@@ -71,7 +71,7 @@ bool DB_share::lookup_path(const std::string & path, std::string & existing_hash
 	lookup_path_hash_ptr = &existing_hash;
 	lookup_path_size_ptr = &existing_size;
 
-	char * query = sqlite3_mprintf("SELECT hash, size FROM share WHERE path = \"%q\" LIMIT 1;", path.c_str());
+	char * query = sqlite3_mprintf("SELECT hash, size FROM share WHERE path = '%q' LIMIT 1;", path.c_str());
 	if(sqlite3_exec(sqlite3_DB, query, lookup_path_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
@@ -94,7 +94,7 @@ bool DB_share::lookup_hash(const std::string & hash, uint64_t & file_size, std::
 	lookup_hash_file_path = &file_path;
 
 	std::ostringstream query;
-	query << "SELECT size, path FROM share WHERE hash LIKE \"" << hash << "\" LIMIT 1;";
+	query << "SELECT size, path FROM share WHERE hash LIKE '" << hash << "' LIMIT 1;";
 	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), lookup_hash_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
@@ -117,20 +117,19 @@ void DB_share::remove_missing()
 
 void DB_share::remove_missing_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
-	boost::mutex::scoped_lock lock(Mutex);
-
 	usleep(1);
-	std::fstream fin(query_response[1]);
+	{
+	boost::mutex::scoped_lock lock(Mutex);
+	std::fstream fin(query_response[1], std::ios::in);
 	if(!fin.is_open()){
-		//remove hash tree
 		namespace fs = boost::filesystem;
 		fs::path path = fs::system_complete(fs::path(global::HASH_DIRECTORY+std::string(query_response[0]), fs::native));
 		fs::remove(path);
-
 		std::ostringstream query;
-		query << "DELETE FROM share WHERE hash = \"" << query_response[0] << "\";";
+		query << "DELETE FROM share WHERE hash = '" << query_response[0] << "';";
 		if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
 			logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 		}
+	}
 	}
 }

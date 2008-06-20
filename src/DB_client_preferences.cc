@@ -56,7 +56,7 @@ void DB_client_preferences::get_download_directory_call_back(int & columns_retri
 void DB_client_preferences::set_download_directory(const std::string & download_directory)
 {
 	std::ostringstream query;
-	query << "UPDATE client_preferences SET download_directory = \"" << download_directory << "\";";
+	query << "UPDATE client_preferences SET download_directory = '" << download_directory << "';";
 	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
@@ -84,7 +84,7 @@ void DB_client_preferences::set_speed_limit(const unsigned int & speed_limit)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	std::ostringstream query;
-	query << "UPDATE client_preferences SET speed_limit = \"" << speed_limit << "\";";
+	query << "UPDATE client_preferences SET speed_limit = '" << speed_limit << "';";
 	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
@@ -112,7 +112,7 @@ void DB_client_preferences::set_max_connections(const unsigned int & max_connect
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	std::ostringstream query;
-	query << "UPDATE client_preferences SET max_connections = \"" << max_connections << "\";";
+	query << "UPDATE client_preferences SET max_connections = '" << max_connections << "';";
 	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}

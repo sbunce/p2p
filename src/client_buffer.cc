@@ -26,8 +26,12 @@ client_buffer::~client_buffer()
 void client_buffer::add_download(download * new_download)
 {
 	boost::mutex::scoped_lock lock(D_mutex);
-	Download.push_back(new_download);
-	Download_iter = Download.begin(); //if first download iterator must be set
+	if(Download.empty()){
+		Download.push_back(new_download);
+		Download_iter = Download.begin();
+	}else{
+		Download.push_back(new_download);
+	}
 }
 
 bool client_buffer::empty()

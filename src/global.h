@@ -4,6 +4,9 @@
 //uncomment to disable all asserts
 //#define NDEBUG
 
+//uncomment to enable file block corruption test
+//#define CORRUPT_BLOCKS
+
 //std
 #include <cassert>
 #include <string>
@@ -27,7 +30,7 @@ namespace global
 	const int P2P_PORT = 6969;            //port client connects to and server receives on
 	const int GUI_TICK = 100;             //time(in milliseconds) between gui updates
 	const int SPEED_AVERAGE = 4;          //how many seconds to average upload/download speed over
-	const int TIMEOUT = 16;               //how long before an unresponsive server times out
+	const int TIMEOUT = 16;               //how long before an unresponsive socket times out
 	const int UNRESPONSIVE_TIMEOUT = 60;  //if connection to server fails, new connection attempts to it are stopped for this time
 
 	//default locations
@@ -55,7 +58,7 @@ namespace global
 	const char P_SLOT_ID = (char)6;
 	const int P_SLOT_ID_SIZE = 2;
 	const char P_BLOCK = (char)7;
-	const int P_BLOCK_SIZE = 5121;
+	const int P_BLOCK_SIZE = 5121; //P_BLOCK_SIZE - 1 must be divisible by sha::HASH_LENGTH
 	const char P_HASH = (char)8;
 	const int P_HASH_SIZE = 21;
 

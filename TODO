@@ -1,28 +1,19 @@
 TODO
 
--Add a setting for block timeout.
+-Look at super mario 2 hash. For some reason hash block 16 is getting
+re_requested.
 
--Check to make sure client and server can be started/stopped/deleted correctly.
-
--Currently no logic to disconnect abusive servers. Currently the client_buffer
-stops accepting data until they time out.
-
--client::set_max_connections() not fully working.
--server::set_max_connections() not fully working.
--client::set_download_directory() not fully working.
--server::set_share_directory() not fully working.
-
--File not found not being handled.
+-P_ERROR on downloads not being handled. Need a way for downloads to trigger
+disconnect of a server to solve this.
 
 
 DEFERRED FEATURES
 
--Think about combining hash tree's in to one file. Maybe put them in DB? It's
-not reasonable to have one hash tree file sitting on the HDD for every file
-shared. Another possibility is some sort of compression library that'd give
-access to a file like it's in a directory, does zlib do this?
-
--Indexes on DB.
+-These have their preferences saved but the setting doesn't take effect.
+	client::set_max_connections()
+	server::set_max_connections()
+	client::set_download_directory()
+	server::set_share_directory()
 
 
 IDEAS
@@ -34,17 +25,16 @@ trusts etc. Have an option to limit trust levels to direct trust only, one
 level inheritance and all level inheritance. Children should be able to point
 to their parents.
 
--Don't allow people to download who have the P2P port blocked. Make a ping
-command the server can send to the client. The client should return a pong
-otherwise it doesn't get to download.
+-Don't allow clients to download who have the P2P port blocked. When a server is
+connected to it should try to connect back to the client(more precisely the
+server running at the address the client connected from). If the server can't
+connect back it should deny the clients connection. This will make things
+totally not work if there is NAT in the way or the server somehow isn't running.
 
 -Let the user set up bandwidth profiles that can be quickly selected. The user
 could create one for games/night time/bla bla. Then have a timer that can select
 the profile based on time of day.
 
--Implement the minix scheduler in the client_bufffer. Three ring buffers. The
-first ring spins 5 times before letting the second ring spin once. The second
-ring spins 5 times before letting the third ring spin once. After a download
-has been served from rings one or two 5 times it gets moved to a lower ring.
-The idea behind this is that bulk jobs (download_file's) get a much lower
-priority than short jobs.
+-Think about combining hash tree's in to one file. Keep track of starting
+locations in DB. Perhaps have a memmove type opteration one a file where hashes
+can be moved to get rid of gaps due to removed files.

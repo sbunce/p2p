@@ -15,22 +15,23 @@ public:
 	gui_preferences(client * Client_in, server * Server_in);
 
 private:
-	class Gtk::Window * window;
-	class Gtk::Entry * download_directory_entry;
-	class Gtk::Entry * share_directory_entry;
-	class Gtk::Entry * download_speed_entry;
-	class Gtk::Entry * upload_speed_entry;
-	class Gtk::Label * downloads_label;
-	class Gtk::Label * share_label;
-	class Gtk::Label * speed_label;
-	class Gtk::Label * connection_limit_label;
-	class Gtk::Label * upload_speed_label;
-	class Gtk::Label * download_speed_label;
-	class Gtk::Button * ok_button;
-	class Gtk::Button * cancel_button;
-	class Gtk::Button * apply_button;
-	class Gtk::HScale * connection_limit_hscale;
-	class Gtk::Fixed * fixed;
+	Gtk::Window * window;
+	Gtk::Entry * download_directory_entry;
+	Gtk::Entry * share_directory_entry;
+	Gtk::Entry * download_speed_entry;
+	Gtk::Entry * upload_speed_entry;
+	Gtk::Label * downloads_label;
+	Gtk::Label * share_label;
+	Gtk::Label * speed_label;
+	Gtk::Label * connection_limit_label;
+	Gtk::Label * upload_speed_label;
+	Gtk::Label * download_speed_label;
+	Gtk::Button * ok_button;
+	Gtk::Button * cancel_button;
+	Gtk::Button * apply_button;
+	Gtk::HButtonBox * button_box;
+	Gtk::HScale * connection_limit_hscale;
+	Gtk::Fixed * fixed;
 
 	//holds pointers to the client/server the GUI has while preferences are open
 	client * Client;

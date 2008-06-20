@@ -19,6 +19,7 @@ gui_preferences::gui_preferences(client * Client_in, server * Server_in)
 	apply_button = Gtk::manage(new Gtk::Button(Gtk::StockID("gtk-apply")));
 	cancel_button = Gtk::manage(new Gtk::Button(Gtk::StockID("gtk-cancel")));
 	ok_button = Gtk::manage(new Gtk::Button(Gtk::StockID("gtk-ok")));
+	button_box = Gtk::manage(new Gtk::HButtonBox);
 	connection_limit_hscale = Gtk::manage(new Gtk::HScale(1,1001,1));
 	fixed = Gtk::manage(new Gtk::Fixed());
 
@@ -88,6 +89,12 @@ gui_preferences::gui_preferences(client * Client_in, server * Server_in)
 	assert(Server->get_max_connections() == Client->get_max_connections());
 	connection_limit_hscale->set_value(Server->get_max_connections());
 
+	button_box->set_spacing(8);
+	button_box->set_border_width(8);
+	button_box->pack_start(*apply_button);
+	button_box->pack_start(*cancel_button);
+	button_box->pack_start(*ok_button);
+
 	fixed->put(*download_directory_entry, 16, 40);
 	fixed->put(*share_directory_entry, 16, 104);
 	fixed->put(*download_speed_entry, 40, 184);
@@ -99,9 +106,7 @@ gui_preferences::gui_preferences(client * Client_in, server * Server_in)
 	fixed->put(*upload_speed_label, 8, 216);
 	fixed->put(*download_speed_label, 8, 184);
 	fixed->put(*connection_limit_hscale, 150, 192);
-	fixed->put(*ok_button, 332, 256);
-	fixed->put(*cancel_button, 252, 256);
-	fixed->put(*apply_button, 180, 256);
+	fixed->put(*button_box, 128, 256);
 
 	show_all_children();
 

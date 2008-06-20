@@ -10,6 +10,7 @@
 #include "download_file.h"
 #include "download_file_conn.h"
 #include "download_hash_tree.h"
+#include "download_hash_tree_conn.h"
 #include "download_info.h"
 
 //std
@@ -29,10 +30,15 @@ public:
 	             returns false if no download needs to be started in response to the download stopping
 	             if true then Download_start will be set and servers filled
 	*/
-	bool start_file(download_info & info, download *& Download, std::list<download_conn *> & servers);
-	bool stop(download * Download_stop, download *& Download_start, std::list<download_conn *> & servers);
+	bool start_hash(download_info & info, download *& Download, std::list<download_conn *> & servers);
+	bool stop(download * Download_Stop, download *& Download_Start, std::list<download_conn *> & servers);
 
 private:
+	/*
+	start_file - starts a download_file
+	*/
+	download_file * start_file(download_hash_tree * DHT, std::list<download_conn *> & servers);
+
 	DB_download DB_Download;
 };
 #endif

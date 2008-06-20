@@ -56,12 +56,11 @@ bool client::DC_add_existing(download_conn * DC)
 	iter_cur = Client_Buffer.begin();
 	iter_end = Client_Buffer.end();
 	while(iter_cur != iter_end){
-		if(DC->server_IP == iter_cur->second->get_IP()){
+		if(DC->IP == iter_cur->second->get_IP()){
 			//if download cancelled don't add it
 			if(DC->Download == NULL){
 				return true;
 			}
-
 			//client_buffer for the server found
 			DC->Download->reg_conn(iter_cur->first, DC);  //register connection with download
 			iter_cur->second->add_download(DC->Download); //register connection
@@ -69,7 +68,6 @@ bool client::DC_add_existing(download_conn * DC)
 		}
 		++iter_cur;
 	}
-
 	return false;
 }
 
@@ -83,19 +81,17 @@ void client::DC_block_concurrent(download_conn * DC)
 		iter_cur = Connection_Current_Attempt.begin();
 		iter_end = Connection_Current_Attempt.end();
 		while(iter_cur != iter_end){
-			if((*iter_cur)->server_IP == DC->server_IP){
+			if((*iter_cur)->IP == DC->IP){
 				found = true;
 				break;
 			}
 			++iter_cur;
 		}
-
 		if(!found){
 			Connection_Current_Attempt.push_back(DC);
 			break;
 		}
 		}
-
 		sleep(1);
 	}
 }
@@ -243,7 +239,6 @@ void client::main_thread()
 						Client_Buffer.erase(socket_FD);
 					}else{
 						Speed_Calculator.update(n_bytes);
-
 						Client_Buffer[socket_FD]->recv_buff.append(recv_buff, n_bytes);
 						Client_Buffer[socket_FD]->post_recv();
 					}
@@ -297,8 +292,8 @@ void client::new_conn(download_conn * DC)
 	connection attempt to it within the last minute then don't attempt another
 	connection.
 	*/
-	if(known_unresponsive(DC->server_IP)){
-		logger::debug(LOGGER_P1,"stopping connection to known unresponsive server ",DC->server_IP);
+	if(known_unresponsive(DC->IP)){
+		logger::debug(LOGGER_P1,"stopping connection to known unresponsive server ",DC->IP);
 		return;
 	}
 
@@ -308,7 +303,7 @@ void client::new_conn(download_conn * DC)
 	int result_code, herr, host_buf_len;
 	host_buf_len = 1024;
 	tmp_host_buf = (char *)malloc(host_buf_len);
-	while((result_code = gethostbyname_r(DC->server_IP.c_str(), &host_buf, tmp_host_buf, host_buf_len, &he, &herr)) == ERANGE){
+	while((result_code = gethostbyname_r(DC->IP.c_str(), &host_buf, tmp_host_buf, host_buf_len, &he, &herr)) == ERANGE){
 		host_buf_len *= 2;
 		tmp_host_buf = (char *)realloc(tmp_host_buf, host_buf_len);
 	}
@@ -316,39 +311,37 @@ void client::new_conn(download_conn * DC)
 	if(he == NULL || strncmp(inet_ntoa(*(struct in_addr*)he->h_addr), "127", 3) == 0){
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(KU_mutex);
-		Known_Unresponsive.insert(std::make_pair(time(0), DC->server_IP));
+		Known_Unresponsive.insert(std::make_pair(time(0), DC->IP));
 		}//end lock scope
 		free(tmp_host_buf);
 		return;
 	}
-
 	sockaddr_in dest_addr;
-	DC->socket_FD = socket(PF_INET, SOCK_STREAM, 0);
+	DC->socket = socket(PF_INET, SOCK_STREAM, 0);
 	dest_addr.sin_family = AF_INET;
 	dest_addr.sin_port = htons(global::P2P_PORT);
 	dest_addr.sin_addr = *((struct in_addr *)he->h_addr_list[0]);
 	memset(&(dest_addr.sin_zero),'\0',8);
-
-	if(connect(DC->socket_FD, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0){
-		logger::debug(LOGGER_P1,"connection to ",DC->server_IP," failed");
+	if(connect(DC->socket, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0){
+		logger::debug(LOGGER_P1,"connection to ",DC->IP," failed");
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(KU_mutex);
-		Known_Unresponsive.insert(std::make_pair(time(0), DC->server_IP));
+		Known_Unresponsive.insert(std::make_pair(time(0), DC->IP));
 		}//end lock scope
 	}else{
-		logger::debug(LOGGER_P1,"created socket ",DC->socket_FD," for ",DC->server_IP);
-		if(DC->socket_FD > FD_max){
-			FD_max = DC->socket_FD;
+		logger::debug(LOGGER_P1,"created socket ",DC->socket," for ",DC->IP);
+		if(DC->socket > FD_max){
+			FD_max = DC->socket;
 		}
 
 		if(DC->Download == NULL){
 			//connetion cancelled during connection, clean up and exit
-			disconnect(DC->socket_FD);
+			disconnect(DC->socket);
 		}else{
-			Client_Buffer.insert(std::make_pair(DC->socket_FD, new client_buffer(DC->socket_FD, DC->server_IP, send_pending)));
-			DC->Download->reg_conn(DC->socket_FD, DC);
-			Client_Buffer[DC->socket_FD]->add_download(DC->Download);
-			FD_SET(DC->socket_FD, &master_FDS);
+			Client_Buffer.insert(std::make_pair(DC->socket, new client_buffer(DC->socket, DC->IP, send_pending)));
+			DC->Download->reg_conn(DC->socket, DC);
+			Client_Buffer[DC->socket]->add_download(DC->Download);
+			FD_SET(DC->socket, &master_FDS);
 		}
 	}
 	free(tmp_host_buf);
@@ -395,32 +388,33 @@ void client::process_CQ()
 
 void client::remove_complete()
 {
-	/*
-	STEP 1:
-	Locate any complete downloads.
-	*/
 	std::list<download *> complete;
 	client_buffer::find_complete(complete);
-
 	if(complete.empty()){
 		return;
 	}
 
-	{
+	remove_complete_0(complete);
+	remove_complete_1(complete);
+	remove_complete_2(complete);
+	remove_complete_3(complete);
+}
+
+void client::remove_complete_0(std::list<download *> & complete)
+{
 	boost::mutex::scoped_lock lock_1(CQ_mutex);
 	boost::mutex::scoped_lock lock_2(CCA_mutex);
 	/*
-	STEP 2:
 	Remove any pending_connections for download. In progress connections will be
 	cancelled by setting their download pointer to NULL. The new_conn function
-	will interpret this NULL.
+	will interpret this NULL and will not establish a connection.
 	*/
 	std::list<download *>::iterator C_iter_cur, C_iter_end;
 	C_iter_cur = complete.begin();
 	C_iter_end = complete.end();
 	while(C_iter_cur != C_iter_end){
 		//pending connections
-		std::deque<download_conn *>::iterator CQ_iter_cur, CQ_iter_end;
+		std::list<download_conn *>::iterator CQ_iter_cur, CQ_iter_end;
 		CQ_iter_cur = Connection_Queue.begin();
 		CQ_iter_end = Connection_Queue.end();
 		while(CQ_iter_cur != CQ_iter_end){
@@ -430,7 +424,6 @@ void client::remove_complete()
 				++CQ_iter_cur;
 			}
 		}
-
 		//in progress connections
 		std::list<download_conn *>::iterator CQA_iter_cur, CQA_iter_end;
 		CQA_iter_cur = Connection_Current_Attempt.begin();
@@ -438,18 +431,16 @@ void client::remove_complete()
 		while(CQA_iter_cur != CQA_iter_end){
 			if((*CQA_iter_cur)->Download == *C_iter_cur){
 				(*CQA_iter_cur)->Download = NULL;
-			}else{
-				++CQA_iter_cur;
 			}
+			++CQA_iter_cur;
 		}
-
 		++C_iter_cur;
 	}
-	}
+}
 
-	{
+void client::remove_complete_1(std::list<download *> & complete)
+{
 	/*
-	STEP 3:
 	Terminate the completed downloads with all client_buffers.
 	*/
 	std::map<int, client_buffer *>::iterator CB_iter_cur, CB_iter_end;
@@ -465,11 +456,11 @@ void client::remove_complete()
 		}
 		++CB_iter_cur;
 	}
-	}
+}
 
-	{
+void client::remove_complete_2(std::list<download *> & complete)
+{
 	/*
-	STEP 4:
 	Remove the download from the client_buffer unique download set and possibly
 	start another download if one is triggered.
 	*/
@@ -479,7 +470,6 @@ void client::remove_complete()
 	while(C_iter_cur != C_iter_end){
 		//remove download from the unique download set
 		client_buffer::remove_download_unique(*C_iter_cur);
-
 		/*
 		It is possible that terminating a download can trigger starting of
 		another download. If this happens the stop function will return that
@@ -489,8 +479,10 @@ void client::remove_complete()
 		reconnecting has to be done.
 		*/
 		std::list<download_conn *> servers;
-		download * Download_start;
-		if(Download_Factory.stop(*C_iter_cur, Download_start, servers)){
+		download * Download_Start;
+		if(Download_Factory.stop(*C_iter_cur, Download_Start, servers)){
+			client_buffer::add_download_unique(Download_Start);
+
 			//attempt to place all servers in a exiting client_buffer
 			std::list<download_conn *>::iterator iter_cur, iter_end;
 			iter_cur = servers.begin();
@@ -507,6 +499,7 @@ void client::remove_complete()
 			iter_cur = servers.begin();
 			iter_end = servers.end();
 			while(iter_cur != iter_end){
+				boost::mutex::scoped_lock lock_1(CQ_mutex);
 				Connection_Queue.push_back(*iter_cur);
 				Thread_Pool.queue_job(this, &client::process_CQ);
 				++iter_cur;
@@ -514,11 +507,11 @@ void client::remove_complete()
 		}
 		++C_iter_cur;
 	}
-	}
+}
 
-	{
+void client::remove_complete_3(std::list<download *> & complete)
+{
 	/*
-	STEP 5:
 	Disconnect empty client_buffer's.
 	*/
 	std::map<int, client_buffer *>::iterator CB_iter_cur, CB_iter_end;
@@ -532,7 +525,6 @@ void client::remove_complete()
 		}else{
 			++CB_iter_cur;
 		}
-	}
 	}
 }
 
@@ -560,7 +552,7 @@ bool client::start_download(download_info & info)
 {
 	download * Download;
 	std::list<download_conn *> servers;
-	if(!Download_Factory.start_file(info, Download, servers)){
+	if(!Download_Factory.start_hash(info, Download, servers)){
 		return false;
 	}
 
@@ -571,10 +563,8 @@ bool client::start_download(download_info & info)
 	iter_cur = servers.begin();
 	iter_end = servers.end();
 	while(iter_cur != iter_end){
-		{//begin lock scope
 		boost::mutex::scoped_lock lock(CQ_mutex);
 		Connection_Queue.push_back(*iter_cur);
-		}//end lock scope
 		Thread_Pool.queue_job(this, &client::process_CQ);
 		++iter_cur;
 	}

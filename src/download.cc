@@ -22,7 +22,7 @@ void download::IP_list(std::vector<std::string> & IP)
 	iter_cur = Connection.begin();
 	iter_end = Connection.end();
 	while(iter_cur != iter_end){
-		IP.push_back(iter_cur->second->server_IP);
+		IP.push_back(iter_cur->second->IP);
 		++iter_cur;
 	}
 }
