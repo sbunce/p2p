@@ -1,7 +1,7 @@
 #include "hash_tree.h"
 
-hash_tree::hash_tree()
-:
+hash_tree::hash_tree(
+	):
 	stop_thread(false),
 	SHA(global::P_BLOCK_SIZE - 1)
 {
@@ -15,15 +15,12 @@ bool hash_tree::check_block(const std::string & root_hex_hash, const uint64_t & 
 		file_hash_root_hex_hash = root_hex_hash;
 		file_hash_start_RRN = locate_start(root_hex_hash);
 	}
-
 	std::fstream fin((global::HASH_DIRECTORY+root_hex_hash).c_str(), std::fstream::in);
 	fin.seekg(sha::HASH_LENGTH * file_hash_start_RRN + block_number * sha::HASH_LENGTH);
 	fin.read(file_hash_buffer, sha::HASH_LENGTH);
-
 	SHA.init();
 	SHA.load(block.c_str(), block.length());
 	SHA.end();
-
 	return strncmp(file_hash_buffer, SHA.raw_hash(), sha::HASH_LENGTH) == 0;
 }
 
@@ -33,13 +30,12 @@ bool hash_tree::check_exists(std::string root_hash)
 	return hash_fstream.is_open();
 }
 
-inline bool hash_tree::check_hash(char parent[], char left_child[], char right_child[])
+bool hash_tree::check_hash(char * parent, char * left_child, char * right_child)
 {
 	SHA.init();
 	SHA.load(left_child, sha::HASH_LENGTH);
 	SHA.load(right_child, sha::HASH_LENGTH);
 	SHA.end();
-
 	if(memcmp(parent, SHA.raw_hash(), sha::HASH_LENGTH) == 0){
 		return true;
 	}else{
@@ -55,11 +51,9 @@ bool hash_tree::check_hash_tree(const std::string & root_hash, const uint64_t & 
 		start_RRN = 0;   //RRN of the start of the current row
 		end_RRN = 0;     //RRN of the end of the current row
 	}
-
 	std::fstream hash_fstream((global::HASH_DIRECTORY+root_hash).c_str(), std::fstream::in);
-
-	//hash tree does not yet exist
 	if(!hash_fstream.is_open()){
+		//hash tree does not yet exist
 		bad_hash.first = 0;
 		bad_hash.second = 1;
 		return true;
@@ -76,25 +70,22 @@ bool hash_tree::check_hash_tree(const std::string & root_hash, const uint64_t & 
 
 	bool early_termination = false;
 	while(true){
-		hash_fstream.seekg(current_RRN * sha::HASH_LENGTH);
+		hash_fstream.seekg(current_RRN * sha::HASH_LENGTH, std::ios::beg);
 		hash_fstream.read(hash, sha::HASH_LENGTH);
-
-		//detect incomplete/missing parent hash
 		if(hash_fstream.eof()){
+			//incomplete/missing parent hash
 			bad_hash.first = current_RRN;
 			bad_hash.second = current_RRN + 1;
 			return true;
 		}
-
-		//detect early termination of a row
 		if(memcmp(hash, end_of_row, sha::HASH_LENGTH) == 0){
+			//early termination of row
 			early_termination = true;
 			++current_RRN;
 			continue;
 		}
-
-		//calculate start and end RRNs of the current row
 		if(current_RRN == end_RRN + 1){
+			//calculate start and end RRNs of the current row
 			uint64_t start_RRN_temp = start_RRN;
 			start_RRN = end_RRN + 1;
 			end_RRN = 2 * (end_RRN - start_RRN_temp) + current_RRN + 1;
@@ -103,51 +94,41 @@ bool hash_tree::check_hash_tree(const std::string & root_hash, const uint64_t & 
 				early_termination = false;
 			}
 		}
-
 		uint64_t first_child_RRN = 2 * (current_RRN - start_RRN) + end_RRN + 1;
-
-		//stopping case, last file hash checked
 		if(first_child_RRN + 1 > hash_count){
+			//last hash checked, stop
 			return false;
 		}
 
 		//read child nodes
-		hash_fstream.seekg(first_child_RRN * sha::HASH_LENGTH);
+		hash_fstream.seekg(first_child_RRN * sha::HASH_LENGTH, std::ios::beg);
 		hash_fstream.read(left_child, sha::HASH_LENGTH);
-
 		if(hash_fstream.eof()){
 			//incomplete/missing child 1
 			bad_hash.first = first_child_RRN;
 			bad_hash.second = first_child_RRN + 1;
 			return true;
 		}
-
 		hash_fstream.read(right_child, sha::HASH_LENGTH);
-
 		if(hash_fstream.eof()){
 			//incomplete/missing child
 			bad_hash.first = first_child_RRN + 1;
 			bad_hash.second = first_child_RRN + 2;
 			return true;
 		}
-
 		if(!check_hash(hash, left_child, right_child)){
 			//bad child hash
 			bad_hash.first = first_child_RRN;
 			bad_hash.second = first_child_RRN + 1;
 			return true;
 		}
-
 		++current_RRN;
 	}
 }
 
 bool hash_tree::create_hash_tree(std::string file_name, std::string & root_hash)
 {
-	//holds one file block
-	char chunk[global::P_BLOCK_SIZE - 1];
-
-	//null hash for comparison
+	char block_buff[global::P_BLOCK_SIZE - 1];
 	char empty[sha::HASH_LENGTH];
 	memset(empty, '\0', sha::HASH_LENGTH);
 
@@ -160,17 +141,17 @@ bool hash_tree::create_hash_tree(std::string file_name, std::string & root_hash)
 		if(stop_thread){
 			return false;
 		}
-		fin.read(chunk, global::P_BLOCK_SIZE - 1);
+		fin.read(block_buff, global::P_BLOCK_SIZE - 1);
 		SHA.init();
-		SHA.load(chunk, fin.gcount());
+		SHA.load(block_buff, fin.gcount());
 		SHA.end();
 		scratch.write(SHA.raw_hash(), sha::HASH_LENGTH);
 		++blocks_read;
 	}while(fin.good());
 
 	if(fin.bad() || !fin.eof()){
-		logger::debug(LOGGER_P1,"error reading newly created hash tree file");
-		assert(false);
+		logger::debug(LOGGER_P1,"error reading file");
+		exit(1);
 	}
 
 	//base case, the file size is less than one block
@@ -186,14 +167,6 @@ bool hash_tree::create_hash_tree(std::string file_name, std::string & root_hash)
 		return true;
 	}
 
-	/*
-	When the deepest recursion depth hit by create_hash_tree_recurse a file for
-	the hash tree will be created. When create_hash_tree_recurse is recursing
-	back up this will stop every recursive call from trying to create a new hash
-	tree file.
-	*/
-	create_hash_tree_recurse_found = false;
-
 	//start recursive tree generating function
 	create_hash_tree_recurse(scratch, 0, scratch.tellp(), root_hash);
 	scratch.close();
@@ -207,10 +180,7 @@ bool hash_tree::create_hash_tree(std::string file_name, std::string & root_hash)
 
 void hash_tree::create_hash_tree_recurse(std::fstream & scratch, std::streampos row_start, std::streampos row_end, std::string & root_hash)
 {
-	//holds one hash
-	char chunk[sha::HASH_LENGTH];
-
-	//null hash for comparison
+	char hash_buff[sha::HASH_LENGTH];
 	char empty[sha::HASH_LENGTH];
 	memset(empty, '\0', sha::HASH_LENGTH);
 
@@ -232,39 +202,31 @@ void hash_tree::create_hash_tree_recurse(std::fstream & scratch, std::streampos 
 	scratch_write = row_end;
 
 	//loop through all hashes in the lower row and create the next highest row
-	scratch.seekg(scratch_read);
+	scratch.seekg(scratch_read, std::ios::beg);
 	while(scratch_read != row_end){
 		if(stop_thread){
 			return;
 		}
 
 		//each new upper hash requires two lower hashes
-		//read hash 1
-		scratch.seekg(scratch_read);
-		scratch.read(chunk, sha::HASH_LENGTH);
+		scratch.seekg(scratch_read, std::ios::beg);
+		scratch.read(hash_buff, sha::HASH_LENGTH);
 		scratch_read = scratch.tellg();
 		SHA.init();
-		SHA.load(chunk, scratch.gcount());
-
-		//read hash 2
-		scratch.read(chunk, sha::HASH_LENGTH);
+		SHA.load(hash_buff, scratch.gcount());
+		scratch.read(hash_buff, sha::HASH_LENGTH);
 		scratch_read = scratch.tellg();
-		SHA.load(chunk, scratch.gcount());
-
+		SHA.load(hash_buff, scratch.gcount());
 		SHA.end();
 
 		//write resulting hash
-		scratch.seekp(scratch_write);
+		scratch.seekp(scratch_write, std::ios::beg);
 		scratch.write(SHA.raw_hash(), sha::HASH_LENGTH);
 		scratch_write = scratch.tellp();
 	}
 
 	//recurse
 	create_hash_tree_recurse(scratch, row_end, scratch_write, root_hash);
-
-	if(create_hash_tree_recurse_found){
-		return;
-	}
 
 	/*
 	Writing of the result hash tree file is depth first, the root node will be
@@ -277,7 +239,6 @@ void hash_tree::create_hash_tree_recurse(std::fstream & scratch, std::streampos 
 		//do nothing if hash tree file already created
 		std::fstream fin((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::in);
 		if(fin.is_open()){
-			create_hash_tree_recurse_found = true;
 			return;
 		}
 
@@ -292,8 +253,8 @@ void hash_tree::create_hash_tree_recurse(std::fstream & scratch, std::streampos 
 	//write hashes that were passed to this function
 	scratch.seekg(row_start);
 	while(scratch.tellg() != row_end){
-		scratch.read(chunk, sha::HASH_LENGTH);
-		fout.write(chunk, sha::HASH_LENGTH);
+		scratch.read(hash_buff, sha::HASH_LENGTH);
+		fout.write(hash_buff, sha::HASH_LENGTH);
 	}
 	fout.close();
 }

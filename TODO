@@ -1,5 +1,8 @@
 TODO
 
+-Duplicate downloads getting added to download table. Use DB_Download.is_downloading
+in download_factory.
+
 -Look at super mario 2 hash. For some reason hash block 16 is getting
 re_requested.
 

@@ -81,7 +81,11 @@ void server_index::index_share_recurse(std::string directory_name)
 							generate_hash(file_path);                   //regenerate hash for file
 						}
 						fin.close();
-
+/*
+std::fstream blarg("share/test", std::ios::out | std::ios::app);
+blarg.put('x');
+blarg.close();
+*/
 						/*
 						Regenerate the hash if the file has changed size. The most
 						common cause of this is that the file was hashed while it was

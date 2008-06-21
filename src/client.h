@@ -81,7 +81,7 @@ public:
 
 private:
 	volatile bool stop_threads; //if true this will trigger thread termination
-	volatile int threads;       //how many threads are currently running (currently one possible)
+	volatile int threads;       //how many threads are currently running (currently just one in main_thread())
 
 	//holds connections which need to be made
 	boost::mutex CQ_mutex;
@@ -91,7 +91,11 @@ private:
 	boost::mutex CCA_mutex;
 	std::list<download_conn *> Connection_Current_Attempt;
 
-	//socket number mapped to client_buffer
+	/*
+	Socket number mapped to client_buffer.
+
+	This should only be accessed by the thread active in main_thread().
+	*/
 	std::map<int, client_buffer *> Client_Buffer;
 
 	//networking related

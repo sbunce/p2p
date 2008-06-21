@@ -6,6 +6,7 @@
 
 //std
 #include <algorithm>
+#include <iostream>
 #include <string>
 
 class sha

@@ -93,15 +93,12 @@ private:
 	//stores the root node of the latest root hash used with check_hash_tree
 	std::string check_tree_latest;
 
-	//stops create_hash_tree_recurse from writing if existing hash tree found
-	bool create_hash_tree_recurse_found;
-
 	/*
 	check_hash               - returns true if the hash of the child hashes match the parent hash
 	create_hash_tree_recurse - called by create_hash_tree to recursively create hash tree rows past the first
 	locate_start             - returns the RRN of the start of the file hashes
 	*/
-	inline bool check_hash(char parent[], char left_child[], char right_child[]);
+	bool check_hash(char * parent, char * left_child, char * right_child);
 	void create_hash_tree_recurse(std::fstream & scratch, std::streampos row_start, std::streampos row_end, std::string & root_hash);
 	uint64_t locate_start(const std::string & root_hex_hash);
 

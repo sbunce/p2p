@@ -32,10 +32,13 @@ download_hash_tree::download_hash_tree(
 
 	std::pair<uint64_t, uint64_t> bad_hash;
 	if(Hash_Tree.check_hash_tree(root_hash, hash_tree_count, bad_hash)){
+std::cout << "RETURNED BAD HASH: " << bad_hash.first << "\n";
 		//determine what hash_block the missing/bad hash falls within
 		uint64_t start_hash_block = bad_hash.first / (global::P_BLOCK_SIZE - 1);
 		Request_Gen.init(start_hash_block, hash_block_count - 1, global::RE_REQUEST_TIMEOUT);
 	}else{
+
+std::cout << "GOOD\n";
 		//complete hash tree
 		download_complete = true;
 	}
@@ -63,6 +66,10 @@ unsigned int download_hash_tree::percent_complete()
 
 bool download_hash_tree::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected)
 {
+	if(download_complete){
+		return false;
+	}
+
 	download_hash_tree_conn * conn = (download_hash_tree_conn *)Connection[socket];
 
 	if(!conn->slot_ID_requested){
@@ -104,34 +111,38 @@ bool download_hash_tree::request(const int & socket, std::string & request, std:
 	if(Request_Gen.complete()){
 		//all blocks requested, check tree
 		std::pair<uint64_t, uint64_t> bad_hash;
+std::cout << "htc: " << hash_tree_count << "\n";
 		if(Hash_Tree.check_hash_tree(root_hash, hash_tree_count, bad_hash)){
+
+std::cout << "bh: " << bad_hash.first << "\n";
+
 			//figure out what block this is from and re-request
-			Request_Gen.force_re_request(bad_hash.first / hashes_per_block);
+//			Request_Gen.force_re_request(bad_hash.first / hashes_per_block);
 		}else{
 			//complete hash tree
 			close_slots = true;
 		}
 	}
 
-	if(!Request_Gen.request(conn->latest_request)){
+	if(Request_Gen.request(conn->latest_request)){
 		//no request to be made at the moment
+		request += global::P_SEND_BLOCK;
+		request += conn->slot_ID;
+		request += Convert_uint64.encode(conn->latest_request.back());
+		int size;
+		if(hash_tree_count - (conn->latest_request.back() * hashes_per_block) < hashes_per_block){
+			//request will not yield full P_BLOCK
+			size = (hash_tree_count - (conn->latest_request.back() * hashes_per_block)) * sha::HASH_LENGTH + 1;
+		}else{
+			size = global::P_BLOCK_SIZE;
+		}
+
+		expected.push_back(std::make_pair(global::P_BLOCK, size));
+		expected.push_back(std::make_pair(global::P_ERROR, 1));
+		return true;
+	}else{
 		return false;
 	}
-
-	request += global::P_SEND_BLOCK;
-	request += conn->slot_ID;
-	request += Convert_uint64.encode(conn->latest_request.back());
-	int size;
-	if(hash_tree_count - (conn->latest_request.back() * hashes_per_block) < hashes_per_block){
-		//request will not yield full P_BLOCK
-		size = (hash_tree_count - (conn->latest_request.back() * hashes_per_block)) * sha::HASH_LENGTH + 1;
-	}else{
-		size = global::P_BLOCK_SIZE;
-	}
-
-	expected.push_back(std::make_pair(global::P_BLOCK, size));
-	expected.push_back(std::make_pair(global::P_ERROR, 1));
-	return true;
 }
 
 void download_hash_tree::response(const int & socket, std::string block)
@@ -155,7 +166,11 @@ void download_hash_tree::response(const int & socket, std::string block)
 
 void download_hash_tree::stop()
 {
-	close_slots = true;
+	if(Connection.size() == 0){
+		download_complete = true;
+	}else{
+		close_slots = true;
+	}
 }
 
 const uint64_t download_hash_tree::size()

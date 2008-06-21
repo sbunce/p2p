@@ -47,11 +47,15 @@ void client::check_timeouts()
 
 void client::current_downloads(std::vector<download_info> & info)
 {
+//DEBUG, not thread safe, current_downloads acquiers a lock but main_thread() doesn't.
 	client_buffer::current_downloads(info);
 }
 
+//add this function to client_buffer perhaps
 bool client::DC_add_existing(download_conn * DC)
 {
+//DEBUG, not thread safe, main_thread() accesses while this does
+
 	std::map<int, client_buffer *>::iterator iter_cur, iter_end;
 	iter_cur = Client_Buffer.begin();
 	iter_end = Client_Buffer.end();
@@ -287,6 +291,9 @@ bool client::known_unresponsive(const std::string & IP)
 
 void client::new_conn(download_conn * DC)
 {
+std::cout << "DC: " << DC << "\n";
+std::cout << "DC->IP: " << DC->IP << "\n";
+
 	/*
 	If this DC is for a server that is known to have rejected a previous
 	connection attempt to it within the last minute then don't attempt another
@@ -309,10 +316,8 @@ void client::new_conn(download_conn * DC)
 	}
 
 	if(he == NULL || strncmp(inet_ntoa(*(struct in_addr*)he->h_addr), "127", 3) == 0){
-		{//begin lock scope
 		boost::mutex::scoped_lock lock(KU_mutex);
 		Known_Unresponsive.insert(std::make_pair(time(0), DC->IP));
-		}//end lock scope
 		free(tmp_host_buf);
 		return;
 	}
@@ -324,10 +329,8 @@ void client::new_conn(download_conn * DC)
 	memset(&(dest_addr.sin_zero),'\0',8);
 	if(connect(DC->socket, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0){
 		logger::debug(LOGGER_P1,"connection to ",DC->IP," failed");
-		{//begin lock scope
 		boost::mutex::scoped_lock lock(KU_mutex);
 		Known_Unresponsive.insert(std::make_pair(time(0), DC->IP));
-		}//end lock scope
 	}else{
 		logger::debug(LOGGER_P1,"created socket ",DC->socket," for ",DC->IP);
 		if(DC->socket > FD_max){
@@ -338,6 +341,8 @@ void client::new_conn(download_conn * DC)
 			//connetion cancelled during connection, clean up and exit
 			disconnect(DC->socket);
 		}else{
+
+//DEBUG, not thread safe, accesses Client_Buffer at same time main_thread() does
 			Client_Buffer.insert(std::make_pair(DC->socket, new client_buffer(DC->socket, DC->IP, send_pending)));
 			DC->Download->reg_conn(DC->socket, DC);
 			Client_Buffer[DC->socket]->add_download(DC->Download);

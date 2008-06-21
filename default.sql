@@ -8,7 +8,7 @@ VALUES ('56F99BBDBFFB68C0FD63F665759F96B0BED2EE0E', 'Double Dragon 2.avi', '2057
 INSERT INTO search (hash, name, size, server)
 VALUES ('2DC4BEC5BC8A572C9CD315FDC66C4C34C68F7F3E', 'Excitebike.avi', '21953008', 'topaz,emerald,ruby');
 INSERT INTO search (hash, name, size, server)
-VALUES ('93ECA8B19E4EBF54C0E9C712B2F0E5742B3EBC0C', 'Super Mario 2 (Jap).avi', '21208890', 'topaz,emerald,ruby');
+VALUES ('A572A554B101636A3A6308CCF7D3AD88D84E2247', 'Super Mario 2 (Jap).avi', '21208890', 'topaz,emerald,ruby');
 INSERT INTO search (hash, name, size, server)
 VALUES ('E2F311E54882A423466B9C6F9F1F66C84B4B707A', 'Kings of Power 4 Billion %.avi', '337080320', 'topaz,emerald,ruby');
 INSERT INTO search (hash, name, size, server)

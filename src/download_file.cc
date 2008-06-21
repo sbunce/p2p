@@ -44,6 +44,10 @@ unsigned int download_file::percent_complete()
 
 bool download_file::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected)
 {
+	if(download_complete){
+		return false;
+	}
+
 	download_file_conn * conn = (download_file_conn *)Connection[socket];
 
 	if(!conn->slot_ID_requested){
@@ -130,9 +134,14 @@ void download_file::response(const int & socket, std::string block)
 void download_file::stop()
 {
 	namespace fs = boost::filesystem;
-	close_slots = true;
 	fs::path path = fs::system_complete(fs::path(file_path, fs::native));
 	fs::remove(path);
+
+	if(Connection.size() == 0){
+		download_complete = true;
+	}else{
+		close_slots = true;
+	}
 }
 
 void download_file::write_block(uint64_t block_number, std::string & block)

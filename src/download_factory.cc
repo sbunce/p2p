@@ -7,12 +7,15 @@ download_factory::download_factory()
 
 bool download_factory::start_hash(download_info & info, download *& Download, std::list<download_conn *> & servers)
 {
-	//make sure download isn't already running
 	if(!DB_Download.start_download(info)){
 		return false;
 	}
 
-	//create an empty file for this download, if a file doesn't already exist
+	/*
+	Make sure there is an empty file for the download. This makes it so the download
+	is not automatically stopped if the program is started and no blocks have been
+	downloaded.
+	*/
 	std::fstream fin((global::HASH_DIRECTORY+info.hash).c_str(), std::ios::in);
 	if(fin.is_open()){
 		fin.close();
@@ -21,16 +24,11 @@ bool download_factory::start_hash(download_info & info, download *& Download, st
 		fout.close();
 	}
 
-	Download = new download_hash_tree(
-		info.hash,
-		info.size,
-		info.name
-	);
+	Download = new download_hash_tree(info.hash, info.size, info.name);
 
 	for(int x = 0; x < info.IP.size(); ++x){
 		servers.push_back(new download_hash_tree_conn(Download, info.IP[x]));
 	}
-
 	return true;
 }
 
@@ -39,14 +37,12 @@ download_file * download_factory::start_file(download_hash_tree * DHT, std::list
 	//get file path, stop if file not found
 	std::string file_path;
 	if(!DB_Download.get_file_path(DHT->hash(), file_path)){
-		return false;
+		std::cout << "fatal error starting download_file\n";
 	}
 
 	//create an empty file for this download, if a file doesn't already exist
 	std::fstream fin(file_path.c_str(), std::ios::in);
-	if(fin.is_open()){
-//need to do hash check here to determine highest valid block
-	}else{
+	if(!fin.is_open()){
 		std::fstream fout(file_path.c_str(), std::ios::out);
 		fout.close();
 	}

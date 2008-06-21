@@ -96,7 +96,6 @@ void DB_download::initial_fill_buff_call_back(int & columns_retrieved, char ** q
 
 bool DB_download::is_downloading(const std::string & hash)
 {
-	boost::mutex::scoped_lock lock(Mutex);
 	bool downloading = false;
 	std::ostringstream query;
 	query << "SELECT 1 FROM download WHERE hash = '" << hash << "' LIMIT 1";
@@ -109,21 +108,23 @@ bool DB_download::is_downloading(const std::string & hash)
 bool DB_download::start_download(download_info & info)
 {
 	boost::mutex::scoped_lock lock(Mutex);
-	std::ostringstream query;
-	query << "INSERT INTO download (hash, name, size, server) VALUES ('" << info.hash << "', '" << info.name << "', " << info.size << ", '";
-	for(std::vector<std::string>::iterator iter0 = info.IP.begin(); iter0 != info.IP.end(); ++iter0){
-		if(iter0 + 1 != info.IP.end()){
-			query << *iter0 << ",";
-		}else{
-			query << *iter0;
-		}
-	}
-	query << "');";
-	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) == 0){
-		return true;
-	}else{
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
+	if(is_downloading(info.hash)){
 		return false;
+	}else{
+		std::ostringstream query;
+		query << "INSERT INTO download (hash, name, size, server) VALUES ('" << info.hash << "', '" << info.name << "', " << info.size << ", '";
+		for(std::vector<std::string>::iterator iter0 = info.IP.begin(); iter0 != info.IP.end(); ++iter0){
+			if(iter0 + 1 != info.IP.end()){
+				query << *iter0 << ",";
+			}else{
+				query << *iter0;
+			}
+		}
+		query << "');";
+		if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
+			logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
+		}
+		return true;
 	}
 }
 

@@ -3,6 +3,7 @@
 
 //std
 #include <deque>
+#include <set>
 #include <string>
 
 //custom
@@ -27,6 +28,19 @@ public:
 
 	//the latest file block requested from this server
 	std::deque<uint64_t> latest_request;
+
+	/*
+	This stores all the blocks that have been requested from the server. When the
+	every block is downloaded there will be a hash check. If any block from this
+	server fails a hash check all blocks later than the bad block requested from
+	this server will be re_requested.
+
+	The purpose of re_requesting before checking is to maximize the speed of the
+	download. In order to re_request sequentially the block would have be be
+	re_requested from one server and all others would have to wait until it was
+	known that the replacement block was good.
+	*/
+	std::set<uint64_t> received_blocks;
 
 	speed_calculator Speed_Calculator;
 };

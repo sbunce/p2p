@@ -24,6 +24,7 @@ void sha::init()
 	h[4].num = 0xC3D2E1F0;
 
 	loaded_bytes = 0;
+	load_buffer.clear();
 }
 
 void sha::load(const char * data, int len)
