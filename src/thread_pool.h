@@ -65,10 +65,8 @@ template<class T> thread_pool<T>::thread_pool(
 
 template<class T> void thread_pool<T>::queue_job(T * Obj, void (T::*memfun_ptr)())
 {
-	{//begin lock scope
 	boost::mutex::scoped_lock lock(Mutex);
 	work_queue.push(std::make_pair(Obj, memfun_ptr));
-	}//end lock scope
 }
 
 template<class T> void thread_pool<T>::pool()
@@ -84,12 +82,12 @@ template<class T> void thread_pool<T>::pool()
 		}
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(Mutex);
-		if(!work_queue.empty()){
+		if(work_queue.empty()){
+			continue;
+		}else{
 			Obj = work_queue.front().first;
 			memfun_ptr = work_queue.front().second;
 			work_queue.pop();
-		}else{
-			continue;
 		}
 		}//end lock scope
 

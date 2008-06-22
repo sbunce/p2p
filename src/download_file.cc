@@ -48,7 +48,9 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 		return false;
 	}
 
-	download_file_conn * conn = (download_file_conn *)Connection[socket];
+	std::map<int, download_conn *>::iterator iter = Connection.find(socket);
+	assert(iter != Connection.end());
+	download_file_conn * conn = (download_file_conn *)iter->second;
 
 	if(!conn->slot_ID_requested){
 		//slot_ID not yet obtained from server

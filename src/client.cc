@@ -3,7 +3,6 @@
 client::client()
 :
 	FD_max(0),
-	send_pending(new volatile int(0)),
 	Download_Factory(),
 	stop_threads(false),
 	threads(0),
@@ -23,56 +22,27 @@ client::~client()
 	for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 		if(FD_ISSET(socket_FD, &master_FDS)){
 			disconnect(socket_FD);
-			Client_Buffer.erase(socket_FD);
 		}
 	}
-
-	client_buffer::delete_downloads();
-	delete send_pending;
+	client_buffer::destroy();
 }
 
 void client::check_timeouts()
 {
-	for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
-		if(FD_ISSET(socket_FD, &master_FDS)){
-			if(time(0) - Client_Buffer[socket_FD]->get_last_seen() >= global::TIMEOUT){
-				logger::debug(LOGGER_P1,"triggering timeout of socket ",socket_FD);
-				disconnect(socket_FD);
-				delete Client_Buffer[socket_FD];
-				Client_Buffer.erase(socket_FD);
-			}
-		}
+	std::vector<int> timed_out;
+	client_buffer::check_timeouts(timed_out);
+	std::vector<int>::iterator iter_cur, iter_end;
+	iter_cur = timed_out.begin();
+	iter_end = timed_out.end();
+	while(iter_cur != iter_end){
+		disconnect(*iter_cur);
+		++iter_cur;
 	}
 }
 
 void client::current_downloads(std::vector<download_info> & info)
 {
-//DEBUG, not thread safe, current_downloads acquiers a lock but main_thread() doesn't.
 	client_buffer::current_downloads(info);
-}
-
-//add this function to client_buffer perhaps
-bool client::DC_add_existing(download_conn * DC)
-{
-//DEBUG, not thread safe, main_thread() accesses while this does
-
-	std::map<int, client_buffer *>::iterator iter_cur, iter_end;
-	iter_cur = Client_Buffer.begin();
-	iter_end = Client_Buffer.end();
-	while(iter_cur != iter_end){
-		if(DC->IP == iter_cur->second->get_IP()){
-			//if download cancelled don't add it
-			if(DC->Download == NULL){
-				return true;
-			}
-			//client_buffer for the server found
-			DC->Download->reg_conn(iter_cur->first, DC);  //register connection with download
-			iter_cur->second->add_download(DC->Download); //register connection
-			return true;
-		}
-		++iter_cur;
-	}
-	return false;
 }
 
 void client::DC_block_concurrent(download_conn * DC)
@@ -193,7 +163,7 @@ void client::main_thread()
 
 		check_timeouts();
 		remove_complete();
-		prepare_requests();
+		client_buffer::generate_requests();
 
 		/*
 		These must be initialized every iteration on linux(and possibly other OS's)
@@ -204,11 +174,7 @@ void client::main_thread()
 		tv.tv_sec = 1;
 		tv.tv_usec = 0;
 
-		/*
-		This if(send_pending) exists to saves CPU time by not checking if sockets
-		are ready to write when we don't need to write anything.
-		*/
-		if(*send_pending != 0){
+		if(client_buffer::get_send_pending() != 0){
 			read_FDS = master_FDS;
 			write_FDS = master_FDS;
 			if((select(FD_max+1, &read_FDS, &write_FDS, NULL, &tv)) == -1){
@@ -240,23 +206,24 @@ void client::main_thread()
 							perror("client recv");
 						}
 						disconnect(socket_FD);
-						Client_Buffer.erase(socket_FD);
+						client_buffer::erase(socket_FD);
 					}else{
 						Speed_Calculator.update(n_bytes);
-						Client_Buffer[socket_FD]->recv_buff.append(recv_buff, n_bytes);
-						Client_Buffer[socket_FD]->post_recv();
+						client_buffer::get_recv_buff(socket_FD).append(recv_buff, n_bytes);
+						client_buffer::post_recv(socket_FD);
 					}
 				}
 			}
 			if(FD_ISSET(socket_FD, &write_FDS)){
-				if(!Client_Buffer[socket_FD]->send_buff.empty()){
-					if((n_bytes = send(socket_FD, Client_Buffer[socket_FD]->send_buff.c_str(), Client_Buffer[socket_FD]->send_buff.size(), MSG_NOSIGNAL)) < 0){
+				if(!client_buffer::get_send_buff(socket_FD).empty()){
+					if((n_bytes = send(socket_FD, client_buffer::get_send_buff(socket_FD).c_str(), client_buffer::get_send_buff(socket_FD).size(), MSG_NOSIGNAL)) < 0){
 						if(n_bytes == -1){
 							perror("client send");
 						}
-					}else{ //remove bytes sent from buffer
-						Client_Buffer[socket_FD]->send_buff.erase(0, n_bytes);
-						Client_Buffer[socket_FD]->post_send();
+					}else{
+						//remove bytes sent from buffer
+						client_buffer::get_send_buff(socket_FD).erase(0, n_bytes);
+						client_buffer::post_send(socket_FD);
 					}
 				}
 			}
@@ -291,9 +258,6 @@ bool client::known_unresponsive(const std::string & IP)
 
 void client::new_conn(download_conn * DC)
 {
-std::cout << "DC: " << DC << "\n";
-std::cout << "DC->IP: " << DC->IP << "\n";
-
 	/*
 	If this DC is for a server that is known to have rejected a previous
 	connection attempt to it within the last minute then don't attempt another
@@ -317,10 +281,12 @@ std::cout << "DC->IP: " << DC->IP << "\n";
 
 	if(he == NULL || strncmp(inet_ntoa(*(struct in_addr*)he->h_addr), "127", 3) == 0){
 		boost::mutex::scoped_lock lock(KU_mutex);
+		logger::debug(LOGGER_P1,"stopping connection to localhost");
 		Known_Unresponsive.insert(std::make_pair(time(0), DC->IP));
 		free(tmp_host_buf);
 		return;
 	}
+
 	sockaddr_in dest_addr;
 	DC->socket = socket(PF_INET, SOCK_STREAM, 0);
 	dest_addr.sin_family = AF_INET;
@@ -332,6 +298,7 @@ std::cout << "DC->IP: " << DC->IP << "\n";
 		boost::mutex::scoped_lock lock(KU_mutex);
 		Known_Unresponsive.insert(std::make_pair(time(0), DC->IP));
 	}else{
+		boost::mutex::scoped_lock lock(CCA_mutex);
 		logger::debug(LOGGER_P1,"created socket ",DC->socket," for ",DC->IP);
 		if(DC->socket > FD_max){
 			FD_max = DC->socket;
@@ -341,26 +308,12 @@ std::cout << "DC->IP: " << DC->IP << "\n";
 			//connetion cancelled during connection, clean up and exit
 			disconnect(DC->socket);
 		}else{
-
-//DEBUG, not thread safe, accesses Client_Buffer at same time main_thread() does
-			Client_Buffer.insert(std::make_pair(DC->socket, new client_buffer(DC->socket, DC->IP, send_pending)));
-			DC->Download->reg_conn(DC->socket, DC);
-			Client_Buffer[DC->socket]->add_download(DC->Download);
+			client_buffer::add_download(DC->Download);
+			client_buffer::new_connection(DC);
 			FD_SET(DC->socket, &master_FDS);
 		}
 	}
 	free(tmp_host_buf);
-}
-
-void client::prepare_requests()
-{
-	std::map<int, client_buffer *>::iterator iter_cur, iter_end;
-	iter_cur = Client_Buffer.begin();
-	iter_end = Client_Buffer.end();
-	while(iter_cur != iter_end){
-		iter_cur->second->prepare_request();
-		++iter_cur;
-	}
 }
 
 void client::process_CQ()
@@ -369,7 +322,8 @@ void client::process_CQ()
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(CQ_mutex);
 	if(Connection_Queue.empty()){
-		return;
+std::cout << "CQ empty\n";
+		exit(1);
 	}
 	DC = Connection_Queue.front();
 	Connection_Queue.pop_front();
@@ -383,7 +337,8 @@ void client::process_CQ()
 	possibility of a download getting cancelled mid connection. If the download
 	pointer in DC->Download is set to NULL it indicates a cancelled connection.
 	*/
-	if(!DC_add_existing(DC)){
+	if(!client_buffer::DC_add_existing(DC)){
+std::cout << DC->Download->name() << " " <<  DC->IP << " making new conn\n";
 		new_conn(DC);
 	}
 
@@ -399,16 +354,30 @@ void client::remove_complete()
 		return;
 	}
 
-	remove_complete_0(complete);
-	remove_complete_1(complete);
-	remove_complete_2(complete);
-	remove_complete_3(complete);
+	remove_pending_DC(complete);
+
+	std::list<download *>::iterator C_iter_cur, C_iter_end;
+	C_iter_cur = complete.begin();
+	C_iter_end = complete.end();
+	while(C_iter_cur != C_iter_end){
+		transition_download(*C_iter_cur);
+		++C_iter_cur;
+	}
+
+	//disconnect any empty client_buffers
+	std::vector<int> disconnect_sockets;
+	client_buffer::remove_empty(disconnect_sockets);
+	std::vector<int>::iterator iter_cur, iter_end;
+	iter_cur = disconnect_sockets.begin();
+	iter_end = disconnect_sockets.end();
+	while(iter_cur != iter_end){
+		disconnect(*iter_cur);
+		++iter_cur;
+	}
 }
 
-void client::remove_complete_0(std::list<download *> & complete)
+void client::remove_pending_DC(std::list<download *> & complete)
 {
-	boost::mutex::scoped_lock lock_1(CQ_mutex);
-	boost::mutex::scoped_lock lock_2(CCA_mutex);
 	/*
 	Remove any pending_connections for download. In progress connections will be
 	cancelled by setting their download pointer to NULL. The new_conn function
@@ -419,117 +388,30 @@ void client::remove_complete_0(std::list<download *> & complete)
 	C_iter_end = complete.end();
 	while(C_iter_cur != C_iter_end){
 		//pending connections
+		boost::mutex::scoped_lock lock_1(CQ_mutex);
 		std::list<download_conn *>::iterator CQ_iter_cur, CQ_iter_end;
 		CQ_iter_cur = Connection_Queue.begin();
 		CQ_iter_end = Connection_Queue.end();
 		while(CQ_iter_cur != CQ_iter_end){
 			if((*CQ_iter_cur)->Download == *C_iter_cur){
-				CQ_iter_cur = Connection_Queue.erase(CQ_iter_cur);
-			}else{
-				++CQ_iter_cur;
+std::cout << "set DC->Download to NULL\n";
+				(*CQ_iter_cur)->Download = NULL;
 			}
+			++CQ_iter_cur;
 		}
 		//in progress connections
-		std::list<download_conn *>::iterator CQA_iter_cur, CQA_iter_end;
-		CQA_iter_cur = Connection_Current_Attempt.begin();
-		CQA_iter_end = Connection_Current_Attempt.end();
-		while(CQA_iter_cur != CQA_iter_end){
-			if((*CQA_iter_cur)->Download == *C_iter_cur){
-				(*CQA_iter_cur)->Download = NULL;
+		boost::mutex::scoped_lock lock_2(CCA_mutex);
+		std::list<download_conn *>::iterator CCA_iter_cur, CCA_iter_end;
+		CCA_iter_cur = Connection_Current_Attempt.begin();
+		CCA_iter_end = Connection_Current_Attempt.end();
+		while(CCA_iter_cur != CCA_iter_end){
+			if((*CCA_iter_cur)->Download == *C_iter_cur){
+std::cout << "set DC->Download to NULL\n";
+				(*CCA_iter_cur)->Download = NULL;
 			}
-			++CQA_iter_cur;
+			++CCA_iter_cur;
 		}
 		++C_iter_cur;
-	}
-}
-
-void client::remove_complete_1(std::list<download *> & complete)
-{
-	/*
-	Terminate the completed downloads with all client_buffers.
-	*/
-	std::map<int, client_buffer *>::iterator CB_iter_cur, CB_iter_end;
-	CB_iter_cur = Client_Buffer.begin();
-	CB_iter_end = Client_Buffer.end();
-	while(CB_iter_cur != CB_iter_end){
-		std::list<download *>::iterator C_iter_cur, C_iter_end;
-		C_iter_cur = complete.begin();
-		C_iter_end = complete.end();
-		while(C_iter_cur != C_iter_end){
-			CB_iter_cur->second->terminate_download(*C_iter_cur);
-			++C_iter_cur;
-		}
-		++CB_iter_cur;
-	}
-}
-
-void client::remove_complete_2(std::list<download *> & complete)
-{
-	/*
-	Remove the download from the client_buffer unique download set and possibly
-	start another download if one is triggered.
-	*/
-	std::list<download *>::iterator C_iter_cur, C_iter_end;
-	C_iter_cur = complete.begin();
-	C_iter_end = complete.end();
-	while(C_iter_cur != C_iter_end){
-		//remove download from the unique download set
-		client_buffer::remove_download_unique(*C_iter_cur);
-		/*
-		It is possible that terminating a download can trigger starting of
-		another download. If this happens the stop function will return that
-		download and the servers associated with that download. If the new
-		download triggered has any of the same servers associated with it
-		the DC's for that server will be added to client_buffers so that no
-		reconnecting has to be done.
-		*/
-		std::list<download_conn *> servers;
-		download * Download_Start;
-		if(Download_Factory.stop(*C_iter_cur, Download_Start, servers)){
-			client_buffer::add_download_unique(Download_Start);
-
-			//attempt to place all servers in a exiting client_buffer
-			std::list<download_conn *>::iterator iter_cur, iter_end;
-			iter_cur = servers.begin();
-			iter_end = servers.end();
-			while(iter_cur != iter_end){
-				if(DC_add_existing(*iter_cur)){
-					iter_cur = servers.erase(iter_cur);
-				}else{
-					++iter_cur;
-				}
-			}
-
-			//queue servers that don't have an existing client_buffer
-			iter_cur = servers.begin();
-			iter_end = servers.end();
-			while(iter_cur != iter_end){
-				boost::mutex::scoped_lock lock_1(CQ_mutex);
-				Connection_Queue.push_back(*iter_cur);
-				Thread_Pool.queue_job(this, &client::process_CQ);
-				++iter_cur;
-			}
-		}
-		++C_iter_cur;
-	}
-}
-
-void client::remove_complete_3(std::list<download *> & complete)
-{
-	/*
-	Disconnect empty client_buffer's.
-	*/
-	std::map<int, client_buffer *>::iterator CB_iter_cur, CB_iter_end;
-	CB_iter_cur = Client_Buffer.begin();
-	CB_iter_end = Client_Buffer.end();
-	while(CB_iter_cur != CB_iter_end){
-		if(CB_iter_cur->second->empty()){
-			disconnect(CB_iter_cur->first);
-			Client_Buffer.erase(CB_iter_cur);
-			CB_iter_cur = Client_Buffer.begin();
-		}else{
-			++CB_iter_cur;
-		}
 	}
 }
 
@@ -561,7 +443,14 @@ bool client::start_download(download_info & info)
 		return false;
 	}
 
-	client_buffer::add_download_unique(Download);
+	if(Download->complete()){
+std::cout << "Download complete upon start\n";
+		//file hash complete start download_file
+		transition_download(Download);
+		return true;
+	}
+
+	client_buffer::add_download(Download);
 
 	//queue jobs to connect to servers
 	std::list<download_conn *>::iterator iter_cur, iter_end;
@@ -570,8 +459,11 @@ bool client::start_download(download_info & info)
 	while(iter_cur != iter_end){
 		boost::mutex::scoped_lock lock(CQ_mutex);
 		Connection_Queue.push_back(*iter_cur);
-		Thread_Pool.queue_job(this, &client::process_CQ);
 		++iter_cur;
+	}
+
+	for(int x = 0; x<servers.size(); ++x){
+		Thread_Pool.queue_job(this, &client::process_CQ);
 	}
 
 	return true;
@@ -590,4 +482,51 @@ int client::total_speed()
 	*/
 	Speed_Calculator.update(0);
 	return Speed_Calculator.speed();
+}
+
+void client::transition_download(download * Download_Stop)
+{
+	client_buffer::remove_download(Download_Stop);
+	/*
+	It is possible that terminating a download can trigger starting of
+	another download. If this happens the stop function will return that
+	download and the servers associated with that download. If the new
+	download triggered has any of the same servers associated with it
+	the DC's for that server will be added to client_buffers so that no
+	reconnecting has to be done.
+	*/
+	std::list<download_conn *> servers;
+	download * Download_Start;
+	if(Download_Factory.stop(Download_Stop, Download_Start, servers)){
+std::cout << "Download triggered start of another download\n";
+		client_buffer::add_download(Download_Start);
+
+		//attempt to place all servers in a exiting client_buffer
+		std::list<download_conn *>::iterator iter_cur, iter_end;
+		iter_cur = servers.begin();
+		iter_end = servers.end();
+		while(iter_cur != iter_end){
+			if(client_buffer::DC_add_existing(*iter_cur)){
+std::cout << "found existing server\n";
+				iter_cur = servers.erase(iter_cur);
+			}else{
+				++iter_cur;
+			}
+		}
+
+std::cout << "need to connect to " << servers.size() << " servers\n";
+
+		//connect to servers that weren't already connected
+		iter_cur = servers.begin();
+		iter_end = servers.end();
+		while(iter_cur != iter_end){
+			boost::mutex::scoped_lock lock_1(CQ_mutex);
+			Connection_Queue.push_back(*iter_cur);
+			++iter_cur;
+		}
+
+		for(int x = 0; x<servers.size(); ++x){
+			Thread_Pool.queue_job(this, &client::process_CQ);
+		}
+	}
 }

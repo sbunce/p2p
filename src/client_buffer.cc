@@ -1,16 +1,16 @@
 #include "client_buffer.h"
 
+std::map<int, client_buffer *> client_buffer::Client_Buffer;
 std::set<download *> client_buffer::Unique_Download;
-boost::mutex client_buffer::D_mutex;
+boost::mutex client_buffer::Mutex;
+volatile int client_buffer::send_pending(0);
 
 client_buffer::client_buffer(
 	const int & socket_in,
-	const std::string & server_IP_in,
-	volatile int * send_pending_in
+	const std::string & IP_in
 ):
-	server_IP(server_IP_in),
 	socket(socket_in),
-	send_pending(send_pending_in),
+	IP(IP_in),
 	abuse(false),
 	last_seen(time(0))
 {
@@ -20,34 +20,12 @@ client_buffer::client_buffer(
 
 client_buffer::~client_buffer()
 {
-	unreg_all();
-}
-
-void client_buffer::add_download(download * new_download)
-{
-	boost::mutex::scoped_lock lock(D_mutex);
-	if(Download.empty()){
-		Download.push_back(new_download);
-		Download_iter = Download.begin();
-	}else{
-		Download.push_back(new_download);
-	}
+	unregister_all();
 }
 
 bool client_buffer::empty()
 {
-	boost::mutex::scoped_lock lock(D_mutex);
 	return Download.empty();
-}
-
-const std::string & client_buffer::get_IP()
-{
-	return server_IP;
-}
-
-const time_t & client_buffer::get_last_seen()
-{
-	return last_seen;
 }
 
 void client_buffer::post_recv()
@@ -55,14 +33,14 @@ void client_buffer::post_recv()
 	last_seen = time(0);
 	if(Pipeline.empty()){
 		//server responded out of turn
-		logger::debug(LOGGER_P1," abusive server (responded when pipeline empty) ",server_IP);
+		logger::debug(LOGGER_P1," abusive server (responded when pipeline empty) ",IP);
 		abuse = true;
 		return;
 	}
 
-	//if recv_buff larger than largest case the server is doing something naughty
 	if(recv_buff.size() > global::PIPELINE_SIZE * global::C_MAX_SIZE){
-		logger::debug(LOGGER_P1," abusive server (exceeded maximum buffer size) ",server_IP);
+		//server sent more than the maximum possible
+		logger::debug(LOGGER_P1," abusive server (exceeded maximum buffer size) ",IP);
 		abuse = true;
 		return;
 	}
@@ -86,7 +64,7 @@ void client_buffer::post_recv()
 			}
 		}else{
 			//server sent unexpected command
-			logger::debug(LOGGER_P1," abusive server ", server_IP, ", unexpected command ", (int)(unsigned char)recv_buff[0]);
+			logger::debug(LOGGER_P1," abusive server ", IP, ", unexpected command ", (int)(unsigned char)recv_buff[0]);
 			abuse = true;
 			return;
 		}
@@ -95,7 +73,6 @@ void client_buffer::post_recv()
 			//terminated download detected, discard response
 			recv_buff.erase(0, iter_cur->second);
 		}else{
-			boost::mutex::scoped_lock lock(D_mutex);
 			//pass response to download
 			Pipeline.front().Download->response(socket, recv_buff.substr(0, iter_cur->second));
 			recv_buff.erase(0, iter_cur->second);
@@ -111,22 +88,18 @@ void client_buffer::post_recv()
 void client_buffer::post_send()
 {
 	if(send_buff.empty()){
-		--(*send_pending);
+		--send_pending;
 	}
 }
 
 void client_buffer::prepare_request()
 {
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(D_mutex);
 	if(Download.empty()){
 		return;
 	}
-	}//end lock scope
 
 	//needed to stop infinite loop when all downloads waiting
 	bool buffer_change = true;
-
 	int initial_empty = (send_buff.size() == 0);
 	while(Pipeline.size() < global::PIPELINE_SIZE){
 		std::string request;
@@ -137,8 +110,6 @@ void client_buffer::prepare_request()
 			buffer_change = false;
 		}
 
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(D_mutex);
 		pending_response PR;
 		PR.Download = *Download_iter;
 		if((*Download_iter)->request(socket, request, PR.expected)){
@@ -153,17 +124,25 @@ void client_buffer::prepare_request()
 				buffer_change = true;
 			}
 		}
-		}//end lock scope
 	}
 
 	if(initial_empty && send_buff.size() != 0){
-		++(*send_pending);
+		++send_pending;
+	}
+}
+
+void client_buffer::register_download(download * new_download)
+{
+	if(Download.empty()){
+		Download.push_back(new_download);
+		Download_iter = Download.begin();
+	}else{
+		Download.push_back(new_download);
 	}
 }
 
 bool client_buffer::rotate_downloads()
 {
-	boost::mutex::scoped_lock lock(D_mutex);
 	if(!Download.empty()){
 		++Download_iter;
 	}
@@ -176,7 +155,6 @@ bool client_buffer::rotate_downloads()
 
 void client_buffer::terminate_download(download * term_DL)
 {
-	boost::mutex::scoped_lock lock(D_mutex);
 	/*
 	If this download is in the Pipeline set the download pointer to NULL to
 	indicate that incoming data for the download should be discarded.
@@ -207,14 +185,13 @@ void client_buffer::terminate_download(download * term_DL)
 	Download_iter = Download.begin();
 }
 
-void client_buffer::unreg_all()
+void client_buffer::unregister_all()
 {
-	boost::mutex::scoped_lock lock(D_mutex);
 	std::list<download *>::iterator iter_cur, iter_end;
 	iter_cur = Download.begin();
 	iter_end = Download.end();
 	while(iter_cur != iter_end){
-		(*iter_cur)->unreg_conn(socket);
+		(*iter_cur)->unregister_connection(socket);
 		++iter_cur;
 	}
 }

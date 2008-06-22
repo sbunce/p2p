@@ -51,8 +51,8 @@ public:
 	reg_conn   - registers a server with this download
 	unreg_conn - unregisters a server with this download
 	*/
-	void reg_conn(const int & socket, download_conn * Download_conn);
-	void unreg_conn(const int & socket);
+	void register_connection(download_conn * Download_conn);
+	void unregister_connection(const int & socket);
 
 protected:
 	/*

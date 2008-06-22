@@ -1,5 +1,5 @@
-#ifndef H_DOWNLOAD_PREP
-#define H_DOWNLOAD_PREP
+#ifndef H_DOWNLOAD_FACTORY
+#define H_DOWNLOAD_FACTORY
 
 //custom
 #include "DB_download.h"
@@ -7,6 +7,7 @@
 //download types
 #include "download.h"
 #include "download_conn.h"
+#include "DB_search.h"
 #include "download_file.h"
 #include "download_file_conn.h"
 #include "download_hash_tree.h"
@@ -40,5 +41,6 @@ private:
 	download_file * start_file(download_hash_tree * DHT, std::list<download_conn *> & servers);
 
 	DB_download DB_Download;
+	DB_search DB_Search;
 };
 #endif

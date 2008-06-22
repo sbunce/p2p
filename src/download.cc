@@ -32,12 +32,12 @@ unsigned int download::speed()
 	return Speed_Calculator.speed();
 }
 
-void download::reg_conn(const int & socket, download_conn * Download_conn)
+void download::register_connection(download_conn * DC)
 {
-	Connection.insert(std::make_pair(socket, Download_conn));
+	Connection.insert(std::make_pair(DC->socket, DC));
 }
 
-void download::unreg_conn(const int & socket)
+void download::unregister_connection(const int & socket)
 {
 	Connection.erase(socket);
 }

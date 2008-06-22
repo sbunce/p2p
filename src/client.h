@@ -91,27 +91,11 @@ private:
 	boost::mutex CCA_mutex;
 	std::list<download_conn *> Connection_Current_Attempt;
 
-	/*
-	Socket number mapped to client_buffer.
-
-	This should only be accessed by the thread active in main_thread().
-	*/
-	std::map<int, client_buffer *> Client_Buffer;
-
 	//networking related
 	fd_set master_FDS; //master file descriptor set
 	fd_set read_FDS;   //holds what sockets are ready to be read
 	fd_set write_FDS;  //holds what sockets can be written to without blocking
 	int FD_max;        //holds the number of the maximum socket
-
-	/*
-	When this is zero there are no pending requests to send. This exists for the
-	purpose of having an alternate select() call that doesn't involve write_FDS
-	because using write_FDS hogs CPU. When the value referenced by this equals 0
-	then there are no sends pending and write_FDS doesn't need to be used. These
-	are given to the client_buffer elements so they can increment it.
-	*/
-	volatile int * send_pending;
 
 	//used to initiate new connections
 	thread_pool<client> Thread_Pool;
@@ -126,8 +110,6 @@ private:
 
 	/*
 	check_timeouts      - checks all servers to see if they've timed out and removes/disconnects if they have
-	DC_add_existing     - tries to add a DC to an existing client_buffer
-	                      returns true if succeeded, else false
 	DC_block_concurrent - will block the second or greater DC that passes with the same server_IP
 	                      lets a new DC by whenever the DC blocking is unblocked with DC_unblock
 	DC_unblock          - allows DC_block_concurrent to release a DC being blocked
@@ -139,22 +121,21 @@ private:
 	process_CQ          - connects to servers for DC's or initiates adding a DC to existing client_buffer
 	                      one Thread_Pool job should be scheduled for each DC in Connection_Queue
 	remove_complete     - removes downloads that are complete(or stopped)
+	remove_pending_DC   - cancels download_conns in progress
+	transition_download - passes terminating download to download_factory, starts downloads download_factory may return
 	*/
 	void check_timeouts();
-	bool DC_add_existing(download_conn * DC);
 	void DC_block_concurrent(download_conn * DC);
 	void DC_unblock(download_conn * DC);
 	inline void disconnect(const int & socket_FD);
 	bool known_unresponsive(const std::string & IP);
 	void main_thread();
 	void new_conn(download_conn * DC);
-	void prepare_requests();
 	void process_CQ();
 	void remove_complete();
-	void remove_complete_0(std::list<download *> & complete);
-	void remove_complete_1(std::list<download *> & complete);
-	void remove_complete_2(std::list<download *> & complete);
-	void remove_complete_3(std::list<download *> & complete);
+	void remove_pending_DC(std::list<download *> & complete);
+	void transition_download(download * Download_Stop);
+
 
 	sha SHA;
 	DB_download DB_Download;

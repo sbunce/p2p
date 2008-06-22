@@ -38,7 +38,7 @@ std::cout << "RETURNED BAD HASH: " << bad_hash.first << "\n";
 		Request_Gen.init(start_hash_block, hash_block_count - 1, global::RE_REQUEST_TIMEOUT);
 	}else{
 
-std::cout << "GOOD\n";
+//std::cout << "GOOD\n";
 		//complete hash tree
 		download_complete = true;
 	}

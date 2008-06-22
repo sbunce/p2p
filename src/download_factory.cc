@@ -61,7 +61,7 @@ download_file * download_factory::start_file(download_hash_tree * DHT, std::list
 	);
 
 	std::vector<std::string> IP;
-	DHT->IP_list(IP);
+	DB_Search.get_servers(DHT->hash(), IP);
 	for(int x = 0; x < IP.size(); ++x){
 		servers.push_back(new download_file_conn(Download, IP[x]));
 	}
