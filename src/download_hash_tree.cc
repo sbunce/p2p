@@ -19,11 +19,12 @@ download_hash_tree::download_hash_tree(
 	file_size(file_size_in),
 	file_name(file_name_in),
 	download_complete(false),
-	close_slots(false)
+	close_slots(false),
+	canceled(false)
 {
 	assert((global::P_BLOCK_SIZE - 1) % sha::HASH_LENGTH == 0);
 	hash_name = file_name + " HASH";
-	hash_tree_count = hash_tree::block_hash_to_hash_tree_count(hash_tree::file_size_to_hash_count(file_size));
+	hash_tree_count = hash_tree::hash_tree_count(hash_tree::file_hash_count(file_size));
 	hash_block_count = (hash_tree_count * sha::HASH_LENGTH) / (global::P_BLOCK_SIZE - 1);
 	hashes_per_block = (global::P_BLOCK_SIZE - 1) / sha::HASH_LENGTH;
 	if((hash_tree_count * sha::HASH_LENGTH) % (global::P_BLOCK_SIZE - 1) != 0){
@@ -32,13 +33,11 @@ download_hash_tree::download_hash_tree(
 
 	std::pair<uint64_t, uint64_t> bad_hash;
 	if(Hash_Tree.check_hash_tree(root_hash, hash_tree_count, bad_hash)){
-std::cout << "RETURNED BAD HASH: " << bad_hash.first << "\n";
 		//determine what hash_block the missing/bad hash falls within
 		uint64_t start_hash_block = bad_hash.first / (global::P_BLOCK_SIZE - 1);
+		logger::debug(LOGGER_P1,"partial or corrupt hash tree found, resuming on hash block ",start_hash_block);
 		Request_Gen.init(start_hash_block, hash_block_count - 1, global::RE_REQUEST_TIMEOUT);
 	}else{
-
-//std::cout << "GOOD\n";
 		//complete hash tree
 		download_complete = true;
 	}
@@ -61,7 +60,11 @@ const std::string & download_hash_tree::name()
 
 unsigned int download_hash_tree::percent_complete()
 {
-	return (unsigned int)(((float)Request_Gen.highest_requested() / (float)hash_block_count)*100);
+	if(hash_block_count == 0){
+		return 0;
+	}else{
+		return (unsigned int)(((float)Request_Gen.highest_requested() / (float)hash_block_count)*100);
+	}
 }
 
 bool download_hash_tree::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected)
@@ -70,7 +73,9 @@ bool download_hash_tree::request(const int & socket, std::string & request, std:
 		return false;
 	}
 
-	download_hash_tree_conn * conn = (download_hash_tree_conn *)Connection[socket];
+	std::map<int, download_conn *>::iterator iter = Connection.find(socket);
+	assert(iter != Connection.end());
+	download_hash_tree_conn * conn = (download_hash_tree_conn *)iter->second;
 
 	if(!conn->slot_ID_requested){
 		//slot_ID not yet obtained from server
@@ -111,11 +116,7 @@ bool download_hash_tree::request(const int & socket, std::string & request, std:
 	if(Request_Gen.complete()){
 		//all blocks requested, check tree
 		std::pair<uint64_t, uint64_t> bad_hash;
-std::cout << "htc: " << hash_tree_count << "\n";
 		if(Hash_Tree.check_hash_tree(root_hash, hash_tree_count, bad_hash)){
-
-std::cout << "bh: " << bad_hash.first << "\n";
-
 			//figure out what block this is from and re-request
 //			Request_Gen.force_re_request(bad_hash.first / hashes_per_block);
 		}else{
@@ -147,7 +148,10 @@ std::cout << "bh: " << bad_hash.first << "\n";
 
 void download_hash_tree::response(const int & socket, std::string block)
 {
-	download_hash_tree_conn * conn = (download_hash_tree_conn *)Connection[socket];
+	std::map<int, download_conn *>::iterator iter = Connection.find(socket);
+	assert(iter != Connection.end());
+	download_hash_tree_conn * conn = (download_hash_tree_conn *)iter->second;
+
 	if(block[0] == global::P_SLOT_ID && conn->slot_ID_received == false){
 		conn->slot_ID = block[1];
 		conn->slot_ID_received = true;
@@ -166,6 +170,7 @@ void download_hash_tree::response(const int & socket, std::string block)
 
 void download_hash_tree::stop()
 {
+	canceled = true;
 	if(Connection.size() == 0){
 		download_complete = true;
 	}else{

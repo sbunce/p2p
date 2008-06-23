@@ -39,7 +39,11 @@ const std::string & download_file::name()
 
 unsigned int download_file::percent_complete()
 {
-	return (unsigned int)(((float)Request_Gen.highest_requested() / (float)last_block)*100);
+	if(last_block == 0){
+		return 0;
+	}else{
+		return (unsigned int)(((float)Request_Gen.highest_requested() / (float)last_block)*100);
+	}
 }
 
 bool download_file::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected)

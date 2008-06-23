@@ -11,16 +11,19 @@ bool download_factory::start_hash(download_info & info, download *& Download, st
 		return false;
 	}
 
-	/*
-	Make sure there is an empty file for the download. This makes it so the download
-	is not automatically stopped if the program is started and no blocks have been
-	downloaded.
-	*/
+	//create empty file for the hash tree, if it doesn't already exist
 	std::fstream fin((global::HASH_DIRECTORY+info.hash).c_str(), std::ios::in);
 	if(fin.is_open()){
 		fin.close();
 	}else{
 		std::fstream fout((global::HASH_DIRECTORY+info.hash).c_str(), std::ios::out);
+		fout.close();
+	}
+
+	//create an empty file for the file the hash tree is for
+	fin.open((global::DOWNLOAD_DIRECTORY+info.name).c_str(), std::ios::in);
+	if(!fin.is_open()){
+		std::fstream fout((global::DOWNLOAD_DIRECTORY+info.name).c_str(), std::ios::out);
 		fout.close();
 	}
 
@@ -34,17 +37,9 @@ bool download_factory::start_hash(download_info & info, download *& Download, st
 
 download_file * download_factory::start_file(download_hash_tree * DHT, std::list<download_conn *> & servers)
 {
-	//get file path, stop if file not found
 	std::string file_path;
 	if(!DB_Download.get_file_path(DHT->hash(), file_path)){
 		std::cout << "fatal error starting download_file\n";
-	}
-
-	//create an empty file for this download, if a file doesn't already exist
-	std::fstream fin(file_path.c_str(), std::ios::in);
-	if(!fin.is_open()){
-		std::fstream fout(file_path.c_str(), std::ios::out);
-		fout.close();
 	}
 
 	uint64_t last_block = DHT->file_size/(global::P_BLOCK_SIZE - 1);
@@ -72,9 +67,17 @@ download_file * download_factory::start_file(download_hash_tree * DHT, std::list
 bool download_factory::stop(download * Download_Stop, download *& Download_Start, std::list<download_conn *> & servers)
 {
 	if(typeid(*Download_Stop) == typeid(download_hash_tree)){
-		Download_Start = start_file((download_hash_tree *)Download_Stop, servers);
-		delete Download_Stop;
-		return true;
+		if(((download_hash_tree *)Download_Stop)->canceled == true){
+			//user cancelled download, don't trigger download_file start
+			DB_Download.terminate_download(Download_Stop->hash());
+			delete Download_Stop;
+			return false;
+		}else{
+			//trigger download_file start
+			Download_Start = start_file((download_hash_tree *)Download_Stop, servers);
+			delete Download_Stop;
+			return true;
+		}
 	}else if(typeid(*Download_Stop) == typeid(download_file)){
 		DB_Download.terminate_download(Download_Stop->hash());
 		delete Download_Stop;

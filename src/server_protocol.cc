@@ -50,10 +50,12 @@ void server_protocol::request_slot_hash(server_buffer * SB)
 			SB->send_buff += slot_ID;
 		}else{
 			//all slots used up
+			logger::debug(LOGGER_P1,"all slots used up, sending error to ",SB->IP);
 			SB->send_buff += global::P_ERROR;
 		}
 	}else{
 		//hash tree doesn't exist
+		logger::debug(LOGGER_P1,SB->IP," requested hash that doesn't exist");
 		SB->send_buff += global::P_ERROR;
 	}
 }
@@ -72,10 +74,12 @@ void server_protocol::request_slot_file(server_buffer * SB)
 			SB->update_slot_speed(slot_ID, global::P_REQUEST_SLOT_FILE_SIZE);
 		}else{
 			//all slots used up
+			logger::debug(LOGGER_P1,"all slots used up, sending error to ",SB->IP);
 			SB->send_buff += global::P_ERROR;
 		}
 	}else{
 		//hash not found in share, send error
+		logger::debug(LOGGER_P1,SB->IP," requested hash that doesn't exist");
 		SB->send_buff += global::P_ERROR;
 	}
 }

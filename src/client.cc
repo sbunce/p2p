@@ -88,7 +88,6 @@ void client::DC_unblock(download_conn * DC)
 inline void client::disconnect(const int & socket_FD)
 {
 	logger::debug(LOGGER_P1,"disconnecting socket ",socket_FD);
-
 	close(socket_FD);
 	FD_CLR(socket_FD, &master_FDS);
 	FD_CLR(socket_FD, &read_FDS);
@@ -322,14 +321,17 @@ void client::process_CQ()
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(CQ_mutex);
 	if(Connection_Queue.empty()){
-std::cout << "CQ empty\n";
-		exit(1);
+		//connection cancelled before a thread got to process_CQ
+		return;
 	}
 	DC = Connection_Queue.front();
 	Connection_Queue.pop_front();
 	}//end lock scope
 
-	//do not allow multiple DC with the same server_IP past
+	/*
+	If two more DC's with the same IP reach here only one will be let past and
+	the others will be blocked until the one that got past is sent to DC_unblock().
+	*/
 	DC_block_concurrent(DC);
 
 	/*
@@ -338,11 +340,9 @@ std::cout << "CQ empty\n";
 	pointer in DC->Download is set to NULL it indicates a cancelled connection.
 	*/
 	if(!client_buffer::DC_add_existing(DC)){
-std::cout << DC->Download->name() << " " <<  DC->IP << " making new conn\n";
 		new_conn(DC);
 	}
 
-	//allow DC_block_concurrent to send next DC with same server_IP
 	DC_unblock(DC);
 }
 
@@ -381,7 +381,8 @@ void client::remove_pending_DC(std::list<download *> & complete)
 	/*
 	Remove any pending_connections for download. In progress connections will be
 	cancelled by setting their download pointer to NULL. The new_conn function
-	will interpret this NULL and will not establish a connection.
+	will interpret this NULL and will disconnect any socket it just made for the
+	download.
 	*/
 	std::list<download *>::iterator C_iter_cur, C_iter_end;
 	C_iter_cur = complete.begin();
@@ -394,10 +395,10 @@ void client::remove_pending_DC(std::list<download *> & complete)
 		CQ_iter_end = Connection_Queue.end();
 		while(CQ_iter_cur != CQ_iter_end){
 			if((*CQ_iter_cur)->Download == *C_iter_cur){
-std::cout << "set DC->Download to NULL\n";
-				(*CQ_iter_cur)->Download = NULL;
+				CQ_iter_cur = Connection_Queue.erase(CQ_iter_cur);
+			}else{
+				++CQ_iter_cur;
 			}
-			++CQ_iter_cur;
 		}
 		//in progress connections
 		boost::mutex::scoped_lock lock_2(CCA_mutex);
@@ -406,7 +407,6 @@ std::cout << "set DC->Download to NULL\n";
 		CCA_iter_end = Connection_Current_Attempt.end();
 		while(CCA_iter_cur != CCA_iter_end){
 			if((*CCA_iter_cur)->Download == *C_iter_cur){
-std::cout << "set DC->Download to NULL\n";
 				(*CCA_iter_cur)->Download = NULL;
 			}
 			++CCA_iter_cur;
@@ -444,7 +444,6 @@ bool client::start_download(download_info & info)
 	}
 
 	if(Download->complete()){
-std::cout << "Download complete upon start\n";
 		//file hash complete start download_file
 		transition_download(Download);
 		return true;
@@ -498,7 +497,6 @@ void client::transition_download(download * Download_Stop)
 	std::list<download_conn *> servers;
 	download * Download_Start;
 	if(Download_Factory.stop(Download_Stop, Download_Start, servers)){
-std::cout << "Download triggered start of another download\n";
 		client_buffer::add_download(Download_Start);
 
 		//attempt to place all servers in a exiting client_buffer
@@ -507,14 +505,11 @@ std::cout << "Download triggered start of another download\n";
 		iter_end = servers.end();
 		while(iter_cur != iter_end){
 			if(client_buffer::DC_add_existing(*iter_cur)){
-std::cout << "found existing server\n";
 				iter_cur = servers.erase(iter_cur);
 			}else{
 				++iter_cur;
 			}
 		}
-
-std::cout << "need to connect to " << servers.size() << " servers\n";
 
 		//connect to servers that weren't already connected
 		iter_cur = servers.begin();

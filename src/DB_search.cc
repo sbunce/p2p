@@ -56,7 +56,7 @@ void DB_search::search_call_back(int & columns_retrieved, char ** query_response
 	);
 
 	//get servers
-	char delims[] = ",";
+	char delims[] = ";";
 	char * result = NULL;
 	result = strtok(query_response[3], delims);
 	while(result != NULL){
@@ -79,7 +79,7 @@ void DB_search::get_servers(const std::string & hash, std::vector<std::string> &
 
 void DB_search::get_servers_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
-	char delims[] = ",";
+	char delims[] = ";";
 	char * result = NULL;
 	result = strtok(query_response[0], delims);
 	while(result != NULL){

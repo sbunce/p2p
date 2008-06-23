@@ -137,17 +137,22 @@ bool hash_tree::create_hash_tree(std::string file_name, std::string & root_hash)
 		| std::ios::out | std::ios::trunc | std::ios::binary);
 
 	uint64_t blocks_read = 0;
-	do{
-		if(stop_thread){
-			return false;
-		}
+	while(true){
 		fin.read(block_buff, global::P_BLOCK_SIZE - 1);
+		if(fin.gcount() == 0){
+			break;
+		}
+
 		SHA.init();
 		SHA.load(block_buff, fin.gcount());
 		SHA.end();
 		scratch.write(SHA.raw_hash(), sha::HASH_LENGTH);
 		++blocks_read;
-	}while(fin.good());
+
+		if(stop_thread){
+			return false;
+		}
+	}
 
 	if(fin.bad() || !fin.eof()){
 		logger::debug(LOGGER_P1,"error reading file");

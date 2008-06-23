@@ -41,10 +41,10 @@ public:
 	void stop();
 
 	//returns how many file hashes there would be for a file of size file_size
-	static uint64_t file_size_to_hash_count(uint64_t file_size)
+	static uint64_t file_hash_count(uint64_t file_size)
 	{
 		uint64_t hash_count = file_size / (global::P_BLOCK_SIZE - 1);
-		if(file_size % 20 != 0){
+		if(file_size % (global::P_BLOCK_SIZE - 1) != 0){
 			//add one for partial last block
 			++hash_count;
 		}
@@ -52,7 +52,7 @@ public:
 	}
 
 	//returns how many hashes there would be in a hash tree of size file_size
-	static uint64_t block_hash_to_hash_tree_count(uint64_t row_hash)
+	static uint64_t hash_tree_count(uint64_t row_hash)
 	{
 		uint64_t start_hash = row_hash;
 		if(row_hash == 1){
@@ -63,7 +63,7 @@ public:
 		}else{
 			row_hash = start_hash / 2;
 		}
-		return start_hash + block_hash_to_hash_tree_count(row_hash);
+		return start_hash + hash_tree_count(row_hash);
 	}
 
 private:

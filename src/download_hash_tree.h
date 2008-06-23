@@ -22,8 +22,16 @@ public:
 		const std::string & file_name_in
 	);
 
-	uint64_t file_size;    //size of the file this hash tree is for
+	//this information is for the file the hash tree was generated for
+	uint64_t file_size;
 	std::string file_name;
+
+	/*
+	If the hash tree download gets cancelled early by the user this will be set
+	to true which will make the completion of the hash tree not trigger a
+	download_file to start.
+	*/
+	bool canceled;
 
 	//documentation for virtual functions in abstract base class
 	virtual bool complete();

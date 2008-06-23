@@ -99,7 +99,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	//TreeView and ScrolledWindow properties
 	//search
 	searchView->set_flags(Gtk::CAN_FOCUS);
-	searchView->set_headers_visible(false); //true enables column labels
+	searchView->set_headers_visible(true);  //true enables column labels
 	searchView->set_rules_hint(true);       //true sets alternating row background color
 	searchView->set_reorderable(false);     //allow moving of TreeView elements
 	searchView->set_enable_search(false);   //allow searching of TreeView contents
@@ -110,7 +110,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	search_scrolledWindow->add(*searchView);
 	//download
 	downloadView->set_flags(Gtk::CAN_FOCUS);
-	downloadView->set_headers_visible(false);
+	downloadView->set_headers_visible(true);
 	downloadView->set_rules_hint(true);
 	downloadView->set_reorderable(true);
 	downloadView->set_enable_search(false);
@@ -121,7 +121,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	download_scrolledWindow->add(*downloadView);
 	//upload
 	uploadView->set_flags(Gtk::CAN_FOCUS);
-	uploadView->set_headers_visible(false);
+	uploadView->set_headers_visible(true);
 	uploadView->set_rules_hint(true);
 	uploadView->set_reorderable(false);
 	uploadView->set_enable_search(false);
@@ -192,7 +192,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 
 	//window properties
 	window->set_title(global::NAME);
-	window->resize(800, 300);
+	window->resize(800, 600);
 	window->set_modal(false);
 	window->property_window_position().set_value(Gtk::WIN_POS_CENTER_ON_PARENT);
 	window->set_resizable(true);
@@ -475,157 +475,6 @@ void gui::help_about()
 	delete GUI_About;
 }
 
-void gui::upload_info_setup()
-{
-	//set up column
-	Gtk::TreeModel::ColumnRecord column;
-	Gtk::TreeModelColumn<Glib::ustring> hash_t;
-	Gtk::TreeModelColumn<Glib::ustring> IP_t;
-	Gtk::TreeModelColumn<Glib::ustring> name_t;
-	Gtk::TreeModelColumn<Glib::ustring> size_t;
-	Gtk::TreeModelColumn<Glib::ustring> speed_t;
-	Gtk::TreeModelColumn<int> percent_complete_t;
-
-	column.add(hash_t);
-	column.add(IP_t);
-	column.add(name_t);
-	column.add(size_t);
-	column.add(speed_t);
-	column.add(percent_complete_t);
-
-	uploadList = Gtk::ListStore::create(column);
-	uploadView->set_model(uploadList);
-
-	//add columns
-	uploadView->append_column("  IP  ", IP_t);
-	uploadView->append_column("  Name  ", name_t);
-	uploadView->append_column("  Size  ", size_t);
-	uploadView->append_column("  Speed  ", speed_t);
-
-	//display percentage progress bar
-	Gtk::CellRendererProgress* cell = new Gtk::CellRendererProgress;
-	int cols_count = uploadView->append_column("  Complete  ", *cell);
-	Gtk::TreeViewColumn* pColumn = uploadView->get_column(cols_count - 1);
-	pColumn->add_attribute(cell->property_value(), percent_complete_t);
-}
-
-bool gui::upload_info_refresh()
-{
-	//update upload info
-	std::vector<upload_info> info;
-	Server.current_uploads(info);
-
-	std::vector<upload_info>::iterator info_iter_cur, info_iter_end;
-	info_iter_cur = info.begin();
-	info_iter_end = info.end();
-	while(info_iter_cur != info_iter_end){
-		//set up column
-		Gtk::TreeModel::ColumnRecord column;
-		Gtk::TreeModelColumn<Glib::ustring> hash_t;
-		Gtk::TreeModelColumn<Glib::ustring> client_IP_t;
-		Gtk::TreeModelColumn<Glib::ustring> file_name_t;
-		Gtk::TreeModelColumn<Glib::ustring> file_size_t;
-		Gtk::TreeModelColumn<Glib::ustring> speed_t;
-		Gtk::TreeModelColumn<int> percent_complete_t;
-		column.add(hash_t);
-		column.add(client_IP_t);
-		column.add(file_name_t);
-		column.add(file_size_t);
-		column.add(speed_t);
-		column.add(percent_complete_t);
-
-		std::ostringstream speed_s;
-		speed_s << (info_iter_cur->speed / 1024) << " kB/s";
-
-		//check for existing row for the upload
-		Gtk::TreeModel::Children children = uploadList->children();
-		Gtk::TreeModel::Children::iterator Children_iter_cur, Children_iter_end;
-		Children_iter_cur = children.begin();
-		Children_iter_end = children.end();
-		bool entry_found = false;
-		while(Children_iter_cur != Children_iter_end){
- 			Gtk::TreeModel::Row row = *Children_iter_cur;
-			Glib::ustring hash_retrieved;
-			row.get_value(0, hash_retrieved);
-
-			//if there already exists a row for the download update it
-			if(hash_retrieved == info_iter_cur->hash){
-				row[speed_t] = speed_s.str();
-				row[percent_complete_t] = info_iter_cur->percent_complete;
-				entry_found = true;
-				break;
-			}
-
-			++Children_iter_cur;
-		}
-
-		if(!entry_found){
-			Gtk::TreeModel::Row row = *(uploadList->append());
-
-			//change display to a decimal if less than 1mB
-			float size = info_iter_cur->size / 1024 / 1024;
-			std::ostringstream size_s;
-			if(size < 1){
-				size_s << std::setprecision(2) << size << " mB";
-			}else{
-				size_s << (int)size << " mB";
-			}
-
-			row[hash_t] = info_iter_cur->hash;
-			row[client_IP_t] = info_iter_cur->IP;
-			row[file_name_t] = info_iter_cur->name;
-			row[file_size_t] = size_s.str();
-			row[speed_t] = speed_s.str();
-			row[percent_complete_t] = info_iter_cur->percent_complete;
-		}
-
-		++info_iter_cur;
-	}
-
-	//get rid of rows without corresponding uploadInfo(finished uploads)
-	Gtk::TreeModel::Children children = uploadList->children();
-
-	//if no upload info exists at all remove all rows(all uploads complete)
-	if(info.size() == 0){
-		uploadList->clear();
-	}
-
-	//remove rows that don't have corresponding upload info
-	Gtk::TreeModel::Children::iterator Children_iter_cur, Children_iter_end;
-	Children_iter_cur = children.begin();
-	Children_iter_end = children.end();
-	while(Children_iter_cur != Children_iter_end){
-	 	Gtk::TreeModel::Row row = *Children_iter_cur;
-
-		//get the file_ID and file_name to check for existing download
-		Glib::ustring hash_retrieved;
-		row.get_value(0, hash_retrieved);
-
-		//loop through the upload info and check if we have an entry for upload
-		std::vector<upload_info>::iterator info_iter_cur, info_iter_end;
-		info_iter_cur = info.begin();
-		info_iter_end = info.end();
-		bool row_found = false;
-		while(info_iter_cur != info_iter_end){
-			//check if server_IP and file_ID match the row
-			if(hash_retrieved == info_iter_cur->hash){
-				row_found = true;
-				break;
-			}
-			++info_iter_cur;
-		}
-
-		//if upload info wasn't found for row delete it
-		if(!row_found){
-			Children_iter_cur = uploadList->erase(Children_iter_cur);
-		}else{
-			++Children_iter_cur;
-		}
-	}
-
-	return true;
-}
-
 bool gui::search_click(GdkEventButton * event)
 {
 	if(event->type == GDK_BUTTON_PRESS && event->button == 3){
@@ -690,7 +539,7 @@ void gui::search_info_refresh()
 		IP_iter_end = info_iter_cur->IP.end();
 		std::string IP;
 		while(IP_iter_cur != IP_iter_end){
-			IP += *IP_iter_cur + "|";
+			IP += *IP_iter_cur + ";";
 			++IP_iter_cur;
 		}
 
@@ -764,6 +613,158 @@ bool gui::update_status_bar()
 
 	statusbar->pop();
 	statusbar->push(status);
+
+	return true;
+}
+
+void gui::upload_info_setup()
+{
+	//set up column
+	Gtk::TreeModel::ColumnRecord column;
+	Gtk::TreeModelColumn<Glib::ustring> hash_t;
+	Gtk::TreeModelColumn<Glib::ustring> IP_t;
+	Gtk::TreeModelColumn<Glib::ustring> name_t;
+	Gtk::TreeModelColumn<Glib::ustring> size_t;
+	Gtk::TreeModelColumn<Glib::ustring> speed_t;
+	Gtk::TreeModelColumn<int> percent_complete_t;
+
+	column.add(hash_t);
+	column.add(IP_t);
+	column.add(name_t);
+	column.add(size_t);
+	column.add(speed_t);
+	column.add(percent_complete_t);
+
+	uploadList = Gtk::ListStore::create(column);
+	uploadView->set_model(uploadList);
+
+	//add columns
+	uploadView->append_column("  IP  ", IP_t);
+	uploadView->append_column("  Name  ", name_t);
+	uploadView->append_column("  Size  ", size_t);
+	uploadView->append_column("  Speed  ", speed_t);
+
+	//display percentage progress bar
+	Gtk::CellRendererProgress* cell = new Gtk::CellRendererProgress;
+	int cols_count = uploadView->append_column("  Complete  ", *cell);
+	Gtk::TreeViewColumn* pColumn = uploadView->get_column(cols_count - 1);
+	pColumn->add_attribute(cell->property_value(), percent_complete_t);
+}
+
+bool gui::upload_info_refresh()
+{
+	//update upload info
+	std::vector<upload_info> info;
+	Server.current_uploads(info);
+
+	std::vector<upload_info>::iterator info_iter_cur, info_iter_end;
+	info_iter_cur = info.begin();
+	info_iter_end = info.end();
+	while(info_iter_cur != info_iter_end){
+		//set up column
+		Gtk::TreeModel::ColumnRecord column;
+		Gtk::TreeModelColumn<Glib::ustring> hash_t;
+		Gtk::TreeModelColumn<Glib::ustring> IP_t;
+		Gtk::TreeModelColumn<Glib::ustring> name_t;
+		Gtk::TreeModelColumn<Glib::ustring> size_t;
+		Gtk::TreeModelColumn<Glib::ustring> speed_t;
+		Gtk::TreeModelColumn<int> percent_complete_t;
+		column.add(hash_t);
+		column.add(IP_t);
+		column.add(name_t);
+		column.add(size_t);
+		column.add(speed_t);
+		column.add(percent_complete_t);
+
+		std::ostringstream speed_s;
+		speed_s << (info_iter_cur->speed / 1024) << " kB/s";
+
+		//change display to a decimal if less than 1mB
+		float size = info_iter_cur->size / 1024 / 1024;
+		std::ostringstream size_s;
+		if(size < 1){
+			size_s << std::setprecision(2) << size << " mB";
+		}else{
+			size_s << (int)size << " mB";
+		}
+
+		//check for existing row for the upload
+		Gtk::TreeModel::Children children = uploadList->children();
+		Gtk::TreeModel::Children::iterator Children_iter_cur, Children_iter_end;
+		Children_iter_cur = children.begin();
+		Children_iter_end = children.end();
+		bool entry_found = false;
+		while(Children_iter_cur != Children_iter_end){
+ 			Gtk::TreeModel::Row row = *Children_iter_cur;
+			Glib::ustring hash_retrieved;
+			row.get_value(0, hash_retrieved);
+
+			//if there already exists a row for the download update it
+			if(hash_retrieved == info_iter_cur->hash){
+				row[name_t] = info_iter_cur->name;
+				row[size_t] = size_s.str();
+				row[speed_t] = speed_s.str();
+				row[percent_complete_t] = info_iter_cur->percent_complete;
+				entry_found = true;
+				break;
+			}
+			++Children_iter_cur;
+		}
+
+		if(!entry_found){
+			Gtk::TreeModel::Row row = *(uploadList->append());
+
+			row[hash_t] = info_iter_cur->hash;
+			row[IP_t] = info_iter_cur->IP;
+			row[name_t] = info_iter_cur->name;
+			row[size_t] = size_s.str();
+			row[speed_t] = speed_s.str();
+			row[percent_complete_t] = info_iter_cur->percent_complete;
+		}
+
+		++info_iter_cur;
+	}
+
+	//get rid of rows without corresponding uploadInfo(finished uploads)
+	Gtk::TreeModel::Children children = uploadList->children();
+
+	//if no upload info exists at all remove all rows(all uploads complete)
+	if(info.size() == 0){
+		uploadList->clear();
+	}
+
+	//remove rows that don't have corresponding upload info
+	Gtk::TreeModel::Children::iterator Children_iter_cur, Children_iter_end;
+	Children_iter_cur = children.begin();
+	Children_iter_end = children.end();
+	while(Children_iter_cur != Children_iter_end){
+	 	Gtk::TreeModel::Row row = *Children_iter_cur;
+
+		//get the file_ID and file_name to check for existing download
+		Glib::ustring hash_retrieved;
+		row.get_value(0, hash_retrieved);
+
+		//loop through the upload info and check if we have an entry for upload
+		std::vector<upload_info>::iterator info_iter_cur, info_iter_end;
+		info_iter_cur = info.begin();
+		info_iter_end = info.end();
+		bool row_found = false;
+		while(info_iter_cur != info_iter_end){
+			//check if server_IP and file_ID match the row
+			if(hash_retrieved == info_iter_cur->hash){
+				row_found = true;
+				break;
+			}
+			++info_iter_cur;
+		}
+
+		//if upload info wasn't found for row delete it
+		if(!row_found){
+			Children_iter_cur = uploadList->erase(Children_iter_cur);
+		}else{
+			++Children_iter_cur;
+		}
+	}
 
 	return true;
 }

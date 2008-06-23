@@ -11,7 +11,7 @@ DB_download::DB_download()
 		logger::debug(LOGGER_P1,"#2 ",sqlite3_errmsg(sqlite3_DB));
 	}
 	//make download table
-	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS download (hash TEXT, name TEXT, size TEXT, server TEXT);", NULL, NULL, NULL) != 0){
+	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS download (hash TEXT, name TEXT, size TEXT, server TEXT)", NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,"#5 ",sqlite3_errmsg(sqlite3_DB));
 	}
 }
@@ -23,7 +23,7 @@ bool DB_download::get_file_path(const std::string & hash, std::string & path)
 
 	//locate the record
 	std::ostringstream query;
-	query << "SELECT name FROM download WHERE hash = '" << hash << "' LIMIT 1;";
+	query << "SELECT name FROM download WHERE hash = '" << hash << "' LIMIT 1";
 	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), get_file_path_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
@@ -45,7 +45,7 @@ void DB_download::initial_fill_buff(std::list<download_info> & resumed_download)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 
-	if(sqlite3_exec(sqlite3_DB, "SELECT * FROM download;", initial_fill_buff_call_back_wrapper, (void *)this, NULL) != 0){
+	if(sqlite3_exec(sqlite3_DB, "SELECT * FROM download", initial_fill_buff_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
 	resumed_download.splice(resumed_download.end(), initial_fill_buff_resumed_download);
@@ -76,7 +76,7 @@ void DB_download::initial_fill_buff_call_back(int & columns_retrieved, char ** q
 		);
 
 		//get servers
-		char delims[] = ",";
+		char delims[] = ";";
 		char * result = NULL;
 		result = strtok(query_response[3], delims);
 		while(result != NULL){
@@ -87,7 +87,7 @@ void DB_download::initial_fill_buff_call_back(int & columns_retrieved, char ** q
 	}else{
 		//partial file removed, delete entry from database
 		std::ostringstream query;
-		query << "DELETE FROM download WHERE name = '" << query_response[1] << "';";
+		query << "DELETE FROM download WHERE name = '" << query_response[1] << "'";
 		if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
 			logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 		}
@@ -115,12 +115,12 @@ bool DB_download::start_download(download_info & info)
 		query << "INSERT INTO download (hash, name, size, server) VALUES ('" << info.hash << "', '" << info.name << "', " << info.size << ", '";
 		for(std::vector<std::string>::iterator iter0 = info.IP.begin(); iter0 != info.IP.end(); ++iter0){
 			if(iter0 + 1 != info.IP.end()){
-				query << *iter0 << ",";
+				query << *iter0 << ";";
 			}else{
 				query << *iter0;
 			}
 		}
-		query << "');";
+		query << "')";
 		if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
 			logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 		}

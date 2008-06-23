@@ -37,7 +37,6 @@ void server::current_uploads(std::vector<upload_info> & info)
 void server::disconnect(const int & socket_FD)
 {
 	logger::debug(LOGGER_P1,"disconnecting socket ",socket_FD);
-
 	if(FD_ISSET(socket_FD, &master_FDS)){
 		FD_CLR(socket_FD, &master_FDS);
 		FD_CLR(socket_FD, &read_FDS);
