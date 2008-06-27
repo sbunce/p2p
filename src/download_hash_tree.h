@@ -18,32 +18,41 @@ class download_hash_tree : public download
 public:
 	download_hash_tree(
 		const std::string & root_hash_in,
-		const uint64_t & file_size_in,
-		const std::string & file_name_in
+		const uint64_t & download_file_size_in,
+		const std::string & download_file_name_in
 	);
-
-	//this information is for the file the hash tree was generated for
-	uint64_t file_size;
-	std::string file_name;
-
-	/*
-	If the hash tree download gets cancelled early by the user this will be set
-	to true which will make the completion of the hash tree not trigger a
-	download_file to start.
-	*/
-	bool canceled;
 
 	//documentation for virtual functions in abstract base class
 	virtual bool complete();
 	virtual const std::string & hash();
-	virtual const std::string & name();
+	virtual const std::string name();
 	virtual unsigned int percent_complete();
 	virtual bool request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected);
 	virtual void response(const int & socket, std::string block);
 	virtual void stop();
 	virtual const uint64_t size();
 
+	/*
+	canceled           - returns true if download canceled, stops download_file from being triggered
+	download_file_size - returns the size of the file the hash tree was generated for
+	download_file_name - returns the name of the file the hash tree was generated for
+	*/
+	const bool & canceled();
+	const uint64_t & download_file_size();
+	const std::string & download_file_name();
+
 private:
+	//this information is for the file the hash tree was generated for
+	uint64_t _download_file_size;
+	std::string _download_file_name;
+
+	/*
+	If the hash tree download gets cancelled early by the user this will be set
+	to true which will make the completion of the hash tree not trigger a
+	download_file to start.
+	*/
+	bool _canceled;
+
 	/*
 	After P_CLOSE_SLOT is sent to all servers and there are no pending responses
 	from any server this should be set to true.
@@ -53,7 +62,7 @@ private:
 	std::string root_hash;     //root hash of the tree downloading
 	std::string hash_name;     //the name of this hash
 	uint64_t hash_tree_count;  //number of hashes in the tree
-	uint64_t hash_block_count; //number of hash blocks ((global::P_BLOCK_SIZE - 1) / sha::HASH_LENGTH)
+	uint64_t hash_block_count; //number of hash blocks
 	uint64_t hashes_per_block; //number of hashes in a hash block
 
 	/*

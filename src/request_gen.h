@@ -13,20 +13,14 @@
 class request_gen
 {
 public:
-	request_gen(); //default ctor
-	request_gen(
-		const uint64_t & min_request_in,
-		const uint64_t & max_request_in,
-		const int & timeout_in
-	);
+	request_gen();
 
 	/*
 	complete          - returns true if there are no more requests to be made
 	force_re_request  - makes a request immediately be re-requested
 	fulfil            - must be called whenever a request is fulfilled
 	highest_requested - returns the highest request given
-	init              - if default ctor used this must be called before request_gen is used
-	                    this can also be used to reset request gen to new state
+	init              - must be called before calling any other function
 	request           - pushes a needed request number on the back of prev_request
 	                    returns true if request pushed on to back of prev_request
 	*/
@@ -38,6 +32,9 @@ public:
 	bool request(std::deque<uint64_t> & prev_request);
 
 private:
+	//if false and a public member function called program will terminate
+	bool initialized;
+
 	/*
 	The latest request returned by new_request. This will not be changed when
 	new_request returns a re_request. This can only go forward one at a time.

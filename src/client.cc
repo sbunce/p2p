@@ -1,19 +1,15 @@
 #include "client.h"
 
-client::client()
-:
+client::client(
+	):
 	FD_max(0),
 	Download_Factory(),
 	stop_threads(false),
 	threads(0),
 	Thread_Pool(global::NEW_CONN_THREADS)
 {
-	//create the download directory if it doesn't exist
 	boost::filesystem::create_directory(global::DOWNLOAD_DIRECTORY);
-
-	//socket bitvector must be initialized before use
 	FD_ZERO(&master_FDS);
-
 	Speed_Calculator.set_speed_limit(DB_Client_Preferences.get_speed_limit_uint());
 }
 
@@ -144,9 +140,9 @@ void client::main_thread()
 	++threads;
 
 	//reconnect downloads that havn't finished
-	std::list<download_info> resumed_download;
+	std::vector<download_info> resumed_download;
 	DB_Download.initial_fill_buff(resumed_download);
-	std::list<download_info>::iterator iter_cur, iter_end;
+	std::vector<download_info>::iterator iter_cur, iter_end;
 	iter_cur = resumed_download.begin();
 	iter_end = resumed_download.end();
 	while(iter_cur != iter_end){
@@ -439,14 +435,8 @@ bool client::start_download(download_info & info)
 {
 	download * Download;
 	std::list<download_conn *> servers;
-	if(!Download_Factory.start_hash(info, Download, servers)){
-		return false;
-	}
-
-	if(Download->complete()){
-		//file hash complete start download_file
-		transition_download(Download);
-		return true;
+	if(!Download_Factory.start_hash(info, Download, servers, info.resumed)){
+			return false;
 	}
 
 	client_buffer::add_download(Download);

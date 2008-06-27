@@ -78,7 +78,7 @@ void server_buffer::update_slot_percent_complete(char slot_ID, const uint64_t & 
 	if(Slot[(int)(unsigned char)slot_ID] != NULL){
 		if(block_number != 0){
 			Slot[(int)(unsigned char)slot_ID]->percent_complete =
-				(int)(((double)(block_number * (global::P_BLOCK_SIZE - 1)) / (double)Slot[(int)(unsigned char)slot_ID]->size)*100);
+				(int)(((double)(block_number * global::FILE_BLOCK_SIZE) / (double)Slot[(int)(unsigned char)slot_ID]->size)*100);
 			if(Slot[(int)(unsigned char)slot_ID]->percent_complete > 100){
 				Slot[(int)(unsigned char)slot_ID]->percent_complete = 100;
 			}

@@ -31,7 +31,7 @@ public:
 	             returns false if no download needs to be started in response to the download stopping
 	             if true then Download_start will be set and servers filled
 	*/
-	bool start_hash(download_info & info, download *& Download, std::list<download_conn *> & servers);
+	bool start_hash(download_info & info, download *& Download, std::list<download_conn *> & servers, bool resumed);
 	bool stop(download * Download_Stop, download *& Download_Start, std::list<download_conn *> & servers);
 
 private:

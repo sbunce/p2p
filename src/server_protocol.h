@@ -24,7 +24,7 @@ public:
 private:
 
 	//buffer for reading file blocks from the HDD
-	char send_block_buff[global::P_BLOCK_SIZE - 1];
+	char send_block_buff[global::FILE_BLOCK_SIZE];
 
 	/*
 	These functions correspond to the protocol command names. Documentation for

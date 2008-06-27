@@ -33,7 +33,7 @@ public:
 	terminate_download - removes the download entry from the database
 	*/
 	bool get_file_path(const std::string & hash, std::string & path);
-	void initial_fill_buff(std::list<download_info> & resumed_download);
+	void initial_fill_buff(std::vector<download_info> & resumed_download);
 	bool start_download(download_info & info);
 	void terminate_download(const std::string & hash);
 
@@ -63,7 +63,7 @@ private:
 		this_class->initial_fill_buff_call_back(columns_retrieved, query_response, column_name);
 		return 0;
 	}	
-	std::list<download_info> initial_fill_buff_resumed_download;
+	std::vector<download_info> * initial_fill_buff_resumed_download_ptr;
 
 	static int is_downloading_call_back(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
 	{

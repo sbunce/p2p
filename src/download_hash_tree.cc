@@ -12,34 +12,62 @@ force_re_request'ed from other servers and the server disconnected.
 
 download_hash_tree::download_hash_tree(
 	const std::string & root_hash_in,
-	const uint64_t & file_size_in,
-	const std::string & file_name_in
+	const uint64_t & download_file_size_in,
+	const std::string & download_file_name_in
 ):
 	root_hash(root_hash_in),
-	file_size(file_size_in),
-	file_name(file_name_in),
+	_download_file_size(download_file_size_in),
+	_download_file_name(download_file_name_in),
 	download_complete(false),
 	close_slots(false),
-	canceled(false)
+	_canceled(false)
 {
-	assert((global::P_BLOCK_SIZE - 1) % sha::HASH_LENGTH == 0);
-	hash_name = file_name + " HASH";
-	hash_tree_count = hash_tree::hash_tree_count(hash_tree::file_hash_count(file_size));
-	hash_block_count = (hash_tree_count * sha::HASH_LENGTH) / (global::P_BLOCK_SIZE - 1);
-	hashes_per_block = (global::P_BLOCK_SIZE - 1) / sha::HASH_LENGTH;
-	if((hash_tree_count * sha::HASH_LENGTH) % (global::P_BLOCK_SIZE - 1) != 0){
+	assert(global::FILE_BLOCK_SIZE % sha::HASH_LENGTH == 0);
+	hash_name = _download_file_name + " HASH";
+	hash_tree_count = hash_tree::hash_tree_count(hash_tree::file_hash_count(_download_file_size));
+	hashes_per_block = global::FILE_BLOCK_SIZE / sha::HASH_LENGTH;
+	hash_block_count = (hash_tree_count * sha::HASH_LENGTH) / global::FILE_BLOCK_SIZE;
+	if((hash_tree_count * sha::HASH_LENGTH) % global::FILE_BLOCK_SIZE != 0){
 		++hash_block_count;
 	}
 
+	/*
+	Create empty file for the hash tree, if it doesn't already exist.
+	*/
+	std::fstream fin((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::in);
+	if(fin.is_open()){
+		fin.close();
+	}else{
+		std::fstream fout((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::out);
+		fout.close();
+	}
+
+	/*
+	Create an empty file for the file the hash tree is for. This is needed so the
+	download isn't detected as removed when the program is stopped/started. Removed
+	downloads are cancelled which this prevents.
+	*/
+	fin.open((global::DOWNLOAD_DIRECTORY+_download_file_name).c_str(), std::ios::in);
+	if(!fin.is_open()){
+		std::fstream fout((global::DOWNLOAD_DIRECTORY+_download_file_name).c_str(), std::ios::out);
+		fout.close();
+	}
+
+	/*
+	Check the hash tree to see if it's complete/corrupt/missing blocks. Resume
+	downloading the hash tree or mark the download as complete if the hash tree
+	is complete.
+	*/
 	std::pair<uint64_t, uint64_t> bad_hash;
 	if(Hash_Tree.check_hash_tree(root_hash, hash_tree_count, bad_hash)){
 		//determine what hash_block the missing/bad hash falls within
-		uint64_t start_hash_block = bad_hash.first / (global::P_BLOCK_SIZE - 1);
+		uint64_t start_hash_block = bad_hash.first / global::FILE_BLOCK_SIZE;
 		logger::debug(LOGGER_P1,"partial or corrupt hash tree found, resuming on hash block ",start_hash_block);
 		Request_Gen.init(start_hash_block, hash_block_count - 1, global::RE_REQUEST_TIMEOUT);
 	}else{
 		//complete hash tree
 		download_complete = true;
+		Request_Gen.init(0, hash_block_count - 1, global::RE_REQUEST_TIMEOUT);
 	}
 }
 
@@ -53,7 +81,7 @@ const std::string & download_hash_tree::hash()
 	return root_hash;
 }
 
-const std::string & download_hash_tree::name()
+const std::string download_hash_tree::name()
 {
 	return hash_name;
 }
@@ -170,7 +198,7 @@ void download_hash_tree::response(const int & socket, std::string block)
 
 void download_hash_tree::stop()
 {
-	canceled = true;
+	_canceled = true;
 	if(Connection.size() == 0){
 		download_complete = true;
 	}else{
@@ -181,4 +209,19 @@ void download_hash_tree::stop()
 const uint64_t download_hash_tree::size()
 {
 	return hash_tree_count * sha::HASH_LENGTH;
+}
+
+const bool & download_hash_tree::canceled()
+{
+	return _canceled;
+}
+
+const uint64_t & download_hash_tree::download_file_size()
+{
+	return _download_file_size;
+}
+
+const std::string & download_hash_tree::download_file_name()
+{
+	return _download_file_name;
 }

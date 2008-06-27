@@ -1,21 +1,9 @@
 #include "request_gen.h"
 
 request_gen::request_gen(
-	):
-	latest_request(0)
-{
-
-}
-
-request_gen::request_gen(
-	const uint64_t & min_request_in,
-	const uint64_t & max_request_in,
-	const int & timeout_in
 ):
-	latest_request(min_request_in),
-	min_request(min_request_in),
-	max_request(max_request_in),
-	timeout(timeout_in)
+	latest_request(0),
+	initialized(false)
 {
 
 }
@@ -36,11 +24,13 @@ void request_gen::check_timeouts()
 
 bool request_gen::complete()
 {
+	assert(initialized);
 	return (latest_request == max_request && unfulfilled_request.empty() && re_request.empty());
 }
 
 void request_gen::force_re_request(const uint64_t & number)
 {
+	assert(initialized);
 	//alter time to force re_request
 	std::map<uint64_t, time_t>::iterator iter = unfulfilled_request.find(number);
 	if(iter != unfulfilled_request.end()){
@@ -52,12 +42,14 @@ void request_gen::force_re_request(const uint64_t & number)
 
 void request_gen::fulfil(uint64_t fulfilled_request)
 {
+	assert(initialized);
 	unfulfilled_request.erase(fulfilled_request);
 	re_request.erase(fulfilled_request);
 }
 
 uint64_t request_gen::highest_requested()
 {
+	assert(initialized);
 	return latest_request;
 }
 
@@ -88,6 +80,7 @@ bool request_gen::check_re_request(std::deque<uint64_t> & prev_request)
 
 void request_gen::init(const uint64_t & min_request_in, const uint64_t & max_request_in, const int & timeout_in)
 {
+	initialized = true;
 	unfulfilled_request.clear();
 	re_request.clear();
 	latest_request = min_request_in;
@@ -98,6 +91,7 @@ void request_gen::init(const uint64_t & min_request_in, const uint64_t & max_req
 
 bool request_gen::request(std::deque<uint64_t> & prev_request)
 {
+	assert(initialized);
 	check_timeouts();
 	if(re_request.empty()){
 		if(latest_request == max_request){

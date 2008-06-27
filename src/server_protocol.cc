@@ -93,8 +93,8 @@ void server_protocol::send_block(server_buffer * SB)
 		std::ifstream fin(SB->path(SB->recv_buff[1]).c_str());
 		if(fin.is_open()){
 			//seek to the file_block the client wants (-1 for command space)
-			fin.seekg(block_number*(global::P_BLOCK_SIZE - 1));
-			fin.read(send_block_buff, global::P_BLOCK_SIZE - 1);
+			fin.seekg(block_number * global::FILE_BLOCK_SIZE);
+			fin.read(send_block_buff, global::FILE_BLOCK_SIZE);
 
 			#ifdef CORRUPT_BLOCKS
 			if(rand() % 100 == 0){

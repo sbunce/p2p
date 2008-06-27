@@ -39,3 +39,7 @@ the profile based on time of day.
 -Think about combining hash tree's in to one file. Keep track of starting
 locations in DB. Perhaps have a memmove type opteration one a file where hashes
 can be moved to get rid of gaps due to removed files.
+
+-Randomize the order in which sockets are checked to eliminate starvation when
+rate limiting enabled. Is there a non-random shuffling that guarantees equal
+time?

@@ -33,7 +33,7 @@ public:
 	write_hash              - used to replace bad hashes found by check_hash_tree
 	stop                    - sets stop_thread to true and allows create hash tree to exit early
 	*/
-	bool check_block(const std::string & root_hex_hash, const uint64_t & block_number, const std::string & block);
+	bool check_block(const std::string & root_hex_hash, const uint64_t & block_number, const char * const block, const int & block_length);
 	bool check_exists(std::string root_hash);
 	bool check_hash_tree(const std::string & root_hash, const uint64_t & hash_count, std::pair<uint64_t, uint64_t> & bad_hash);
 	bool create_hash_tree(std::string file_path, std::string & root_hash);
@@ -43,8 +43,8 @@ public:
 	//returns how many file hashes there would be for a file of size file_size
 	static uint64_t file_hash_count(uint64_t file_size)
 	{
-		uint64_t hash_count = file_size / (global::P_BLOCK_SIZE - 1);
-		if(file_size % (global::P_BLOCK_SIZE - 1) != 0){
+		uint64_t hash_count = file_size / global::FILE_BLOCK_SIZE;
+		if(file_size % global::FILE_BLOCK_SIZE != 0){
 			//add one for partial last block
 			++hash_count;
 		}

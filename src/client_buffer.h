@@ -270,7 +270,8 @@ public:
 	}
 
 	/*
-	Remove the download from the client_buffer.
+	Remove the download from the Unique_Download container and from any instantiation
+	of the client_buffer.
 	*/
 	static void remove_download(download * Download)
 	{

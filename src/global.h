@@ -26,7 +26,7 @@ namespace global
 	const int DOWN_SPEED = 9999*1024+512; //download speed limit (B/s)
 	const int NEW_CONN_THREADS = 8;       //how many threads are in the thread pool for making new client connections
 	const int PIPELINE_SIZE = 16;         //how many pre-requests can be done
-	const int RE_REQUEST_TIMEOUT = 4;     //seconds before a file block is re-requested
+	const int RE_REQUEST_TIMEOUT = 8;     //seconds before a file block is re-requested
 	const int P2P_PORT = 6969;            //port client connects to and server receives on
 	const int GUI_TICK = 100;             //time(in milliseconds) between gui updates
 	const int SPEED_AVERAGE = 4;          //how many seconds to average upload/download speed over
@@ -58,12 +58,20 @@ namespace global
 	const char P_SLOT_ID = (char)6;
 	const int P_SLOT_ID_SIZE = 2;
 	const char P_BLOCK = (char)7;
-	const int P_BLOCK_SIZE = 5121; //P_BLOCK_SIZE - 1 must be divisible by sha::HASH_LENGTH
+	const int P_BLOCK_SIZE = 5121;
 	const char P_HASH = (char)8;
 	const int P_HASH_SIZE = 21;
 
 	//largest possible packet (used to determine buffer sizes)
 	const int S_MAX_SIZE = P_REQUEST_SLOT_FILE_SIZE;
 	const int C_MAX_SIZE = P_BLOCK_SIZE;
+
+	/*
+	This is the size of a file block (hash block or file block) sent in a P_BLOCK
+	response. It is also the size that files are hashed in.
+
+	WARNING: FILE_BLOCK_SIZE % sha::HASH_LENGTH must equal 0
+	*/
+	const int FILE_BLOCK_SIZE = P_BLOCK_SIZE - 1;
 }
 #endif

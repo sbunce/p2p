@@ -4,6 +4,9 @@
 //boost
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
+#include <boost/thread/thread.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/bind.hpp>
 
 //custom
 #include "convert.h"
@@ -37,16 +40,15 @@ public:
 		const std::string & file_hash_in,
 		const std::string & file_name_in, 
 		const std::string & file_path_in,
-		const uint64_t & file_size_in,
-		const uint64_t & latest_request_in,
-		const uint64_t & last_block_in,
-		const unsigned int & last_block_size_in
+		const uint64_t & file_size_in
 	);
+
+	~download_file();
 
 	//documentation for virtual functions in abstract base class
 	virtual bool complete();
 	virtual const std::string & hash();
-	virtual const std::string & name();
+	virtual const std::string name();
 	virtual unsigned int percent_complete();
 	virtual bool request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected);
 	virtual void response(const int & socket, std::string block);
@@ -55,6 +57,29 @@ public:
 
 private:
 	/*
+	When the download_file is constructed a thread is spawned to hash check a
+	partial download that has been resumed. Requests are only returned when hashing
+	is done which is indicated by this being set equal to false.
+	*/
+	volatile bool hashing;
+
+	/*
+	These variables are for tracking the progress of the hash checking so a percent
+	can be calculated.
+	*/
+	volatile uint64_t hash_latest;
+	uint64_t hash_last;
+
+	volatile int threads;       //one if hash checking, otherwise zero
+	volatile bool stop_threads; //if set to true hash checking will stop early
+
+	/*
+	These variables are only to be used by the hash_check() thread.
+	*/
+	std::string thread_file_hash;
+	std::string thread_file_path;
+
+	/*
 	After P_CLOSE_SLOT is sent to all servers and there are no pending responses
 	from any server this should be set to true.
 	*/
@@ -62,7 +87,7 @@ private:
 
 	std::string file_hash;        //hash tree root hash
 	std::string file_name;        //name of the file
-	std::string file_path;        //path to write file to on local system
+	std::string file_path;        //path to write file to
 	uint64_t file_size;           //size of the file(bytes)
 	uint64_t last_block;          //the last block number
 	unsigned int last_block_size; //holds the exact size of the last fileBlock(in bytes)
@@ -74,9 +99,10 @@ private:
 	bool close_slots;
 
 	/*
-	check_complete - returns true if the download is ready to be removed
-	writeTree      - writes a file block
+	hash_check  - checks partial download integrity (run in thread spawned in ctor)
+	write_block - writes a file block
 	*/
+	void hash_check();
 	void write_block(uint64_t block_number, std::string & block);
 
 	convert<uint64_t> Convert_uint64;

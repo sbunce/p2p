@@ -3,13 +3,13 @@
 hash_tree::hash_tree(
 	):
 	stop_thread(false),
-	SHA(global::P_BLOCK_SIZE - 1)
+	SHA(global::FILE_BLOCK_SIZE)
 {
 	//create hash directory if it doesn't already exist
 	boost::filesystem::create_directory(global::HASH_DIRECTORY.c_str());
 }
 
-bool hash_tree::check_block(const std::string & root_hex_hash, const uint64_t & block_number, const std::string & block)
+bool hash_tree::check_block(const std::string & root_hex_hash, const uint64_t & block_number, const char * const block, const int & block_length)
 {
 	if(root_hex_hash != file_hash_root_hex_hash){
 		file_hash_root_hex_hash = root_hex_hash;
@@ -19,7 +19,7 @@ bool hash_tree::check_block(const std::string & root_hex_hash, const uint64_t & 
 	fin.seekg(sha::HASH_LENGTH * file_hash_start_RRN + block_number * sha::HASH_LENGTH);
 	fin.read(file_hash_buffer, sha::HASH_LENGTH);
 	SHA.init();
-	SHA.load(block.c_str(), block.length());
+	SHA.load(block, block_length);
 	SHA.end();
 	return strncmp(file_hash_buffer, SHA.raw_hash(), sha::HASH_LENGTH) == 0;
 }
@@ -103,19 +103,23 @@ bool hash_tree::check_hash_tree(const std::string & root_hash, const uint64_t & 
 		//read child nodes
 		hash_fstream.seekg(first_child_RRN * sha::HASH_LENGTH, std::ios::beg);
 		hash_fstream.read(left_child, sha::HASH_LENGTH);
+
 		if(hash_fstream.eof()){
 			//incomplete/missing child 1
 			bad_hash.first = first_child_RRN;
 			bad_hash.second = first_child_RRN + 1;
 			return true;
 		}
+
 		hash_fstream.read(right_child, sha::HASH_LENGTH);
+
 		if(hash_fstream.eof()){
 			//incomplete/missing child
 			bad_hash.first = first_child_RRN + 1;
 			bad_hash.second = first_child_RRN + 2;
 			return true;
 		}
+
 		if(!check_hash(hash, left_child, right_child)){
 			//bad child hash
 			bad_hash.first = first_child_RRN;
@@ -128,9 +132,7 @@ bool hash_tree::check_hash_tree(const std::string & root_hash, const uint64_t & 
 
 bool hash_tree::create_hash_tree(std::string file_name, std::string & root_hash)
 {
-	char block_buff[global::P_BLOCK_SIZE - 1];
-	char empty[sha::HASH_LENGTH];
-	memset(empty, '\0', sha::HASH_LENGTH);
+	char block_buff[global::FILE_BLOCK_SIZE];
 
 	std::fstream fin(file_name.c_str(), std::ios::in | std::ios::binary);
 	std::fstream scratch((global::HASH_DIRECTORY+"scratch").c_str(), std::ios::in
@@ -138,7 +140,7 @@ bool hash_tree::create_hash_tree(std::string file_name, std::string & root_hash)
 
 	uint64_t blocks_read = 0;
 	while(true){
-		fin.read(block_buff, global::P_BLOCK_SIZE - 1);
+		fin.read(block_buff, global::FILE_BLOCK_SIZE);
 		if(fin.gcount() == 0){
 			break;
 		}

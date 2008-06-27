@@ -105,8 +105,8 @@ gui_preferences::gui_preferences(client * Client_in, server * Server_in)
 	fixed->put(*connection_limit_label, 140, 152);
 	fixed->put(*upload_speed_label, 8, 216);
 	fixed->put(*download_speed_label, 8, 184);
-	fixed->put(*connection_limit_hscale, 150, 192);
-	fixed->put(*button_box, 128, 256);
+	fixed->put(*connection_limit_hscale, 140, 192);
+	fixed->put(*button_box, 80, 256);
 
 	show_all_children();
 
