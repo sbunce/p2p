@@ -138,24 +138,13 @@ void client::set_speed_limit(const std::string & speed_limit)
 void client::main_thread()
 {
 	++threads;
-
-	//reconnect downloads that havn't finished
-	std::vector<download_info> resumed_download;
-	DB_Download.initial_fill_buff(resumed_download);
-	std::vector<download_info>::iterator iter_cur, iter_end;
-	iter_cur = resumed_download.begin();
-	iter_end = resumed_download.end();
-	while(iter_cur != iter_end){
-		start_download(*iter_cur);
-		++iter_cur;
-	}
-
-	int recv_limit = 0;
+	reconnect_unfinished();
 	while(true){
 		if(stop_threads){
 			break;
 		}
 
+		start_pending_downloads();
 		check_timeouts();
 		remove_complete();
 		client_buffer::generate_requests();
@@ -193,6 +182,7 @@ void client::main_thread()
 		//process reads/writes
 		char recv_buff[global::C_MAX_SIZE*global::PIPELINE_SIZE];
 		int n_bytes;
+		int recv_limit = 0;
 		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &read_FDS)){
 				if((recv_limit = Speed_Calculator.rate_control(global::C_MAX_SIZE*global::PIPELINE_SIZE)) != 0){
@@ -234,7 +224,7 @@ bool client::known_unresponsive(const std::string & IP)
 
 	//remove elements that are too old
 	Known_Unresponsive.erase(Known_Unresponsive.begin(),
-		Known_Unresponsive.upper_bound(time(0) - global::UNRESPONSIVE_TIMEOUT));
+		Known_Unresponsive.upper_bound(time(NULL) - global::UNRESPONSIVE_TIMEOUT));
 
 	//see if IP is in the list
 	std::map<time_t,std::string>::iterator iter_cur, iter_end;
@@ -277,7 +267,7 @@ void client::new_conn(download_conn * DC)
 	if(he == NULL || strncmp(inet_ntoa(*(struct in_addr*)he->h_addr), "127", 3) == 0){
 		boost::mutex::scoped_lock lock(KU_mutex);
 		logger::debug(LOGGER_P1,"stopping connection to localhost");
-		Known_Unresponsive.insert(std::make_pair(time(0), DC->IP));
+		Known_Unresponsive.insert(std::make_pair(time(NULL), DC->IP));
 		free(tmp_host_buf);
 		return;
 	}
@@ -291,7 +281,7 @@ void client::new_conn(download_conn * DC)
 	if(connect(DC->socket, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0){
 		logger::debug(LOGGER_P1,"connection to ",DC->IP," failed");
 		boost::mutex::scoped_lock lock(KU_mutex);
-		Known_Unresponsive.insert(std::make_pair(time(0), DC->IP));
+		Known_Unresponsive.insert(std::make_pair(time(NULL), DC->IP));
 	}else{
 		boost::mutex::scoped_lock lock(CCA_mutex);
 		logger::debug(LOGGER_P1,"created socket ",DC->socket," for ",DC->IP);
@@ -318,6 +308,7 @@ void client::process_CQ()
 	boost::mutex::scoped_lock lock(CQ_mutex);
 	if(Connection_Queue.empty()){
 		//connection cancelled before a thread got to process_CQ
+std::cout << "empty CQ\n";
 		return;
 	}
 	DC = Connection_Queue.front();
@@ -340,6 +331,19 @@ void client::process_CQ()
 	}
 
 	DC_unblock(DC);
+}
+
+void client::reconnect_unfinished()
+{
+	std::vector<download_info> resumed_download;
+	DB_Download.initial_fill_buff(resumed_download);
+	std::vector<download_info>::iterator iter_cur, iter_end;
+	iter_cur = resumed_download.begin();
+	iter_end = resumed_download.end();
+	while(iter_cur != iter_end){
+		start_download(*iter_cur);
+		++iter_cur;
+	}
 }
 
 void client::remove_complete()
@@ -431,12 +435,18 @@ void client::stop()
 	}
 }
 
-bool client::start_download(download_info & info)
+void client::start_download(const download_info & info)
+{
+	boost::mutex::scoped_lock lock(PD_mutex);
+	Pending_Download.push_back(info);
+}
+
+void client::start_download_process(const download_info & info)
 {
 	download * Download;
 	std::list<download_conn *> servers;
-	if(!Download_Factory.start_hash(info, Download, servers, info.resumed)){
-			return false;
+	if(!Download_Factory.start_hash(info, Download, servers)){
+		return;
 	}
 
 	client_buffer::add_download(Download);
@@ -454,13 +464,36 @@ bool client::start_download(download_info & info)
 	for(int x = 0; x<servers.size(); ++x){
 		Thread_Pool.queue_job(this, &client::process_CQ);
 	}
-
-	return true;
 }
 
 void client::stop_download(std::string hash)
 {
 	client_buffer::stop_download(hash);
+}
+
+void client::start_pending_downloads()
+{
+	/*
+	The pending downloads are copied so that PD_mutex can be unlocked as soon as
+	possible. PD_mutex locks start_download() which the GUI accesses. The
+	start_download function needs to be as fast as possible so the GUI doesn't
+	freeze up when starting a download.
+	*/
+	std::list<download_info> Pending_Download_Temp;
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(PD_mutex);
+	Pending_Download_Temp.assign(Pending_Download.begin(), Pending_Download.end());
+	Pending_Download.clear();
+	}//end lock scope
+
+	std::list<download_info>::iterator iter_cur, iter_end;
+	iter_cur = Pending_Download_Temp.begin();
+	iter_end = Pending_Download_Temp.end();
+	while(iter_cur != iter_end){
+		//this is the slow function which neccessitates the copy
+		start_download_process(*iter_cur);
+		++iter_cur;
+	}
 }
 
 int client::total_speed()
@@ -505,7 +538,7 @@ void client::transition_download(download * Download_Stop)
 		iter_cur = servers.begin();
 		iter_end = servers.end();
 		while(iter_cur != iter_end){
-			boost::mutex::scoped_lock lock_1(CQ_mutex);
+			boost::mutex::scoped_lock lock(CQ_mutex);
 			Connection_Queue.push_back(*iter_cur);
 			++iter_cur;
 		}

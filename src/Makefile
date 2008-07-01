@@ -2,6 +2,7 @@
 CXXFLAGS = `pkg-config gtkmm-2.4 --cflags` -O3 -Werror -ansi -pedantic
 
 OBJECTS = \
+	DB_blacklist.o \
 	client_buffer.o \
 	client.o \
 	DB_client_preferences.o \
@@ -38,6 +39,7 @@ LINKER_OPTIONS = \
 	-lsqlite3
 
 SERVER_OBJECTS = \
+	DB_blacklist.o \
 	DB_download.o \
 	DB_server_preferences.o \
 	DB_share.o \

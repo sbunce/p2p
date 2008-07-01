@@ -15,8 +15,8 @@ void request_gen::check_timeouts()
 	iter_cur = unfulfilled_request.begin();
 	iter_end = unfulfilled_request.end();
 	while(iter_cur != iter_end){
-		if(time(0) - iter_cur->second > timeout){
-			re_request.insert(std::make_pair(iter_cur->first, time(0)));
+		if(time(NULL) - iter_cur->second > timeout){
+			re_request.insert(iter_cur->first);
 		}
 		++iter_cur;
 	}
@@ -24,58 +24,32 @@ void request_gen::check_timeouts()
 
 bool request_gen::complete()
 {
+	boost::mutex::scoped_lock lock(Mutex);
 	assert(initialized);
-	return (latest_request == max_request && unfulfilled_request.empty() && re_request.empty());
+	return (latest_request == max_request && unfulfilled_request.empty());
 }
 
 void request_gen::force_re_request(const uint64_t & number)
 {
+	boost::mutex::scoped_lock lock(Mutex);
 	assert(initialized);
-	//alter time to force re_request
-	std::map<uint64_t, time_t>::iterator iter = unfulfilled_request.find(number);
-	if(iter != unfulfilled_request.end()){
-		iter->second = 0; //set time requested to zero, which will trigger re_request
-	}else{
-		unfulfilled_request.insert(std::make_pair(number, 0));
-	}
+	re_request.insert(number);
 }
 
-void request_gen::fulfil(uint64_t fulfilled_request)
+void request_gen::fulfil(const uint64_t & fulfilled_request)
 {
+	boost::mutex::scoped_lock lock(Mutex);
 	assert(initialized);
 	unfulfilled_request.erase(fulfilled_request);
 	re_request.erase(fulfilled_request);
+	re_requested.erase(fulfilled_request);
 }
 
 uint64_t request_gen::highest_requested()
 {
+	boost::mutex::scoped_lock lock(Mutex);
 	assert(initialized);
 	return latest_request;
-}
-
-bool request_gen::check_re_request(std::deque<uint64_t> & prev_request)
-{
-	//do not do re_request from servers that are having a block re_requested
-	std::map<uint64_t, time_t>::iterator re_request_iter_cur, re_request_iter_end;
-	std::deque<uint64_t>::iterator prev_iter_cur, prev_iter_end;
-	re_request_iter_cur = re_request.begin();
-	re_request_iter_end = re_request.end();
-	while(re_request_iter_cur != re_request_iter_end){
-		prev_iter_cur = prev_request.begin();
-		prev_iter_end = prev_request.end();
-		while(prev_iter_cur != prev_iter_end){
-			if(re_request_iter_cur->first == *prev_iter_cur){
-				return false;
-			}
-			++prev_iter_cur;
-		}
-		++re_request_iter_cur;
-	}
-
-	prev_request.push_back(re_request.begin()->first);
-	logger::debug(LOGGER_P1,"re_requesting ",re_request.begin()->first);
-	re_request.erase(re_request.begin()->first);
-	return true;
 }
 
 void request_gen::init(const uint64_t & min_request_in, const uint64_t & max_request_in, const int & timeout_in)
@@ -83,6 +57,7 @@ void request_gen::init(const uint64_t & min_request_in, const uint64_t & max_req
 	initialized = true;
 	unfulfilled_request.clear();
 	re_request.clear();
+	re_requested.clear();
 	latest_request = min_request_in;
 	min_request = min_request_in;
 	max_request = max_request_in;
@@ -91,31 +66,65 @@ void request_gen::init(const uint64_t & min_request_in, const uint64_t & max_req
 
 bool request_gen::request(std::deque<uint64_t> & prev_request)
 {
+	boost::mutex::scoped_lock lock(Mutex);
 	assert(initialized);
 	check_timeouts();
 	if(re_request.empty()){
+		//no re_requests to be made
 		if(latest_request == max_request){
-			//max request reached
-			if(prev_request.empty()){
-				return false;
-			}else{
-				if(prev_request.back() != max_request){
-					//max_request hasn't yet been requested
-					prev_request.push_back(max_request);
-					unfulfilled_request.insert(std::make_pair(max_request, time(0)));
-					return true;
-				}else{
-					//max request already requested
+			/*
+			On the last request. Check to see if it has already been requested from
+			a server. If it has been return false because no more requests need to
+			be made.
+			*/
+			std::map<uint64_t, time_t>::iterator iter_cur, iter_end;
+			iter_cur = unfulfilled_request.begin();
+			iter_end = unfulfilled_request.end();
+			while(iter_cur != iter_end){
+				if(iter_cur->first == max_request){
 					return false;
 				}
+				++iter_cur;
 			}
+			prev_request.push_back(max_request);
+			unfulfilled_request.insert(std::make_pair(max_request, time(NULL)));
+			return true;
 		}else{
+			//not on last request, proceed normally adding the next sequential request
 			prev_request.push_back(latest_request);
-			unfulfilled_request.insert(std::make_pair(latest_request, time(0)));
+			unfulfilled_request.insert(std::make_pair(latest_request, time(NULL)));
 			++latest_request;
 			return true;
 		}
 	}else{
-		return check_re_request(prev_request);
+		/*
+		A re_request needs to be done. Only do re_requests from servers that haven't
+		already had a block re_requested from them.
+		*/
+		std::set<uint64_t>::iterator re_requested_iter_cur, re_requested_iter_end;
+		std::deque<uint64_t>::iterator prev_iter_cur, prev_iter_end;
+		re_requested_iter_cur = re_requested.begin();
+		re_requested_iter_end = re_requested.end();
+		while(re_requested_iter_cur != re_requested_iter_end){
+			prev_iter_cur = prev_request.begin();
+			prev_iter_end = prev_request.end();
+			while(prev_iter_cur != prev_iter_end){
+				if(*re_requested_iter_cur == *prev_iter_cur){
+					/*
+					A re-request was already made from this server. It won't be allowed
+					to handle another re-request until it handles the one it already has.
+					*/
+					return false;
+				}
+				++prev_iter_cur;
+			}
+			++re_requested_iter_cur;
+		}
+		prev_request.push_back(*(re_request.begin()));
+		unfulfilled_request.insert(std::make_pair(*(re_request.begin()), time(NULL)));
+		re_requested.insert(*(re_request.begin()));
+		re_request.erase(re_request.begin());
+		logger::debug(LOGGER_P1,"re_requesting ",*(prev_request.begin()));
+		return true;
 	}
 }

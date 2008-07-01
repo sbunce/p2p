@@ -34,7 +34,7 @@ public:
 	*/
 	bool get_file_path(const std::string & hash, std::string & path);
 	void initial_fill_buff(std::vector<download_info> & resumed_download);
-	bool start_download(download_info & info);
+	bool start_download(const download_info & info);
 	void terminate_download(const std::string & hash);
 
 private:

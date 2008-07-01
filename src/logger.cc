@@ -1,6 +1,6 @@
 #include "logger.h"
 
-volatile logger * logger::logger_instance = NULL;
+volatile logger * logger::Logger = NULL;
 boost::mutex logger::Mutex;
 
 logger::logger()

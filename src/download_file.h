@@ -57,6 +57,12 @@ public:
 
 private:
 	/*
+	When any writing is happening to the downloading file all read access should
+	be blocked.
+	*/
+	boost::mutex file_mutex;
+
+	/*
 	When the download_file is constructed a thread is spawned to hash check a
 	partial download that has been resumed. Requests are only returned when hashing
 	is done which is indicated by this being set equal to false.
@@ -64,11 +70,9 @@ private:
 	volatile bool hashing;
 
 	/*
-	These variables are for tracking the progress of the hash checking so a percent
-	can be calculated.
+	This is set to the first unreceived block (next block past end of file).
 	*/
-	volatile uint64_t hash_latest;
-	uint64_t hash_last;
+	uint64_t first_unreceived;
 
 	volatile int threads;       //one if hash checking, otherwise zero
 	volatile bool stop_threads; //if set to true hash checking will stop early

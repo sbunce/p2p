@@ -75,13 +75,22 @@ public:
 	void search(std::string search_word, std::vector<download_info> & Search_Info);
 	void start();
 	void stop();
-	bool start_download(download_info & info);
+	void start_download(const download_info & info);
 	void stop_download(std::string hash);
 	int total_speed();
 
 private:
 	volatile bool stop_threads; //if true this will trigger thread termination
 	volatile int threads;       //how many threads are currently running (currently just one in main_thread())
+
+	/*
+	Holds download_info for downloads that need to be started. The download_info
+	is put in this container and later processed by main_thread(). This is done
+	because the logic which starts the download takes long enough to where the
+	GUI function which calls it blocks for an unacceptible amount of time.
+	*/
+	boost::mutex PD_mutex;
+	std::list<download_info> Pending_Download;
 
 	//holds connections which need to be made
 	boost::mutex CQ_mutex;
@@ -109,20 +118,24 @@ private:
 	std::map<time_t,std::string> Known_Unresponsive; //time mapped to IP
 
 	/*
-	check_timeouts      - checks all servers to see if they've timed out and removes/disconnects if they have
-	DC_block_concurrent - will block the second or greater DC that passes with the same server_IP
-	                      lets a new DC by whenever the DC blocking is unblocked with DC_unblock
-	DC_unblock          - allows DC_block_concurrent to release a DC being blocked
-	disconnect          - disconnects a socket, modifies Client_Buffer
-	known_unresponsive  - returns true if a connection to the server failed within global::UNRESPONSIVE_TIMEOUT time
-	main_thread         - main client thread that sends/receives data and triggers events
-	new_conn            - connects to the server specified by the DC
-	prepare_requests    - touches each Client_Buffer element to trigger new requests(if needed)
-	process_CQ          - connects to servers for DC's or initiates adding a DC to existing client_buffer
-	                      one Thread_Pool job should be scheduled for each DC in Connection_Queue
-	remove_complete     - removes downloads that are complete(or stopped)
-	remove_pending_DC   - cancels download_conns in progress
-	transition_download - passes terminating download to download_factory, starts downloads download_factory may return
+	check_timeouts          - checks all servers to see if they've timed out and removes/disconnects if they have
+	DC_block_concurrent     - will block the second or greater DC that passes with the same server_IP
+	                          lets a new DC by whenever the DC blocking is unblocked with DC_unblock
+	DC_unblock              - allows DC_block_concurrent to release a DC being blocked
+	disconnect              - disconnects a socket, modifies Client_Buffer
+	known_unresponsive      - returns true if a connection to the server failed within global::UNRESPONSIVE_TIMEOUT time
+	main_thread             - main client thread that sends/receives data and triggers events
+	new_conn                - connects to the server specified by the DC
+	prepare_requests        - touches each Client_Buffer element to trigger new requests(if needed)
+	process_CQ              - connects to servers for DC's or initiates adding a DC to existing client_buffer
+	                          one Thread_Pool job should be scheduled for each DC in Connection_Queue
+	reconnect_unfinished    - called by main_thread() to resume unfinished downloads
+	                          called before main_thread accesses shared objects so no mutex needed
+	remove_complete         - removes downloads that are complete(or stopped)
+	remove_pending_DC       - cancels download_conns in progress
+	start_download_process  - starts a download added by start_download()
+	start_pending_downloads - called by main_thread() to start downloads added by start_download()
+	transition_download     - passes terminating download to download_factory, starts downloads download_factory may return
 	*/
 	void check_timeouts();
 	void DC_block_concurrent(download_conn * DC);
@@ -132,8 +145,11 @@ private:
 	void main_thread();
 	void new_conn(download_conn * DC);
 	void process_CQ();
+	void reconnect_unfinished();
 	void remove_complete();
 	void remove_pending_DC(std::list<download *> & complete);
+	void start_download_process(const download_info & info);
+	void start_pending_downloads();
 	void transition_download(download * Download_Stop);
 
 

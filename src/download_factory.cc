@@ -5,11 +5,11 @@ download_factory::download_factory()
 
 }
 
-bool download_factory::start_hash(download_info & info, download *& Download, std::list<download_conn *> & servers, bool resumed)
+bool download_factory::start_hash(const download_info & info, download *& Download, std::list<download_conn *> & servers)
 {
 	if(!DB_Download.start_download(info)){
 		//download already exists in database
-		if(!resumed){
+		if(!info.resumed){
 			//download is resumed so it's normal that the download couldn't be added
 			logger::debug(LOGGER_P1,"resuming download ",info.name);
 			return false;

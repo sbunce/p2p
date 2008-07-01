@@ -4,3 +4,8 @@ download_conn::download_conn()
 {
 
 }
+
+download_conn::~download_conn()
+{
+
+}

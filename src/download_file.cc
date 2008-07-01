@@ -11,7 +11,6 @@ download_file::download_file(
 	file_path(file_path_in),
 	file_size(file_size_in),
 	hashing(true),
-	hash_latest(0),
 	threads(0),
 	stop_threads(false),
 	thread_file_hash(file_hash_in),
@@ -46,9 +45,12 @@ download_file::download_file(
 	std::fstream fin((global::DOWNLOAD_DIRECTORY+file_name).c_str(), std::ios::in);
 	assert(fin.is_open());
 	fin.seekg(0, std::ios::end);
-	hash_last = fin.tellg() / global::FILE_BLOCK_SIZE;
+	first_unreceived = fin.tellg() / global::FILE_BLOCK_SIZE;
 
-	//hash check file blocks
+	//start re_requesting where the download left off
+	Request_Gen.init((uint64_t)first_unreceived, last_block, global::RE_REQUEST_TIMEOUT);
+
+	//hash check for corrupt/missing blocks
 	boost::thread T(boost::bind(&download_file::hash_check, this));
 }
 
@@ -73,26 +75,23 @@ const std::string & download_file::hash()
 void download_file::hash_check()
 {
 	++threads;
-	std::fstream fin;
-	fin.open(thread_file_path.c_str(), std::ios::in);
-	assert(fin.is_open());
-
+	std::fstream fin(thread_file_path.c_str(), std::ios::in);
 	char block_buff[global::FILE_BLOCK_SIZE];
+	uint64_t hash_latest = 0;
 	while(true){
-		fin.read(block_buff, global::FILE_BLOCK_SIZE);
-		if(fin.gcount() == 0){
+		if(hash_latest == first_unreceived){
 			break;
 		}
-		if(!Hash_Tree.check_block(thread_file_hash, (uint64_t)hash_latest, block_buff, fin.gcount())){
-			break;
+		fin.read(block_buff, global::FILE_BLOCK_SIZE);
+		if(!Hash_Tree.check_block(thread_file_hash, hash_latest, block_buff, fin.gcount())){
+			logger::debug(LOGGER_P1,"found corrupt block ",hash_latest," in resumed download");
+			Request_Gen.force_re_request(hash_latest);
 		}
 		++hash_latest;
 		if(stop_threads){
 			break;
 		}
 	}
-
-	Request_Gen.init((uint64_t)hash_latest, last_block, global::RE_REQUEST_TIMEOUT);
 	hashing = false;
 	--threads;
 }
@@ -100,7 +99,7 @@ void download_file::hash_check()
 const std::string download_file::name()
 {
 	if(hashing){
-		return file_name + " CHECKING";
+		return file_name + " HASHING";
 	}else{
 		return file_name;
 	}
@@ -111,35 +110,21 @@ unsigned int download_file::percent_complete()
 	if(last_block == 0){
 		return 0;
 	}else{
-		if(hashing){
-			return (unsigned int)(((float)hash_latest / (float)hash_last)*100);
-		}else{
-			return (unsigned int)(((float)Request_Gen.highest_requested() / (float)last_block)*100);
-		}
+		return (unsigned int)(((float)Request_Gen.highest_requested() / (float)last_block)*100);
 	}
 }
 
 bool download_file::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected)
 {
-/*
-Think about letting requests happen while hashing is going on. To do this have
-the hashing function force_rerequest blocks that it find that are bad. Initialize
-the Request_Gen immediately.
-
-Request_Gen may have to be made thread safe. This can be internal thread safety
-with mutex on all public member functions.
-*/
-
-
-	if(download_complete || hashing){
-		return false;
-	}
-
 	std::map<int, download_conn *>::iterator iter = Connection.find(socket);
 	assert(iter != Connection.end());
-	download_file_conn * conn = (download_file_conn *)iter->second;
+	download_file_conn * conn = dynamic_cast<download_file_conn *>(iter->second);
+	assert(conn != NULL);
 
-	if(!conn->slot_ID_requested){
+	if(download_complete && !hashing){
+		//stopping case, download complete
+		return false;
+	}else if(!conn->slot_ID_requested){
 		//slot_ID not yet obtained from server
 		request = global::P_REQUEST_SLOT_FILE + hex::hex_to_binary(file_hash);
 		conn->slot_ID_requested = true;
@@ -171,29 +156,31 @@ with mutex on all public member functions.
 			download_complete = true;
 		}
 		return true;
-	}else if(!Request_Gen.request(conn->latest_request)){
-		//no request to be made at the moment
+	}else if(Request_Gen.request(conn->latest_request)){
+		//prepare request for needed block
+		request += global::P_SEND_BLOCK;
+		request += conn->slot_ID;
+		request += Convert_uint64.encode(conn->latest_request.back());
+		int size;
+		if(conn->latest_request.back() == last_block){
+			size = last_block_size;
+		}else{
+			size = global::P_BLOCK_SIZE;
+		}
+		expected.push_back(std::make_pair(global::P_BLOCK, size));
+		expected.push_back(std::make_pair(global::P_ERROR, 1));
+		return true;
+	}else{
 		return false;
 	}
-
-	request += global::P_SEND_BLOCK;
-	request += conn->slot_ID;
-	request += Convert_uint64.encode(conn->latest_request.back());
-	int size;
-	if(conn->latest_request.back() == last_block){
-		size = last_block_size;
-	}else{
-		size = global::P_BLOCK_SIZE;
-	}
-
-	expected.push_back(std::make_pair(global::P_BLOCK, size));
-	expected.push_back(std::make_pair(global::P_ERROR, 1));
-	return true;
 }
 
 void download_file::response(const int & socket, std::string block)
 {
-	download_file_conn * conn = (download_file_conn *)Connection[socket];
+	std::map<int, download_conn *>::iterator iter = Connection.find(socket);
+	assert(iter != Connection.end());
+	download_file_conn * conn = dynamic_cast<download_file_conn *>(iter->second);
+	assert(conn != NULL);
 
 	if(block[0] == global::P_SLOT_ID && conn->slot_ID_received == false){
 		conn->slot_ID = block[1];
@@ -206,6 +193,9 @@ void download_file::response(const int & socket, std::string block)
 		if(!Hash_Tree.check_block(file_hash, conn->latest_request.front(), block.c_str(), block.length())){
 			Request_Gen.force_re_request(conn->latest_request.front());
 			logger::debug(LOGGER_P1,file_name,":",conn->latest_request.front()," hash failure");
+
+//blacklist server here
+
 		}else{
 			if(!close_slots){
 				write_block(conn->latest_request.front(), block);
@@ -213,7 +203,7 @@ void download_file::response(const int & socket, std::string block)
 			Request_Gen.fulfil(conn->latest_request.front());
 		}
 		conn->latest_request.pop_front();
-		if(Request_Gen.complete()){
+		if(Request_Gen.complete() && !hashing){
 			//download is complete, start closing slots
 			close_slots = true;
 		}
@@ -225,7 +215,6 @@ void download_file::stop()
 	namespace fs = boost::filesystem;
 	fs::path path = fs::system_complete(fs::path(file_path, fs::native));
 	fs::remove(path);
-
 	if(Connection.size() == 0){
 		download_complete = true;
 	}else{

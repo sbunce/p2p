@@ -13,6 +13,7 @@ class download_conn
 {
 public:
 	download_conn();
+	virtual ~download_conn();
 
 	int socket;
 	std::string IP;

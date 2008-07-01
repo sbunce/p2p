@@ -5,7 +5,7 @@
 //#define NDEBUG
 
 //uncomment to enable file block corruption test
-//#define CORRUPT_BLOCKS
+#define CORRUPT_BLOCKS
 
 //std
 #include <cassert>

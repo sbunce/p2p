@@ -1,11 +1,12 @@
 TODO
 
--Make download hash check itself when it starts. This can be done in a function.
-The status of the hash check can be indicated by changing the name of the
-download_file.
-
 -P_ERROR on downloads not being handled. Need a way for downloads to trigger
-disconnect of a server to solve this.
+disconnect of a server to solve this. Make singleton disconnect object the client
+has access to. Have it buffer in memory servers to disconnect. Also give it
+DB access to record blacklisted servers.
+
+-Untemplate the convert class. Make it a namespace with templated functions.
+Merge hex.h in to it. Make the endianness check a singleton.
 
 
 DEFERRED FEATURES
@@ -42,4 +43,5 @@ can be moved to get rid of gaps due to removed files.
 
 -Randomize the order in which sockets are checked to eliminate starvation when
 rate limiting enabled. Is there a non-random shuffling that guarantees equal
-time?
+time? What about associating a counter with each socket that counts the number
+of turns it got?

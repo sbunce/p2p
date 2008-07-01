@@ -4,22 +4,22 @@ DB_share::DB_share()
 {
 	//open DB
 	if(sqlite3_open(global::DATABASE_PATH.c_str(), &sqlite3_DB) != 0){
-		logger::debug(LOGGER_P1,"#1 ",sqlite3_errmsg(sqlite3_DB));
+		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
 
 	//DB timeout to 1 second
 	if(sqlite3_busy_timeout(sqlite3_DB, 1000) != 0){
-		logger::debug(LOGGER_P1,"#2 ",sqlite3_errmsg(sqlite3_DB));
+		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
 
-	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS share (hash TEXT, size TEXT, path TEXT);", NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,"#3 ",sqlite3_errmsg(sqlite3_DB));
+	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS share (hash TEXT, size TEXT, path TEXT)", NULL, NULL, NULL) != 0){
+		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
-	if(sqlite3_exec(sqlite3_DB, "CREATE INDEX IF NOT EXISTS share_path_index ON share (path);", NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,"#4 ",sqlite3_errmsg(sqlite3_DB));
+	if(sqlite3_exec(sqlite3_DB, "CREATE INDEX IF NOT EXISTS share_path_index ON share (path)", NULL, NULL, NULL) != 0){
+		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
-	if(sqlite3_exec(sqlite3_DB, "CREATE INDEX IF NOT EXISTS share_hash_index ON share (hash);", NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,"#5 ",sqlite3_errmsg(sqlite3_DB));
+	if(sqlite3_exec(sqlite3_DB, "CREATE INDEX IF NOT EXISTS share_hash_index ON share (hash)", NULL, NULL, NULL) != 0){
+		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
 }
 
@@ -42,7 +42,7 @@ void DB_share::add_entry(const std::string & hash, const uint64_t & size, const 
 	if(!add_entry_entry_exists){
 		char * path_sqlite = sqlite3_mprintf("%q", path.c_str());
 		std::ostringstream query;
-		query << "INSERT INTO share (hash, size, path) VALUES ('" << hash << "', '" << size << "', '" << path_sqlite << "');";
+		query << "INSERT INTO share (hash, size, path) VALUES ('" << hash << "', '" << size << "', '" << path_sqlite << "')";
 		if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
 			logger::debug(LOGGER_P1,"#2 ",sqlite3_errmsg(sqlite3_DB));
 		}
@@ -110,7 +110,7 @@ void DB_share::lookup_hash_call_back(int & columns_retrieved, char ** query_resp
 
 void DB_share::remove_missing()
 {
-	if(sqlite3_exec(sqlite3_DB, "SELECT hash, path FROM share;", remove_missing_call_back_wrapper, (void *)this, NULL) != 0){
+	if(sqlite3_exec(sqlite3_DB, "SELECT hash, path FROM share", remove_missing_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
 }

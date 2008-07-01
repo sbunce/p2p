@@ -30,7 +30,7 @@ public:
 	std::deque<uint64_t> latest_request;
 
 	/*
-	This stores all the blocks that have been requested from the server. When the
+	This stores all the blocks that have been received from the server. When the
 	every block is downloaded there will be a hash check. If any block from this
 	server fails a hash check all blocks later than the bad block requested from
 	this server will be re_requested.

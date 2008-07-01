@@ -7,7 +7,7 @@ average_speed(0),
 rate_control_count(0),
 rate_control_damper(0),
 rate_control_try_speed(0),
-rate_control_try_time(time(0))
+rate_control_try_time(time(NULL))
 {
 
 }
@@ -35,7 +35,7 @@ void speed_calculator::update(const unsigned int & byte_count)
 	previous second. Because the current second will always be incomplete, the
 	previous second will be considered the download speed.
 	*/
-	unsigned int current_time = time(0);
+	unsigned int current_time = time(NULL);
 
 	if(Second_Bytes.empty()){
 		Second_Bytes.push_front(std::make_pair(current_time, 0));
@@ -102,7 +102,7 @@ unsigned int speed_calculator::rate_control(int max_possible_transfer)
 
 	This is run once per second to adjust how much this function sleeps.
 	*/
-	if(rate_control_try_time != time(0)){
+	if(rate_control_try_time != time(NULL)){
 		//there is a bias toward speeding up
 		if(average_speed >= rate_control_try_speed){
 			rate_control_damper -= 1;
@@ -111,7 +111,7 @@ unsigned int speed_calculator::rate_control(int max_possible_transfer)
 		}
 
 		rate_control_try_speed = average_speed;
-		rate_control_try_time = time(0);
+		rate_control_try_time = time(NULL);
 	}
 
 	//damper = 1 means that there is always a sleep, it should not go below 1

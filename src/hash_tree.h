@@ -4,6 +4,7 @@
 //boost
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
+#include <boost/thread/mutex.hpp>
 
 //custom
 #include "sha.h"
@@ -22,7 +23,6 @@ public:
 	/*
 	check_block             - checks a file block to see if it matches the block in the hash tree
 	                          returns true if block valid, else false
-	check_exists            - returns true if hash tree file exists (note: this doesn't mean the tree is corrrect)
 	check_hash_tree         - returns true if bad hash or missing hash found (bad_hash set to possible bad hashes)
 	                          returns false if no bad hash found in the hash tree	                          
 	create_hash_tree        - creates a hash tree for the file pointed to by file_path
@@ -34,7 +34,6 @@ public:
 	stop                    - sets stop_thread to true and allows create hash tree to exit early
 	*/
 	bool check_block(const std::string & root_hex_hash, const uint64_t & block_number, const char * const block, const int & block_length);
-	bool check_exists(std::string root_hash);
 	bool check_hash_tree(const std::string & root_hash, const uint64_t & hash_count, std::pair<uint64_t, uint64_t> & bad_hash);
 	bool create_hash_tree(std::string file_path, std::string & root_hash);
 	void write_hash(const std::string & root_hex_hash, const uint64_t & number, const std::string & hash_block);
@@ -67,6 +66,9 @@ public:
 	}
 
 private:
+	//mutex for all access to public functions except stop()
+	boost::mutex Mutex;
+
 	/*
 	If a thread is in a long create_hash_tree call then this will cause it to
 	terminate early.

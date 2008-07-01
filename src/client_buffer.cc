@@ -12,7 +12,7 @@ client_buffer::client_buffer(
 	socket(socket_in),
 	IP(IP_in),
 	abuse(false),
-	last_seen(time(0))
+	last_seen(time(NULL))
 {
 	recv_buff.reserve(global::C_MAX_SIZE*global::PIPELINE_SIZE);
 	send_buff.reserve(global::S_MAX_SIZE*global::PIPELINE_SIZE);
@@ -30,7 +30,7 @@ bool client_buffer::empty()
 
 void client_buffer::post_recv()
 {
-	last_seen = time(0);
+	last_seen = time(NULL);
 	if(Pipeline.empty()){
 		//server responded out of turn
 		logger::debug(LOGGER_P1," abusive server (responded when pipeline empty) ",IP);
@@ -104,6 +104,7 @@ void client_buffer::prepare_request()
 	while(Pipeline.size() < global::PIPELINE_SIZE){
 		std::string request;
 		if(rotate_downloads()){
+			//this will only be checked when a full rotation of downloads has been done
 			if(!buffer_change){
 				break;
 			}

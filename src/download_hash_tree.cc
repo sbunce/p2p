@@ -20,7 +20,8 @@ download_hash_tree::download_hash_tree(
 	_download_file_name(download_file_name_in),
 	download_complete(false),
 	close_slots(false),
-	_canceled(false)
+	_canceled(false),
+	checking_phase(false)
 {
 	assert(global::FILE_BLOCK_SIZE % sha::HASH_LENGTH == 0);
 	hash_name = _download_file_name + " HASH";
@@ -97,15 +98,63 @@ unsigned int download_hash_tree::percent_complete()
 
 bool download_hash_tree::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected)
 {
-	if(download_complete){
-		return false;
-	}
-
 	std::map<int, download_conn *>::iterator iter = Connection.find(socket);
 	assert(iter != Connection.end());
-	download_hash_tree_conn * conn = (download_hash_tree_conn *)iter->second;
+	download_hash_tree_conn * conn = dynamic_cast<download_hash_tree_conn *>(iter->second);
+	assert(conn != NULL);
 
-	if(!conn->slot_ID_requested){
+	if(Request_Gen.complete()){
+		checking_phase = true;
+		/*
+		All blocks have been requested and received, check the hash tree for bad
+		hash blocks.
+		*/
+		std::pair<uint64_t, uint64_t> bad_hash;
+		if(Hash_Tree.check_hash_tree(root_hash, hash_tree_count, bad_hash)){
+			/*
+			There is a bad hash block. Find out what server it was from and re_request
+			all blocks that were requested from that server.
+			*/
+			uint64_t bad_block = bad_hash.first / hashes_per_block;
+
+			std::map<int, download_conn *>::iterator C_iter_cur, C_iter_end;
+			C_iter_cur = Connection.begin();
+			C_iter_end = Connection.end();
+			download_hash_tree_conn * DHTC;
+			while(C_iter_cur != C_iter_end){
+				DHTC = dynamic_cast<download_hash_tree_conn *>(C_iter_cur->second);
+				assert(DHTC != NULL);
+				std::set<uint64_t>::iterator iter = DHTC->received_blocks.find(bad_block);
+				if(iter != DHTC->received_blocks.end()){
+					//found the server that sent the bad block, re_request all blocks from that server
+					std::set<uint64_t>::iterator RB_iter_cur, RB_iter_end;
+					RB_iter_cur = DHTC->received_blocks.begin();
+					RB_iter_end = DHTC->received_blocks.end();
+					while(RB_iter_cur != RB_iter_end){
+						Request_Gen.force_re_request(*RB_iter_cur);
+						++RB_iter_cur;
+					}
+					break;
+				}
+				++C_iter_cur;
+			}
+
+			//blacklist the server that sent the bad blocks
+			DB_blacklist::add(DHTC->IP);
+
+			if(DHTC == conn){
+				//server that sent the bad block is the current server
+				return false;
+			}
+		}else{
+			//complete hash tree
+			close_slots = true;
+		}
+	}
+
+	if(download_complete){
+		return false;
+	}else if(!conn->slot_ID_requested){
 		//slot_ID not yet obtained from server
 		request = global::P_REQUEST_SLOT_HASH + hex::hex_to_binary(root_hash);
 		conn->slot_ID_requested = true;
@@ -139,21 +188,7 @@ bool download_hash_tree::request(const int & socket, std::string & request, std:
 			download_complete = true;
 		}
 		return true;
-	}
-
-	if(Request_Gen.complete()){
-		//all blocks requested, check tree
-		std::pair<uint64_t, uint64_t> bad_hash;
-		if(Hash_Tree.check_hash_tree(root_hash, hash_tree_count, bad_hash)){
-			//figure out what block this is from and re-request
-//			Request_Gen.force_re_request(bad_hash.first / hashes_per_block);
-		}else{
-			//complete hash tree
-			close_slots = true;
-		}
-	}
-
-	if(Request_Gen.request(conn->latest_request)){
+	}else if(Request_Gen.request(conn->latest_request)){
 		//no request to be made at the moment
 		request += global::P_SEND_BLOCK;
 		request += conn->slot_ID;
@@ -165,7 +200,6 @@ bool download_hash_tree::request(const int & socket, std::string & request, std:
 		}else{
 			size = global::P_BLOCK_SIZE;
 		}
-
 		expected.push_back(std::make_pair(global::P_BLOCK, size));
 		expected.push_back(std::make_pair(global::P_ERROR, 1));
 		return true;
@@ -178,7 +212,8 @@ void download_hash_tree::response(const int & socket, std::string block)
 {
 	std::map<int, download_conn *>::iterator iter = Connection.find(socket);
 	assert(iter != Connection.end());
-	download_hash_tree_conn * conn = (download_hash_tree_conn *)iter->second;
+	download_hash_tree_conn * conn = dynamic_cast<download_hash_tree_conn *>(iter->second);
+	assert(conn != NULL);
 
 	if(block[0] == global::P_SLOT_ID && conn->slot_ID_received == false){
 		conn->slot_ID = block[1];
@@ -190,6 +225,7 @@ void download_hash_tree::response(const int & socket, std::string block)
 		block.erase(0, 1);                           //trim command
 		Hash_Tree.write_hash(root_hash, conn->latest_request.front()*hashes_per_block, block);
 		Request_Gen.fulfil(conn->latest_request.front());
+		conn->received_blocks.insert(conn->latest_request.front());
 		conn->latest_request.pop_front();
 	}else{
 		//server abusive

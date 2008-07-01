@@ -3,6 +3,7 @@
 
 //custom
 #include "convert.h"
+#include "DB_blacklist.h"
 #include "download.h"
 #include "download_hash_tree_conn.h"
 #include "hash_tree.h"
@@ -70,6 +71,12 @@ private:
 	that P_CLOSE_SLOT commands need to be sent to all servers.
 	*/
 	bool close_slots;
+
+	/*
+	When all hashes are done downloading the checking phase is entered where if
+	there are any bad blocks they're requested one at a time from low to high.
+	*/
+	bool checking_phase;
 
 	convert<uint64_t> Convert_uint64;
 	request_gen Request_Gen;

@@ -25,9 +25,23 @@ public:
 		resumed(false)
 	{}
 
-	std::string hash;        //root hash of hash tree
-	std::string name;        //name of the file
-	uint64_t size;           //size of the file (bytes)
+	//copy ctor
+	download_info(
+		const download_info & DI
+	):
+		hash(DI.hash),
+		name(DI.name),
+		size(DI.size),
+		percent_complete(DI.percent_complete),
+		speed(DI.speed),
+		resumed(DI.resumed)
+	{
+		IP.assign(DI.IP.begin(), DI.IP.end());
+	}
+
+	std::string hash; //root hash of hash tree
+	std::string name; //name of the file
+	uint64_t size;    //size of the file (bytes)
 
 	//information unique to the server
 	std::vector<std::string> IP;

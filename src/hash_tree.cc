@@ -11,6 +11,7 @@ hash_tree::hash_tree(
 
 bool hash_tree::check_block(const std::string & root_hex_hash, const uint64_t & block_number, const char * const block, const int & block_length)
 {
+	boost::mutex::scoped_lock lock(Mutex);
 	if(root_hex_hash != file_hash_root_hex_hash){
 		file_hash_root_hex_hash = root_hex_hash;
 		file_hash_start_RRN = locate_start(root_hex_hash);
@@ -22,12 +23,6 @@ bool hash_tree::check_block(const std::string & root_hex_hash, const uint64_t & 
 	SHA.load(block, block_length);
 	SHA.end();
 	return strncmp(file_hash_buffer, SHA.raw_hash(), sha::HASH_LENGTH) == 0;
-}
-
-bool hash_tree::check_exists(std::string root_hash)
-{
-	std::fstream hash_fstream((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::in);
-	return hash_fstream.is_open();
 }
 
 bool hash_tree::check_hash(char * parent, char * left_child, char * right_child)
@@ -45,6 +40,7 @@ bool hash_tree::check_hash(char * parent, char * left_child, char * right_child)
 
 bool hash_tree::check_hash_tree(const std::string & root_hash, const uint64_t & hash_count, std::pair<uint64_t, uint64_t> & bad_hash)
 {
+	boost::mutex::scoped_lock lock(Mutex);
 	//reset the positions if checking a different tree
 	if(check_tree_latest.empty() || check_tree_latest != root_hash){
 		current_RRN = 0; //RRN of latest hash retrieved
@@ -319,6 +315,7 @@ uint64_t hash_tree::locate_start(const std::string & root_hex_hash)
 
 void hash_tree::write_hash(const std::string & root_hex_hash, const uint64_t & number, const std::string & hash_block)
 {
+	boost::mutex::scoped_lock lock(Mutex);
 	std::fstream fout((global::HASH_DIRECTORY+root_hex_hash).c_str(), std::ios::in | std::ios::out | std::ios::binary);
 	if(fout.is_open()){
 		fout.seekp(sha::HASH_LENGTH * number, std::ios::beg);
