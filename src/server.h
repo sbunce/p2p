@@ -21,7 +21,6 @@
 //networking
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 
 //std
@@ -50,8 +49,6 @@ public:
 	get_speed_limit     - returns the download speed limit (kilobytes/second)
 	set_speed_limit     - sets a new download speed limit (kilobytes/second)
 	is_indexing         - returns true if the server is indexing files
-	start               - starts the server
-	stop                - stops the server (blocks until server shut down)
 	total_speed         - returns the total speed of all uploads (bytes per second)
 	*/
 	void current_uploads(std::vector<upload_info> & info);
@@ -62,12 +59,10 @@ public:
 	std::string get_speed_limit();
 	void set_speed_limit(const std::string & speed_limit);
 	bool is_indexing();
-	void start();
-	void stop();
 	int total_speed();
 
 private:
-	std::map<int, server_buffer *> Server_Buffer;
+	std::map<int, server_buffer> Server_Buffer;
 
 	volatile bool stop_threads; //if true this will trigger thread termination
 	volatile int threads;       //how many threads are currently running
@@ -89,12 +84,12 @@ private:
 	main_thread        - where the party is at
 	new_conn           - sets up socket for client
 	                   - returns true if connection suceeded
-	process_request    - interprets the request from a client and buffers it
+	process_request    - adds received bytes to buffer and interprets buffer
 	*/
 	void disconnect(const int & socketfd);
 	void main_thread();
-	bool new_conn(const int & listener);
-	void process_request(const int & socketfd, char * recv_buff, const int & n_bytes);
+	bool new_connection(const int & listener);
+	void process_request(server_buffer * SB, char * recv_buff, const int & n_bytes);
 
 	DB_server_preferences DB_Server_Preferences;
 	server_index Server_Index;

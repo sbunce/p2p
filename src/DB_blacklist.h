@@ -19,24 +19,47 @@
 class DB_blacklist
 {
 public:
-	//add a host to the blacklist
-	static void add(const std::string & host)
+	/*
+	Add a host to the blacklist.
+
+	Everytime a IP is added the modified_count is incremented. This is used by
+	modified() to communicate back to objects if the blacklist has been added to.
+	*/
+	static void add(const std::string & IP)
 	{
 		init();
-		((DB_blacklist *)DB_Blacklist)->add_(host);
+		++blacklist_state;
+		((DB_blacklist *)DB_Blacklist)->add_worker(IP);
 	}
 
-	static bool is_blacklisted(const std::string & host)
+	//returns true if the IP is blacklisted
+	static bool is_blacklisted(const std::string & IP)
 	{
 		init();
-		return ((DB_blacklist *)DB_Blacklist)->is_blacklisted_(host);
+		return ((DB_blacklist *)DB_Blacklist)->is_blacklisted_worker(IP);
 	}
 
-	//returns the time when the blacklist last had a host added
-	static time_t last_added()
+	/*
+	This function is used to communicate back to different objects if one of more
+	IPs have been added to the blacklist.
+
+	The way this function works is an integer in the client object is initialized
+	to zero and passed to this function. The first time this function is used it
+	will always return true.
+
+	All other times if blacklist_state_in is different than modified_count true
+	will be returned and blacklist_state_in will be set equal to blacklist_state.
+	*/
+	static bool modified(int & blacklist_state_in)
 	{
-		init();
-		return ((DB_blacklist *)DB_Blacklist)->last_added_();
+		if(blacklist_state_in == blacklist_state){
+			//blacklist has not been updated
+			return false;
+		}else{
+			//blacklist updated
+			blacklist_state_in = blacklist_state;
+			return true;
+		}
 	}
 
 private:
@@ -46,13 +69,11 @@ private:
 	//init() must be called at the top of every public function
 	static void init()
 	{
-		//double-checked lock eliminates mutex overhead
-		if(DB_Blacklist == NULL){ //non-threadsafe comparison (the hint)
-			boost::mutex::scoped_lock lock(init_mutex);
-			if(DB_Blacklist == NULL){ //threadsafe comparison
-				DB_Blacklist = new volatile DB_blacklist();
-			}
+		boost::mutex::scoped_lock lock(init_mutex);
+		if(DB_Blacklist == NULL){ //threadsafe comparison
+			DB_Blacklist = new DB_blacklist();
 		}
+
 	}
 
 	static int is_blacklisted_call_back(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
@@ -62,18 +83,22 @@ private:
 	}
 
 	//the one possible instance of DB_blacklist
-	static volatile DB_blacklist * DB_Blacklist;
+	static DB_blacklist * DB_Blacklist;
 	static boost::mutex init_mutex; //mutex for init()
+
+	/*
+	This count starts at 1 and is incremented every time a server is added to the
+	blacklist.
+	*/
+	static volatile int blacklist_state;
 
 	sqlite3 * sqlite3_DB;
 	boost::mutex Mutex;     //mutex for functions called by public static functions
-	time_t last_time_added; //when last host added to blacklist
 
 	/*
 	All these functions correspond to public static functions.
 	*/
-	void add_(const std::string & host);
-	bool is_blacklisted_(const std::string & host);
-	time_t last_added_();
+	void add_worker(const std::string & IP);
+	bool is_blacklisted_worker(const std::string & IP);
 };
 #endif

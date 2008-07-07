@@ -11,7 +11,6 @@
 //custom
 #include "convert.h"
 #include "download.h"
-#include "download_file_conn.h"
 #include "global.h"
 #include "hash_tree.h"
 #include "hex.h"
@@ -50,10 +49,13 @@ public:
 	virtual const std::string & hash();
 	virtual const std::string name();
 	virtual unsigned int percent_complete();
+	virtual void register_connection(const download_connection & DC);
 	virtual bool request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected);
 	virtual void response(const int & socket, std::string block);
 	virtual void stop();
 	virtual const uint64_t size();
+	virtual void unregister_connection(const int & socket);
+	virtual bool visible();
 
 private:
 	/*
@@ -103,8 +105,47 @@ private:
 	bool close_slots;
 
 	/*
-	hash_check  - checks partial download integrity (run in thread spawned in ctor)
-	write_block - writes a file block
+	Class for storing information specific to servers. Each server is identified
+	by it's socket number which is unique.
+	*/
+	class connection_special
+	{
+	public:
+		connection_special():
+			slot_ID_requested(false),
+			slot_ID_received(false),
+			close_slot_sent(false)
+		{
+
+		}
+
+		char slot_ID;           //slot ID the server gave for the file
+		bool slot_ID_requested; //true if slot_ID requested
+		bool slot_ID_received;  //true if slot_ID received
+
+		/*
+		The download will not be finished until a P_CLOSE_SLOT has been sent to all
+		servers.
+		*/
+		bool close_slot_sent;
+
+		/*
+		What file blocks have been requested from the server in order of when they
+		were requested. When a block is received from the server the block number
+		is latest_request.front().
+
+		When new requests are made they should be pushed on to the back of
+		latest_request.
+		*/
+		std::deque<uint64_t> latest_request;
+	};
+
+	//socket number mapped to connection special pointer
+	std::map<int, connection_special> Connection_Special;
+
+	/*
+	hash_check             - checks partial download integrity (run in thread spawned in ctor)
+	write_block            - writes a file block
 	*/
 	void hash_check();
 	void write_block(uint64_t block_number, std::string & block);

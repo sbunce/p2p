@@ -1,9 +1,20 @@
 #include "client_buffer.h"
 
-std::map<int, client_buffer *> client_buffer::Client_Buffer;
+std::map<int, client_buffer> client_buffer::Client_Buffer;
 std::set<download *> client_buffer::Unique_Download;
 boost::mutex client_buffer::Mutex;
 volatile int client_buffer::send_pending(0);
+
+client_buffer::client_buffer()
+{
+	/*
+	The client_buffer is used in a std::map. If std::map::[] is ever used to
+	locate a client_buffer that doesn't exist the default ctor will be called and
+	the program will be killed.
+	*/
+	logger::debug(LOGGER_P1,"improperly constructed client_buffer");
+	exit(1);
+}
 
 client_buffer::client_buffer(
 	const int & socket_in,
@@ -57,16 +68,16 @@ void client_buffer::post_recv()
 			++iter_cur;
 		}
 
-		if(iter_cur != iter_end){
-			//not enough bytes yet received to fulfill download's request
-			if(recv_buff.size() < iter_cur->second){
-				break;
-			}
-		}else{
+		if(iter_cur == iter_end){
 			//server sent unexpected command
 			logger::debug(LOGGER_P1," abusive server ", IP, ", unexpected command ", (int)(unsigned char)recv_buff[0]);
 			abuse = true;
 			return;
+		}else{
+			if(recv_buff.size() < iter_cur->second){
+				//not enough bytes yet received to fulfill download's request
+				break;
+			}
 		}
 
 		if(Pipeline.front().Download == NULL){

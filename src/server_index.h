@@ -23,14 +23,12 @@ class server_index
 {
 public:
 	server_index();
+	~server_index();
+
 	/*
 	is_indexing - true if indexing(scanning for new files and hashing)
-	start       - starts the index share thread
-	stop        - stops the index share thread (blocks until thread stopped, up to 1 second)
 	*/
 	bool is_indexing();
-	void start();
-	void stop();
 
 private:
 	volatile bool stop_thread; //if true this will trigger thread termination

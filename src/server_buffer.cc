@@ -1,10 +1,21 @@
 #include "server_buffer.h"
 
+server_buffer::server_buffer()
+{
+	/*
+	The server_buffer is used in the server in a std::map. If std::map::[] is ever
+	improperly used to locate a server_buffer the default ctor will be called on
+	server_buffer and kill the program.
+	*/
+	logger::debug(LOGGER_P1,"improperly constructed server_buffer");
+	exit(1);
+}
+
 server_buffer::server_buffer(
-	const int & socket_in,
+	const int & socket_FD_in,
 	const std::string & IP_in
 ):
-	socket(socket_in),
+	socket_FD(socket_FD_in),
 	IP(IP_in)
 {
 	send_buff.reserve(global::C_MAX_SIZE * global::PIPELINE_SIZE);
@@ -92,5 +103,3 @@ void server_buffer::update_slot_speed(char slot_ID, unsigned int bytes)
 		Slot[(int)(unsigned char)slot_ID]->Speed_Calculator.update(bytes);
 	}
 }
-
-

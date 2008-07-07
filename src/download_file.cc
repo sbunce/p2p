@@ -75,6 +75,12 @@ const std::string & download_file::hash()
 void download_file::hash_check()
 {
 	++threads;
+	/*
+	This is done so that on resume all the downloads can be added quickly before
+	things bog down with hash checking.
+	*/
+	sleep(1);
+
 	std::fstream fin(thread_file_path.c_str(), std::ios::in);
 	char block_buff[global::FILE_BLOCK_SIZE];
 	uint64_t hash_latest = 0;
@@ -114,27 +120,37 @@ unsigned int download_file::percent_complete()
 	}
 }
 
+void download_file::register_connection(const download_connection & DC)
+{
+	download::register_connection(DC);
+	Connection_Special.insert(std::make_pair(DC.socket, connection_special()));
+}
+
 bool download_file::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected)
 {
-	std::map<int, download_conn *>::iterator iter = Connection.find(socket);
-	assert(iter != Connection.end());
-	download_file_conn * conn = dynamic_cast<download_file_conn *>(iter->second);
-	assert(conn != NULL);
+	std::map<int, connection_special>::iterator iter = Connection_Special.find(socket);
+	assert(iter != Connection_Special.end());
+	connection_special * conn = &iter->second;
 
-	if(download_complete && !hashing){
-		//stopping case, download complete
+	if(download_complete){
 		return false;
-	}else if(!conn->slot_ID_requested){
+	}
+
+	if(!conn->slot_ID_requested){
 		//slot_ID not yet obtained from server
 		request = global::P_REQUEST_SLOT_FILE + hex::hex_to_binary(file_hash);
 		conn->slot_ID_requested = true;
 		expected.push_back(std::make_pair(global::P_SLOT_ID, global::P_SLOT_ID_SIZE));
 		expected.push_back(std::make_pair(global::P_ERROR, 1));
 		return true;
-	}else if(!conn->slot_ID_received){
+	}
+
+	if(!conn->slot_ID_received){
 		//slot_ID requested but not yet received
 		return false;
-	}else if(close_slots && !conn->close_slot_sent){
+	}
+
+	if(close_slots && !conn->close_slot_sent){
 		/*
 		The file finished downloading or the download was manually stopped. This
 		server has not been sent P_CLOSE_SLOT.
@@ -143,11 +159,11 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 		request += conn->slot_ID;
 		conn->close_slot_sent = true;
 		bool unready_found = false;
-		std::map<int, download_conn *>::iterator iter_cur, iter_end;
-		iter_cur = Connection.begin();
-		iter_end = Connection.end();
+		std::map<int, connection_special>::iterator iter_cur, iter_end;
+		iter_cur = Connection_Special.begin();
+		iter_end = Connection_Special.end();
 		while(iter_cur != iter_end){
-			if(((download_file_conn *)iter_cur->second)->close_slot_sent == false){
+			if(iter_cur->second.close_slot_sent == false){
 				unready_found = true;
 			}
 			++iter_cur;
@@ -156,7 +172,14 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 			download_complete = true;
 		}
 		return true;
-	}else if(Request_Gen.request(conn->latest_request)){
+	}
+
+	if(close_slots && conn->close_slot_sent){
+		//don't sent any more requests once P_CLOSE_SLOT sent
+		return false;
+	}
+
+	if(Request_Gen.request(conn->latest_request)){
 		//prepare request for needed block
 		request += global::P_SEND_BLOCK;
 		request += conn->slot_ID;
@@ -170,26 +193,28 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 		expected.push_back(std::make_pair(global::P_BLOCK, size));
 		expected.push_back(std::make_pair(global::P_ERROR, 1));
 		return true;
-	}else{
-		return false;
 	}
+
+	return false;
 }
 
 void download_file::response(const int & socket, std::string block)
 {
-	std::map<int, download_conn *>::iterator iter = Connection.find(socket);
-	assert(iter != Connection.end());
-	download_file_conn * conn = dynamic_cast<download_file_conn *>(iter->second);
-	assert(conn != NULL);
+	std::map<int, connection_special>::iterator iter = Connection_Special.find(socket);
+	assert(iter != Connection_Special.end());
+	connection_special * conn = &iter->second;
 
-	if(block[0] == global::P_SLOT_ID && conn->slot_ID_received == false){
+	if(block[0] == global::P_ERROR){
+		logger::debug(LOGGER_P1,"received P_ERROR");
+
+//do something
+	}
+	else if(block[0] == global::P_SLOT_ID && conn->slot_ID_received == false){
 		conn->slot_ID = block[1];
 		conn->slot_ID_received = true;
 	}else if(block[0] == global::P_BLOCK){
-		//a block was received
-		conn->Speed_Calculator.update(block.size()); //update server speed
-		Speed_Calculator.update(block.size());       //update download speed
-		block.erase(0, 1); //trim command
+		Speed_Calculator.update(block.size()); //update download speed
+		block.erase(0, 1);                     //trim command
 		if(!Hash_Tree.check_block(file_hash, conn->latest_request.front(), block.c_str(), block.length())){
 			Request_Gen.force_re_request(conn->latest_request.front());
 			logger::debug(LOGGER_P1,file_name,":",conn->latest_request.front()," hash failure");
@@ -208,6 +233,11 @@ void download_file::response(const int & socket, std::string block)
 			close_slots = true;
 		}
 	}
+}
+
+const uint64_t download_file::size()
+{
+	return file_size;
 }
 
 void download_file::stop()
@@ -233,7 +263,13 @@ void download_file::write_block(uint64_t block_number, std::string & block)
 	}
 }
 
-const uint64_t download_file::size()
+void download_file::unregister_connection(const int & socket)
 {
-	return file_size;
+	download::unregister_connection(socket);
+	Connection_Special.erase(socket);
+}
+
+bool download_file::visible()
+{
+	return true;
 }

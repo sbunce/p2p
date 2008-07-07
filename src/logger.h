@@ -66,17 +66,14 @@ private:
 
 	inline static void init()
 	{
-		//double-checked lock eliminates mutex overhead
-		if(Logger == NULL){ //non-threadsafe comparison (the hint)
-			boost::mutex::scoped_lock lock(Mutex);
-			if(Logger == NULL){ //threadsafe comparison
-				Logger = new volatile logger();
-			}
+		boost::mutex::scoped_lock lock(Mutex);
+		if(Logger == NULL){ //threadsafe comparison
+			Logger = new logger;
 		}
 	}
 
 	//the one possible instance
-	static volatile logger * Logger;
+	static logger * Logger;
 
 	//mutex for checking if singleton was initialized
 	static boost::mutex Mutex;

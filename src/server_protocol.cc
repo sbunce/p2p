@@ -103,7 +103,6 @@ void server_protocol::send_block(server_buffer * SB)
 			#endif
 
 			SB->send_buff.append(send_block_buff, fin.gcount());
-			fin.close();
 			SB->update_slot_speed(SB->recv_buff[1], fin.gcount());
 		}
 	}

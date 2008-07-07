@@ -1,10 +1,5 @@
 TODO
 
--P_ERROR on downloads not being handled. Need a way for downloads to trigger
-disconnect of a server to solve this. Make singleton disconnect object the client
-has access to. Have it buffer in memory servers to disconnect. Also give it
-DB access to record blacklisted servers.
-
 -Untemplate the convert class. Make it a namespace with templated functions.
 Merge hex.h in to it. Make the endianness check a singleton.
 

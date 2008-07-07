@@ -112,9 +112,9 @@ bool DB_download::start_download(const download_info & info)
 		query << "INSERT INTO download (hash, name, size, server) VALUES ('" << info.hash << "', '" << info.name << "', " << info.size << ", '";
 		for(int x = 0; x < info.IP.size(); ++x){
 			if(x+1 == info.IP.size()){
-				query << info.IP[x] << ";";
-			}else{
 				query << info.IP[x];
+			}else{
+				query << info.IP[x] << ";";
 			}
 		}
 		query << "')";
@@ -129,7 +129,7 @@ void DB_download::terminate_download(const std::string & hash)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	std::ostringstream query;
-	query << "DELETE FROM download WHERE hash = '" << hash << "';";
+	query << "DELETE FROM download WHERE hash = '" << hash << "'";
 	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}

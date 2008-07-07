@@ -26,7 +26,7 @@ bool request_gen::complete()
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	assert(initialized);
-	return (latest_request == max_request && unfulfilled_request.empty());
+	return (latest_request == max_request && unfulfilled_request.empty() && re_request.empty() && re_requested.empty());
 }
 
 void request_gen::force_re_request(const uint64_t & number)

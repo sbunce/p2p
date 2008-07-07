@@ -5,7 +5,7 @@ download_factory::download_factory()
 
 }
 
-bool download_factory::start_hash(const download_info & info, download *& Download, std::list<download_conn *> & servers)
+bool download_factory::start_hash(const download_info & info, download *& Download, std::list<download_connection> & servers)
 {
 	if(!DB_Download.start_download(info)){
 		//download already exists in database
@@ -17,12 +17,12 @@ bool download_factory::start_hash(const download_info & info, download *& Downlo
 	}
 	Download = new download_hash_tree(info.hash, info.size, info.name);
 	for(int x = 0; x < info.IP.size(); ++x){
-		servers.push_back(new download_hash_tree_conn(Download, info.IP[x]));
+		servers.push_back(download_connection(Download, info.IP[x]));
 	}
 	return true;
 }
 
-download_file * download_factory::start_file(download_hash_tree * DHT, std::list<download_conn *> & servers)
+download_file * download_factory::start_file(download_hash_tree * DHT, std::list<download_connection> & servers)
 {
 	std::string file_path;
 	if(!DB_Download.get_file_path(DHT->hash(), file_path)){
@@ -37,12 +37,12 @@ download_file * download_factory::start_file(download_hash_tree * DHT, std::list
 	std::vector<std::string> IP;
 	DB_Search.get_servers(DHT->hash(), IP);
 	for(int x = 0; x < IP.size(); ++x){
-		servers.push_back(new download_file_conn(Download, IP[x]));
+		servers.push_back(download_connection(Download, IP[x]));
 	}
 	return Download;
 }
 
-bool download_factory::stop(download * Download_Stop, download *& Download_Start, std::list<download_conn *> & servers)
+bool download_factory::stop(download * Download_Stop, download *& Download_Start, std::list<download_connection> & servers)
 {
 	if(typeid(*Download_Stop) == typeid(download_hash_tree)){
 		if(((download_hash_tree *)Download_Stop)->canceled() == true){

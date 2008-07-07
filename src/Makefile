@@ -3,18 +3,16 @@ CXXFLAGS = `pkg-config gtkmm-2.4 --cflags` -O3 -Werror -ansi -pedantic
 
 OBJECTS = \
 	DB_blacklist.o \
-	client_buffer.o \
 	client.o \
+	client_buffer.o \
+	client_new_connection.o \
 	DB_client_preferences.o \
 	DB_download.o \
 	DB_search.o \
 	DB_server_preferences.o \
 	DB_share.o \
-	download_conn.o \
-	download_file_conn.o \
 	download_file.o \
 	download_hash_tree.o \
-	download_hash_tree_conn.o \
 	download_factory.o \
 	download.o \
 	gui.o \

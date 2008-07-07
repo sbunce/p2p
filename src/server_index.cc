@@ -1,10 +1,21 @@
 #include "server_index.h"
 
-server_index::server_index()
-: indexing(false), stop_thread(false), threads(0)
+server_index::server_index():
+	indexing(false),
+	stop_thread(false),
+	threads(0)
 {
-	//create the share directory if it doesn't exist
 	boost::filesystem::create_directory(global::SHARE_DIRECTORY);
+	boost::thread T(boost::bind(&server_index::index_share, this));
+}
+
+server_index::~server_index()
+{
+	stop_thread = true;
+	Hash_Tree.stop(); //force hash tree functions to return early
+	while(threads){
+		usleep(1);
+	}
 }
 
 static bool file_exists(const std::string & path)
@@ -81,11 +92,7 @@ void server_index::index_share_recurse(std::string directory_name)
 							generate_hash(file_path);                   //regenerate hash for file
 						}
 						fin.close();
-/*
-std::fstream blarg("share/test", std::ios::out | std::ios::app);
-blarg.put('x');
-blarg.close();
-*/
+
 						/*
 						Regenerate the hash if the file has changed size. The most
 						common cause of this is that the file was hashed while it was
@@ -147,20 +154,4 @@ void server_index::index_share()
 		sleep(1);
 	}
 	--threads;
-}
-
-void server_index::start()
-{
-	assert(threads == 0);
-	boost::thread T(boost::bind(&server_index::index_share, this));
-}
-
-void server_index::stop()
-{
-	stop_thread = true;
-	Hash_Tree.stop();
-
-	while(threads){
-		usleep(1);
-	}
 }

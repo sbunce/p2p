@@ -5,7 +5,8 @@
 #include "convert.h"
 #include "DB_blacklist.h"
 #include "download.h"
-#include "download_hash_tree_conn.h"
+#include "download_connection.h"
+#include "global.h"
 #include "hash_tree.h"
 #include "hex.h"
 #include "request_gen.h"
@@ -31,7 +32,10 @@ public:
 	virtual bool request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected);
 	virtual void response(const int & socket, std::string block);
 	virtual void stop();
+	virtual void register_connection(const download_connection & DC);
 	virtual const uint64_t size();
+	virtual void unregister_connection(const int & socket);
+	virtual bool visible();
 
 	/*
 	canceled           - returns true if download canceled, stops download_file from being triggered
@@ -77,6 +81,62 @@ private:
 	there are any bad blocks they're requested one at a time from low to high.
 	*/
 	bool checking_phase;
+
+	/*
+	Class for storing information specific to servers. Each server is identified
+	by it's socket number which is unique.
+	*/
+	class connection_special
+	{
+	public:
+		connection_special(
+			const std::string IP_in
+		):
+			IP(IP_in),
+			slot_ID_requested(false),
+			slot_ID_received(false),
+			close_slot_sent(false)
+		{
+
+		}
+
+		std::string IP;         //IP of server
+		char slot_ID;           //slot ID the server gave for the file
+		bool slot_ID_requested; //true if slot_ID requested
+		bool slot_ID_received;  //true if slot_ID received
+
+		/*
+		The download will not be finished until a P_CLOSE_SLOT has been sent to all
+		servers.
+		*/
+		bool close_slot_sent;
+
+		/*
+		What file blocks have been requested from the server in order of when they
+		were requested. When a block is received from the server the block number
+		is latest_request.front().
+
+		When new requests are made they should be pushed on to the back of
+		latest_request.
+		*/
+		std::deque<uint64_t> latest_request;
+
+		/*
+		This stores all the blocks that have been received from the server. When the
+		every block is downloaded there will be a hash check. If any block from this
+		server fails a hash check all blocks later than the bad block requested from
+		this server will be re_requested.
+
+		The purpose of re_requesting before checking is to maximize the speed of the
+		download. In order to re_request sequentially the block would have be be
+		re_requested from one server and all others would have to wait until it was
+		known that the replacement block was good.
+		*/
+		std::set<uint64_t> requested_blocks;
+	};
+
+	//socket number mapped to connection special pointer
+	std::map<int, connection_special> Connection_Special;
 
 	convert<uint64_t> Convert_uint64;
 	request_gen Request_Gen;

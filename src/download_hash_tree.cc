@@ -72,9 +72,24 @@ download_hash_tree::download_hash_tree(
 	}
 }
 
+const bool & download_hash_tree::canceled()
+{
+	return _canceled;
+}
+
 bool download_hash_tree::complete()
 {
 	return download_complete;
+}
+
+const uint64_t & download_hash_tree::download_file_size()
+{
+	return _download_file_size;
+}
+
+const std::string & download_hash_tree::download_file_name()
+{
+	return _download_file_name;
 }
 
 const std::string & download_hash_tree::hash()
@@ -98,10 +113,9 @@ unsigned int download_hash_tree::percent_complete()
 
 bool download_hash_tree::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected)
 {
-	std::map<int, download_conn *>::iterator iter = Connection.find(socket);
-	assert(iter != Connection.end());
-	download_hash_tree_conn * conn = dynamic_cast<download_hash_tree_conn *>(iter->second);
-	assert(conn != NULL);
+	std::map<int, connection_special>::iterator iter = Connection_Special.find(socket);
+	assert(iter != Connection_Special.end());
+	connection_special * conn = &iter->second;
 
 	if(Request_Gen.complete()){
 		checking_phase = true;
@@ -117,34 +131,35 @@ bool download_hash_tree::request(const int & socket, std::string & request, std:
 			*/
 			uint64_t bad_block = bad_hash.first / hashes_per_block;
 
-			std::map<int, download_conn *>::iterator C_iter_cur, C_iter_end;
-			C_iter_cur = Connection.begin();
-			C_iter_end = Connection.end();
-			download_hash_tree_conn * DHTC;
-			while(C_iter_cur != C_iter_end){
-				DHTC = dynamic_cast<download_hash_tree_conn *>(C_iter_cur->second);
-				assert(DHTC != NULL);
-				std::set<uint64_t>::iterator iter = DHTC->received_blocks.find(bad_block);
-				if(iter != DHTC->received_blocks.end()){
+			std::map<int, connection_special>::iterator CS_iter_cur, CS_iter_end;
+			CS_iter_cur = Connection_Special.begin();
+			CS_iter_end = Connection_Special.end();
+
+			bool found = false;
+			while(CS_iter_cur != CS_iter_end){
+				std::set<uint64_t>::iterator iter = CS_iter_cur->second.requested_blocks.find(bad_block);
+				if(iter != CS_iter_cur->second.requested_blocks.end()){
 					//found the server that sent the bad block, re_request all blocks from that server
+					found = true;
 					std::set<uint64_t>::iterator RB_iter_cur, RB_iter_end;
-					RB_iter_cur = DHTC->received_blocks.begin();
-					RB_iter_end = DHTC->received_blocks.end();
+					RB_iter_cur = CS_iter_cur->second.requested_blocks.begin();
+					RB_iter_end = CS_iter_cur->second.requested_blocks.end();
 					while(RB_iter_cur != RB_iter_end){
 						Request_Gen.force_re_request(*RB_iter_cur);
 						++RB_iter_cur;
 					}
 					break;
 				}
-				++C_iter_cur;
+				++CS_iter_cur;
 			}
 
-			//blacklist the server that sent the bad blocks
-			DB_blacklist::add(DHTC->IP);
-
-			if(DHTC == conn){
-				//server that sent the bad block is the current server
-				return false;
+			if(found){
+				//blacklist the server that sent the bad blocks
+				DB_blacklist::add(CS_iter_cur->second.IP);
+				if(CS_iter_cur->second.IP == conn->IP){
+					//server that sent the bad block is the current server
+					return false;
+				}
 			}
 		}else{
 			//complete hash tree
@@ -154,17 +169,23 @@ bool download_hash_tree::request(const int & socket, std::string & request, std:
 
 	if(download_complete){
 		return false;
-	}else if(!conn->slot_ID_requested){
+	}
+
+	if(!conn->slot_ID_requested){
 		//slot_ID not yet obtained from server
 		request = global::P_REQUEST_SLOT_HASH + hex::hex_to_binary(root_hash);
 		conn->slot_ID_requested = true;
 		expected.push_back(std::make_pair(global::P_SLOT_ID, global::P_SLOT_ID_SIZE));
 		expected.push_back(std::make_pair(global::P_ERROR, 1));
 		return true;
-	}else if(!conn->slot_ID_received){
+	}
+
+	if(!conn->slot_ID_received){
 		//slot_ID requested but not yet received
 		return false;
-	}else if(close_slots && !conn->close_slot_sent){
+	}
+
+	if(close_slots && !conn->close_slot_sent){
 		/*
 		The file finished downloading or the download was manually stopped. This
 		server has not been sent P_CLOSE_SLOT.
@@ -175,24 +196,32 @@ bool download_hash_tree::request(const int & socket, std::string & request, std:
 
 		//the download is complete when all servers have been sent a P_CLOSE_SLOT
 		bool unready_found = false;
-		std::map<int, download_conn *>::iterator iter_cur, iter_end;
-		iter_cur = Connection.begin();
-		iter_end = Connection.end();
-		while(iter_cur != iter_end){
-			if(((download_hash_tree_conn *)iter_cur->second)->close_slot_sent == false){
+		std::map<int, connection_special>::iterator CS_iter_cur, CS_iter_end;
+		CS_iter_cur = Connection_Special.begin();
+		CS_iter_end = Connection_Special.end();
+		while(CS_iter_cur != CS_iter_end){
+			if(CS_iter_cur->second.close_slot_sent == false){
 				unready_found = true;
 			}
-			++iter_cur;
+			++CS_iter_cur;
 		}
 		if(!unready_found){
 			download_complete = true;
 		}
 		return true;
-	}else if(Request_Gen.request(conn->latest_request)){
+	}
+
+	if(close_slots && conn->close_slot_sent){
+		//don't sent any more requests once P_CLOSE_SLOT sent
+		return false;
+	}
+
+	if(Request_Gen.request(conn->latest_request)){
 		//no request to be made at the moment
 		request += global::P_SEND_BLOCK;
 		request += conn->slot_ID;
 		request += Convert_uint64.encode(conn->latest_request.back());
+		conn->requested_blocks.insert(conn->latest_request.back());
 		int size;
 		if(hash_tree_count - (conn->latest_request.back() * hashes_per_block) < hashes_per_block){
 			//request will not yield full P_BLOCK
@@ -203,29 +232,32 @@ bool download_hash_tree::request(const int & socket, std::string & request, std:
 		expected.push_back(std::make_pair(global::P_BLOCK, size));
 		expected.push_back(std::make_pair(global::P_ERROR, 1));
 		return true;
-	}else{
-		return false;
 	}
+
+	return false;
+}
+
+void download_hash_tree::register_connection(const download_connection & DC)
+{
+	download::register_connection(DC);
+	Connection_Special.insert(std::make_pair(DC.socket, connection_special(DC.IP)));
 }
 
 void download_hash_tree::response(const int & socket, std::string block)
 {
-	std::map<int, download_conn *>::iterator iter = Connection.find(socket);
-	assert(iter != Connection.end());
-	download_hash_tree_conn * conn = dynamic_cast<download_hash_tree_conn *>(iter->second);
-	assert(conn != NULL);
+	std::map<int, connection_special>::iterator iter = Connection_Special.find(socket);
+	assert(iter != Connection_Special.end());
+	connection_special * conn = &iter->second;
 
 	if(block[0] == global::P_SLOT_ID && conn->slot_ID_received == false){
 		conn->slot_ID = block[1];
 		conn->slot_ID_received = true;
 	}else if(block[0] == global::P_BLOCK){
 		//a block was received
-		conn->Speed_Calculator.update(block.size()); //update server speed
 		Speed_Calculator.update(block.size());       //update download speed
 		block.erase(0, 1);                           //trim command
 		Hash_Tree.write_hash(root_hash, conn->latest_request.front()*hashes_per_block, block);
 		Request_Gen.fulfil(conn->latest_request.front());
-		conn->received_blocks.insert(conn->latest_request.front());
 		conn->latest_request.pop_front();
 	}else{
 		//server abusive
@@ -247,17 +279,25 @@ const uint64_t download_hash_tree::size()
 	return hash_tree_count * sha::HASH_LENGTH;
 }
 
-const bool & download_hash_tree::canceled()
+void download_hash_tree::unregister_connection(const int & socket)
 {
-	return _canceled;
+	//re_request all blocks that are pending for the server that's getting disconnected
+	std::map<int, connection_special>::iterator iter = Connection_Special.find(socket);
+	if(iter != Connection_Special.end()){
+		std::set<uint64_t>::iterator RB_iter_cur, RB_iter_end;
+		RB_iter_cur = iter->second.requested_blocks.begin();
+		RB_iter_end = iter->second.requested_blocks.end();
+		while(RB_iter_cur != RB_iter_end){
+			Request_Gen.force_re_request(*RB_iter_cur);
+			++RB_iter_cur;
+		}
+	}
+
+	download::unregister_connection(socket);
+	Connection_Special.erase(socket);
 }
 
-const uint64_t & download_hash_tree::download_file_size()
+bool download_hash_tree::visible()
 {
-	return _download_file_size;
-}
-
-const std::string & download_hash_tree::download_file_name()
-{
-	return _download_file_name;
+	return true;
 }

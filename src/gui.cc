@@ -2,9 +2,6 @@
 
 gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 {
-	Server.start();
-	Client.start();
-
 	window = this;
 	menubar = Gtk::manage(new Gtk::MenuBar());
 	notebook = Gtk::manage(new Gtk::Notebook());
@@ -192,7 +189,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 
 	//window properties
 	window->set_title(global::NAME);
-	window->resize(800, 600);
+	window->resize(800, 300);
 	window->set_modal(false);
 	window->property_window_position().set_value(Gtk::WIN_POS_CENTER_ON_PARENT);
 	window->set_resizable(true);
@@ -222,9 +219,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 
 gui::~gui()
 {
-	//stop all client and server threads before terminating
-	Client.stop();
-	Server.stop();
+
 }
 
 void gui::on_quit()

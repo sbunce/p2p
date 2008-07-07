@@ -16,14 +16,15 @@
 class server_buffer
 {
 public:
-	server_buffer(const int & socket_in, const std::string & IP_in);
+	server_buffer();
+	server_buffer(const int & socket_FD_in, const std::string & IP_in);
 	~server_buffer();
 
 	std::string recv_buff; //buffer for partial recvs
 	std::string send_buff; //buffer for partial sends
 
+	int socket_FD;
 	std::string IP;
-	int socket;
 
 	/*
 	close_slot                   - close a slot opened with create_slot()
