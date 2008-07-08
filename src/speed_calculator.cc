@@ -1,13 +1,10 @@
 #include "speed_calculator.h"
 
-speed_calculator::speed_calculator(unsigned int speed_limit_in)
-:
-speed_limit(speed_limit_in),
-average_speed(0),
-rate_control_count(0),
-rate_control_damper(0),
-rate_control_try_speed(0),
-rate_control_try_time(time(NULL))
+speed_calculator::speed_calculator(
+	unsigned int speed_limit_in
+):
+	speed_limit(speed_limit_in),
+	average_speed(0)
 {
 
 }
@@ -73,16 +70,7 @@ void speed_calculator::update(const unsigned int & byte_count)
 
 unsigned int speed_calculator::rate_control(int max_possible_transfer)
 {
-	++rate_control_count;
 	unsigned int transfer = 0;
-
-	/*
-	Reset rate_control_damper if no download has been going for
-	global::SPEED_AVERAGE seconds.
-	*/
-	if(average_speed == 0){
-		rate_control_damper = 0;
-	}
 
 	//maximum possible transfer to keep average_speed under rate
 	if(!Second_Bytes.empty()){
@@ -94,37 +82,6 @@ unsigned int speed_calculator::rate_control(int max_possible_transfer)
 	if(transfer > max_possible_transfer){
 		//max transfer that can be sent is max_possible_transfer
 		transfer = max_possible_transfer;
-	}
-
-	/*
-	By limiting the rate the select() loop is made to iterate more often. To
-	compensate for the increased CPU usage this function has a variable sleep.
-
-	This is run once per second to adjust how much this function sleeps.
-	*/
-	if(rate_control_try_time != time(NULL)){
-		//there is a bias toward speeding up
-		if(average_speed >= rate_control_try_speed){
-			rate_control_damper -= 1;
-		}else{
-			rate_control_damper += 2;
-		}
-
-		rate_control_try_speed = average_speed;
-		rate_control_try_time = time(NULL);
-	}
-
-	//damper = 1 means that there is always a sleep, it should not go below 1
-	if(rate_control_damper < 1){
-		rate_control_damper = 1;
-	}else if(rate_control_damper > 100){
-		//reasonable limit for rate_control_damper
-		rate_control_damper = 100;
-	}
-
-	//sleep every rate_control_damper calls to this function
-	if(rate_control_count % rate_control_damper == 0){
-		usleep(1);
 	}
 
 	return transfer;

@@ -27,7 +27,8 @@ OBJECTS = \
 	server_index.o \
 	server_protocol.o \
 	sha.o \
-	speed_calculator.o
+	speed_calculator.o \
+	thread_pool.o
 
 LINKER_OPTIONS = \
 	`pkg-config gtkmm-2.4 --libs` \

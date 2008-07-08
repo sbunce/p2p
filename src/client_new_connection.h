@@ -14,6 +14,7 @@
 #include "DB_blacklist.h"
 #include "download_connection.h"
 #include "global.h"
+#include "thread_pool.h"
 
 //networking
 #include <arpa/inet.h>
@@ -83,5 +84,7 @@ private:
 	void process_DC(download_connection DC);
 	bool resolve(download_connection & DC);
 	void unblock(const download_connection & DC);
+
+	thread_pool Thread_Pool;
 };
 #endif

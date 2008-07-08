@@ -5,7 +5,6 @@
 #include "convert.h"
 #include "DB_share.h"
 #include "global.h"
-#include "hex.h"
 #include "server_buffer.h"
 
 //std
@@ -35,7 +34,6 @@ private:
 	void request_slot_file(server_buffer * SB);
 	void send_block(server_buffer * SB);
 
-	convert<uint64_t> Convert_uint64;
 	DB_share DB_Share;
 };
 #endif

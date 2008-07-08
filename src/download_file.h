@@ -10,10 +10,10 @@
 
 //custom
 #include "convert.h"
+#include "DB_blacklist.h"
 #include "download.h"
 #include "global.h"
 #include "hash_tree.h"
-#include "hex.h"
 #include "request_gen.h"
 
 //std
@@ -111,17 +111,29 @@ private:
 	class connection_special
 	{
 	public:
-		connection_special():
+		connection_special(
+			const std::string IP_in
+		):
+			IP(IP_in),
 			slot_ID_requested(false),
 			slot_ID_received(false),
-			close_slot_sent(false)
+			close_slot_sent(false),
+			abusive(false)
 		{
 
 		}
 
+		std::string IP;         //IP of server
 		char slot_ID;           //slot ID the server gave for the file
 		bool slot_ID_requested; //true if slot_ID requested
 		bool slot_ID_received;  //true if slot_ID received
+
+		/*
+		If a server sends a corrupt block it is put in the blacklist and this is
+		set to true to indicate that any more communication with the server before
+		it is disconnected should be ignored.
+		*/
+		bool abusive;
 
 		/*
 		The download will not be finished until a P_CLOSE_SLOT has been sent to all
@@ -137,7 +149,7 @@ private:
 		When new requests are made they should be pushed on to the back of
 		latest_request.
 		*/
-		std::deque<uint64_t> latest_request;
+		std::deque<uint64_t> requested_blocks;
 	};
 
 	//socket number mapped to connection special pointer
@@ -150,7 +162,6 @@ private:
 	void hash_check();
 	void write_block(uint64_t block_number, std::string & block);
 
-	convert<uint64_t> Convert_uint64;
 	request_gen Request_Gen;
 	hash_tree Hash_Tree;
 };

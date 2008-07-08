@@ -5,7 +5,7 @@
 //#define NDEBUG
 
 //uncomment to enable file block corruption test
-#define CORRUPT_BLOCKS
+//#define CORRUPT_BLOCKS
 
 //uncomment to enable resolution of host names
 #define RESOLVE_HOST_NAMES
@@ -27,7 +27,6 @@ namespace global
 	const int MAX_CONNECTIONS = 50;       //maximum number of connections the server will accept
 	const int UP_SPEED = 9999*1024+512;   //upload speed limit (B/s)
 	const int DOWN_SPEED = 9999*1024+512; //download speed limit (B/s)
-	const int NEW_CONN_THREADS = 8;       //how many threads are in the thread pool for making new client connections
 	const int PIPELINE_SIZE = 16;         //how many pre-requests can be done
 	const int RE_REQUEST_TIMEOUT = 8;     //seconds before a file block is re-requested
 	const int P2P_PORT = 6969;            //port client connects to and server receives on
@@ -74,6 +73,7 @@ namespace global
 	response. It is also the size that files are hashed in.
 
 	WARNING: FILE_BLOCK_SIZE % sha::HASH_LENGTH must equal 0
+	         FILE_BLOCK_SIZE % 2 must equal 0
 	*/
 	const int FILE_BLOCK_SIZE = P_BLOCK_SIZE - 1;
 }

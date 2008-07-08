@@ -8,7 +8,6 @@
 #include "download_connection.h"
 #include "global.h"
 #include "hash_tree.h"
-#include "hex.h"
 #include "request_gen.h"
 #include "sha.h"
 
@@ -95,7 +94,8 @@ private:
 			IP(IP_in),
 			slot_ID_requested(false),
 			slot_ID_received(false),
-			close_slot_sent(false)
+			close_slot_sent(false),
+			abusive(false)
 		{
 
 		}
@@ -104,6 +104,14 @@ private:
 		char slot_ID;           //slot ID the server gave for the file
 		bool slot_ID_requested; //true if slot_ID requested
 		bool slot_ID_received;  //true if slot_ID received
+
+		/*
+		When the download hash tree is entirely downloaded the download goes in to
+		the checking phase where the hash tree is checked. If this server sent a
+		bad block it will be blacklisted and abusive will be set to true. When
+		abusive is set to true
+		*/
+		bool abusive;
 
 		/*
 		The download will not be finished until a P_CLOSE_SLOT has been sent to all
@@ -138,7 +146,6 @@ private:
 	//socket number mapped to connection special pointer
 	std::map<int, connection_special> Connection_Special;
 
-	convert<uint64_t> Convert_uint64;
 	request_gen Request_Gen;
 	hash_tree Hash_Tree;
 };

@@ -1,5 +1,11 @@
 TODO
 
+-Remove root hash from hash files. Use the root hash hex stored in the file name
+as the root hash. This also allows requesting in chunks of two so that hashes
+requested from servers are evenly split so that it can be known for sure what
+bad blocks came from what server.
+
+
 -Untemplate the convert class. Make it a namespace with templated functions.
 Merge hex.h in to it. Make the endianness check a singleton.
 

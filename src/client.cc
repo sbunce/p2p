@@ -11,7 +11,7 @@ client::client():
 	boost::filesystem::create_directory(global::DOWNLOAD_DIRECTORY);
 	FD_ZERO(&master_FDS);
 	Speed_Calculator.set_speed_limit(DB_Client_Preferences.get_speed_limit_uint());
-	boost::thread T1(boost::bind(&client::main_thread, this));
+	boost::thread T(boost::bind(&client::main_thread, this));
 }
 
 client::~client()
@@ -35,7 +35,6 @@ void client::check_blacklist()
 				if(DB_blacklist::is_blacklisted(IP)){
 					logger::debug(LOGGER_P1,"disconnecting blacklisted IP ",IP);
 					disconnect(socket_FD);
-					client_buffer::erase(socket_FD);
 				}
 			}
 		}
@@ -45,7 +44,7 @@ void client::check_blacklist()
 void client::check_timeouts()
 {
 	std::vector<int> timed_out;
-	client_buffer::check_timeouts(timed_out);
+	client_buffer::find_timed_out(timed_out);
 	std::vector<int>::iterator iter_cur, iter_end;
 	iter_cur = timed_out.begin();
 	iter_end = timed_out.end();
@@ -67,6 +66,7 @@ inline void client::disconnect(const int & socket_FD)
 	FD_CLR(socket_FD, &master_FDS);
 	FD_CLR(socket_FD, &read_FDS);
 	FD_CLR(socket_FD, &write_FDS);
+	client_buffer::erase(socket_FD);
 
 	//reduce FD_max if possible
 	for(int x = FD_max; x != 0; --x){
@@ -119,9 +119,17 @@ void client::main_thread()
 	++threads;
 	reconnect_unfinished();
 	while(true){
+/*
 static int COUNT = 0;
-
-
+static time_t TIME = time(NULL);
+COUNT++;
+if(time(NULL) != TIME){
+	TIME = time(NULL);
+	std::cout << "cnt: " << COUNT << "\n";
+	COUNT = 0;
+	std::cout << "sp: " << client_buffer::get_send_pending() << "\n";
+}
+*/
 		if(stop_threads){
 			break;
 		}
@@ -174,7 +182,6 @@ static int COUNT = 0;
 							perror("client recv");
 						}
 						disconnect(socket_FD);
-						client_buffer::erase(socket_FD);
 					}else{
 						Speed_Calculator.update(n_bytes);
 						client_buffer::get_recv_buff(socket_FD).append(recv_buff, n_bytes);
@@ -232,7 +239,7 @@ void client::remove_complete()
 
 	//disconnect any empty client_buffers
 	std::vector<int> disconnect_sockets;
-	client_buffer::remove_empty(disconnect_sockets);
+	client_buffer::find_empty(disconnect_sockets);
 	std::vector<int>::iterator iter_cur, iter_end;
 	iter_cur = disconnect_sockets.begin();
 	iter_end = disconnect_sockets.end();

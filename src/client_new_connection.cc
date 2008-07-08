@@ -5,19 +5,16 @@ client_new_connection::client_new_connection(
 	int & FD_max_in
 ):
 	stop_threads(false),
-	threads(0)
+	threads(0),
+	Thread_Pool(8)
 {
 	master_FDS = &master_FDS_in;
 	FD_max = &FD_max_in;
-	boost::thread T(boost::bind(&client_new_connection::main_thread, this));
 }
 
 client_new_connection::~client_new_connection()
 {
-	stop_threads = true;
-	while(threads){
-		usleep(1);
-	}
+
 }
 
 void client_new_connection::add_unresponsive(const std::string & IP)
@@ -79,27 +76,6 @@ void client_new_connection::block_concurrent(const download_connection & DC)
 	}
 }
 
-void client_new_connection::main_thread()
-{
-	++threads;
-	while(true){
-		if(stop_threads){
-			break;
-		}
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(CQ_mutex);
-		if(!Connection_Queue.empty()){
-			boost::thread T(boost::bind(&client_new_connection::process_DC, this, Connection_Queue.front()));
-			Connection_Queue.pop_front();
-			continue; //skip sleep, there may be more in queue
-		}
-		}//end lock scope
-
-		sleep(1);
-	}
-	--threads;
-}
-
 void client_new_connection::new_connection(download_connection DC)
 {
 	/*
@@ -115,6 +91,14 @@ void client_new_connection::new_connection(download_connection DC)
 	//do not connect to servers that are blacklisted
 	if(DB_blacklist::is_blacklisted(DC.IP)){
 		logger::debug(LOGGER_P1,"stopping connection to blacklisted IP ",DC.IP);
+		return;
+	}
+
+	/*
+	It's possible the download was stopped while the DC was in the thread pool.
+	If it was stopped abort connection attempt.
+	*/
+	if(!client_buffer::is_downloading(DC.Download)){
 		return;
 	}
 
@@ -180,10 +164,9 @@ void client_new_connection::queue(download_connection DC)
 	}
 	#endif
 
-	if(!client_buffer::DC_add_existing(DC)){
+	if(!client_buffer::add_connection(DC)){
 		//no existing client_buffer for the DC, schedule new connection
-		boost::mutex::scoped_lock lock(CQ_mutex);
-		Connection_Queue.push_back(DC);
+		Thread_Pool.queue(boost::bind(&client_new_connection::process_DC, this, DC));
 	}
 }
 
@@ -224,8 +207,6 @@ void client_new_connection::unblock(const download_connection & DC)
 	iter_cur = Connection_Current_Attempt.begin();
 	iter_end = Connection_Current_Attempt.end();
 	while(iter_cur != iter_end){
-
-//overload equality operator
 		if(iter_cur->IP == DC.IP && iter_cur->Download == DC.Download){
 			Connection_Current_Attempt.erase(iter_cur);
 			break;

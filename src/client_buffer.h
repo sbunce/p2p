@@ -31,6 +31,36 @@ public:
 	~client_buffer();
 
 	/*
+	Will try to add download to an existing client_buffer. Returns true if client_buffer
+	for download_conn found, else returns false. If false is returned then new_connection()
+	should be called to create a new client_buffer for the download_conn.
+	*/
+	static bool add_connection(download_connection & DC)
+	{
+		boost::mutex::scoped_lock lock(Mutex);
+
+		std::set<download *>::iterator iter = Unique_Download.find(DC.Download);
+		if(iter == Unique_Download.end()){
+			//no download to add a connection to
+			return true;
+		}
+
+		std::map<int, client_buffer>::iterator iter_cur, iter_end;
+		iter_cur = Client_Buffer.begin();
+		iter_end = Client_Buffer.end();
+		while(iter_cur != iter_end){
+			if(DC.IP == iter_cur->second.IP){
+				DC.socket = iter_cur->second.socket;             //set socket of the discovered client_buffer
+				DC.Download->register_connection(DC);            //register connection with download
+				iter_cur->second.register_download(DC.Download); //register download with client_buffer
+				return true;
+			}
+			++iter_cur;
+		}
+		return false;
+	}
+
+	/*
 	Add a download to the client_buffer. Doesn't associate the download with any
 	instantiation of client_buffer.
 	*/
@@ -38,27 +68,6 @@ public:
 	{
 		boost::mutex::scoped_lock lock(Mutex);
 		Unique_Download.insert(Download);
-	}
-
-	/*
-	Removes client_buffers that have timed out. Puts sockets to disconnect in
-	timed_out vector.
-	*/
-	static void check_timeouts(std::vector<int> & timed_out)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, client_buffer>::iterator iter_cur, iter_end;
-		iter_cur = Client_Buffer.begin();
-		iter_end = Client_Buffer.end();
-		while(iter_cur != iter_end){
-			if(time(0) - iter_cur->second.last_seen >= global::TIMEOUT){
-				timed_out.push_back(iter_cur->first);
-				Client_Buffer.erase(iter_cur);
-				iter_cur = Client_Buffer.begin();
-			}else{
-				++iter_cur;
-			}
-		}
 	}
 
 	/*
@@ -90,36 +99,6 @@ public:
 	}
 
 	/*
-	Will try to add download to an existing client_buffer. Returns true if client_buffer
-	for download_conn found, else returns false. If false is returned then new_connection()
-	should be called to create a new client_buffer for the download_conn.
-	*/
-	static bool DC_add_existing(download_connection & DC)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-
-		std::set<download *>::iterator iter = Unique_Download.find(DC.Download);
-		if(iter == Unique_Download.end()){
-			//no download to add a connection to
-			return true;
-		}
-
-		std::map<int, client_buffer>::iterator iter_cur, iter_end;
-		iter_cur = Client_Buffer.begin();
-		iter_end = Client_Buffer.end();
-		while(iter_cur != iter_end){
-			if(DC.IP == iter_cur->second.IP){
-				DC.socket = iter_cur->second.socket;             //set socket of the discovered client_buffer
-				DC.Download->register_connection(DC);            //register connection with download
-				iter_cur->second.register_download(DC.Download); //register download with client_buffer
-				return true;
-			}
-			++iter_cur;
-		}
-		return false;
-	}
-
-	/*
 	Deletes all downloads in client_buffer and deletes all client_buffer instantiations.
 	This is used when client is being destroyed.
 	*/
@@ -141,7 +120,25 @@ public:
 	static void erase(const int & socket_FD)
 	{
 		boost::mutex::scoped_lock lock(Mutex);
+		std::map<int, client_buffer>::iterator iter = Client_Buffer.find(socket_FD);
+		assert(iter != Client_Buffer.end());
+		if(!iter->second.send_buff.empty()){
+			/*
+			send_buff contains data, decrement send_pending
+			*/
+			--send_pending;
+		}
 		Client_Buffer.erase(socket_FD);
+	}
+
+	/*
+	Check if a download is running. Returns true if yes, else false.
+	*/
+	static bool is_downloading(download * Download)
+	{
+		boost::mutex::scoped_lock lock(Mutex);
+		std::set<download *>::iterator iter = Unique_Download.find(Download);
+		return iter != Unique_Download.end();
 	}
 
 	/*
@@ -158,6 +155,42 @@ public:
 		while(iter_cur != iter_end){
 			if((*iter_cur)->complete()){
 				complete.push_back(*iter_cur);
+			}
+			++iter_cur;
+		}
+	}
+
+	/*
+	Removes all empty client_buffers and returns their socket numbers which need
+	to be disconnected.
+	*/
+	static void find_empty(std::vector<int> & disconnect_sockets)
+	{
+		boost::mutex::scoped_lock lock(Mutex);
+		std::map<int, client_buffer>::iterator iter_cur, iter_end;
+		iter_cur = Client_Buffer.begin();
+		iter_end = Client_Buffer.end();
+		while(iter_cur != iter_end){
+			if(iter_cur->second.empty()){
+				disconnect_sockets.push_back(iter_cur->first);
+			}
+			++iter_cur;
+		}
+	}
+
+	/*
+	Removes client_buffers that have timed out. Puts sockets to disconnect in
+	timed_out vector.
+	*/
+	static void find_timed_out(std::vector<int> & timed_out)
+	{
+		boost::mutex::scoped_lock lock(Mutex);
+		std::map<int, client_buffer>::iterator iter_cur, iter_end;
+		iter_cur = Client_Buffer.begin();
+		iter_end = Client_Buffer.end();
+		while(iter_cur != iter_end){
+			if(time(0) - iter_cur->second.last_seen >= global::TIMEOUT){
+				timed_out.push_back(iter_cur->first);
 			}
 			++iter_cur;
 		}
@@ -260,27 +293,6 @@ public:
 		std::map<int, client_buffer>::iterator iter = Client_Buffer.find(socket_FD);
 		assert(iter != Client_Buffer.end());
 		iter->second.post_send();
-	}
-
-	/*
-	Removes all empty client_buffers and returns their socket numbers which need
-	to be disconnected.
-	*/
-	static void remove_empty(std::vector<int> & disconnect_sockets)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, client_buffer>::iterator iter_cur, iter_end;
-		iter_cur = Client_Buffer.begin();
-		iter_end = Client_Buffer.end();
-		while(iter_cur != iter_end){
-			if(iter_cur->second.empty()){
-				disconnect_sockets.push_back(iter_cur->first);
-				Client_Buffer.erase(iter_cur);
-				iter_cur = Client_Buffer.begin();
-			}else{
-				++iter_cur;
-			}
-		}
 	}
 
 	/*

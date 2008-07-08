@@ -60,5 +60,8 @@ bool download_factory::stop(download * Download_Stop, download *& Download_Start
 		DB_Download.terminate_download(Download_Stop->hash());
 		delete Download_Stop;
 		return false;
+	}else{
+		logger::debug(LOGGER_P1,"unrecognized download type");
+		exit(1);
 	}
 }

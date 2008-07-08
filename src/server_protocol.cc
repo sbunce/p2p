@@ -37,14 +37,14 @@ void server_protocol::close_slot(server_buffer * SB)
 
 void server_protocol::request_slot_hash(server_buffer * SB)
 {
-	std::string path = global::HASH_DIRECTORY+hex::binary_to_hex(SB->recv_buff.substr(1,20));
+	std::string path = global::HASH_DIRECTORY+convert::binary_to_hex(SB->recv_buff.substr(1,20));
 	std::fstream fin(path.c_str(), std::ios::in);
 	if(fin.is_open()){
 		//hash tree exists, make slot
 		fin.seekg(0, std::ios::end);
 		uint64_t size = fin.tellg();
 		char slot_ID;
-		if(SB->create_slot(slot_ID, hex::binary_to_hex(SB->recv_buff.substr(1,20)), size, path)){
+		if(SB->create_slot(slot_ID, convert::binary_to_hex(SB->recv_buff.substr(1,20)), size, path)){
 			logger::debug(LOGGER_P1,"granting hash slot ",(int)(unsigned char)slot_ID, " to ",SB->IP);
 			SB->send_buff += global::P_SLOT_ID;
 			SB->send_buff += slot_ID;
@@ -64,10 +64,10 @@ void server_protocol::request_slot_file(server_buffer * SB)
 {
 	uint64_t size;
 	std::string path;
-	if(DB_Share.lookup_hash(hex::binary_to_hex(SB->recv_buff.substr(1,20)), size, path)){
+	if(DB_Share.lookup_hash(convert::binary_to_hex(SB->recv_buff.substr(1,20)), size, path)){
 		//hash found in share, create slot
 		char slot_ID;
-		if(SB->create_slot(slot_ID, hex::binary_to_hex(SB->recv_buff.substr(1,20)), size, path)){
+		if(SB->create_slot(slot_ID, convert::binary_to_hex(SB->recv_buff.substr(1,20)), size, path)){
 			logger::debug(LOGGER_P1,"granting file slot ",(int)(unsigned char)slot_ID, " to ",SB->IP);
 			SB->send_buff += global::P_SLOT_ID;
 			SB->send_buff += slot_ID;
@@ -86,7 +86,7 @@ void server_protocol::request_slot_file(server_buffer * SB)
 
 void server_protocol::send_block(server_buffer * SB)
 {
-	uint64_t block_number = Convert_uint64.decode(SB->recv_buff.substr(2, 8));
+	uint64_t block_number = convert::decode<uint64_t>(SB->recv_buff.substr(2, 8));
 	if(SB->slot_valid(SB->recv_buff[1])){
 		SB->update_slot_percent_complete(SB->recv_buff[1], block_number);
 		SB->send_buff += global::P_BLOCK;

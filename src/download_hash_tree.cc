@@ -40,6 +40,7 @@ download_hash_tree::download_hash_tree(
 		fin.close();
 	}else{
 		std::fstream fout((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::out);
+		fout.write(convert::hex_to_binary(root_hash).c_str(), sha::HASH_LENGTH);
 		fout.close();
 	}
 
@@ -68,7 +69,7 @@ download_hash_tree::download_hash_tree(
 	}else{
 		//complete hash tree
 		download_complete = true;
-		Request_Gen.init(0, hash_block_count - 1, global::RE_REQUEST_TIMEOUT);
+		Request_Gen.init(0, 1, global::RE_REQUEST_TIMEOUT);
 	}
 }
 
@@ -117,79 +118,24 @@ bool download_hash_tree::request(const int & socket, std::string & request, std:
 	assert(iter != Connection_Special.end());
 	connection_special * conn = &iter->second;
 
-	if(Request_Gen.complete()){
-		checking_phase = true;
-		/*
-		All blocks have been requested and received, check the hash tree for bad
-		hash blocks.
-		*/
-		std::pair<uint64_t, uint64_t> bad_hash;
-		if(Hash_Tree.check_hash_tree(root_hash, hash_tree_count, bad_hash)){
-			/*
-			There is a bad hash block. Find out what server it was from and re_request
-			all blocks that were requested from that server.
-			*/
-			uint64_t bad_block = bad_hash.first / hashes_per_block;
-
-			std::map<int, connection_special>::iterator CS_iter_cur, CS_iter_end;
-			CS_iter_cur = Connection_Special.begin();
-			CS_iter_end = Connection_Special.end();
-
-			bool found = false;
-			while(CS_iter_cur != CS_iter_end){
-				std::set<uint64_t>::iterator iter = CS_iter_cur->second.requested_blocks.find(bad_block);
-				if(iter != CS_iter_cur->second.requested_blocks.end()){
-					//found the server that sent the bad block, re_request all blocks from that server
-					found = true;
-					std::set<uint64_t>::iterator RB_iter_cur, RB_iter_end;
-					RB_iter_cur = CS_iter_cur->second.requested_blocks.begin();
-					RB_iter_end = CS_iter_cur->second.requested_blocks.end();
-					while(RB_iter_cur != RB_iter_end){
-						Request_Gen.force_re_request(*RB_iter_cur);
-						++RB_iter_cur;
-					}
-					break;
-				}
-				++CS_iter_cur;
-			}
-
-			if(found){
-				//blacklist the server that sent the bad blocks
-				DB_blacklist::add(CS_iter_cur->second.IP);
-				if(CS_iter_cur->second.IP == conn->IP){
-					//server that sent the bad block is the current server
-					return false;
-				}
-			}
-		}else{
-			//complete hash tree
-			close_slots = true;
-		}
-	}
-
-	if(download_complete){
+	if(download_complete || conn->close_slot_sent || conn->abusive){
 		return false;
 	}
 
 	if(!conn->slot_ID_requested){
 		//slot_ID not yet obtained from server
-		request = global::P_REQUEST_SLOT_HASH + hex::hex_to_binary(root_hash);
+		request = global::P_REQUEST_SLOT_HASH + convert::hex_to_binary(root_hash);
 		conn->slot_ID_requested = true;
 		expected.push_back(std::make_pair(global::P_SLOT_ID, global::P_SLOT_ID_SIZE));
 		expected.push_back(std::make_pair(global::P_ERROR, 1));
 		return true;
-	}
-
-	if(!conn->slot_ID_received){
+	}else if(!conn->slot_ID_received){
 		//slot_ID requested but not yet received
 		return false;
 	}
 
 	if(close_slots && !conn->close_slot_sent){
-		/*
-		The file finished downloading or the download was manually stopped. This
-		server has not been sent P_CLOSE_SLOT.
-		*/
+		//download finishing or cancelled, send P_CLOSE_SLOT
 		request += global::P_CLOSE_SLOT;
 		request += conn->slot_ID;
 		conn->close_slot_sent = true;
@@ -211,16 +157,11 @@ bool download_hash_tree::request(const int & socket, std::string & request, std:
 		return true;
 	}
 
-	if(close_slots && conn->close_slot_sent){
-		//don't sent any more requests once P_CLOSE_SLOT sent
-		return false;
-	}
-
 	if(Request_Gen.request(conn->latest_request)){
 		//no request to be made at the moment
 		request += global::P_SEND_BLOCK;
 		request += conn->slot_ID;
-		request += Convert_uint64.encode(conn->latest_request.back());
+		request += convert::encode<uint64_t>(conn->latest_request.back());
 		conn->requested_blocks.insert(conn->latest_request.back());
 		int size;
 		if(hash_tree_count - (conn->latest_request.back() * hashes_per_block) < hashes_per_block){
@@ -249,18 +190,49 @@ void download_hash_tree::response(const int & socket, std::string block)
 	assert(iter != Connection_Special.end());
 	connection_special * conn = &iter->second;
 
+	if(conn->abusive){
+		//server abusive but not yet disconnected, ignore data from it
+		return;
+	}
+
 	if(block[0] == global::P_SLOT_ID && conn->slot_ID_received == false){
 		conn->slot_ID = block[1];
 		conn->slot_ID_received = true;
 	}else if(block[0] == global::P_BLOCK){
 		//a block was received
-		Speed_Calculator.update(block.size());       //update download speed
-		block.erase(0, 1);                           //trim command
+		Speed_Calculator.update(block.size()); //update download speed
+		block.erase(0, 1);                     //trim command
 		Hash_Tree.write_hash(root_hash, conn->latest_request.front()*hashes_per_block, block);
 		Request_Gen.fulfil(conn->latest_request.front());
 		conn->latest_request.pop_front();
-	}else{
-		//server abusive
+
+		if(Request_Gen.complete()){
+			//check for bad blocks in tree
+			std::pair<uint64_t, uint64_t> bad_hash;
+			if(Hash_Tree.check_hash_tree(root_hash, hash_tree_count, bad_hash)){
+				//bad block found, find server that sent it
+
+//not totally sure about this logic
+				uint64_t bad_block = bad_hash.first / hashes_per_block;
+				std::map<int, connection_special>::iterator CS_iter_cur, CS_iter_end;
+				CS_iter_cur = Connection_Special.begin();
+				CS_iter_end = Connection_Special.end();
+				while(CS_iter_cur != CS_iter_end){
+					std::set<uint64_t>::iterator iter = CS_iter_cur->second.requested_blocks.find(bad_block);
+					if(iter != CS_iter_cur->second.requested_blocks.end()){
+						//found the server that sent the bad block, re_request all blocks from that server
+						CS_iter_cur->second.abusive = true;
+						DB_blacklist::add(CS_iter_cur->second.IP);
+						break;
+					}
+					++CS_iter_cur;
+				}
+			}else{
+				download_complete = true;
+			}
+		}
+	}else if(block[0] == global::P_ERROR){
+		logger::debug(LOGGER_P1,"P_ERROR received from ",conn->IP);
 	}
 }
 

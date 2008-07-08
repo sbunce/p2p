@@ -123,7 +123,7 @@ unsigned int download_file::percent_complete()
 void download_file::register_connection(const download_connection & DC)
 {
 	download::register_connection(DC);
-	Connection_Special.insert(std::make_pair(DC.socket, connection_special()));
+	Connection_Special.insert(std::make_pair(DC.socket, connection_special(DC.IP)));
 }
 
 bool download_file::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected)
@@ -132,20 +132,18 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 	assert(iter != Connection_Special.end());
 	connection_special * conn = &iter->second;
 
-	if(download_complete){
+	if(download_complete || conn->close_slot_sent || conn->abusive){
 		return false;
 	}
 
 	if(!conn->slot_ID_requested){
 		//slot_ID not yet obtained from server
-		request = global::P_REQUEST_SLOT_FILE + hex::hex_to_binary(file_hash);
+		request = global::P_REQUEST_SLOT_FILE + convert::hex_to_binary(file_hash);
 		conn->slot_ID_requested = true;
 		expected.push_back(std::make_pair(global::P_SLOT_ID, global::P_SLOT_ID_SIZE));
 		expected.push_back(std::make_pair(global::P_ERROR, 1));
 		return true;
-	}
-
-	if(!conn->slot_ID_received){
+	}else if(!conn->slot_ID_received){
 		//slot_ID requested but not yet received
 		return false;
 	}
@@ -174,18 +172,13 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 		return true;
 	}
 
-	if(close_slots && conn->close_slot_sent){
-		//don't sent any more requests once P_CLOSE_SLOT sent
-		return false;
-	}
-
-	if(Request_Gen.request(conn->latest_request)){
+	if(Request_Gen.request(conn->requested_blocks)){
 		//prepare request for needed block
 		request += global::P_SEND_BLOCK;
 		request += conn->slot_ID;
-		request += Convert_uint64.encode(conn->latest_request.back());
+		request += convert::encode<uint64_t>(conn->requested_blocks.back());
 		int size;
-		if(conn->latest_request.back() == last_block){
+		if(conn->requested_blocks.back() == last_block){
 			size = last_block_size;
 		}else{
 			size = global::P_BLOCK_SIZE;
@@ -204,35 +197,35 @@ void download_file::response(const int & socket, std::string block)
 	assert(iter != Connection_Special.end());
 	connection_special * conn = &iter->second;
 
-	if(block[0] == global::P_ERROR){
-		logger::debug(LOGGER_P1,"received P_ERROR");
-
-//do something
+	if(conn->abusive){
+		return;
 	}
-	else if(block[0] == global::P_SLOT_ID && conn->slot_ID_received == false){
+
+	if(block[0] == global::P_SLOT_ID && conn->slot_ID_received == false){
 		conn->slot_ID = block[1];
 		conn->slot_ID_received = true;
 	}else if(block[0] == global::P_BLOCK){
 		Speed_Calculator.update(block.size()); //update download speed
 		block.erase(0, 1);                     //trim command
-		if(!Hash_Tree.check_block(file_hash, conn->latest_request.front(), block.c_str(), block.length())){
-			Request_Gen.force_re_request(conn->latest_request.front());
-			logger::debug(LOGGER_P1,file_name,":",conn->latest_request.front()," hash failure");
-
-//blacklist server here
-
+		if(!Hash_Tree.check_block(file_hash, conn->requested_blocks.front(), block.c_str(), block.length())){
+			logger::debug(LOGGER_P1,file_name,":",conn->requested_blocks.front()," hash failure");
+			Request_Gen.force_re_request(conn->requested_blocks.front());
+			DB_blacklist::add(conn->IP);
+			conn->abusive = true;
 		}else{
-			if(!close_slots){
-				write_block(conn->latest_request.front(), block);
-			}
-			Request_Gen.fulfil(conn->latest_request.front());
+			write_block(conn->requested_blocks.front(), block);
+			Request_Gen.fulfil(conn->requested_blocks.front());
 		}
-		conn->latest_request.pop_front();
+		conn->requested_blocks.pop_front();
 		if(Request_Gen.complete() && !hashing){
 			//download is complete, start closing slots
 			close_slots = true;
 		}
+	}else if(block[0] == global::P_ERROR){
+		logger::debug(LOGGER_P1,"received P_ERROR from ",conn->IP);
 	}
+
+//may need to add a case for if the downloads gets the last block but is still hashing
 }
 
 const uint64_t download_file::size()
@@ -265,6 +258,18 @@ void download_file::write_block(uint64_t block_number, std::string & block)
 
 void download_file::unregister_connection(const int & socket)
 {
+	//re_request all blocks that are pending for the server that's getting disconnected
+	std::map<int, connection_special>::iterator iter = Connection_Special.find(socket);
+	if(iter != Connection_Special.end()){
+		std::deque<uint64_t>::iterator RB_iter_cur, RB_iter_end;
+		RB_iter_cur = iter->second.requested_blocks.begin();
+		RB_iter_end = iter->second.requested_blocks.end();
+		while(RB_iter_cur != RB_iter_end){
+			Request_Gen.force_re_request(*RB_iter_cur);
+			++RB_iter_cur;
+		}
+	}
+
 	download::unregister_connection(socket);
 	Connection_Special.erase(socket);
 }
