@@ -10,6 +10,7 @@
 #include <signal.h>
 
 //custom
+#include "DB_blacklist.h"
 #include "DB_server_preferences.h"
 #include "global.h"
 #include "server_buffer.h"
@@ -62,13 +63,13 @@ public:
 	int total_speed();
 
 private:
-	std::map<int, server_buffer> Server_Buffer;
+	std::map<int, server_buffer *> Server_Buffer;
 
 	volatile bool stop_threads; //if true this will trigger thread termination
 	volatile int threads;       //how many threads are currently running
 
-	//how many are connections currently established
-	int connections;
+	int connections;     //currently established connections
+	int max_connections; //connection limit
 
 	//select() related
 	fd_set master_FDS;   //master file descriptor set
@@ -79,13 +80,18 @@ private:
 	//counter for how many sends need to be done
 	volatile int send_pending;
 
+	//passed to DB_Blacklist to check for updates to blacklist
+	int blacklist_state;
+
 	/*
-	disconnect         - disconnect client and remove socket from master set
-	main_thread        - where the party is at
-	new_conn           - sets up socket for client
-	                   - returns true if connection suceeded
-	process_request    - adds received bytes to buffer and interprets buffer
+	check_blacklist - disconects servers which have been blacklisted
+	disconnect      - disconnect client and remove socket from master set
+	main_thread     - where the party is at
+	new_conn        - sets up socket for client
+	                - returns true if connection suceeded
+	process_request - adds received bytes to buffer and interprets buffer
 	*/
+	void check_blacklist();
 	void disconnect(const int & socketfd);
 	void main_thread();
 	bool new_connection(const int & listener);

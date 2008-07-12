@@ -6,6 +6,7 @@
 
 //custom
 #include "convert.h"
+#include "DB_blacklist.h"
 
 //std
 #include <ctime>
@@ -358,7 +359,6 @@ private:
 	std::string IP;   //IP associated with this client_buffer
 	int socket;       //socket number of this element
 	time_t last_seen; //used for timeout
-	bool abuse;       //if true a disconnect is triggered
 
 	class pending_response
 	{

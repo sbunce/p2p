@@ -119,17 +119,6 @@ void client::main_thread()
 	++threads;
 	reconnect_unfinished();
 	while(true){
-/*
-static int COUNT = 0;
-static time_t TIME = time(NULL);
-COUNT++;
-if(time(NULL) != TIME){
-	TIME = time(NULL);
-	std::cout << "cnt: " << COUNT << "\n";
-	COUNT = 0;
-	std::cout << "sp: " << client_buffer::get_send_pending() << "\n";
-}
-*/
 		if(stop_threads){
 			break;
 		}

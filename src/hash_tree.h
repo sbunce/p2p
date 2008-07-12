@@ -7,8 +7,9 @@
 #include <boost/thread/mutex.hpp>
 
 //custom
-#include "sha.h"
+#include "convert.h"
 #include "global.h"
+#include "sha.h"
 
 //std
 #include <fstream>
@@ -55,7 +56,7 @@ public:
 	{
 		uint64_t start_hash = row_hash;
 		if(row_hash == 1){
-			return 1;
+			return 0;
 		}else if(row_hash % 2 != 0){
 			++start_hash;
 			row_hash = start_hash / 2;
@@ -100,7 +101,7 @@ private:
 	create_hash_tree_recurse - called by create_hash_tree to recursively create hash tree rows past the first
 	locate_start             - returns the RRN of the start of the file hashes
 	*/
-	bool check_hash(char * parent, char * left_child, char * right_child);
+	bool check_hash(const char * parent, char * left_child, char * right_child);
 	void create_hash_tree_recurse(std::fstream & scratch, std::streampos row_start, std::streampos row_end, std::string & root_hash);
 	uint64_t locate_start(const std::string & root_hex_hash);
 

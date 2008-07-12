@@ -1,12 +1,14 @@
 #include "server.h"
 
 server::server():
+	blacklist_state(0),
 	connections(0),
 	send_pending(0),
 	stop_threads(false),
 	threads(0)
 {
 	FD_ZERO(&master_FDS);
+	max_connections = DB_Server_Preferences.get_max_connections();
 	Speed_Calculator.set_speed_limit(DB_Server_Preferences.get_speed_limit_uint());
 	boost::thread T(boost::bind(&server::main_thread, this));
 }
@@ -18,15 +20,38 @@ server::~server()
 	while(threads){
 		usleep(1);
 	}
+
+	while(!Server_Buffer.empty()){
+		delete Server_Buffer.begin()->second;
+		Server_Buffer.erase(Server_Buffer.begin());
+	}
+}
+
+void server::check_blacklist()
+{
+	if(DB_blacklist::modified(blacklist_state)){
+		sockaddr_in temp_addr;
+		socklen_t len = sizeof(temp_addr);
+		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
+			if(FD_ISSET(socket_FD, &master_FDS)){
+				getpeername(socket_FD, (sockaddr*)&temp_addr, &len);
+				std::string IP(inet_ntoa(temp_addr.sin_addr));
+				if(DB_blacklist::is_blacklisted(IP)){
+					logger::debug(LOGGER_P1,"disconnecting blacklisted IP ",IP);
+					disconnect(socket_FD);
+				}
+			}
+		}
+	}
 }
 
 void server::current_uploads(std::vector<upload_info> & info)
 {
-	std::map<int, server_buffer>::iterator iter_cur, iter_end;
+	std::map<int, server_buffer *>::iterator iter_cur, iter_end;
 	iter_cur = Server_Buffer.begin();
 	iter_end = Server_Buffer.end();
 	while(iter_cur != iter_end){
-		iter_cur->second.current_uploads(info);
+		iter_cur->second->current_uploads(info);
 		++iter_cur;
 	}
 }
@@ -38,8 +63,14 @@ void server::disconnect(const int & socket_FD)
 	close(socket_FD);
 	--connections;
 
+	std::map<int, server_buffer *>::iterator iter = Server_Buffer.find(socket_FD);
+	assert(iter != Server_Buffer.end());
+	if(!iter->second->send_buff.empty()){
+		--send_pending;
+	}
 
-	Server_Buffer.erase(socket_FD);
+	delete iter->second;
+	Server_Buffer.erase(iter);
 
 	//reduce FD_max if possible
 	for(int x = FD_max; x != 0; --x){
@@ -58,6 +89,14 @@ int server::get_max_connections()
 void server::set_max_connections(int max_connections)
 {
 	DB_Server_Preferences.set_max_connections(max_connections);
+	while(max_connections > connections){
+		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
+			if(FD_ISSET(socket_FD, &master_FDS)){
+				disconnect(socket_FD);
+				break;
+			}
+		}
+	}
 }
 
 std::string server::get_share_directory()
@@ -117,9 +156,9 @@ bool server::new_connection(const int & listener)
 		}
 	}
 
-	if(connections <= global::MAX_CONNECTIONS){
+	if(connections < max_connections){
 		++connections;
-		Server_Buffer.insert(std::make_pair(new_FD, server_buffer(new_FD, new_IP)));
+		Server_Buffer.insert(std::make_pair(new_FD, new server_buffer(new_FD, new_IP)));
 		FD_SET(new_FD, &master_FDS);
 		if(new_FD > FD_max){
 			FD_max = new_FD;
@@ -183,6 +222,8 @@ void server::main_thread()
 			break;
 		}
 
+		check_blacklist();
+
 		/*
 		This if(send_pending) exists to saves CPU time by not checking if sockets
 		are ready to write when we don't need to write anything.
@@ -222,9 +263,9 @@ void server::main_thread()
 						continue;
 					}else{
 						//incoming data from client socket
-						std::map<int, server_buffer>::iterator iter = Server_Buffer.find(socket_FD);
+						std::map<int, server_buffer *>::iterator iter = Server_Buffer.find(socket_FD);
 						assert(iter != Server_Buffer.end());
-						server_buffer * SB = &iter->second;
+						server_buffer * SB = iter->second;
 						process_request(SB, recv_buff, n_bytes);
 					}
 				}
@@ -232,9 +273,9 @@ void server::main_thread()
 
 			//do not check for writes on listener
 			if(FD_ISSET(socket_FD, &write_FDS) && socket_FD != listener){
-				std::map<int, server_buffer>::iterator iter = Server_Buffer.find(socket_FD);
+				std::map<int, server_buffer *>::iterator iter = Server_Buffer.find(socket_FD);
 				assert(iter != Server_Buffer.end());
-				server_buffer * SB = &iter->second;
+				server_buffer * SB = iter->second;
 				if(!SB->send_buff.empty()){
 					send_limit = Speed_Calculator.rate_control(SB->send_buff.size());
 					if((n_bytes = send(socket_FD, SB->send_buff.c_str(), send_limit, MSG_NOSIGNAL)) < 0){
@@ -261,9 +302,9 @@ void server::process_request(server_buffer * SB, char * recv_buff, const int & n
 
 	//disconnect clients that have pipelined more than is allowed
 	if(SB->recv_buff.size() > global::S_MAX_SIZE*global::PIPELINE_SIZE){
-		logger::debug(LOGGER_P1,"disconnecting abusive socket ",SB->socket_FD);
-		disconnect(SB->socket_FD);
-//blacklist needs to be done here
+		logger::debug(LOGGER_P1,"server ",SB->IP," over pipelined");
+		DB_blacklist::add(SB->IP);
+		return;
 	}
 
 	bool initial_empty = (SB->send_buff.size() == 0);

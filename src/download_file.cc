@@ -11,6 +11,7 @@ download_file::download_file(
 	file_path(file_path_in),
 	file_size(file_size_in),
 	hashing(true),
+	hashing_percent(0),
 	threads(0),
 	stop_threads(false),
 	thread_file_hash(file_hash_in),
@@ -94,6 +95,9 @@ void download_file::hash_check()
 			Request_Gen.force_re_request(hash_latest);
 		}
 		++hash_latest;
+
+		hashing_percent = (int)(((double)hash_latest / first_unreceived) * 100);
+
 		if(stop_threads){
 			break;
 		}
@@ -105,7 +109,9 @@ void download_file::hash_check()
 const std::string download_file::name()
 {
 	if(hashing){
-		return file_name + " HASHING";
+		std::ostringstream name;
+		name << file_name + " CHECK " << hashing_percent << "%";
+		return name.str();
 	}else{
 		return file_name;
 	}
@@ -132,7 +138,7 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 	assert(iter != Connection_Special.end());
 	connection_special * conn = &iter->second;
 
-	if(download_complete || conn->close_slot_sent || conn->abusive){
+	if(conn->close_slot_sent || conn->abusive){
 		return false;
 	}
 
@@ -170,6 +176,10 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 			download_complete = true;
 		}
 		return true;
+	}
+
+	if(download_complete){
+		return false;
 	}
 
 	if(Request_Gen.request(conn->requested_blocks)){
@@ -224,8 +234,6 @@ void download_file::response(const int & socket, std::string block)
 	}else if(block[0] == global::P_ERROR){
 		logger::debug(LOGGER_P1,"received P_ERROR from ",conn->IP);
 	}
-
-//may need to add a case for if the downloads gets the last block but is still hashing
 }
 
 const uint64_t download_file::size()

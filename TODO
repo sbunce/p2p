@@ -1,20 +1,10 @@
 TODO
 
--Remove root hash from hash files. Use the root hash hex stored in the file name
-as the root hash. This also allows requesting in chunks of two so that hashes
-requested from servers are evenly split so that it can be known for sure what
-bad blocks came from what server.
-
-
--Untemplate the convert class. Make it a namespace with templated functions.
-Merge hex.h in to it. Make the endianness check a singleton.
-
 
 DEFERRED FEATURES
 
 -These have their preferences saved but the setting doesn't take effect.
 	client::set_max_connections()
-	server::set_max_connections()
 	client::set_download_directory()
 	server::set_share_directory()
 
@@ -41,8 +31,3 @@ the profile based on time of day.
 -Think about combining hash tree's in to one file. Keep track of starting
 locations in DB. Perhaps have a memmove type opteration one a file where hashes
 can be moved to get rid of gaps due to removed files.
-
--Randomize the order in which sockets are checked to eliminate starvation when
-rate limiting enabled. Is there a non-random shuffling that guarantees equal
-time? What about associating a counter with each socket that counts the number
-of turns it got?

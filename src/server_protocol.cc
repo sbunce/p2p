@@ -86,11 +86,12 @@ void server_protocol::request_slot_file(server_buffer * SB)
 
 void server_protocol::send_block(server_buffer * SB)
 {
-	uint64_t block_number = convert::decode<uint64_t>(SB->recv_buff.substr(2, 8));
-	if(SB->slot_valid(SB->recv_buff[1])){
+	std::string path;
+	if(SB->path(SB->recv_buff[1], path)){
+		uint64_t block_number = convert::decode<uint64_t>(SB->recv_buff.substr(2, 8));
 		SB->update_slot_percent_complete(SB->recv_buff[1], block_number);
 		SB->send_buff += global::P_BLOCK;
-		std::ifstream fin(SB->path(SB->recv_buff[1]).c_str());
+		std::ifstream fin(path.c_str());
 		if(fin.is_open()){
 			//seek to the file_block the client wants (-1 for command space)
 			fin.seekg(block_number * global::FILE_BLOCK_SIZE);
@@ -105,5 +106,7 @@ void server_protocol::send_block(server_buffer * SB)
 			SB->send_buff.append(send_block_buff, fin.gcount());
 			SB->update_slot_speed(SB->recv_buff[1], fin.gcount());
 		}
+	}else{
+		logger::debug(LOGGER_P1,SB->IP," sent a invalid slot ID");
 	}
 }

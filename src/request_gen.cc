@@ -48,7 +48,6 @@ void request_gen::fulfil(const uint64_t & fulfilled_request)
 uint64_t request_gen::highest_requested()
 {
 	boost::mutex::scoped_lock lock(Mutex);
-	assert(initialized);
 	return latest_request;
 }
 

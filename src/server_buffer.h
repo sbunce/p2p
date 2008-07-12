@@ -16,7 +16,6 @@
 class server_buffer
 {
 public:
-	server_buffer();
 	server_buffer(const int & socket_FD_in, const std::string & IP_in);
 	~server_buffer();
 
@@ -31,21 +30,21 @@ public:
 	create_slot_file             - create a download slot for a file
 	                               returns true if slot successfully created, else false
 	current_uploads              - adds upload information to the info vector
-	path                         - returns the path associated with the slot
-	slot_valid                   - returns true if a slot is valid, else false
-	                               slot_valid() should be called before path()
+	path                         - sets path to uploading file path, returns false if slot invalid, else true
 	update_slot_percent_complete - updates the percentage complete an upload is
 	update_slot_speed            - updates speed for the upload the corresponds to the slot_ID
 	*/
 	void close_slot(char slot_ID);
 	bool create_slot(char & slot_ID, const std::string & hash, const uint64_t & size, const std::string & path);
 	void current_uploads(std::vector<upload_info> & info);
-	std::string & path(char slot_ID);
-	bool slot_valid(char slot_ID);
+	bool path(char slot_ID, std::string & path);
 	void update_slot_percent_complete(char slot_ID, const uint64_t & block_number);
 	void update_slot_speed(char slot_ID, unsigned int bytes);
 
 private:
+	//mutex for all public functions
+	boost::mutex Mutex;
+
 	class slot_element
 	{
 	public:

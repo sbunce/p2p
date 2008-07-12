@@ -72,6 +72,11 @@ private:
 	volatile bool hashing;
 
 	/*
+	Percent done hashing the partial file when download resumed.
+	*/
+	volatile int hashing_percent;
+
+	/*
 	This is set to the first unreceived block (next block past end of file).
 	*/
 	uint64_t first_unreceived;

@@ -22,7 +22,6 @@ client_buffer::client_buffer(
 ):
 	socket(socket_in),
 	IP(IP_in),
-	abuse(false),
 	last_seen(time(NULL))
 {
 	recv_buff.reserve(global::C_MAX_SIZE*global::PIPELINE_SIZE);
@@ -45,18 +44,16 @@ void client_buffer::post_recv()
 	if(Pipeline.empty()){
 		//server responded out of turn
 		logger::debug(LOGGER_P1," abusive server (responded when pipeline empty) ",IP);
-		abuse = true;
+		DB_blacklist::add(IP);
 		return;
-	}
-
-	if(recv_buff.size() > global::PIPELINE_SIZE * global::C_MAX_SIZE){
+	}else if(recv_buff.size() > global::PIPELINE_SIZE * global::C_MAX_SIZE){
 		//server sent more than the maximum possible
 		logger::debug(LOGGER_P1," abusive server (exceeded maximum buffer size) ",IP);
-		abuse = true;
+		DB_blacklist::add(IP);
 		return;
 	}
 
-	while(true){
+	while(!Pipeline.empty() && recv_buff.size() != 0){
 		//find out how many bytes are expected for this command
 		std::vector<std::pair<char, int> >::iterator iter_cur, iter_end;
 		iter_cur = Pipeline.front().expected.begin();
@@ -71,27 +68,23 @@ void client_buffer::post_recv()
 		if(iter_cur == iter_end){
 			//server sent unexpected command
 			logger::debug(LOGGER_P1," abusive server ", IP, ", unexpected command ", (int)(unsigned char)recv_buff[0]);
-			abuse = true;
+			DB_blacklist::add(IP);
 			return;
 		}else{
 			if(recv_buff.size() < iter_cur->second){
 				//not enough bytes yet received to fulfill download's request
 				break;
 			}
-		}
 
-		if(Pipeline.front().Download == NULL){
-			//terminated download detected, discard response
-			recv_buff.erase(0, iter_cur->second);
-		}else{
-			//pass response to download
-			Pipeline.front().Download->response(socket, recv_buff.substr(0, iter_cur->second));
-			recv_buff.erase(0, iter_cur->second);
-		}
-
-		Pipeline.pop_front();
-		if(Pipeline.empty() || recv_buff.size() == 0){
-			break;
+			if(Pipeline.front().Download == NULL){
+				//terminated download detected, discard response
+				recv_buff.erase(0, iter_cur->second);
+			}else{
+				//pass response to download
+				Pipeline.front().Download->response(socket, recv_buff.substr(0, iter_cur->second));
+				recv_buff.erase(0, iter_cur->second);
+			}
+			Pipeline.pop_front();
 		}
 	}
 }
@@ -115,11 +108,20 @@ void client_buffer::prepare_request()
 	while(Pipeline.size() < global::PIPELINE_SIZE){
 		std::string request;
 		if(rotate_downloads()){
-			//this will only be checked when a full rotation of downloads has been done
+			/*
+			When rotate_downloads returns true it means that a full rotation of the
+			ring buffer has been done. If the buffer has not been modified after one
+			full rotation it means that all the downloads have no requests to make.
+			*/
 			if(!buffer_change){
 				break;
 			}
 			buffer_change = false;
+		}
+
+		if((*Download_iter)->complete()){
+			//download complete, don't attempt to get a request
+			continue;
 		}
 
 		pending_response PR;
@@ -128,13 +130,13 @@ void client_buffer::prepare_request()
 			send_buff += request;
 
 			/*
-			It is possible that the download expectes no response to the command.
-			If it doesn't don't add the pending_response to the pipeline.
+			If the download doesn't expect a response to the command then don't add
+			it to the pipeline.
 			*/
 			if(!PR.expected.empty()){
 				Pipeline.push_back(PR);
-				buffer_change = true;
 			}
+			buffer_change = true;
 		}
 	}
 

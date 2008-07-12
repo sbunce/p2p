@@ -73,9 +73,18 @@ unsigned int speed_calculator::rate_control(int max_possible_transfer)
 	unsigned int transfer = 0;
 
 	//maximum possible transfer to keep average_speed under rate
-	if(!Second_Bytes.empty()){
-		if(Second_Bytes.front().second < speed_limit){
-			transfer = speed_limit - Second_Bytes.front().second;
+	if(Second_Bytes.empty()){
+		//no bytes recieved yet, request maximum possible
+		--transfer;
+	}else{
+		while(true){
+			if(Second_Bytes.front().second < speed_limit){
+				transfer = speed_limit - Second_Bytes.front().second;
+				break;
+			}else{
+				usleep(1); //sleep until bytes can be requested
+				update(0); //recalculate speed
+			}
 		}
 	}
 

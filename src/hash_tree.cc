@@ -25,7 +25,7 @@ bool hash_tree::check_block(const std::string & root_hex_hash, const uint64_t & 
 	return strncmp(file_hash_buffer, SHA.raw_hash(), sha::HASH_LENGTH) == 0;
 }
 
-bool hash_tree::check_hash(char * parent, char * left_child, char * right_child)
+bool hash_tree::check_hash(const char * parent, char * left_child, char * right_child)
 {
 	SHA.init();
 	SHA.load(left_child, sha::HASH_LENGTH);
@@ -45,8 +45,14 @@ bool hash_tree::check_hash_tree(const std::string & root_hash, const uint64_t & 
 	if(check_tree_latest.empty() || check_tree_latest != root_hash){
 		current_RRN = 0; //RRN of latest hash retrieved
 		start_RRN = 0;   //RRN of the start of the current row
-		end_RRN = 0;     //RRN of the end of the current row
+		end_RRN = 1;     //RRN of the end of the current row
 	}
+
+	if(hash_count == 1){
+		//only one hash, it's the root hash and the file hash
+		return false;
+	}
+
 	std::fstream hash_fstream((global::HASH_DIRECTORY+root_hash).c_str(), std::fstream::in);
 	if(!hash_fstream.is_open()){
 		//hash tree does not yet exist
@@ -63,6 +69,25 @@ bool hash_tree::check_hash_tree(const std::string & root_hash, const uint64_t & 
 	char hash[sha::HASH_LENGTH];
 	char left_child[sha::HASH_LENGTH];
 	char right_child[sha::HASH_LENGTH];
+
+	//root hash not in file, check the root hash and it's two children
+	hash_fstream.read(left_child, sha::HASH_LENGTH);
+	if(hash_fstream.eof()){
+		bad_hash.first = 0;
+		bad_hash.second = 1;
+		return true;
+	}
+	hash_fstream.read(right_child, sha::HASH_LENGTH);
+	if(hash_fstream.eof()){
+		bad_hash.first = 0;
+		bad_hash.second = 1;
+		return true;
+	}
+	if(!check_hash(convert::hex_to_binary(root_hash).c_str(), left_child, right_child)){
+		bad_hash.first = 0;
+		bad_hash.second = 1;
+		return true;
+	}
 
 	bool early_termination = false;
 	while(true){
@@ -247,7 +272,6 @@ void hash_tree::create_hash_tree_recurse(std::fstream & scratch, std::streampos 
 
 		//create the file with the root hash as name
 		fout.open((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::out | std::ios::app | std::ios::binary);
-		fout.write(SHA.raw_hash(), sha::HASH_LENGTH);
 	}else{
 		//this is not the recursive call with the root hash
 		fout.open((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::out | std::ios::app | std::ios::binary);
@@ -272,13 +296,18 @@ uint64_t hash_tree::locate_start(const std::string & root_hex_hash)
 	fin.seekg(0, std::ios::end);
 	uint64_t max_possible_RRN = fin.tellg() / sha::HASH_LENGTH - 1;
 
-	uint64_t current_RRN = 0;
+	uint64_t current_RRN = 1;
 	uint64_t start_RRN = 0;   //RRN of the start of the current row
-	uint64_t end_RRN = 0;     //RRN of the end of the current row
+	uint64_t end_RRN = 1;     //RRN of the end of the current row
 
 	//holder for one hash
 	char hash[sha::HASH_LENGTH];
 
+	/*
+	Skip directly to the possible ends of a row. Check if the row terminates
+	normally or if there is early termination. Skip to the end of the next row.
+	Repeat until at start of last row and return RRN.
+	*/
 	while(true){
 		fin.seekg(current_RRN * sha::HASH_LENGTH);
 		fin.read(hash, sha::HASH_LENGTH);

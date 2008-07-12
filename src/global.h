@@ -23,10 +23,12 @@ namespace global
 	const std::string NAME = "p2p";
 	const std::string VERSION = "0.00 pre-alpha";
 
-	//settings
+	//default settings
 	const int MAX_CONNECTIONS = 50;       //maximum number of connections the server will accept
 	const int UP_SPEED = 9999*1024+512;   //upload speed limit (B/s)
 	const int DOWN_SPEED = 9999*1024+512; //download speed limit (B/s)
+
+	//hard settings
 	const int PIPELINE_SIZE = 16;         //how many pre-requests can be done
 	const int RE_REQUEST_TIMEOUT = 8;     //seconds before a file block is re-requested
 	const int P2P_PORT = 6969;            //port client connects to and server receives on

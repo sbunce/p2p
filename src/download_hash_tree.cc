@@ -69,7 +69,6 @@ download_hash_tree::download_hash_tree(
 	}else{
 		//complete hash tree
 		download_complete = true;
-		Request_Gen.init(0, 1, global::RE_REQUEST_TIMEOUT);
 	}
 }
 
@@ -118,7 +117,7 @@ bool download_hash_tree::request(const int & socket, std::string & request, std:
 	assert(iter != Connection_Special.end());
 	connection_special * conn = &iter->second;
 
-	if(download_complete || conn->close_slot_sent || conn->abusive){
+	if(conn->close_slot_sent || conn->abusive){
 		return false;
 	}
 
@@ -157,6 +156,10 @@ bool download_hash_tree::request(const int & socket, std::string & request, std:
 		return true;
 	}
 
+	if(download_complete){
+		return false;
+	}
+
 	if(Request_Gen.request(conn->latest_request)){
 		//no request to be made at the moment
 		request += global::P_SEND_BLOCK;
@@ -190,7 +193,7 @@ void download_hash_tree::response(const int & socket, std::string block)
 	assert(iter != Connection_Special.end());
 	connection_special * conn = &iter->second;
 
-	if(conn->abusive){
+	if(conn->abusive || close_slots){
 		//server abusive but not yet disconnected, ignore data from it
 		return;
 	}
@@ -211,8 +214,6 @@ void download_hash_tree::response(const int & socket, std::string block)
 			std::pair<uint64_t, uint64_t> bad_hash;
 			if(Hash_Tree.check_hash_tree(root_hash, hash_tree_count, bad_hash)){
 				//bad block found, find server that sent it
-
-//not totally sure about this logic
 				uint64_t bad_block = bad_hash.first / hashes_per_block;
 				std::map<int, connection_special>::iterator CS_iter_cur, CS_iter_end;
 				CS_iter_cur = Connection_Special.begin();
@@ -220,7 +221,7 @@ void download_hash_tree::response(const int & socket, std::string block)
 				while(CS_iter_cur != CS_iter_end){
 					std::set<uint64_t>::iterator iter = CS_iter_cur->second.requested_blocks.find(bad_block);
 					if(iter != CS_iter_cur->second.requested_blocks.end()){
-						//found the server that sent the bad block, re_request all blocks from that server
+						//re_request all blocks gotten from the server that sent a bad block
 						CS_iter_cur->second.abusive = true;
 						DB_blacklist::add(CS_iter_cur->second.IP);
 						break;
@@ -228,7 +229,7 @@ void download_hash_tree::response(const int & socket, std::string block)
 					++CS_iter_cur;
 				}
 			}else{
-				download_complete = true;
+				close_slots = true;
 			}
 		}
 	}else if(block[0] == global::P_ERROR){
