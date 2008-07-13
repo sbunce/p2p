@@ -2,7 +2,9 @@
 
 client_new_connection::client_new_connection(
 	fd_set & master_FDS_in,
-	int & FD_max_in
+	int & FD_max_in,
+	volatile int & max_connections_in,
+	volatile int & connections_in
 ):
 	stop_threads(false),
 	threads(0),
@@ -10,6 +12,8 @@ client_new_connection::client_new_connection(
 {
 	master_FDS = &master_FDS_in;
 	FD_max = &FD_max_in;
+	max_connections = &max_connections_in;
+	connections = &connections_in;
 }
 
 client_new_connection::~client_new_connection()
@@ -79,6 +83,15 @@ void client_new_connection::block_concurrent(const download_connection & DC)
 void client_new_connection::new_connection(download_connection DC)
 {
 	/*
+	Do not initiate new connections if at connection limit.
+	*/
+	if(*connections >= *max_connections){
+		return;
+	}else{
+		++(*connections);
+	}
+
+	/*
 	If this DC is for a server that is known to have rejected a previous
 	connection attempt to it within the last minute then don't attempt another
 	connection.
@@ -125,12 +138,14 @@ void client_new_connection::new_connection(download_connection DC)
 			sending/receiving.
 			*/
 			FD_SET(DC.socket, master_FDS);
+
 		}else{
 			/*
 			The download was removed from client_buffer while connection was being
 			made. Disconnect the socket since it's not needed.
 			*/
 			close(DC.socket);
+			--(*connections);
 		}
 	}
 }

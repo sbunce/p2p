@@ -4,9 +4,7 @@ TODO
 DEFERRED FEATURES
 
 -These have their preferences saved but the setting doesn't take effect.
-	client::set_max_connections()
 	client::set_download_directory()
-	server::set_share_directory()
 
 
 IDEAS

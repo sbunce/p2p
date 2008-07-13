@@ -9,6 +9,9 @@
 //Gtk
 #include <gtkmm.h>
 
+//std
+#include <sstream>
+
 class gui_preferences : public Gtk::Window
 {  
 public:

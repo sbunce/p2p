@@ -51,8 +51,8 @@ public:
 	set_max_connections    - sets maximum connections client will make
 	get_download_directory - returns the location where downloads are saved to
 	set_download_directory - sets the download directory
-	get_speed_limit        - returns the download speed limit (kilobytes/second)
-	set_speed_limit        - sets a new download speed limit (kilobytes/second)
+	get_speed_limit        - returns the download speed limit (bytes/second)
+	set_speed_limit        - sets a new download speed limit (bytes/second)
 	search                 - populates info with download_info that match the search_word
 	start                  - start the threads needed for the client
 	stop                   - stops all threads, must be called before destruction
@@ -62,7 +62,7 @@ public:
 	*/
 	void current_downloads(std::vector<download_info> & info);
 	int get_max_connections();
-	void set_max_connections(int max_connections);
+	void set_max_connections(int max_connections_in);
 	std::string get_download_directory();
 	void set_download_directory(const std::string & download_directory);
 	std::string get_speed_limit();
@@ -75,6 +75,9 @@ public:
 private:
 	volatile bool stop_threads; //if true this will trigger thread termination
 	volatile int threads;       //how many threads are currently running
+
+	volatile int connections;     //currently established connections
+	volatile int max_connections; //connection limit
 
 	/*
 	Holds download_info for downloads that need to be started. The download_info

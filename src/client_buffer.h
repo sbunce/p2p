@@ -124,9 +124,7 @@ public:
 		std::map<int, client_buffer>::iterator iter = Client_Buffer.find(socket_FD);
 		assert(iter != Client_Buffer.end());
 		if(!iter->second.send_buff.empty()){
-			/*
-			send_buff contains data, decrement send_pending
-			*/
+			//send_buff contains data, decrement send_pending
 			--send_pending;
 		}
 		Client_Buffer.erase(socket_FD);

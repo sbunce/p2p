@@ -2,13 +2,15 @@
 
 client::client():
 	blacklist_state(0),
+	connections(0),
 	FD_max(0),
 	Download_Factory(),
 	stop_threads(false),
 	threads(0),
-	Client_New_Connection(master_FDS, FD_max)
+	Client_New_Connection(master_FDS, FD_max, max_connections, connections)
 {
 	boost::filesystem::create_directory(global::DOWNLOAD_DIRECTORY);
+	max_connections = DB_Client_Preferences.get_max_connections();
 	FD_ZERO(&master_FDS);
 	Speed_Calculator.set_speed_limit(DB_Client_Preferences.get_speed_limit_uint());
 	boost::thread T(boost::bind(&client::main_thread, this));
@@ -63,6 +65,7 @@ inline void client::disconnect(const int & socket_FD)
 {
 	logger::debug(LOGGER_P1,"disconnecting socket ",socket_FD);
 	close(socket_FD);
+	--connections;
 	FD_CLR(socket_FD, &master_FDS);
 	FD_CLR(socket_FD, &read_FDS);
 	FD_CLR(socket_FD, &write_FDS);
@@ -79,12 +82,21 @@ inline void client::disconnect(const int & socket_FD)
 
 int client::get_max_connections()
 {
-	return DB_Client_Preferences.get_max_connections();
+	return max_connections;
 }
 
-void client::set_max_connections(int max_connections)
+void client::set_max_connections(int max_connections_in)
 {
+	max_connections = max_connections_in;
 	DB_Client_Preferences.set_max_connections(max_connections);
+	while(connections > max_connections){
+		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
+			if(FD_ISSET(socket_FD, &master_FDS)){
+				disconnect(socket_FD);
+				break;
+			}
+		}
+	}
 }
 
 std::string client::get_download_directory()
@@ -119,6 +131,7 @@ void client::main_thread()
 	++threads;
 	reconnect_unfinished();
 	while(true){
+
 		if(stop_threads){
 			break;
 		}

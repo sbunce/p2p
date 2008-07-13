@@ -3,9 +3,11 @@
 server_index::server_index():
 	indexing(false),
 	stop_thread(false),
+	change_share(false),
 	threads(0)
 {
 	boost::filesystem::create_directory(global::SHARE_DIRECTORY);
+	share_directory = DB_Server_Preferences.get_share_directory();
 	boost::thread T(boost::bind(&server_index::index_share, this));
 }
 
@@ -49,7 +51,7 @@ void server_index::index_share_recurse(std::string directory_name)
 {
 	namespace fs = boost::filesystem;
 
-	if(stop_thread){
+	if(stop_thread || change_share){
 		return;
 	}
 
@@ -89,7 +91,7 @@ void server_index::index_share_recurse(std::string directory_name)
 							//hash tree is missing
 							indexing = true;
 							DB_Share.delete_hash(existing_hash); //delete the entry
-							generate_hash(file_path);                   //regenerate hash for file
+							generate_hash(file_path);            //regenerate hash for file
 						}
 						fin.close();
 
@@ -109,7 +111,7 @@ void server_index::index_share_recurse(std::string directory_name)
 						generate_hash(file_path);
 					}
 
-					if(stop_thread){
+					if(stop_thread || change_share){
 						return;
 					}
 				}
@@ -135,23 +137,38 @@ void server_index::index_share()
 {
 	++threads;
 	indexing = false;
+	std::string share_directory_tmp;
 	while(true){
 		if(stop_thread){
 			break;
 		}
 
+		if(share_directory_tmp != share_directory){
+			//share directory changed
+			DB_Share.clear();
+		}
+
+		{//begin lock scope
+		boost::mutex::scoped_lock lock(SD_mutex);
+		share_directory_tmp = share_directory;
+		}//end lock scope
+
 		//remove share entries for files that no longer exist
-		DB_Share.remove_missing();
+		DB_Share.remove_missing(share_directory_tmp);
 
 		//create hashes
-		index_share_recurse(global::SHARE_DIRECTORY);
-
-		//remove hashes with no corresponding file
-//add stuff here
-
+		index_share_recurse(share_directory_tmp);
 
 		indexing = false;
+		change_share = false;
 		sleep(1);
 	}
 	--threads;
+}
+
+void server_index::set_share_directory(const std::string & directory)
+{
+	boost::mutex::scoped_lock lock(SD_mutex);
+	share_directory = directory;
+	change_share = true;
 }

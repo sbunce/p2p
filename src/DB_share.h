@@ -22,6 +22,7 @@ public:
 
 	/*
 	add_entry      - adds an entry to the database if none exists for the file
+	clear          - remove all entries from the share table
 	delete_hash    - deletes the record associated with hash
 	file_info      - sets file_size and file_path that corresponds to hash
 	               - returns true if file found else false
@@ -30,9 +31,10 @@ public:
 	*/
 	void add_entry(const std::string & hash, const uint64_t & size, const std::string & path);
 	void delete_hash(const std::string & hash);
+	void clear();
 	bool lookup_path(const std::string & path, std::string & existing_hash, uint64_t & existing_size);
 	bool lookup_hash(const std::string & hash, uint64_t & file_size, std::string & file_path);
-	void remove_missing();
+	void remove_missing(const std::string & share_directory);
 
 private:
 	sqlite3 * sqlite3_DB;
@@ -76,5 +78,6 @@ private:
 		this_class->remove_missing_call_back(columns_retrieved, query_response, column_name);
 		return 0;
 	}
+	std::string * remove_missing_share_directory;
 };
 #endif

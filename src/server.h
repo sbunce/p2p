@@ -54,7 +54,7 @@ public:
 	*/
 	void current_uploads(std::vector<upload_info> & info);
 	int get_max_connections();
-	void set_max_connections(int max_connections);
+	void set_max_connections(int max_connections_in);
 	std::string get_share_directory();
 	void set_share_directory(const std::string & share_directory);
 	std::string get_speed_limit();

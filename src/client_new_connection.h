@@ -30,7 +30,12 @@
 class client_new_connection
 {
 public:
-	client_new_connection(fd_set & master_FDS_in, int & FD_max_in);
+	client_new_connection(
+		fd_set & master_FDS_in,
+		int & FD_max_in,
+		volatile int & max_connections_in,
+		volatile int & connections_in
+	);
 	~client_new_connection();
 
 	/*
@@ -42,8 +47,10 @@ private:
 	volatile bool stop_threads; //if true this will trigger thread termination
 	volatile int threads;       //how many threads are currently running
 
-	fd_set * master_FDS; //pointer to the same master_FDS in client
-	int * FD_max;        //pointer to FD_max which exists in client
+	fd_set * master_FDS;   //pointer to the same master_FDS in client
+	int * FD_max;          //pointer to FD_max which exists in client
+	volatile int * volatile max_connections; //maximum number of connections allowed
+	volatile int * volatile connections;     //number of connections currently established
 
 	/*
 	Used by the known_unresponsive function to check for servers that have

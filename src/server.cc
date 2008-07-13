@@ -60,8 +60,8 @@ void server::disconnect(const int & socket_FD)
 {
 	logger::debug(LOGGER_P1,"disconnecting socket ",socket_FD);
 	FD_CLR(socket_FD, &master_FDS);
-	close(socket_FD);
 	--connections;
+	close(socket_FD);
 
 	std::map<int, server_buffer *>::iterator iter = Server_Buffer.find(socket_FD);
 	assert(iter != Server_Buffer.end());
@@ -83,13 +83,14 @@ void server::disconnect(const int & socket_FD)
 
 int server::get_max_connections()
 {
-	return DB_Server_Preferences.get_max_connections();
+	return max_connections;
 }
 
-void server::set_max_connections(int max_connections)
+void server::set_max_connections(int max_connections_in)
 {
+	max_connections = max_connections_in;
 	DB_Server_Preferences.set_max_connections(max_connections);
-	while(max_connections > connections){
+	while(connections > max_connections){
 		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &master_FDS)){
 				disconnect(socket_FD);
@@ -107,6 +108,7 @@ std::string server::get_share_directory()
 void server::set_share_directory(const std::string & share_directory)
 {
 	DB_Server_Preferences.set_share_directory(share_directory);
+	Server_Index.set_share_directory(share_directory);
 }
 
 std::string server::get_speed_limit()
