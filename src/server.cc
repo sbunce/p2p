@@ -133,17 +133,23 @@ bool server::is_indexing()
 	return Server_Index.is_indexing();
 }
 
-bool server::new_connection(const int & listener)
+void server::new_connection(const int & listener)
 {
 	sockaddr_in remoteaddr;
 	socklen_t len = sizeof(remoteaddr);
 	int new_FD = accept(listener, (sockaddr *)&remoteaddr, &len);
 	if(new_FD == -1){
 		perror("accept");
-		return false;
+		return;
 	}
 
 	std::string new_IP(inet_ntoa(remoteaddr.sin_addr));
+
+	//do not allow clients to connect that are blacklisted
+	if(DB_blacklist::is_blacklisted(new_IP)){
+		logger::debug(LOGGER_P1,"stopping connection from blacklisted IP ",new_IP);
+		return;
+	}
 
 	//make sure the client isn't already connected
 	sockaddr_in temp_addr;
@@ -153,7 +159,7 @@ bool server::new_connection(const int & listener)
 			if(strcmp(new_IP.c_str(), inet_ntoa(temp_addr.sin_addr)) == 0){
 				logger::debug(LOGGER_P1,"server ",new_IP," attempted multiple connections");
 				close(new_FD);
-				return false;
+				return;
 			}
 		}
 	}
@@ -170,7 +176,7 @@ bool server::new_connection(const int & listener)
 		close(new_FD);
 	}
 
-	return true;
+	return;
 }
 
 void server::main_thread()

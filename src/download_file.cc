@@ -68,7 +68,7 @@ bool download_file::complete()
 	return download_complete;
 }
 
-const std::string & download_file::hash()
+const std::string download_file::hash()
 {
 	return file_hash;
 }

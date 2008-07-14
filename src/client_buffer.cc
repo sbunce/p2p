@@ -195,7 +195,7 @@ void client_buffer::terminate_download(download * term_DL)
 		}
 	}
 
-	//reset Download_iter since it was invalidated
+	//reset Download_iter because it may have been invalidated
 	Download_iter = Download.begin();
 }
 

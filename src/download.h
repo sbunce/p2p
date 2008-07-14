@@ -3,18 +3,14 @@
 
 //custom
 #include "download_connection.h"
-#include "download_info.h"
 #include "global.h"
 #include "speed_calculator.h"
 
 //std
-#include <deque>
 #include <list>
 #include <string>
 #include <map>
 #include <vector>
-
-class download_connection; //circular dependency
 
 class download
 {
@@ -22,39 +18,47 @@ public:
 	download();
 	virtual ~download();
 
+	enum mode { BINARY_MODE, ASCII_MODE, NO_REQUEST };
+
 	/*
-	complete              - returns true if download complete (or if stop called)
-	hash                  - returns a unique identifier to the download
-	info                  - returns Download_Info for this download (pushes on to vector)
+	If the visible() function returns true the client sends information from all
+	the functions in this section to the GUI.
+
+	hash                  - returns a unique identifier to the download (may be a hash)
 	name                  - returns the name of this download
-	percent_complete      - returns int 1 to 100
-	register_connection   - registers a server with this download
-	                        WARNING: If this is defined in derived, make it call base
-	request               - full request should be put in request
-	                      - return false upon fatal error
-	response              - response to the latest request passed to this
-	                      - return false if no request
+	IP_list               - returns a vector of IP addresses the download is downloading from
+	percent_complete      - should return integer 0 to 100 to indicate percent complete
 	speed                 - download speed in bytes per second
-	stop                  - cause download to stop
 	size                  - the total amount needing to be downloaded
-	unregister_connection - unregisters a server with this download
-	                        WARNING: If this is defined in derived, make it call base
-	visible               - override this and make it return true if the download should be visible in the GUI
+	*/
+	virtual bool visible();
+	virtual const std::string hash();
+	virtual void IP_list(std::vector<std::string> & IP);
+	virtual const std::string name();
+	virtual unsigned int percent_complete();
+	virtual unsigned int speed();
+	virtual const uint64_t size();
+
+	/*
+	If server specific information needs to be stored in the download these can
+	be overridden. If you do override these you must call the register and unregister
+	functions in the base class. (see download_file for example)
+	*/
+	virtual void register_connection(const download_connection & DC);
+	virtual void unregister_connection(const int & socket);
+
+	/*
+	Minimum functions which need to be defined for a download.
+
+	complete - if true is returned the download is removed
+	request  - make a request of a server, expected vector is possible response commands paired with length of responses
+	response - responses to requests are sent to this function once the entire response is gotten
+	stop     - this must prepare the download for early termination
 	*/
 	virtual bool complete() = 0;
-	virtual const std::string & hash() = 0;
-	virtual void IP_list(std::vector<std::string> & IP);
-	virtual const std::string name() = 0;
-	virtual unsigned int percent_complete() = 0;
-	virtual void register_connection(const download_connection & DC);
 	virtual bool request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected) = 0;
 	virtual void response(const int & socket, std::string block) = 0;
-	virtual unsigned int speed();
 	virtual void stop() = 0;
-	virtual const uint64_t size() = 0;
-	virtual void unregister_connection(const int & socket);
-	virtual bool visible();
-//DEBUG, consider making a lot of these non-pure
 
 protected:
 	/*

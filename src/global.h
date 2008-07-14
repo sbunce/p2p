@@ -62,7 +62,7 @@ namespace global
 	const char P_SLOT_ID = (char)6;
 	const int P_SLOT_ID_SIZE = 2;
 	const char P_BLOCK = (char)7;
-	const int P_BLOCK_SIZE = 5121;
+	const int P_BLOCK_SIZE = 10241;
 	const char P_HASH = (char)8;
 	const int P_HASH_SIZE = 21;
 

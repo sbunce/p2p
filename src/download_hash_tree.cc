@@ -92,7 +92,7 @@ const std::string & download_hash_tree::download_file_name()
 	return _download_file_name;
 }
 
-const std::string & download_hash_tree::hash()
+const std::string download_hash_tree::hash()
 {
 	return root_hash;
 }

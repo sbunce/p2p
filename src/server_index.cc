@@ -14,7 +14,7 @@ server_index::server_index():
 server_index::~server_index()
 {
 	stop_thread = true;
-	Hash_Tree.stop(); //force hash tree functions to return early
+	Hash_Tree.stop(); //force hash tree generation to terminate
 	while(threads){
 		usleep(1);
 	}
@@ -137,7 +137,7 @@ void server_index::index_share()
 {
 	++threads;
 	indexing = false;
-	std::string share_directory_tmp;
+	std::string share_directory_tmp = share_directory;
 	while(true){
 		if(stop_thread){
 			break;

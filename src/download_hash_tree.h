@@ -25,7 +25,7 @@ public:
 
 	//documentation for virtual functions in abstract base class
 	virtual bool complete();
-	virtual const std::string & hash();
+	virtual const std::string hash();
 	virtual const std::string name();
 	virtual unsigned int percent_complete();
 	virtual bool request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected);

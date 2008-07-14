@@ -88,13 +88,12 @@ private:
 	disconnect      - disconnect client and remove socket from master set
 	main_thread     - where the party is at
 	new_conn        - sets up socket for client
-	                - returns true if connection suceeded
 	process_request - adds received bytes to buffer and interprets buffer
 	*/
 	void check_blacklist();
 	void disconnect(const int & socketfd);
 	void main_thread();
-	bool new_connection(const int & listener);
+	void new_connection(const int & listener);
 	void process_request(server_buffer * SB, char * recv_buff, const int & n_bytes);
 
 	DB_server_preferences DB_Server_Preferences;

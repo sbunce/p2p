@@ -28,4 +28,11 @@ the profile based on time of day.
 
 -Think about combining hash tree's in to one file. Keep track of starting
 locations in DB. Perhaps have a memmove type opteration one a file where hashes
-can be moved to get rid of gaps due to removed files.
+can be moved to get rid of gaps due to removed files. The intermediate step of
+the memmove operation would basically be a journal.
+
+-Create a pure virtual in download called mode. Mode should return an enumerated
+type which specifies to the client buffer whether the response to the request
+should be parsed in binary or ascii mode. In ascii mode there is a delimiter (NULL)
+which indicates the end of the packet. When a response to ascii mode request is
+expected the buffer size checks should be modified to an ascii max size.

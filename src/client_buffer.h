@@ -7,6 +7,7 @@
 //custom
 #include "convert.h"
 #include "DB_blacklist.h"
+#include "download_info.h"
 
 //std
 #include <ctime>

@@ -46,7 +46,7 @@ public:
 
 	//documentation for virtual functions in abstract base class
 	virtual bool complete();
-	virtual const std::string & hash();
+	virtual const std::string hash();
 	virtual const std::string name();
 	virtual unsigned int percent_complete();
 	virtual void register_connection(const download_connection & DC);
@@ -161,8 +161,8 @@ private:
 	std::map<int, connection_special> Connection_Special;
 
 	/*
-	hash_check             - checks partial download integrity (run in thread spawned in ctor)
-	write_block            - writes a file block
+	hash_check  - checks partial download integrity (run in thread spawned in ctor)
+	write_block - writes a file block
 	*/
 	void hash_check();
 	void write_block(uint64_t block_number, std::string & block);
