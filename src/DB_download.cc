@@ -63,11 +63,14 @@ void DB_download::initial_fill_buff_call_back(int & columns_retrieved, char ** q
 		fstream_temp.close();
 		fs::path path_boost = fs::system_complete(fs::path(global::DOWNLOAD_DIRECTORY + query_response[1], fs::native));
 
+		std::istringstream size_iss(query_response[2]);
+		uint64_t size;
+		size_iss >> size;
 		initial_fill_buff_resumed_download_ptr->push_back(
 			download_info(
-				query_response[0],                    //hash
-				query_response[1],                    //name
-				strtoull(query_response[2], NULL, 10) //size
+				query_response[0], //hash
+				query_response[1], //name
+				size               //size
 			)
 		);
 

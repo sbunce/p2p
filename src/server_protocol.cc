@@ -3,7 +3,7 @@
 server_protocol::server_protocol()
 {
 	#ifdef CORRUPT_BLOCKS
-	srand(time(0));
+	srand(time(NULL));
 	#endif
 }
 
@@ -23,6 +23,9 @@ void server_protocol::process(server_buffer * SB)
 		}else if(SB->recv_buff[0] == global::P_SEND_BLOCK && SB->recv_buff.size() >= global::P_SEND_BLOCK_SIZE){
 			send_block(SB);
 			SB->recv_buff.erase(0, global::P_SEND_BLOCK_SIZE);
+		}else if(SB->recv_buff.length() >= 3 && strncmp(SB->recv_buff.c_str(), "GET", 3) == 0){
+			test(SB);
+			SB->recv_buff.erase(0,1);
 		}else{
 			break;
 		}
@@ -109,4 +112,10 @@ void server_protocol::send_block(server_buffer * SB)
 	}else{
 		logger::debug(LOGGER_P1,SB->IP," sent a invalid slot ID");
 	}
+}
+
+void server_protocol::test(server_buffer * SB)
+{
+	SB->send_buff += "<html>hi!</html>";
+	SB->send_buff += '\0';
 }

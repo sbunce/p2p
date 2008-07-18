@@ -8,6 +8,7 @@
 #include <sqlite3.h>
 
 //std
+#include <sstream>
 #include <string>
 
 class DB_search

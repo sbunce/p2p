@@ -3,8 +3,7 @@ TODO
 
 DEFERRED FEATURES
 
--These have their preferences saved but the setting doesn't take effect.
-	client::set_download_directory()
+-client::set_download_directory() not doing anything but saving setting.
 
 
 IDEAS

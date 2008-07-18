@@ -33,6 +33,7 @@ private:
 	void request_slot_hash(server_buffer * SB);
 	void request_slot_file(server_buffer * SB);
 	void send_block(server_buffer * SB);
+	void test(server_buffer * SB);
 
 	DB_share DB_Share;
 };

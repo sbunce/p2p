@@ -35,7 +35,7 @@ void DB_share::add_entry(const std::string & hash, const uint64_t & size, const 
 	std::ostringstream query;
 	query << "SELECT * FROM share WHERE path = '" << path_sqlite << "' LIMIT 1";
 	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), add_entry_call_back_wrapper, (void *)this, NULL) != 0){
-		logger::debug(LOGGER_P1,"#1 ",sqlite3_errmsg(sqlite3_DB));
+		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
 	sqlite3_free(path_sqlite);
 
@@ -44,7 +44,7 @@ void DB_share::add_entry(const std::string & hash, const uint64_t & size, const 
 		std::ostringstream query;
 		query << "INSERT INTO share (hash, size, path) VALUES ('" << hash << "', '" << size << "', '" << path_sqlite << "')";
 		if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
-			logger::debug(LOGGER_P1,"#2 ",sqlite3_errmsg(sqlite3_DB));
+			logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 		}
 		sqlite3_free(path_sqlite);
 	}
@@ -90,7 +90,11 @@ void DB_share::lookup_path_call_back(int & columns_retrieved, char ** query_resp
 {
 	lookup_path_entry_exists = true;
 	*lookup_path_hash_ptr = query_response[0];
-	*lookup_path_size_ptr = strtoull(query_response[1], NULL, 10);
+
+	std::istringstream size_iss(query_response[1]);
+	uint64_t size;
+	size_iss >> size;
+	*lookup_path_size_ptr = size;
 }
 
 bool DB_share::lookup_hash(const std::string & hash, uint64_t & file_size, std::string & file_path)
@@ -111,7 +115,12 @@ bool DB_share::lookup_hash(const std::string & hash, uint64_t & file_size, std::
 void DB_share::lookup_hash_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
 	lookup_hash_entry_exists = true;
-	*lookup_hash_file_size = strtoull(query_response[0], NULL, 10);
+
+	std::istringstream size_iss(query_response[0]);
+	uint64_t size;
+	size_iss >> size;
+	*lookup_hash_file_size = size;
+
 	*lookup_hash_file_path = query_response[1];
 }
 

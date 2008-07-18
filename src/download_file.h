@@ -31,10 +31,6 @@
 class download_file : public download
 {
 public:
-	/*
-	download_file_complete is a special bool used to signal that the client
-	should check for the presence of a completed download.
-	*/
 	download_file(
 		const std::string & file_hash_in,
 		const std::string & file_name_in, 
@@ -50,7 +46,7 @@ public:
 	virtual const std::string name();
 	virtual unsigned int percent_complete();
 	virtual void register_connection(const download_connection & DC);
-	virtual bool request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected);
+	virtual download::mode request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected);
 	virtual void response(const int & socket, std::string block);
 	virtual void stop();
 	virtual const uint64_t size();

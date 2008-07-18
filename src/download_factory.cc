@@ -5,23 +5,6 @@ download_factory::download_factory()
 
 }
 
-bool download_factory::start_hash(const download_info & info, download *& Download, std::list<download_connection> & servers)
-{
-	if(!DB_Download.start_download(info)){
-		//download already exists in database
-		if(!info.resumed){
-			//download is resumed so it's normal that the download couldn't be added
-			logger::debug(LOGGER_P1,"resuming download ",info.name);
-			return false;
-		}
-	}
-	Download = new download_hash_tree(info.hash, info.size, info.name);
-	for(int x = 0; x < info.IP.size(); ++x){
-		servers.push_back(download_connection(Download, info.IP[x]));
-	}
-	return true;
-}
-
 download_file * download_factory::start_file(download_hash_tree * DHT, std::list<download_connection> & servers)
 {
 	std::string file_path;
@@ -40,6 +23,32 @@ download_file * download_factory::start_file(download_hash_tree * DHT, std::list
 		servers.push_back(download_connection(Download, IP[x]));
 	}
 	return Download;
+}
+
+bool download_factory::start_hash(const download_info & info, download *& Download, std::list<download_connection> & servers)
+{
+	if(!DB_Download.start_download(info)){
+		//download already exists in database
+		if(!info.resumed){
+			//download is resumed so it's normal that the download couldn't be added
+			logger::debug(LOGGER_P1,"resuming download ",info.name);
+			return false;
+		}
+	}
+	Download = new download_hash_tree(info.hash, info.size, info.name);
+	for(int x = 0; x < info.IP.size(); ++x){
+		servers.push_back(download_connection(Download, info.IP[x]));
+	}
+	return true;
+}
+
+
+
+bool download_factory::start_tracker(download *& Download, std::list<download_connection> & servers)
+{
+	Download = new download_tracker;
+	servers.push_back(download_connection(Download,"192.168.1.6"));
+	return true;
 }
 
 bool download_factory::stop(download * Download_Stop, download *& Download_Start, std::list<download_connection> & servers)

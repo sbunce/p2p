@@ -271,19 +271,15 @@ void client::start_download_process(const download_info & info)
 {
 	download * Download;
 	std::list<download_connection> servers;
-	if(!Download_Factory.start_hash(info, Download, servers)){
-		return;
-	}
-
-	client_buffer::add_download(Download);
-
-	//queue jobs to connect to servers
-	std::list<download_connection>::iterator iter_cur, iter_end;
-	iter_cur = servers.begin();
-	iter_end = servers.end();
-	while(iter_cur != iter_end){
-		Client_New_Connection.queue(*iter_cur);
-		++iter_cur;
+	if(Download_Factory.start_hash(info, Download, servers)){
+		client_buffer::add_download(Download);
+		std::list<download_connection>::iterator iter_cur, iter_end;
+		iter_cur = servers.begin();
+		iter_end = servers.end();
+		while(iter_cur != iter_end){
+			Client_New_Connection.queue(*iter_cur);
+			++iter_cur;
+		}
 	}
 }
 

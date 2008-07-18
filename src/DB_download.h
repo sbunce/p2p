@@ -16,6 +16,7 @@
 //std
 #include <fstream>
 #include <list>
+#include <sstream>
 #include <string>
 #include <vector>
 

@@ -72,6 +72,13 @@ private:
 	std::list<download_connection> Connection_Current_Attempt;
 
 	/*
+	Mutex for gethostbyname() function which is not reentrant. It uses static
+	memory which makes it so you have to copy what gethostbyname() returns before
+	allowing another thread to use the function.
+	*/
+	boost::mutex gethostbyname_mutex;
+
+	/*
 	add_unresponsive   - adds a IP to the unresponsive map so that connection attempts won't be wasted on it
 	check_unresponsive - returns true if the IP is on the unresponsive list, else false
 	block_concurrent   - only allows one IP at a time past (more detailed desc in function)

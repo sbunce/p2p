@@ -1,5 +1,5 @@
-#GPROF = -pg
 CXXFLAGS = `pkg-config gtkmm-2.4 --cflags` -O3 -Werror -ansi -pedantic
+#GPROF = -pg
 
 OBJECTS = \
 	DB_blacklist.o \
@@ -11,10 +11,11 @@ OBJECTS = \
 	DB_search.o \
 	DB_server_preferences.o \
 	DB_share.o \
+	download.o \
+	download_factory.o \
 	download_file.o \
 	download_hash_tree.o \
-	download_factory.o \
-	download.o \
+	download_tracker.o \
 	gui.o \
 	gui_about.o \
 	gui_preferences.o \
@@ -53,20 +54,22 @@ SERVER_OBJECTS = \
 	speed_calculator.o
 
 SERVER_LINKER_OPTIONS = \
+	-lboost_filesystem-gcc-mt-1_33_1 \
+	-lboost_thread-gcc-mt-1_33_1 \
 	-lboost_filesystem \
 	-lboost_thread \
 	-D_REENTRANT \
 	-lsqlite3
 
 .depend:
-	fastdep --extraremakedep=Makefile --remakedeptarget=.depend *.cc > .depend
+	$(CXX) -MM *.cc > .depend
 
 main: $(OBJECTS) server
-	g++ $(OBJECTS) $(GPROF) -o p2p $(LINKER_OPTIONS)
+	$(CXX) $(OBJECTS) $(GPROF) -o p2p $(LINKER_OPTIONS)
 	@echo "building complete"
 
 server: $(SERVER_OBJECTS)
-	g++ $(SERVER_OBJECTS) $(GPROF) -o p2p_server $(SERVER_LINKER_OPTIONS)
+	$(CXX) $(SERVER_OBJECTS) $(GPROF) -o p2p_server $(SERVER_LINKER_OPTIONS)
 
 -include .depend
 

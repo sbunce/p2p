@@ -18,7 +18,7 @@ public:
 	download();
 	virtual ~download();
 
-	enum mode { BINARY_MODE, ASCII_MODE, NO_REQUEST };
+	enum mode { BINARY_MODE, TEXT_MODE, NO_REQUEST };
 
 	/*
 	If the visible() function returns true the client sends information from all
@@ -56,7 +56,7 @@ public:
 	stop     - this must prepare the download for early termination
 	*/
 	virtual bool complete() = 0;
-	virtual bool request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected) = 0;
+	virtual mode request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected) = 0;
 	virtual void response(const int & socket, std::string block) = 0;
 	virtual void stop() = 0;
 

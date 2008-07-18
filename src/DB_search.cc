@@ -47,11 +47,14 @@ void DB_search::search(std::string & search_word, std::vector<download_info> & s
 
 void DB_search::search_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
+	std::istringstream size_iss(query_response[2]);
+	uint64_t size;
+	size_iss >> size;
 	download_info Download_Info(
-		query_response[0],                     //hash
-		query_response[1],                     //name
-		strtoull(query_response[2], NULL, 10), //size
-		0,                                     //latest request
+		query_response[0], //hash
+		query_response[1], //name
+		size,              //size
+		0,                 //latest request
 		0
 	);
 

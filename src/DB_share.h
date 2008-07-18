@@ -14,6 +14,8 @@
 
 //std
 #include <fstream>
+#include <sstream>
+#include <string>
 
 class DB_share
 {

@@ -55,16 +55,12 @@ namespace global
 	const int P_CLOSE_SLOT_SIZE = 2;
 	const char P_SEND_BLOCK = (char)4;
 	const int P_SEND_BLOCK_SIZE = 10;
-	const char P_SEND_HASH = (char)5;
-	const int P_SEND_HASH_SIZE = 10;
 
 	//protocol commands server -> client
 	const char P_SLOT_ID = (char)6;
 	const int P_SLOT_ID_SIZE = 2;
 	const char P_BLOCK = (char)7;
 	const int P_BLOCK_SIZE = 10241;
-	const char P_HASH = (char)8;
-	const int P_HASH_SIZE = 21;
 
 	//largest possible packet (used to determine buffer sizes)
 	const int S_MAX_SIZE = P_REQUEST_SLOT_FILE_SIZE;

@@ -1,29 +1,39 @@
-PROTOCOL DOCUMENTATION
+********************************************************************************
+General Protocol Information
 
-/******************************************************************************/
-GENERAL INFORMATION
+All encoded numbers are unsigned and are encoded in big endian. This includes
+SHA-1 hashes which are big endian by SHA-1 standard.
 
-All encoded numbers are unsigned and are in big endian.
+There are two types of messages, binary and text.
 
-All packets are sent asynchronously and are delimited by 1 byte commands that
-all have associated packet length.
+Binary:
+Binary messages are all preceeded by a command (1 byte). Each command has an
+associated length. Some binary requests expect no response (like P_CLOSE_SLOT).
+
+Text:
+Text Messages are not preceeded by anything. Each request for a text message
+must has a response. Responses can vary in size. All text messages are
+terminated by a \0 character.
 
 Example Buffer:
 
 	  0   1   2   3   4   6   7   8   9  10  11  12  13  14  15  16  17  18
 	+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-	| C |               | C |                                       | C |   |
+	| C |                       | S |           |\0 | C |                   |
 	+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
 
-	In this example the first command has an associated length of 5, the second
-one has length 11, the third one has length 2.
+At location 0 there is a binary command with a 6 byte message. At location 8 is
+the start of a text message that happens to be 4 bytes long. The command at
+location 13 is for a binary message that is only complete if the associated size
+of the message is 5 bytes.
 
-/******************************************************************************/
+********************************************************************************
 RE-REQUEST ALGORITHM
 
+NEEDS THOUGHT
 Blocks are rerequested that haven't been received after 4 seconds.
 
-/******************************************************************************/
+********************************************************************************
 PIPELINING
 
 Pipelining is done to avoid dead time (time where no data is being transferred).
@@ -33,19 +43,23 @@ this by having the client send out many requests initially, and then sending a
 new request as whenever a response is received. In this way the server maintains
 a queue of requests it can process even if new requests are delayed.
 
-The maximum pipeline size is 16 commands.
+The maximum pipeline size is 16 commands. When first connecting 16 requests(if
+available) should be made, then after each response a new request should be
+made. This will keep the servers pipeline full so it can always be sending.
 
-/******************************************************************************/
+********************************************************************************
 TIMEOUT
 
 Connection timeout is 16 seconds of inactivity (no I/O).
 
-/******************************************************************************/
+********************************************************************************
+Binary Protocol
+
 P_ERROR (0)
 server -> client
 Has different meaning and packet length in different contexts.
 
-/******************************************************************************/
+****************************************
 P_REQUEST_SLOT_FILE (1)
 client -> server
 
@@ -80,7 +94,7 @@ The server doesn't have the requested file.
 	| C |
 	+---+
 
-/******************************************************************************/
+****************************************
 P_CLOSE_SLOT (4)
 client -> server
 
@@ -91,10 +105,12 @@ Tell the server to close a slot.
 	| C | S | , where S = slot ID
 	+---+---+
 
-/******************************************************************************/
+No Response Expected
+
+****************************************
 P_SEND_BLOCK (5)
 client -> server
-Request either a 5120 byte block from a file or a block of 256 hashes.
+Request either a 10240 byte block from a file or a block of 512 hashes.
 
 	  0   1   2   3   4   .........  10
 	+---+---+---+---+---+---+---+---+---+
@@ -107,19 +123,19 @@ P_BLOCK (6)
 The block requested. May be shorter than 5121 if the block requested was the
 last block of a file or if there aren't 256 hashes left in a hash tree.
 
-	  0   1   2   3   .........  5121
+	  0   1   2   3   ......... 10241
 	+---+---+---+---+---+---+---+---+
 	| C |            block          |
 	+---+---+---+---+---+---+---+---+
 
 
 P_ERROR (0)
-The server has the file but has not yet downloaded this block. This should
-trigger a 8 second delay before trying again.
+
+NEEDS THOUGHT
+The server does not have the block.
 
 	  0
 	+---+
 	| C |
 	+---+
-
-/******************************************************************************/
+********************************************************************************

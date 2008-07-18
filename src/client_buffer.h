@@ -362,6 +362,19 @@ private:
 	class pending_response
 	{
 	public:
+		pending_response(){}
+
+		//copy ctor
+		pending_response(const pending_response & PR)
+		{
+			Mode = PR.Mode;
+			expected = PR.expected;
+			Download = PR.Download;
+		}
+
+		//mode determines how to parse the response
+		download::mode Mode;
+
 		//possible responses paired with size of the possible response
 		std::vector<std::pair<char, int> > expected;
 		download * Download;

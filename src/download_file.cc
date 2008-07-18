@@ -132,14 +132,14 @@ void download_file::register_connection(const download_connection & DC)
 	Connection_Special.insert(std::make_pair(DC.socket, connection_special(DC.IP)));
 }
 
-bool download_file::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected)
+download::mode download_file::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected)
 {
 	std::map<int, connection_special>::iterator iter = Connection_Special.find(socket);
 	assert(iter != Connection_Special.end());
 	connection_special * conn = &iter->second;
 
 	if(conn->close_slot_sent || conn->abusive){
-		return false;
+		return download::NO_REQUEST;
 	}
 
 	if(!conn->slot_ID_requested){
@@ -148,10 +148,10 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 		conn->slot_ID_requested = true;
 		expected.push_back(std::make_pair(global::P_SLOT_ID, global::P_SLOT_ID_SIZE));
 		expected.push_back(std::make_pair(global::P_ERROR, 1));
-		return true;
+		return download::BINARY_MODE;
 	}else if(!conn->slot_ID_received){
 		//slot_ID requested but not yet received
-		return false;
+		return download::NO_REQUEST;
 	}
 
 	if(close_slots && !conn->close_slot_sent){
@@ -175,14 +175,14 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 		if(!unready_found){
 			download_complete = true;
 		}
-		return true;
+		return download::BINARY_MODE;
 	}
 
 	if(download_complete){
-		return false;
+		return download::NO_REQUEST;
 	}
 
-	if(Request_Gen.request(conn->requested_blocks)){
+	if(!Request_Gen.complete() && Request_Gen.request(conn->requested_blocks)){
 		//prepare request for needed block
 		request += global::P_SEND_BLOCK;
 		request += conn->slot_ID;
@@ -195,10 +195,10 @@ bool download_file::request(const int & socket, std::string & request, std::vect
 		}
 		expected.push_back(std::make_pair(global::P_BLOCK, size));
 		expected.push_back(std::make_pair(global::P_ERROR, 1));
-		return true;
+		return download::BINARY_MODE;
 	}
 
-	return false;
+	return download::NO_REQUEST;
 }
 
 void download_file::response(const int & socket, std::string block)

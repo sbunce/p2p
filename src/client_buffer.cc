@@ -41,51 +41,63 @@ bool client_buffer::empty()
 void client_buffer::post_recv()
 {
 	last_seen = time(NULL);
-	if(Pipeline.empty()){
-		//server responded out of turn
-		logger::debug(LOGGER_P1," abusive server (responded when pipeline empty) ",IP);
-		DB_blacklist::add(IP);
-		return;
-	}else if(recv_buff.size() > global::PIPELINE_SIZE * global::C_MAX_SIZE){
-		//server sent more than the maximum possible
-		logger::debug(LOGGER_P1," abusive server (exceeded maximum buffer size) ",IP);
-		DB_blacklist::add(IP);
-		return;
-	}
 
 	while(!Pipeline.empty() && recv_buff.size() != 0){
-		//find out how many bytes are expected for this command
-		std::vector<std::pair<char, int> >::iterator iter_cur, iter_end;
-		iter_cur = Pipeline.front().expected.begin();
-		iter_end = Pipeline.front().expected.end();
-		while(iter_cur != iter_end){
-			if(iter_cur->first == recv_buff[0]){
-				break;
-			}
-			++iter_cur;
-		}
 
-		if(iter_cur == iter_end){
-			//server sent unexpected command
-			logger::debug(LOGGER_P1," abusive server ", IP, ", unexpected command ", (int)(unsigned char)recv_buff[0]);
-			DB_blacklist::add(IP);
-			return;
-		}else{
-			if(recv_buff.size() < iter_cur->second){
-				//not enough bytes yet received to fulfill download's request
-				break;
+		if(Pipeline.front().Mode == download::BINARY_MODE){
+			//find out how many bytes are expected for this command
+			std::vector<std::pair<char, int> >::iterator iter_cur, iter_end;
+			iter_cur = Pipeline.front().expected.begin();
+			iter_end = Pipeline.front().expected.end();
+			while(iter_cur != iter_end){
+				if(iter_cur->first == recv_buff[0]){
+					break;
+				}
+				++iter_cur;
 			}
 
-			if(Pipeline.front().Download == NULL){
-				//terminated download detected, discard response
-				recv_buff.erase(0, iter_cur->second);
+			if(iter_cur == iter_end){
+				//server sent unexpected command
+				logger::debug(LOGGER_P1," abusive server ", IP, ", unexpected command ", (int)(unsigned char)recv_buff[0]);
+				DB_blacklist::add(IP);
+				return;
 			}else{
-				//pass response to download
-				Pipeline.front().Download->response(socket, recv_buff.substr(0, iter_cur->second));
-				recv_buff.erase(0, iter_cur->second);
+				if(recv_buff.size() < iter_cur->second){
+					//not enough bytes yet received to fulfill download's request
+					break;
+				}
+
+				if(Pipeline.front().Download == NULL){
+					//terminated download detected, discard response
+					recv_buff.erase(0, iter_cur->second);
+				}else{
+					//pass response to download
+					Pipeline.front().Download->response(socket, recv_buff.substr(0, iter_cur->second));
+					recv_buff.erase(0, iter_cur->second);
+				}
+				Pipeline.pop_front();
 			}
-			Pipeline.pop_front();
+		}else if(Pipeline.front().Mode == download::TEXT_MODE){
+			int loc;
+			if((loc = recv_buff.find_first_of('\0',0)) != std::string::npos){
+				//pass response to download
+				Pipeline.front().Download->response(socket, recv_buff.substr(0, loc));
+				recv_buff.erase(0, loc+1);
+				Pipeline.pop_front();
+			}else{
+				//whole message not yet received
+				break;
+			}
+		}else{
+			logger::debug(LOGGER_P1,"invalid mode");
+			exit(1);
 		}
+	}
+
+	if(recv_buff.size() > global::PIPELINE_SIZE * global::C_MAX_SIZE){
+		//server sent more than the maximum possible
+		logger::debug(LOGGER_P1,"abusive server (exceeded maximum buffer size) ",IP);
+		DB_blacklist::add(IP);
 	}
 }
 
@@ -106,7 +118,6 @@ void client_buffer::prepare_request()
 	bool buffer_change = true;
 	int initial_empty = (send_buff.size() == 0);
 	while(Pipeline.size() < global::PIPELINE_SIZE){
-		std::string request;
 		if(rotate_downloads()){
 			/*
 			When rotate_downloads returns true it means that a full rotation of the
@@ -124,16 +135,23 @@ void client_buffer::prepare_request()
 			continue;
 		}
 
+		std::string request;
 		pending_response PR;
 		PR.Download = *Download_iter;
-		if((*Download_iter)->request(socket, request, PR.expected)){
-			send_buff += request;
+		PR.Mode = (*Download_iter)->request(socket, request, PR.expected);
 
-			/*
-			If the download doesn't expect a response to the command then don't add
-			it to the pipeline.
-			*/
-			if(!PR.expected.empty()){
+		if(PR.Mode == download::NO_REQUEST){
+			//no request to be made from the download
+			continue;
+		}else{
+			send_buff += request;
+			if(PR.Mode == download::BINARY_MODE){
+				if(!PR.expected.empty()){
+					//no response expected, don't add to pipeline
+					Pipeline.push_back(PR);
+				}
+			}else if(PR.Mode == download::TEXT_MODE){
+				//text mode always expects a response
 				Pipeline.push_back(PR);
 			}
 			buffer_change = true;

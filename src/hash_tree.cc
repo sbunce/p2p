@@ -213,7 +213,7 @@ void hash_tree::create_hash_tree_recurse(std::fstream & scratch, std::streampos 
 	memset(empty, '\0', sha::HASH_LENGTH);
 
 	//stopping case, if one hash passed in it's the root hash
-	if(row_end - row_start == sha::HASH_LENGTH){
+	if(row_end - row_start == (std::streampos)sha::HASH_LENGTH){
 		return;
 	}
 
@@ -261,7 +261,7 @@ void hash_tree::create_hash_tree_recurse(std::fstream & scratch, std::streampos 
 	added first.
 	*/
 	std::fstream fout;
-	if(scratch_write - row_end == sha::HASH_LENGTH){
+	if(scratch_write - row_end == (std::streampos)sha::HASH_LENGTH){
 		root_hash = SHA.hex_hash();
 
 		//do nothing if hash tree file already created

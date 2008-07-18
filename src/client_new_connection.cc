@@ -82,6 +82,11 @@ void client_new_connection::block_concurrent(const download_connection & DC)
 
 void client_new_connection::new_connection(download_connection DC)
 {
+	if(client_buffer::add_connection(DC)){
+		//existing connection to server, add download to it
+		return;
+	}
+
 	/*
 	Do not initiate new connections if at connection limit.
 	*/
@@ -179,35 +184,21 @@ void client_new_connection::queue(download_connection DC)
 	}
 	#endif
 
-	if(!client_buffer::add_connection(DC)){
-		//no existing client_buffer for the DC, schedule new connection
-		Thread_Pool.queue(boost::bind(&client_new_connection::process_DC, this, DC));
-	}
+	Thread_Pool.queue(boost::bind(&client_new_connection::process_DC, this, DC));
 }
 
 bool client_new_connection::resolve(download_connection & DC)
 {
-	//this mess is a reentrant version of gethostname that is added in glibc
-	hostent host_buf, *he;
-	char * tmp_host_buf;
-	int result_code, herr, host_buf_len;
-	host_buf_len = 1024;
-	tmp_host_buf = (char *)malloc(host_buf_len);
-	while((result_code = gethostbyname_r(DC.IP.c_str(), &host_buf, tmp_host_buf, host_buf_len, &he, &herr)) == ERANGE){
-		//function returns if supplied buffer wasn't large enough
-		host_buf_len *= 2;
-		tmp_host_buf = (char *)realloc(tmp_host_buf, host_buf_len);
-	}
+	boost::mutex::scoped_lock lock(gethostbyname_mutex);
 
+	hostent * he = gethostbyname(DC.IP.c_str());
 	if(he == NULL){
 		logger::debug(LOGGER_P1,"error resolving ",DC.IP);
 		add_unresponsive(DC.IP);
-		free(tmp_host_buf);
 		return false;
 	}
 
 	DC.IP = inet_ntoa(*(struct in_addr*)he->h_addr);
-	free(tmp_host_buf);
 	return true;
 }
 
