@@ -5,7 +5,11 @@ int main(int argc, char * argv[])
 {
 	server Server;
 	while(true){
-		sleep(1);
+		#ifdef WIN32
+		Sleep(0);
+		#else
+		usleep(1);
+		#endif
 	}
 	return 0;
 }

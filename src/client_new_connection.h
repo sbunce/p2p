@@ -17,10 +17,14 @@
 #include "thread_pool.h"
 
 //networking
+#ifdef WIN32
+#include <winsock.h>
+#else
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#endif
 
 //std
 #include <list>

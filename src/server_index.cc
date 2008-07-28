@@ -16,7 +16,11 @@ server_index::~server_index()
 	stop_thread = true;
 	Hash_Tree.stop(); //force hash tree generation to terminate
 	while(threads){
+		#ifdef WIN32
+		Sleep(0);
+		#else
 		usleep(1);
+		#endif
 	}
 }
 
@@ -72,7 +76,11 @@ void server_index::index_share_recurse(std::string directory_name)
 			checks for updated files. This makes those checks such that they don't
 			contantly load the CPU.
 			*/
+			#ifdef WIN32
+			Sleep(0);
+			#else
 			usleep(1);
+			#endif
 			try{
 				if(fs::is_directory(*directory_iter)){
 					//recurse to new directory
@@ -161,7 +169,13 @@ void server_index::index_share()
 
 		indexing = false;
 		change_share = false;
-		sleep(1);
+
+		//wait 1 second between share scans and checks
+		#ifdef WIN32
+		Sleep(1000);
+		#else
+		usleep(1000000);
+		#endif
 	}
 	--threads;
 }

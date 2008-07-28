@@ -82,7 +82,13 @@ unsigned int speed_calculator::rate_control(int max_possible_transfer)
 				transfer = speed_limit - Second_Bytes.front().second;
 				break;
 			}else{
-				usleep(1); //sleep until bytes can be requested
+				//sleep until bytes can be requested
+				#ifdef WIN32
+				Sleep(0);
+				#else
+				usleep(1);
+				#endif
+
 				update(0); //recalculate speed
 			}
 		}

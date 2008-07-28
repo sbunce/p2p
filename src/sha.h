@@ -1,8 +1,8 @@
 #ifndef H_SHA
 #define H_SHA
 
-//C
-#include <stdint.h>
+//custom
+#include "global.h"
 
 //std
 #include <algorithm>

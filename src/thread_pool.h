@@ -1,6 +1,9 @@
 #ifndef H_THREAD_POOL
 #define H_THREAD_POOL
 
+//custom
+#include "global.h"
+
 //boost
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>

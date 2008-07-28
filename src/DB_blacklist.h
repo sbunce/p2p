@@ -5,7 +5,7 @@
 #include <boost/thread/mutex.hpp>
 
 //sqlite
-#include <sqlite3.h>
+#include "sqlite3.h"
 
 //std
 #include <iostream>

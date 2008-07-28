@@ -1,5 +1,11 @@
 TODO
 
+-Set timeout on individual requests depending on how large the pipeline is.
+
+-Add WSAGetLastError() for windows (for perror functionality).
+
+-Problem on windows where no blocks are passing a hash check.
+
 
 DEFERRED FEATURES
 
@@ -7,13 +13,6 @@ DEFERRED FEATURES
 
 
 IDEAS
-
--File location should be done with trackers which are organized in to a tree
-structure such that if the user adds a tracker the user will also get to see
-the files of the trackers that tracker trusts and the files that that tracker
-trusts etc. Have an option to limit trust levels to direct trust only, one
-level inheritance and all level inheritance. Children should be able to point
-to their parents.
 
 -Don't allow clients to download who have the P2P port blocked. When a server is
 connected to it should try to connect back to the client(more precisely the
@@ -30,8 +29,15 @@ locations in DB. Perhaps have a memmove type opteration one a file where hashes
 can be moved to get rid of gaps due to removed files. The intermediate step of
 the memmove operation would basically be a journal.
 
--Create a pure virtual in download called mode. Mode should return an enumerated
-type which specifies to the client buffer whether the response to the request
-should be parsed in binary or ascii mode. In ascii mode there is a delimiter (NULL)
-which indicates the end of the packet. When a response to ascii mode request is
-expected the buffer size checks should be modified to an ascii max size.
+
+OVERLAY NETWORK IDEAS
+
+-XOR key system where keys are a hash of IP addresses so that nodes are
+organized by distance (distance measured in hops). Can keys directly be IP
+addresses since they are unique and organized by network?
+
+-Trackers which are organized in to a tree structure such that if the user adds
+a tracker the user will also get to see the files of the trackers that tracker
+trusts and the files that that tracker trusts etc. Have an option to limit trust
+levels to direct trust only, one level inheritance and all level inheritance.
+Children should be able to point to their parents.

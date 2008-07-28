@@ -5,7 +5,7 @@
 #include "download_info.h"
 
 //sqlite
-#include <sqlite3.h>
+#include "sqlite3.h"
 
 //std
 #include <sstream>

@@ -25,9 +25,15 @@
 #include <boost/bind.hpp>
 
 //networking
+#ifdef WIN32
+#include <winsock.h>
+#define socklen_t int
+#define MSG_NOSIGNAL 0
+#else
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#endif
 
 //std
 #include <ctime>

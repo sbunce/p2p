@@ -13,6 +13,18 @@ client::client():
 	max_connections = DB_Client_Preferences.get_max_connections();
 	FD_ZERO(&master_FDS);
 	Speed_Calculator.set_speed_limit(DB_Client_Preferences.get_speed_limit_uint());
+
+	#ifdef WIN32
+	//start winsock
+	WORD wsock_ver = MAKEWORD(1,1);
+	WSADATA wsock_data;
+	int startup;
+	if((startup = WSAStartup(wsock_ver, &wsock_data)) != 0){
+		logger::debug(LOGGER_P1,"winsock startup error ", startup);
+		exit(1);
+	}
+	#endif
+
 	boost::thread T(boost::bind(&client::main_thread, this));
 }
 
@@ -20,9 +32,18 @@ client::~client()
 {
 	stop_threads = true;
 	while(threads){
+		#ifdef WIN32
+		Sleep(0);
+		#else
 		usleep(1);
+		#endif
 	}
 	client_buffer::destroy();
+
+	#ifdef WIN32
+	//cleanup winsock
+	WSACleanup();
+	#endif
 }
 
 void client::check_blacklist()
@@ -64,7 +85,13 @@ void client::current_downloads(std::vector<download_info> & info)
 inline void client::disconnect(const int & socket_FD)
 {
 	logger::debug(LOGGER_P1,"disconnecting socket ",socket_FD);
+
+	#ifdef WIN32
+	closesocket(socket_FD);
+	#else
 	close(socket_FD);
+	#endif
+
 	--connections;
 	FD_CLR(socket_FD, &master_FDS);
 	FD_CLR(socket_FD, &read_FDS);
@@ -151,20 +178,27 @@ void client::main_thread()
 		tv.tv_sec = 1;
 		tv.tv_usec = 0;
 
+		#ifdef WIN32
+		//winsock doesn't allow calling select() with empty socket set
+		if(master_FDS.fd_count == 0){
+			Sleep(1000);
+			continue;
+		}
+		#endif
+
 		if(client_buffer::get_send_pending() != 0){
 			read_FDS = master_FDS;
 			write_FDS = master_FDS;
-			if((select(FD_max+1, &read_FDS, &write_FDS, NULL, &tv)) == -1){
+			if(select(FD_max+1, &read_FDS, &write_FDS, NULL, &tv) == -1){
 				if(errno != EINTR){ //EINTR is caused by gprof
 					perror("client select");
 					exit(1);
 				}
 			}
-		}
-		else{
+		}else{
 			FD_ZERO(&write_FDS);
 			read_FDS = master_FDS;
-			if((select(FD_max+1, &read_FDS, NULL, NULL, &tv)) == -1){
+			if(select(FD_max+1, &read_FDS, NULL, NULL, &tv) == -1){
 				if(errno != EINTR){ //EINTR is caused by gprof
 					perror("client select");
 					exit(1);

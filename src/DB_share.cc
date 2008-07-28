@@ -134,7 +134,13 @@ void DB_share::remove_missing(const std::string & share_directory)
 
 void DB_share::remove_missing_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
+	//slow down check to save CPU
+	#ifdef WIN32
+	Sleep(0);
+	#else
 	usleep(1);
+	#endif
+
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(Mutex);
 	std::fstream fin(query_response[1], std::ios::in);

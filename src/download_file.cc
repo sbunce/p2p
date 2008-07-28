@@ -59,7 +59,11 @@ download_file::~download_file()
 {
 	stop_threads = true;
 	while(threads){
+		#ifdef WIN32
+		Sleep(0);
+		#else
 		usleep(1);
+		#endif
 	}
 }
 
@@ -76,11 +80,6 @@ const std::string download_file::hash()
 void download_file::hash_check()
 {
 	++threads;
-	/*
-	This is done so that on resume all the downloads can be added quickly before
-	things bog down with hash checking.
-	*/
-	sleep(1);
 
 	std::fstream fin(thread_file_path.c_str(), std::ios::in);
 	char block_buff[global::FILE_BLOCK_SIZE];

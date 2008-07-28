@@ -14,14 +14,22 @@ thread_pool::~thread_pool()
 {
 	stop_threads = true;
 	while(threads){
+		#ifdef WIN32
+		Sleep(0);
+		#else
 		usleep(1);
+		#endif
 	}
 }
 
 void thread_pool::join()
 {
 	while(threads){
+		#ifdef WIN32
+		Sleep(0);
+		#else
 		usleep(1);
+		#endif
 	}
 }
 

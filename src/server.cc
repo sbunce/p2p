@@ -10,6 +10,18 @@ server::server():
 	FD_ZERO(&master_FDS);
 	max_connections = DB_Server_Preferences.get_max_connections();
 	Speed_Calculator.set_speed_limit(DB_Server_Preferences.get_speed_limit_uint());
+
+	#ifdef WIN32
+	//start winsock
+	WORD wsock_ver = MAKEWORD(1,1);
+	WSADATA wsock_data;
+	int startup;
+	if((startup = WSAStartup(wsock_ver, &wsock_data)) != 0){
+		logger::debug(LOGGER_P1,"winsock startup error ", startup);
+		exit(1);
+	}
+	#endif
+
 	boost::thread T(boost::bind(&server::main_thread, this));
 }
 
@@ -18,13 +30,22 @@ server::~server()
 	stop_threads = true;
 	raise(SIGINT); //force select() to return
 	while(threads){
+		#ifdef WIN32
+		Sleep(0);
+		#else
 		usleep(1);
+		#endif
 	}
 
 	while(!Server_Buffer.empty()){
 		delete Server_Buffer.begin()->second;
 		Server_Buffer.erase(Server_Buffer.begin());
 	}
+
+	#ifdef WIN32
+	//cleanup winsock
+	WSACleanup();
+	#endif
 }
 
 void server::check_blacklist()
@@ -61,7 +82,12 @@ void server::disconnect(const int & socket_FD)
 	logger::debug(LOGGER_P1,"disconnecting socket ",socket_FD);
 	FD_CLR(socket_FD, &master_FDS);
 	--connections;
+
+	#ifdef WIN32
+	closesocket(socket_FD);
+	#else
 	close(socket_FD);
+	#endif
 
 	std::map<int, server_buffer *>::iterator iter = Server_Buffer.find(socket_FD);
 	assert(iter != Server_Buffer.end());
@@ -158,7 +184,11 @@ void server::new_connection(const int & listener)
 			getpeername(socket_FD, (sockaddr*)&temp_addr, &len);
 			if(strcmp(new_IP.c_str(), inet_ntoa(temp_addr.sin_addr)) == 0){
 				logger::debug(LOGGER_P1,"server ",new_IP," attempted multiple connections");
+				#ifdef WIN32
+				closesocket(new_FD);
+				#else
 				close(new_FD);
+				#endif
 				return;
 			}
 		}
@@ -173,7 +203,11 @@ void server::new_connection(const int & listener)
 		}
 		logger::debug(LOGGER_P1,"client ",inet_ntoa(remoteaddr.sin_addr)," socket ",new_FD," connected");
 	}else{
+		#ifdef WIN32
+		closesocket(new_FD);
+		#else
 		close(new_FD);
+		#endif
 	}
 
 	return;
@@ -184,7 +218,7 @@ void server::main_thread()
 	++threads;
 
 	//set listening socket
-	int listener;
+	unsigned int listener;
 	if((listener = socket(PF_INET, SOCK_STREAM, 0)) == -1){
 		perror("socket");
 		exit(1);
@@ -194,8 +228,8 @@ void server::main_thread()
 	Reuse port if it's currently in use. It can take up to a minute for linux to
 	deallocate the port if this isn't used.
 	*/
-	int yes = 1;
-	if(setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1){
+	bool yes = true;
+	if(setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (char *)&yes, sizeof(int)) == -1){
 		perror("setsockopt");
 		exit(1);
 	}
@@ -223,7 +257,7 @@ void server::main_thread()
 	FD_max = listener;
 
 	char recv_buff[global::S_MAX_SIZE*global::PIPELINE_SIZE];
-   int n_bytes;
+	int n_bytes;
 	int send_limit = 0;
 	while(true){
 		if(stop_threads){
@@ -239,7 +273,7 @@ void server::main_thread()
 		if(send_pending != 0){
 			read_FDS = master_FDS;
 			write_FDS = master_FDS;
-			if((select(FD_max+1, &read_FDS, &write_FDS, NULL, NULL)) == -1){
+			if(select(FD_max+1, &read_FDS, &write_FDS, NULL, NULL) == -1){
 				//gprof will send PROF signal, this will ignore it
 				if(errno != EINTR){
 					perror("server select");
@@ -249,7 +283,7 @@ void server::main_thread()
 		}else{
 			FD_ZERO(&write_FDS);
 			read_FDS = master_FDS;
-			if((select(FD_max+1, &read_FDS, NULL, NULL, NULL)) == -1){
+			if(select(FD_max+1, &read_FDS, NULL, NULL, NULL) == -1){
 				//gprof will send PROF signal, this will ignore it
 				if(errno != EINTR){
 					perror("server select");

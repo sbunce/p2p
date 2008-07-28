@@ -14,11 +14,23 @@ client_new_connection::client_new_connection(
 	FD_max = &FD_max_in;
 	max_connections = &max_connections_in;
 	connections = &connections_in;
+
+	#ifdef WIN32
+	WORD wsock_ver = MAKEWORD(1,1);
+	WSADATA wsock_data;
+	int startup;
+	if((startup = WSAStartup(wsock_ver, &wsock_data)) != 0){
+		logger::debug(LOGGER_P1,"winsock startup error ", startup);
+		exit(1);
+	}
+	#endif
 }
 
 client_new_connection::~client_new_connection()
 {
-
+	#ifdef WIN32
+	WSACleanup();
+	#endif
 }
 
 void client_new_connection::add_unresponsive(const std::string & IP)
@@ -75,8 +87,12 @@ void client_new_connection::block_concurrent(const download_connection & DC)
 		}
 		}
 
-		//if known being blocked wait 1 second then try again
-		sleep(1);
+		//if known being blocked wait 1/10 second then try again
+		#ifdef WIN32
+		Sleep(100);
+		#else
+		usleep(100000);
+		#endif
 	}
 }
 
@@ -124,7 +140,13 @@ void client_new_connection::new_connection(download_connection DC)
 	DC.socket = socket(PF_INET, SOCK_STREAM, 0);
 	dest_addr.sin_family = AF_INET;
 	dest_addr.sin_port = htons(global::P2P_PORT);
+
+	#ifdef WIN32
+	dest_addr.sin_addr.s_addr = inet_addr(DC.IP.c_str());
+	#else
 	inet_aton(DC.IP.c_str(), &dest_addr.sin_addr);
+	#endif
+
 	memset(&(dest_addr.sin_zero),'\0',8);
 	if(connect(DC.socket, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0){
 		logger::debug(LOGGER_P1,"connection to ",DC.IP," failed");
@@ -149,7 +171,12 @@ void client_new_connection::new_connection(download_connection DC)
 			The download was removed from client_buffer while connection was being
 			made. Disconnect the socket since it's not needed.
 			*/
+			#ifdef WIN32
+			closesocket(DC.socket);
+			#else
 			close(DC.socket);
+			#endif
+
 			--(*connections);
 		}
 	}
