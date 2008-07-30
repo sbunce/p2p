@@ -1,8 +1,4 @@
-CXXFLAGS = -O3 -Werror -ansi
-CFLAGS = -O3 -Werror -ansi
-#GPROF = -pg
-
-#tagets which require gtk includes
+#tagets which require gtk
 gui.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
 gui_preferences.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
 gui_about.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
@@ -64,7 +60,6 @@ SERVER_OBJECTS = \
 
 all: $(OBJECTS) server
 	$(CXX) $(OBJECTS) $(GPROF) -o p2p $(LINKER_OPTIONS)
-	@echo "building complete"
 
 server: $(SERVER_OBJECTS)
 	$(CXX) $(SERVER_OBJECTS) $(GPROF) -o p2p_server $(LINKER_OPTIONS)

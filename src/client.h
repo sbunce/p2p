@@ -4,6 +4,9 @@
 //boost
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
+#include <boost/thread/thread.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/bind.hpp>
 
 //custom
 #include "client_buffer.h"
@@ -17,15 +20,12 @@
 #include "download_info.h"
 #include "download_factory.h"
 #include "global.h"
+#include "resolve.h"
 #include "speed_calculator.h"
-
-//boost
-#include <boost/thread/thread.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/bind.hpp>
 
 //networking
 #ifdef WIN32
+#define FD_SETSIZE 1000 //max number of connections in FD_SET
 #include <winsock.h>
 #define socklen_t int
 #define MSG_NOSIGNAL 0

@@ -1,13 +1,3 @@
-/*
-make a download_hash_tree_conn
-
-it should contain a vector of blocks requested.
-
-if a block fails from a server all blocks that were downloaded it should be
-force_re_request'ed from other servers and the server disconnected.
-
-*/
-
 #include "download_hash_tree.h"
 
 download_hash_tree::download_hash_tree(

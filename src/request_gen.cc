@@ -15,7 +15,7 @@ void request_gen::check_timeouts()
 	iter_cur = unfulfilled_request.begin();
 	iter_end = unfulfilled_request.end();
 	while(iter_cur != iter_end){
-		if(time(NULL) - iter_cur->second > timeout){
+		if(iter_cur->second <= time(NULL)){
 			re_request.insert(iter_cur->first);
 		}
 		++iter_cur;
@@ -86,12 +86,12 @@ bool request_gen::request(std::deque<uint64_t> & prev_request)
 				++iter_cur;
 			}
 			prev_request.push_back(max_request);
-			unfulfilled_request.insert(std::make_pair(max_request, time(NULL)));
+			unfulfilled_request.insert(std::make_pair(max_request, time(NULL) + timeout * prev_request.size()));
 			return true;
 		}else{
 			//not on last request, proceed normally adding the next sequential request
 			prev_request.push_back(latest_request);
-			unfulfilled_request.insert(std::make_pair(latest_request, time(NULL)));
+			unfulfilled_request.insert(std::make_pair(latest_request, time(NULL) + timeout * prev_request.size()));
 			++latest_request;
 			return true;
 		}
@@ -120,7 +120,7 @@ bool request_gen::request(std::deque<uint64_t> & prev_request)
 			++re_requested_iter_cur;
 		}
 		prev_request.push_back(*(re_request.begin()));
-		unfulfilled_request.insert(std::make_pair(*(re_request.begin()), time(NULL)));
+		unfulfilled_request.insert(std::make_pair(*(re_request.begin()), time(NULL) + timeout * prev_request.size()));
 		re_requested.insert(*(re_request.begin()));
 		re_request.erase(re_request.begin());
 		logger::debug(LOGGER_P1,"re_requesting ",*(prev_request.begin()));

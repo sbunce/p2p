@@ -84,7 +84,7 @@ unsigned int speed_calculator::rate_control(int max_possible_transfer)
 			}else{
 				//sleep until bytes can be requested
 				#ifdef WIN32
-				Sleep(0);
+				Sleep(1);
 				#else
 				usleep(1);
 				#endif

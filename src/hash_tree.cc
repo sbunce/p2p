@@ -16,7 +16,7 @@ bool hash_tree::check_block(const std::string & root_hex_hash, const uint64_t & 
 		file_hash_root_hex_hash = root_hex_hash;
 		file_hash_start_RRN = locate_start(root_hex_hash);
 	}
-	std::fstream fin((global::HASH_DIRECTORY+root_hex_hash).c_str(), std::fstream::in);
+	std::fstream fin((global::HASH_DIRECTORY+root_hex_hash).c_str(), std::ios::in | std::ios::binary);
 	fin.seekg(sha::HASH_LENGTH * file_hash_start_RRN + block_number * sha::HASH_LENGTH);
 	fin.read(file_hash_buffer, sha::HASH_LENGTH);
 	SHA.init();
@@ -53,7 +53,7 @@ bool hash_tree::check_hash_tree(const std::string & root_hash, const uint64_t & 
 		return false;
 	}
 
-	std::fstream hash_fstream((global::HASH_DIRECTORY+root_hash).c_str(), std::fstream::in);
+	std::fstream hash_fstream((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::in | std::ios::binary);
 	if(!hash_fstream.is_open()){
 		//hash tree does not yet exist
 		bad_hash.first = 0;

@@ -1,0 +1,91 @@
+This application can be build with Microsoft Visual C++ Express. It doesn't cost
+money but for some likely nefarious reason Microsoft wants you to register to
+obtain a registration key.
+
+Bugs:
+
+Debug mode doesn't work. 
+LDR: LdrpWalkImportDescriptor() failed to probe C:\GTK\bin\gtkmm-2.4d.dll for its manifest, ntstatus 0xc0150002
+Debugger:: An unhandled non-continuable exception was thrown during process load
+
+Release mode can work with a console these are set like so.
+Common Properties\Linker\System\SubSystem. Set to "Console (/SUBSYSTEM:CONSOLE)"
+Common Properties\Linker\Advanced\"Entry Point". Set to ""
+
+DIRECTIONS:
+
+Get Boost (lastest known to work 1.35.0):
+http://www.boost.org/users/download/
+
+1. Download both the Boost package and Boost Jam. Boost Jam is the tool the Boost
+libraries are built with.
+
+2. Extract the Boost package to C:\Program Files\Boost . Extract Boost Jam and
+put bjam.exe in the Boost directory (C:\Program Files\Boost). The bjam.exe
+program should be in the same directory as a file called Jamroot.
+
+3. Open a cmd.exe prompt and navigate to C:\Program Files\Boost. Run the command
+"bjam.exe". After the libraries are built in the same directory run
+"bjam.exe install". This will install the boost libraries and headers toC:\Boost.
+
+
+Get GTKMM (latest known to work (2.10.11-1)
+http://ftp.gnome.org/pub/GNOME/binaries/win32/gtkmm/
+
+1. Download the latest gtkmm-win32-devel installer.
+
+2. Install it. The gtkmm installer will offer to download and install gtk, do this.
+
+
+Get Visual C++(latest known to work 2008
+
+This one is trivial to install.
+
+
+Configure Visual C++
+
+Create Project:
+File\New\Project From Existing Code.
+Select Visual C++. *next*
+Select src directory and give the project a name. *next*
+Under "Project type" select "console application project". *finish*
+
+Add GTK support:
+Go to the property manager.
+Right Click "Debug | Win32", select "Add existing property sheet" and select
+	"C:\GTK\MSVC\gtkmm-2.4.vsprops".
+Right Click "Release | Win32", select "Add existing property sheet" and select
+	"C:\GTK\MSVC\gtkmm-2.4.vsprops".
+
+Configure includes and linker for Debug:
+Right click "Debug | Win32" and select properties.
+Common Properties\"C\C++"\General. Set warning level to Off.
+Common Properties\"C\C++"\General\"Additional Include Directories". Add "C:\Boost\include\boost-1_35"
+Common Properties\Linker\General\"Additional Library Directories". Add "C:\Boost\lib"
+Common Properties\Linker\Input\"Additional Dependencies". Add "ws2_32.lib"
+
+Configure includes and linker for Release:
+Right click "Debug | Win32" and select properties.
+Common Properties\"C\C++"\General. Set warning level to Off.
+Common Properties\"C\C++"\General\"Additional Include Directories". Add "C:\Boost\include\boost-1_35"
+Common Properties\"C\C++"\General\Optimization. Set to full optimization.
+Common Properties\Linker\General\"Additional Library Directories". Add "C:\Boost\lib"
+Common Properties\Linker\Input\"Additional Dependencies". Add "ws2_32.lib"
+Common Properties\Linker\System\SubSystem. Set to "Windows (/SUBSYSTEM:WINDOWS)"
+Common Properties\Linker\Advanced\"Entry Point". Set to "mainCRTStartup"
+
+
+Attempt to Build Project:
+If all is configured properly it should suceed. A directory named Debug or
+Release will appear in the source directory depending on what you built. You can
+switch between Debug and Release by going to the properties menu and down to the
+configuration manager.
+
+
+Copying Boost DLL's to the proper location:
+Visual C++ Express doesn't allow static linking (see http://en.wikipedia.org/wiki/Crippleware)
+so you have to copy the DLLs to a path which is searched by the application when
+it starts up. An easy place to copy DLL's is the directory with p2p.exe in it.
+Attempt to start p2p.exe and it will complain about what it's missing. Copy these
+DLL's to the directory with p2p.exe in it until it starts. Some renaming of the
+DLL's might be required.

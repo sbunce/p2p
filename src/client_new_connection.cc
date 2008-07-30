@@ -98,11 +98,6 @@ void client_new_connection::block_concurrent(const download_connection & DC)
 
 void client_new_connection::new_connection(download_connection DC)
 {
-	if(client_buffer::add_connection(DC)){
-		//existing connection to server, add download to it
-		return;
-	}
-
 	/*
 	Do not initiate new connections if at connection limit.
 	*/
@@ -133,6 +128,14 @@ void client_new_connection::new_connection(download_connection DC)
 	If it was stopped abort connection attempt.
 	*/
 	if(!client_buffer::is_downloading(DC.Download)){
+		return;
+	}
+
+	/*
+	Before making new connection check to see if a connection was already
+	created to this server.
+	*/
+	if(client_buffer::add_connection(DC)){
 		return;
 	}
 
@@ -193,40 +196,7 @@ void client_new_connection::process_DC(download_connection DC)
 
 void client_new_connection::queue(download_connection DC)
 {
-	/*
-	The resolve function uses a blocking function call. Resolution of IPs should
-	not be done here.
-
-	When downloads are transitioned this creates a delay which is too high.
-
-	If hostnames are to be resolved it should be done before the download is
-	transitioned and the IP should be stored in the DB.
-
-	However host names should probably not be used at all except for in testing.
-	*/
-	#ifdef RESOLVE_HOST_NAMES
-	if(!resolve(DC)){
-		logger::debug(LOGGER_P1,"error resolving ",DC.IP);
-		return;
-	}
-	#endif
-
 	Thread_Pool.queue(boost::bind(&client_new_connection::process_DC, this, DC));
-}
-
-bool client_new_connection::resolve(download_connection & DC)
-{
-	boost::mutex::scoped_lock lock(gethostbyname_mutex);
-
-	hostent * he = gethostbyname(DC.IP.c_str());
-	if(he == NULL){
-		logger::debug(LOGGER_P1,"error resolving ",DC.IP);
-		add_unresponsive(DC.IP);
-		return false;
-	}
-
-	DC.IP = inet_ntoa(*(struct in_addr*)he->h_addr);
-	return true;
 }
 
 void client_new_connection::unblock(const download_connection & DC)

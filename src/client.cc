@@ -191,7 +191,11 @@ void client::main_thread()
 			write_FDS = master_FDS;
 			if(select(FD_max+1, &read_FDS, &write_FDS, NULL, &tv) == -1){
 				if(errno != EINTR){ //EINTR is caused by gprof
+					#ifdef WIN32
+					logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+					#else
 					perror("client select");
+					#endif
 					exit(1);
 				}
 			}
@@ -200,7 +204,11 @@ void client::main_thread()
 			read_FDS = master_FDS;
 			if(select(FD_max+1, &read_FDS, NULL, NULL, &tv) == -1){
 				if(errno != EINTR){ //EINTR is caused by gprof
+					#ifdef WIN32
+					logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+					#else
 					perror("client select");
+					#endif
 					exit(1);
 				}
 			}
@@ -215,7 +223,11 @@ void client::main_thread()
 				if((recv_limit = Speed_Calculator.rate_control(global::C_MAX_SIZE*global::PIPELINE_SIZE)) != 0){
 					if((n_bytes = recv(socket_FD, recv_buff, recv_limit, MSG_NOSIGNAL)) <= 0){
 						if(n_bytes == -1){
+							#ifdef WIN32
+							logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+							#else
 							perror("client recv");
+							#endif
 						}
 						disconnect(socket_FD);
 					}else{
@@ -230,7 +242,11 @@ void client::main_thread()
 				if(!buff->empty()){
 					if((n_bytes = send(socket_FD, buff->c_str(), buff->size(), MSG_NOSIGNAL)) < 0){
 						if(n_bytes == -1){
+							#ifdef WIN32
+							logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+							#else
 							perror("client send");
+							#endif
 						}
 					}else{
 						//remove bytes sent from buffer
@@ -311,7 +327,19 @@ void client::start_download_process(const download_info & info)
 		iter_cur = servers.begin();
 		iter_end = servers.end();
 		while(iter_cur != iter_end){
-			Client_New_Connection.queue(*iter_cur);
+			#ifdef RESOLVE_HOST_NAMES
+			//resolve hostname
+			if(!resolve::hostname(iter_cur->IP)){
+				logger::debug(LOGGER_P1,"failed to resolve ",iter_cur->IP);
+				++iter_cur;
+				continue;
+			}
+			#endif
+
+			if(!client_buffer::add_connection(*iter_cur)){
+				//no existing connection to server, initiate new connection
+				Client_New_Connection.queue(*iter_cur);
+			}
 			++iter_cur;
 		}
 	}
@@ -371,7 +399,20 @@ void client::transition_download(download * Download_Stop)
 		iter_cur = servers.begin();
 		iter_end = servers.end();
 		while(iter_cur != iter_end){
-			Client_New_Connection.queue(*iter_cur);
+			#ifdef RESOLVE_HOST_NAMES
+			//resolve hostname
+			if(!resolve::hostname(iter_cur->IP)){
+				logger::debug(LOGGER_P1,"failed to resolve ",iter_cur->IP);
+				++iter_cur;
+				continue;
+			}
+			#endif
+
+			if(!client_buffer::add_connection(*iter_cur)){
+				//no existing connection to server, initiate new connection
+				Client_New_Connection.queue(*iter_cur);
+			}
+
 			++iter_cur;
 		}
 	}

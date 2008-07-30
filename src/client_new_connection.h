@@ -18,12 +18,12 @@
 
 //networking
 #ifdef WIN32
+#define FD_SETSIZE 1000 //max number of connections in FD_SET
 #include <winsock.h>
 #else
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <netdb.h>
 #endif
 
 //std
@@ -89,9 +89,6 @@ private:
 	main_thread        - checks if DCs queued, starts connection threads
 	new_connection     - establishes new connections, adds connections to client_buffer
 	process_DC         - process a DC, try to add it to an existing client_buffer else make new connection
-	resolve            - if a download_conn contains a hostname it will be resolved and replaced with an IP
-	                     IP addresses are left as-is
-	                     returns true if suceeded, else false
 	unblock            - works in conjunction with block_concurrent
 	*/
 	void add_unresponsive(const std::string & IP);
@@ -100,7 +97,6 @@ private:
 	void main_thread();
 	void new_connection(download_connection DC);
 	void process_DC(download_connection DC);
-	bool resolve(download_connection & DC);
 	void unblock(const download_connection & DC);
 
 	thread_pool Thread_Pool;

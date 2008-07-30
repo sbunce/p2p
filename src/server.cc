@@ -165,7 +165,11 @@ void server::new_connection(const int & listener)
 	socklen_t len = sizeof(remoteaddr);
 	int new_FD = accept(listener, (sockaddr *)&remoteaddr, &len);
 	if(new_FD == -1){
+		#ifdef WIN32
+		logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+		#else
 		perror("accept");
+		#endif
 		return;
 	}
 
@@ -220,7 +224,11 @@ void server::main_thread()
 	//set listening socket
 	unsigned int listener;
 	if((listener = socket(PF_INET, SOCK_STREAM, 0)) == -1){
+		#ifdef WIN32
+		logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+		#else
 		perror("socket");
+		#endif
 		exit(1);
 	}
 
@@ -230,7 +238,11 @@ void server::main_thread()
 	*/
 	bool yes = true;
 	if(setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (char *)&yes, sizeof(int)) == -1){
+		#ifdef WIN32
+		logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+		#else
 		perror("setsockopt");
+		#endif
 		exit(1);
 	}
 
@@ -242,13 +254,21 @@ void server::main_thread()
 
 	//set listener info to what we set above
 	if(bind(listener, (sockaddr *)&myaddr, sizeof(myaddr)) == -1){
+		#ifdef WIN32
+		logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+		#else
 		perror("bind");
+		#endif
 		exit(1);
 	}
 
 	//start listener socket listening
 	if(listen(listener, 10) == -1){
+		#ifdef WIN32
+		logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+		#else
 		perror("listen");
+		#endif
 		exit(1);
 	}
 	logger::debug(LOGGER_P1,"created listening socket ",listener);
@@ -276,7 +296,11 @@ void server::main_thread()
 			if(select(FD_max+1, &read_FDS, &write_FDS, NULL, NULL) == -1){
 				//gprof will send PROF signal, this will ignore it
 				if(errno != EINTR){
+					#ifdef WIN32
+					logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+					#else
 					perror("server select");
+					#endif
 					exit(1);
 				}
 			}
@@ -286,7 +310,11 @@ void server::main_thread()
 			if(select(FD_max+1, &read_FDS, NULL, NULL, NULL) == -1){
 				//gprof will send PROF signal, this will ignore it
 				if(errno != EINTR){
+					#ifdef WIN32
+					logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+					#else
 					perror("server select");
+					#endif
 					exit(1);
 				}
 			}

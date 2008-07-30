@@ -39,6 +39,10 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				Optimization="3"
+				InlineFunctionExpansion="2"
+				EnableIntrinsicFunctions="true"
+				FavorSizeOrSpeed="1"
 				AdditionalIncludeDirectories="&quot;C:\Boost\include\boost-1_35&quot;"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;"
 				RuntimeLibrary="2"
@@ -192,6 +196,10 @@
 			</File>
 			<File
 				RelativePath=".\request_gen.h"
+				>
+			</File>
+			<File
+				RelativePath=".\resolve.h"
 				>
 			</File>
 			<File

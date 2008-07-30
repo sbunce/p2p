@@ -1,15 +1,12 @@
 TODO
 
--Set timeout on individual requests depending on how large the pipeline is.
-
--Add WSAGetLastError() for windows (for perror functionality).
-
--Problem on windows where no blocks are passing a hash check.
-
 
 DEFERRED FEATURES
 
 -client::set_download_directory() not doing anything but saving setting.
+
+-Hashes need to be removed for files that don't exist in share. Deferred because
+it makes testing difficult.
 
 
 IDEAS
@@ -41,3 +38,7 @@ a tracker the user will also get to see the files of the trackers that tracker
 trusts and the files that that tracker trusts etc. Have an option to limit trust
 levels to direct trust only, one level inheritance and all level inheritance.
 Children should be able to point to their parents.
+
+-What about having one large overlay network reserved for tracker discovery.
+Have a rule that says an individual can advertise a tracker once per day (or
+some large time period). That'd make traffic on the large overlay very minimal.

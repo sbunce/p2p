@@ -33,20 +33,13 @@ public:
 	~client_buffer();
 
 	/*
-	Will try to add download to an existing client_buffer. Returns true if client_buffer
-	for download_conn found, else returns false. If false is returned then new_connection()
-	should be called to create a new client_buffer for the download_conn.
+	Try to add download to an existing client_buffer. If client_buffer is found
+	then return true. If no client_buffer is found false will be returned and a
+	new connection should be made.
 	*/
 	static bool add_connection(download_connection & DC)
 	{
 		boost::mutex::scoped_lock lock(Mutex);
-
-		std::set<download *>::iterator iter = Unique_Download.find(DC.Download);
-		if(iter == Unique_Download.end()){
-			//no download to add a connection to
-			return true;
-		}
-
 		std::map<int, client_buffer>::iterator iter_cur, iter_end;
 		iter_cur = Client_Buffer.begin();
 		iter_end = Client_Buffer.end();
