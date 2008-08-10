@@ -29,11 +29,11 @@ public:
 	                    returns true if request pushed on to back of prev_request
 	*/
 	bool complete();
-	void force_re_request(const uint64_t & number);
-	void fulfil(const uint64_t & fulfilled_request);
-	uint64_t highest_requested();
-	void init(const uint64_t & min_request_in, const uint64_t & max_request_in, const int & timeout_in);
-	bool request(std::deque<uint64_t> & prev_request);
+	void force_re_request(const boost::uint64_t & number);
+	void fulfil(const boost::uint64_t & fulfilled_request);
+	boost::uint64_t highest_requested();
+	void init(const boost::uint64_t & min_request_in, const boost::uint64_t & max_request_in, const int & timeout_in);
+	bool request(std::deque<boost::uint64_t> & prev_request);
 
 private:
 	/*
@@ -51,11 +51,11 @@ private:
 	The latest request returned by new_request. This will not be changed when
 	new_request returns a re_request. This can only go forward one at a time.
 	*/
-	uint64_t latest_request;
+	boost::uint64_t latest_request;
 
 	//min and max request number
-	uint64_t min_request;
-	uint64_t max_request;
+	boost::uint64_t min_request;
+	boost::uint64_t max_request;
 
 	//max age of a request (in seconds) before a re_request is made
 	int timeout;
@@ -65,14 +65,14 @@ private:
 	used to keep track of timeouts. If a element in this container times out it is
 	re_requested.
 	*/
-	std::map<uint64_t, time_t> unfulfilled_request;
+	std::map<boost::uint64_t, time_t> unfulfilled_request;
 
 	/*
 	Whenever a element in unfulfilled_request times out it's request number is
 	put in the re_request container so that request() can issue another request
 	(re-request) for the number.
 	*/
-	std::set<uint64_t> re_request;
+	std::set<boost::uint64_t> re_request;
 
 	/*
 	After request() serves a request from the re_request container it will erase
@@ -85,7 +85,7 @@ private:
 	this evenly distributes the re-requests over servers to give the best possible
 	chance of getting the requested block in a timely manner.
 	*/
-	std::set<uint64_t> re_requested;
+	std::set<boost::uint64_t> re_requested;
 
 	/*
 	check_timeouts - if any requests have timed out add them to re_request

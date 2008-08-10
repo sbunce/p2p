@@ -30,20 +30,20 @@ private:
 	char raw[20];
 
 	//used by load()
-	uint64_t loaded_bytes;   //total bytes input
-	std::string load_buffer; //holds data input
+	boost::uint64_t loaded_bytes; //total bytes input
+	std::string load_buffer;      //holds data input
 
 	enum endianness { BIG_ENDIAN_ENUM, LITTLE_ENDIAN_ENUM };
 	endianness ENDIANNESS; //check done in ctor to set this
 
 	//makes conversion from int to bytes easier
 	union sha_uint32_t{
-		uint32_t num;
-		char byte[sizeof(uint32_t)];
+		boost::uint32_t num;
+		char byte[sizeof(boost::uint32_t)];
 	};
 	union sha_uint64_t{
-		uint64_t num;
-		unsigned char byte[sizeof(uint64_t)];
+		boost::uint64_t num;
+		unsigned char byte[sizeof(boost::uint64_t)];
 	};
 
 	sha_uint32_t w[80]; //holds expansion of a chunk
@@ -53,11 +53,11 @@ private:
 	inline void process(const int & chunk_start);
 
 	//bit rotation
-	inline uint32_t rotate_right(uint32_t data, int bits)
+	inline boost::uint32_t rotate_right(boost::uint32_t data, int bits)
 	{
 		return ((data >> bits) | (data << (32 - bits)));
 	}
-	inline uint32_t rotate_left(uint32_t data, int bits)
+	inline boost::uint32_t rotate_left(boost::uint32_t data, int bits)
 	{
 		return ((data << bits) | (data >> (32 - bits)));
 	}

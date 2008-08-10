@@ -33,7 +33,7 @@ void server_buffer::close_slot(char slot_ID)
 	}
 }
 
-bool server_buffer::create_slot(char & slot_ID, const std::string & hash, const uint64_t & size, const std::string & path)
+bool server_buffer::create_slot(char & slot_ID, const std::string & hash, const boost::uint64_t & size, const std::string & path)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	for(int x=0; x<256; ++x){
@@ -74,7 +74,7 @@ bool server_buffer::path(char slot_ID, std::string & path)
 	}
 }
 
-void server_buffer::update_slot_percent_complete(char slot_ID, const uint64_t & block_number)
+void server_buffer::update_slot_percent_complete(char slot_ID, const boost::uint64_t & block_number)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	if(Slot[(int)(unsigned char)slot_ID] != NULL){

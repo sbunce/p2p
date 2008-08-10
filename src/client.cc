@@ -32,11 +32,7 @@ client::~client()
 {
 	stop_threads = true;
 	while(threads){
-		#ifdef WIN32
-		Sleep(0);
-		#else
-		usleep(1);
-		#endif
+		portable_sleep::yield();
 	}
 	client_buffer::destroy();
 
@@ -181,7 +177,7 @@ void client::main_thread()
 		#ifdef WIN32
 		//winsock doesn't allow calling select() with empty socket set
 		if(master_FDS.fd_count == 0){
-			Sleep(1000);
+			portable_sleep::ms(1000);
 			continue;
 		}
 		#endif
@@ -233,7 +229,7 @@ void client::main_thread()
 					}else{
 						Speed_Calculator.update(n_bytes);
 						client_buffer::get_recv_buff(socket_FD).append(recv_buff, n_bytes);
-						client_buffer::post_recv(socket_FD);
+						client_buffer::post_recv(socket_FD, n_bytes);
 					}
 				}
 			}

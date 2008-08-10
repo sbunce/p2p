@@ -19,7 +19,7 @@ class download_hash_tree : public download
 public:
 	download_hash_tree(
 		const std::string & root_hash_in,
-		const uint64_t & download_file_size_in,
+		const boost::uint64_t & download_file_size_in,
 		const std::string & download_file_name_in
 	);
 
@@ -32,7 +32,7 @@ public:
 	virtual void response(const int & socket, std::string block);
 	virtual void stop();
 	virtual void register_connection(const download_connection & DC);
-	virtual const uint64_t size();
+	virtual const boost::uint64_t size();
 	virtual void unregister_connection(const int & socket);
 	virtual bool visible();
 
@@ -42,12 +42,12 @@ public:
 	download_file_name - returns the name of the file the hash tree was generated for
 	*/
 	const bool & canceled();
-	const uint64_t & download_file_size();
+	const boost::uint64_t & download_file_size();
 	const std::string & download_file_name();
 
 private:
 	//this information is for the file the hash tree was generated for
-	uint64_t _download_file_size;
+	boost::uint64_t _download_file_size;
 	std::string _download_file_name;
 
 	/*
@@ -65,9 +65,9 @@ private:
 
 	std::string root_hash;     //root hash of the tree downloading
 	std::string hash_name;     //the name of this hash
-	uint64_t hash_tree_count;  //number of hashes in the tree
-	uint64_t hash_block_count; //number of hash blocks
-	uint64_t hashes_per_block; //number of hashes in a hash block
+	boost::uint64_t hash_tree_count;  //number of hashes in the tree
+	boost::uint64_t hash_block_count; //number of hash blocks
+	boost::uint64_t hashes_per_block; //number of hashes in a hash block
 
 	/*
 	When the file has finished downloading this will be set to true to indicate
@@ -127,7 +127,7 @@ private:
 		When new requests are made they should be pushed on to the back of
 		latest_request.
 		*/
-		std::deque<uint64_t> latest_request;
+		std::deque<boost::uint64_t> latest_request;
 
 		/*
 		This stores all the blocks that have been received from the server. When the
@@ -140,7 +140,7 @@ private:
 		re_requested from one server and all others would have to wait until it was
 		known that the replacement block was good.
 		*/
-		std::set<uint64_t> requested_blocks;
+		std::set<boost::uint64_t> requested_blocks;
 	};
 
 	//socket number mapped to connection special pointer

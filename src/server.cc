@@ -30,11 +30,7 @@ server::~server()
 	stop_threads = true;
 	raise(SIGINT); //force select() to return
 	while(threads){
-		#ifdef WIN32
-		Sleep(0);
-		#else
-		usleep(1);
-		#endif
+		portable_sleep::yield();
 	}
 
 	while(!Server_Buffer.empty()){

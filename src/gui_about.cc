@@ -9,24 +9,22 @@ gui_about::gui_about()
 	window->set_keep_above(true);
 	window->set_position(Gtk::WIN_POS_CENTER);
 
-	add(about_VBox);
-	about_scrolledWindow.add(about_textView);
-	about_scrolledWindow.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
-	about_VBox.pack_start(about_scrolledWindow);
-	about_refTextBuff = Gtk::TextBuffer::create();
-
-	about_refTextBuff->set_text(global::NAME+" version: "+ global::VERSION+" © Seth Bunce 2006");
-	about_textView.set_buffer(about_refTextBuff);
-	about_VBox.pack_start(about_buttonBox, Gtk::PACK_SHRINK);
-	about_buttonBox.pack_start(buttonClose, Gtk::PACK_SHRINK);
-
-	buttonClose.set_label("Close");
-	buttonClose.signal_clicked().connect(sigc::mem_fun(*this, &gui_about::close_window));
+	add(vbox);
+	scrolled_window.add(text_view);
+	scrolled_window.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+	vbox.pack_start(scrolled_window);
+	text_buff = Gtk::TextBuffer::create();
+	text_buff->set_text(global::NAME+" version: "+ global::VERSION+" © Seth Bunce 2006");
+	text_view.set_buffer(text_buff);
+	vbox.pack_start(button_box, Gtk::PACK_SHRINK);
+	button_box.pack_start(close_button, Gtk::PACK_SHRINK);
+	close_button.set_label("Close");
+	close_button.signal_clicked().connect(sigc::mem_fun(*this, &gui_about::close_click));
 
 	show_all_children();
 }
 
-void gui_about::close_window()
+void gui_about::close_click()
 {
 	hide();
 }

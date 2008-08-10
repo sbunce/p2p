@@ -5,11 +5,7 @@ int main(int argc, char * argv[])
 {
 	server Server;
 	while(true){
-		#ifdef WIN32
-		Sleep(0);
-		#else
-		usleep(1);
-		#endif
+		portable_sleep::yield();
 	}
 	return 0;
 }

@@ -88,11 +88,7 @@ void client_new_connection::block_concurrent(const download_connection & DC)
 		}
 
 		//if known being blocked wait 1/10 second then try again
-		#ifdef WIN32
-		Sleep(100);
-		#else
-		usleep(100000);
-		#endif
+		portable_sleep::ms(100);
 	}
 }
 

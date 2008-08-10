@@ -13,7 +13,7 @@ public:
 	download_info(
 		const std::string & hash_in,
 		const std::string & name_in,
-		const uint64_t & size_in,
+		const boost::uint64_t & size_in,
 		const int speed_in = 0,
 		const int percent_complete_in = 0
 	):
@@ -41,7 +41,7 @@ public:
 
 	std::string hash; //root hash of hash tree
 	std::string name; //name of the file
-	uint64_t size;    //size of the file (bytes)
+	boost::uint64_t size;    //size of the file (bytes)
 
 	//information unique to the server
 	std::vector<std::string> IP;

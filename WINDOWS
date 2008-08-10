@@ -1,16 +1,5 @@
-This application can be build with Microsoft Visual C++ Express. It doesn't cost
-money but for some likely nefarious reason Microsoft wants you to register to
-obtain a registration key.
+This application can be build with Microsoft Visual C++ Express.
 
-Bugs:
-
-Debug mode doesn't work. 
-LDR: LdrpWalkImportDescriptor() failed to probe C:\GTK\bin\gtkmm-2.4d.dll for its manifest, ntstatus 0xc0150002
-Debugger:: An unhandled non-continuable exception was thrown during process load
-
-Release mode can work with a console these are set like so.
-Common Properties\Linker\System\SubSystem. Set to "Console (/SUBSYSTEM:CONSOLE)"
-Common Properties\Linker\Advanced\"Entry Point". Set to ""
 
 DIRECTIONS:
 

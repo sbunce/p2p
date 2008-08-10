@@ -38,12 +38,11 @@ bool client_buffer::empty()
 	return Download.empty();
 }
 
-void client_buffer::post_recv()
+void client_buffer::post_recv(const int & n_bytes)
 {
 	last_seen = time(NULL);
 
 	while(!Pipeline.empty() && recv_buff.size() != 0){
-
 		if(Pipeline.front().Mode == download::BINARY_MODE){
 			//find out how many bytes are expected for this command
 			std::vector<std::pair<char, int> >::iterator iter_cur, iter_end;
@@ -74,6 +73,7 @@ void client_buffer::post_recv()
 					//pass response to download
 					Pipeline.front().Download->response(socket, recv_buff.substr(0, iter_cur->second));
 					recv_buff.erase(0, iter_cur->second);
+					Pipeline.front().Download->update_speed(socket, iter_cur->second);
 				}
 				Pipeline.pop_front();
 			}
@@ -83,6 +83,7 @@ void client_buffer::post_recv()
 				//pass response to download
 				Pipeline.front().Download->response(socket, recv_buff.substr(0, loc));
 				recv_buff.erase(0, loc+1);
+				Pipeline.front().Download->update_speed(socket, loc);
 				Pipeline.pop_front();
 			}else{
 				//whole message not yet received

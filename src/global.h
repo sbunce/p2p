@@ -1,41 +1,50 @@
 #ifndef H_GLOBALS
 #define H_GLOBALS
 
-//sleep macros for windows
-#ifdef WIN32
-#include <windows.h>
-#endif
-
-//msvc++ doesn't conform to C99 std which includes stdint.h
-#ifdef _MSC_VER
-typedef __int8            int8_t;
-typedef __int16           int16_t;
-typedef __int32           int32_t;
-typedef __int64           int64_t;
-typedef unsigned __int8   uint8_t;
-typedef unsigned __int16  uint16_t;
-typedef unsigned __int32  uint32_t;
-typedef unsigned __int64  uint64_t;
-#else
-#include <stdint.h>
-#endif
-
 //uncomment to disable all asserts
 //#define NDEBUG
-
 //uncomment to enable file block corruption test
 //#define CORRUPT_BLOCKS
-
 //uncomment to enable resolution of host names
 #define RESOLVE_HOST_NAMES
+
+//boost
+#include <boost/cstdint.hpp>
+
+//custom
+#include "logger.h"
 
 //std
 #include <cassert>
 #include <string>
 
-//custom
-#include "logger.h"
-#include "sha.h"
+//portable sleep
+namespace portable_sleep
+{
+#ifdef WIN32
+#include <windows.h>
+#endif
+
+	//sleep for specified number of milliseconds
+	inline void ms(const int & milliseconds)
+	{
+		#ifdef WIN32
+		Sleep(milliseconds);
+		#else
+		usleep(milliseconds * 1000);
+		#endif
+	}
+
+	//yield time slice
+	inline void yield()
+	{
+		#ifdef WIN32
+		Sleep(0);
+		#else
+		usleep(1);
+		#endif
+	}
+}
 
 namespace global
 {
@@ -49,10 +58,10 @@ namespace global
 
 	//hard settings
 	const int PIPELINE_SIZE = 16;         //how many pre-requests can be done
-	const int RE_REQUEST_TIMEOUT = 8;     //seconds before a file block is re-requested
+	const int RE_REQUEST_TIMEOUT = 16;    //seconds before a file block is re-requested
 	const int P2P_PORT = 6969;            //port client connects to and server receives on
 	const int GUI_TICK = 100;             //time(in milliseconds) between gui updates
-	const int SPEED_AVERAGE = 4;          //how many seconds to average upload/download speed over
+	const int SPEED_AVERAGE = 4;          //how many seconds to average speed over
 	const int TIMEOUT = 16;               //how long before an unresponsive socket times out
 	const int UNRESPONSIVE_TIMEOUT = 60;  //if connection to server fails, new connection attempts to it are stopped for this time
 
@@ -79,7 +88,7 @@ namespace global
 	const char P_SLOT_ID = (char)6;
 	const int P_SLOT_ID_SIZE = 2;
 	const char P_BLOCK = (char)7;
-	const int P_BLOCK_SIZE = 10241;
+	const int P_BLOCK_SIZE = 5121;
 
 	//largest possible packet (used to determine buffer sizes)
 	const int S_MAX_SIZE = P_REQUEST_SLOT_FILE_SIZE;

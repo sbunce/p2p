@@ -4,7 +4,7 @@ download_file::download_file(
 	const std::string & file_hash_in,
 	const std::string & file_name_in, 
 	const std::string & file_path_in,
-	const uint64_t & file_size_in
+	const boost::uint64_t & file_size_in
 ):
 	file_hash(file_hash_in),
 	file_name(file_name_in),
@@ -49,7 +49,7 @@ download_file::download_file(
 	first_unreceived = fin.tellg() / global::FILE_BLOCK_SIZE;
 
 	//start re_requesting where the download left off
-	Request_Gen.init((uint64_t)first_unreceived, last_block, global::RE_REQUEST_TIMEOUT);
+	Request_Gen.init((boost::uint64_t)first_unreceived, last_block, global::RE_REQUEST_TIMEOUT);
 
 	//hash check for corrupt/missing blocks
 	boost::thread T(boost::bind(&download_file::hash_check, this));
@@ -59,11 +59,7 @@ download_file::~download_file()
 {
 	stop_threads = true;
 	while(threads){
-		#ifdef WIN32
-		Sleep(0);
-		#else
-		usleep(1);
-		#endif
+		portable_sleep::yield();
 	}
 }
 
@@ -83,7 +79,7 @@ void download_file::hash_check()
 
 	std::fstream fin(thread_file_path.c_str(), std::ios::in);
 	char block_buff[global::FILE_BLOCK_SIZE];
-	uint64_t hash_latest = 0;
+	boost::uint64_t hash_latest = 0;
 	while(true){
 		if(hash_latest == first_unreceived){
 			break;
@@ -185,7 +181,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 		//prepare request for needed block
 		request += global::P_SEND_BLOCK;
 		request += conn->slot_ID;
-		request += convert::encode<uint64_t>(conn->requested_blocks.back());
+		request += convert::encode<boost::uint64_t>(conn->requested_blocks.back());
 		int size;
 		if(conn->requested_blocks.back() == last_block){
 			size = last_block_size;
@@ -214,8 +210,7 @@ void download_file::response(const int & socket, std::string block)
 		conn->slot_ID = block[1];
 		conn->slot_ID_received = true;
 	}else if(block[0] == global::P_BLOCK){
-		Speed_Calculator.update(block.size()); //update download speed
-		block.erase(0, 1);                     //trim command
+		block.erase(0, 1); //trim command
 		if(!Hash_Tree.check_block(file_hash, conn->requested_blocks.front(), block.c_str(), block.length())){
 			logger::debug(LOGGER_P1,file_name,":",conn->requested_blocks.front()," hash failure");
 			Request_Gen.force_re_request(conn->requested_blocks.front());
@@ -235,7 +230,7 @@ void download_file::response(const int & socket, std::string block)
 	}
 }
 
-const uint64_t download_file::size()
+const boost::uint64_t download_file::size()
 {
 	return file_size;
 }
@@ -252,7 +247,7 @@ void download_file::stop()
 	}
 }
 
-void download_file::write_block(uint64_t block_number, std::string & block)
+void download_file::write_block(boost::uint64_t block_number, std::string & block)
 {
 	std::fstream fout(file_path.c_str(), std::ios::in | std::ios::out | std::ios::binary);
 	if(fout.is_open()){
@@ -268,7 +263,7 @@ void download_file::unregister_connection(const int & socket)
 	//re_request all blocks that are pending for the server that's getting disconnected
 	std::map<int, connection_special>::iterator iter = Connection_Special.find(socket);
 	if(iter != Connection_Special.end()){
-		std::deque<uint64_t>::iterator RB_iter_cur, RB_iter_end;
+		std::deque<boost::uint64_t>::iterator RB_iter_cur, RB_iter_end;
 		RB_iter_cur = iter->second.requested_blocks.begin();
 		RB_iter_end = iter->second.requested_blocks.end();
 		while(RB_iter_cur != RB_iter_end){

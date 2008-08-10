@@ -35,10 +35,10 @@ public:
 	update_slot_speed            - updates speed for the upload the corresponds to the slot_ID
 	*/
 	void close_slot(char slot_ID);
-	bool create_slot(char & slot_ID, const std::string & hash, const uint64_t & size, const std::string & path);
+	bool create_slot(char & slot_ID, const std::string & hash, const boost::uint64_t & size, const std::string & path);
 	void current_uploads(std::vector<upload_info> & info);
 	bool path(char slot_ID, std::string & path);
-	void update_slot_percent_complete(char slot_ID, const uint64_t & block_number);
+	void update_slot_percent_complete(char slot_ID, const boost::uint64_t & block_number);
 	void update_slot_speed(char slot_ID, unsigned int bytes);
 
 private:
@@ -50,7 +50,7 @@ private:
 	public:
 		slot_element(
 			const std::string & hash_in,
-			const uint64_t & size_in,
+			const boost::uint64_t & size_in,
 			const std::string & path_in
 		):
 			hash(hash_in),
@@ -63,7 +63,7 @@ private:
 		}
 
 		std::string hash;
-		uint64_t size;
+		boost::uint64_t size;
 		std::string path;     //path of file associated with slot
 		std::string name;     //name of file
 		int percent_complete; //what % client has downloaded

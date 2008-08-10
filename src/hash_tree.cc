@@ -9,7 +9,7 @@ hash_tree::hash_tree(
 	boost::filesystem::create_directory(global::HASH_DIRECTORY.c_str());
 }
 
-bool hash_tree::check_block(const std::string & root_hex_hash, const uint64_t & block_number, const char * const block, const int & block_length)
+bool hash_tree::check_block(const std::string & root_hex_hash, const boost::uint64_t & block_number, const char * const block, const int & block_length)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	if(root_hex_hash != file_hash_root_hex_hash){
@@ -38,7 +38,7 @@ bool hash_tree::check_hash(const char * parent, char * left_child, char * right_
 	}
 }
 
-bool hash_tree::check_hash_tree(const std::string & root_hash, const uint64_t & hash_count, std::pair<uint64_t, uint64_t> & bad_hash)
+bool hash_tree::check_hash_tree(const std::string & root_hash, const boost::uint64_t & hash_count, std::pair<boost::uint64_t, boost::uint64_t> & bad_hash)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	//reset the positions if checking a different tree
@@ -107,7 +107,7 @@ bool hash_tree::check_hash_tree(const std::string & root_hash, const uint64_t & 
 		}
 		if(current_RRN == end_RRN + 1){
 			//calculate start and end RRNs of the current row
-			uint64_t start_RRN_temp = start_RRN;
+			boost::uint64_t start_RRN_temp = start_RRN;
 			start_RRN = end_RRN + 1;
 			end_RRN = 2 * (end_RRN - start_RRN_temp) + current_RRN + 1;
 			if(early_termination){
@@ -115,7 +115,7 @@ bool hash_tree::check_hash_tree(const std::string & root_hash, const uint64_t & 
 				early_termination = false;
 			}
 		}
-		uint64_t first_child_RRN = 2 * (current_RRN - start_RRN) + end_RRN + 1;
+		boost::uint64_t first_child_RRN = 2 * (current_RRN - start_RRN) + end_RRN + 1;
 		if(first_child_RRN + 1 > hash_count){
 			//last hash checked, stop
 			return false;
@@ -159,7 +159,7 @@ bool hash_tree::create_hash_tree(std::string file_name, std::string & root_hash)
 	std::fstream scratch((global::HASH_DIRECTORY+"scratch").c_str(), std::ios::in
 		| std::ios::out | std::ios::trunc | std::ios::binary);
 
-	uint64_t blocks_read = 0;
+	boost::uint64_t blocks_read = 0;
 	while(true){
 		fin.read(block_buff, global::FILE_BLOCK_SIZE);
 		if(fin.gcount() == 0){
@@ -286,19 +286,19 @@ void hash_tree::create_hash_tree_recurse(std::fstream & scratch, std::streampos 
 	fout.close();
 }
 
-uint64_t hash_tree::locate_start(const std::string & root_hex_hash)
+boost::uint64_t hash_tree::locate_start(const std::string & root_hex_hash)
 {
 	//null hash used to determine if a row is terminating early
 	char end_of_row[sha::HASH_LENGTH];
 	memset(end_of_row, '\0', sha::HASH_LENGTH);
 
-	std::fstream fin((global::HASH_DIRECTORY+root_hex_hash).c_str(), std::fstream::in);
+	std::fstream fin((global::HASH_DIRECTORY+root_hex_hash).c_str(), std::ios::in | std::ios::binary);
 	fin.seekg(0, std::ios::end);
-	uint64_t max_possible_RRN = fin.tellg() / sha::HASH_LENGTH - 1;
+	boost::uint64_t max_possible_RRN = fin.tellg() / sha::HASH_LENGTH - 1;
 
-	uint64_t current_RRN = 1;
-	uint64_t start_RRN = 0;   //RRN of the start of the current row
-	uint64_t end_RRN = 1;     //RRN of the end of the current row
+	boost::uint64_t current_RRN = 1;
+	boost::uint64_t start_RRN = 0;   //RRN of the start of the current row
+	boost::uint64_t end_RRN = 1;     //RRN of the end of the current row
 
 	//holder for one hash
 	char hash[sha::HASH_LENGTH];
@@ -309,11 +309,11 @@ uint64_t hash_tree::locate_start(const std::string & root_hex_hash)
 	Repeat until at start of last row and return RRN.
 	*/
 	while(true){
-		fin.seekg(current_RRN * sha::HASH_LENGTH);
+		fin.seekg(current_RRN * sha::HASH_LENGTH, std::ios::beg);
 		fin.read(hash, sha::HASH_LENGTH);
 		if(memcmp(hash, end_of_row, sha::HASH_LENGTH) == 0){
 			//row terminated early
-			uint64_t start_RRN_temp = start_RRN;
+			boost::uint64_t start_RRN_temp = start_RRN;
 			start_RRN = end_RRN + 1;
 			end_RRN = 2 * (end_RRN - start_RRN_temp) + current_RRN;
 			current_RRN = end_RRN;
@@ -326,7 +326,7 @@ uint64_t hash_tree::locate_start(const std::string & root_hex_hash)
 				exit(1);
 			}
 		}else{
-			uint64_t start_RRN_temp = start_RRN;
+			boost::uint64_t start_RRN_temp = start_RRN;
 			start_RRN = end_RRN + 1;
 			end_RRN = 2 * (end_RRN - start_RRN_temp) + current_RRN + 2;
 			current_RRN = end_RRN;
@@ -342,7 +342,7 @@ uint64_t hash_tree::locate_start(const std::string & root_hex_hash)
 	}
 }
 
-void hash_tree::write_hash(const std::string & root_hex_hash, const uint64_t & number, const std::string & hash_block)
+void hash_tree::write_hash(const std::string & root_hex_hash, const boost::uint64_t & number, const std::string & hash_block)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	std::fstream fout((global::HASH_DIRECTORY+root_hex_hash).c_str(), std::ios::in | std::ios::out | std::ios::binary);

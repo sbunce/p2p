@@ -1,5 +1,22 @@
 TODO
 
+-Have a possible response to a P_SEND_BLOCK be a P_WAIT, which should trigger a
+8 second wait before attempting another P_SEND_BLOCK request. It should also
+trigger something with existing P_SEND_BLOCK requests. Should they be
+re_requested immediately from other servers? There is a problem with un-expecting
+responses. What about having a new command server->client that tells the client
+buffer to un-expect?
+
+-The total upload speed should include requests the client is making. Not just
+server upload. Make a singleton for a speed_calculator for up_down speeds.
+
+-Verify Mersenne Twister is working properly.
+
+
+WINDOWS PORTABILITY
+
+-New line not working in terminal. \r\n?
+
 
 DEFERRED FEATURES
 
@@ -25,6 +42,20 @@ the profile based on time of day.
 locations in DB. Perhaps have a memmove type opteration one a file where hashes
 can be moved to get rid of gaps due to removed files. The intermediate step of
 the memmove operation would basically be a journal.
+
+-Encryption idea. Do diffie-hellman-merkle to get shared key. Seed a PRNG with
+it to make a stream cypher.
+
+
+GUI IDEAS
+
+-When right clicking a download a option to get detailed info.
+
+-A pulldown box in the preferences that lets you add directories to share.
+
+-Replace IP in the search treeview with a description.
+
+-Replace IP in the download treeview with a seeder/leecher count.
 
 
 OVERLAY NETWORK IDEAS

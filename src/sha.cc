@@ -105,7 +105,7 @@ inline void sha::process(const int & chunk_start)
 		w[x].num = rotate_left((w[x-3].num ^ w[x-8].num ^ w[x-14].num ^ w[x-16].num), 1);
 	}
 
-	uint32_t a, b, c, d, e;
+	boost::uint32_t a, b, c, d, e;
 	a = h[0].num;
 	b = h[1].num;
 	c = h[2].num;
@@ -113,7 +113,7 @@ inline void sha::process(const int & chunk_start)
 	e = h[4].num;
 
 	for(int x=0; x<80; ++x){
-		uint32_t f, k;
+		boost::uint32_t f, k;
 		if(0 <= x && x <= 19){
 			f = (b & c) | ((~b) & d);
 			k = 0x5A827999;
@@ -128,7 +128,7 @@ inline void sha::process(const int & chunk_start)
 			k = 0xCA62C1D6;
 		}
 
-		uint32_t temp = rotate_left(a, 5) + f + e + k + w[x].num;
+		boost::uint32_t temp = rotate_left(a, 5) + f + e + k + w[x].num;
 		e = d;
 		d = c;
 		c = rotate_left(b, 30);

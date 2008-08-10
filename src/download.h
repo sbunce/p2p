@@ -37,7 +37,7 @@ public:
 	virtual const std::string name();
 	virtual unsigned int percent_complete();
 	virtual unsigned int speed();
-	virtual const uint64_t size();
+	virtual const boost::uint64_t size();
 
 	/*
 	If server specific information needs to be stored in the download these can
@@ -60,19 +60,35 @@ public:
 	virtual void response(const int & socket, std::string block) = 0;
 	virtual void stop() = 0;
 
+	/*
+	The client_buffer calls these to update speed for servers whenever any bytes
+	are received.
+	*/
+	void update_speed(const int & socket, const int & n_bytes);
+
 protected:
+	class server_info
+	{
+	public:
+		server_info(
+			const std::string & IP_in
+		):
+			IP(IP_in)
+		{}
+
+		std::string IP;
+		speed_calculator Speed_Calculator;
+	};
+
 	/*
 	client_buffers register/unregister with the download by storing information
 	here.
 
 	This maps the socket number to the server IP.
 	*/
-	std::map<int, std::string> Connection;
+	std::map<int, server_info> Connection;
 
-	/*
-	This can be used by the derived class to calculate speed for the individual
-	download. Downloads may opt not to use this.
-	*/
+	//overall speed for the download
 	speed_calculator Speed_Calculator;
 };
 #endif

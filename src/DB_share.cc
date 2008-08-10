@@ -23,7 +23,7 @@ DB_share::DB_share()
 	}
 }
 
-void DB_share::add_entry(const std::string & hash, const uint64_t & size, const std::string & path)
+void DB_share::add_entry(const std::string & hash, const boost::uint64_t & size, const std::string & path)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 
@@ -71,7 +71,7 @@ void DB_share::delete_hash(const std::string & hash)
 	}
 }
 
-bool DB_share::lookup_path(const std::string & path, std::string & existing_hash, uint64_t & existing_size)
+bool DB_share::lookup_path(const std::string & path, std::string & existing_hash, boost::uint64_t & existing_size)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	lookup_path_entry_exists = false;
@@ -92,12 +92,12 @@ void DB_share::lookup_path_call_back(int & columns_retrieved, char ** query_resp
 	*lookup_path_hash_ptr = query_response[0];
 
 	std::istringstream size_iss(query_response[1]);
-	uint64_t size;
+	boost::uint64_t size;
 	size_iss >> size;
 	*lookup_path_size_ptr = size;
 }
 
-bool DB_share::lookup_hash(const std::string & hash, uint64_t & file_size, std::string & file_path)
+bool DB_share::lookup_hash(const std::string & hash, boost::uint64_t & file_size, std::string & file_path)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	lookup_hash_entry_exists = false;
@@ -117,7 +117,7 @@ void DB_share::lookup_hash_call_back(int & columns_retrieved, char ** query_resp
 	lookup_hash_entry_exists = true;
 
 	std::istringstream size_iss(query_response[0]);
-	uint64_t size;
+	boost::uint64_t size;
 	size_iss >> size;
 	*lookup_hash_file_size = size;
 
@@ -135,11 +135,7 @@ void DB_share::remove_missing(const std::string & share_directory)
 void DB_share::remove_missing_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
 	//slow down check to save CPU
-	#ifdef WIN32
-	Sleep(0);
-	#else
-	usleep(1);
-	#endif
+	portable_sleep::yield();
 
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(Mutex);

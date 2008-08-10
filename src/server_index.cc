@@ -16,11 +16,7 @@ server_index::~server_index()
 	stop_thread = true;
 	Hash_Tree.stop(); //force hash tree generation to terminate
 	while(threads){
-		#ifdef WIN32
-		Sleep(0);
-		#else
-		usleep(1);
-		#endif
+		portable_sleep::yield();
 	}
 }
 
@@ -76,11 +72,7 @@ void server_index::index_share_recurse(std::string directory_name)
 			checks for updated files. This makes those checks such that they don't
 			contantly load the CPU.
 			*/
-			#ifdef WIN32
-			Sleep(0);
-			#else
-			usleep(1);
-			#endif
+			portable_sleep::yield();
 			try{
 				if(fs::is_directory(*directory_iter)){
 					//recurse to new directory
@@ -91,7 +83,7 @@ void server_index::index_share_recurse(std::string directory_name)
 					//determine if a hash tree needs to be generated
 					fs::path file_path = fs::system_complete(fs::path(directory_name + directory_iter->leaf(), fs::native));
 					std::string existing_hash;
-					uint64_t existing_size;
+					boost::uint64_t existing_size;
 					if(DB_Share.lookup_path(file_path.string(), existing_hash, existing_size)){
 						//database entry exists, make sure there is a corresponding hash tree file
 						std::fstream fin((global::HASH_DIRECTORY+existing_hash).c_str(), std::ios::in);
@@ -171,11 +163,7 @@ void server_index::index_share()
 		change_share = false;
 
 		//wait 1 second between share scans and checks
-		#ifdef WIN32
-		Sleep(1000);
-		#else
-		usleep(1000000);
-		#endif
+		portable_sleep::ms(1000);
 	}
 	--threads;
 }

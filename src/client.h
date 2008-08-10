@@ -25,7 +25,7 @@
 
 //networking
 #ifdef WIN32
-#define FD_SETSIZE 1000 //max number of connections in FD_SET
+#define FD_SETSIZE 1000
 #include <winsock.h>
 #define socklen_t int
 #define MSG_NOSIGNAL 0

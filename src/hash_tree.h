@@ -34,16 +34,16 @@ public:
 	write_hash              - used to replace bad hashes found by check_hash_tree
 	stop                    - sets stop_thread to true and allows create hash tree to exit early
 	*/
-	bool check_block(const std::string & root_hex_hash, const uint64_t & block_number, const char * const block, const int & block_length);
-	bool check_hash_tree(const std::string & root_hash, const uint64_t & hash_count, std::pair<uint64_t, uint64_t> & bad_hash);
+	bool check_block(const std::string & root_hex_hash, const boost::uint64_t & block_number, const char * const block, const int & block_length);
+	bool check_hash_tree(const std::string & root_hash, const boost::uint64_t & hash_count, std::pair<boost::uint64_t, boost::uint64_t> & bad_hash);
 	bool create_hash_tree(std::string file_path, std::string & root_hash);
-	void write_hash(const std::string & root_hex_hash, const uint64_t & number, const std::string & hash_block);
+	void write_hash(const std::string & root_hex_hash, const boost::uint64_t & number, const std::string & hash_block);
 	void stop();
 
 	//returns how many file hashes there would be for a file of size file_size
-	static uint64_t file_hash_count(uint64_t file_size)
+	static boost::uint64_t file_hash_count(boost::uint64_t file_size)
 	{
-		uint64_t hash_count = file_size / global::FILE_BLOCK_SIZE;
+		boost::uint64_t hash_count = file_size / global::FILE_BLOCK_SIZE;
 		if(file_size % global::FILE_BLOCK_SIZE != 0){
 			//add one for partial last block
 			++hash_count;
@@ -52,9 +52,9 @@ public:
 	}
 
 	//returns how many hashes there would be in a hash tree of size file_size
-	static uint64_t hash_tree_count(uint64_t row_hash)
+	static boost::uint64_t hash_tree_count(boost::uint64_t row_hash)
 	{
-		uint64_t start_hash = row_hash;
+		boost::uint64_t start_hash = row_hash;
 		if(row_hash == 1){
 			return 0;
 		}else if(row_hash % 2 != 0){
@@ -80,9 +80,9 @@ private:
 	Used by check_tree() to maintain the current position in the tree. Time is saved
 	by not rechecking already verified parts of the tree.
 	*/
-	uint64_t current_RRN; //RRN of latest hash retrieved
-	uint64_t start_RRN;   //RRN of the start of the current row
-	uint64_t end_RRN;     //RRN of the end of the current row
+	boost::uint64_t current_RRN; //RRN of latest hash retrieved
+	boost::uint64_t start_RRN;   //RRN of the start of the current row
+	boost::uint64_t end_RRN;     //RRN of the end of the current row
 
 	/*
 	Used by file_hash() to store the last root hash and start RRN it was told
@@ -90,7 +90,7 @@ private:
 	hashes every time file_hash() is called.
 	*/
 	std::string file_hash_root_hex_hash;
-	uint64_t file_hash_start_RRN;
+	boost::uint64_t file_hash_start_RRN;
 	char file_hash_buffer[sha::HASH_LENGTH];
 
 	//stores the root node of the latest root hash used with check_hash_tree
@@ -103,7 +103,7 @@ private:
 	*/
 	bool check_hash(const char * parent, char * left_child, char * right_child);
 	void create_hash_tree_recurse(std::fstream & scratch, std::streampos row_start, std::streampos row_end, std::string & root_hash);
-	uint64_t locate_start(const std::string & root_hex_hash);
+	boost::uint64_t locate_start(const std::string & root_hex_hash);
 
 	sha SHA;
 };

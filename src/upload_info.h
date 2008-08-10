@@ -10,7 +10,7 @@ public:
 	upload_info(
 		const std::string & hash_in,
 		const std::string & IP_in,
-		const uint64_t & size_in,
+		const boost::uint64_t & size_in,
 		const std::string & path_in,
 		const int & speed_in,
 		const int & percent_complete_in
@@ -28,7 +28,7 @@ public:
 
 	std::string hash;
 	std::string IP;
-	uint64_t size;        //file size in bytes
+	boost::uint64_t size;        //file size in bytes
 	std::string path;
 	std::string name;
 	int speed;            //upload speed (bytes/second)

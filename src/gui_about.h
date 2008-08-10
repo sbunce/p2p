@@ -12,18 +12,18 @@ class gui_about : public Gtk::Window
 public:
 	gui_about();
 
-	/*
-	close_window - close this window
-	*/
-	void close_window();
-
 private:
 	class Gtk::Window * window;
-	Gtk::VBox about_VBox;
-	Gtk::ScrolledWindow about_scrolledWindow;
-	Gtk::TextView about_textView;
-	Glib::RefPtr<Gtk::TextBuffer> about_refTextBuff;
-	Gtk::HButtonBox about_buttonBox;
-	Gtk::Button buttonClose;
+	Gtk::VBox vbox;
+	Gtk::ScrolledWindow scrolled_window;
+	Gtk::TextView text_view;
+	Glib::RefPtr<Gtk::TextBuffer> text_buff;
+	Gtk::HButtonBox button_box;
+	Gtk::Button close_button;
+
+	/*
+	close_click - close button clicked
+	*/
+	void close_click();
 };
 #endif

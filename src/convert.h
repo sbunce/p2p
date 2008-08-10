@@ -71,7 +71,7 @@ namespace convert
 	{
 		assert(hex_str.size() % 2 == 0);
 		std::string binary;
-		uint8_t byte;
+		boost::uint8_t byte;
 		for(int x=0; x<hex_str.size(); ++x){
 			//each hex character represents half of a byte
 			if(x % 2 == 0){

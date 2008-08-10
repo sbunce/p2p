@@ -1,8 +1,4 @@
-#tagets which require gtk
-gui.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
-gui_preferences.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
-gui_about.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
-main.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
+CXXFLAGS += -Isqlite3 -Ibignum `pkg-config gtkmm-2.4 --cflags`
 
 OBJECTS = \
 	client.o \
@@ -19,12 +15,15 @@ OBJECTS = \
 	download_file.o \
 	download_hash_tree.o \
 	download_tracker.o \
+	encryption.o \
 	gui.o \
 	gui_about.o \
+	gui_download_info.o \
 	gui_preferences.o \
 	hash_tree.o \
 	logger.o \
 	main.o \
+	mersenne_twister.o \
 	request_gen.o \
 	server.o \
 	server_buffer.o \
@@ -32,45 +31,61 @@ OBJECTS = \
 	server_protocol.o \
 	sha.o \
 	speed_calculator.o \
-	sqlite3.o \
+	sqlite3/sqlite3.o \
 	thread_pool.o
 
 LINKER_OPTIONS = \
 	`pkg-config gtkmm-2.4 --libs` \
+	-ldl \
 	-lboost_filesystem \
 	-lboost_thread \
-	-D_REENTRANT \
-	-lsqlite3
+	-D_REENTRANT
 
 SERVER_OBJECTS = \
 	DB_blacklist.o \
 	DB_download.o \
 	DB_server_preferences.o \
 	DB_share.o \
+	encryption.o \
 	hash_tree.o \
 	logger.o \
 	main_server.o \
+	mersenne_twister.o \
 	server.o \
 	server_buffer.o \
 	server_index.o \
 	server_protocol.o \
 	sha.o \
 	speed_calculator.o \
-	sqlite3.o
+	sqlite3/sqlite3.o
 
-all: $(OBJECTS) server
+SERVER_LINKER_OPTIONS = \
+	-ldl \
+	-lboost_filesystem \
+	-lboost_thread
+
+all: $(OBJECTS) bignum sqlite3 server
 	$(CXX) $(OBJECTS) $(GPROF) -o p2p $(LINKER_OPTIONS)
 
-server: $(SERVER_OBJECTS)
-	$(CXX) $(SERVER_OBJECTS) $(GPROF) -o p2p_server $(LINKER_OPTIONS)
+server: $(SERVER_OBJECTS) bignum sqlite3
+	$(CXX) $(SERVER_OBJECTS) $(GPROF) -o p2p_server $(SERVER_LINKER_OPTIONS)
 
+#automatic dependency generation
 .depend:
 	$(CXX) -MM *.cc > .depend
 
 -include .depend
 
-sqlite3.o: sqlite3.c sqlite3.h sqlite3ext.h
+.PHONY: bignum
+bignum:
+	$(MAKE) -C bignum
+
+.PHONY: sqlite3
+sqlite3:
+	$(MAKE) -C sqlite3
 
 .PHONY: clean
 clean:
-	rm -v p2p p2p_server .depend main_server.o $(OBJECTS)
+	$(MAKE) -C bignum clean
+	$(MAKE) -C sqlite3 clean
+	rm -f p2p p2p_server .depend main_server.o $(OBJECTS)

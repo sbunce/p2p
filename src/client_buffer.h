@@ -268,12 +268,12 @@ public:
 	any complete commands and if there are it slices them off the recv_buff and
 	sends them to the downloads.
 	*/
-	static void post_recv(const int & socket_FD)
+	static void post_recv(const int & socket_FD, const int & n_bytes)
 	{
 		boost::mutex::scoped_lock lock(Mutex);
 		std::map<int, client_buffer>::iterator iter = Client_Buffer.find(socket_FD);
 		assert(iter != Client_Buffer.end());
-		iter->second.post_recv();
+		iter->second.post_recv(n_bytes);
 	}
 
 	/*
@@ -394,7 +394,7 @@ private:
 	                     when the client_buffer is destroyed
 	*/
 	bool empty();
-	void post_recv();
+	void post_recv(const int & n_bytes);
 	void post_send();
 	void prepare_request();
 	void register_download(download * new_download);

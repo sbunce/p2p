@@ -35,7 +35,7 @@ public:
 		const std::string & file_hash_in,
 		const std::string & file_name_in, 
 		const std::string & file_path_in,
-		const uint64_t & file_size_in
+		const boost::uint64_t & file_size_in
 	);
 
 	~download_file();
@@ -49,7 +49,7 @@ public:
 	virtual download::mode request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected);
 	virtual void response(const int & socket, std::string block);
 	virtual void stop();
-	virtual const uint64_t size();
+	virtual const boost::uint64_t size();
 	virtual void unregister_connection(const int & socket);
 	virtual bool visible();
 
@@ -75,7 +75,7 @@ private:
 	/*
 	This is set to the first unreceived block (next block past end of file).
 	*/
-	uint64_t first_unreceived;
+	boost::uint64_t first_unreceived;
 
 	volatile int threads;       //one if hash checking, otherwise zero
 	volatile bool stop_threads; //if set to true hash checking will stop early
@@ -95,8 +95,8 @@ private:
 	std::string file_hash;        //hash tree root hash
 	std::string file_name;        //name of the file
 	std::string file_path;        //path to write file to
-	uint64_t file_size;           //size of the file(bytes)
-	uint64_t last_block;          //the last block number
+	boost::uint64_t file_size;           //size of the file(bytes)
+	boost::uint64_t last_block;          //the last block number
 	unsigned int last_block_size; //holds the exact size of the last fileBlock(in bytes)
 
 	/*
@@ -150,7 +150,7 @@ private:
 		When new requests are made they should be pushed on to the back of
 		latest_request.
 		*/
-		std::deque<uint64_t> requested_blocks;
+		std::deque<boost::uint64_t> requested_blocks;
 	};
 
 	//socket number mapped to connection special pointer
@@ -161,7 +161,7 @@ private:
 	write_block - writes a file block
 	*/
 	void hash_check();
-	void write_block(uint64_t block_number, std::string & block);
+	void write_block(boost::uint64_t block_number, std::string & block);
 
 	request_gen Request_Gen;
 	hash_tree Hash_Tree;
