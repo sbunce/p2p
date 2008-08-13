@@ -1,4 +1,8 @@
-CXXFLAGS += -Isqlite3 -Ibignum `pkg-config gtkmm-2.4 --cflags`
+CXXFLAGS = $(GPROF) -O3 -Werror -ansi -Ilibtommath -Isqlite3 `pkg-config gtkmm-2.4 --cflags`
+CFLAGS = -O3 -Werror -ansi
+
+LIBTOMMATH_OBJECT = libtommath/libtommath.a
+SQLITE3_OBJECT = sqlite3/sqlite3.o
 
 OBJECTS = \
 	client.o \
@@ -31,7 +35,6 @@ OBJECTS = \
 	server_protocol.o \
 	sha.o \
 	speed_calculator.o \
-	sqlite3/sqlite3.o \
 	thread_pool.o
 
 LINKER_OPTIONS = \
@@ -56,19 +59,18 @@ SERVER_OBJECTS = \
 	server_index.o \
 	server_protocol.o \
 	sha.o \
-	speed_calculator.o \
-	sqlite3/sqlite3.o
+	speed_calculator.o
 
 SERVER_LINKER_OPTIONS = \
 	-ldl \
 	-lboost_filesystem \
 	-lboost_thread
 
-all: $(OBJECTS) bignum sqlite3 server
-	$(CXX) $(OBJECTS) $(GPROF) -o p2p $(LINKER_OPTIONS)
+all: $(OBJECTS) libtommath sqlite3 server
+	$(CXX) $(OBJECTS) $(LIBTOMMATH_OBJECT) $(SQLITE3_OBJECT) -o p2p $(LINKER_OPTIONS) $(GPROF)
 
-server: $(SERVER_OBJECTS) bignum sqlite3
-	$(CXX) $(SERVER_OBJECTS) $(GPROF) -o p2p_server $(SERVER_LINKER_OPTIONS)
+server: $(SERVER_OBJECTS) libtommath sqlite3
+	$(CXX) $(SERVER_OBJECTS) $(LIBTOMMATH_OBJECT) $(SQLITE3_OBJECT) -o p2p_server $(SERVER_LINKER_OPTIONS) $(GPROF)
 
 #automatic dependency generation
 .depend:
@@ -76,9 +78,9 @@ server: $(SERVER_OBJECTS) bignum sqlite3
 
 -include .depend
 
-.PHONY: bignum
-bignum:
-	$(MAKE) -C bignum
+.PHONY: libtommath
+libtommath:
+	$(MAKE) --quiet -C libtommath
 
 .PHONY: sqlite3
 sqlite3:
@@ -86,6 +88,6 @@ sqlite3:
 
 .PHONY: clean
 clean:
-	$(MAKE) -C bignum clean
+	$(MAKE) -C libtommath clean
 	$(MAKE) -C sqlite3 clean
-	rm -f p2p p2p_server .depend main_server.o $(OBJECTS)
+	rm -f p2p p2p_server .depend $(OBJECTS) $(SERVER_OBJECTS)

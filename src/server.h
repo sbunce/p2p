@@ -12,6 +12,7 @@
 //custom
 #include "DB_blacklist.h"
 #include "DB_server_preferences.h"
+#include "encryption.h"
 #include "global.h"
 #include "server_buffer.h"
 #include "server_index.h"
@@ -101,9 +102,10 @@ private:
 	void disconnect(const int & socketfd);
 	void main_thread();
 	void new_connection(const int & listener);
-	void process_request(server_buffer * SB, char * recv_buff, const int & n_bytes);
+	void process_request(const int & socket_FD, char * recv_buff, const int & n_bytes);
 
 	DB_server_preferences DB_Server_Preferences;
+	encryption Encryption;
 	server_index Server_Index;
 	server_protocol Server_Protocol;
 	speed_calculator Speed_Calculator;

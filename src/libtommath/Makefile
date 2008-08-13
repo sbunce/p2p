@@ -1,4 +1,4 @@
-CFLAGS = -I.
+CFLAGS = -I. -O3
 
 OBJECTS = bncore.o bn_mp_init.o bn_mp_clear.o bn_mp_exch.o bn_mp_grow.o bn_mp_shrink.o \
 bn_mp_clamp.o bn_mp_zero.o  bn_mp_set.o bn_mp_set_int.o bn_mp_init_size.o bn_mp_copy.o \
@@ -29,6 +29,7 @@ bn_mp_init_set_int.o bn_mp_invmod_slow.o bn_mp_prime_rabin_miller_trials.o \
 bn_mp_to_signed_bin_n.o bn_mp_to_unsigned_bin_n.o
 
 libtommath.a: $(OBJECTS)
+	$(AR) $(ARFLAGS) $@ $(OBJECTS) > /dev/null
 
 clean:
 	rm -f libtommath.a $(OBJECTS)

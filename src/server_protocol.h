@@ -3,6 +3,7 @@
 
 //custom
 #include "convert.h"
+#include "DB_blacklist.h"
 #include "DB_share.h"
 #include "global.h"
 #include "server_buffer.h"
@@ -18,7 +19,7 @@ public:
 	/*
 	process - every time data is put in to a server_buffer it should be passed to this function
 	*/
-	void process(server_buffer * SB);
+	void process(server_buffer * SB, char * recv_buff, const int & n_bytes);
 
 private:
 
@@ -30,10 +31,9 @@ private:
 	what they do can be found in the protocol documentation.
 	*/
 	void close_slot(server_buffer * SB);
-	void request_slot_hash(server_buffer * SB);
-	void request_slot_file(server_buffer * SB);
-	void send_block(server_buffer * SB);
-	void test(server_buffer * SB);
+	void request_slot_hash(server_buffer * SB, std::string & send);
+	void request_slot_file(server_buffer * SB, std::string & send);
+	void send_block(server_buffer * SB, std::string & send);
 
 	DB_share DB_Share;
 };

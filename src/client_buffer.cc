@@ -22,10 +22,18 @@ client_buffer::client_buffer(
 ):
 	socket(socket_in),
 	IP(IP_in),
-	last_seen(time(NULL))
+	last_seen(time(NULL)),
+	exchange_key(true)
 {
 	recv_buff.reserve(global::C_MAX_SIZE*global::PIPELINE_SIZE);
 	send_buff.reserve(global::S_MAX_SIZE*global::PIPELINE_SIZE);
+
+	//look at encryption.h for key exchange protocol
+	send_buff += Encryption.get_prime();
+	Encryption.set_prime(send_buff);
+	send_buff += Encryption.get_local_result();
+std::cout << "send_buff size: " << send_buff.size() << "\n";
+	++send_pending;
 }
 
 client_buffer::~client_buffer()
@@ -33,12 +41,35 @@ client_buffer::~client_buffer()
 	unregister_all();
 }
 
+void client_buffer::recv_buff_append(char * buff, const int & n_bytes)
+{
+	if(exchange_key){
+		remote_result.append(buff, n_bytes);
+		if(remote_result.size() == global::DH_KEY_SIZE){
+			Encryption.set_remote_result(remote_result);
+			recv_buff.clear();
+			exchange_key = false;
+		}
+
+		if(remote_result.size() > global::DH_KEY_SIZE){
+			logger::debug(LOGGER_P1,"abusive server ", IP, " failed key negotation, too many bytes");
+			DB_blacklist::add(IP);
+		}
+
+		return;
+	}
+
+	Encryption.crypt_recv(buff, n_bytes);
+	recv_buff.append(buff, n_bytes);
+	post_recv();
+}
+
 bool client_buffer::empty()
 {
 	return Download.empty();
 }
 
-void client_buffer::post_recv(const int & n_bytes)
+void client_buffer::post_recv()
 {
 	last_seen = time(NULL);
 
@@ -57,7 +88,7 @@ void client_buffer::post_recv(const int & n_bytes)
 
 			if(iter_cur == iter_end){
 				//server sent unexpected command
-				logger::debug(LOGGER_P1," abusive server ", IP, ", unexpected command ", (int)(unsigned char)recv_buff[0]);
+				logger::debug(LOGGER_P1,"abusive server ", IP, ", unexpected command");
 				DB_blacklist::add(IP);
 				return;
 			}else{
@@ -102,22 +133,19 @@ void client_buffer::post_recv(const int & n_bytes)
 	}
 }
 
-void client_buffer::post_send()
-{
-	if(send_buff.empty()){
-		--send_pending;
-	}
-}
-
 void client_buffer::prepare_request()
 {
+	if(exchange_key){
+		return;
+	}
+
 	if(Download.empty()){
 		return;
 	}
 
 	//needed to stop infinite loop when all downloads waiting
 	bool buffer_change = true;
-	int initial_empty = (send_buff.size() == 0);
+	int initial_empty = send_buff.size() == 0;
 	while(Pipeline.size() < global::PIPELINE_SIZE){
 		if(rotate_downloads()){
 			/*
@@ -140,6 +168,8 @@ void client_buffer::prepare_request()
 		pending_response PR;
 		PR.Download = *Download_iter;
 		PR.Mode = (*Download_iter)->request(socket, request, PR.expected);
+
+		Encryption.crypt_send(request);
 
 		if(PR.Mode == download::NO_REQUEST){
 			//no request to be made from the download

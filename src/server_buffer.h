@@ -5,6 +5,7 @@
 #include <boost/thread/mutex.hpp>
 
 //custom
+#include "encryption.h"
 #include "global.h"
 #include "speed_calculator.h"
 #include "upload_info.h"
@@ -40,6 +41,10 @@ public:
 	bool path(char slot_ID, std::string & path);
 	void update_slot_percent_complete(char slot_ID, const boost::uint64_t & block_number);
 	void update_slot_speed(char slot_ID, unsigned int bytes);
+
+	bool exchange_key;               //true when key exchange happening
+	std::string prime_remote_result; //holds prime and incoming result for key exchange
+	encryption Encryption;
 
 private:
 	//mutex for all public functions

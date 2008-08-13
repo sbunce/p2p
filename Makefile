@@ -1,7 +1,4 @@
-CXXFLAGS = -O3 -Werror -ansi
-CFLAGS = -O3 -Werror -ansi
-CPU_COUNT = `cat /proc/cpuinfo |grep -c "processor"`
-#CXXFLAGS = -pg
+GPROF = -pg
 
 #sub-makefiles to export variables to
 .EXPORT_ALL_VARIABLES: src
@@ -15,11 +12,11 @@ all: src
 #make main source tree
 .PHONY: src
 src:
-	$(MAKE) -j$(CPU_COUNT) -C src
+	$(MAKE) -j2 -C src
 
 #remove all object files
 .PHONY: clean
 clean:
-	$(MAKE) -j$(CPU_COUNT) -C src clean
+	$(MAKE) -j2 -C src clean
 	rm -f hash/*
 	rm -f download/*

@@ -3,8 +3,10 @@
 
 //uncomment to disable all asserts
 //#define NDEBUG
+
 //uncomment to enable file block corruption test
 //#define CORRUPT_BLOCKS
+
 //uncomment to enable resolution of host names
 #define RESOLVE_HOST_NAMES
 
@@ -18,7 +20,9 @@
 #include <cassert>
 #include <string>
 
-//portable sleep
+/*
+These functions are used instead of platform specific sleep functions.
+*/
 namespace portable_sleep
 {
 #ifdef WIN32
@@ -57,6 +61,7 @@ namespace global
 	const int DOWN_SPEED = 9999*1024+512; //download speed limit (B/s)
 
 	//hard settings
+	const int DH_KEY_SIZE = 128;          //size of key exchanged with diffie-hellman (bytes)
 	const int PIPELINE_SIZE = 16;         //how many pre-requests can be done
 	const int RE_REQUEST_TIMEOUT = 16;    //seconds before a file block is re-requested
 	const int P2P_PORT = 6969;            //port client connects to and server receives on

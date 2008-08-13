@@ -5,7 +5,8 @@ server_buffer::server_buffer(
 	const std::string & IP_in
 ):
 	socket_FD(socket_FD_in),
-	IP(IP_in)
+	IP(IP_in),
+	exchange_key(true)
 {
 	send_buff.reserve(global::C_MAX_SIZE * global::PIPELINE_SIZE);
 	recv_buff.reserve(global::S_MAX_SIZE * global::PIPELINE_SIZE);

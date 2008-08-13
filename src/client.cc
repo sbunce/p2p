@@ -228,8 +228,7 @@ void client::main_thread()
 						disconnect(socket_FD);
 					}else{
 						Speed_Calculator.update(n_bytes);
-						client_buffer::get_recv_buff(socket_FD).append(recv_buff, n_bytes);
-						client_buffer::post_recv(socket_FD, n_bytes);
+						client_buffer::recv_buff_append(socket_FD, recv_buff, n_bytes);
 					}
 				}
 			}

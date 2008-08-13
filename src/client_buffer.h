@@ -8,6 +8,7 @@
 #include "convert.h"
 #include "DB_blacklist.h"
 #include "download_info.h"
+#include "encryption.h"
 
 //std
 #include <ctime>
@@ -228,18 +229,6 @@ public:
 	}
 
 	/*
-	Returns the client_buffer send_buff that corresponds to socket_FD.
-	WARNING: violates encapsulation, NOT thread safe to call this from multiple threads
-	*/
-	static std::string & get_recv_buff(const int & socket_FD)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, client_buffer>::iterator iter = Client_Buffer.find(socket_FD);
-		assert(iter != Client_Buffer.end());
-		return iter->second.recv_buff;
-	}
-
-	/*
 	Creates new client_buffer. Registers the download with the client_buffer.
 	Registers the download_conn with the download.
 
@@ -264,19 +253,6 @@ public:
 	}
 
 	/*
-	Should be called after recieving data. This function determines if there are
-	any complete commands and if there are it slices them off the recv_buff and
-	sends them to the downloads.
-	*/
-	static void post_recv(const int & socket_FD, const int & n_bytes)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, client_buffer>::iterator iter = Client_Buffer.find(socket_FD);
-		assert(iter != Client_Buffer.end());
-		iter->second.post_recv(n_bytes);
-	}
-
-	/*
 	Should be called after sending data. This function evaluates whether or not the
 	send_buff was emptied. If it was then it decrements send_pending.
 	*/
@@ -285,7 +261,21 @@ public:
 		boost::mutex::scoped_lock lock(Mutex);
 		std::map<int, client_buffer>::iterator iter = Client_Buffer.find(socket_FD);
 		assert(iter != Client_Buffer.end());
-		iter->second.post_send();
+
+		if(iter->second.send_buff.empty()){
+			--send_pending;
+		}
+	}
+
+	/*
+	Append bytes to a buffer for a specified socket.
+	*/
+	static void recv_buff_append(const int & socket_FD, char * buff, const int & n_bytes)
+	{
+		boost::mutex::scoped_lock lock(Mutex);
+		std::map<int, client_buffer>::iterator iter = Client_Buffer.find(socket_FD);
+		assert(iter != Client_Buffer.end());
+		iter->second.recv_buff_append(buff, n_bytes);
 	}
 
 	/*
@@ -381,6 +371,7 @@ private:
 	std::deque<pending_response> Pipeline;
 
 	/*
+	recv_buff_append   - appends bytes to recv_buff and calls post_recv
 	empty              - return true if client_buffer contains no downloads
 	post_recv          - does actions which may need to be done after a recv
 	post_send          - should be called after every send
@@ -393,13 +384,21 @@ private:
 	                     called from destructor to unregister from all downloads
 	                     when the client_buffer is destroyed
 	*/
+	void recv_buff_append(char * buff, const int & n_bytes);
 	bool empty();
-	void post_recv(const int & n_bytes);
-	void post_send();
+	void post_recv();
 	void prepare_request();
 	void register_download(download * new_download);
 	bool rotate_downloads();
 	void terminate_download(download * term_DL);
 	void unregister_all();
+
+	/*
+	This is set to true when key exchange happening. While true the client_buffer
+	will not get requests from downloads.
+	*/
+	bool exchange_key;
+	std::string remote_result; //holds remote result for key exchange
+	encryption Encryption;
 };
 #endif

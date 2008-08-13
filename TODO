@@ -1,5 +1,8 @@
 TODO
 
+-A pair of encryption instantiations is needed for send/recv. Build the capability
+in to encryption class with crypt_send and crypt_recv functions.
+
 -Have a possible response to a P_SEND_BLOCK be a P_WAIT, which should trigger a
 8 second wait before attempting another P_SEND_BLOCK request. It should also
 trigger something with existing P_SEND_BLOCK requests. Should they be
@@ -11,6 +14,11 @@ buffer to un-expect?
 server upload. Make a singleton for a speed_calculator for up_down speeds.
 
 -Verify Mersenne Twister is working properly.
+
+-encryption::PRNG is not being seeded properly by encryption::random_prime().
+
+-It seems like client_buffer::post_recv should be able to be called by an append
+buffer function or something.
 
 
 WINDOWS PORTABILITY

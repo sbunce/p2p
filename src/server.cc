@@ -329,10 +329,7 @@ void server::main_thread()
 						continue;
 					}else{
 						//incoming data from client socket
-						std::map<int, server_buffer *>::iterator iter = Server_Buffer.find(socket_FD);
-						assert(iter != Server_Buffer.end());
-						server_buffer * SB = iter->second;
-						process_request(SB, recv_buff, n_bytes);
+						process_request(socket_FD, recv_buff, n_bytes);
 					}
 				}
 			}
@@ -362,19 +359,14 @@ void server::main_thread()
 	--threads;
 }
 
-void server::process_request(server_buffer * SB, char * recv_buff, const int & n_bytes)
+void server::process_request(const int & socket_FD, char * recv_buff, const int & n_bytes)
 {
-	SB->recv_buff.append(recv_buff, n_bytes);
+	std::map<int, server_buffer *>::iterator iter = Server_Buffer.find(socket_FD);
+	assert(iter != Server_Buffer.end());
+	server_buffer * SB = iter->second;
 
-	//disconnect clients that have pipelined more than is allowed
-	if(SB->recv_buff.size() > global::S_MAX_SIZE*global::PIPELINE_SIZE){
-		logger::debug(LOGGER_P1,"server ",SB->IP," over pipelined");
-		DB_blacklist::add(SB->IP);
-		return;
-	}
-
-	bool initial_empty = (SB->send_buff.size() == 0);
-	Server_Protocol.process(SB);
+	bool initial_empty = SB->send_buff.size() == 0;
+	Server_Protocol.process(SB, recv_buff, n_bytes);
 	if(initial_empty && SB->send_buff.size() != 0){
 		//buffer went from empty to non-empty, signal that a send needs to be done
 		++send_pending;
