@@ -2,9 +2,8 @@
 #define H_ENCRYPTION
 
 //custom
+#include "CMWC4096.h"
 #include "global.h"
-#include "mersenne_twister.h"
-#include "sha.h"
 
 //libtommath
 #include <mpint.h>
@@ -98,15 +97,9 @@ private:
 	mpint shared_key;    //agreed upon key
 
 	//stuff for stream cypher
-	mersenne_twister Mersenne_Twister_send;
-	mersenne_twister Mersenne_Twister_recv;
-	sha SHA;
+	CMWC4096 PRNG_send;
+	CMWC4096 PRNG_recv;
 	std::string stream_send; //bytes to use for stream cypher
 	std::string stream_recv; //bytes to use for stream cypher
-
-	/*
-	grow_stream - if the stream is smaller than bytes, it will be grown to be >= bytes
-	*/
-	void grow_stream(const int & bytes, mersenne_twister & MT, std::string & stream);
 };
 #endif

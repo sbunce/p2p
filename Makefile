@@ -1,4 +1,4 @@
-GPROF = -pg
+#GPROF = -pg
 
 #sub-makefiles to export variables to
 .EXPORT_ALL_VARIABLES: src

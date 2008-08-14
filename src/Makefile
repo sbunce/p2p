@@ -8,6 +8,7 @@ OBJECTS = \
 	client.o \
 	client_buffer.o \
 	client_new_connection.o \
+	CMWC4096.o \
 	DB_blacklist.o \
 	DB_client_preferences.o \
 	DB_download.o \
@@ -27,7 +28,6 @@ OBJECTS = \
 	hash_tree.o \
 	logger.o \
 	main.o \
-	mersenne_twister.o \
 	request_gen.o \
 	server.o \
 	server_buffer.o \
@@ -45,6 +45,7 @@ LINKER_OPTIONS = \
 	-D_REENTRANT
 
 SERVER_OBJECTS = \
+	CMWC4096.o \
 	DB_blacklist.o \
 	DB_download.o \
 	DB_server_preferences.o \
@@ -53,7 +54,6 @@ SERVER_OBJECTS = \
 	hash_tree.o \
 	logger.o \
 	main_server.o \
-	mersenne_twister.o \
 	server.o \
 	server_buffer.o \
 	server_index.o \

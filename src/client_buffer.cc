@@ -32,7 +32,6 @@ client_buffer::client_buffer(
 	send_buff += Encryption.get_prime();
 	Encryption.set_prime(send_buff);
 	send_buff += Encryption.get_local_result();
-std::cout << "send_buff size: " << send_buff.size() << "\n";
 	++send_pending;
 }
 

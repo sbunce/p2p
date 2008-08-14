@@ -43,37 +43,16 @@ void encryption::set_remote_result(std::string result)
 
 	//get Mersenne_Twister ready to create stream
 	std::string seed((char *)shared_key.to_bin(), shared_key.to_bin_size());
-	Mersenne_Twister_send.seed(seed);
-	Mersenne_Twister_recv.seed(seed);
+	PRNG_send.seed(seed);
+	PRNG_recv.seed(seed);
 
 	State = ready_to_encrypt;
-}
-
-void encryption::grow_stream(const int & bytes, mersenne_twister & MT, std::string & stream)
-{
-	if(bytes > stream.size()){
-		//stream not big enough to encrypt bytes, grow stream
-		int bytes_needed = bytes - stream.size();
-		int iterations = bytes_needed / sha::HASH_LENGTH + 1;
-		std::string bytes;
-		for(int x=0; x<iterations; ++x){
-			//get 64 bytes to feed to SHA
-			for(int x=0; x<16; ++x){
-				bytes += MT.extract_4_bytes();
-			}
-			SHA.init();
-			SHA.load(bytes.c_str(), bytes.length());
-			SHA.end();
-			stream.append(SHA.raw_hash(), sha::HASH_LENGTH);
-			bytes.clear();
-		}
-	}
 }
 
 void encryption::crypt_send(std::string & bytes)
 {
 	assert(ready_to_encrypt);
-	grow_stream(bytes.length(), Mersenne_Twister_send, stream_send);
+	PRNG_send.extract_bytes(stream_send, bytes.length());
 	for(int x=0; x<bytes.length(); ++x){
 		bytes[x] = (unsigned char)bytes[x] ^ (unsigned char)stream_send[x];
 	}
@@ -83,7 +62,7 @@ void encryption::crypt_send(std::string & bytes)
 void encryption::crypt_send(char * bytes, const int & length)
 {
 	assert(ready_to_encrypt);
-	grow_stream(length, Mersenne_Twister_send, stream_send);
+	PRNG_send.extract_bytes(stream_send, length);
 	for(int x=0; x<length; ++x){
 		bytes[x] = (unsigned char)bytes[x] ^ (unsigned char)stream_send[x];
 	}
@@ -93,7 +72,7 @@ void encryption::crypt_send(char * bytes, const int & length)
 void encryption::crypt_recv(std::string & bytes)
 {
 	assert(ready_to_encrypt);
-	grow_stream(bytes.length(), Mersenne_Twister_recv, stream_recv);
+	PRNG_recv.extract_bytes(stream_recv, bytes.length());
 	for(int x=0; x<bytes.length(); ++x){
 		bytes[x] = (unsigned char)bytes[x] ^ (unsigned char)stream_recv[x];
 	}
@@ -103,7 +82,7 @@ void encryption::crypt_recv(std::string & bytes)
 void encryption::crypt_recv(char * bytes, const int & length)
 {
 	assert(ready_to_encrypt);
-	grow_stream(length, Mersenne_Twister_recv, stream_recv);
+	PRNG_recv.extract_bytes(stream_recv, length);
 	for(int x=0; x<length; ++x){
 		bytes[x] = (unsigned char)bytes[x] ^ (unsigned char)stream_recv[x];
 	}
