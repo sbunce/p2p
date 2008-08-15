@@ -1,6 +1,6 @@
 #include "client_buffer.h"
 
-std::map<int, client_buffer> client_buffer::Client_Buffer;
+std::map<int, client_buffer *> client_buffer::Client_Buffer;
 std::set<download *> client_buffer::Unique_Download;
 boost::mutex client_buffer::Mutex;
 volatile int client_buffer::send_pending(0);

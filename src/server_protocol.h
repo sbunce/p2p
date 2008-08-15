@@ -23,18 +23,5 @@ public:
 
 private:
 
-	//buffer for reading file blocks from the HDD
-	char send_block_buff[global::FILE_BLOCK_SIZE];
-
-	/*
-	These functions correspond to the protocol command names. Documentation for
-	what they do can be found in the protocol documentation.
-	*/
-	void close_slot(server_buffer * SB);
-	void request_slot_hash(server_buffer * SB, std::string & send);
-	void request_slot_file(server_buffer * SB, std::string & send);
-	void send_block(server_buffer * SB, std::string & send);
-
-	DB_share DB_Share;
 };
 #endif

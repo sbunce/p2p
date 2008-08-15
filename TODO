@@ -1,9 +1,5 @@
 TODO
 
--Set up the same model as the client_buffer with the server. There is crashing
-happening which I suspect to be a result of the GUI thread futzing with stuff
-at the same time as the server::main_thread.
-
 -Have a possible response to a P_SEND_BLOCK be a P_WAIT, which should trigger a
 8 second wait before attempting another P_SEND_BLOCK request. It should also
 trigger something with existing P_SEND_BLOCK requests. Should they be

@@ -32,7 +32,6 @@ OBJECTS = \
 	server.o \
 	server_buffer.o \
 	server_index.o \
-	server_protocol.o \
 	sha.o \
 	speed_calculator.o \
 	thread_pool.o
@@ -57,7 +56,6 @@ SERVER_OBJECTS = \
 	server.o \
 	server_buffer.o \
 	server_index.o \
-	server_protocol.o \
 	sha.o \
 	speed_calculator.o
 

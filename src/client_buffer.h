@@ -41,14 +41,14 @@ public:
 	static bool add_connection(download_connection & DC)
 	{
 		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, client_buffer>::iterator iter_cur, iter_end;
+		std::map<int, client_buffer *>::iterator iter_cur, iter_end;
 		iter_cur = Client_Buffer.begin();
 		iter_end = Client_Buffer.end();
 		while(iter_cur != iter_end){
-			if(DC.IP == iter_cur->second.IP){
-				DC.socket = iter_cur->second.socket;             //set socket of the discovered client_buffer
+			if(DC.IP == iter_cur->second->IP){
+				DC.socket = iter_cur->second->socket;             //set socket of the discovered client_buffer
 				DC.Download->register_connection(DC);            //register connection with download
-				iter_cur->second.register_download(DC.Download); //register download with client_buffer
+				iter_cur->second->register_download(DC.Download); //register download with client_buffer
 				return true;
 			}
 			++iter_cur;
@@ -105,6 +105,7 @@ public:
 			Unique_Download.erase(Unique_Download.begin());
 		}
 		while(!Client_Buffer.empty()){
+			delete Client_Buffer.begin()->second;
 			Client_Buffer.erase(Client_Buffer.begin());
 		}
 	}
@@ -116,13 +117,14 @@ public:
 	static void erase(const int & socket_FD)
 	{
 		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, client_buffer>::iterator iter = Client_Buffer.find(socket_FD);
+		std::map<int, client_buffer *>::iterator iter = Client_Buffer.find(socket_FD);
 		assert(iter != Client_Buffer.end());
-		if(!iter->second.send_buff.empty()){
+		if(!iter->second->send_buff.empty()){
 			//send_buff contains data, decrement send_pending
 			--send_pending;
 		}
-		Client_Buffer.erase(socket_FD);
+		delete iter->second;
+		Client_Buffer.erase(iter);
 	}
 
 	/*
@@ -161,11 +163,11 @@ public:
 	static void find_empty(std::vector<int> & disconnect_sockets)
 	{
 		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, client_buffer>::iterator iter_cur, iter_end;
+		std::map<int, client_buffer *>::iterator iter_cur, iter_end;
 		iter_cur = Client_Buffer.begin();
 		iter_end = Client_Buffer.end();
 		while(iter_cur != iter_end){
-			if(iter_cur->second.empty()){
+			if(iter_cur->second->empty()){
 				disconnect_sockets.push_back(iter_cur->first);
 			}
 			++iter_cur;
@@ -179,11 +181,11 @@ public:
 	static void find_timed_out(std::vector<int> & timed_out)
 	{
 		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, client_buffer>::iterator iter_cur, iter_end;
+		std::map<int, client_buffer *>::iterator iter_cur, iter_end;
 		iter_cur = Client_Buffer.begin();
 		iter_end = Client_Buffer.end();
 		while(iter_cur != iter_end){
-			if(time(0) - iter_cur->second.last_seen >= global::TIMEOUT){
+			if(time(0) - iter_cur->second->last_seen >= global::TIMEOUT){
 				timed_out.push_back(iter_cur->first);
 			}
 			++iter_cur;
@@ -197,11 +199,11 @@ public:
 	static void generate_requests()
 	{
 		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, client_buffer>::iterator iter_cur, iter_end;
+		std::map<int, client_buffer *>::iterator iter_cur, iter_end;
 		iter_cur = Client_Buffer.begin();
 		iter_end = Client_Buffer.end();
 		while(iter_cur != iter_end){
-			iter_cur->second.prepare_request();
+			iter_cur->second->prepare_request();
 			++iter_cur;
 		}
 	}
@@ -223,9 +225,9 @@ public:
 	static std::string & get_send_buff(const int & socket_FD)
 	{
 		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, client_buffer>::iterator iter = Client_Buffer.find(socket_FD);
+		std::map<int, client_buffer *>::iterator iter = Client_Buffer.find(socket_FD);
 		assert(iter != Client_Buffer.end());
-		return iter->second.send_buff;
+		return iter->second->send_buff;
 	}
 
 	/*
@@ -245,8 +247,8 @@ public:
 		if(iter == Unique_Download.end()){
 			return false;
 		}else{
-			Client_Buffer.insert(std::make_pair(DC.socket, client_buffer(DC.socket, DC.IP)));
-			Client_Buffer[DC.socket].register_download(DC.Download);
+			Client_Buffer.insert(std::make_pair(DC.socket, new client_buffer(DC.socket, DC.IP)));
+			Client_Buffer[DC.socket]->register_download(DC.Download);
 			DC.Download->register_connection(DC);
 			return true;
 		}
@@ -259,10 +261,10 @@ public:
 	static void post_send(const int & socket_FD)
 	{
 		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, client_buffer>::iterator iter = Client_Buffer.find(socket_FD);
+		std::map<int, client_buffer *>::iterator iter = Client_Buffer.find(socket_FD);
 		assert(iter != Client_Buffer.end());
 
-		if(iter->second.send_buff.empty()){
+		if(iter->second->send_buff.empty()){
 			--send_pending;
 		}
 	}
@@ -273,9 +275,9 @@ public:
 	static void recv_buff_append(const int & socket_FD, char * buff, const int & n_bytes)
 	{
 		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, client_buffer>::iterator iter = Client_Buffer.find(socket_FD);
+		std::map<int, client_buffer *>::iterator iter = Client_Buffer.find(socket_FD);
 		assert(iter != Client_Buffer.end());
-		iter->second.recv_buff_append(buff, n_bytes);
+		iter->second->recv_buff_append(buff, n_bytes);
 	}
 
 	/*
@@ -286,11 +288,11 @@ public:
 	{
 		boost::mutex::scoped_lock lock(Mutex);
 		Unique_Download.erase(Download);
-		std::map<int, client_buffer>::iterator iter_cur, iter_end;
+		std::map<int, client_buffer *>::iterator iter_cur, iter_end;
 		iter_cur = Client_Buffer.begin();
 		iter_end = Client_Buffer.end();
 		while(iter_cur != iter_end){
-			iter_cur->second.terminate_download(Download);
+			iter_cur->second->terminate_download(Download);
 			++iter_cur;
 		}
 	}
@@ -315,9 +317,9 @@ private:
 	//only the client_buffer can instantiate itself
 	client_buffer(const int & socket_in, const std::string & IP_in);
 
-	static boost::mutex Mutex;                         //mutex for any access to a download
-	static std::map<int, client_buffer> Client_Buffer; //socket mapped to client_buffer
-	static std::set<download *> Unique_Download;       //all current downloads
+	static boost::mutex Mutex;                           //mutex for any access to a download
+	static std::map<int, client_buffer *> Client_Buffer; //socket mapped to client_buffer
+	static std::set<download *> Unique_Download;         //all current downloads
 
 	/*
 	When this is zero there are no pending requests to send. This exists for the

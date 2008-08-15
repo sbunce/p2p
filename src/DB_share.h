@@ -3,9 +3,10 @@
 
 //boost
 #include <boost/cstdint.hpp>
-#include <boost/thread/thread.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/thread.hpp>
 
 //custom
 #include "global.h"

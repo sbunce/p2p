@@ -16,7 +16,7 @@
 #include "global.h"
 #include "server_buffer.h"
 #include "server_index.h"
-#include "server_protocol.h"
+#include "server_buffer.h"
 #include "speed_calculator.h"
 #include "upload_info.h"
 
@@ -71,8 +71,6 @@ public:
 	int total_speed();
 
 private:
-	std::map<int, server_buffer *> Server_Buffer;
-
 	volatile bool stop_threads; //if true this will trigger thread termination
 	volatile int threads;       //how many threads are currently running
 
@@ -84,9 +82,6 @@ private:
 	fd_set read_FDS;     //set when socket can read without blocking
 	fd_set write_FDS;    //set when socket can write without blocking
 	int FD_max;          //holds the number of the maximum socket
-
-	//counter for how many sends need to be done
-	volatile int send_pending;
 
 	//passed to DB_Blacklist to check for updates to blacklist
 	int blacklist_state;
@@ -107,7 +102,6 @@ private:
 	DB_server_preferences DB_Server_Preferences;
 	encryption Encryption;
 	server_index Server_Index;
-	server_protocol Server_Protocol;
 	speed_calculator Speed_Calculator;
 };
 #endif

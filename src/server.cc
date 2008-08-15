@@ -3,7 +3,6 @@
 server::server():
 	blacklist_state(0),
 	connections(0),
-	send_pending(0),
 	stop_threads(false),
 	threads(0)
 {
@@ -33,10 +32,7 @@ server::~server()
 		portable_sleep::yield();
 	}
 
-	while(!Server_Buffer.empty()){
-		delete Server_Buffer.begin()->second;
-		Server_Buffer.erase(Server_Buffer.begin());
-	}
+	server_buffer::destroy();
 
 	#ifdef WIN32
 	//cleanup winsock
@@ -64,13 +60,7 @@ void server::check_blacklist()
 
 void server::current_uploads(std::vector<upload_info> & info)
 {
-	std::map<int, server_buffer *>::iterator iter_cur, iter_end;
-	iter_cur = Server_Buffer.begin();
-	iter_end = Server_Buffer.end();
-	while(iter_cur != iter_end){
-		iter_cur->second->current_uploads(info);
-		++iter_cur;
-	}
+	server_buffer::current_uploads(info);
 }
 
 void server::disconnect(const int & socket_FD)
@@ -85,14 +75,7 @@ void server::disconnect(const int & socket_FD)
 	close(socket_FD);
 	#endif
 
-	std::map<int, server_buffer *>::iterator iter = Server_Buffer.find(socket_FD);
-	assert(iter != Server_Buffer.end());
-	if(!iter->second->send_buff.empty()){
-		--send_pending;
-	}
-
-	delete iter->second;
-	Server_Buffer.erase(iter);
+	server_buffer::erase(socket_FD);
 
 	//reduce FD_max if possible
 	for(int x = FD_max; x != 0; --x){
@@ -196,7 +179,7 @@ void server::new_connection(const int & listener)
 
 	if(connections < max_connections){
 		++connections;
-		Server_Buffer.insert(std::make_pair(new_FD, new server_buffer(new_FD, new_IP)));
+		server_buffer::new_connection(new_FD, new_IP);
 		FD_SET(new_FD, &master_FDS);
 		if(new_FD > FD_max){
 			FD_max = new_FD;
@@ -286,7 +269,7 @@ void server::main_thread()
 		This if(send_pending) exists to saves CPU time by not checking if sockets
 		are ready to write when we don't need to write anything.
 		*/
-		if(send_pending != 0){
+		if(server_buffer::get_send_pending() != 0){
 			read_FDS = master_FDS;
 			write_FDS = master_FDS;
 			if(select(FD_max+1, &read_FDS, &write_FDS, NULL, NULL) == -1){
@@ -329,27 +312,23 @@ void server::main_thread()
 						continue;
 					}else{
 						//incoming data from client socket
-						process_request(socket_FD, recv_buff, n_bytes);
+						server_buffer::process(socket_FD, recv_buff, n_bytes);
 					}
 				}
 			}
 
 			//do not check for writes on listener
 			if(FD_ISSET(socket_FD, &write_FDS) && socket_FD != listener){
-				std::map<int, server_buffer *>::iterator iter = Server_Buffer.find(socket_FD);
-				assert(iter != Server_Buffer.end());
-				server_buffer * SB = iter->second;
-				if(!SB->send_buff.empty()){
-					send_limit = Speed_Calculator.rate_control(SB->send_buff.size());
-					if((n_bytes = send(socket_FD, SB->send_buff.c_str(), send_limit, MSG_NOSIGNAL)) < 0){
+				std::string * buff = &server_buffer::get_send_buff(socket_FD);
+				if(!buff->empty()){
+					send_limit = Speed_Calculator.rate_control(buff->size());
+					if((n_bytes = send(socket_FD, buff->c_str(), send_limit, MSG_NOSIGNAL)) < 0){
 						disconnect(socket_FD);
 					}else{
 						//remove bytes sent from buffer
 						Speed_Calculator.update(n_bytes);
-						SB->send_buff.erase(0, n_bytes);
-						if(SB->send_buff.empty()){
-							--send_pending;
-						}
+						buff->erase(0, n_bytes);
+						server_buffer::post_send(socket_FD);
 					}
 				}
 			}
@@ -357,20 +336,6 @@ void server::main_thread()
 	}
 
 	--threads;
-}
-
-void server::process_request(const int & socket_FD, char * recv_buff, const int & n_bytes)
-{
-	std::map<int, server_buffer *>::iterator iter = Server_Buffer.find(socket_FD);
-	assert(iter != Server_Buffer.end());
-	server_buffer * SB = iter->second;
-
-	bool initial_empty = SB->send_buff.size() == 0;
-	Server_Protocol.process(SB, recv_buff, n_bytes);
-	if(initial_empty && SB->send_buff.size() != 0){
-		//buffer went from empty to non-empty, signal that a send needs to be done
-		++send_pending;
-	}
 }
 
 int server::total_speed()
