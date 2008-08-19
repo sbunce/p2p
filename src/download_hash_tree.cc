@@ -229,7 +229,9 @@ void download_hash_tree::response(const int & socket, std::string block)
 			}
 		}
 	}else if(block[0] == global::P_ERROR){
-		logger::debug(LOGGER_P1,"P_ERROR received from ",conn->IP);
+		logger::debug(LOGGER_P1,"server ",conn->IP," does not have hash tree");
+//DEBUG, server needs to be removed from search table in DB
+		exit(1);
 	}
 }
 

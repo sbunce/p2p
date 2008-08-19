@@ -12,6 +12,7 @@ OBJECTS = \
 	DB_blacklist.o \
 	DB_client_preferences.o \
 	DB_download.o \
+	DB_prime.o \
 	DB_search.o \
 	DB_server_preferences.o \
 	DB_share.o \
@@ -28,6 +29,7 @@ OBJECTS = \
 	hash_tree.o \
 	logger.o \
 	main.o \
+	number_generator.o \
 	request_gen.o \
 	server.o \
 	server_buffer.o \
@@ -47,12 +49,14 @@ SERVER_OBJECTS = \
 	CMWC4096.o \
 	DB_blacklist.o \
 	DB_download.o \
+	DB_prime.o \
 	DB_server_preferences.o \
 	DB_share.o \
 	encryption.o \
 	hash_tree.o \
 	logger.o \
 	main_server.o \
+	number_generator.o \
 	server.o \
 	server_buffer.o \
 	server_index.o \
@@ -65,10 +69,10 @@ SERVER_LINKER_OPTIONS = \
 	-lboost_thread
 
 all: $(OBJECTS) libtommath sqlite3 server
-	$(CXX) $(OBJECTS) $(LIBTOMMATH_OBJECT) $(SQLITE3_OBJECT) -o p2p $(LINKER_OPTIONS) $(GPROF)
+	$(CXX) -o p2p $(OBJECTS) $(LIBTOMMATH_OBJECT) $(SQLITE3_OBJECT) $(LINKER_OPTIONS) $(GPROF)
 
 server: $(SERVER_OBJECTS) libtommath sqlite3
-	$(CXX) $(SERVER_OBJECTS) $(LIBTOMMATH_OBJECT) $(SQLITE3_OBJECT) -o p2p_server $(SERVER_LINKER_OPTIONS) $(GPROF)
+	$(CXX) -o p2p_server $(SERVER_OBJECTS) $(LIBTOMMATH_OBJECT) $(SQLITE3_OBJECT) $(SERVER_LINKER_OPTIONS) $(GPROF)
 
 #automatic dependency generation
 .depend:

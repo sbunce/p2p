@@ -4,6 +4,7 @@
 //custom
 #include "CMWC4096.h"
 #include "global.h"
+#include "number_generator.h"
 
 //libtommath
 #include <mpint.h>
@@ -11,44 +12,13 @@
 //std
 #include <cassert>
 #include <ctime>
+#include <fstream>
 #include <iostream>
 
 class encryption
 {
 public:
 	encryption();
-
-	static int PRNG(unsigned char * buff, int length, void * data)
-	{
-		int n = length; 
-		while(length--){
-			*buff++ = rand() & 255;
-		}
-		return n; //return how many random bytes added to buff
-	}
-
-	static mpint random_num(int bits)
-	{
-		assert(bits % 8 == 0);
-		unsigned char buff[bits/8];
-		PRNG(buff, bits/8, NULL);
-		return mpint(buff, bits/8);
-	}
-
-	static mpint random_prime(int bits)
-	{
-		srand(time(NULL)); //real bad idea
-		mpint m;
-		mp_prime_random_ex(
-			&m.data, //mp_int structure
-			1,       //Miller-Rabin tests
-			bits,    //size (bits) of prime to generate
-			0,       //optional flags
-			&PRNG,
-			NULL     //optional void* that can be passed to PRNG
-		);
-		return m;
-	}
 
 	/*
 	Protocol for key exchange:

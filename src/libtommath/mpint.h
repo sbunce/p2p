@@ -8,6 +8,9 @@
 
 #include <tommath.h>
 
+//std
+#include <iostream>
+
 class ltmpp_error
 {
 public:

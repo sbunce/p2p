@@ -20,6 +20,7 @@
 #include "download_info.h"
 #include "download_factory.h"
 #include "global.h"
+#include "number_generator.h"
 #include "resolve.h"
 #include "speed_calculator.h"
 
@@ -40,6 +41,7 @@
 #include <deque>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <list>
 #include <map>
 #include <sstream>
@@ -53,6 +55,7 @@ public:
 	~client();
 	/*
 	current_downloads      - returns download info for all downloads
+	prime_count            - returns the number of primes cached for Diffie-Hellman
 	get_max_connections    - returns maximum connections client will make
 	set_max_connections    - sets maximum connections client will make
 	get_download_directory - returns the location where downloads are saved to
@@ -67,6 +70,7 @@ public:
 	total_speed            - returns the total download speed(in bytes per second)
 	*/
 	void current_downloads(std::vector<download_info> & info);
+	unsigned int prime_count();
 	int get_max_connections();
 	void set_max_connections(int max_connections_in);
 	std::string get_download_directory();

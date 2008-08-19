@@ -67,7 +67,7 @@ private:
 	inline static void init()
 	{
 		boost::mutex::scoped_lock lock(Mutex);
-		if(Logger == NULL){ //threadsafe comparison
+		if(Logger == NULL){
 			Logger = new logger;
 		}
 	}

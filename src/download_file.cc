@@ -76,7 +76,6 @@ const std::string download_file::hash()
 void download_file::hash_check()
 {
 	++threads;
-
 	std::fstream fin(thread_file_path.c_str(), std::ios::in);
 	char block_buff[global::FILE_BLOCK_SIZE];
 	boost::uint64_t hash_latest = 0;
@@ -226,7 +225,9 @@ void download_file::response(const int & socket, std::string block)
 			close_slots = true;
 		}
 	}else if(block[0] == global::P_ERROR){
-		logger::debug(LOGGER_P1,"received P_ERROR from ",conn->IP);
+		logger::debug(LOGGER_P1,"server ",conn->IP," does not have file UNIMPLEMENTED FEATURE");
+//DEBUG, server needs to be removed from search table in DB
+		exit(1);
 	}
 }
 
@@ -245,6 +246,7 @@ void download_file::stop()
 	}else{
 		close_slots = true;
 	}
+	stop_threads = true;
 }
 
 void download_file::write_block(boost::uint64_t block_number, std::string & block)

@@ -10,12 +10,15 @@ buffer to un-expect?
 -The total upload speed should include requests the client is making. Not just
 server upload. Make a singleton for a speed_calculator for up_down speeds.
 
--encryption::PRNG is not being seeded properly by encryption::random_prime().
+-Need to make a limit on the client to not request more than 256 concurrent slots.
 
 
 WINDOWS PORTABILITY
 
 -New line not working in terminal. \r\n?
+
+-Need to figure out CryptGenRandom for encryption::PRNG().
+http://msdn.microsoft.com/en-us/library/aa379942.aspx
 
 
 DEFERRED FEATURES
@@ -42,9 +45,6 @@ the profile based on time of day.
 locations in DB. Perhaps have a memmove type opteration one a file where hashes
 can be moved to get rid of gaps due to removed files. The intermediate step of
 the memmove operation would basically be a journal.
-
--Encryption idea. Do diffie-hellman-merkle to get shared key. Seed a PRNG with
-it to make a stream cypher.
 
 
 GUI IDEAS

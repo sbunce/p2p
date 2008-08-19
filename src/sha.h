@@ -22,6 +22,7 @@ public:
 	//access hashes after end()
 	std::string hex_hash(); //base 16 (slow, better to use raw if possible)
 	char * raw_hash();      //raw bytes (20 bytes)
+	char * raw_hash_no_null(); //if hash bytes are all 0 the last byte is changed to 1
 
 	static const int HASH_LENGTH = 20;
 

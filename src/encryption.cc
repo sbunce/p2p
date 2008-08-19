@@ -3,13 +3,13 @@
 encryption::encryption()
 {
 	g = 2; //fast generater, supposed to be secure
-	s = random_num(global::DH_KEY_SIZE*8);
+	s = number_generator::random_mpint(global::DH_KEY_SIZE);
 	State = waiting_for_prime;
 }
 
 std::string encryption::get_prime()
 {
-	p = random_prime(global::DH_KEY_SIZE*8);
+	p = number_generator::random_prime_mpint();
 	return std::string((char *)p.to_bin(), p.to_bin_size());
 }
 
@@ -51,40 +51,48 @@ void encryption::set_remote_result(std::string result)
 
 void encryption::crypt_send(std::string & bytes)
 {
+	#ifdef ENCRYPTION
 	assert(ready_to_encrypt);
 	PRNG_send.extract_bytes(stream_send, bytes.length());
 	for(int x=0; x<bytes.length(); ++x){
 		bytes[x] = (unsigned char)bytes[x] ^ (unsigned char)stream_send[x];
 	}
 	stream_send.erase(0, bytes.length());
+	#endif
 }
 
 void encryption::crypt_send(char * bytes, const int & length)
 {
+	#ifdef ENCRYPTION
 	assert(ready_to_encrypt);
 	PRNG_send.extract_bytes(stream_send, length);
 	for(int x=0; x<length; ++x){
 		bytes[x] = (unsigned char)bytes[x] ^ (unsigned char)stream_send[x];
 	}
 	stream_send.erase(0, length);
+	#endif
 }
 
 void encryption::crypt_recv(std::string & bytes)
 {
+	#ifdef ENCRYPTION
 	assert(ready_to_encrypt);
 	PRNG_recv.extract_bytes(stream_recv, bytes.length());
 	for(int x=0; x<bytes.length(); ++x){
 		bytes[x] = (unsigned char)bytes[x] ^ (unsigned char)stream_recv[x];
 	}
 	stream_recv.erase(0, bytes.length());
+	#endif
 }
 
 void encryption::crypt_recv(char * bytes, const int & length)
 {
+	#ifdef ENCRYPTION
 	assert(ready_to_encrypt);
 	PRNG_recv.extract_bytes(stream_recv, length);
 	for(int x=0; x<length; ++x){
 		bytes[x] = (unsigned char)bytes[x] ^ (unsigned char)stream_recv[x];
 	}
 	stream_recv.erase(0, length);
+	#endif
 }

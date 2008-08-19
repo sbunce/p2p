@@ -39,7 +39,7 @@ public:
 		iter_cur = Server_Buffer.begin();
 		iter_end = Server_Buffer.end();
 		while(iter_cur != iter_end){
-			iter_cur->second->current_uploads_priv(info);
+			iter_cur->second->uploads(info);
 			++iter_cur;
 		}
 	}
@@ -125,67 +125,8 @@ public:
 		std::map<int, server_buffer *>::iterator iter = Server_Buffer.find(socket_FD);
 		assert(iter != Server_Buffer.end());
 		server_buffer * SB = iter->second;
-
 		bool initial_empty = SB->send_buff.size() == 0;
-
-		if(SB->exchange_key){
-			SB->prime_remote_result.append(recv_buff, n_bytes);
-			if(SB->prime_remote_result.size() == global::DH_KEY_SIZE*2){
-				SB->Encryption.set_prime(SB->prime_remote_result.substr(0,global::DH_KEY_SIZE));
-				SB->Encryption.set_remote_result(SB->prime_remote_result.substr(global::DH_KEY_SIZE,global::DH_KEY_SIZE));
-				SB->send_buff += SB->Encryption.get_local_result();
-				SB->prime_remote_result.clear();
-				SB->exchange_key = false;
-			}
-
-			if(SB->prime_remote_result.size() > global::DH_KEY_SIZE*2){
-				logger::debug(LOGGER_P1,"abusive client ", SB->IP, " failed key negotation, too many bytes");
-				DB_blacklist::add(SB->IP);
-			}
-
-			if(initial_empty && SB->send_buff.size() != 0){
-				//buffer went from empty to non-empty, signal that a send needs to be done
-				++send_pending;
-			}
-
-			return;
-		}
-
-		//decrypt received bytes
-		SB->Encryption.crypt_recv(recv_buff, n_bytes);
-		SB->recv_buff.append(recv_buff, n_bytes);
-
-		//disconnect clients that have pipelined more than is allowed
-		if(SB->recv_buff.size() > global::S_MAX_SIZE*global::PIPELINE_SIZE){
-			logger::debug(LOGGER_P1,"server ",SB->IP," over pipelined");
-			DB_blacklist::add(SB->IP);
-			return;
-		}
-
-		//slice off one command at a time and process
-		std::string send; //data to send
-		while(SB->recv_buff.size()){
-			send.clear();
-			if(SB->recv_buff[0] == global::P_CLOSE_SLOT && SB->recv_buff.size() >= global::P_CLOSE_SLOT_SIZE){
-				SB->close_slot(SB);
-				SB->recv_buff.erase(0, global::P_CLOSE_SLOT_SIZE);
-			}else if(SB->recv_buff[0] == global::P_REQUEST_SLOT_HASH && SB->recv_buff.size() >= global::P_REQUEST_SLOT_HASH_SIZE){
-				SB->request_slot_hash(SB, send);
-				SB->recv_buff.erase(0, global::P_REQUEST_SLOT_HASH_SIZE);
-			}else if(SB->recv_buff[0] == global::P_REQUEST_SLOT_FILE && SB->recv_buff.size() >= global::P_REQUEST_SLOT_FILE_SIZE){
-				SB->request_slot_file(SB, send);
-				SB->recv_buff.erase(0, global::P_REQUEST_SLOT_FILE_SIZE);
-			}else if(SB->recv_buff[0] == global::P_SEND_BLOCK && SB->recv_buff.size() >= global::P_SEND_BLOCK_SIZE){
-				SB->send_block(SB, send);
-				SB->recv_buff.erase(0, global::P_SEND_BLOCK_SIZE);
-			}else{
-				break;
-			}
-
-			SB->Encryption.crypt_send(send);
-			SB->send_buff += send;
-		}
-
+		SB->process(recv_buff, n_bytes);
 		if(initial_empty && SB->send_buff.size() != 0){
 			//buffer went from empty to non-empty, signal that a send needs to be done
 			++send_pending;
@@ -208,8 +149,8 @@ private:
 	*/
 	static volatile int send_pending;
 
-	std::string recv_buff; //buffer for partial recvs
-	std::string send_buff; //buffer for partial sends
+	std::string recv_buff;
+	std::string send_buff;
 
 	int socket_FD;
 	std::string IP;
@@ -249,17 +190,11 @@ private:
 	//buffer for reading file blocks from the HDD
 	char send_block_buff[global::FILE_BLOCK_SIZE];
 
-	/*
-	These functions correspond to the protocol command names. Documentation for
-	what they do can be found in the protocol documentation.
-	*/
-	void close_slot(server_buffer * SB);
-	void request_slot_hash(server_buffer * SB, std::string & send);
-	void request_slot_file(server_buffer * SB, std::string & send);
-	void send_block(server_buffer * SB, std::string & send);
+	//temp buffers used by process()
+	std::string process_send;
+	std::string process_request;
 
 	/*
-	close_slot                   - close a slot opened with create_slot()
 	create_slot_file             - create a download slot for a file
 	                               returns true if slot successfully created, else false
 	current_uploads              - adds upload information to the info vector
@@ -267,17 +202,21 @@ private:
 	update_slot_percent_complete - updates the percentage complete an upload is
 	update_slot_speed            - updates speed for the upload the corresponds to the slot_ID
 	*/
-	void close_slot(char slot_ID);
+	void close_slot(const std::string & request);
 	bool create_slot(char & slot_ID, const std::string & hash, const boost::uint64_t & size, const std::string & path);
-	void current_uploads_priv(std::vector<upload_info> & info);
-	bool path(char slot_ID, std::string & path);
+	void uploads(std::vector<upload_info> & info);
+	bool path(const char & slot_ID, std::string & path);
+	void process(char * buff, const int & n_bytes);
+	void request_slot_hash(const std::string & request, std::string & send);
+	void request_slot_file(const std::string & request, std::string & send);
+	void send_block(const std::string & request, std::string & send);
 	void update_slot_percent_complete(char slot_ID, const boost::uint64_t & block_number);
 	void update_slot_speed(char slot_ID, unsigned int bytes);
-
-	DB_share DB_Share;
 
 	bool exchange_key;               //true when key exchange happening
 	std::string prime_remote_result; //holds prime and incoming result for key exchange
 	encryption Encryption;
+
+	DB_share DB_Share;
 };
 #endif

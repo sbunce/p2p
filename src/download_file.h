@@ -2,11 +2,11 @@
 #define H_DOWNLOAD_FILE
 
 //boost
+#include <boost/bind.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
-#include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
-#include <boost/bind.hpp>
+#include <boost/thread/thread.hpp>
 
 //custom
 #include "convert.h"

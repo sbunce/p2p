@@ -157,3 +157,17 @@ char * sha::raw_hash()
 {
 	return raw;
 }
+
+char * sha::raw_hash_no_null()
+{
+	int x=0;
+	for(; x<HASH_LENGTH; ++x){
+		if((int)(unsigned char)raw[x] != 0){
+			break;
+		}
+	}
+	if(x == HASH_LENGTH){
+		raw[x-1] == (char)1;
+	}
+	return raw;
+}

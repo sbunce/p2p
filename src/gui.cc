@@ -189,7 +189,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 
 	//window properties
 	window->set_title(global::NAME);
-	window->resize(800, 300);
+	window->resize(750, 550);
 	window->set_modal(false);
 	window->property_window_position().set_value(Gtk::WIN_POS_CENTER_ON_PARENT);
 	window->set_resizable(true);
@@ -607,13 +607,14 @@ bool gui::update_status_bar()
 	std::ostringstream server_speed_s;
 	server_speed_s << server_speed << " kB/s";
 
-	status = "  D: " + client_speed_s.str() + " U: " + server_speed_s.str();
+	std::ostringstream oss;
+	oss << "  D: " + client_speed_s.str() << " U: " << server_speed_s.str() << "  P:" << Client.prime_count();
 	if(Server.is_indexing()){
-		status += "  Hashing ";
+		oss << "  Indexing Share";
 	}
 
 	statusbar->pop();
-	statusbar->push(status);
+	statusbar->push(oss.str());
 
 	return true;
 }

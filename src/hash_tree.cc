@@ -22,7 +22,7 @@ bool hash_tree::check_block(const std::string & root_hex_hash, const boost::uint
 	SHA.init();
 	SHA.load(block, block_length);
 	SHA.end();
-	return strncmp(file_hash_buffer, SHA.raw_hash(), sha::HASH_LENGTH) == 0;
+	return strncmp(file_hash_buffer, SHA.raw_hash_no_null(), sha::HASH_LENGTH) == 0;
 }
 
 bool hash_tree::check_hash(const char * parent, char * left_child, char * right_child)
@@ -31,7 +31,7 @@ bool hash_tree::check_hash(const char * parent, char * left_child, char * right_
 	SHA.load(left_child, sha::HASH_LENGTH);
 	SHA.load(right_child, sha::HASH_LENGTH);
 	SHA.end();
-	if(memcmp(parent, SHA.raw_hash(), sha::HASH_LENGTH) == 0){
+	if(memcmp(parent, SHA.raw_hash_no_null(), sha::HASH_LENGTH) == 0){
 		return true;
 	}else{
 		return false;
@@ -169,7 +169,7 @@ bool hash_tree::create_hash_tree(std::string file_name, std::string & root_hash)
 		SHA.init();
 		SHA.load(block_buff, fin.gcount());
 		SHA.end();
-		scratch.write(SHA.raw_hash(), sha::HASH_LENGTH);
+		scratch.write(SHA.raw_hash_no_null(), sha::HASH_LENGTH);
 		++blocks_read;
 
 		if(stop_thread){
@@ -186,7 +186,6 @@ bool hash_tree::create_hash_tree(std::string file_name, std::string & root_hash)
 	if(blocks_read == 1){
 		root_hash = SHA.hex_hash();
 		std::fstream fout((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::out | std::ios::app | std::ios::binary);
-		fout.write(SHA.raw_hash(), sha::HASH_LENGTH);
 
 		//clear the scratch file
 		scratch.close();
@@ -249,7 +248,7 @@ void hash_tree::create_hash_tree_recurse(std::fstream & scratch, std::streampos 
 
 		//write resulting hash
 		scratch.seekp(scratch_write, std::ios::beg);
-		scratch.write(SHA.raw_hash(), sha::HASH_LENGTH);
+		scratch.write(SHA.raw_hash_no_null(), sha::HASH_LENGTH);
 		scratch_write = scratch.tellp();
 	}
 

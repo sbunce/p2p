@@ -119,7 +119,11 @@ void server::set_share_directory(const std::string & share_directory)
 std::string server::get_speed_limit()
 {
 	std::ostringstream sl;
-	sl << Speed_Calculator.get_speed_limit() / 1024;
+	if(Speed_Calculator.get_speed_limit() == std::numeric_limits<unsigned int>::max()){
+		sl << "0";
+	}else{
+		sl << Speed_Calculator.get_speed_limit() / 1024;
+	}
 	return sl.str();
 }
 
@@ -129,6 +133,9 @@ void server::set_speed_limit(const std::string & speed_limit)
 	unsigned int speed;
 	ss >> speed;
 	speed *= 1024;
+	if(speed == 0){
+		speed = speed - 1;
+	}
 	DB_Server_Preferences.set_speed_limit(speed);
 	Speed_Calculator.set_speed_limit(speed);
 }

@@ -26,6 +26,9 @@ client::client():
 	#endif
 
 	boost::thread T(boost::bind(&client::main_thread, this));
+
+	//get number_generator singleton initialized so it starts generating primes
+	number_generator::init();
 }
 
 client::~client()
@@ -103,6 +106,11 @@ inline void client::disconnect(const int & socket_FD)
 	}
 }
 
+unsigned int client::prime_count()
+{
+	return number_generator::prime_count();
+}
+
 int client::get_max_connections()
 {
 	return max_connections;
@@ -135,7 +143,11 @@ void client::set_download_directory(const std::string & download_directory)
 std::string client::get_speed_limit()
 {
 	std::ostringstream sl;
-	sl << Speed_Calculator.get_speed_limit() / 1024;
+	if(Speed_Calculator.get_speed_limit() == std::numeric_limits<unsigned int>::max()){
+		sl << "0";
+	}else{
+		sl << Speed_Calculator.get_speed_limit() / 1024;
+	}
 	return sl.str();
 }
 
@@ -145,6 +157,9 @@ void client::set_speed_limit(const std::string & speed_limit)
 	unsigned int speed;
 	ss >> speed;
 	speed *= 1024;
+	if(speed == 0){
+		speed = speed - 1;
+	}
 	DB_Client_Preferences.set_speed_limit(speed);
 	Speed_Calculator.set_speed_limit(speed);
 }
