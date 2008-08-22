@@ -14,7 +14,7 @@
 #include "download.h"
 #include "global.h"
 #include "hash_tree.h"
-#include "request_gen.h"
+#include "request_generator.h"
 
 //std
 #include <ctime>
@@ -163,7 +163,7 @@ private:
 	void hash_check();
 	void write_block(boost::uint64_t block_number, std::string & block);
 
-	request_gen Request_Gen;
+	request_generator Request_Generator;
 	hash_tree Hash_Tree;
 };
 #endif

@@ -1,5 +1,5 @@
-#ifndef H_REQUEST_GEN
-#define H_REQUEST_GEN
+#ifndef H_REQUEST_GENERATOR
+#define H_REQUEST_GENERATOR
 
 //boost
 #include <boost/thread/mutex.hpp>
@@ -14,10 +14,10 @@
 //custom
 #include "global.h"
 
-class request_gen
+class request_generator
 {
 public:
-	request_gen();
+	request_generator();
 
 	/*
 	complete          - returns true if there are no more requests to be made
@@ -27,6 +27,7 @@ public:
 	init              - must be called before calling any other function
 	request           - pushes a needed request number on the back of prev_request
 	                    returns true if request pushed on to back of prev_request
+	set_timeout       - change the timeout on fulfilling requests
 	*/
 	bool complete();
 	void force_re_request(const boost::uint64_t & number);
@@ -34,6 +35,7 @@ public:
 	boost::uint64_t highest_requested();
 	void init(const boost::uint64_t & min_request_in, const boost::uint64_t & max_request_in, const int & timeout_in);
 	bool request(std::deque<boost::uint64_t> & prev_request);
+	void set_timeout(const unsigned int & timeout_in);
 
 private:
 	/*
@@ -58,14 +60,28 @@ private:
 	boost::uint64_t max_request;
 
 	//max age of a request (in seconds) before a re_request is made
-	int timeout;
+	unsigned int timeout;
 
 	/*
 	Requests that have been made associated with the time they were made. This is
 	used to keep track of timeouts. If a element in this container times out it is
 	re_requested.
 	*/
-	std::map<boost::uint64_t, time_t> unfulfilled_request;
+	class request_info
+	{
+	public:
+		request_info(
+			const time_t & time_in,
+			const int & pipeline_size_in
+		):
+			time(time_in),
+			pipeline_size(pipeline_size_in)
+		{}
+
+		time_t time;       //time which the request was made
+		int pipeline_size; //how large pipeline was when request made
+	};
+	std::map<boost::uint64_t, request_info> unfulfilled_request;
 
 	/*
 	Whenever a element in unfulfilled_request times out it's request number is

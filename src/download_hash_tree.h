@@ -8,7 +8,7 @@
 #include "download_connection.h"
 #include "global.h"
 #include "hash_tree.h"
-#include "request_gen.h"
+#include "request_generator.h"
 #include "sha.h"
 
 //std
@@ -22,6 +22,8 @@ public:
 		const boost::uint64_t & download_file_size_in,
 		const std::string & download_file_name_in
 	);
+
+	~download_hash_tree();
 
 	//documentation for virtual functions in abstract base class
 	virtual bool complete();
@@ -63,8 +65,9 @@ private:
 	*/
 	bool download_complete;
 
-	std::string root_hash;     //root hash of the tree downloading
-	std::string hash_name;     //the name of this hash
+	std::string root_hash;            //root hash of the hash tree downloading
+	std::string root_hash_download;   //name of hash tree when downloading (renamed to root_hash when finished)
+	std::string hash_name;            //the name of this hash
 	boost::uint64_t hash_tree_count;  //number of hashes in the tree
 	boost::uint64_t hash_block_count; //number of hash blocks
 	boost::uint64_t hashes_per_block; //number of hashes in a hash block
@@ -146,7 +149,7 @@ private:
 	//socket number mapped to connection special pointer
 	std::map<int, connection_special> Connection_Special;
 
-	request_gen Request_Gen;
+	request_generator Request_Generator;
 	hash_tree Hash_Tree;
 };
 #endif

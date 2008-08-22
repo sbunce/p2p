@@ -49,7 +49,7 @@ download_file::download_file(
 	first_unreceived = fin.tellg() / global::FILE_BLOCK_SIZE;
 
 	//start re_requesting where the download left off
-	Request_Gen.init((boost::uint64_t)first_unreceived, last_block, global::RE_REQUEST_TIMEOUT);
+	Request_Generator.init((boost::uint64_t)first_unreceived, last_block, global::RE_REQUEST);
 
 	//hash check for corrupt/missing blocks
 	boost::thread T(boost::bind(&download_file::hash_check, this));
@@ -86,7 +86,7 @@ void download_file::hash_check()
 		fin.read(block_buff, global::FILE_BLOCK_SIZE);
 		if(!Hash_Tree.check_block(thread_file_hash, hash_latest, block_buff, fin.gcount())){
 			logger::debug(LOGGER_P1,"found corrupt block ",hash_latest," in resumed download");
-			Request_Gen.force_re_request(hash_latest);
+			Request_Generator.force_re_request(hash_latest);
 		}
 		++hash_latest;
 
@@ -116,7 +116,7 @@ unsigned int download_file::percent_complete()
 	if(last_block == 0){
 		return 0;
 	}else{
-		return (unsigned int)(((float)Request_Gen.highest_requested() / (float)last_block)*100);
+		return (unsigned int)(((float)Request_Generator.highest_requested() / (float)last_block)*100);
 	}
 }
 
@@ -176,7 +176,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 		return download::NO_REQUEST;
 	}
 
-	if(!Request_Gen.complete() && Request_Gen.request(conn->requested_blocks)){
+	if(!Request_Generator.complete() && Request_Generator.request(conn->requested_blocks)){
 		//prepare request for needed block
 		request += global::P_SEND_BLOCK;
 		request += conn->slot_ID;
@@ -184,6 +184,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 		int size;
 		if(conn->requested_blocks.back() == last_block){
 			size = last_block_size;
+			Request_Generator.set_timeout(global::RE_REQUEST_FINISHING);
 		}else{
 			size = global::P_BLOCK_SIZE;
 		}
@@ -212,15 +213,15 @@ void download_file::response(const int & socket, std::string block)
 		block.erase(0, 1); //trim command
 		if(!Hash_Tree.check_block(file_hash, conn->requested_blocks.front(), block.c_str(), block.length())){
 			logger::debug(LOGGER_P1,file_name,":",conn->requested_blocks.front()," hash failure");
-			Request_Gen.force_re_request(conn->requested_blocks.front());
+			Request_Generator.force_re_request(conn->requested_blocks.front());
 			DB_blacklist::add(conn->IP);
 			conn->abusive = true;
 		}else{
 			write_block(conn->requested_blocks.front(), block);
-			Request_Gen.fulfil(conn->requested_blocks.front());
+			Request_Generator.fulfil(conn->requested_blocks.front());
 		}
 		conn->requested_blocks.pop_front();
-		if(Request_Gen.complete() && !hashing){
+		if(Request_Generator.complete() && !hashing){
 			//download is complete, start closing slots
 			close_slots = true;
 		}
@@ -269,7 +270,7 @@ void download_file::unregister_connection(const int & socket)
 		RB_iter_cur = iter->second.requested_blocks.begin();
 		RB_iter_end = iter->second.requested_blocks.end();
 		while(RB_iter_cur != RB_iter_end){
-			Request_Gen.force_re_request(*RB_iter_cur);
+			Request_Generator.force_re_request(*RB_iter_cur);
 			++RB_iter_cur;
 		}
 	}

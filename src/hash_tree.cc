@@ -38,14 +38,15 @@ bool hash_tree::check_hash(const char * parent, char * left_child, char * right_
 	}
 }
 
-bool hash_tree::check_hash_tree(const std::string & root_hash, const boost::uint64_t & hash_count, std::pair<boost::uint64_t, boost::uint64_t> & bad_hash)
+bool hash_tree::check_hash_tree(const std::string file_name, const std::string & root_hash_hex, const boost::uint64_t & hash_count, std::pair<boost::uint64_t, boost::uint64_t> & bad_hash)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	//reset the positions if checking a different tree
-	if(check_tree_latest.empty() || check_tree_latest != root_hash){
+	if(check_tree_latest.empty() || check_tree_latest != root_hash_hex){
 		current_RRN = 0; //RRN of latest hash retrieved
 		start_RRN = 0;   //RRN of the start of the current row
 		end_RRN = 1;     //RRN of the end of the current row
+		check_tree_latest = root_hash_hex;
 	}
 
 	if(hash_count == 1){
@@ -53,7 +54,7 @@ bool hash_tree::check_hash_tree(const std::string & root_hash, const boost::uint
 		return false;
 	}
 
-	std::fstream hash_fstream((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::in | std::ios::binary);
+	std::fstream hash_fstream((global::HASH_DIRECTORY+file_name).c_str(), std::ios::in | std::ios::binary);
 	if(!hash_fstream.is_open()){
 		//hash tree does not yet exist
 		bad_hash.first = 0;
@@ -83,7 +84,7 @@ bool hash_tree::check_hash_tree(const std::string & root_hash, const boost::uint
 		bad_hash.second = 1;
 		return true;
 	}
-	if(!check_hash(convert::hex_to_binary(root_hash).c_str(), left_child, right_child)){
+	if(!check_hash(convert::hex_to_binary(root_hash_hex).c_str(), left_child, right_child)){
 		bad_hash.first = 0;
 		bad_hash.second = 1;
 		return true;
@@ -156,7 +157,7 @@ bool hash_tree::create_hash_tree(std::string file_name, std::string & root_hash)
 	char block_buff[global::FILE_BLOCK_SIZE];
 
 	std::fstream fin(file_name.c_str(), std::ios::in | std::ios::binary);
-	std::fstream scratch((global::HASH_DIRECTORY+"scratch").c_str(), std::ios::in
+	std::fstream scratch((global::HASH_DIRECTORY+"upside_down").c_str(), std::ios::in
 		| std::ios::out | std::ios::trunc | std::ios::binary);
 
 	boost::uint64_t blocks_read = 0;
@@ -185,11 +186,11 @@ bool hash_tree::create_hash_tree(std::string file_name, std::string & root_hash)
 	//base case, the file size is less than one block
 	if(blocks_read == 1){
 		root_hash = SHA.hex_hash();
-		std::fstream fout((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::out | std::ios::app | std::ios::binary);
+		std::fstream fout((global::HASH_DIRECTORY+"rightside_up").c_str(), std::ios::out | std::ios::app | std::ios::binary);
 
 		//clear the scratch file
 		scratch.close();
-		scratch.open((global::HASH_DIRECTORY+"scratch").c_str(), std::ios::trunc | std::ios::out);
+		scratch.open((global::HASH_DIRECTORY+"upside_down").c_str(), std::ios::trunc | std::ios::out);
 		scratch.close();
 		return true;
 	}
@@ -198,9 +199,11 @@ bool hash_tree::create_hash_tree(std::string file_name, std::string & root_hash)
 	create_hash_tree_recurse(scratch, 0, scratch.tellp(), root_hash);
 	scratch.close();
 
-	//clear the scratch file
-	scratch.open((global::HASH_DIRECTORY+"scratch").c_str(), std::ios::trunc | std::ios::out);
-	scratch.close();
+	//remove the upside down tree
+	std::remove((global::HASH_DIRECTORY+"upside_down").c_str());
+
+	//rename the completed tree
+	std::rename((global::HASH_DIRECTORY+"rightside_up").c_str(), (global::HASH_DIRECTORY+root_hash).c_str());
 
 	return !root_hash.empty();
 }
@@ -264,16 +267,16 @@ void hash_tree::create_hash_tree_recurse(std::fstream & scratch, std::streampos 
 		root_hash = SHA.hex_hash();
 
 		//do nothing if hash tree file already created
-		std::fstream fin((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::in);
+		std::fstream fin((global::HASH_DIRECTORY+"rightside_up").c_str(), std::ios::in);
 		if(fin.is_open()){
 			return;
 		}
 
 		//create the file with the root hash as name
-		fout.open((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::out | std::ios::app | std::ios::binary);
+		fout.open((global::HASH_DIRECTORY+"rightside_up").c_str(), std::ios::out | std::ios::app | std::ios::binary);
 	}else{
 		//this is not the recursive call with the root hash
-		fout.open((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::out | std::ios::app | std::ios::binary);
+		fout.open((global::HASH_DIRECTORY+"rightside_up").c_str(), std::ios::out | std::ios::app | std::ios::binary);
 	}
 
 	//write hashes that were passed to this function

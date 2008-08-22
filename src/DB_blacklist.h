@@ -4,17 +4,17 @@
 //boost
 #include <boost/thread/mutex.hpp>
 
+//custom
+#include "global.h"
+
 //sqlite
-#include "sqlite3.h"
+#include <sqlite3.h>
 
 //std
 #include <iostream>
 #include <sstream>
 #include <sstream>
 #include <string>
-
-//custom
-#include "global.h"
 
 class DB_blacklist
 {
@@ -73,7 +73,6 @@ private:
 		if(DB_Blacklist == NULL){ //threadsafe comparison
 			DB_Blacklist = new DB_blacklist();
 		}
-
 	}
 
 	static int is_blacklisted_call_back(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)

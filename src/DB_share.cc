@@ -126,7 +126,6 @@ void DB_share::lookup_hash_call_back(int & columns_retrieved, char ** query_resp
 
 void DB_share::remove_missing(const std::string & share_directory)
 {
-	remove_missing_share_directory = const_cast<std::string *>(&share_directory);
 	if(sqlite3_exec(sqlite3_DB, "SELECT hash, path FROM share", remove_missing_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
@@ -141,9 +140,8 @@ void DB_share::remove_missing_call_back(int & columns_retrieved, char ** query_r
 	boost::mutex::scoped_lock lock(Mutex);
 	std::fstream fin(query_response[1], std::ios::in);
 	if(!fin.is_open()){
-		namespace fs = boost::filesystem;
-		fs::path path = fs::system_complete(fs::path((*remove_missing_share_directory)+std::string(query_response[0]), fs::native));
-		fs::remove(path);
+		std::string orphan_hash = global::HASH_DIRECTORY+std::string(query_response[0]);
+		std::remove(orphan_hash.c_str());
 		std::ostringstream query;
 		query << "DELETE FROM share WHERE hash = '" << query_response[0] << "'";
 		if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){

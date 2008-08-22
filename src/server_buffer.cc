@@ -22,11 +22,11 @@ server_buffer::server_buffer(
 	socket_FD(socket_FD_in),
 	IP(IP_in),
 	exchange_key(true)
-
+{
 	#ifdef CORRUPT_BLOCKS
 	srand(time(NULL));
 	#endif
-{
+
 	send_buff.reserve(global::C_MAX_SIZE * global::PIPELINE_SIZE);
 	recv_buff.reserve(global::S_MAX_SIZE * global::PIPELINE_SIZE);
 
@@ -200,7 +200,7 @@ void server_buffer::send_block(const std::string & request, std::string & send)
 			fin.read(send_block_buff, global::FILE_BLOCK_SIZE);
 
 			#ifdef CORRUPT_BLOCKS
-			if(rand() % 100 == 0){
+			if(rand() % 20 == 0){
 				send_block_buff[0] = (char)0;
 			}
 			#endif

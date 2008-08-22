@@ -14,6 +14,7 @@ download_hash_tree::download_hash_tree(
 	checking_phase(false)
 {
 	assert(global::FILE_BLOCK_SIZE % sha::HASH_LENGTH == 0);
+	root_hash_download = root_hash + "_download";
 	hash_name = _download_file_name + " HASH";
 	hash_tree_count = hash_tree::hash_tree_count(hash_tree::file_hash_count(_download_file_size));
 	hashes_per_block = global::FILE_BLOCK_SIZE / sha::HASH_LENGTH;
@@ -23,49 +24,64 @@ download_hash_tree::download_hash_tree(
 	}
 
 	/*
-	Create empty file for the hash tree, if it doesn't already exist.
-	*/
-	bool hash_tree_exists;
-	std::fstream fin((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::in);
-	if(fin.is_open()){
-		hash_tree_exists = true;
-		fin.close();
-	}else{
-		hash_tree_exists = false;
-		std::fstream fout((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::out);
-		fout.write(convert::hex_to_binary(root_hash).c_str(), sha::HASH_LENGTH);
-		fout.close();
-	}
-
-	/*
 	Create an empty file for the file the hash tree is for. This is needed so the
 	download isn't detected as removed when the program is stopped/started. Removed
 	downloads are cancelled which this prevents.
 	*/
-	fin.open((global::DOWNLOAD_DIRECTORY+_download_file_name).c_str(), std::ios::in);
+	std::fstream fin((global::DOWNLOAD_DIRECTORY+_download_file_name).c_str(), std::ios::in);
 	if(!fin.is_open()){
 		std::fstream fout((global::DOWNLOAD_DIRECTORY+_download_file_name).c_str(), std::ios::out);
 		fout.close();
 	}
 
 	/*
-	Check the hash tree to see if it's complete/corrupt/missing blocks. Resume
-	downloading the hash tree or mark the download as complete if the hash tree
-	is complete.
+	If the hash tree is complete set the download_hash_tree to be complete.
 	*/
-	if(hash_tree_exists){
-		std::pair<boost::uint64_t, boost::uint64_t> bad_hash;
-		if(Hash_Tree.check_hash_tree(root_hash, hash_tree_count, bad_hash)){
-			//determine what hash_block the missing/bad hash falls within
-			boost::uint64_t start_hash_block = bad_hash.first / global::FILE_BLOCK_SIZE;
-			logger::debug(LOGGER_P1,"partial or corrupt hash tree found, resuming on hash block ",start_hash_block);
-			Request_Gen.init(start_hash_block, hash_block_count - 1, global::RE_REQUEST_TIMEOUT);
-		}else{
-			//complete hash tree
-			download_complete = true;
-		}
+	fin.open((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::in);
+	if(fin.is_open()){
+		download_complete = true;
 	}else{
-		Request_Gen.init(0, hash_block_count - 1, global::RE_REQUEST_TIMEOUT);
+		/*
+		Create empty file for the downloading hash tree, if it doesn't already exist.
+		*/
+		bool hash_tree_download_exists;
+		std::fstream fin((global::HASH_DIRECTORY+root_hash_download).c_str(), std::ios::in);
+		if(fin.is_open()){
+			hash_tree_download_exists = true;
+			fin.close();
+		}else{
+			hash_tree_download_exists = false;
+			fin.open((global::HASH_DIRECTORY+root_hash_download).c_str(), std::ios::out);
+			fin.close();
+		}
+
+		/*
+		Check the hash tree to see if it's complete/corrupt/missing blocks. Resume
+		downloading the hash tree or mark the download as complete if the hash tree
+		is complete.
+		*/
+		if(hash_tree_download_exists){
+			std::pair<boost::uint64_t, boost::uint64_t> bad_hash;
+			if(Hash_Tree.check_hash_tree(root_hash_download, root_hash, hash_tree_count, bad_hash)){
+				//determine what hash_block the missing/bad hash falls within
+				boost::uint64_t start_hash_block = bad_hash.first / global::FILE_BLOCK_SIZE;
+				logger::debug(LOGGER_P1,"partial or corrupt hash tree found, resuming on hash block ",start_hash_block);
+				Request_Generator.init(start_hash_block, hash_block_count - 1, global::RE_REQUEST);
+			}else{
+				//complete hash tree
+				download_complete = true;
+			}
+		}else{
+			Request_Generator.init(0, hash_block_count - 1, global::RE_REQUEST);
+		}
+	}
+}
+
+download_hash_tree::~download_hash_tree()
+{
+	if(download_complete){
+		//rename completed hash tree so the server can use it
+		std::rename((global::HASH_DIRECTORY+root_hash_download).c_str(), (global::HASH_DIRECTORY+root_hash).c_str());
 	}
 }
 
@@ -104,7 +120,7 @@ unsigned int download_hash_tree::percent_complete()
 	if(hash_block_count == 0){
 		return 0;
 	}else{
-		return (unsigned int)(((float)Request_Gen.highest_requested() / (float)hash_block_count)*100);
+		return (unsigned int)(((float)Request_Generator.highest_requested() / (float)hash_block_count)*100);
 	}
 }
 
@@ -157,7 +173,7 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 		return download::NO_REQUEST;
 	}
 
-	if(Request_Gen.request(conn->latest_request)){
+	if(Request_Generator.request(conn->latest_request)){
 		//no request to be made at the moment
 		request += global::P_SEND_BLOCK;
 		request += conn->slot_ID;
@@ -167,6 +183,7 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 		if(hash_tree_count - (conn->latest_request.back() * hashes_per_block) < hashes_per_block){
 			//request will not yield full P_BLOCK
 			size = (hash_tree_count - (conn->latest_request.back() * hashes_per_block)) * sha::HASH_LENGTH + 1;
+			Request_Generator.set_timeout(global::RE_REQUEST_FINISHING);
 		}else{
 			size = global::P_BLOCK_SIZE;
 		}
@@ -190,7 +207,7 @@ void download_hash_tree::response(const int & socket, std::string block)
 	assert(iter != Connection_Special.end());
 	connection_special * conn = &iter->second;
 
-	if(conn->abusive || close_slots){
+	if(conn->abusive){
 		//server abusive but not yet disconnected, ignore data from it
 		return;
 	}
@@ -201,14 +218,14 @@ void download_hash_tree::response(const int & socket, std::string block)
 	}else if(block[0] == global::P_BLOCK){
 		//a block was received
 		block.erase(0, 1); //trim command
-		Hash_Tree.write_hash(root_hash, conn->latest_request.front()*hashes_per_block, block);
-		Request_Gen.fulfil(conn->latest_request.front());
+		Hash_Tree.write_hash(root_hash_download, conn->latest_request.front()*hashes_per_block, block);
+		Request_Generator.fulfil(conn->latest_request.front());
 		conn->latest_request.pop_front();
 
-		if(Request_Gen.complete()){
+		if(Request_Generator.complete()){
 			//check for bad blocks in tree
 			std::pair<boost::uint64_t, boost::uint64_t> bad_hash;
-			if(Hash_Tree.check_hash_tree(root_hash, hash_tree_count, bad_hash)){
+			if(Hash_Tree.check_hash_tree(root_hash_download, root_hash, hash_tree_count, bad_hash)){
 				//bad block found, find server that sent it
 				boost::uint64_t bad_block = bad_hash.first / hashes_per_block;
 				std::map<int, connection_special>::iterator CS_iter_cur, CS_iter_end;
@@ -259,7 +276,7 @@ void download_hash_tree::unregister_connection(const int & socket)
 		RB_iter_cur = iter->second.requested_blocks.begin();
 		RB_iter_end = iter->second.requested_blocks.end();
 		while(RB_iter_cur != RB_iter_end){
-			Request_Gen.force_re_request(*RB_iter_cur);
+			Request_Generator.force_re_request(*RB_iter_cur);
 			++RB_iter_cur;
 		}
 	}

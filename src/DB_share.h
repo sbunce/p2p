@@ -2,17 +2,16 @@
 #define H_DB_SHARE
 
 //boost
-#include <boost/cstdint.hpp>
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
 #include <boost/thread/mutex.hpp>
-#include <boost/thread/thread.hpp>
+
+//C
+#include <cstdio>
 
 //custom
 #include "global.h"
 
 //sqlite
-#include "sqlite3.h"
+#include <sqlite3.h>
 
 //std
 #include <fstream>
@@ -82,6 +81,5 @@ private:
 		this_class->remove_missing_call_back(columns_retrieved, query_response, column_name);
 		return 0;
 	}
-	std::string * remove_missing_share_directory;
 };
 #endif

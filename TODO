@@ -1,32 +1,49 @@
 TODO
 
+-Have the server check for <hash>_downloading so it can signal P_WAIT.
+
+-Problem when serving partially downloaded files. There might be blocks that
+exist on the HDD that are not actually recieved (when block beyond EOF is
+received and file is padded with NULLs).
+
+-Make a class called client_server_bridge that's a singleton which keeps track of
+what files are downloading and what blocks are available. Also, the
+upload/download speed calculators can be contained within this class.
+
 -Have a possible response to a P_SEND_BLOCK be a P_WAIT, which should trigger a
 8 second wait before attempting another P_SEND_BLOCK request. It should also
 trigger something with existing P_SEND_BLOCK requests. Should they be
 re_requested immediately from other servers? There is a problem with un-expecting
 responses. What about having a new command server->client that tells the client
-buffer to un-expect?
+buffer to un-expect? The server should send P_WAIT when the client is downloading
+a hash tree (check for <hash>_download).
 
 -The total upload speed should include requests the client is making. Not just
 server upload. Make a singleton for a speed_calculator for up_down speeds.
 
 -Need to make a limit on the client to not request more than 256 concurrent slots.
 
+-Get double-checked locking working on singletons.
+
 
 WINDOWS PORTABILITY
 
 -New line not working in terminal. \r\n?
 
--Need to figure out CryptGenRandom for encryption::PRNG().
+-Need to figure out CryptGenRandom for encryption::PRNG(). encryption::PRNG()
+currently set to kill program on windows.
 http://msdn.microsoft.com/en-us/library/aa379942.aspx
 
 
 DEFERRED FEATURES
 
--client::set_download_directory() not doing anything but saving setting.
+-client::set_download_directory() not doing anything but saving setting. Make it
+impossible to change if there are downloads going.
 
 -Hashes need to be removed for files that don't exist in share. Deferred because
 it makes testing difficult.
+
+-Support for multiple share directories.
 
 
 IDEAS

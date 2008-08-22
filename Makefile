@@ -1,7 +1,4 @@
-#GPROF = -pg
-
-#sub-makefiles to export variables to
-.EXPORT_ALL_VARIABLES: src
+CPU_COUNT = $(shell cat /proc/cpuinfo |grep -c "processor")
 
 .PHONY: all
 all: src
@@ -9,14 +6,11 @@ all: src
 	cp src/p2p_server ./
 	@echo "building complete"
 
-#make main source tree
 .PHONY: src
 src:
-	$(MAKE) -j2 -C src
+	$(MAKE) -j$(CPU_COUNT) -C src
 
-#remove all object files
 .PHONY: clean
 clean:
-	$(MAKE) -j2 -C src clean
-	rm -f hash/*
-	rm -f download/*
+	$(MAKE) -j$(CPU_COUNT) -C src clean
+	rm -f hash/* download/* p2p p2p_server

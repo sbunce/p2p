@@ -8,10 +8,10 @@
 #include "global.h"
 
 //libtommath
-#include "mpint.h"
+#include <mpint.h>
 
 //sqlite
-#include "sqlite3.h"
+#include <sqlite3.h>
 
 //std
 #include <iostream>

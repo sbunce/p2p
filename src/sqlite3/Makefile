@@ -1,6 +1,9 @@
 CFLAGS = -O3
 
-sqlite3.o: sqlite3.c sqlite3.h sqlite3ext.h
+OBJECTS = $(patsubst %.c,%.o,$(wildcard *.c))
+
+.PHONY: all
+all: $(OBJECTS)
 
 clean:
-	rm -f sqlite3.o
+	rm -f *.o

@@ -67,7 +67,8 @@ namespace global
 	//hard settings
 	const int DH_KEY_SIZE = 64;          //size of key exchanged with diffie-hellman (bytes)
 	const int PIPELINE_SIZE = 16;        //how many pre-requests can be done
-	const int RE_REQUEST_TIMEOUT = 16;   //seconds before a file block is re-requested
+	const int RE_REQUEST = 16;           //seconds before a file block is re-requested
+	const int RE_REQUEST_FINISHING = 4;  //seconds before a file block is re-requested when download is in finishing phase (last block requested)
 	const int P2P_PORT = 6969;           //port client connects to and server receives on
 	const int GUI_TICK = 100;            //time(in milliseconds) between gui updates
 	const int SPEED_AVERAGE = 4;         //how many seconds to average speed over

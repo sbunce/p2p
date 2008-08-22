@@ -1,13 +1,14 @@
-CXXFLAGS = $(GPROF) -O3 -Werror -ansi -Ilibtommath -Isqlite3 `pkg-config gtkmm-2.4 --cflags`
-CFLAGS = -O3 -Werror -ansi
+CXXFLAGS = -O3 -Werror -ansi -Ilibtommath -Isqlite3 `pkg-config gtkmm-2.4 --cflags`
 
 LIBTOMMATH_OBJECT = libtommath/libtommath.a
 SQLITE3_OBJECT = sqlite3/sqlite3.o
 
 OBJECTS = \
+	CLI_args.o \
 	client.o \
 	client_buffer.o \
 	client_new_connection.o \
+	client_server_bridge.o \
 	CMWC4096.o \
 	DB_blacklist.o \
 	DB_client_preferences.o \
@@ -30,7 +31,7 @@ OBJECTS = \
 	logger.o \
 	main.o \
 	number_generator.o \
-	request_gen.o \
+	request_generator.o \
 	server.o \
 	server_buffer.o \
 	server_index.o \
@@ -38,14 +39,9 @@ OBJECTS = \
 	speed_calculator.o \
 	thread_pool.o
 
-LINKER_OPTIONS = \
-	`pkg-config gtkmm-2.4 --libs` \
-	-ldl \
-	-lboost_filesystem \
-	-lboost_thread \
-	-D_REENTRANT
-
 SERVER_OBJECTS = \
+	CLI_args.o \
+	client_server_bridge.o \
 	CMWC4096.o \
 	DB_blacklist.o \
 	DB_download.o \
@@ -63,28 +59,31 @@ SERVER_OBJECTS = \
 	sha.o \
 	speed_calculator.o
 
+LINKER_OPTIONS = \
+	`pkg-config gtkmm-2.4 --libs` \
+	-ldl \
+	-lboost_filesystem \
+	-lboost_thread \
+	-D_REENTRANT
+
 SERVER_LINKER_OPTIONS = \
 	-ldl \
 	-lboost_filesystem \
 	-lboost_thread
 
-all: $(OBJECTS) libtommath sqlite3 server
-	$(CXX) -o p2p $(OBJECTS) $(LIBTOMMATH_OBJECT) $(SQLITE3_OBJECT) $(LINKER_OPTIONS) $(GPROF)
+.PHONY: all
+all: $(OBJECTS) $(SERVER_OBJECTS) libtommath sqlite3
+	$(CXX) -o p2p $(OBJECTS) $(LIBTOMMATH_OBJECT) $(SQLITE3_OBJECT) $(LINKER_OPTIONS)
+	$(CXX) -o p2p_server $(SERVER_OBJECTS) $(LIBTOMMATH_OBJECT) $(SQLITE3_OBJECT) $(SERVER_LINKER_OPTIONS)
 
-server: $(SERVER_OBJECTS) libtommath sqlite3
-	$(CXX) -o p2p_server $(SERVER_OBJECTS) $(LIBTOMMATH_OBJECT) $(SQLITE3_OBJECT) $(SERVER_LINKER_OPTIONS) $(GPROF)
-
-#automatic dependency generation
 .depend:
 	$(CXX) -MM *.cc > .depend
 
 -include .depend
 
-.PHONY: libtommath
+.PHONY: libtommath sqlite3
 libtommath:
-	$(MAKE) --quiet -C libtommath
-
-.PHONY: sqlite3
+	$(MAKE) -C libtommath
 sqlite3:
 	$(MAKE) -C sqlite3
 
@@ -92,4 +91,4 @@ sqlite3:
 clean:
 	$(MAKE) -C libtommath clean
 	$(MAKE) -C sqlite3 clean
-	rm -f p2p p2p_server .depend $(OBJECTS) $(SERVER_OBJECTS)
+	rm -f p2p p2p_server .depend *.o

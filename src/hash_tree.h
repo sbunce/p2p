@@ -1,6 +1,9 @@
 #ifndef H_HASH_TREE
 #define H_HASH_TREE
 
+//C
+#include <cstdio>
+
 //boost
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
@@ -35,7 +38,7 @@ public:
 	stop                    - sets stop_thread to true and allows create hash tree to exit early
 	*/
 	bool check_block(const std::string & root_hex_hash, const boost::uint64_t & block_number, const char * const block, const int & block_length);
-	bool check_hash_tree(const std::string & root_hash, const boost::uint64_t & hash_count, std::pair<boost::uint64_t, boost::uint64_t> & bad_hash);
+	bool check_hash_tree(const std::string file_name, const std::string & root_hash_hex, const boost::uint64_t & hash_count, std::pair<boost::uint64_t, boost::uint64_t> & bad_hash);
 	bool create_hash_tree(std::string file_path, std::string & root_hash);
 	void write_hash(const std::string & root_hex_hash, const boost::uint64_t & number, const std::string & hash_block);
 	void stop();
