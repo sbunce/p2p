@@ -1,4 +1,4 @@
-#include <tommath.h>
+#include "tommath.h"
 #ifdef BN_MP_SUB_C
 /* LibTomMath, multiple-precision integer library -- Tom St Denis
  *
@@ -51,9 +51,4 @@ mp_sub (mp_int * a, mp_int * b, mp_int * c)
   }
   return res;
 }
-
 #endif
-
-/* $Source: /cvs/libtom/libtommath/bn_mp_sub.c,v $ */
-/* $Revision: 1.3 $ */
-/* $Date: 2006/03/31 14:18:44 $ */

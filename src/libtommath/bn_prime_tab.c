@@ -1,4 +1,4 @@
-#include <tommath.h>
+#include "tommath.h"
 #ifdef BN_PRIME_TAB_C
 /* LibTomMath, multiple-precision integer library -- Tom St Denis
  *
@@ -55,7 +55,3 @@ const mp_digit ltm_prime_tab[] = {
 #endif
 };
 #endif
-
-/* $Source: /cvs/libtom/libtommath/bn_prime_tab.c,v $ */
-/* $Revision: 1.3 $ */
-/* $Date: 2006/03/31 14:18:44 $ */

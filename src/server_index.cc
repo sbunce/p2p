@@ -7,7 +7,6 @@ server_index::server_index():
 	threads(0)
 {
 	boost::filesystem::create_directory(global::SHARE_DIRECTORY);
-	share_directory = DB_Server_Preferences.get_share_directory();
 	boost::thread T(boost::bind(&server_index::index_share, this));
 }
 
@@ -47,11 +46,44 @@ void server_index::generate_hash(const boost::filesystem::path & file_path)
 	}
 }
 
-void server_index::index_share_recurse(std::string directory_name)
+void server_index::scan_hashes()
+{
+	namespace fs = boost::filesystem;
+	fs::path full_path = fs::system_complete(fs::path(global::HASH_DIRECTORY, fs::native));
+	fs::directory_iterator end_iter;
+	for(fs::directory_iterator directory_iter(full_path); directory_iter != end_iter; directory_iter++){
+		portable_sleep::yield(); //make it so directory scans don't hog all CPU
+		try{
+			if(fs::is_directory(*directory_iter)){
+				logger::debug(LOGGER_P1,"found directory: ",directory_iter->leaf(),", in hash directory");
+			}else{
+				if(directory_iter->leaf().length() != sha::HEX_HASH_LENGTH){
+					//file not a hash tree, it may be "upside_down", "rightside_up", or <hash>_download
+					continue;
+				}
+
+				if(!client_server_bridge::is_downloading(directory_iter->leaf()) && !DB_Share.hash_exists(directory_iter->leaf())){
+					std::remove((global::HASH_DIRECTORY+directory_iter->leaf()).c_str());
+				}
+
+				if(stop_thread){
+					return;
+				}
+			}
+		}
+		catch(std::exception & ex){
+			logger::debug(LOGGER_P1,"when trying to read file ",directory_iter->leaf()," caught exception ",ex.what());
+		}
+	}
+
+	return;
+}
+
+void server_index::scan_share(std::string directory_name)
 {
 	namespace fs = boost::filesystem;
 
-	if(stop_thread || change_share){
+	if(stop_thread){
 		return;
 	}
 
@@ -65,20 +97,13 @@ void server_index::index_share_recurse(std::string directory_name)
 	if(fs::is_directory(full_path)){
 		fs::directory_iterator end_iter;
 		for(fs::directory_iterator directory_iter(full_path); directory_iter != end_iter; directory_iter++){
-			/*
-			Directory scans happen frequently. The idea of putting a sleep here is
-			to slow them down. Most of the time is spent hashing files if there is
-			stuff needing to be hashed. After that is done there are constant
-			checks for updated files. This makes those checks such that they don't
-			contantly load the CPU.
-			*/
-			portable_sleep::yield();
+			portable_sleep::yield(); //make it so directory scans don't hog all CPU
 			try{
 				if(fs::is_directory(*directory_iter)){
 					//recurse to new directory
 					std::string sub_directory;
 					sub_directory = directory_name + directory_iter->leaf() + "/";
-					index_share_recurse(sub_directory);
+					scan_share(sub_directory);
 				}else{
 					//determine if a hash tree needs to be generated
 					fs::path file_path = fs::system_complete(fs::path(directory_name + directory_iter->leaf(), fs::native));
@@ -111,7 +136,7 @@ void server_index::index_share_recurse(std::string directory_name)
 						generate_hash(file_path);
 					}
 
-					if(stop_thread || change_share){
+					if(stop_thread){
 						return;
 					}
 				}
@@ -137,27 +162,19 @@ void server_index::index_share()
 {
 	++threads;
 	indexing = false;
-	std::string share_directory_tmp = share_directory;
 	while(true){
 		if(stop_thread){
 			break;
 		}
 
-		if(share_directory_tmp != share_directory){
-			//share directory changed
-			DB_Share.clear();
-		}
-
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(SD_mutex);
-		share_directory_tmp = share_directory;
-		}//end lock scope
+		//remove hashes with no corresponding entry in the database
+		scan_hashes();
 
 		//remove share entries for files that no longer exist
-		DB_Share.remove_missing(share_directory_tmp);
+		DB_Share.remove_missing(global::SHARE_DIRECTORY);
 
-		//create hashes
-		index_share_recurse(share_directory_tmp);
+		//create hashes for all files in shares
+		scan_share(global::SHARE_DIRECTORY);
 
 		indexing = false;
 		change_share = false;
@@ -166,11 +183,4 @@ void server_index::index_share()
 		portable_sleep::ms(1000);
 	}
 	--threads;
-}
-
-void server_index::set_share_directory(const std::string & directory)
-{
-	boost::mutex::scoped_lock lock(SD_mutex);
-	share_directory = directory;
-	change_share = true;
 }

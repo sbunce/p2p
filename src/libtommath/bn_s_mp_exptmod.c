@@ -1,4 +1,4 @@
-#include <tommath.h>
+#include "tommath.h"
 #ifdef BN_S_MP_EXPTMOD_C
 /* LibTomMath, multiple-precision integer library -- Tom St Denis
  *
@@ -246,7 +246,3 @@ LBL_M:
   return err;
 }
 #endif
-
-/* $Source: /cvs/libtom/libtommath/bn_s_mp_exptmod.c,v $ */
-/* $Revision: 1.4 $ */
-/* $Date: 2006/03/31 14:18:44 $ */

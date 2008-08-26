@@ -1,12 +1,12 @@
 #include "download_file.h"
 
 download_file::download_file(
-	const std::string & file_hash_in,
+	const std::string & root_hash_hex_in,
 	const std::string & file_name_in, 
 	const std::string & file_path_in,
 	const boost::uint64_t & file_size_in
 ):
-	file_hash(file_hash_in),
+	root_hash_hex(root_hash_hex_in),
 	file_name(file_name_in),
 	file_path(file_path_in),
 	file_size(file_size_in),
@@ -14,11 +14,13 @@ download_file::download_file(
 	hashing_percent(0),
 	threads(0),
 	stop_threads(false),
-	thread_file_hash(file_hash_in),
+	thread_root_hash_hex(root_hash_hex_in),
 	thread_file_path(file_path_in),
 	download_complete(false),
 	close_slots(false)
 {
+	client_server_bridge::transition_download(root_hash_hex);
+
 	/*
 	Block requests start at zero so the lst block is the number of file block
 	hashes there is minus one.
@@ -70,7 +72,7 @@ bool download_file::complete()
 
 const std::string download_file::hash()
 {
-	return file_hash;
+	return root_hash_hex;
 }
 
 void download_file::hash_check()
@@ -84,7 +86,7 @@ void download_file::hash_check()
 			break;
 		}
 		fin.read(block_buff, global::FILE_BLOCK_SIZE);
-		if(!Hash_Tree.check_block(thread_file_hash, hash_latest, block_buff, fin.gcount())){
+		if(!Hash_Tree.check_block(thread_root_hash_hex, hash_latest, block_buff, fin.gcount())){
 			logger::debug(LOGGER_P1,"found corrupt block ",hash_latest," in resumed download");
 			Request_Generator.force_re_request(hash_latest);
 		}
@@ -138,7 +140,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 
 	if(!conn->slot_ID_requested){
 		//slot_ID not yet obtained from server
-		request = global::P_REQUEST_SLOT_FILE + convert::hex_to_binary(file_hash);
+		request = global::P_REQUEST_SLOT_FILE + convert::hex_to_binary(root_hash_hex);
 		conn->slot_ID_requested = true;
 		expected.push_back(std::make_pair(global::P_SLOT_ID, global::P_SLOT_ID_SIZE));
 		expected.push_back(std::make_pair(global::P_ERROR, 1));
@@ -211,13 +213,14 @@ void download_file::response(const int & socket, std::string block)
 		conn->slot_ID_received = true;
 	}else if(block[0] == global::P_BLOCK){
 		block.erase(0, 1); //trim command
-		if(!Hash_Tree.check_block(file_hash, conn->requested_blocks.front(), block.c_str(), block.length())){
+		if(!Hash_Tree.check_block(root_hash_hex, conn->requested_blocks.front(), block.c_str(), block.length())){
 			logger::debug(LOGGER_P1,file_name,":",conn->requested_blocks.front()," hash failure");
 			Request_Generator.force_re_request(conn->requested_blocks.front());
 			DB_blacklist::add(conn->IP);
 			conn->abusive = true;
 		}else{
 			write_block(conn->requested_blocks.front(), block);
+			client_server_bridge::download_block_received(root_hash_hex, conn->requested_blocks.front());
 			Request_Generator.fulfil(conn->requested_blocks.front());
 		}
 		conn->requested_blocks.pop_front();

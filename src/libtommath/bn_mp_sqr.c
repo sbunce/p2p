@@ -1,4 +1,4 @@
-#include <tommath.h>
+#include "tommath.h"
 #ifdef BN_MP_SQR_C
 /* LibTomMath, multiple-precision integer library -- Tom St Denis
  *
@@ -52,7 +52,3 @@ if (a->used >= KARATSUBA_SQR_CUTOFF) {
   return res;
 }
 #endif
-
-/* $Source: /cvs/libtom/libtommath/bn_mp_sqr.c,v $ */
-/* $Revision: 1.3 $ */
-/* $Date: 2006/03/31 14:18:44 $ */

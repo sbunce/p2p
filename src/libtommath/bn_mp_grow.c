@@ -1,4 +1,4 @@
-#include <tommath.h>
+#include "tommath.h"
 #ifdef BN_MP_GROW_C
 /* LibTomMath, multiple-precision integer library -- Tom St Denis
  *
@@ -51,7 +51,3 @@ int mp_grow (mp_int * a, int size)
   return MP_OKAY;
 }
 #endif
-
-/* $Source: /cvs/libtom/libtommath/bn_mp_grow.c,v $ */
-/* $Revision: 1.3 $ */
-/* $Date: 2006/03/31 14:18:44 $ */

@@ -1,4 +1,4 @@
-#include <tommath.h>
+#include "tommath.h"
 #ifdef BN_MP_REDUCE_SETUP_C
 /* LibTomMath, multiple-precision integer library -- Tom St Denis
  *
@@ -28,7 +28,3 @@ int mp_reduce_setup (mp_int * a, mp_int * b)
   return mp_div (a, b, a, NULL);
 }
 #endif
-
-/* $Source: /cvs/libtom/libtommath/bn_mp_reduce_setup.c,v $ */
-/* $Revision: 1.3 $ */
-/* $Date: 2006/03/31 14:18:44 $ */

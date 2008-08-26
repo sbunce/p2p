@@ -35,6 +35,13 @@ bool download_factory::start_hash(const download_info & info, download *& Downlo
 			return false;
 		}
 	}
+
+	/*
+	Create empty file for the download_file. This is needed because if the file is
+	missing upon program start the download is cancelled.
+	*/
+	std::fstream fout((global::DOWNLOAD_DIRECTORY+info.name).c_str(), std::ios::out);
+
 	Download = new download_hash_tree(info.hash, info.size, info.name);
 	for(int x = 0; x < info.IP.size(); ++x){
 		servers.push_back(download_connection(Download, info.IP[x]));

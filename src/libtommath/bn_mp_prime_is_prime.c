@@ -1,4 +1,4 @@
-#include <tommath.h>
+#include "tommath.h"
 #ifdef BN_MP_PRIME_IS_PRIME_C
 /* LibTomMath, multiple-precision integer library -- Tom St Denis
  *
@@ -77,7 +77,3 @@ LBL_B:mp_clear (&b);
   return err;
 }
 #endif
-
-/* $Source: /cvs/libtom/libtommath/bn_mp_prime_is_prime.c,v $ */
-/* $Revision: 1.3 $ */
-/* $Date: 2006/03/31 14:18:44 $ */

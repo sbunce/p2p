@@ -1,4 +1,4 @@
-#include <tommath.h>
+#include "tommath.h"
 #ifdef BN_MP_RSHD_C
 /* LibTomMath, multiple-precision integer library -- Tom St Denis
  *
@@ -66,7 +66,3 @@ void mp_rshd (mp_int * a, int b)
   a->used -= b;
 }
 #endif
-
-/* $Source: /cvs/libtom/libtommath/bn_mp_rshd.c,v $ */
-/* $Revision: 1.3 $ */
-/* $Date: 2006/03/31 14:18:44 $ */

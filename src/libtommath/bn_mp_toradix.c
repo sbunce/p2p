@@ -1,4 +1,4 @@
-#include <tommath.h>
+#include "tommath.h"
 #ifdef BN_MP_TORADIX_C
 /* LibTomMath, multiple-precision integer library -- Tom St Denis
  *
@@ -67,9 +67,4 @@ int mp_toradix (mp_int * a, char *str, int radix)
   mp_clear (&t);
   return MP_OKAY;
 }
-
 #endif
-
-/* $Source: /cvs/libtom/libtommath/bn_mp_toradix.c,v $ */
-/* $Revision: 1.3 $ */
-/* $Date: 2006/03/31 14:18:44 $ */

@@ -34,7 +34,7 @@ void number_generator::generate_primes_thread()
 {
 	while(true){
 		bool do_sleep = false;
-		if(DB_Prime.count() >= global::MAX_CONNECTIONS){
+		if(DB_Prime.count() >= global::PRIME_CACHE){
 			do_sleep = true;
 		}
 

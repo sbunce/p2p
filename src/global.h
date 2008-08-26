@@ -65,6 +65,7 @@ namespace global
 	const unsigned int DOWN_SPEED = std::numeric_limits<unsigned int>::max(); //download speed limit (B/s)
 
 	//hard settings
+	const int PRIME_CACHE = 256;         //number of primes to keep in prime cache for diffie-hellman
 	const int DH_KEY_SIZE = 64;          //size of key exchanged with diffie-hellman (bytes)
 	const int PIPELINE_SIZE = 16;        //how many pre-requests can be done
 	const int RE_REQUEST = 16;           //seconds before a file block is re-requested
@@ -99,6 +100,8 @@ namespace global
 	const int P_SLOT_ID_SIZE = 2;
 	const char P_BLOCK = (char)7;
 	const int P_BLOCK_SIZE = 5121;
+	const char P_WAIT = (char)8;
+	const int P_WAIT_SIZE = 1;
 
 	//largest possible packet (used to determine buffer sizes)
 	const int S_MAX_SIZE = P_REQUEST_SLOT_FILE_SIZE;

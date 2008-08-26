@@ -3,6 +3,7 @@
 
 //custom
 #include "convert.h"
+#include "client_server_bridge.h"
 #include "DB_blacklist.h"
 #include "download.h"
 #include "download_connection.h"
@@ -18,7 +19,7 @@ class download_hash_tree : public download
 {
 public:
 	download_hash_tree(
-		const std::string & root_hash_in,
+		const std::string & root_hash_hex_in,
 		const boost::uint64_t & download_file_size_in,
 		const std::string & download_file_name_in
 	);
@@ -65,12 +66,12 @@ private:
 	*/
 	bool download_complete;
 
-	std::string root_hash;            //root hash of the hash tree downloading
-	std::string root_hash_download;   //name of hash tree when downloading (renamed to root_hash when finished)
-	std::string hash_name;            //the name of this hash
-	boost::uint64_t hash_tree_count;  //number of hashes in the tree
-	boost::uint64_t hash_block_count; //number of hash blocks
-	boost::uint64_t hashes_per_block; //number of hashes in a hash block
+	std::string root_hash_hex;          //root hash of the hash tree downloading
+	std::string root_hash_hex_download; //name of hash tree when downloading (renamed to root_hash_hex when finished)
+	std::string hash_name;              //the name of this hash
+	boost::uint64_t hash_tree_count;    //number of hashes in the tree
+	boost::uint64_t hash_block_count;   //number of hash blocks
+	boost::uint64_t hashes_per_block;   //number of hashes in a hash block
 
 	/*
 	When the file has finished downloading this will be set to true to indicate

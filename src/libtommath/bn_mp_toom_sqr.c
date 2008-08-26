@@ -1,4 +1,4 @@
-#include <tommath.h>
+#include "tommath.h"
 #ifdef BN_MP_TOOM_SQR_C
 /* LibTomMath, multiple-precision integer library -- Tom St Denis
  *
@@ -218,9 +218,4 @@ ERR:
      mp_clear_multi(&w0, &w1, &w2, &w3, &w4, &a0, &a1, &a2, &tmp1, NULL);
      return res;
 }
-
 #endif
-
-/* $Source: /cvs/libtom/libtommath/bn_mp_toom_sqr.c,v $ */
-/* $Revision: 1.3 $ */
-/* $Date: 2006/03/31 14:18:44 $ */

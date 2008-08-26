@@ -1,4 +1,4 @@
-CFLAGS = -I. -O3
+CFLAGS = -O3
 
 OBJECTS = $(patsubst %.c,%.o,$(wildcard *.c))
 
@@ -6,4 +6,4 @@ libtommath.a: $(OBJECTS)
 	$(AR) $(ARFLAGS) $@ $(OBJECTS) > /dev/null
 
 clean:
-	rm -f *.o
+	rm -f *.o *.a

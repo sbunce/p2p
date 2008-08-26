@@ -1,4 +1,4 @@
-#include <tommath.h>
+#include "tommath.h"
 #ifdef BN_MP_PRIME_IS_DIVISIBLE_C
 /* LibTomMath, multiple-precision integer library -- Tom St Denis
  *
@@ -44,7 +44,3 @@ int mp_prime_is_divisible (mp_int * a, int *result)
   return MP_OKAY;
 }
 #endif
-
-/* $Source: /cvs/libtom/libtommath/bn_mp_prime_is_divisible.c,v $ */
-/* $Revision: 1.3 $ */
-/* $Date: 2006/03/31 14:18:44 $ */

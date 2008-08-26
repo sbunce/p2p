@@ -1,14 +1,17 @@
 TODO
 
--Have the server check for <hash>_downloading so it can signal P_WAIT.
-
--Problem when serving partially downloaded files. There might be blocks that
-exist on the HDD that are not actually recieved (when block beyond EOF is
-received and file is padded with NULLs).
+-The new logic to delete orphan hashes will delete hashes for downloading files.
+When download running have server_index::scan_share check with client_server_bridge
+to see if hash belongs to running download. When download finishes add an entry
+to share that points at the file in the download directory. Scan share should
+remove the hash and database entry when the file is moved.
 
 -Make a class called client_server_bridge that's a singleton which keeps track of
 what files are downloading and what blocks are available. Also, the
-upload/download speed calculators can be contained within this class.
+upload/download speed calculators can be contained within this class. This will
+solve problem when serving partially downloaded files. There might be blocks that
+exist on the HDD that are not actually recieved (when block beyond EOF is
+received and file is padded with NULLs).
 
 -Have a possible response to a P_SEND_BLOCK be a P_WAIT, which should trigger a
 8 second wait before attempting another P_SEND_BLOCK request. It should also
@@ -23,8 +26,6 @@ server upload. Make a singleton for a speed_calculator for up_down speeds.
 
 -Need to make a limit on the client to not request more than 256 concurrent slots.
 
--Get double-checked locking working on singletons.
-
 
 WINDOWS PORTABILITY
 
@@ -33,6 +34,9 @@ WINDOWS PORTABILITY
 -Need to figure out CryptGenRandom for encryption::PRNG(). encryption::PRNG()
 currently set to kill program on windows.
 http://msdn.microsoft.com/en-us/library/aa379942.aspx
+
+-Look in to a makefile project in visual C++. See if that can be made compatible
+with gnu-make.
 
 
 DEFERRED FEATURES

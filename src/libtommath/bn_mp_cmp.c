@@ -1,4 +1,4 @@
-#include <tommath.h>
+#include "tommath.h"
 #ifdef BN_MP_CMP_C
 /* LibTomMath, multiple-precision integer library -- Tom St Denis
  *
@@ -37,7 +37,3 @@ mp_cmp (mp_int * a, mp_int * b)
   }
 }
 #endif
-
-/* $Source: /cvs/libtom/libtommath/bn_mp_cmp.c,v $ */
-/* $Revision: 1.3 $ */
-/* $Date: 2006/03/31 14:18:44 $ */

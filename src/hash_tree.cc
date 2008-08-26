@@ -183,15 +183,16 @@ bool hash_tree::create_hash_tree(std::string file_name, std::string & root_hash)
 		exit(1);
 	}
 
+	if(blocks_read == 0){
+		//do not generate hash trees for empty files
+		return false;
+	}
+
 	//base case, the file size is less than one block
 	if(blocks_read == 1){
 		root_hash = SHA.hex_hash();
-		std::fstream fout((global::HASH_DIRECTORY+"rightside_up").c_str(), std::ios::out | std::ios::app | std::ios::binary);
-
-		//clear the scratch file
-		scratch.close();
-		scratch.open((global::HASH_DIRECTORY+"upside_down").c_str(), std::ios::trunc | std::ios::out);
-		scratch.close();
+		std::fstream fout((global::HASH_DIRECTORY+root_hash).c_str(), std::ios::out | std::ios::app | std::ios::binary);
+		std::remove((global::HASH_DIRECTORY+"upside_down").c_str());
 		return true;
 	}
 

@@ -54,9 +54,12 @@ public:
 	//function to initialize the singleton
 	inline static void init()
 	{
-		boost::mutex::scoped_lock lock(Mutex);
-		if(Number_Generator == NULL){
-			Number_Generator = new number_generator;
+		//double checked lock to avoid locking overhead
+		if(Number_Generator == NULL){ //unsafe comparison, the hint
+			boost::mutex::scoped_lock lock(Mutex);
+			if(Number_Generator == NULL){ //threadsafe comparison
+				Number_Generator = new number_generator;
+			}
 		}
 	}
 

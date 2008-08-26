@@ -1,4 +1,4 @@
-#include <tommath.h>
+#include "tommath.h"
 #ifdef BN_MP_KARATSUBA_MUL_C
 /* LibTomMath, multiple-precision integer library -- Tom St Denis
  *
@@ -161,7 +161,3 @@ ERR:
   return err;
 }
 #endif
-
-/* $Source: /cvs/libtom/libtommath/bn_mp_karatsuba_mul.c,v $ */
-/* $Revision: 1.5 $ */
-/* $Date: 2006/03/31 14:18:44 $ */

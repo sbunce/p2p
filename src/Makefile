@@ -1,9 +1,19 @@
-CXXFLAGS = -O3 -Werror -ansi -Ilibtommath -Isqlite3 `pkg-config gtkmm-2.4 --cflags`
+CXXFLAGS = -O3 -Werror -ansi -Isqlite3 -Ilibtommath
 
-LIBTOMMATH_OBJECT = libtommath/libtommath.a
-SQLITE3_OBJECT = sqlite3/sqlite3.o
+#subdirs to call submakes on
+SUBDIRS = libtommath sqlite3
 
-OBJECTS = \
+#targets that require gtkmm
+main.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
+gui.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
+gui_about.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
+gui_download_info.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
+gui_preferences.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
+
+LIBTOMMATH_OBJECT := libtommath/libtommath.a
+SQLITE3_OBJECT := sqlite3/sqlite3.o
+
+OBJECTS := \
 	CLI_args.o \
 	client.o \
 	client_buffer.o \
@@ -39,7 +49,7 @@ OBJECTS = \
 	speed_calculator.o \
 	thread_pool.o
 
-SERVER_OBJECTS = \
+SERVER_OBJECTS := \
 	CLI_args.o \
 	client_server_bridge.o \
 	CMWC4096.o \
@@ -59,20 +69,20 @@ SERVER_OBJECTS = \
 	sha.o \
 	speed_calculator.o
 
-LINKER_OPTIONS = \
+LINKER_OPTIONS := \
 	`pkg-config gtkmm-2.4 --libs` \
 	-ldl \
 	-lboost_filesystem \
 	-lboost_thread \
 	-D_REENTRANT
 
-SERVER_LINKER_OPTIONS = \
+SERVER_LINKER_OPTIONS := \
 	-ldl \
 	-lboost_filesystem \
 	-lboost_thread
 
 .PHONY: all
-all: $(OBJECTS) $(SERVER_OBJECTS) libtommath sqlite3
+all: $(OBJECTS) $(SERVER_OBJECTS) subdirs
 	$(CXX) -o p2p $(OBJECTS) $(LIBTOMMATH_OBJECT) $(SQLITE3_OBJECT) $(LINKER_OPTIONS)
 	$(CXX) -o p2p_server $(SERVER_OBJECTS) $(LIBTOMMATH_OBJECT) $(SQLITE3_OBJECT) $(SERVER_LINKER_OPTIONS)
 
@@ -81,14 +91,15 @@ all: $(OBJECTS) $(SERVER_OBJECTS) libtommath sqlite3
 
 -include .depend
 
-.PHONY: libtommath sqlite3
-libtommath:
-	$(MAKE) -C libtommath
-sqlite3:
-	$(MAKE) -C sqlite3
+.PHONY: subdirs $(SUBDIRS)
+subdirs: $(SUBDIRS)
+
+$(SUBDIRS):
+	$(MAKE) -C $@
 
 .PHONY: clean
 clean:
-	$(MAKE) -C libtommath clean
-	$(MAKE) -C sqlite3 clean
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir clean; \
+	done
 	rm -f p2p p2p_server .depend *.o

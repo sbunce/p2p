@@ -64,11 +64,14 @@ private:
 	//only the logger can initialize itself
 	logger();
 
-	inline static void init()
+	static void init()
 	{
-		boost::mutex::scoped_lock lock(Mutex);
-		if(Logger == NULL){
-			Logger = new logger;
+		//double checked lock to avoid locking overhead
+		if(Logger == NULL){ //unsafe comparison, the hint
+			boost::mutex::scoped_lock lock(Mutex);
+			if(Logger == NULL){ //threadsafe comparison
+				Logger = new logger;
+			}
 		}
 	}
 

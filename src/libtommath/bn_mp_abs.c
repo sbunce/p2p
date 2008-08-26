@@ -1,4 +1,4 @@
-#include <tommath.h>
+#include "tommath.h"
 #ifdef BN_MP_ABS_C
 /* LibTomMath, multiple-precision integer library -- Tom St Denis
  *
@@ -37,7 +37,3 @@ mp_abs (mp_int * a, mp_int * b)
   return MP_OKAY;
 }
 #endif
-
-/* $Source: /cvs/libtom/libtommath/bn_mp_abs.c,v $ */
-/* $Revision: 1.3 $ */
-/* $Date: 2006/03/31 14:18:44 $ */

@@ -1,4 +1,4 @@
-#include <tommath.h>
+#include "tommath.h"
 #ifdef BN_MP_GET_INT_C
 /* LibTomMath, multiple-precision integer library -- Tom St Denis
  *
@@ -39,7 +39,3 @@ unsigned long mp_get_int(mp_int * a)
   return res & 0xFFFFFFFFUL;
 }
 #endif
-
-/* $Source: /cvs/libtom/libtommath/bn_mp_get_int.c,v $ */
-/* $Revision: 1.3 $ */
-/* $Date: 2006/03/31 14:18:44 $ */

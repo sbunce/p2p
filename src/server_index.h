@@ -9,10 +9,12 @@
 #include <boost/thread/thread.hpp>
 
 //custom
+#include "client_server_bridge.h"
 #include "DB_share.h"
 #include "DB_server_preferences.h"
 #include "global.h"
 #include "hash_tree.h"
+#include "sha.h"
 
 //std
 #include <ctime>
@@ -28,11 +30,9 @@ public:
 	~server_index();
 
 	/*
-	is_indexing         - true if indexing(scanning for new files and hashing)
-	set_share_directory - sets directory to be shared
+	is_indexing - true if indexing(scanning for new files and hashing)
 	*/
 	bool is_indexing();
-	void set_share_directory(const std::string & directory);
 
 private:
 	volatile bool stop_thread;  //if true this will trigger thread termination
@@ -40,18 +40,16 @@ private:
 	bool indexing;              //true if server_index is currently indexing files
 	volatile bool change_share; //stops current indexing so that share_directory can be changed
 
-	//shared directory to be indexed
-	std::string share_directory;
-	boost::mutex SD_mutex; //mutex for access to share_directory in index_share()
-
 	/*
-	generate_hash       - generates hash tree for file
-	index_share         - removes files listed in index that don't exist in share
-	index_share_recurse - recursive function to locate all files in share(calls add_entry)
+	generate_hash - generates hash tree for file
+	index_share   - removes files listed in index that don't exist in share
+	scan_hashes   - scans hash directory
+	scan_share    - recursively scan a share directory
 	*/
 	void generate_hash(const boost::filesystem::path & file_path);
 	void index_share();
-	void index_share_recurse(std::string directory_name);
+	void scan_hashes();
+	void scan_share(std::string directory_name);
 
 	DB_share DB_Share;
 	DB_server_preferences DB_Server_Preferences;

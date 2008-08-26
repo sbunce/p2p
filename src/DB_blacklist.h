@@ -69,9 +69,12 @@ private:
 	//init() must be called at the top of every public function
 	static void init()
 	{
-		boost::mutex::scoped_lock lock(init_mutex);
-		if(DB_Blacklist == NULL){ //threadsafe comparison
-			DB_Blacklist = new DB_blacklist();
+		//double checked lock to avoid locking overhead
+		if(DB_Blacklist == NULL){ //unsafe comparison, the hint
+			boost::mutex::scoped_lock lock(init_mutex);
+			if(DB_Blacklist == NULL){ //threadsafe comparison
+				DB_Blacklist = new DB_blacklist();
+			}
 		}
 	}
 

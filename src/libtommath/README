@@ -1,5 +1,0 @@
-This is libtommath 0.39 chopped up by Seth Bunce.
-
-Obtain the original at: http://math.libtomcrypt.com/
-
-C++ wrapper is mpint.h

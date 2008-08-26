@@ -140,14 +140,14 @@ void server_buffer::process(char * buff, const int & n_bytes)
 void server_buffer::request_slot_hash(const std::string & request, std::string & send)
 {
 	std::string hash_hex = convert::binary_to_hex(request.substr(1,20));
-	std::string path = global::HASH_DIRECTORY+hash_hex;
-	std::fstream fin(path.c_str(), std::ios::in);
+	std::string hash_tree_path = global::HASH_DIRECTORY+hash_hex;
+	std::fstream fin(hash_tree_path.c_str(), std::ios::in);
 	if(fin.is_open()){
 		//hash tree exists, make slot
 		fin.seekg(0, std::ios::end);
 		boost::uint64_t size = fin.tellg();
 		char slot_ID;
-		if(create_slot(slot_ID, hash_hex, size, path)){
+		if(create_slot(slot_ID, hash_hex, size, hash_tree_path)){
 			logger::debug(LOGGER_P1,"granting hash slot ",(int)(unsigned char)slot_ID, " to ",IP);
 			send += global::P_SLOT_ID;
 			send += slot_ID;
@@ -156,6 +156,9 @@ void server_buffer::request_slot_hash(const std::string & request, std::string &
 			DB_blacklist::add(IP);
 		}
 	}else{
+		//check if hash is downloading
+		fin.open(
+
 		//hash tree doesn't exist
 		logger::debug(LOGGER_P1,IP," requested hash that doesn't exist");
 		send += global::P_ERROR;

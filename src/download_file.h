@@ -10,6 +10,7 @@
 
 //custom
 #include "convert.h"
+#include "client_server_bridge.h"
 #include "DB_blacklist.h"
 #include "download.h"
 #include "global.h"
@@ -32,7 +33,7 @@ class download_file : public download
 {
 public:
 	download_file(
-		const std::string & file_hash_in,
+		const std::string & root_hash_hex_in,
 		const std::string & file_name_in, 
 		const std::string & file_path_in,
 		const boost::uint64_t & file_size_in
@@ -83,7 +84,7 @@ private:
 	/*
 	These variables are only to be used by the hash_check() thread.
 	*/
-	std::string thread_file_hash;
+	std::string thread_root_hash_hex;
 	std::string thread_file_path;
 
 	/*
@@ -92,11 +93,11 @@ private:
 	*/
 	bool download_complete;
 
-	std::string file_hash;        //hash tree root hash
+	std::string root_hash_hex;        //hash tree root hash
 	std::string file_name;        //name of the file
 	std::string file_path;        //path to write file to
-	boost::uint64_t file_size;           //size of the file(bytes)
-	boost::uint64_t last_block;          //the last block number
+	boost::uint64_t file_size;    //size of the file(bytes)
+	boost::uint64_t last_block;   //the last block number
 	unsigned int last_block_size; //holds the exact size of the last fileBlock(in bytes)
 
 	/*

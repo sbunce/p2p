@@ -1,4 +1,4 @@
-#include <tommath.h>
+#include "tommath.h"
 #ifdef BN_MP_2EXPT_C
 /* LibTomMath, multiple-precision integer library -- Tom St Denis
  *
@@ -42,7 +42,3 @@ mp_2expt (mp_int * a, int b)
   return MP_OKAY;
 }
 #endif
-
-/* $Source: /cvs/libtom/libtommath/bn_mp_2expt.c,v $ */
-/* $Revision: 1.3 $ */
-/* $Date: 2006/03/31 14:18:44 $ */

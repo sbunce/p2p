@@ -1,4 +1,4 @@
-#include <tommath.h>
+#include "tommath.h"
 #ifdef BN_ERROR_C
 /* LibTomMath, multiple-precision integer library -- Tom St Denis
  *
@@ -39,9 +39,4 @@ char *mp_error_to_string(int code)
    /* generic reply for invalid code */
    return "Invalid error code";
 }
-
 #endif
-
-/* $Source: /cvs/libtom/libtommath/bn_error.c,v $ */
-/* $Revision: 1.3 $ */
-/* $Date: 2006/03/31 14:18:44 $ */

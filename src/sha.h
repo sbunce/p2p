@@ -25,6 +25,7 @@ public:
 	char * raw_hash_no_null(); //if hash bytes are all 0 the last byte is changed to 1
 
 	static const int HASH_LENGTH = 20;
+	static const int HEX_HASH_LENGTH = 40;
 
 private:
 	//holds last generated raw hash

@@ -113,7 +113,8 @@ std::string server::get_share_directory()
 void server::set_share_directory(const std::string & share_directory)
 {
 	DB_Server_Preferences.set_share_directory(share_directory);
-	Server_Index.set_share_directory(share_directory);
+
+	std::cout << "SETTING SHARE FEATURE UNIMPLEMENTED\n";
 }
 
 std::string server::get_speed_limit()

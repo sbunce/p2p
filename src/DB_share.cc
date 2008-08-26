@@ -55,13 +55,6 @@ void DB_share::add_entry_call_back(int & columns_retrieved, char ** query_respon
 	add_entry_entry_exists = true;
 }
 
-void DB_share::clear()
-{
-	if(sqlite3_exec(sqlite3_DB, "DELETE FROM share;", NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-}
-
 void DB_share::delete_hash(const std::string & hash)
 {
 	std::ostringstream query;
@@ -69,6 +62,21 @@ void DB_share::delete_hash(const std::string & hash)
 	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
+}
+
+bool DB_share::hash_exists(const std::string & hash)
+{
+	std::ostringstream query;
+	query << "SELECT count(1) FROM share WHERE hash = '" << hash << "'";
+	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), hash_exists_call_back_wrapper, (void *)this, NULL) != 0){
+		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
+	}
+	return hash_exists_exists;
+}
+
+void DB_share::hash_exists_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
+{
+	hash_exists_exists = strcmp(query_response[0], "1") == 0;
 }
 
 bool DB_share::lookup_path(const std::string & path, std::string & existing_hash, boost::uint64_t & existing_size)
@@ -133,9 +141,6 @@ void DB_share::remove_missing(const std::string & share_directory)
 
 void DB_share::remove_missing_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
-	//slow down check to save CPU
-	portable_sleep::yield();
-
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(Mutex);
 	std::fstream fin(query_response[1], std::ios::in);

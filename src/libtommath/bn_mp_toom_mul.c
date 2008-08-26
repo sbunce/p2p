@@ -1,4 +1,4 @@
-#include <tommath.h>
+#include "tommath.h"
 #ifdef BN_MP_TOOM_MUL_C
 /* LibTomMath, multiple-precision integer library -- Tom St Denis
  *
@@ -275,10 +275,5 @@ ERR:
                     &a0, &a1, &a2, &b0, &b1, 
                     &b2, &tmp1, &tmp2, NULL);
      return res;
-}     
-     
+}
 #endif
-
-/* $Source: /cvs/libtom/libtommath/bn_mp_toom_mul.c,v $ */
-/* $Revision: 1.3 $ */
-/* $Date: 2006/03/31 14:18:44 $ */

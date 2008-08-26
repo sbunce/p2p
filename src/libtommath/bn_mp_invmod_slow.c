@@ -1,4 +1,4 @@
-#include <tommath.h>
+#include "tommath.h"
 #ifdef BN_MP_INVMOD_SLOW_C
 /* LibTomMath, multiple-precision integer library -- Tom St Denis
  *
@@ -169,7 +169,3 @@ LBL_ERR:mp_clear_multi (&x, &y, &u, &v, &A, &B, &C, &D, NULL);
   return res;
 }
 #endif
-
-/* $Source: /cvs/libtom/libtommath/bn_mp_invmod_slow.c,v $ */
-/* $Revision: 1.3 $ */
-/* $Date: 2006/03/31 14:18:44 $ */
