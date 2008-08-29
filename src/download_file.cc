@@ -17,7 +17,8 @@ download_file::download_file(
 	thread_root_hash_hex(root_hash_hex_in),
 	thread_file_path(file_path_in),
 	download_complete(false),
-	close_slots(false)
+	close_slots(false),
+	canceled(false)
 {
 	client_server_bridge::transition_download(root_hash_hex);
 
@@ -63,6 +64,12 @@ download_file::~download_file()
 	while(threads){
 		portable_sleep::yield();
 	}
+
+	if(!canceled){
+		DB_Share.add_entry(root_hash_hex, file_size, file_path);
+	}
+
+	client_server_bridge::finish_download(root_hash_hex);
 }
 
 bool download_file::complete()
@@ -138,12 +145,12 @@ download::mode download_file::request(const int & socket, std::string & request,
 		return download::NO_REQUEST;
 	}
 
-	if(!conn->slot_ID_requested){
+	if(!conn->slot_ID_requested && !close_slots){
 		//slot_ID not yet obtained from server
 		request = global::P_REQUEST_SLOT_FILE + convert::hex_to_binary(root_hash_hex);
 		conn->slot_ID_requested = true;
 		expected.push_back(std::make_pair(global::P_SLOT_ID, global::P_SLOT_ID_SIZE));
-		expected.push_back(std::make_pair(global::P_ERROR, 1));
+		expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
 		return download::BINARY_MODE;
 	}else if(!conn->slot_ID_received){
 		//slot_ID requested but not yet received
@@ -178,20 +185,32 @@ download::mode download_file::request(const int & socket, std::string & request,
 		return download::NO_REQUEST;
 	}
 
-	if(!Request_Generator.complete() && Request_Generator.request(conn->requested_blocks)){
+	if(conn->wait_activated){
+		//check to see if wait is completed
+		if(conn->wait_start + global::P_WAIT_TIMEOUT <= time(NULL)){
+			//timeout expired
+			conn->wait_activated = false;
+		}else{
+			//timeout not yet expired
+			return download::NO_REQUEST;
+		}
+	}
+
+	if(!Request_Generator.complete() && Request_Generator.request(conn->latest_request)){
 		//prepare request for needed block
 		request += global::P_SEND_BLOCK;
 		request += conn->slot_ID;
-		request += convert::encode<boost::uint64_t>(conn->requested_blocks.back());
+		request += convert::encode<boost::uint64_t>(conn->latest_request.back());
 		int size;
-		if(conn->requested_blocks.back() == last_block){
+		if(conn->latest_request.back() == last_block){
 			size = last_block_size;
 			Request_Generator.set_timeout(global::RE_REQUEST_FINISHING);
 		}else{
 			size = global::P_BLOCK_SIZE;
 		}
 		expected.push_back(std::make_pair(global::P_BLOCK, size));
-		expected.push_back(std::make_pair(global::P_ERROR, 1));
+		expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
+		expected.push_back(std::make_pair(global::P_WAIT, global::P_WAIT_SIZE));
 		return download::BINARY_MODE;
 	}
 
@@ -213,24 +232,32 @@ void download_file::response(const int & socket, std::string block)
 		conn->slot_ID_received = true;
 	}else if(block[0] == global::P_BLOCK){
 		block.erase(0, 1); //trim command
-		if(!Hash_Tree.check_block(root_hash_hex, conn->requested_blocks.front(), block.c_str(), block.length())){
-			logger::debug(LOGGER_P1,file_name,":",conn->requested_blocks.front()," hash failure");
-			Request_Generator.force_re_request(conn->requested_blocks.front());
+		if(!Hash_Tree.check_block(root_hash_hex, conn->latest_request.front(), block.c_str(), block.length())){
+			logger::debug(LOGGER_P1,file_name,":",conn->latest_request.front()," hash failure");
+			Request_Generator.force_re_request(conn->latest_request.front());
 			DB_blacklist::add(conn->IP);
 			conn->abusive = true;
 		}else{
-			write_block(conn->requested_blocks.front(), block);
-			client_server_bridge::download_block_received(root_hash_hex, conn->requested_blocks.front());
-			Request_Generator.fulfil(conn->requested_blocks.front());
+			write_block(conn->latest_request.front(), block);
+			client_server_bridge::download_block_received(root_hash_hex, conn->latest_request.front());
+			Request_Generator.fulfil(conn->latest_request.front());
 		}
-		conn->requested_blocks.pop_front();
+		conn->latest_request.pop_front();
 		if(Request_Generator.complete() && !hashing){
 			//download is complete, start closing slots
 			close_slots = true;
 		}
+	}else if(block[0] == global::P_WAIT){
+		//server doesn't yet have the requested block, immediately re_request block
+		Request_Generator.force_re_request(conn->latest_request.front());
+		conn->latest_request.pop_front();
+
+		//set up wait
+		conn->wait_activated = true;
+		conn->wait_start = time(NULL);
 	}else if(block[0] == global::P_ERROR){
-		logger::debug(LOGGER_P1,"server ",conn->IP," does not have file UNIMPLEMENTED FEATURE");
-//DEBUG, server needs to be removed from search table in DB
+		logger::debug(LOGGER_P1,"server ",conn->IP," does not have file");
+std::cout << "REMOVAL FROM DB DUE TO P_ERROR NOT IMPLEMENTED IN download_file\n";
 		exit(1);
 	}
 }
@@ -251,6 +278,7 @@ void download_file::stop()
 		close_slots = true;
 	}
 	stop_threads = true;
+	canceled = true;
 }
 
 void download_file::write_block(boost::uint64_t block_number, std::string & block)
@@ -270,8 +298,8 @@ void download_file::unregister_connection(const int & socket)
 	std::map<int, connection_special>::iterator iter = Connection_Special.find(socket);
 	if(iter != Connection_Special.end()){
 		std::deque<boost::uint64_t>::iterator RB_iter_cur, RB_iter_end;
-		RB_iter_cur = iter->second.requested_blocks.begin();
-		RB_iter_end = iter->second.requested_blocks.end();
+		RB_iter_cur = iter->second.latest_request.begin();
+		RB_iter_end = iter->second.latest_request.end();
 		while(RB_iter_cur != RB_iter_end){
 			Request_Generator.force_re_request(*RB_iter_cur);
 			++RB_iter_cur;

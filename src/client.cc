@@ -272,11 +272,11 @@ void client::main_thread()
 
 void client::reconnect_unfinished()
 {
-	std::vector<download_info> resumed_download;
-	DB_Download.initial_fill_buff(resumed_download);
+	std::vector<download_info> resume;
+	DB_Download.resume(resume);
 	std::vector<download_info>::iterator iter_cur, iter_end;
-	iter_cur = resumed_download.begin();
-	iter_end = resumed_download.end();
+	iter_cur = resume.begin();
+	iter_end = resume.end();
 	while(iter_cur != iter_end){
 		start_download(*iter_cur);
 		++iter_cur;

@@ -58,11 +58,11 @@ void server_index::scan_hashes()
 				logger::debug(LOGGER_P1,"found directory: ",directory_iter->leaf(),", in hash directory");
 			}else{
 				if(directory_iter->leaf().length() != sha::HEX_HASH_LENGTH){
-					//file not a hash tree, it may be "upside_down", "rightside_up", or <hash>_download
+					//file not a hash tree, it may be "upside_down" or "rightside_up" temporary files
 					continue;
 				}
 
-				if(!client_server_bridge::is_downloading(directory_iter->leaf()) && !DB_Share.hash_exists(directory_iter->leaf())){
+				if(client_server_bridge::is_downloading(directory_iter->leaf()) == client_server_bridge::NOT_DOWNLOADING && !DB_Share.hash_exists(directory_iter->leaf())){
 					std::remove((global::HASH_DIRECTORY+directory_iter->leaf()).c_str());
 				}
 

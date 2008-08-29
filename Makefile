@@ -10,6 +10,10 @@ all: src
 src:
 	$(MAKE) -j$(CPU_COUNT) -C src
 
+.PHONY: loc
+loc:
+	$(MAKE) -C src loc
+
 .PHONY: clean
 clean:
 	$(MAKE) -j$(CPU_COUNT) -C src clean

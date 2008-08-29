@@ -105,6 +105,20 @@ void DB_share::lookup_path_call_back(int & columns_retrieved, char ** query_resp
 	*lookup_path_size_ptr = size;
 }
 
+bool DB_share::lookup_hash(const std::string & hash, std::string & file_path)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	lookup_hash_entry_exists = false;
+	lookup_hash_file_path = &file_path;
+
+	std::ostringstream query;
+	query << "SELECT path FROM share WHERE hash = '" << hash << "'";
+	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), lookup_hash_1_call_back_wrapper, (void *)this, NULL) != 0){
+		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
+	}
+	return lookup_hash_entry_exists;
+}
+
 bool DB_share::lookup_hash(const std::string & hash, boost::uint64_t & file_size, std::string & file_path)
 {
 	boost::mutex::scoped_lock lock(Mutex);
@@ -113,22 +127,26 @@ bool DB_share::lookup_hash(const std::string & hash, boost::uint64_t & file_size
 	lookup_hash_file_path = &file_path;
 
 	std::ostringstream query;
-	query << "SELECT size, path FROM share WHERE hash LIKE '" << hash << "' LIMIT 1";
-	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), lookup_hash_call_back_wrapper, (void *)this, NULL) != 0){
+	query << "SELECT size, path FROM share WHERE hash = '" << hash << "'";
+	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), lookup_hash_2_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
 	return lookup_hash_entry_exists;
 }
 
-void DB_share::lookup_hash_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
+void DB_share::lookup_hash_1_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
 	lookup_hash_entry_exists = true;
+	*lookup_hash_file_path = query_response[0];
+}
 
+void DB_share::lookup_hash_2_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
+{
+	lookup_hash_entry_exists = true;
 	std::istringstream size_iss(query_response[0]);
 	boost::uint64_t size;
 	size_iss >> size;
 	*lookup_hash_file_size = size;
-
 	*lookup_hash_file_path = query_response[1];
 }
 

@@ -8,7 +8,7 @@ download_factory::download_factory()
 download_file * download_factory::start_file(download_hash_tree * DHT, std::list<download_connection> & servers)
 {
 	std::string file_path;
-	if(!DB_Download.get_file_path(DHT->hash(), file_path)){
+	if(!DB_Download.lookup_hash(DHT->hash(), file_path)){
 		logger::debug(LOGGER_P1,"download ",DHT->download_file_name()," not found in database");
 	}
 	download_file * Download = new download_file(

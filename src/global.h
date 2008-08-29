@@ -69,6 +69,7 @@ namespace global
 	const int DH_KEY_SIZE = 64;          //size of key exchanged with diffie-hellman (bytes)
 	const int PIPELINE_SIZE = 16;        //how many pre-requests can be done
 	const int RE_REQUEST = 16;           //seconds before a file block is re-requested
+	const int P_WAIT_TIMEOUT = 8;        //when a client download_file/download_hash_tree receives a P_WAIT it will not make any requests for this long
 	const int RE_REQUEST_FINISHING = 4;  //seconds before a file block is re-requested when download is in finishing phase (last block requested)
 	const int P2P_PORT = 6969;           //port client connects to and server receives on
 	const int GUI_TICK = 100;            //time(in milliseconds) between gui updates
@@ -84,6 +85,7 @@ namespace global
 
 	//protocol commands client <-> server
 	const char P_ERROR = (char)0;
+	const int P_ERROR_SIZE = 1;
 
 	//protocol commands client -> server
 	const char P_REQUEST_SLOT_FILE = (char)1;
@@ -112,7 +114,6 @@ namespace global
 	response. It is also the size that files are hashed in.
 
 	WARNING: FILE_BLOCK_SIZE % sha::HASH_LENGTH must equal 0
-	         FILE_BLOCK_SIZE % 2 must equal 0
 	*/
 	const int FILE_BLOCK_SIZE = P_BLOCK_SIZE - 1;
 }

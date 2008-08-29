@@ -26,17 +26,23 @@ public:
 	DB_download();
 
 	/*
-	get_file_path      - sets path to file that corresponds to hash
-	                     returns true if record found else false
-	initial_fill_buff  - returns download information for all in progress downloads
+	Functions to modify the database:
 	start_download     - adds a download to the database if it doesn't already exist
 	                     returns true if download could be added, else false
 	terminate_download - removes the download entry from the database
 	*/
-	bool get_file_path(const std::string & hash, std::string & path);
-	void initial_fill_buff(std::vector<download_info> & resumed_download);
+
 	bool start_download(const download_info & info);
 	void terminate_download(const std::string & hash);
+
+	/*
+	Lookup functions:
+	lookup_<*>  - look up information by <*>
+	resume      - fill the vector with download information (used to resume downloads on program start)
+	*/
+
+	bool lookup_hash(const std::string & hash, std::string & path);
+	void resume(std::vector<download_info> & resume_DL);
 
 private:
 	sqlite3 * sqlite3_DB;
@@ -47,24 +53,24 @@ private:
 	*/
 	bool is_downloading(const std::string & hash);
 
-	void get_file_path_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
-	static int get_file_path_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
+	void lookup_hash_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
+	static int lookup_hash_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
 	{
 		DB_download * this_class = (DB_download *)object_ptr;
-		this_class->get_file_path_call_back(columns_retrieved, query_response, column_name);
+		this_class->lookup_hash_call_back(columns_retrieved, query_response, column_name);
 		return 0;
 	}
-	bool get_file_path_entry_exits;
-	std::string get_file_path_file_name;
+	bool lookup_hash_entry_exits;
+	std::string lookup_hash_file_name;
 
-	void initial_fill_buff_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
-	static int initial_fill_buff_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
+	void resume_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
+	static int resume_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
 	{
 		DB_download * this_class = (DB_download *)object_ptr;
-		this_class->initial_fill_buff_call_back(columns_retrieved, query_response, column_name);
+		this_class->resume_call_back(columns_retrieved, query_response, column_name);
 		return 0;
 	}	
-	std::vector<download_info> * initial_fill_buff_resumed_download_ptr;
+	std::vector<download_info> * resume_resume_ptr;
 
 	static int is_downloading_call_back(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
 	{

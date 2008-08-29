@@ -86,6 +86,11 @@ all: $(OBJECTS) $(SERVER_OBJECTS) subdirs
 	$(CXX) -o p2p $(OBJECTS) $(LIBTOMMATH_OBJECT) $(SQLITE3_OBJECT) $(LINKER_OPTIONS)
 	$(CXX) -o p2p_server $(SERVER_OBJECTS) $(LIBTOMMATH_OBJECT) $(SQLITE3_OBJECT) $(SERVER_LINKER_OPTIONS)
 
+#print how many lines of code exist
+.PHONY: loc
+loc:
+	@echo lines of code: $(shell cat *.h *.cc Makefile |wc -l)
+
 .depend:
 	$(CXX) -MM *.cc > .depend
 

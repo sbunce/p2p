@@ -5,6 +5,7 @@
 #include <boost/thread/mutex.hpp>
 
 //custom
+#include "DB_download.h"
 #include "global.h"
 
 //std
@@ -15,6 +16,12 @@
 class client_server_bridge
 {
 public:
+	enum download_mode{
+		DOWNLOAD_HASH_TREE,
+		DOWNLOAD_FILE,
+		NOT_DOWNLOADING
+	};
+
 	/*
 	Every time the client receives a block for a file it will call this function
 	to update what blocks are available for downloading.
@@ -22,7 +29,7 @@ public:
 	static void download_block_received(const std::string & hash, const boost::uint64_t & block_number)
 	{
 		init();
-		((client_server_bridge *)Client_Server_Bridge)->download_block_receieved_priv(hash, block_number);
+		Client_Server_Bridge->download_block_receieved_priv(hash, block_number);
 	}
 
 	/*
@@ -32,7 +39,7 @@ public:
 	static void finish_download(const std::string & hash)
 	{
 		init();
-		((client_server_bridge *)Client_Server_Bridge)->finish_download_priv(hash);
+		Client_Server_Bridge->finish_download_priv(hash);
 	}
 
 	/*
@@ -44,16 +51,35 @@ public:
 	static bool is_available(const std::string & hash, const boost::uint64_t & block_number)
 	{
 		init();
-		return ((client_server_bridge *)Client_Server_Bridge)->is_available_priv(hash, block_number);
+		return Client_Server_Bridge->is_available_priv(hash, block_number);
 	}
 
 	/*
-	Returns true if a file corresponding to hash is currently downloading.
+	Returns true if a file or hash tree corresponding to hash is currently downloading.
 	*/
-	static bool is_downloading(const std::string & hash)
+	static download_mode is_downloading(const std::string & hash)
 	{
 		init();
-		return ((client_server_bridge *)Client_Server_Bridge)->is_downloading_priv(hash);
+		return Client_Server_Bridge->is_downloading_priv(hash);
+	}
+
+	/*
+	If hash downloading returns true and sets path to path of hash tree file.
+	*/
+	static bool is_downloading_hash(const std::string & hash, std::string & path)
+	{
+		init();
+		return Client_Server_Bridge->is_downloading_hash_priv(hash, path);
+	}
+
+	/*
+	If file downloading returns true and sets path to path of file.
+	PERFORMANCE: A database call is in this function.
+	*/
+	static bool is_downloading_file(const std::string & hash, std::string & path)
+	{
+		init();
+		return Client_Server_Bridge->is_downloading_file_priv(hash, path);
 	}
 
 	/*
@@ -64,7 +90,7 @@ public:
 	static void start_download(const std::string & hash)
 	{
 		init();
-		((client_server_bridge *)Client_Server_Bridge)->start_download_priv(hash);
+		Client_Server_Bridge->start_download_priv(hash);
 	}
 
 	/*
@@ -74,7 +100,7 @@ public:
 	static void transition_download(const std::string & hash)
 	{
 		init();
-		((client_server_bridge *)Client_Server_Bridge)->transition_download_priv(hash);
+		Client_Server_Bridge->transition_download_priv(hash);
 	}
 
 private:
@@ -83,12 +109,9 @@ private:
 	//init() must be called at the top of every public function
 	static void init()
 	{
-		//double checked lock to avoid locking overhead
-		if(Client_Server_Bridge == NULL){ //unsafe comparison, the hint
-			boost::mutex::scoped_lock lock(init_mutex);
-			if(Client_Server_Bridge == NULL){ //safe comparison
-				Client_Server_Bridge = new client_server_bridge();
-			}
+		boost::mutex::scoped_lock lock(init_mutex);
+		if(Client_Server_Bridge == NULL){
+			Client_Server_Bridge = new client_server_bridge();
 		}
 	}
 
@@ -98,11 +121,6 @@ private:
 
 	//mutex for functions called by public static functions
 	boost::mutex Mutex;
-
-	enum download_mode{
-		DOWNLOAD_HASH_TREE,
-		DOWNLOAD_FILE
-	};
 
 	class download_state
 	{
@@ -192,8 +210,12 @@ private:
 	void download_block_receieved_priv(const std::string & hash, const boost::uint64_t & block_number);
 	void finish_download_priv(const std::string & hash);
 	bool is_available_priv(const std::string & hash, const boost::uint64_t & block_number);
-	bool is_downloading_priv(const std::string & hash);
+	download_mode is_downloading_priv(const std::string & hash);
+	bool is_downloading_hash_priv(const std::string & hash, std::string & path);
+	bool is_downloading_file_priv(const std::string & hash, std::string & path);
 	void start_download_priv(const std::string & hash);
 	void transition_download_priv(const std::string & hash);
+
+	DB_download DB_Download;
 };
 #endif

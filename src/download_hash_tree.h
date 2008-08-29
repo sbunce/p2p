@@ -66,12 +66,11 @@ private:
 	*/
 	bool download_complete;
 
-	std::string root_hash_hex;          //root hash of the hash tree downloading
-	std::string root_hash_hex_download; //name of hash tree when downloading (renamed to root_hash_hex when finished)
-	std::string hash_name;              //the name of this hash
-	boost::uint64_t hash_tree_count;    //number of hashes in the tree
-	boost::uint64_t hash_block_count;   //number of hash blocks
-	boost::uint64_t hashes_per_block;   //number of hashes in a hash block
+	std::string root_hash_hex;        //root hash of the hash tree downloading
+	std::string hash_name;            //the name of this hash
+	boost::uint64_t hash_tree_count;  //number of hashes in the tree
+	boost::uint64_t hash_block_count; //number of hash blocks
+	boost::uint64_t hashes_per_block; //number of hashes in a hash block
 
 	/*
 	When the file has finished downloading this will be set to true to indicate
@@ -99,7 +98,8 @@ private:
 			slot_ID_requested(false),
 			slot_ID_received(false),
 			close_slot_sent(false),
-			abusive(false)
+			abusive(false),
+			wait_activated(false)
 		{
 
 		}
@@ -145,6 +145,15 @@ private:
 		known that the replacement block was good.
 		*/
 		std::set<boost::uint64_t> requested_blocks;
+
+		/*
+		If wait_activated is true then the server has sent a P_WAIT to indicate it
+		doesn't yet have the block requested. The wait_start variable indicates
+		when the server sent the P_WAIT. New requests of this server should not be
+		made until global::P_WAIT_TIMEOUT seconds have passed.
+		*/
+		bool wait_activated;
+		time_t wait_start;
 	};
 
 	//socket number mapped to connection special pointer

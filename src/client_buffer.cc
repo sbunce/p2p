@@ -51,7 +51,7 @@ void client_buffer::recv_buff_append(char * buff, const int & n_bytes)
 		}
 
 		if(remote_result.size() > global::DH_KEY_SIZE){
-			logger::debug(LOGGER_P1,"abusive server ", IP, " failed key negotation, too many bytes");
+			logger::debug(LOGGER_P1,IP," abusive, failed key negotation, too many bytes");
 			DB_blacklist::add(IP);
 		}
 
@@ -87,7 +87,15 @@ void client_buffer::post_recv()
 
 			if(iter_cur == iter_end){
 				//server sent unexpected command
-				logger::debug(LOGGER_P1,"abusive server ", IP, ", unexpected command");
+				std::cout << "expected ";
+				iter_cur = Pipeline.front().expected.begin();
+				iter_end = Pipeline.front().expected.end();
+				while(iter_cur != iter_end){
+					std::cout << (int)(unsigned char)iter_cur->first << ";";
+					++iter_cur;
+				}
+				std::cout << "\n";
+				logger::debug(LOGGER_P1,"abusive ",IP,", unexpected command ", (int)(unsigned char)recv_buff[0]);
 				DB_blacklist::add(IP);
 				return;
 			}else{

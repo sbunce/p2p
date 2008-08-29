@@ -1,28 +1,13 @@
 TODO
 
--The new logic to delete orphan hashes will delete hashes for downloading files.
-When download running have server_index::scan_share check with client_server_bridge
-to see if hash belongs to running download. When download finishes add an entry
-to share that points at the file in the download directory. Scan share should
-remove the hash and database entry when the file is moved.
+-Socket resuse doesn't seem to be working on the server. Suspect winsock hack.
 
--Make a class called client_server_bridge that's a singleton which keeps track of
-what files are downloading and what blocks are available. Also, the
-upload/download speed calculators can be contained within this class. This will
-solve problem when serving partially downloaded files. There might be blocks that
-exist on the HDD that are not actually recieved (when block beyond EOF is
-received and file is padded with NULLs).
+-Size of file that's uploading/downloading at the same time is messed up.
 
--Have a possible response to a P_SEND_BLOCK be a P_WAIT, which should trigger a
-8 second wait before attempting another P_SEND_BLOCK request. It should also
-trigger something with existing P_SEND_BLOCK requests. Should they be
-re_requested immediately from other servers? There is a problem with un-expecting
-responses. What about having a new command server->client that tells the client
-buffer to un-expect? The server should send P_WAIT when the client is downloading
-a hash tree (check for <hash>_download).
-
--The total upload speed should include requests the client is making. Not just
-server upload. Make a singleton for a speed_calculator for up_down speeds.
+-Total upload/download needs to be kept track of in client_server_bridge. Think
+about having a minimum speed on the client/server upload/download (like 1kB/s).
+If there's no minimum it could be possible for the client to starve the server
+or vise versa.
 
 -Need to make a limit on the client to not request more than 256 concurrent slots.
 

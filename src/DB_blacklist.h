@@ -29,14 +29,14 @@ public:
 	{
 		init();
 		++blacklist_state;
-		((DB_blacklist *)DB_Blacklist)->add_worker(IP);
+		DB_Blacklist->add_worker(IP);
 	}
 
 	//returns true if the IP is blacklisted
 	static bool is_blacklisted(const std::string & IP)
 	{
 		init();
-		return ((DB_blacklist *)DB_Blacklist)->is_blacklisted_worker(IP);
+		return DB_Blacklist->is_blacklisted_worker(IP);
 	}
 
 	/*
@@ -69,12 +69,9 @@ private:
 	//init() must be called at the top of every public function
 	static void init()
 	{
-		//double checked lock to avoid locking overhead
-		if(DB_Blacklist == NULL){ //unsafe comparison, the hint
-			boost::mutex::scoped_lock lock(init_mutex);
-			if(DB_Blacklist == NULL){ //threadsafe comparison
-				DB_Blacklist = new DB_blacklist();
-			}
+		boost::mutex::scoped_lock lock(init_mutex);
+		if(DB_Blacklist == NULL){
+			DB_Blacklist = new DB_blacklist();
 		}
 	}
 

@@ -12,6 +12,7 @@
 #include "convert.h"
 #include "client_server_bridge.h"
 #include "DB_blacklist.h"
+#include "DB_share.h"
 #include "download.h"
 #include "global.h"
 #include "hash_tree.h"
@@ -82,6 +83,12 @@ private:
 	volatile bool stop_threads; //if set to true hash checking will stop early
 
 	/*
+	If download is terminated early the downloaded file will not be added to the
+	share.
+	*/
+	bool canceled;
+
+	/*
 	These variables are only to be used by the hash_check() thread.
 	*/
 	std::string thread_root_hash_hex;
@@ -120,7 +127,8 @@ private:
 			slot_ID_requested(false),
 			slot_ID_received(false),
 			close_slot_sent(false),
-			abusive(false)
+			abusive(false),
+			wait_activated(false)
 		{
 
 		}
@@ -151,7 +159,16 @@ private:
 		When new requests are made they should be pushed on to the back of
 		latest_request.
 		*/
-		std::deque<boost::uint64_t> requested_blocks;
+		std::deque<boost::uint64_t> latest_request;
+
+		/*
+		If wait_activated is true then the server has sent a P_WAIT to indicate it
+		doesn't yet have the block requested. The wait_start variable indicates
+		when the server sent the P_WAIT. New requests of this server should not be
+		made until global::P_WAIT_TIMEOUT seconds have passed.
+		*/
+		bool wait_activated;
+		time_t wait_start;
 	};
 
 	//socket number mapped to connection special pointer
@@ -164,6 +181,7 @@ private:
 	void hash_check();
 	void write_block(boost::uint64_t block_number, std::string & block);
 
+	DB_share DB_Share;
 	request_generator Request_Generator;
 	hash_tree Hash_Tree;
 };

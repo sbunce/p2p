@@ -6,6 +6,7 @@
 
 //custom
 #include "convert.h"
+#include "client_server_bridge.h"
 #include "DB_blacklist.h"
 #include "DB_share.h"
 #include "encryption.h"
@@ -64,13 +65,14 @@ public:
 	{
 		boost::mutex::scoped_lock lock(Mutex);
 		std::map<int, server_buffer *>::iterator iter = Server_Buffer.find(socket_FD);
-		assert(iter != Server_Buffer.end());
-		if(!iter->second->send_buff.empty()){
-			//send_buff contains data, decrement send_pending
-			--send_pending;
+		if(iter != Server_Buffer.end()){
+			if(!iter->second->send_buff.empty()){
+				//send_buff contains data, decrement send_pending
+				--send_pending;
+			}
+			delete iter->second;
+			Server_Buffer.erase(iter);
 		}
-		delete iter->second;
-		Server_Buffer.erase(iter);
 	}
 
 	/*
@@ -149,11 +151,18 @@ private:
 	*/
 	static volatile int send_pending;
 
+	//main send/recv buffers
 	std::string recv_buff;
 	std::string send_buff;
 
+	//socket and IP this server_buffer instantiation is for
 	int socket_FD;
 	std::string IP;
+
+	enum slot_type{
+		SLOT_HASH_TREE,
+		SLOT_FILE
+	};
 
 	class slot_element
 	{
@@ -161,17 +170,20 @@ private:
 		slot_element(
 			const std::string & hash_in,
 			const boost::uint64_t & size_in,
-			const std::string & path_in
+			const std::string & path_in,
+			const slot_type & Slot_Type_in
 		):
 			hash(hash_in),
 			size(size_in),
 			path(path_in),
+			Slot_Type(Slot_Type_in),
 			percent_complete(0)
 		{
 			assert(path.find_last_of("/") != std::string::npos);
 			name = path.substr(path.find_last_of("/")+1);
 		}
 
+		slot_type Slot_Type;  //what type of slot this is
 		std::string hash;
 		boost::uint64_t size;
 		std::string path;     //path of file associated with slot
@@ -198,17 +210,18 @@ private:
 	create_slot_file             - create a download slot for a file
 	                               returns true if slot successfully created, else false
 	current_uploads              - adds upload information to the info vector
-	path                         - sets path to uploading file path, returns false if slot invalid, else true
+	get_slot_element             - returns slot element associated with slot ID, returns NULL if bad slot
 	update_slot_percent_complete - updates the percentage complete an upload is
 	update_slot_speed            - updates speed for the upload the corresponds to the slot_ID
 	*/
 	void close_slot(const std::string & request);
-	bool create_slot(char & slot_ID, const std::string & hash, const boost::uint64_t & size, const std::string & path);
+	bool create_slot(char & slot_ID, const std::string & hash, const boost::uint64_t & size, const std::string & path, const slot_type ST);
 	void uploads(std::vector<upload_info> & info);
-	bool path(const char & slot_ID, std::string & path);
+	slot_element * get_slot_element(const char & slot_ID);
 	void process(char * buff, const int & n_bytes);
 	void request_slot_hash(const std::string & request, std::string & send);
 	void request_slot_file(const std::string & request, std::string & send);
+	void make_slot_file(const std::string & root_hash_hex, const boost::uint64_t & size, const std::string & path, std::string & send);
 	void send_block(const std::string & request, std::string & send);
 	void update_slot_percent_complete(char slot_ID, const boost::uint64_t & block_number);
 	void update_slot_speed(char slot_ID, unsigned int bytes);

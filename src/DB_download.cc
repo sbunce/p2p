@@ -16,41 +16,41 @@ DB_download::DB_download()
 	}
 }
 
-bool DB_download::get_file_path(const std::string & hash, std::string & path)
+bool DB_download::lookup_hash(const std::string & hash, std::string & path)
 {
 	boost::mutex::scoped_lock lock(Mutex);
-	get_file_path_entry_exits = false;
+	lookup_hash_entry_exits = false;
 
 	//locate the record
 	std::ostringstream query;
 	query << "SELECT name FROM download WHERE hash = '" << hash << "' LIMIT 1";
-	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), get_file_path_call_back_wrapper, (void *)this, NULL) != 0){
+	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), lookup_hash_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
-	if(get_file_path_entry_exits){
-		path = global::DOWNLOAD_DIRECTORY + get_file_path_file_name;
+	if(lookup_hash_entry_exits){
+		path = global::DOWNLOAD_DIRECTORY + lookup_hash_file_name;
 		return true;
 	}else{
 		logger::debug(LOGGER_P1,"download record not found");
 	}
 }
 
-void DB_download::get_file_path_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
+void DB_download::lookup_hash_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
-	get_file_path_entry_exits = true;
-	get_file_path_file_name.assign(query_response[0]);
+	lookup_hash_entry_exits = true;
+	lookup_hash_file_name.assign(query_response[0]);
 }
 
-void DB_download::initial_fill_buff(std::vector<download_info> & resumed_download)
+void DB_download::resume(std::vector<download_info> & resume_DL)
 {
 	boost::mutex::scoped_lock lock(Mutex);
-	initial_fill_buff_resumed_download_ptr = &resumed_download;
-	if(sqlite3_exec(sqlite3_DB, "SELECT * FROM download", initial_fill_buff_call_back_wrapper, (void *)this, NULL) != 0){
+	resume_resume_ptr = &resume_DL;
+	if(sqlite3_exec(sqlite3_DB, "SELECT * FROM download", resume_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
 }
 
-void DB_download::initial_fill_buff_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
+void DB_download::resume_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
 	namespace fs = boost::filesystem;
 
@@ -66,7 +66,7 @@ void DB_download::initial_fill_buff_call_back(int & columns_retrieved, char ** q
 		std::istringstream size_iss(query_response[2]);
 		boost::uint64_t size;
 		size_iss >> size;
-		initial_fill_buff_resumed_download_ptr->push_back(
+		resume_resume_ptr->push_back(
 			download_info(
 				query_response[0], //hash
 				query_response[1], //name
@@ -74,14 +74,14 @@ void DB_download::initial_fill_buff_call_back(int & columns_retrieved, char ** q
 			)
 		);
 
-		initial_fill_buff_resumed_download_ptr->back().resumed = true;
+		resume_resume_ptr->back().resumed = true;
 
 		//get servers
 		char delims[] = ";";
 		char * result = NULL;
 		result = strtok(query_response[3], delims);
 		while(result != NULL){
-			initial_fill_buff_resumed_download_ptr->back().IP.push_back(result);
+			resume_resume_ptr->back().IP.push_back(result);
 			result = strtok(NULL, delims);
 		}
 	}else{

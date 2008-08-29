@@ -17,7 +17,6 @@ download_hash_tree::download_hash_tree(
 
 	client_server_bridge::start_download(root_hash_hex);
 
-	root_hash_hex_download = root_hash_hex + "_download";
 	hash_name = _download_file_name + " HASH";
 	hash_tree_count = hash_tree::hash_tree_count(hash_tree::file_hash_count(_download_file_size));
 	hashes_per_block = global::FILE_BLOCK_SIZE / sha::HASH_LENGTH;
@@ -26,44 +25,38 @@ download_hash_tree::download_hash_tree(
 		++hash_block_count;
 	}
 
-	/*
-	If the hash tree is complete set the download_hash_tree to be complete.
-	*/
-	std::fstream fin((global::HASH_DIRECTORY+root_hash_hex).c_str(), std::ios::in);
+	//check to see if the hash tree exists
+	std::fstream fin((global::HASH_DIRECTORY+root_hash_hex).c_str(), std::ios::in | std::ios::ate);
 	if(fin.is_open()){
-		download_complete = true;
-	}else{
 		/*
-		Create empty file for the downloading hash tree, if it doesn't already exist.
-		*/
-		bool hash_tree_download_exists;
-		std::fstream fin((global::HASH_DIRECTORY+root_hash_hex_download).c_str(), std::ios::in);
-		if(fin.is_open()){
-			hash_tree_download_exists = true;
-			fin.close();
-		}else{
-			hash_tree_download_exists = false;
-			fin.open((global::HASH_DIRECTORY+root_hash_hex_download).c_str(), std::ios::out);
-			fin.close();
-		}
+		Hash tree exists, check size to see if hash tree complete. If hash tree file
+		is the right size assume hash tree is complete.
 
-		/*
-		Check the hash tree to see if it's complete/corrupt/missing blocks. Resume
-		downloading the hash tree or mark the download as complete if the hash tree
-		is complete.
+		Is a more advanced way of determining this needed? If the program is abnormally
+		terminated while checking a corrupt tree this could fail.
 		*/
-		if(hash_tree_download_exists){
+		boost::uint64_t size = fin.tellg();
+		if(size == sha::HASH_LENGTH * hash_tree_count){
+			download_complete = true;
+		}
+		fin.close();
+	}
+
+	if(!download_complete){
+		fin.open((global::HASH_DIRECTORY+root_hash_hex).c_str(), std::ios::in);
+		if(fin.is_open()){
+			//hash tree exists but is incomplete, hash check to find what block to start on
+			fin.close();
 			std::pair<boost::uint64_t, boost::uint64_t> bad_hash;
-			if(Hash_Tree.check_hash_tree(root_hash_hex_download, root_hash_hex, hash_tree_count, bad_hash)){
+			if(Hash_Tree.check_hash_tree(root_hash_hex, root_hash_hex, hash_tree_count, bad_hash)){
 				//determine what hash_block the missing/bad hash falls within
 				boost::uint64_t start_hash_block = bad_hash.first / global::FILE_BLOCK_SIZE;
 				logger::debug(LOGGER_P1,"partial or corrupt hash tree found, resuming on hash block ",start_hash_block);
 				Request_Generator.init(start_hash_block, hash_block_count - 1, global::RE_REQUEST);
-			}else{
-				//complete hash tree that hasn't been renamed yet
-				download_complete = true;
 			}
 		}else{
+			//hash tree does not exist yet
+			fin.open((global::HASH_DIRECTORY+root_hash_hex).c_str(), std::ios::out);
 			Request_Generator.init(0, hash_block_count - 1, global::RE_REQUEST);
 		}
 	}
@@ -71,10 +64,7 @@ download_hash_tree::download_hash_tree(
 
 download_hash_tree::~download_hash_tree()
 {
-	if(download_complete && !_canceled){
-		//rename completed hash tree so the server can use it
-		std::rename((global::HASH_DIRECTORY+root_hash_hex_download).c_str(), (global::HASH_DIRECTORY+root_hash_hex).c_str());
-	}
+
 }
 
 const bool & download_hash_tree::canceled()
@@ -126,12 +116,12 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 		return download::NO_REQUEST;
 	}
 
-	if(!conn->slot_ID_requested){
+	if(!conn->slot_ID_requested && !close_slots){
 		//slot_ID not yet obtained from server
 		request = global::P_REQUEST_SLOT_HASH + convert::hex_to_binary(root_hash_hex);
 		conn->slot_ID_requested = true;
 		expected.push_back(std::make_pair(global::P_SLOT_ID, global::P_SLOT_ID_SIZE));
-		expected.push_back(std::make_pair(global::P_ERROR, 1));
+		expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
 		return download::BINARY_MODE;
 	}else if(!conn->slot_ID_received){
 		//slot_ID requested but not yet received
@@ -165,6 +155,17 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 		return download::NO_REQUEST;
 	}
 
+	if(conn->wait_activated){
+		//check to see if wait is completed
+		if(conn->wait_start + global::P_WAIT_TIMEOUT <= time(NULL)){
+			//timeout expired
+			conn->wait_activated = false;
+		}else{
+			//timeout not yet expired
+			return download::NO_REQUEST;
+		}
+	}
+
 	if(Request_Generator.request(conn->latest_request)){
 		//no request to be made at the moment
 		request += global::P_SEND_BLOCK;
@@ -180,7 +181,8 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 			size = global::P_BLOCK_SIZE;
 		}
 		expected.push_back(std::make_pair(global::P_BLOCK, size));
-		expected.push_back(std::make_pair(global::P_ERROR, 1));
+		expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
+		expected.push_back(std::make_pair(global::P_WAIT, global::P_WAIT_SIZE));
 		return download::BINARY_MODE;
 	}
 
@@ -210,7 +212,7 @@ void download_hash_tree::response(const int & socket, std::string block)
 	}else if(block[0] == global::P_BLOCK){
 		//a block was received
 		block.erase(0, 1); //trim command
-		Hash_Tree.write_hash(root_hash_hex_download, conn->latest_request.front()*hashes_per_block, block);
+		Hash_Tree.write_hash(root_hash_hex, conn->latest_request.front()*hashes_per_block, block);
 		client_server_bridge::download_block_received(root_hash_hex, conn->latest_request.front());
 		Request_Generator.fulfil(conn->latest_request.front());
 		conn->latest_request.pop_front();
@@ -218,7 +220,7 @@ void download_hash_tree::response(const int & socket, std::string block)
 		if(Request_Generator.complete()){
 			//check for bad blocks in tree
 			std::pair<boost::uint64_t, boost::uint64_t> bad_hash;
-			if(Hash_Tree.check_hash_tree(root_hash_hex_download, root_hash_hex, hash_tree_count, bad_hash)){
+			if(Hash_Tree.check_hash_tree(root_hash_hex, root_hash_hex, hash_tree_count, bad_hash)){
 				//bad block found, find server that sent it
 				boost::uint64_t bad_block = bad_hash.first / hashes_per_block;
 				std::map<int, connection_special>::iterator CS_iter_cur, CS_iter_end;
@@ -238,9 +240,17 @@ void download_hash_tree::response(const int & socket, std::string block)
 				close_slots = true;
 			}
 		}
+	}else if(block[0] == global::P_WAIT){
+		//server doesn't yet have the requested block, immediately re_request block
+		Request_Generator.force_re_request(conn->latest_request.front());
+		conn->latest_request.pop_front();
+
+		//set up wait
+		conn->wait_activated = true;
+		conn->wait_start = time(NULL);
 	}else if(block[0] == global::P_ERROR){
 		logger::debug(LOGGER_P1,"server ",conn->IP," does not have hash tree");
-//DEBUG, server needs to be removed from search table in DB
+std::cout << "REMOVAL FROM DB DUE TO P_ERROR NOT IMPLEMENTED IN download_hash_tree\n";
 		exit(1);
 	}
 }
