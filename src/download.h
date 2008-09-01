@@ -56,7 +56,7 @@ public:
 	stop     - this must prepare the download for early termination
 	*/
 	virtual bool complete() = 0;
-	virtual mode request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected) = 0;
+	virtual mode request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected, int & slots_used) = 0;
 	virtual void response(const int & socket, std::string block) = 0;
 	virtual void stop() = 0;
 

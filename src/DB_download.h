@@ -40,8 +40,8 @@ public:
 	lookup_<*>  - look up information by <*>
 	resume      - fill the vector with download information (used to resume downloads on program start)
 	*/
-
 	bool lookup_hash(const std::string & hash, std::string & path);
+	bool lookup_hash(const std::string & hash, std::string & path, boost::uint64_t & size);
 	void resume(std::vector<download_info> & resume_DL);
 
 private:
@@ -53,15 +53,25 @@ private:
 	*/
 	bool is_downloading(const std::string & hash);
 
-	void lookup_hash_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
-	static int lookup_hash_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
+	//callback for path only
+	void lookup_hash_1_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
+	static int lookup_hash_1_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
 	{
 		DB_download * this_class = (DB_download *)object_ptr;
-		this_class->lookup_hash_call_back(columns_retrieved, query_response, column_name);
+		this_class->lookup_hash_1_call_back(columns_retrieved, query_response, column_name);
+		return 0;
+	}
+	//callback for both path and size
+	void lookup_hash_2_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
+	static int lookup_hash_2_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
+	{
+		DB_download * this_class = (DB_download *)object_ptr;
+		this_class->lookup_hash_2_call_back(columns_retrieved, query_response, column_name);
 		return 0;
 	}
 	bool lookup_hash_entry_exits;
-	std::string lookup_hash_file_name;
+	std::string * lookup_hash_path;
+	boost::uint64_t * lookup_hash_size;
 
 	void resume_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
 	static int resume_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)

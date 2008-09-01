@@ -58,14 +58,14 @@ bool client_server_bridge::is_downloading_hash_priv(const std::string & hash, st
 	}
 }
 
-bool client_server_bridge::is_downloading_file_priv(const std::string & hash, std::string & path)
+bool client_server_bridge::is_downloading_file_priv(const std::string & hash, std::string & path, boost::uint64_t & size)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	std::map<std::string, download_state>::iterator iter = Download.find(hash);
 	if(iter == Download.end()){
 		return false;
 	}else{
-		DB_Download.lookup_hash(hash, path);
+		DB_Download.lookup_hash(hash, path, size);
 		return true;
 	}
 }

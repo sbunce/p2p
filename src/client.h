@@ -21,7 +21,6 @@
 #include "download_factory.h"
 #include "global.h"
 #include "number_generator.h"
-#include "resolve.h"
 #include "speed_calculator.h"
 
 //networking
@@ -116,6 +115,7 @@ private:
 	reconnect_unfinished    - called by main_thread() to resume unfinished downloads
 	                          called before main_thread accesses shared objects so no mutex needed
 	remove_complete         - removes downloads that are complete(or stopped)
+	remove_empty            - remove any empty client_buffers as they are no longer needed
 	start_download_process  - starts a download added by start_download()
 	start_pending_downloads - called by main_thread() to start downloads added by start_download()
 	transition_download     - passes terminating download to download_factory, starts downloads download_factory may return
@@ -126,6 +126,7 @@ private:
 	void main_thread();
 	void reconnect_unfinished();
 	void remove_complete();
+	void remove_empty();
 	void start_download_process(const download_info & info);
 	void start_pending_downloads();
 	void transition_download(download * Download_Stop);

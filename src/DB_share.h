@@ -39,9 +39,9 @@ public:
 	lookup_<*>  - look up information by <*>
 	*/
 	bool hash_exists(const std::string & hash);
-	bool lookup_path(const std::string & path, std::string & existing_hash, boost::uint64_t & existing_size);
-	bool lookup_hash(const std::string & hash, std::string & file_path);
-	bool lookup_hash(const std::string & hash, boost::uint64_t & file_size, std::string & file_path);
+	bool lookup_path(const std::string & path, std::string & hash, boost::uint64_t & size);
+	bool lookup_hash(const std::string & hash, std::string & path);
+	bool lookup_hash(const std::string & hash, std::string & path, boost::uint64_t & size);
 
 private:
 	sqlite3 * sqlite3_DB;
@@ -81,8 +81,8 @@ private:
 		return 0;
 	}
 	bool lookup_path_entry_exists;
-	std::string * lookup_path_hash_ptr;
-	boost::uint64_t * lookup_path_size_ptr;
+	std::string * lookup_path_hash;
+	boost::uint64_t * lookup_path_size;
 
 	//sets only lookup_hash_file_path
 	void lookup_hash_1_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
@@ -101,9 +101,7 @@ private:
 		return 0;
 	}
 	bool lookup_hash_entry_exists;
-	boost::uint64_t * lookup_hash_file_size;
-	std::string * lookup_hash_file_path;
-
-
+	std::string * lookup_hash_path;
+	boost::uint64_t * lookup_hash_size;
 };
 #endif

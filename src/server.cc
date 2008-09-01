@@ -223,8 +223,12 @@ void server::main_thread()
 	Reuse port if it's currently in use. It can take up to a minute for linux to
 	deallocate the port if this isn't used.
 	*/
-	bool yes = true;
+	#ifdef WIN32
 	if(setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (char *)&yes, sizeof(int)) == -1){
+	#else
+	int yes = 1;
+	if(setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1){
+	#endif
 		#ifdef WIN32
 		logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
 		#else
@@ -309,7 +313,7 @@ void server::main_thread()
 
 		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &read_FDS)){
-				if(FD_ISSET(listener, &read_FDS)){
+				if(socket_FD == listener){
 					//new client connected
 					new_connection(listener);
 				}else{
@@ -326,7 +330,7 @@ void server::main_thread()
 			}
 
 			//do not check for writes on listener
-			if(FD_ISSET(socket_FD, &write_FDS) && socket_FD != listener){
+			if(socket_FD != listener && FD_ISSET(socket_FD, &write_FDS)){
 				std::string * buff = &server_buffer::get_send_buff(socket_FD);
 				if(!buff->empty()){
 					send_limit = Speed_Calculator.rate_control(buff->size());

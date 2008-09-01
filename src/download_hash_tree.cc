@@ -106,7 +106,7 @@ unsigned int download_hash_tree::percent_complete()
 	}
 }
 
-download::mode download_hash_tree::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected)
+download::mode download_hash_tree::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected, int & slots_used)
 {
 	std::map<int, connection_special>::iterator iter = Connection_Special.find(socket);
 	assert(iter != Connection_Special.end());
@@ -118,8 +118,15 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 
 	if(!conn->slot_ID_requested && !close_slots){
 		//slot_ID not yet obtained from server
+		if(slots_used >= 255){
+			//the server has no free slots left, wait for one to free up
+			return download::NO_REQUEST;
+		}
+
+		//slot available, make slot request
 		request = global::P_REQUEST_SLOT_HASH + convert::hex_to_binary(root_hash_hex);
 		conn->slot_ID_requested = true;
+		++slots_used;
 		expected.push_back(std::make_pair(global::P_SLOT_ID, global::P_SLOT_ID_SIZE));
 		expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
 		return download::BINARY_MODE;
@@ -133,6 +140,7 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 		request += global::P_CLOSE_SLOT;
 		request += conn->slot_ID;
 		conn->close_slot_sent = true;
+		--slots_used;
 
 		//the download is complete when all servers have been sent a P_CLOSE_SLOT
 		bool unready_found = false;

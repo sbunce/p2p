@@ -48,7 +48,7 @@ public:
 	virtual const std::string name();
 	virtual unsigned int percent_complete();
 	virtual void register_connection(const download_connection & DC);
-	virtual download::mode request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected);
+	virtual download::mode request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected, int & slots_used);
 	virtual void response(const int & socket, std::string block);
 	virtual void stop();
 	virtual const boost::uint64_t size();

@@ -16,7 +16,7 @@ bool download_tracker::complete()
 	return download_complete;
 }
 
-download::mode download_tracker::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected)
+download::mode download_tracker::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected, int & slots_used)
 {
 	request = "T";
 	return download::TEXT_MODE;

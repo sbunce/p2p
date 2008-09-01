@@ -179,12 +179,12 @@ void server_buffer::request_slot_file(const std::string & request, std::string &
 	boost::uint64_t size;
 	std::string path;
 	std::string root_hash_hex = convert::binary_to_hex(request.substr(1,20));
-	if(DB_Share.lookup_hash(root_hash_hex, size, path)){
+	if(DB_Share.lookup_hash(root_hash_hex, path, size)){
 		//hash found in share, create slot
 		make_slot_file(root_hash_hex, size, path, send);
 	}else{
 		//file not in share, check to see if it's downloading
-		if(client_server_bridge::is_downloading_file(root_hash_hex, path)){
+		if(client_server_bridge::is_downloading_file(root_hash_hex, path, size)){
 			//file is downloading
 			make_slot_file(root_hash_hex, size, path, send);
 		}else{

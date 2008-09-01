@@ -14,6 +14,7 @@
 #include "DB_blacklist.h"
 #include "download_connection.h"
 #include "global.h"
+#include "resolve.h"
 #include "thread_pool.h"
 
 //networking

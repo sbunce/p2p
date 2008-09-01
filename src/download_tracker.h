@@ -22,7 +22,7 @@ public:
 
 	//documentation for virtual functions in abstract base class
 	virtual bool complete();
-	virtual download::mode request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected);
+	virtual download::mode request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected, int & slots_used);
 	virtual void response(const int & socket, std::string block);
 	virtual void stop();
 

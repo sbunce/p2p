@@ -189,7 +189,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 
 	//window properties
 	window->set_title(global::NAME);
-	window->resize(750, 550);
+	window->resize(750, 300);
 	window->set_modal(false);
 	window->property_window_position().set_value(Gtk::WIN_POS_CENTER_ON_PARENT);
 	window->set_resizable(true);

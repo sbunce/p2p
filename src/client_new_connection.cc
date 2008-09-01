@@ -87,7 +87,7 @@ void client_new_connection::block_concurrent(const download_connection & DC)
 		}
 		}
 
-		//if known being blocked wait 1/10 second then try again
+		//if known DC being blocked wait 1/10 second then try again
 		portable_sleep::ms(100);
 	}
 }
@@ -127,14 +127,6 @@ void client_new_connection::new_connection(download_connection DC)
 		return;
 	}
 
-	/*
-	Before making new connection check to see if a connection was already
-	created to this server.
-	*/
-	if(client_buffer::add_connection(DC)){
-		return;
-	}
-
 	sockaddr_in dest_addr;
 	DC.socket = socket(PF_INET, SOCK_STREAM, 0);
 	dest_addr.sin_family = AF_INET;
@@ -147,6 +139,15 @@ void client_new_connection::new_connection(download_connection DC)
 	#endif
 
 	memset(&(dest_addr.sin_zero),'\0',8);
+
+	/*
+	Before making new connection check to see if a connection was already
+	created to this server.
+	*/
+	if(client_buffer::add_connection(DC)){
+		return;
+	}
+
 	if(connect(DC.socket, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0){
 		logger::debug(LOGGER_P1,"connection to ",DC.IP," failed");
 		add_unresponsive(DC.IP);
@@ -156,28 +157,8 @@ void client_new_connection::new_connection(download_connection DC)
 			*FD_max = DC.socket;
 		}
 
-		if(client_buffer::new_connection(DC)){
-			/*
-			New connection was successfully registered with the client_buffer which
-			indicates the download is running normally. Add the socket to the master
-			socket set so the client_buffer instantiation for the socket can start
-			sending/receiving.
-			*/
-			FD_SET(DC.socket, master_FDS);
-
-		}else{
-			/*
-			The download was removed from client_buffer while connection was being
-			made. Disconnect the socket since it's not needed.
-			*/
-			#ifdef WIN32
-			closesocket(DC.socket);
-			#else
-			close(DC.socket);
-			#endif
-
-			--(*connections);
-		}
+		client_buffer::new_connection(DC);
+		FD_SET(DC.socket, master_FDS);
 	}
 }
 
@@ -192,6 +173,22 @@ void client_new_connection::process_DC(download_connection DC)
 
 void client_new_connection::queue(download_connection DC)
 {
+	#ifdef RESOLVE_HOST_NAMES
+	//resolve hostname
+	if(!resolve::hostname(DC.IP)){
+		logger::debug(LOGGER_P1,"failed to resolve ",DC.IP);
+		return;
+	}
+	#endif
+
+	/*
+	Before using a thread, check to see if a connection to this server already
+	exists. If it does add the download connection to it.
+	*/
+	if(client_buffer::add_connection(DC)){
+		return;
+	}
+
 	Thread_Pool.queue(boost::bind(&client_new_connection::process_DC, this, DC));
 }
 

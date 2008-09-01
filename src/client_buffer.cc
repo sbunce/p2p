@@ -23,6 +23,7 @@ client_buffer::client_buffer(
 	socket(socket_in),
 	IP(IP_in),
 	last_seen(time(NULL)),
+	slots_used(0),
 	exchange_key(true)
 {
 	recv_buff.reserve(global::C_MAX_SIZE*global::PIPELINE_SIZE);
@@ -86,15 +87,6 @@ void client_buffer::post_recv()
 			}
 
 			if(iter_cur == iter_end){
-				//server sent unexpected command
-				std::cout << "expected ";
-				iter_cur = Pipeline.front().expected.begin();
-				iter_end = Pipeline.front().expected.end();
-				while(iter_cur != iter_end){
-					std::cout << (int)(unsigned char)iter_cur->first << ";";
-					++iter_cur;
-				}
-				std::cout << "\n";
 				logger::debug(LOGGER_P1,"abusive ",IP,", unexpected command ", (int)(unsigned char)recv_buff[0]);
 				DB_blacklist::add(IP);
 				return;
@@ -174,7 +166,10 @@ void client_buffer::prepare_request()
 		std::string request;
 		pending_response PR;
 		PR.Download = *Download_iter;
-		PR.Mode = (*Download_iter)->request(socket, request, PR.expected);
+		PR.Mode = (*Download_iter)->request(socket, request, PR.expected, slots_used);
+
+		//make sure slots_used value is within valid range
+		assert(slots_used >= 0 || slots_used <= 255);
 
 		Encryption.crypt_send(request);
 

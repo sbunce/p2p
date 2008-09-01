@@ -47,7 +47,7 @@ public:
 		while(iter_cur != iter_end){
 			if(DC.IP == iter_cur->second->IP){
 				DC.socket = iter_cur->second->socket;             //set socket of the discovered client_buffer
-				DC.Download->register_connection(DC);            //register connection with download
+				DC.Download->register_connection(DC);             //register connection with download
 				iter_cur->second->register_download(DC.Download); //register download with client_buffer
 				return true;
 			}
@@ -240,17 +240,20 @@ public:
 	Returns true if the download associated with the DC was found, else false.
 	If the download is not found the connection can not be added.
 	*/
-	static bool new_connection(const download_connection & DC)
+	static void new_connection(const download_connection & DC)
 	{
 		boost::mutex::scoped_lock lock(Mutex);
+		Client_Buffer.insert(std::make_pair(DC.socket, new client_buffer(DC.socket, DC.IP)));
+
+		/*
+		Add download to new client_buffer. It's possible that the download was
+		ended before this function was called. When this happens there will be an
+		empty client_buffer that will get cleaned up by the client.
+		*/
 		std::set<download *>::iterator iter = Unique_Download.find(DC.Download);
-		if(iter == Unique_Download.end()){
-			return false;
-		}else{
-			Client_Buffer.insert(std::make_pair(DC.socket, new client_buffer(DC.socket, DC.IP)));
+		if(iter != Unique_Download.end()){
 			Client_Buffer[DC.socket]->register_download(DC.Download);
 			DC.Download->register_connection(DC);
-			return true;
 		}
 	}
 
@@ -371,6 +374,14 @@ private:
 	in the front of this queue.
 	*/
 	std::deque<pending_response> Pipeline;
+
+	/*
+	The number of slots in use by the downloads contained within this client_buffer.
+	This is passed to downloads by reference so they may modify it. Checks exist
+	in the client_buffer such that if this value goes negative or above 255 the
+	program will be terminated.
+	*/
+	int slots_used;
 
 	/*
 	recv_buff_append   - appends bytes to recv_buff and calls post_recv

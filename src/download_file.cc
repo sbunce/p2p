@@ -46,9 +46,8 @@ download_file::download_file(
 		last_block_size = file_size % global::FILE_BLOCK_SIZE + 1;
 	}
 
-	std::fstream fin((global::DOWNLOAD_DIRECTORY+file_name).c_str(), std::ios::in);
+	std::fstream fin((global::DOWNLOAD_DIRECTORY+file_name).c_str(), std::ios::in | std::ios::ate);
 	assert(fin.is_open());
-	fin.seekg(0, std::ios::end);
 	first_unreceived = fin.tellg() / global::FILE_BLOCK_SIZE;
 
 	//start re_requesting where the download left off
@@ -135,7 +134,7 @@ void download_file::register_connection(const download_connection & DC)
 	Connection_Special.insert(std::make_pair(DC.socket, connection_special(DC.IP)));
 }
 
-download::mode download_file::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected)
+download::mode download_file::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected, int & slots_used)
 {
 	std::map<int, connection_special>::iterator iter = Connection_Special.find(socket);
 	assert(iter != Connection_Special.end());
@@ -147,8 +146,15 @@ download::mode download_file::request(const int & socket, std::string & request,
 
 	if(!conn->slot_ID_requested && !close_slots){
 		//slot_ID not yet obtained from server
+		if(slots_used >= 255){
+			//the server has no free slots left, wait for one to free up
+			return download::NO_REQUEST;
+		}
+
+		//slot available, make slot request
 		request = global::P_REQUEST_SLOT_FILE + convert::hex_to_binary(root_hash_hex);
 		conn->slot_ID_requested = true;
+		++slots_used;
 		expected.push_back(std::make_pair(global::P_SLOT_ID, global::P_SLOT_ID_SIZE));
 		expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
 		return download::BINARY_MODE;
@@ -165,6 +171,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 		request += global::P_CLOSE_SLOT;
 		request += conn->slot_ID;
 		conn->close_slot_sent = true;
+		--slots_used;
 		bool unready_found = false;
 		std::map<int, connection_special>::iterator iter_cur, iter_end;
 		iter_cur = Connection_Special.begin();
@@ -277,8 +284,8 @@ void download_file::stop()
 	}else{
 		close_slots = true;
 	}
-	stop_threads = true;
-	canceled = true;
+	stop_threads = true; //stop hash check thread if it's running
+	canceled = true;     //this download will not be added to share since it was cancelled
 }
 
 void download_file::write_block(boost::uint64_t block_number, std::string & block)

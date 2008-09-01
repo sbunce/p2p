@@ -1,15 +1,6 @@
 TODO
 
--Socket resuse doesn't seem to be working on the server. Suspect winsock hack.
-
--Size of file that's uploading/downloading at the same time is messed up.
-
--Total upload/download needs to be kept track of in client_server_bridge. Think
-about having a minimum speed on the client/server upload/download (like 1kB/s).
-If there's no minimum it could be possible for the client to starve the server
-or vise versa.
-
--Need to make a limit on the client to not request more than 256 concurrent slots.
+-Make download info open in tab, not new window.
 
 
 WINDOWS PORTABILITY
@@ -20,32 +11,31 @@ WINDOWS PORTABILITY
 currently set to kill program on windows.
 http://msdn.microsoft.com/en-us/library/aa379942.aspx
 
--Look in to a makefile project in visual C++. See if that can be made compatible
-with gnu-make.
+-Make diffie-hellman keys larger (1024bit). When connecting to a server have the
+client send it's host key and then the server send it's host key. Both the
+client and server should look to see if a key has been negotiated with the
+other before. If it has the client can just start sending without negotating a
+new key.
 
 
 DEFERRED FEATURES
 
--client::set_download_directory() not doing anything but saving setting. Make it
-impossible to change if there are downloads going.
-
--Hashes need to be removed for files that don't exist in share. Deferred because
-it makes testing difficult.
+-client::set_download_directory() not doing anything but saving setting.
 
 -Support for multiple share directories.
 
+-Total upload/download needs to be kept track of in client_server_bridge. Think
+about having a minimum speed on the client/server upload/download (like 1kB/s).
+If there's no minimum it could be possible for the client to starve the server
+or vise versa. The sleep method in the socket checking loop won't work here
+because it would allow writes to slow down reads and visa versa.
+
+-Figure out how to handle naming conflicts. Figure out how to alert the user if
+they have duplicate files in their share. Figure out how to let the user know if
+they already downloaded a file.
+
 
 IDEAS
-
--Don't allow clients to download who have the P2P port blocked. When a server is
-connected to it should try to connect back to the client(more precisely the
-server running at the address the client connected from). If the server can't
-connect back it should deny the clients connection. This will make things
-totally not work if there is NAT in the way or the server somehow isn't running.
-
--Let the user set up bandwidth profiles that can be quickly selected. The user
-could create one for games/night time/bla bla. Then have a timer that can select
-the profile based on time of day.
 
 -Think about combining hash tree's in to one file. Keep track of starting
 locations in DB. Perhaps have a memmove type opteration one a file where hashes
@@ -55,20 +45,16 @@ the memmove operation would basically be a journal.
 
 GUI IDEAS
 
--When right clicking a download a option to get detailed info.
+-Right click a download to get detailed info.
 
--A pulldown box in the preferences that lets you add directories to share.
-
--Replace IP in the search treeview with a description.
+-Replace IP in the search treeview with a description. Add a seeders count.
 
 -Replace IP in the download treeview with a seeder/leecher count.
 
 
 OVERLAY NETWORK IDEAS
 
--XOR key system where keys are a hash of IP addresses so that nodes are
-organized by distance (distance measured in hops). Can keys directly be IP
-addresses since they are unique and organized by network?
+-XOR key system where keys are organized by distance (distance measured in hops).
 
 -Trackers which are organized in to a tree structure such that if the user adds
 a tracker the user will also get to see the files of the trackers that tracker

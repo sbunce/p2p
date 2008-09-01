@@ -79,12 +79,12 @@ void DB_share::hash_exists_call_back(int & columns_retrieved, char ** query_resp
 	hash_exists_exists = strcmp(query_response[0], "1") == 0;
 }
 
-bool DB_share::lookup_path(const std::string & path, std::string & existing_hash, boost::uint64_t & existing_size)
+bool DB_share::lookup_path(const std::string & path, std::string & hash, boost::uint64_t & size)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	lookup_path_entry_exists = false;
-	lookup_path_hash_ptr = &existing_hash;
-	lookup_path_size_ptr = &existing_size;
+	lookup_path_hash = &hash;
+	lookup_path_size = &size;
 
 	char * query = sqlite3_mprintf("SELECT hash, size FROM share WHERE path = '%q' LIMIT 1", path.c_str());
 	if(sqlite3_exec(sqlite3_DB, query, lookup_path_call_back_wrapper, (void *)this, NULL) != 0){
@@ -97,19 +97,17 @@ bool DB_share::lookup_path(const std::string & path, std::string & existing_hash
 void DB_share::lookup_path_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
 	lookup_path_entry_exists = true;
-	*lookup_path_hash_ptr = query_response[0];
+	*lookup_path_hash = query_response[0];
 
 	std::istringstream size_iss(query_response[1]);
-	boost::uint64_t size;
-	size_iss >> size;
-	*lookup_path_size_ptr = size;
+	size_iss >> *lookup_path_size;
 }
 
-bool DB_share::lookup_hash(const std::string & hash, std::string & file_path)
+bool DB_share::lookup_hash(const std::string & hash, std::string & path)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	lookup_hash_entry_exists = false;
-	lookup_hash_file_path = &file_path;
+	lookup_hash_path = &path;
 
 	std::ostringstream query;
 	query << "SELECT path FROM share WHERE hash = '" << hash << "'";
@@ -119,12 +117,12 @@ bool DB_share::lookup_hash(const std::string & hash, std::string & file_path)
 	return lookup_hash_entry_exists;
 }
 
-bool DB_share::lookup_hash(const std::string & hash, boost::uint64_t & file_size, std::string & file_path)
+bool DB_share::lookup_hash(const std::string & hash, std::string & path, boost::uint64_t & size)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	lookup_hash_entry_exists = false;
-	lookup_hash_file_size = &file_size;
-	lookup_hash_file_path = &file_path;
+	lookup_hash_path = &path;
+	lookup_hash_size = &size;
 
 	std::ostringstream query;
 	query << "SELECT size, path FROM share WHERE hash = '" << hash << "'";
@@ -137,17 +135,17 @@ bool DB_share::lookup_hash(const std::string & hash, boost::uint64_t & file_size
 void DB_share::lookup_hash_1_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
 	lookup_hash_entry_exists = true;
-	*lookup_hash_file_path = query_response[0];
+	*lookup_hash_path = query_response[0];
 }
 
 void DB_share::lookup_hash_2_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
 	lookup_hash_entry_exists = true;
+
 	std::istringstream size_iss(query_response[0]);
-	boost::uint64_t size;
-	size_iss >> size;
-	*lookup_hash_file_size = size;
-	*lookup_hash_file_path = query_response[1];
+	size_iss >> *lookup_hash_size;
+
+	*lookup_hash_path = query_response[1];
 }
 
 void DB_share::remove_missing(const std::string & share_directory)

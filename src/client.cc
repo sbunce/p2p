@@ -174,11 +174,12 @@ void client::main_thread()
 			break;
 		}
 
-		check_blacklist();
-		check_timeouts();
-		client_buffer::generate_requests();
-		remove_complete();
-		start_pending_downloads();
+		check_blacklist();                  //check/disconnect blacklisted IPs
+		check_timeouts();                   //check/disconnect timed out sockets
+		client_buffer::generate_requests(); //process client_buffers, let them generate requests
+		remove_complete();                  //remove completed downloads
+		remove_empty();                     //remove empty client_buffers (no downloads)
+		start_pending_downloads();          //start downloads queue'd by the GUI
 
 		/*
 		These must be initialized every iteration on linux(and possibly other OS's)
@@ -254,7 +255,7 @@ void client::main_thread()
 						if(n_bytes == -1){
 							#ifdef WIN32
 							logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
-							#else
+							#elseremove_empty()
 							perror("client send");
 							#endif
 						}
@@ -298,7 +299,10 @@ void client::remove_complete()
 		transition_download(*C_iter_cur);
 		++C_iter_cur;
 	}
+}
 
+void client::remove_empty()
+{
 	//disconnect any empty client_buffers
 	std::vector<int> disconnect_sockets;
 	client_buffer::find_empty(disconnect_sockets);
@@ -337,19 +341,7 @@ void client::start_download_process(const download_info & info)
 		iter_cur = servers.begin();
 		iter_end = servers.end();
 		while(iter_cur != iter_end){
-			#ifdef RESOLVE_HOST_NAMES
-			//resolve hostname
-			if(!resolve::hostname(iter_cur->IP)){
-				logger::debug(LOGGER_P1,"failed to resolve ",iter_cur->IP);
-				++iter_cur;
-				continue;
-			}
-			#endif
-
-			if(!client_buffer::add_connection(*iter_cur)){
-				//no existing connection to server, initiate new connection
-				Client_New_Connection.queue(*iter_cur);
-			}
+			Client_New_Connection.queue(*iter_cur);
 			++iter_cur;
 		}
 	}
@@ -409,20 +401,7 @@ void client::transition_download(download * Download_Stop)
 		iter_cur = servers.begin();
 		iter_end = servers.end();
 		while(iter_cur != iter_end){
-			#ifdef RESOLVE_HOST_NAMES
-			//resolve hostname
-			if(!resolve::hostname(iter_cur->IP)){
-				logger::debug(LOGGER_P1,"failed to resolve ",iter_cur->IP);
-				++iter_cur;
-				continue;
-			}
-			#endif
-
-			if(!client_buffer::add_connection(*iter_cur)){
-				//no existing connection to server, initiate new connection
-				Client_New_Connection.queue(*iter_cur);
-			}
-
+			Client_New_Connection.queue(*iter_cur);
 			++iter_cur;
 		}
 	}

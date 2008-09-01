@@ -76,10 +76,10 @@ public:
 	If file downloading returns true and sets path to path of file.
 	PERFORMANCE: A database call is in this function.
 	*/
-	static bool is_downloading_file(const std::string & hash, std::string & path)
+	static bool is_downloading_file(const std::string & hash, std::string & path, boost::uint64_t & size)
 	{
 		init();
-		return Client_Server_Bridge->is_downloading_file_priv(hash, path);
+		return Client_Server_Bridge->is_downloading_file_priv(hash, path, size);
 	}
 
 	/*
@@ -212,7 +212,7 @@ private:
 	bool is_available_priv(const std::string & hash, const boost::uint64_t & block_number);
 	download_mode is_downloading_priv(const std::string & hash);
 	bool is_downloading_hash_priv(const std::string & hash, std::string & path);
-	bool is_downloading_file_priv(const std::string & hash, std::string & path);
+	bool is_downloading_file_priv(const std::string & hash, std::string & path, boost::uint64_t & size);
 	void start_download_priv(const std::string & hash);
 	void transition_download_priv(const std::string & hash);
 

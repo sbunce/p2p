@@ -160,6 +160,13 @@ bool server_index::is_indexing()
 
 void server_index::index_share()
 {
+	/*
+	If hashes aren't in the DB or if they're not downloading they're deleted. This
+	sleep gives downloads a chance to start before their associated hashes are
+	deleted.
+	*/
+	portable_sleep::ms(1000);
+
 	++threads;
 	indexing = false;
 	while(true){
