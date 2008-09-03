@@ -6,7 +6,6 @@
 #include "download_info.h"
 #include "global.h"
 #include "gui_about.h"
-#include "gui_download_info.h"
 #include "gui_preferences.h"
 #include "server.h"
 #include "upload_info.h"
@@ -50,11 +49,11 @@ private:
 	Gtk::MenuItem * help_menu_item;
 	Gtk::MenuItem * about;
 
-	//notebook tabs
-	Gtk::Label * search_tab;
-	Gtk::Label * download_tab;
-	Gtk::Label * upload_tab;
-	Gtk::Label * tracker_tab;
+	//notebook labels
+	Gtk::Image * search_label;
+	Gtk::Image * download_label;
+	Gtk::Image * upload_label;
+	Gtk::Image * tracker_label;
 	
 	//search
 	Gtk::Entry * search_entry;   //input box for searches
@@ -75,10 +74,10 @@ private:
 	Gtk::ScrolledWindow * tracker_scrolled_window;
 
 	//boxes (divides the window)
+	Gtk::VBox * main_VBox;    //VBox for the main window (separates top from bottom)
 	Gtk::HBox * search_HBox;  //separates the search input and search button
 	Gtk::HBox * tracker_HBox; //separates the tracker input and add button
 	Gtk::VBox * search_VBox;  //VBox which goes inside search_scrolled_window
-	Gtk::VBox * main_VBox;    //VBox for the main window (separates top from bottom)
 	Gtk::VBox * tracker_VBox; //VBox which goes inside the tracker_scrolled_window
 
 	//bottom bar that displays status etc
@@ -95,23 +94,26 @@ private:
 	Glib::RefPtr<Gtk::ListStore> tracker_list;
 
 	/*functions associated with Gtk signals
-	help_about           - user clicked Help/About
-	cancel_download      - when user clicks Cancel on a download in download_view
-	download_click       - interprets download_view input, can pop up a menu on right click
-	download_file        - when user clicks Download on a entry in search_view
-	on_quit              - when user clicks File/Quit
-	on_delete_event      - overrides the event which happens on window close
-	search_input         - when user clicks search_button or hits enter while on search_entry
-	search_click         - interprets search_view input, can pop up a menu on right click
-	settings_preferences - user clicked Settings/Preferences
+	help_about              - user clicked Help/About
+	cancel_download         - when user clicks Cancel on a download in download_view
+	download_click          - interprets download_view input, can pop up a menu on right click
+	download_file           - when user clicks Download on a entry in search_view
+	download_info_tab       - opens a tab for detailed download information
+	download_info_tab_close - closes a download info tab
+	on_quit                 - when user clicks File/Quit
+	on_delete_event         - overrides the event which happens on window close
+	search_input            - when user clicks search_button or hits enter while on search_entry
+	search_click            - interprets search_view input, can pop up a menu on right click
+	settings_preferences    - user clicked Settings/Preferences
 	*/
 	void help_about();
 	void cancel_download();
 	bool download_click(GdkEventButton * event);
 	void download_file();
-	void download_info_popup();
+	void download_info_tab();
+	void download_info_tab_close(Gtk::ScrolledWindow * info_scrolled_window);
 	void on_quit();
-	bool on_delete_event(GdkEventAny* event);
+	bool on_delete_event(GdkEventAny * event);
 	void search_input();
 	bool search_click(GdkEventButton * event);
 	void settings_preferences();

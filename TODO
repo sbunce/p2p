@@ -1,6 +1,13 @@
 TODO
 
--Make download info open in tab, not new window.
+-Make it so close button doesn't display on the tab until the tab is clicked.
+
+-Make download speed counter extend down in to the bytes. Add a function in
+conversion.h to do this.
+
+-Replace IP in the search treeview with a description. Add a seeders count.
+
+-Replace IP in the download treeview with a seeder/leecher count.
 
 
 WINDOWS PORTABILITY
@@ -30,26 +37,14 @@ If there's no minimum it could be possible for the client to starve the server
 or vise versa. The sleep method in the socket checking loop won't work here
 because it would allow writes to slow down reads and visa versa.
 
--Figure out how to handle naming conflicts. Figure out how to alert the user if
-they have duplicate files in their share. Figure out how to let the user know if
-they already downloaded a file.
+-Figure out how to handle naming conflicts. It should be fully automatic.
+Probably just rename the files according to some rules. It doesn't matter too
+much since the hashes stay the same.
 
-
-IDEAS
-
--Think about combining hash tree's in to one file. Keep track of starting
-locations in DB. Perhaps have a memmove type opteration one a file where hashes
-can be moved to get rid of gaps due to removed files. The intermediate step of
-the memmove operation would basically be a journal.
-
-
-GUI IDEAS
-
--Right click a download to get detailed info.
-
--Replace IP in the search treeview with a description. Add a seeders count.
-
--Replace IP in the download treeview with a seeder/leecher count.
+-Combine hash tree's in to one file. Keep track of starting locations in DB.
+Perhaps have a memmove type opteration one a file where hashes can be moved to
+get rid of gaps due to removed files. The intermediate step of the memmove
+operation would basically be a journal.
 
 
 OVERLAY NETWORK IDEAS

@@ -20,7 +20,7 @@ gui_preferences::gui_preferences(client * Client_in, server * Server_in)
 	cancel_button = Gtk::manage(new Gtk::Button(Gtk::StockID("gtk-cancel")));
 	ok_button = Gtk::manage(new Gtk::Button(Gtk::StockID("gtk-ok")));
 	button_box = Gtk::manage(new Gtk::HButtonBox);
-	connection_limit_hscale = Gtk::manage(new Gtk::HScale(1,1001,1));
+	connection_limit_hscale = Gtk::manage(new Gtk::HScale(1,global::MAX_CONNECTIONS+1,1));
 	fixed = Gtk::manage(new Gtk::Fixed());
 
 	window->set_resizable(false);

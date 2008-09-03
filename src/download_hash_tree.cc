@@ -51,7 +51,7 @@ download_hash_tree::download_hash_tree(
 			if(Hash_Tree.check_hash_tree(root_hash_hex, root_hash_hex, hash_tree_count, bad_hash)){
 				//determine what hash_block the missing/bad hash falls within
 				boost::uint64_t start_hash_block = bad_hash.first / global::FILE_BLOCK_SIZE;
-				logger::debug(LOGGER_P1,"partial or corrupt hash tree found, resuming on hash block ",start_hash_block);
+				logger::debug(LOGGER_P1,"partial hash tree found, resuming on hash block ",start_hash_block);
 				Request_Generator.init(start_hash_block, hash_block_count - 1, global::RE_REQUEST);
 			}
 		}else{
@@ -131,7 +131,7 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 		expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
 		return download::BINARY_MODE;
 	}else if(!conn->slot_ID_received){
-		//slot_ID requested but not yet received
+		//slot_ID requested but not yet received, or slots closing and slot_ID not requested
 		return download::NO_REQUEST;
 	}
 
@@ -144,14 +144,15 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 
 		//the download is complete when all servers have been sent a P_CLOSE_SLOT
 		bool unready_found = false;
-		std::map<int, connection_special>::iterator CS_iter_cur, CS_iter_end;
-		CS_iter_cur = Connection_Special.begin();
-		CS_iter_end = Connection_Special.end();
-		while(CS_iter_cur != CS_iter_end){
-			if(CS_iter_cur->second.close_slot_sent == false){
+		std::map<int, connection_special>::iterator iter_cur, iter_end;
+		iter_cur = Connection_Special.begin();
+		iter_end = Connection_Special.end();
+		while(iter_cur != iter_end){
+			if(iter_cur->second.slot_ID_requested && iter_cur->second.close_slot_sent == false){
+				//server requested slot but has not yet closed it
 				unready_found = true;
 			}
-			++CS_iter_cur;
+			++iter_cur;
 		}
 		if(!unready_found){
 			download_complete = true;

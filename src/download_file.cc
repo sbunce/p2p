@@ -159,7 +159,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 		expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
 		return download::BINARY_MODE;
 	}else if(!conn->slot_ID_received){
-		//slot_ID requested but not yet received
+		//slot_ID requested but not yet received, or slots closing and slot_ID not requested
 		return download::NO_REQUEST;
 	}
 
@@ -177,7 +177,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 		iter_cur = Connection_Special.begin();
 		iter_end = Connection_Special.end();
 		while(iter_cur != iter_end){
-			if(iter_cur->second.close_slot_sent == false){
+			if(iter_cur->second.slot_ID_requested && iter_cur->second.close_slot_sent == false){
 				unready_found = true;
 			}
 			++iter_cur;

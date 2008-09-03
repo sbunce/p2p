@@ -14,12 +14,12 @@ public:
 
 private:
 	class Gtk::Window * window;
-	Gtk::VBox vbox;
-	Gtk::ScrolledWindow scrolled_window;
-	Gtk::TextView text_view;
+	Gtk::VBox * vbox;
+	Gtk::ScrolledWindow * scrolled_window;
+	Gtk::TextView * text_view;
 	Glib::RefPtr<Gtk::TextBuffer> text_buff;
-	Gtk::HButtonBox button_box;
-	Gtk::Button close_button;
+	Gtk::HButtonBox * button_box;
+	Gtk::Button * close_button;
 
 	/*
 	close_click - close button clicked

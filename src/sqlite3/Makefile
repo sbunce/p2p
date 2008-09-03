@@ -1,4 +1,4 @@
-CFLAGS = -O3
+CFLAGS = -Os -Wno-deprecated-declarations
 
 OBJECTS = $(patsubst %.c,%.o,$(wildcard *.c))
 

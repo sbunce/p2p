@@ -1,4 +1,4 @@
-CXXFLAGS = -O3 -Werror -ansi -Isqlite3 -Ilibtommath
+CXXFLAGS := -O3 -Werror -ansi -Isqlite3 -Ilibtommath
 
 #subdirs to call submakes on
 SUBDIRS = libtommath sqlite3
@@ -7,7 +7,6 @@ SUBDIRS = libtommath sqlite3
 main.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
 gui.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
 gui_about.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
-gui_download_info.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
 gui_preferences.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
 
 LIBTOMMATH_OBJECT := libtommath/libtommath.a
@@ -35,7 +34,6 @@ OBJECTS := \
 	encryption.o \
 	gui.o \
 	gui_about.o \
-	gui_download_info.o \
 	gui_preferences.o \
 	hash_tree.o \
 	logger.o \
@@ -85,6 +83,7 @@ SERVER_LINKER_OPTIONS := \
 all: $(OBJECTS) $(SERVER_OBJECTS) subdirs
 	$(CXX) -o p2p $(OBJECTS) $(LIBTOMMATH_OBJECT) $(SQLITE3_OBJECT) $(LINKER_OPTIONS)
 	$(CXX) -o p2p_server $(SERVER_OBJECTS) $(LIBTOMMATH_OBJECT) $(SQLITE3_OBJECT) $(SERVER_LINKER_OPTIONS)
+	@echo building complete
 
 #print how many lines of code exist
 .PHONY: loc

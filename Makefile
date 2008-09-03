@@ -1,14 +1,10 @@
 CPU_COUNT = $(shell cat /proc/cpuinfo |grep -c "processor")
 
-.PHONY: all
-all: src
-	cp src/p2p ./
-	cp src/p2p_server ./
-	@echo "building complete"
-
 .PHONY: src
 src:
 	$(MAKE) -j$(CPU_COUNT) -C src
+	cp src/p2p ./
+	cp src/p2p_server ./
 
 .PHONY: loc
 loc:

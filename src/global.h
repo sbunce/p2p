@@ -60,7 +60,7 @@ namespace global
 	const std::string VERSION = "0.00 pre-alpha";
 
 	//default settings
-	const int MAX_CONNECTIONS = 1000; //maximum number of connections the server will accept
+	const int MAX_CONNECTIONS = 1024; //maximum number of connections the server will accept
 	const unsigned int UP_SPEED = std::numeric_limits<unsigned int>::max();   //upload speed limit (B/s)
 	const unsigned int DOWN_SPEED = std::numeric_limits<unsigned int>::max(); //download speed limit (B/s)
 
