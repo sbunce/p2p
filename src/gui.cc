@@ -101,7 +101,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	search_view->set_enable_search(false);   //allow searching of TreeView contents
 	search_scrolled_window->set_flags(Gtk::CAN_FOCUS);
 	search_scrolled_window->set_shadow_type(Gtk::SHADOW_IN);
-	search_scrolled_window->set_policy(Gtk::POLICY_ALWAYS, Gtk::POLICY_ALWAYS);
+	search_scrolled_window->set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
 	search_scrolled_window->property_window_placement().set_value(Gtk::CORNER_TOP_LEFT);
 	search_scrolled_window->add(*search_view);
 	//download
@@ -111,7 +111,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	download_view->set_enable_search(false);
 	download_scrolled_window->set_flags(Gtk::CAN_FOCUS);
 	download_scrolled_window->set_shadow_type(Gtk::SHADOW_IN);
-	download_scrolled_window->set_policy(Gtk::POLICY_ALWAYS, Gtk::POLICY_ALWAYS);
+	download_scrolled_window->set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
 	download_scrolled_window->property_window_placement().set_value(Gtk::CORNER_TOP_LEFT);
 	download_scrolled_window->add(*download_view);
 	//upload
@@ -121,7 +121,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	upload_view->set_enable_search(false);
 	upload_scrolled_window->set_flags(Gtk::CAN_FOCUS);
 	upload_scrolled_window->set_shadow_type(Gtk::SHADOW_IN);
-	upload_scrolled_window->set_policy(Gtk::POLICY_ALWAYS, Gtk::POLICY_ALWAYS);
+	upload_scrolled_window->set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
 	upload_scrolled_window->property_window_placement().set_value(Gtk::CORNER_TOP_LEFT);
 	upload_scrolled_window->add(*upload_view);
 	//tracker
@@ -131,7 +131,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	tracker_view->set_enable_search(false);
 	tracker_scrolled_window->set_flags(Gtk::CAN_FOCUS);
 	tracker_scrolled_window->set_shadow_type(Gtk::SHADOW_IN);
-	tracker_scrolled_window->set_policy(Gtk::POLICY_ALWAYS, Gtk::POLICY_ALWAYS);
+	tracker_scrolled_window->set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
 	tracker_scrolled_window->property_window_placement().set_value(Gtk::CORNER_TOP_LEFT);
 	tracker_scrolled_window->add(*tracker_view);
 
@@ -148,7 +148,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	notebook->set_show_tabs(true);
 	notebook->set_show_border(true);
 	notebook->set_tab_pos(Gtk::POS_TOP);
-	notebook->set_scrollable(false);
+	notebook->set_scrollable(true);
 
 	//add elements to the notebook
 	notebook->append_page(*search_VBox, *search_label);
@@ -167,7 +167,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 
 	//window properties
 	window->set_title(global::NAME);
-	window->resize(750, 300);
+	window->resize(750, 550);
 	window->set_modal(false);
 	window->property_window_position().set_value(Gtk::WIN_POS_CENTER_ON_PARENT);
 	window->set_resizable(true);
@@ -269,7 +269,7 @@ void gui::download_file()
 
 void gui::download_info_tab()
 {
-	std::string name = "no download selected";
+	std::string name = " none selected ";
 	Glib::RefPtr<Gtk::TreeView::Selection> refSelection = download_view->get_selection();
 	if(refSelection){
 		Gtk::TreeModel::iterator selected_row_iter = refSelection->get_selected();
@@ -290,9 +290,7 @@ void gui::download_info_tab()
 	Gtk::Label * info_label = Gtk::manage(new Gtk::Label(name.c_str()));
 	Gtk::Button * close_button = Gtk::manage(new Gtk::Button);
 	Gtk::Image * close_image = Gtk::manage(new Gtk::Image(Gtk::Stock::CLOSE, Gtk::ICON_SIZE_MENU));
-
-//derive from ScrolledWindow class and make download information class
-	Gtk::ScrolledWindow * info_scrolled_window = Gtk::manage(new Gtk::ScrolledWindow);
+	gui_download_status * info_scrolled_window = new gui_download_status;
 
 	hbox->pack_start(*info_label);
 	close_button->add(*close_image);
@@ -301,13 +299,47 @@ void gui::download_info_tab()
 	hbox->show_all_children();
 	show_all_children();
 
+	//used to tell the refresh function to stop
+	bool * refresh = new bool(true);
+
 	//signal to close tab, function pointer bound to window pointer associated with a tab
-	close_button->signal_clicked().connect(sigc::bind<Gtk::ScrolledWindow*>(sigc::mem_fun(*this, &gui::download_info_tab_close), info_scrolled_window));
+	close_button->signal_clicked().connect(
+		sigc::bind<gui_download_status *, bool *>(
+			sigc::mem_fun(*this, &gui::download_info_tab_close),
+			info_scrolled_window, refresh
+		)
+	);
+
+	//set tab window to refresh
+	Glib::signal_timeout().connect(
+		sigc::bind<gui_download_status *, bool *>(
+			sigc::mem_fun(*this, &gui::download_info_tab_refresh),
+			info_scrolled_window, refresh
+		),
+		global::GUI_TICK
+	);
 }
 
-void gui::download_info_tab_close(Gtk::ScrolledWindow * info_scrolled_window)
+void gui::download_info_tab_close(gui_download_status * info_scrolled_window, bool * refresh)
 {
+	//stop window from refreshing
+	*refresh = false;
 	notebook->remove_page(*info_scrolled_window);
+}
+
+bool gui::download_info_tab_refresh(gui_download_status * info_scrolled_window, bool * refresh)
+{
+//refresh window here
+//remember to delete window
+
+
+	if(*refresh == false){
+		//tab was closed
+		delete refresh;
+		return false;
+	}else{
+		return true;
+	}
 }
 
 void gui::download_info_setup()

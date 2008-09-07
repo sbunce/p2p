@@ -6,6 +6,7 @@
 #include "download_info.h"
 #include "global.h"
 #include "gui_about.h"
+#include "gui_download_status.h"
 #include "gui_preferences.h"
 #include "server.h"
 #include "upload_info.h"
@@ -111,7 +112,8 @@ private:
 	bool download_click(GdkEventButton * event);
 	void download_file();
 	void download_info_tab();
-	void download_info_tab_close(Gtk::ScrolledWindow * info_scrolled_window);
+	void download_info_tab_close(gui_download_status * info_scrolled_window, bool * refresh);
+	bool download_info_tab_refresh(gui_download_status * info_scrolled_window, bool * refresh);
 	void on_quit();
 	bool on_delete_event(GdkEventAny * event);
 	void search_input();

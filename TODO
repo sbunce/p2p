@@ -1,6 +1,9 @@
 TODO
 
--Make it so close button doesn't display on the tab until the tab is clicked.
+-Refactor row refresh code for upload/download treeviews in gui. Think about
+having a datastructure backend like a std::map<hash, structure>. Iterate through
+the rows, looking for a matching hash in the map. If the entry exists update the
+row, else remove the row.
 
 -Make download speed counter extend down in to the bytes. Add a function in
 conversion.h to do this.
@@ -45,6 +48,14 @@ much since the hashes stay the same.
 Perhaps have a memmove type opteration one a file where hashes can be moved to
 get rid of gaps due to removed files. The intermediate step of the memmove
 operation would basically be a journal.
+
+
+PROTOCOL IDEAS
+
+-Have a token that can be send to the server from the client which basically asks
+the server, "do you want to send data". Token should be offered once every 16
+seconds so the server can send information like servers it knows about that the
+client does not.
 
 
 OVERLAY NETWORK IDEAS

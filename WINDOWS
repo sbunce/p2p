@@ -15,7 +15,7 @@ program should be in the same directory as a file called Jamroot.
 
 3. Open a cmd.exe prompt and navigate to C:\Program Files\Boost. Run the command
 "bjam.exe". After the libraries are built in the same directory run
-"bjam.exe install". This will install the boost libraries and headers toC:\Boost.
+"bjam.exe install". This will install the boost libraries and headers to C:\Boost.
 
 
 Get GTKMM (latest known to work (2.10.11-1)

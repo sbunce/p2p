@@ -1,16 +1,11 @@
-CXXFLAGS := -O3 -Werror -ansi -Isqlite3 -Ilibtommath
+CXXFLAGS := -O3 -Werror -ansi -Isqlite3 -Ilibtommath `pkg-config gtkmm-2.4 --cflags`
 
 #subdirs to call submakes on
-SUBDIRS = libtommath sqlite3
+SUBDIRS = $(shell ls -1d */ 2> /dev/null |sed s/\\///)
 
-#targets that require gtkmm
-main.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
-gui.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
-gui_about.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
-gui_preferences.o: CXXFLAGS += `pkg-config gtkmm-2.4 --cflags`
-
-LIBTOMMATH_OBJECT := libtommath/libtommath.a
-SQLITE3_OBJECT := sqlite3/sqlite3.o
+EXTRA_OBJECTS := 	\
+	libtommath/libtommath.a \
+	sqlite3/sqlite3.o
 
 OBJECTS := \
 	CLI_args.o \
@@ -34,6 +29,7 @@ OBJECTS := \
 	encryption.o \
 	gui.o \
 	gui_about.o \
+	gui_download_status.o \
 	gui_preferences.o \
 	hash_tree.o \
 	logger.o \
@@ -81,14 +77,14 @@ SERVER_LINKER_OPTIONS := \
 
 .PHONY: all
 all: $(OBJECTS) $(SERVER_OBJECTS) subdirs
-	$(CXX) -o p2p $(OBJECTS) $(LIBTOMMATH_OBJECT) $(SQLITE3_OBJECT) $(LINKER_OPTIONS)
-	$(CXX) -o p2p_server $(SERVER_OBJECTS) $(LIBTOMMATH_OBJECT) $(SQLITE3_OBJECT) $(SERVER_LINKER_OPTIONS)
+	$(CXX) -o p2p $(OBJECTS) $(EXTRA_OBJECTS) $(LINKER_OPTIONS)
+	$(CXX) -o p2p_nogui $(SERVER_OBJECTS) $(EXTRA_OBJECTS) $(SERVER_LINKER_OPTIONS)
 	@echo building complete
 
 #print how many lines of code exist
 .PHONY: loc
 loc:
-	@echo lines of code: $(shell cat *.h *.cc Makefile |wc -l)
+	@echo lines of code: $(shell cat *.h *.cc |wc -l)
 
 .depend:
 	$(CXX) -MM *.cc > .depend
@@ -106,4 +102,4 @@ clean:
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir clean; \
 	done
-	rm -f p2p p2p_server .depend *.o
+	rm -f p2p p2p_nogui .depend *.o
