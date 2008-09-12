@@ -5,9 +5,11 @@
 #include "DB_download.h"
 
 //download types
+#include "client_buffer.h"
 #include "download.h"
 #include "download_connection.h"
 #include "DB_search.h"
+#include "DB_share.h"
 #include "download_file.h"
 #include "download_hash_tree.h"
 #include "download_tracker.h"
@@ -43,5 +45,6 @@ private:
 
 	DB_download DB_Download;
 	DB_search DB_Search;
+	DB_share DB_Share;
 };
 #endif

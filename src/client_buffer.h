@@ -71,26 +71,50 @@ public:
 	in all client_buffers. The vector passed in is cleared before download info is
 	added.
 	*/
-	static void current_downloads(std::vector<download_info> & info)
+	static void current_downloads(std::vector<download_info> & info, std::string hash)
 	{
 		boost::mutex::scoped_lock lock(Mutex);
 		info.clear();
-		std::set<download *>::iterator iter_cur, iter_end;
-		iter_cur = Unique_Download.begin();
-		iter_end = Unique_Download.end();
-		while(iter_cur != iter_end){
-			if((*iter_cur)->visible()){
-				download_info Download_Info(
-					(*iter_cur)->hash(),
-					(*iter_cur)->name(),
-					(*iter_cur)->size(),
-					(*iter_cur)->speed(),
-					(*iter_cur)->percent_complete()
-				);
-				(*iter_cur)->IP_list(Download_Info.IP);
-				info.push_back(Download_Info);
+
+		if(hash.empty()){
+			//info for all downloads
+			std::set<download *>::iterator iter_cur, iter_end;
+			iter_cur = Unique_Download.begin();
+			iter_end = Unique_Download.end();
+			while(iter_cur != iter_end){
+				if((*iter_cur)->visible()){
+					download_info Download_Info(
+						(*iter_cur)->hash(),
+						(*iter_cur)->name(),
+						(*iter_cur)->size(),
+						(*iter_cur)->speed(),
+						(*iter_cur)->percent_complete()
+					);
+					(*iter_cur)->servers(Download_Info.IP, Download_Info.speed);
+					info.push_back(Download_Info);
+				}
+				++iter_cur;
 			}
-			++iter_cur;
+		}else{
+			//info for one download
+			std::set<download *>::iterator iter_cur, iter_end;
+			iter_cur = Unique_Download.begin();
+			iter_end = Unique_Download.end();
+			while(iter_cur != iter_end){
+				if((*iter_cur)->hash() == hash){
+					download_info Download_Info(
+						(*iter_cur)->hash(),
+						(*iter_cur)->name(),
+						(*iter_cur)->size(),
+						(*iter_cur)->speed(),
+						(*iter_cur)->percent_complete()
+					);
+					(*iter_cur)->servers(Download_Info.IP, Download_Info.speed);
+					info.push_back(Download_Info);
+					break;
+				}
+				++iter_cur;
+			}
 		}
 	}
 
@@ -135,6 +159,24 @@ public:
 		boost::mutex::scoped_lock lock(Mutex);
 		std::set<download *>::iterator iter = Unique_Download.find(Download);
 		return iter != Unique_Download.end();
+	}
+
+	/*
+	Check by hash if a download is running. Returns true if yes, else false.
+	*/
+	static bool is_downloading(const std::string & hash)
+	{
+		boost::mutex::scoped_lock lock(Mutex);
+		std::set<download *>::iterator iter_cur, iter_end;
+		iter_cur = Unique_Download.begin();
+		iter_end = Unique_Download.end();
+		while(iter_cur != iter_end){
+			if((*iter_cur)->hash() == hash){
+				return true;
+			}
+			++iter_cur;
+		}
+		return false;
 	}
 
 	/*

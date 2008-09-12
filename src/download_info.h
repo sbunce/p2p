@@ -14,60 +14,29 @@ public:
 		const std::string & hash_in,
 		const std::string & name_in,
 		const boost::uint64_t & size_in,
-		const int speed_in = 0,
+		const int total_speed_in = 0,
 		const int percent_complete_in = 0
 	):
 		hash(hash_in),
 		name(name_in),
 		size(size_in),
-		speed(speed_in),
-		percent_complete(percent_complete_in),
-		resumed(false)
+		total_speed(total_speed_in),
+		percent_complete(percent_complete_in)
 	{}
 
-	//copy ctor
-	download_info(
-		const download_info & DI
-	):
-		hash(DI.hash),
-		name(DI.name),
-		size(DI.size),
-		percent_complete(DI.percent_complete),
-		speed(DI.speed),
-		resumed(DI.resumed)
-	{
-		IP.assign(DI.IP.begin(), DI.IP.end());
-	}
-
-	std::string hash; //root hash of hash tree
-	std::string name; //name of the file
-	boost::uint64_t size;    //size of the file (bytes)
-
-	//information unique to the server
-	std::vector<std::string> IP;
-
-	//these are set when the download is running
-	int percent_complete;
-	int speed;
-
 	/*
-	This is only relevant when download_info is used to start a download.
-
-	Resumed downloads must set this to true. There is a check which exists when
-	starting a download that won't let downloads be added twice. This check is
-	dependent on looking at whether or not the download information already exists
-	in the database. This overrides that check. When resuming a download the
-	download information is in the database but no download is actually started.
+	WARNING: This object uses a default copy constructor.
 	*/
-	bool resumed;
 
-	void print_info()
-	{
-		std::cout << "hash:             " << hash << "\n";
-		std::cout << "name:             " << name << "\n";
-		std::cout << "size:             " << size << "\n";
-		std::cout << "percent_complete: " << percent_complete << "\n";
-		std::cout << "speed:            " << speed << "\n";
-	}
+	//information guaranteed to be set
+	std::vector<std::string> IP;     //IP's off all servers downloading file from
+	std::string hash;                //root hash of hash tree
+	std::string name;                //name of the file
+	boost::uint64_t size;            //size of the file (bytes)
+
+	//these are only set when returning information about running downloads
+	int percent_complete;            //0-100
+	int total_speed;                 //total download speed (bytes/second)
+	std::vector<unsigned int> speed; //speed of servers (parallel to IP vector)
 };
 #endif

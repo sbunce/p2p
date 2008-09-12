@@ -53,7 +53,12 @@ public:
 	client();
 	~client();
 	/*
-	current_downloads      - returns download info for all downloads
+	current_downloads      - returns download info for all downloads or
+	                         if hash set info only retrieved for download that corresponds to hash
+	                         WARNING: if no hash found info will be empty
+	file_info              - returns specific information about file that corresponds to hash (for currently running downloads)
+	                         WARNING: Expensive call that includes database access, do not poll this.
+	                                  A good possible use of this is to get info when opening download info tabs.
 	prime_count            - returns the number of primes cached for Diffie-Hellman
 	get_max_connections    - returns maximum connections client will make
 	set_max_connections    - sets maximum connections client will make
@@ -62,14 +67,13 @@ public:
 	get_speed_limit        - returns the download speed limit (bytes/second)
 	set_speed_limit        - sets a new download speed limit (bytes/second)
 	search                 - populates info with download_info that match the search_word
-	start                  - start the threads needed for the client
-	stop                   - stops all threads, must be called before destruction
 	start_download         - schedules a download_file to be started
 	stop_download          - marks a download as completed so it will be stopped
 	total_speed            - returns the total download speed(in bytes per second)
 	*/
-	void current_downloads(std::vector<download_info> & info);
-	unsigned int prime_count();
+	void current_downloads(std::vector<download_info> & info, std::string hash = "");
+	bool file_info(const std::string & hash, std::string & name, boost::uint64_t & tree_size, boost::uint64_t & file_size);
+	int prime_count();
 	int get_max_connections();
 	void set_max_connections(int max_connections_in);
 	std::string get_download_directory();

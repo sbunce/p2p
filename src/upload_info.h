@@ -28,7 +28,7 @@ public:
 
 	std::string hash;
 	std::string IP;
-	boost::uint64_t size;        //file size in bytes
+	boost::uint64_t size; //file size in bytes
 	std::string path;
 	std::string name;
 	int speed;            //upload speed (bytes/second)

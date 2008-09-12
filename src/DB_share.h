@@ -36,7 +36,7 @@ public:
 	/*
 	Lookup functions, the first parameter is what to look up the record by.
 	hash_exists - returns true if a record exists with the specified hash, else false
-	lookup_<*>  - look up information by <*>
+	lookup_<*>  - look up information by <*>, returns false if no info exists
 	*/
 	bool hash_exists(const std::string & hash);
 	bool lookup_path(const std::string & path, std::string & hash, boost::uint64_t & size);

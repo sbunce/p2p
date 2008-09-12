@@ -27,14 +27,20 @@ download_file * download_factory::start_file(download_hash_tree * DHT, std::list
 
 bool download_factory::start_hash(const download_info & info, download *& Download, std::list<download_connection> & servers)
 {
-	if(!DB_Download.start_download(info)){
-		//download already exists in database
-		if(!info.resumed){
-			//download is resumed so it's normal that the download couldn't be added
-			logger::debug(LOGGER_P1,"resuming download ",info.name);
-			return false;
-		}
+	if(DB_Share.hash_exists(info.hash)){
+		//file exists in share, don't redownload it
+		logger::debug(LOGGER_P1,"file '",info.name,"' already exists in share");
+		return false;
 	}
+
+	if(client_buffer::is_downloading(info.hash)){
+		//file already downloading
+		logger::debug(LOGGER_P1,"file '",info.name,"' already downloading");
+		return false;
+	}
+
+	//add download to download table if it doesn't already exist
+	DB_Download.start_download(info);
 
 	/*
 	Create empty file for the download_file. This is needed because if the file is
@@ -52,8 +58,6 @@ bool download_factory::start_hash(const download_info & info, download *& Downlo
 
 	return true;
 }
-
-
 
 bool download_factory::start_tracker(download *& Download, std::list<download_connection> & servers)
 {

@@ -22,18 +22,17 @@ public:
 
 	/*
 	If the visible() function returns true the client sends information from all
-	the functions in this section to the GUI.
+	the functions in this section to the GUI. It also sends information from the
+	server_info function.
 
 	hash                  - returns a unique identifier to the download (may be a hash)
 	name                  - returns the name of this download
-	IP_list               - returns a vector of IP addresses the download is downloading from
 	percent_complete      - should return integer 0 to 100 to indicate percent complete
 	speed                 - download speed in bytes per second
 	size                  - the total amount needing to be downloaded
 	*/
 	virtual bool visible();
 	virtual const std::string hash();
-	virtual void IP_list(std::vector<std::string> & IP);
 	virtual const std::string name();
 	virtual unsigned int percent_complete();
 	virtual unsigned int speed();
@@ -61,10 +60,13 @@ public:
 	virtual void stop() = 0;
 
 	/*
-	The client_buffer calls these to update speed for servers whenever any bytes
-	are received.
+	Functions that the client_buffer interacts with.
+
+	upload_speed - updates the server specific speed_calculators whenever bytes are received
+	server_info  - populates the first vector with IP's and the second with speeds
 	*/
 	void update_speed(const int & socket, const int & n_bytes);
+	void servers(std::vector<std::string> & IP, std::vector<unsigned int> & speed);
 
 protected:
 	class server_info

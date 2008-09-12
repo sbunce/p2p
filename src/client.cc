@@ -76,9 +76,9 @@ void client::check_timeouts()
 	}
 }
 
-void client::current_downloads(std::vector<download_info> & info)
+void client::current_downloads(std::vector<download_info> & info, std::string hash)
 {
-	client_buffer::current_downloads(info);
+	client_buffer::current_downloads(info, hash);
 }
 
 inline void client::disconnect(const int & socket_FD)
@@ -106,7 +106,12 @@ inline void client::disconnect(const int & socket_FD)
 	}
 }
 
-unsigned int client::prime_count()
+bool client::file_info(const std::string & hash, std::string & name, boost::uint64_t & tree_size, boost::uint64_t & file_size)
+{
+	return DB_Download.lookup_hash(hash, name, tree_size, file_size);
+}
+
+int client::prime_count()
 {
 	return number_generator::prime_count();
 }
@@ -158,7 +163,7 @@ void client::set_speed_limit(const std::string & speed_limit)
 	ss >> speed;
 	speed *= 1024;
 	if(speed == 0){
-		speed = speed - 1;
+		speed = speed - 1; //max speed
 	}
 	DB_Client_Preferences.set_speed_limit(speed);
 	Speed_Calculator.set_speed_limit(speed);

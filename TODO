@@ -1,16 +1,7 @@
 TODO
 
--Refactor row refresh code for upload/download treeviews in gui. Think about
-having a datastructure backend like a std::map<hash, structure>. Iterate through
-the rows, looking for a matching hash in the map. If the entry exists update the
-row, else remove the row.
-
--Make download speed counter extend down in to the bytes. Add a function in
-conversion.h to do this.
-
--Replace IP in the search treeview with a description. Add a seeders count.
-
--Replace IP in the download treeview with a seeder/leecher count.
+-Add port numbers to search table. Set up program so it can do testing over
+localhost on different port numbers.
 
 
 WINDOWS PORTABILITY
@@ -29,6 +20,8 @@ new key.
 
 
 DEFERRED FEATURES
+
+-Carefully examine client and server public interfaces.
 
 -client::set_download_directory() not doing anything but saving setting.
 

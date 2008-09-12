@@ -16,17 +16,6 @@ const std::string download::hash()
 	return "FUNCTION NOT SET IN DERIVED";
 }
 
-void download::IP_list(std::vector<std::string> & IP)
-{
-	std::map<int, server_info>::iterator iter_cur, iter_end;
-	iter_cur = Connection.begin();
-	iter_end = Connection.end();
-	while(iter_cur != iter_end){
-		IP.push_back(iter_cur->second.IP);
-		++iter_cur;
-	}
-}
-
 const std::string download::name()
 {
 	//if download visible this should be defined in derived
@@ -51,6 +40,18 @@ const boost::uint64_t download::size()
 void download::register_connection(const download_connection & DC)
 {
 	Connection.insert(std::make_pair(DC.socket, server_info(DC.IP)));
+}
+
+void download::servers(std::vector<std::string> & IP, std::vector<unsigned int> & speed)
+{
+	std::map<int, server_info>::iterator iter_cur, iter_end;
+	iter_cur = Connection.begin();
+	iter_end = Connection.end();
+	while(iter_cur != iter_end){
+		IP.push_back(iter_cur->second.IP);
+		speed.push_back(iter_cur->second.Speed_Calculator.speed());
+		++iter_cur;
+	}
 }
 
 void download::unregister_connection(const int & socket)

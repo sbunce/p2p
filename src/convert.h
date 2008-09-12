@@ -6,6 +6,8 @@
 
 //std
 #include <cassert>
+#include <iomanip>
+#include <sstream>
 #include <string>
 
 namespace convert
@@ -126,6 +128,25 @@ namespace convert
 			hash += hex[(int)(binary[x] & 15)];        //right side of byte
 		}
 		return hash;
+	}
+
+	/*
+	Convert bytes to reasonable SI unit.
+	Example 1024 -> 1kB
+	*/
+	static std::string size_unit_select(boost::uint64_t bytes)
+	{
+		std::ostringstream oss;
+		if(bytes < 1024){
+			oss << bytes << "B";
+		}else if(bytes >= 1024*1024*1024){
+			oss << std::fixed << std::setprecision(2) << bytes / (double)(1024*1024*1024) << "gB";
+		}else if(bytes >= 1024*1024){
+			oss << std::fixed << std::setprecision(1) << bytes / (double)(1024*1024) << "mB";
+		}else if(bytes >= 1024){
+			oss << std::fixed << std::setprecision(0) << bytes / (double)1024 << "kB";
+		}
+		return oss.str();
 	}
 }
 #endif

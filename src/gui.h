@@ -3,6 +3,7 @@
 
 //custom
 #include "client.h"
+#include "convert.h"
 #include "download_info.h"
 #include "global.h"
 #include "gui_about.h"
@@ -112,8 +113,7 @@ private:
 	bool download_click(GdkEventButton * event);
 	void download_file();
 	void download_info_tab();
-	void download_info_tab_close(gui_download_status * info_scrolled_window, bool * refresh);
-	bool download_info_tab_refresh(gui_download_status * info_scrolled_window, bool * refresh);
+	void download_info_tab_close(gui_download_status * status_window, bool * refresh);
 	void on_quit();
 	bool on_delete_event(GdkEventAny * event);
 	void search_input();
