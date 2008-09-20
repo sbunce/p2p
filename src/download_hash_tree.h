@@ -95,33 +95,23 @@ private:
 			const std::string IP_in
 		):
 			IP(IP_in),
-			slot_ID_requested(false),
-			slot_ID_received(false),
-			close_slot_sent(false),
-			abusive(false),
-			wait_activated(false)
+			wait_activated(false),
+			State(REQUEST_SLOT)
 		{
 
 		}
 
-		std::string IP;         //IP of server
-		char slot_ID;           //slot ID the server gave for the file
-		bool slot_ID_requested; //true if slot_ID requested
-		bool slot_ID_received;  //true if slot_ID received
+		enum state{
+			ABUSIVE,        //server violated protocol but has not yet been disconnected
+			REQUEST_SLOT,   //need to request a slot
+			AWAITING_SLOT,  //slot requested, awaiting slot
+			REQUEST_BLOCKS, //slot received, requesting blocks
+			CLOSED_SLOT     //already sent a P_CLOSE
+		};
+		state State;
 
-		/*
-		When the download hash tree is entirely downloaded the download goes in to
-		the checking phase where the hash tree is checked. If this server sent a
-		bad block it will be blacklisted and abusive will be set to true. When
-		abusive is set to true
-		*/
-		bool abusive;
-
-		/*
-		The download will not be finished until a P_CLOSE_SLOT has been sent to all
-		servers.
-		*/
-		bool close_slot_sent;
+		std::string IP; //IP of server
+		char slot_ID;   //slot ID the server gave for the file
 
 		/*
 		What file blocks have been requested from the server in order of when they

@@ -1,5 +1,8 @@
 TODO
 
+-Sometimes gui download stat file percent complete stops at 99% when file is
+complete.
+
 -Add port numbers to search table. Set up program so it can do testing over
 localhost on different port numbers.
 

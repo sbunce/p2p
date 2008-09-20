@@ -112,90 +112,102 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 	assert(iter != Connection_Special.end());
 	connection_special * conn = &iter->second;
 
-	if(conn->close_slot_sent || conn->abusive){
+	if(conn->State == connection_special::ABUSIVE){
+		//server abusive but not yet disconnected
 		return download::NO_REQUEST;
-	}
-
-	if(!conn->slot_ID_requested && !close_slots){
+	}else if(conn->State == connection_special::REQUEST_SLOT){
 		//slot_ID not yet obtained from server
+		if(close_slots){
+			//download is in process of closing slots, don't request a slot
+			conn->State = connection_special::CLOSED_SLOT;
+			return download::NO_REQUEST;
+		}
 		if(slots_used >= 255){
-			//the server has no free slots left, wait for one to free up
+			//no free slots left, wait for one to free up
 			return download::NO_REQUEST;
+		}else{
+			request = global::P_REQUEST_SLOT_HASH + convert::hex_to_binary(root_hash_hex);
+			++slots_used;
+			expected.push_back(std::make_pair(global::P_SLOT_ID, global::P_SLOT_ID_SIZE));
+			expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
+			conn->State = connection_special::AWAITING_SLOT;
+			return download::BINARY_MODE;
 		}
-
-		//slot available, make slot request
-		request = global::P_REQUEST_SLOT_HASH + convert::hex_to_binary(root_hash_hex);
-		conn->slot_ID_requested = true;
-		++slots_used;
-		expected.push_back(std::make_pair(global::P_SLOT_ID, global::P_SLOT_ID_SIZE));
-		expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
-		return download::BINARY_MODE;
-	}else if(!conn->slot_ID_received){
-		//slot_ID requested but not yet received, or slots closing and slot_ID not requested
+	}else if(conn->State == connection_special::AWAITING_SLOT){
+		//wait until slot_ID is received
 		return download::NO_REQUEST;
-	}
+	}else if(conn->State == connection_special::REQUEST_BLOCKS){
+		if(close_slots){
+			//download finishing or cancelled, send P_CLOSE_SLOT
+			request += global::P_CLOSE_SLOT;
+			request += conn->slot_ID;
+			--slots_used;
+			conn->State = connection_special::CLOSED_SLOT;
 
-	if(close_slots && !conn->close_slot_sent){
-		//download finishing or cancelled, send P_CLOSE_SLOT
-		request += global::P_CLOSE_SLOT;
-		request += conn->slot_ID;
-		conn->close_slot_sent = true;
-		--slots_used;
-
-		//the download is complete when all servers have been sent a P_CLOSE_SLOT
-		bool unready_found = false;
-		std::map<int, connection_special>::iterator iter_cur, iter_end;
-		iter_cur = Connection_Special.begin();
-		iter_end = Connection_Special.end();
-		while(iter_cur != iter_end){
-			if(iter_cur->second.slot_ID_requested && iter_cur->second.close_slot_sent == false){
-				//server requested slot but has not yet closed it
-				unready_found = true;
+			//check if all servers have been sent a P_CLOSE_SLOT
+			std::map<int, connection_special>::iterator iter_cur, iter_end;
+			iter_cur = Connection_Special.begin();
+			iter_end = Connection_Special.end();
+			bool unready_found = false;
+			while(iter_cur != iter_end){
+				if(iter_cur->second.State != connection_special::CLOSED_SLOT){
+					//server requested slot but has not yet closed it
+					unready_found = true;
+					break;
+				}
+				++iter_cur;
 			}
-			++iter_cur;
+			if(!unready_found){
+				download_complete = true;
+			}
+			return download::BINARY_MODE;
 		}
-		if(!unready_found){
-			download_complete = true;
-		}
-		return download::BINARY_MODE;
-	}
 
-	if(download_complete){
+		if(download_complete){
+			//all blocks received, no need to make any more requests
+			return download::NO_REQUEST;
+		}
+
+		if(conn->wait_activated){
+			//check to see if wait is completed
+			if(conn->wait_start + global::P_WAIT_TIMEOUT <= time(NULL)){
+				//timeout expired
+				conn->wait_activated = false;
+			}else{
+				//timeout not yet expired
+				return download::NO_REQUEST;
+			}
+		}
+
+		if(Request_Generator.request(conn->latest_request)){
+			//no request to be made at the moment
+			request += global::P_SEND_BLOCK;
+			request += conn->slot_ID;
+			request += convert::encode<boost::uint64_t>(conn->latest_request.back());
+			conn->requested_blocks.insert(conn->latest_request.back());
+			int size;
+			if(hash_tree_count - (conn->latest_request.back() * hashes_per_block) < hashes_per_block){
+				//request will not yield full P_BLOCK
+				size = (hash_tree_count - (conn->latest_request.back() * hashes_per_block)) * sha::HASH_LENGTH + 1;
+				Request_Generator.set_timeout(global::RE_REQUEST_FINISHING);
+			}else{
+				size = global::P_BLOCK_SIZE;
+			}
+			expected.push_back(std::make_pair(global::P_BLOCK, size));
+			expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
+			expected.push_back(std::make_pair(global::P_WAIT, global::P_WAIT_SIZE));
+			return download::BINARY_MODE;
+		}else{
+			//no more requests to make
+			return download::NO_REQUEST;
+		}
+	}else if(conn->State == connection_special::CLOSED_SLOT){
+		//slot closed, this download is done with the server
 		return download::NO_REQUEST;
 	}
 
-	if(conn->wait_activated){
-		//check to see if wait is completed
-		if(conn->wait_start + global::P_WAIT_TIMEOUT <= time(NULL)){
-			//timeout expired
-			conn->wait_activated = false;
-		}else{
-			//timeout not yet expired
-			return download::NO_REQUEST;
-		}
-	}
-
-	if(Request_Generator.request(conn->latest_request)){
-		//no request to be made at the moment
-		request += global::P_SEND_BLOCK;
-		request += conn->slot_ID;
-		request += convert::encode<boost::uint64_t>(conn->latest_request.back());
-		conn->requested_blocks.insert(conn->latest_request.back());
-		int size;
-		if(hash_tree_count - (conn->latest_request.back() * hashes_per_block) < hashes_per_block){
-			//request will not yield full P_BLOCK
-			size = (hash_tree_count - (conn->latest_request.back() * hashes_per_block)) * sha::HASH_LENGTH + 1;
-			Request_Generator.set_timeout(global::RE_REQUEST_FINISHING);
-		}else{
-			size = global::P_BLOCK_SIZE;
-		}
-		expected.push_back(std::make_pair(global::P_BLOCK, size));
-		expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
-		expected.push_back(std::make_pair(global::P_WAIT, global::P_WAIT_SIZE));
-		return download::BINARY_MODE;
-	}
-
-	return download::NO_REQUEST;
+	logger::debug(LOGGER_P1,"logic error: unhandled case");
+	exit(1);
 }
 
 void download_hash_tree::register_connection(const download_connection & DC)
@@ -210,58 +222,73 @@ void download_hash_tree::response(const int & socket, std::string block)
 	assert(iter != Connection_Special.end());
 	connection_special * conn = &iter->second;
 
-	if(conn->abusive){
-		//server abusive but not yet disconnected, ignore data from it
+	if(conn->State == connection_special::ABUSIVE){
+		//abusive but not yet disconnected, ignore data
+		return;
+	}else if(conn->State == connection_special::AWAITING_SLOT){
+		if(block[0] == global::P_SLOT_ID){
+			//received slot, ready to request blocks
+			conn->slot_ID = block[1];
+			conn->State = connection_special::REQUEST_BLOCKS;
+		}else if(block[0] == global::P_ERROR){
+			logger::debug(LOGGER_P1,"server ",conn->IP," does not have hash tree, REMOVAL FROM DB NOT IMPLEMENTED");
+		}else{
+			logger::debug(LOGGER_P1,"logic error: unhandled case");
+			exit(1);
+		}
+		return;
+	}else if(conn->State == connection_special::REQUEST_BLOCKS){
+		if(block[0] == global::P_BLOCK){
+			//a block was received
+			block.erase(0, 1); //trim command
+			Hash_Tree.write_hash(root_hash_hex, conn->latest_request.front()*hashes_per_block, block);
+			client_server_bridge::download_block_received(root_hash_hex, conn->latest_request.front());
+			Request_Generator.fulfil(conn->latest_request.front());
+			conn->latest_request.pop_front();
+			if(Request_Generator.complete()){
+				//check for bad blocks in tree
+				std::pair<boost::uint64_t, boost::uint64_t> bad_hash;
+				if(Hash_Tree.check_hash_tree(root_hash_hex, root_hash_hex, hash_tree_count, bad_hash)){
+					//bad block found, find server that sent it
+					boost::uint64_t bad_block = bad_hash.first / hashes_per_block;
+					std::map<int, connection_special>::iterator iter_cur, iter_end;
+					iter_cur = Connection_Special.begin();
+					iter_end = Connection_Special.end();
+					while(iter_cur != iter_end){
+						std::set<boost::uint64_t>::iterator iter = iter_cur->second.requested_blocks.find(bad_block);
+						if(iter != iter_cur->second.requested_blocks.end()){
+							//re_request all blocks gotten from the server that sent a bad block
+							iter_cur->second.State = connection_special::ABUSIVE;
+							DB_blacklist::add(iter_cur->second.IP);
+							return;
+						}
+						++iter_cur;
+					}
+				}else{
+					//hash tree complete, close slots
+					close_slots = true;
+				}
+			}
+		}else if(block[0] == global::P_WAIT){
+			//server doesn't yet have the requested block, immediately re_request block
+			Request_Generator.force_re_request(conn->latest_request.front());
+			conn->latest_request.pop_front();
+			conn->wait_activated = true;
+			conn->wait_start = time(NULL);
+		}else if(block[0] == global::P_ERROR){
+			logger::debug(LOGGER_P1,"server ",conn->IP," does not have hash tree, REMOVAL FROM DB NOT IMPLEMENTED");
+		}else{
+			logger::debug(LOGGER_P1,"logic error: unhandled case");
+			exit(1);
+		}
+		return;
+	}else if(conn->State == connection_special::CLOSED_SLOT){
+		//done with server, ignore any pending responses from it
 		return;
 	}
 
-	if(block[0] == global::P_SLOT_ID && conn->slot_ID_received == false){
-		conn->slot_ID = block[1];
-		conn->slot_ID_received = true;
-	}else if(block[0] == global::P_BLOCK){
-		//a block was received
-		block.erase(0, 1); //trim command
-		Hash_Tree.write_hash(root_hash_hex, conn->latest_request.front()*hashes_per_block, block);
-		client_server_bridge::download_block_received(root_hash_hex, conn->latest_request.front());
-		Request_Generator.fulfil(conn->latest_request.front());
-		conn->latest_request.pop_front();
-
-		if(Request_Generator.complete()){
-			//check for bad blocks in tree
-			std::pair<boost::uint64_t, boost::uint64_t> bad_hash;
-			if(Hash_Tree.check_hash_tree(root_hash_hex, root_hash_hex, hash_tree_count, bad_hash)){
-				//bad block found, find server that sent it
-				boost::uint64_t bad_block = bad_hash.first / hashes_per_block;
-				std::map<int, connection_special>::iterator CS_iter_cur, CS_iter_end;
-				CS_iter_cur = Connection_Special.begin();
-				CS_iter_end = Connection_Special.end();
-				while(CS_iter_cur != CS_iter_end){
-					std::set<boost::uint64_t>::iterator iter = CS_iter_cur->second.requested_blocks.find(bad_block);
-					if(iter != CS_iter_cur->second.requested_blocks.end()){
-						//re_request all blocks gotten from the server that sent a bad block
-						CS_iter_cur->second.abusive = true;
-						DB_blacklist::add(CS_iter_cur->second.IP);
-						break;
-					}
-					++CS_iter_cur;
-				}
-			}else{
-				close_slots = true;
-			}
-		}
-	}else if(block[0] == global::P_WAIT){
-		//server doesn't yet have the requested block, immediately re_request block
-		Request_Generator.force_re_request(conn->latest_request.front());
-		conn->latest_request.pop_front();
-
-		//set up wait
-		conn->wait_activated = true;
-		conn->wait_start = time(NULL);
-	}else if(block[0] == global::P_ERROR){
-		logger::debug(LOGGER_P1,"server ",conn->IP," does not have hash tree");
-std::cout << "REMOVAL FROM DB DUE TO P_ERROR NOT IMPLEMENTED IN download_hash_tree\n";
-		exit(1);
-	}
+	logger::debug(LOGGER_P1,"logic error: unhandled case");
+	exit(1);
 }
 
 void download_hash_tree::stop()

@@ -100,7 +100,7 @@ private:
 	*/
 	bool download_complete;
 
-	std::string root_hash_hex;        //hash tree root hash
+	std::string root_hash_hex;    //hash tree root hash
 	std::string file_name;        //name of the file
 	std::string file_path;        //path to write file to
 	boost::uint64_t file_size;    //size of the file(bytes)
@@ -124,32 +124,23 @@ private:
 			const std::string IP_in
 		):
 			IP(IP_in),
-			slot_ID_requested(false),
-			slot_ID_received(false),
-			close_slot_sent(false),
-			abusive(false),
-			wait_activated(false)
+			wait_activated(false),
+			State(REQUEST_SLOT)
 		{
 
 		}
 
+		enum state{
+			ABUSIVE,        //server violated protocol but has not yet been disconnected
+			REQUEST_SLOT,   //need to request a slot
+			AWAITING_SLOT,  //slot requested, awaiting slot
+			REQUEST_BLOCKS, //slot received, requesting blocks
+			CLOSED_SLOT     //already sent a P_CLOSE
+		};
+		state State;
+
 		std::string IP;         //IP of server
 		char slot_ID;           //slot ID the server gave for the file
-		bool slot_ID_requested; //true if slot_ID requested
-		bool slot_ID_received;  //true if slot_ID received
-
-		/*
-		If a server sends a corrupt block it is put in the blacklist and this is
-		set to true to indicate that any more communication with the server before
-		it is disconnected should be ignored.
-		*/
-		bool abusive;
-
-		/*
-		The download will not be finished until a P_CLOSE_SLOT has been sent to all
-		servers.
-		*/
-		bool close_slot_sent;
 
 		/*
 		What file blocks have been requested from the server in order of when they

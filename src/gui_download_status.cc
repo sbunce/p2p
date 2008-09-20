@@ -5,14 +5,21 @@ gui_download_status::gui_download_status(
 	Gtk::Label * tab_label,
 	client * Client_in
 ):
-	root_hash(root_hash_in)
+	root_hash(root_hash_in),
+	tree_size_bytes(0),
+	file_size_bytes(0)
 {
 	Client = Client_in;
 
 	std::string name;
 	if(Client->file_info(root_hash, name, tree_size_bytes, file_size_bytes)){
-		name = " " + name + " ";
-		tab_label->set_text(name);
+		int max_tab_label_size = 24;
+		std::string tmp = name.substr(0, max_tab_label_size);
+		if(name.size() > max_tab_label_size){
+			tmp += "..";
+		}
+		tmp = " " + tmp + " ";
+		tab_label->set_text(tmp);
 	}else{
 		tab_label->set_text("download not found");
 	}
@@ -88,17 +95,11 @@ gui_download_status::gui_download_status(
 
 bool gui_download_status::refresh(bool * refresh)
 {
-	if(*refresh == false){
-		//tab was closed
-		delete refresh;
-		return false;
-	}
-
 	std::vector<download_info> info;
 	Client->current_downloads(info, root_hash);
 
-	if(info.empty()){
-		//download no longer downloading, no need to refresh
+	if(*refresh == false || info.empty()){
+		//tab was closed or download finished
 		servers_list->clear();
 		delete refresh;
 		return false;
