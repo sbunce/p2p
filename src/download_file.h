@@ -85,8 +85,12 @@ private:
 	/*
 	If download is terminated early the downloaded file will not be added to the
 	share.
+
+	Downloads cancelled by a user immediately become invisible because they might
+	take a little while to clean up.
 	*/
 	bool canceled;
+	bool _visible;
 
 	/*
 	These variables are only to be used by the hash_check() thread.

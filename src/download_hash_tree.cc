@@ -11,7 +11,7 @@ download_hash_tree::download_hash_tree(
 	download_complete(false),
 	close_slots(false),
 	_canceled(false),
-	checking_phase(false)
+	_visible(true)
 {
 	assert(global::FILE_BLOCK_SIZE % sha::HASH_LENGTH == 0);
 
@@ -294,6 +294,7 @@ void download_hash_tree::response(const int & socket, std::string block)
 void download_hash_tree::stop()
 {
 	_canceled = true;
+	_visible = false;
 	if(Connection.size() == 0){
 		download_complete = true;
 	}else{
@@ -326,5 +327,5 @@ void download_hash_tree::unregister_connection(const int & socket)
 
 bool download_hash_tree::visible()
 {
-	return true;
+	return _visible;
 }

@@ -67,7 +67,7 @@ namespace global
 	//hard settings
 	const int PRIME_CACHE = 256;         //number of primes to keep in prime cache for diffie-hellman
 	const int DH_KEY_SIZE = 64;          //size of key exchanged with diffie-hellman (bytes)
-	const int PIPELINE_SIZE = 16;        //how many pre-requests can be done
+	const int PIPELINE_SIZE = 8;         //how many pre-requests can be done
 	const int RE_REQUEST = 16;           //seconds before a file block is re-requested
 	const int P_WAIT_TIMEOUT = 8;        //when a client download_file/download_hash_tree receives a P_WAIT it will not make any requests for this long
 	const int RE_REQUEST_FINISHING = 4;  //seconds before a file block is re-requested when download is in finishing phase (last block requested)
@@ -88,21 +88,21 @@ namespace global
 	const int P_ERROR_SIZE = 1;
 
 	//protocol commands client -> server
-	const char P_REQUEST_SLOT_FILE = (char)1;
-	const int P_REQUEST_SLOT_FILE_SIZE = 21;
-	const char P_REQUEST_SLOT_HASH = (char)2;
+	const char P_REQUEST_SLOT_HASH = (char)1;
 	const int P_REQUEST_SLOT_HASH_SIZE = 21;
+	const char P_REQUEST_SLOT_FILE = (char)2;
+	const int P_REQUEST_SLOT_FILE_SIZE = 21;
 	const char P_CLOSE_SLOT = (char)3;
 	const int P_CLOSE_SLOT_SIZE = 2;
-	const char P_SEND_BLOCK = (char)4;
+	const char P_SEND_BLOCK = (char)5;
 	const int P_SEND_BLOCK_SIZE = 10;
 
 	//protocol commands server -> client
-	const char P_SLOT_ID = (char)6;
+	const char P_SLOT_ID = (char)3;
 	const int P_SLOT_ID_SIZE = 2;
-	const char P_BLOCK = (char)7;
+	const char P_BLOCK = (char)5;
 	const int P_BLOCK_SIZE = 5121;
-	const char P_WAIT = (char)8;
+	const char P_WAIT = (char)6;
 	const int P_WAIT_SIZE = 1;
 
 	//largest possible packet (used to determine buffer sizes)

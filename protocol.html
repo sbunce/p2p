@@ -1,0 +1,341 @@
+<html>
+<head>
+<title>P2P Protocol Documentation</title>
+</head>
+<body>
+<table>
+<tr><td width="800">
+
+<h3>Table of Contents</h3>
+<ul>
+<li><a href="#general">General</a>
+<ul>
+<li><a href="#pipelining">Pipelining</a>
+<li><a href="#rerequests">Rerequests</a>
+<li><a href="#blacklist">Blacklist</a>
+</ul>
+
+<li><a href="#commands">Commands</a>
+<ul>
+<li><a href="#client_to_server">Client -&#62 Server</a>
+<li><a href="#server_to_client">Server -&#62 Client</a>
+</ul>
+</ul>
+
+<hr>
+
+<a name="general">
+<h2>General</h2>
+<p>
+P2P is a typical client/server protocol. The client sends requests to the
+server and the server responds. Each request sent to the server begins with a 1
+byte command. There are two types of requests, text and binary. 
+</p>
+<p><b>Binary:</b></p>
+<p>
+Binary requests are fixed length. The server determines the length of a binary
+request by looking at the command. Responses to binary requests are binary and
+fixed length. The client determines the length of a binary response by looking
+at the command.
+</p>
+<p>
+example:
+</p>
+<blockquote>
+<pre>
+  0   1                0   1   2   3   4   5
++---+---+            +---+---+---+---+---+---+
+| C |   |            | C |                   |
++---+---+            +---+---+---+---+---+---+
+ request                  response
+</pre>
+</blockquote>
+<br>
+<p><b>Text:</b></p>
+<p>
+Text requests are fixed length. The server determines the length of a text
+request by looking at the command. Responses to text requests are text and are
+variable length. The client determines the end end of a text response by looking
+for a \0 terminator. There is no command in a text response.
+</p>
+<p>example:</p>
+<blockquote>
+<pre>
+  0   1                0   1   .........   n
++---+---+            +---+---+---+---+---+---+
+| C |   |            |                    \0 |
++---+---+            +---+---+---+---+---+---+
+ request                  response
+</pre>
+</blockquote>
+
+<hr>
+
+<a name="pipelining">
+<h2>Pipelining</h2>
+<p>
+The maximum pipeline size is 8 requests.
+</p>
+<p>
+Pipelining is done by sending multiple requests when a download starts and a new
+request whenever a response is received such that there are always requests
+"in the pipeline". Pipelining makes it so the server is never sitting idle
+waiting for a request.
+</p>
+
+<hr>
+
+<a name="rerequests">
+<h2>Rerequests</h2>
+<p>
+The following trigger rerequesting of file blocks:
+<br><br>
+- If a request is not fulfilled within 16 seconds a rerequest will be done.
+<br>
+- Server disconnect triggers rerequest of all requests in pipeline.
+<br>
+- Hash failure triggers blacklisting of server and rerequest of all requests in
+pipline.
+</p>
+
+<hr>
+
+<a name="blacklist">
+<h2>Blacklist</h2>
+<p>
+When a client or server disobeys the protocol it will be blacklisted. Any established
+connections to the server are immediately severed. The following trigger blacklisting:
+<br><br>
+- Unexpected commands, unknown commands, and commands out of sequence.
+<br>
+- Overpiplining from the client.
+<br>
+- Buffer overrun. Malformed commands generally lead the the client/server not being
+able to delimit commands which leads to buffer overruns.
+<br>
+- Server sending a block which fails a hash check.
+</p>
+
+<hr>
+
+<a name="commands">
+<h2>Commands</h2>
+<pre>
+C: command name
+B: byte value
+D: direction
+</pre>
+
+<a name="server_to_client">
+<h3>Server -> Client</h3>
+<blockquote>
+<a name="ERROR">
+<fieldset>
+<pre>
+C: ERROR
+B: 0
+D: server -> client
+</pre>
+<p>
+ERROR has different meanings in different contexts.
+</p>
+<p>
+<blockquote>
+<pre>
+  0
++---+
+| C |
++---+
+</pre>
+</blockquote>
+</fieldset>
+
+<br>
+
+<a name="SLOT_ID">
+<fieldset>
+<pre>
+C: SLOT_ID
+B: 3
+D: server -> client
+</pre>
+<p>
+This message is sent in response to a REQUEST_SLOT_FILE or a REQUEST_SLOT_HASH.
+Contained within this response is a slot ID that can be used to request blocks
+from a file.
+</p>
+<blockquote>
+<pre>
+  0   1
++---+---+
+| C | S | , where S = slot ID
++---+---+
+</pre>
+</blockquote>
+</fieldset>
+
+<br>
+
+<a name="BLOCK">
+<fieldset>
+<pre>
+C: BLOCK
+B: 5
+D: server -> client
+</pre>
+<p>
+The server is sending a block.
+</p>
+<blockquote>
+<pre>
+  0   1   2   3   ......... 5121
++---+---+---+---+---+---+---+---+
+| C |            block          |
++---+---+---+---+---+---+---+---+
+</pre>
+</blockquote>
+</fieldset>
+
+<br>
+
+<a name="WAIT">
+<fieldset>
+<pre>
+C: WAIT
+B: 6
+D: server -> client
+</pre>
+<p>
+The server is currently downloading the file and doesn't yet have the block
+that was requested. This triggers an 8 second wait before trying to request
+any new blocks.
+</p>
+<blockquote>
+<pre>
+  0
++---+
+| C |
++---+
+</pre>
+</blockquote>
+</blockquote>
+
+
+<br>
+
+<a name="client_to_server">
+<h3>Client -> Server</h3>
+<blockquote>
+<fieldset>
+<pre>
+C: REQUEST_SLOT_HASH
+B: 1
+D: client -> server
+</pre>
+<p>
+Request a slot for downloading a hash tree. The slot ID is 1 byte so 256 slots per
+connection are supported.
+</p>
+<blockquote>
+<pre>
+  0   1   2   3   ........    21
++---+---+---+---+---+---+---+---+
+| C |         root hash         |
++---+---+---+---+---+---+---+---+
+</pre>
+</blockquote>
+<pre>
+Possible Responses:
+<a href="#SLOT_ID">SLOT_ID</a>
+<a href="#ERROR">ERROR</a>   - The server does not have the requested hash.
+</pre>
+</fieldset>
+
+<br>
+
+<fieldset>
+<pre>
+C: REQUEST_SLOT_FILE
+B: 2
+D: client -> server
+</pre>
+<p>
+Request a slot for downloading a file. The slot ID is 1 byte so 256 slots per
+connection are supported.
+</p>
+<blockquote>
+<pre>
+  0   1   2   3   ........    21
++---+---+---+---+---+---+---+---+
+| C |         root hash         |
++---+---+---+---+---+---+---+---+
+</pre>
+</blockquote>
+<pre>
+Possible Responses:
+<a href="#SLOT_ID">SLOT_ID</a>
+<a href="#ERROR">ERROR</a>   - The server does not have the requested hash.
+</pre>
+</fieldset>
+
+<br>
+
+<fieldset>
+<pre>
+C: CLOSE_SLOT
+B: 4
+D: client -> server
+</pre>
+<p>
+Tell the server to close a slot. Generally used when finished downloading a file.
+</p>
+<blockquote>
+<pre>
+  0   1
++---+---+
+| C | S | , where S = slot ID
++---+---+
+</pre>
+</blockquote>
+<pre>
+No Response Expected
+</pre>
+</fieldset>
+
+<br>
+
+<fieldset>
+<pre>
+C: BLOCK
+B: 5
+D: client -> server
+</pre>
+<p>
+This is used to request a 5120 byte block from a file. The BLOCK command is used
+to request a block from a hash tree or a file. A 5120 byte block from a hash tree
+is 256 hashes.
+</p>
+<blockquote>
+<pre>
+  0   1   2   3   .........  10
++---+---+---+---+---+---+---+---+
+| C | S |              RRN      | , S = slot ID
++---+---+---+---+---+---+---+---+
+</pre>
+</blockquote>
+<pre>
+Possible Responses:
+<a href="#BLOCK">BLOCK</a>
+<a href="#WAIT">WAIT</a>
+<a href="#ERROR">ERROR</a>   - The server no longer has the file.
+</pre>
+</fieldset>
+</blockquote>
+
+<hr>
+
+</td></tr>
+</table>
+
+</body>
+</html>

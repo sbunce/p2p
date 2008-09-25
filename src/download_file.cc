@@ -18,7 +18,8 @@ download_file::download_file(
 	thread_file_path(file_path_in),
 	download_complete(false),
 	close_slots(false),
-	canceled(false)
+	canceled(false),
+	_visible(true)
 {
 	client_server_bridge::transition_download(root_hash_hex);
 
@@ -316,6 +317,7 @@ void download_file::stop()
 	}
 	stop_threads = true; //stop hash check thread if it's running
 	canceled = true;     //this download will not be added to share since it was cancelled
+	_visible = false;
 }
 
 void download_file::write_block(boost::uint64_t block_number, std::string & block)
@@ -349,5 +351,5 @@ void download_file::unregister_connection(const int & socket)
 
 bool download_file::visible()
 {
-	return true;
+	return _visible;
 }

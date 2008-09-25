@@ -57,8 +57,12 @@ private:
 	If the hash tree download gets cancelled early by the user this will be set
 	to true which will make the completion of the hash tree not trigger a
 	download_file to start.
+
+	Downloads cancelled by a user immediately become invisible because they might
+	take a little while to clean up.
 	*/
 	bool _canceled;
+	bool _visible;
 
 	/*
 	After P_CLOSE_SLOT is sent to all servers and there are no pending responses
@@ -77,12 +81,6 @@ private:
 	that P_CLOSE_SLOT commands need to be sent to all servers.
 	*/
 	bool close_slots;
-
-	/*
-	When all hashes are done downloading the checking phase is entered where if
-	there are any bad blocks they're requested one at a time from low to high.
-	*/
-	bool checking_phase;
 
 	/*
 	Class for storing information specific to servers. Each server is identified

@@ -1,8 +1,7 @@
 ********************************************************************************
-General Protocol Information
+Client / Server Protocol
 
-All encoded numbers are unsigned and are encoded in big endian. This includes
-SHA-1 hashes which are big endian by SHA-1 standard.
+All encoded numbers are unsigned and are encoded in big endian.
 
 There are two types of messages, binary and text.
 
@@ -15,23 +14,15 @@ Text Messages are not preceeded by anything. Each request for a text message
 must has a response. Responses can vary in size. All text messages are
 terminated by a \0 character.
 
-Example Buffer:
-
-	  0   1   2   3   4   6   7   8   9  10  11  12  13  14  15  16  17  18
-	+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-	| C |                       | S |           |\0 | C |                   |
-	+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-
-At location 0 there is a binary command with a 6 byte message. At location 8 is
-the start of a text message that happens to be 4 bytes long. The command at
-location 13 is for a binary message that is only complete if the associated size
-of the message is 5 bytes.
 
 ********************************************************************************
 RE-REQUEST ALGORITHM
 
-NEEDS THOUGHT
-Blocks are rerequested that haven't been received after 4 seconds.
+Blocks are rerequested that haven't been received after 16 seconds. However, if
+for example there are two blocks in the pipeline the first one will be
+rerequested after 16 seconds butt the second one will be rerequested after 32
+seconds.
+
 
 ********************************************************************************
 PIPELINING
@@ -47,10 +38,12 @@ The maximum pipeline size is 16 commands. When first connecting 16 requests(if
 available) should be made, then after each response a new request should be
 made. This will keep the servers pipeline full so it can always be sending.
 
+
 ********************************************************************************
 TIMEOUT
 
 Connection timeout is 16 seconds of inactivity (no I/O).
+
 
 ********************************************************************************
 Binary Protocol
@@ -58,6 +51,7 @@ Binary Protocol
 P_ERROR (0)
 server -> client
 Has different meaning and packet length in different contexts.
+
 
 ****************************************
 P_REQUEST_SLOT_FILE (1)

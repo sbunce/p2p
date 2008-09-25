@@ -1,10 +1,17 @@
 TODO
 
+-Are database class instantiations within downloads stalling things?
+
+-Redo commands to fit documentation.
+
+-Get client_server_bridge working for hash trees. Use the hash tree recursive
+function to figure out how many blocks are in each row so it's known when blocks
+are checked.
+
 -Sometimes gui download stat file percent complete stops at 99% when file is
 complete.
 
--Add port numbers to search table. Set up program so it can do testing over
-localhost on different port numbers.
+-Sometimes primes go above 256 on program start.
 
 
 WINDOWS PORTABILITY
@@ -67,3 +74,6 @@ Children should be able to point to their parents.
 -What about having one large overlay network reserved for tracker discovery.
 Have a rule that says an individual can advertise a tracker once per day (or
 some large time period). That'd make traffic on the large overlay very minimal.
+
+-There must be a global catalogue. Do projections on how much space this would
+take up.
