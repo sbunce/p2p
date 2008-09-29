@@ -181,7 +181,7 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 
 		if(Request_Generator.request(conn->latest_request)){
 			//no request to be made at the moment
-			request += global::P_SEND_BLOCK;
+			request += global::P_BLOCK;
 			request += conn->slot_ID;
 			request += convert::encode<boost::uint64_t>(conn->latest_request.back());
 			conn->requested_blocks.insert(conn->latest_request.back());
@@ -191,7 +191,7 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 				size = (hash_tree_count - (conn->latest_request.back() * hashes_per_block)) * sha::HASH_LENGTH + 1;
 				Request_Generator.set_timeout(global::RE_REQUEST_FINISHING);
 			}else{
-				size = global::P_BLOCK_SIZE;
+				size = global::P_BLOCK_TO_CLIENT_SIZE;
 			}
 			expected.push_back(std::make_pair(global::P_BLOCK, size));
 			expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));

@@ -1,8 +1,11 @@
 TODO
 
--Are database class instantiations within downloads stalling things?
+-Think about dynamic pipeline size that increases every time 0 is hit, up to a
+max value of 8.
 
--Redo commands to fit documentation.
+-Rerequests are happening when only one server connected. I speculate that this
+would make the rerequest buffer grow really large. Think about having a function
+in request_gen that could disable rerequests.
 
 -Get client_server_bridge working for hash trees. Use the hash tree recursive
 function to figure out how many blocks are in each row so it's known when blocks
@@ -10,8 +13,6 @@ are checked.
 
 -Sometimes gui download stat file percent complete stops at 99% when file is
 complete.
-
--Sometimes primes go above 256 on program start.
 
 
 WINDOWS PORTABILITY

@@ -122,9 +122,9 @@ void server_buffer::process(char * buff, const int & n_bytes)
 			process_request = recv_buff.substr(0, global::P_REQUEST_SLOT_FILE_SIZE);
 			recv_buff.erase(0, global::P_REQUEST_SLOT_FILE_SIZE);
 			request_slot_file(process_request, process_send);
-		}else if(recv_buff[0] == global::P_SEND_BLOCK && recv_buff.size() >= global::P_SEND_BLOCK_SIZE){
-			process_request = recv_buff.substr(0, global::P_SEND_BLOCK_SIZE);
-			recv_buff.erase(0, global::P_SEND_BLOCK_SIZE);
+		}else if(recv_buff[0] == global::P_BLOCK && recv_buff.size() >= global::P_BLOCK_TO_SERVER_SIZE){
+			process_request = recv_buff.substr(0, global::P_BLOCK_TO_SERVER_SIZE);
+			recv_buff.erase(0, global::P_BLOCK_TO_SERVER_SIZE);
 			send_block(process_request, process_send);
 		}else{
 			//no full command left to slice off

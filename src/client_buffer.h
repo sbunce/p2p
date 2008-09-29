@@ -255,8 +255,9 @@ public:
 	zero no send needs to be done. Every +1 above zero it is indicates a send_buff
 	has something in it.
 	*/
-	static const volatile int & get_send_pending()
+	static int get_send_pending()
 	{
+		boost::mutex::scoped_lock lock(Mutex);
 		return send_pending;
 	}
 
@@ -373,7 +374,7 @@ private:
 	then there are no sends pending and write_FDS doesn't need to be used. These
 	are given to the client_buffer elements so they can increment it.
 	*/
-	static volatile int send_pending;
+	static int send_pending;
 
 	std::string recv_buff;
 	std::string send_buff;

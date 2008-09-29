@@ -15,9 +15,11 @@
 #include "sha.h"
 
 //std
+#include <deque>
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <vector>
 
 class hash_tree
 {
@@ -54,7 +56,11 @@ public:
 		return hash_count;
 	}
 
-	//returns how many hashes there would be in a hash tree of size file_size
+	/*
+	Returns how many hashes there would be in a hash tree with a specified number
+	of file hashes. The number of file hashes can be obtained by using the
+	file_hash_count function above.
+	*/
 	static boost::uint64_t hash_tree_count(boost::uint64_t row_hash)
 	{
 		boost::uint64_t start_hash = row_hash;
@@ -67,6 +73,27 @@ public:
 			row_hash = start_hash / 2;
 		}
 		return start_hash + hash_tree_count(row_hash);
+	}
+
+	/*
+	Same as above hash_tree_count function except this one fills the row vector
+	with how many hashes are in each individual row. The total hash count is also
+	returned.
+	*/
+	static boost::uint64_t hash_tree_row_count(boost::uint64_t row_hash, std::deque<boost::uint64_t> & row)
+	{
+		boost::uint64_t start_hash = row_hash;
+		if(row_hash == 1){
+			return 0;
+		}else if(row_hash % 2 != 0){
+			++start_hash;
+			row_hash = start_hash / 2;
+			row.push_front(start_hash);
+		}else{
+			row_hash = start_hash / 2;
+			row.push_front(start_hash);
+		}
+		return start_hash + hash_tree_row_count(row_hash, row);
 	}
 
 private:

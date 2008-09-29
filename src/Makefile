@@ -55,7 +55,7 @@ SERVER_OBJECTS := \
 	encryption.o \
 	hash_tree.o \
 	logger.o \
-	main_server.o \
+	main_nogui.o \
 	number_generator.o \
 	server.o \
 	server_buffer.o \

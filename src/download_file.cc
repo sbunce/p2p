@@ -212,7 +212,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 
 		if(!Request_Generator.complete() && Request_Generator.request(conn->latest_request)){
 			//prepare request for needed block
-			request += global::P_SEND_BLOCK;
+			request += global::P_BLOCK;
 			request += conn->slot_ID;
 			request += convert::encode<boost::uint64_t>(conn->latest_request.back());
 			int size;
@@ -220,7 +220,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 				size = last_block_size;
 				Request_Generator.set_timeout(global::RE_REQUEST_FINISHING);
 			}else{
-				size = global::P_BLOCK_SIZE;
+				size = global::P_BLOCK_TO_CLIENT_SIZE;
 			}
 			expected.push_back(std::make_pair(global::P_BLOCK, size));
 			expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));

@@ -18,6 +18,7 @@
 
 //std
 #include <ctime>
+#include <deque>
 #include <fstream>
 #include <iostream>
 #include <sstream>

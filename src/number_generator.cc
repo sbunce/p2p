@@ -32,6 +32,12 @@ mpint number_generator::random_prime_mpint_priv()
 
 void number_generator::generate_primes_thread()
 {
+	/*
+	Sleep for one second after program start to give time for other more important
+	things to start.
+	*/
+	portable_sleep::ms(1000);
+
 	while(true){
 		bool do_sleep = false;
 		if(DB_Prime.count() >= global::PRIME_CACHE){

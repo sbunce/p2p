@@ -86,28 +86,27 @@ namespace global
 	//protocol commands client <-> server
 	const char P_ERROR = (char)0;
 	const int P_ERROR_SIZE = 1;
+	const char P_BLOCK = (char)5;
+	const int P_BLOCK_TO_CLIENT_SIZE = 5121;
+	const int P_BLOCK_TO_SERVER_SIZE = 10;
 
 	//protocol commands client -> server
 	const char P_REQUEST_SLOT_HASH = (char)1;
 	const int P_REQUEST_SLOT_HASH_SIZE = 21;
 	const char P_REQUEST_SLOT_FILE = (char)2;
 	const int P_REQUEST_SLOT_FILE_SIZE = 21;
-	const char P_CLOSE_SLOT = (char)3;
+	const char P_CLOSE_SLOT = (char)4;
 	const int P_CLOSE_SLOT_SIZE = 2;
-	const char P_SEND_BLOCK = (char)5;
-	const int P_SEND_BLOCK_SIZE = 10;
 
 	//protocol commands server -> client
 	const char P_SLOT_ID = (char)3;
 	const int P_SLOT_ID_SIZE = 2;
-	const char P_BLOCK = (char)5;
-	const int P_BLOCK_SIZE = 5121;
 	const char P_WAIT = (char)6;
 	const int P_WAIT_SIZE = 1;
 
 	//largest possible packet (used to determine buffer sizes)
 	const int S_MAX_SIZE = P_REQUEST_SLOT_FILE_SIZE;
-	const int C_MAX_SIZE = P_BLOCK_SIZE;
+	const int C_MAX_SIZE = P_BLOCK_TO_CLIENT_SIZE;
 
 	/*
 	This is the size of a file block (hash block or file block) sent in a P_BLOCK
@@ -115,6 +114,6 @@ namespace global
 
 	WARNING: FILE_BLOCK_SIZE % sha::HASH_LENGTH must equal 0
 	*/
-	const int FILE_BLOCK_SIZE = P_BLOCK_SIZE - 1;
+	const int FILE_BLOCK_SIZE = P_BLOCK_TO_CLIENT_SIZE - 1;
 }
 #endif
