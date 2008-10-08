@@ -15,7 +15,9 @@ unsigned int number_generator::prime_count_priv()
 
 mpint number_generator::random_mpint_priv(const int & bytes)
 {
-	unsigned char buff[bytes];
+	boost::mutex::scoped_lock lock(random_mpint_mutex);
+	assert(bytes < global::DH_KEY_SIZE + 1);
+	static unsigned char buff[global::DH_KEY_SIZE+1];
 	PRNG(buff, bytes, NULL);
 	return mpint(buff, bytes);
 }
@@ -59,7 +61,6 @@ void number_generator::generate_primes_thread()
 			&PRNG,
 			NULL                   //optional void* that can be passed to PRNG
 		);
-
 		DB_Prime.add(m);
 	}
 }

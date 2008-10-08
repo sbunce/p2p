@@ -6,7 +6,7 @@
 #ifndef H_MPINT
 #define H_MPINT
 
-#include <tommath.h>
+#include "tommath.h"
 
 //std
 #include <iostream>
@@ -33,72 +33,17 @@ public:
 	mpint()
 	{
 		rstr = NULL;
-		if(mp_init(&data) != MP_OKAY){ throw ltmpp_error(MP_MEM); return; }
-   }
-
-	mpint(int n)
-	{
-		int tmp;
-		rstr = NULL;
-		if(n < 0){ tmp = -n; }else{ tmp = n; }
-		if(mp_init(&data) != MP_OKAY){ throw ltmpp_error(MP_MEM); return; }
-		if(mp_set_int(&data, (unsigned long)tmp) != MP_OKAY){
-			mp_clear(&data);
-			throw ltmpp_error(MP_MEM);
-			return;
-		}
-		if(tmp != n){
-			if(mp_neg(&data, &data) != MP_OKAY){ mp_clear(&data); throw ltmpp_error(MP_MEM); }
-		}
-   }
-
-	mpint(unsigned n)
-	{
-		rstr = NULL;
 		if(mp_init(&data) != MP_OKAY){
 			throw ltmpp_error(MP_MEM);
 			return;
 		}
-		if(mp_set_int(&data, (unsigned long)n) != MP_OKAY){
-			mp_clear(&data);
-			throw ltmpp_error(MP_MEM);
-			return;
-		}
-	}
-
-	mpint(long n)
-	{
-		rstr = NULL;
-		long tmp;
-		if(n < 0) tmp = -n; else tmp = n;
-		if(mp_init(&data) != MP_OKAY) throw ltmpp_error(MP_MEM);
-		if(mp_set_int(&data, (unsigned long)tmp) != MP_OKAY){
-			mp_clear(&data);
-			throw ltmpp_error(MP_MEM);
-		}
-		if(tmp != n){
-			if(mp_neg(&data, &data) != MP_OKAY){ mp_clear(&data); throw ltmpp_error(MP_MEM); }
-		}
    }
-
-	mpint(unsigned long n){
-		rstr = NULL;
-		if (mp_init(&data) != MP_OKAY){
-			throw ltmpp_error(MP_MEM);
-			return;
-		}
-		if(mp_set_int(&data, (unsigned long)n) != MP_OKAY){
-			mp_clear(&data);
-			throw ltmpp_error(MP_MEM);
-			return;
-		}
-	}
 
 	mpint(const char *str, int radix=10)
 	{
 		int err;
 		rstr = NULL;
-		if (mp_init(&data) != MP_OKAY){
+		if(mp_init(&data) != MP_OKAY){
 			throw ltmpp_error(MP_MEM);
 			return;
 		}
@@ -107,7 +52,7 @@ public:
 		}
 	}
 
-	mpint(const unsigned char *bin, int len)
+	mpint(const unsigned char * bin, int len)
 	{
 		int err;
 		rstr = NULL;
@@ -120,70 +65,42 @@ public:
 		}
 	}
 
-	mpint(const mpint &b)
+	mpint(const mpint & b)
 	{
 		rstr = NULL;
 		if(mp_init(&data) != MP_OKAY){
 			throw ltmpp_error(MP_MEM);
 			return;
 		}
-		if(mp_copy((mp_int *)&b.data, &data) != MP_OKAY){ throw ltmpp_error(MP_MEM); }
+		if(mp_copy((mp_int *)&b.data, &data) != MP_OKAY){
+			throw ltmpp_error(MP_MEM); 
+		}
 	}
 
 	~mpint()
 	{
 		mp_clear(&data);
 		if(rstr != NULL){
-			XFREE(rstr);
+			free(rstr);
 		}
 	}
 
-   void read_str(const char *str, int radix)
-	{
-      if(mp_read_radix(&data, str, radix) != MP_OKAY){
-			throw ltmpp_error(MP_MEM);
-		}
-   }
-
-   void read_dec(const char *str)
-	{
-      read_str(str, 10);
-   }
-
-   void read_hex(const char *str)
-	{
-      read_str(str, 16);
-   }
-
-	char * to_str(int radix)
+   unsigned char * to_bin()
 	{
 		int n, err;
-		if(rstr){ XFREE(rstr); rstr = NULL; }
-		if((err = mp_radix_size(&data, radix, &n)) != MP_OKAY){ throw ltmpp_error(err); }
-		rstr = (char*)XCALLOC(1, n+1);
-		if(rstr == NULL){
-			throw ltmpp_error(MP_MEM);
-			return NULL;
+		if(rstr){
+			free(rstr);
+			rstr = NULL;
 		}
-		if((err = mp_toradix(&data, rstr, radix)) != MP_OKAY){ throw ltmpp_error(err); }
-		return rstr;
-	}
-
-   char *to_dec(){ return to_str(10); }
-
-   char *to_hex(){ return to_str(16); }
-
-   unsigned char *to_bin()
-	{
-		int n, err;
-		if(rstr){ XFREE(rstr); rstr = NULL; }
 		n = mp_unsigned_bin_size(&data);
-		rstr = (char*)XCALLOC(1, n+1);
+		rstr = (char *)calloc(1, n+1);
 		if(rstr == NULL){
 			throw ltmpp_error(MP_MEM);
 			return NULL;
 		}
-		if((err = mp_to_unsigned_bin(&data, (unsigned char *)rstr)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_to_unsigned_bin(&data, (unsigned char *)rstr)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return (unsigned char *)rstr;
    }
 
@@ -194,14 +111,18 @@ public:
 
 	void operator=(const mpint &b)
 	{
-		if(mp_copy((mp_int *)&b.data, &data) != MP_OKAY){ throw ltmpp_error(MP_MEM); }
+		if(mp_copy((mp_int *)&b.data, &data) != MP_OKAY){
+			throw ltmpp_error(MP_MEM);
+		}
 	}
 
 	mpint operator+(const mpint &b)
 	{
 		int err;
 		mpint tmp;
-		if((err = mp_add(&data, (mp_int *)&b.data, &tmp.data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_add(&data, (mp_int *)&b.data, &tmp.data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return tmp;
    }
 
@@ -209,7 +130,9 @@ public:
 	{
 		int err;
 		mpint tmp;
-		if((err = mp_sub(&data, (mp_int *)&b.data, &tmp.data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_sub(&data, (mp_int *)&b.data, &tmp.data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return tmp;
 	}
 
@@ -217,14 +140,18 @@ public:
 	{
 		int err;
 		mpint tmp;
-		if((err = mp_mul(&data, (mp_int *)&b.data, &tmp.data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_mul(&data, (mp_int *)&b.data, &tmp.data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return tmp;
 	}
 
 	mpint operator/(const mpint &b){
 		int err;
 		mpint tmp;
-		if((err = mp_div(&data, (mp_int *)&b.data, &tmp.data, NULL)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_div(&data, (mp_int *)&b.data, &tmp.data, NULL)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return tmp;
 	}
 
@@ -232,7 +159,9 @@ public:
 	{
 		int err;
 		mpint tmp;
-		if((err = mp_mod(&data, (mp_int *)&b.data, &tmp.data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_mod(&data, (mp_int *)&b.data, &tmp.data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return tmp;
 	}
 
@@ -240,7 +169,9 @@ public:
 	{
 		int err;
 		mpint tmp;
-		if((err = mp_xor(&data, (mp_int *)&b.data, &tmp.data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_xor(&data, (mp_int *)&b.data, &tmp.data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return tmp;
 	}
 
@@ -248,7 +179,9 @@ public:
 	{
 		int err;
 		mpint tmp;
-		if((err = mp_or(&data, (mp_int *)&b.data, &tmp.data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_or(&data, (mp_int *)&b.data, &tmp.data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return tmp;
 	}
 
@@ -256,7 +189,9 @@ public:
 	{
 		int err;
 		mpint tmp;
-		if((err = mp_and(&data, (mp_int *)&b.data, &tmp.data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_and(&data, (mp_int *)&b.data, &tmp.data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return tmp;
 	}
 
@@ -264,7 +199,9 @@ public:
 	{
 		int err;
 		mpint tmp;
-		if((err = mp_neg(&data, &tmp.data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_neg(&data, &tmp.data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return tmp;
 	}
 
@@ -272,7 +209,9 @@ public:
 	{
 		int err;
 		mpint tmp;
-		if((err = mp_mul_2d(&data, n, &tmp.data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_mul_2d(&data, n, &tmp.data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return tmp;
    }
 
@@ -280,105 +219,135 @@ public:
 	{
 		int err;
 		mpint tmp;
-		if((err = mp_div_2d(&data, n, &tmp.data, NULL)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_div_2d(&data, n, &tmp.data, NULL)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return tmp;
 	}
 
 	mpint &operator+=(const mpint &b)
 	{
 		int err;
-		if((err = mp_add(&data, (mp_int *)&b.data, &data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_add(&data, (mp_int *)&b.data, &data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return *this;
 	}
 
 	mpint &operator-=(const mpint &b)
 	{
 		int err;
-		if((err = mp_sub(&data, (mp_int *)&b.data, &data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_sub(&data, (mp_int *)&b.data, &data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return *this;
 	}
 
    mpint &operator*=(const mpint &b)
 	{
 		int err;
-		if((err = mp_mul(&data, (mp_int *)&b.data, &data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_mul(&data, (mp_int *)&b.data, &data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return *this;
 	}
 
 	mpint &operator/=(const mpint &b)
 	{
 		int err;
-		if((err = mp_div(&data, (mp_int *)&b.data, &data, NULL)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_div(&data, (mp_int *)&b.data, &data, NULL)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return *this;
 	}
 
 	mpint &operator%=(const mpint &b)
 	{
 		int err;
-		if ((err = mp_mod(&data, (mp_int *)&b.data, &data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_mod(&data, (mp_int *)&b.data, &data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return *this;
 	}
 
 	mpint &operator^=(const mpint &b)
 	{
 		int err;
-		if((err = mp_xor(&data, (mp_int *)&b.data, &data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_xor(&data, (mp_int *)&b.data, &data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return *this;
 	}
 
 	mpint &operator&=(const mpint &b)
 	{
 		int err;
-		if((err = mp_and(&data, (mp_int *)&b.data, &data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_and(&data, (mp_int *)&b.data, &data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return *this;
 	}
 
 	mpint &operator|=(const mpint &b)
 	{
 		int err;
-		if ((err = mp_or(&data, (mp_int *)&b.data, &data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_or(&data, (mp_int *)&b.data, &data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return *this;
 	}
 
 	mpint &operator<<=(int n)
 	{
 		int err;
-		if((err = mp_mul_2d(&data, n, &data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_mul_2d(&data, n, &data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return *this;
 	}
 
 	mpint &operator>>=(int n)
 	{
 		int err;
-		if((err = mp_div_2d(&data, n, &data, NULL)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_div_2d(&data, n, &data, NULL)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return *this;
 	}
 
    mpint &operator++()
 	{
 		int err;
-		if((err = mp_add_d(&data, 1, &data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_add_d(&data, 1, &data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return *this;
 	}
 
 	mpint &operator--()
 	{
 		int err;
-		if((err = mp_sub_d(&data, 1, &data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_sub_d(&data, 1, &data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return *this;
 	}
 
 	mpint &operator++(int)
 	{
 		int err;
-		if((err = mp_add_d(&data, 1, &data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_add_d(&data, 1, &data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return *this;
 	}
 
 	mpint &operator--(int)
 	{
 		int err;
-		if((err = mp_sub_d(&data, 1, &data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_sub_d(&data, 1, &data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return *this;
 	}
 
@@ -436,18 +405,25 @@ public:
 		return *this;
 	}
 
-   mpint &operator/=(const mp_digit b) {
-      int err;
-      mp_digit q;
-      if (b > MP_MASK) {
-	 q = MP_MASK - (b & MP_MASK) + 1;
-	 if ((err = mp_div_d(&data, q, &data, NULL)) != MP_OKAY) throw ltmpp_error(err);
-	 if ((err = mp_neg(&data, &data)) != MP_OKAY)	   throw ltmpp_error(err);
-      } else {
-	 if ((err = mp_div_d(&data, b, &data, NULL)) != MP_OKAY) throw ltmpp_error(err);
-      }
-      return *this;
-   }
+	mpint &operator/=(const mp_digit b)
+	{
+		int err;
+		mp_digit q;
+		if(b > MP_MASK){
+			q = MP_MASK - (b & MP_MASK) + 1;
+			if((err = mp_div_d(&data, q, &data, NULL)) != MP_OKAY){
+				throw ltmpp_error(err);
+			}
+			if((err = mp_neg(&data, &data)) != MP_OKAY){
+				throw ltmpp_error(err);
+			}
+		}else{
+			if((err = mp_div_d(&data, b, &data, NULL)) != MP_OKAY){
+				throw ltmpp_error(err);
+			}
+		}
+		return *this;
+	}
 
 	mpint &operator%=(const mp_digit b)
 	{
@@ -582,11 +558,18 @@ public:
 		}
 	}
 
+	friend std::ostream & operator << (std::ostream & lval, mpint rval)
+	{
+		return lval << rval.to_str(10);
+	}
+
    mpint gcd(const mpint &b)
 	{
 		int err;
 		mpint tmp;
-		if((err = mp_gcd(&data, (mp_int *)&b.data, &tmp.data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_gcd(&data, (mp_int *)&b.data, &tmp.data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return tmp;
 	}
 
@@ -594,7 +577,9 @@ public:
 	{
 		int err;
 		mpint tmp;
-		if((err = mp_lcm(&data, (mp_int *)&b.data, &tmp.data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_lcm(&data, (mp_int *)&b.data, &tmp.data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return tmp;
 	}
 
@@ -602,14 +587,18 @@ public:
 	{
 		int err;
 		mpint tmp;
-		if((err = mp_invmod(&data, (mp_int *)&b.data, &tmp.data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_invmod(&data, (mp_int *)&b.data, &tmp.data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return tmp;
 	}
 
 	int is_prime()
 	{
 		int err, n;
-		if((err = mp_prime_is_prime(&data, 10, &n)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_prime_is_prime(&data, 10, &n)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return n;
 	}
 
@@ -617,14 +606,35 @@ public:
 	{
 		int err;
 		mpint tmp;
-		if((err = mp_exptmod(&data, (mp_int *)&y.data, (mp_int *)&p.data, &tmp.data)) != MP_OKAY){ throw ltmpp_error(err); }
+		if((err = mp_exptmod(&data, (mp_int *)&y.data, (mp_int *)&p.data, &tmp.data)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
 		return tmp;
 	}
 
-/*
-WARNING: do not use these directly unless passing to the C libtommath functions.
-*/
+//private:
 	mp_int data;
 	char * rstr;
+
+	char * to_str(int radix)
+	{
+		int n, err;
+		if(rstr){
+			free(rstr);
+			rstr = NULL;
+		}
+		if((err = mp_radix_size(&data, radix, &n)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
+		rstr = (char *)calloc(1, n+1);
+		if(rstr == NULL){
+			throw ltmpp_error(MP_MEM);
+			return NULL;
+		}
+		if((err = mp_toradix(&data, rstr, radix)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
+		return rstr;
+	}
 };
 #endif

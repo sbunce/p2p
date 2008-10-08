@@ -55,11 +55,9 @@ public:
 	inline static void init()
 	{
 		//double checked lock to avoid locking overhead
-		if(Number_Generator == NULL){ //unsafe comparison, the hint
-			boost::mutex::scoped_lock lock(Mutex);
-			if(Number_Generator == NULL){ //threadsafe comparison
-				Number_Generator = new number_generator;
-			}
+		boost::mutex::scoped_lock lock(Mutex);
+		if(Number_Generator == NULL){ //threadsafe comparison
+			Number_Generator = new number_generator;
 		}
 	}
 
@@ -73,20 +71,27 @@ private:
 	//PRNG function that mp_prime_random_ex needs
 	static int PRNG(unsigned char * buff, int length, void * data)
 	{
-		#ifdef WIN32
-		std::cout << "NEED TO ADD WINDOWS PRNG\n";
-		exit(1);
-		#else
-		std::fstream fin("/dev/urandom", std::ios::in | std::ios::binary);
 		char ch;
 		int n = length;
+#ifdef WIN32
+		std::cout << "NEED TO ADD WINDOWS PRNG\n";
+		exit(1);
+#else
+		std::fstream fin("/dev/urandom", std::ios::in | std::ios::binary);
 		while(length--){
 			fin.get(ch);
 			*buff++ = (unsigned char)ch;
 		}
-		#endif
+#endif
 		return n; //return how many random bytes added to buff
 	}
+
+	/*
+	Access to random_mpint_priv must be locked to protect a static array. This
+	static array is necessary because microsoft doesn't support VLA (variable
+	length arrays) which is in the C99 standard.
+	*/
+	boost::mutex random_mpint_mutex;
 
 	/*
 	All of these functions are associated with public static member functions.

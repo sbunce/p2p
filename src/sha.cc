@@ -167,7 +167,7 @@ char * sha::raw_hash_no_null()
 		}
 	}
 	if(x == HASH_LENGTH){
-		raw[x-1] == (char)1;
+		raw[x-1] = (char)1;
 	}
 	return raw;
 }

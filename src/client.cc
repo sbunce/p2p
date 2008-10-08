@@ -260,7 +260,7 @@ void client::main_thread()
 						if(n_bytes == -1){
 							#ifdef WIN32
 							logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
-							#elseremove_empty()
+							#else
 							perror("client send");
 							#endif
 						}

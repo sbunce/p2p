@@ -223,10 +223,10 @@ void server::main_thread()
 	Reuse port if it's currently in use. It can take up to a minute for linux to
 	deallocate the port if this isn't used.
 	*/
+	int yes = 1;
 	#ifdef WIN32
 	if(setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (char *)&yes, sizeof(int)) == -1){
 	#else
-	int yes = 1;
 	if(setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1){
 	#endif
 		#ifdef WIN32

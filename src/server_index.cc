@@ -55,15 +55,15 @@ void server_index::scan_hashes()
 		portable_sleep::yield(); //make it so directory scans don't hog all CPU
 		try{
 			if(fs::is_directory(*directory_iter)){
-				logger::debug(LOGGER_P1,"found directory: ",directory_iter->leaf(),", in hash directory");
+				logger::debug(LOGGER_P1,"found directory: ",directory_iter->path().leaf(),", in hash directory");
 			}else{
-				if(directory_iter->leaf().length() != sha::HEX_HASH_LENGTH){
+				if(directory_iter->path().leaf().length() != sha::HEX_HASH_LENGTH){
 					//file not a hash tree, it may be "upside_down" or "rightside_up" temporary files
 					continue;
 				}
 
-				if(client_server_bridge::is_downloading(directory_iter->leaf()) == client_server_bridge::NOT_DOWNLOADING && !DB_Share.hash_exists(directory_iter->leaf())){
-					std::remove((global::HASH_DIRECTORY+directory_iter->leaf()).c_str());
+				if(client_server_bridge::is_downloading(directory_iter->path().leaf()) == client_server_bridge::NOT_DOWNLOADING && !DB_Share.hash_exists(directory_iter->path().leaf())){
+					std::remove((global::HASH_DIRECTORY+directory_iter->path().leaf()).c_str());
 				}
 
 				if(stop_thread){
@@ -72,7 +72,7 @@ void server_index::scan_hashes()
 			}
 		}
 		catch(std::exception & ex){
-			logger::debug(LOGGER_P1,"when trying to read file ",directory_iter->leaf()," caught exception ",ex.what());
+			logger::debug(LOGGER_P1,"when trying to read file ",directory_iter->path().leaf()," caught exception ",ex.what());
 		}
 	}
 
@@ -102,11 +102,11 @@ void server_index::scan_share(std::string directory_name)
 				if(fs::is_directory(*directory_iter)){
 					//recurse to new directory
 					std::string sub_directory;
-					sub_directory = directory_name + directory_iter->leaf() + "/";
+					sub_directory = directory_name + directory_iter->path().leaf() + "/";
 					scan_share(sub_directory);
 				}else{
 					//determine if a hash tree needs to be generated
-					fs::path file_path = fs::system_complete(fs::path(directory_name + directory_iter->leaf(), fs::native));
+					fs::path file_path = fs::system_complete(fs::path(directory_name + directory_iter->path().leaf(), fs::native));
 					std::string existing_hash;
 					boost::uint64_t existing_size;
 					if(DB_Share.lookup_path(file_path.string(), existing_hash, existing_size)){
@@ -142,7 +142,7 @@ void server_index::scan_share(std::string directory_name)
 				}
 			}
 			catch(std::exception & ex){
-				logger::debug(LOGGER_P1,"when trying to read file ",directory_iter->leaf()," caught exception ",ex.what());
+				logger::debug(LOGGER_P1,"when trying to read file ",directory_iter->path().leaf()," caught exception ",ex.what());
 			}
 		}
 	}else{

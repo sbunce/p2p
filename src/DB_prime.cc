@@ -37,7 +37,7 @@ void DB_prime::add(const mpint & prime)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	std::ostringstream oss;
-	oss << "INSERT INTO prime VALUES (NULL,'" << ((mpint)prime).to_str(10) << "')";
+	oss << "INSERT INTO prime VALUES (NULL,'" << prime << "')";
 	if(sqlite3_exec(sqlite3_DB, oss.str().c_str(), NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}

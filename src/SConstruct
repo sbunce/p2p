@@ -1,0 +1,75 @@
+src_gui = [
+	'gui.cc',
+	'gui_about.cc',
+	'gui_download_status.cc',
+	'gui_preferences.cc',
+	'main_gui.cc'
+]
+
+src_nogui = [
+	'main_nogui.cc'
+]
+
+src_common = [
+	'CLI_args.cc',
+	'client_buffer.cc',
+	'client.cc',
+	'client_new_connection.cc',
+	'client_server_bridge.cc',
+	'CMWC4096.cc',
+	'DB_blacklist.cc',
+	'DB_client_preferences.cc',
+	'DB_download.cc',
+	'DB_prime.cc',
+	'DB_search.cc',
+	'DB_server_preferences.cc',
+	'DB_share.cc',
+	'download.cc',
+	'download_factory.cc',
+	'download_file.cc',
+	'download_hash_tree.cc',
+	'download_tracker.cc',
+	'encryption.cc',
+	'hash_tree.cc',
+	'logger.cc',
+	'number_generator.cc',
+	'request_generator.cc',
+	'server_buffer.cc',
+	'server.cc',
+	'server_index.cc',
+	'sha.cc',
+	'speed_calculator.cc',
+	'thread_pool.cc',
+	'#sqlite3/sqlite3.c'
+]
+
+#paths for static libs
+static_libs = [
+	'/usr/local/lib/libboost_thread-gcc41-mt-1_36.a',
+	'/usr/local/lib/libboost_filesystem-gcc41-mt-1_36.a',
+	'/usr/local/lib/libboost_system-gcc41-mt-1_36.a',
+	'#libtommath/libtommath.a'
+]
+
+#build static libs
+SConscript('libtommath/SConstruct')
+
+#setup base environment
+env_base = Environment(
+	CPPPATH = ['.', '#/libtommath', '#/sqlite3'],
+	LIBS = ['dl', 'pthread']
+)
+env_base.Repository('/usr/local/include/boost-1_36')
+
+#create gui environment
+env_gui = env_base.Clone()
+env_gui.ParseConfig('pkg-config gtkmm-2.4 --libs --cflags')
+
+#compile different object groups
+src_gui_obj = env_gui.Object(src_gui)
+src_nogui_obj = env_base.Object(src_nogui)
+src_common_obj = env_base.Object(src_common)
+
+#link
+env_gui.Program('p2p_gui', src_gui_obj + src_common_obj + static_libs)
+env_base.Program('p2p_nogui', src_nogui_obj + src_common_obj + static_libs)
