@@ -1,17 +1,3 @@
-/* LibTomMath, multiple-precision integer library -- Tom St Denis
- *
- * LibTomMath is a library that provides multiple-precision
- * integer arithmetic as well as number theoretic functionality.
- *
- * The library was designed directly after the MPI library by
- * Michael Fromberger but has been written from scratch with
- * additional optimizations in place.
- *
- * The library is free for all purposes without any express
- * guarantee it works.
- *
- * Tom St Denis, tomstdenis@gmail.com, http://math.libtomcrypt.com
- */
 #ifndef BN_H_
 #define BN_H_
 
@@ -35,21 +21,21 @@
 extern "C" {
 
 /* C++ compilers don't like assigning void * to mp_digit * */
-#define  OPT_CAST(x)  (x *)
+#define OPT_CAST(x) (x *)
 
 #else
 
 /* C on the other hand doesn't care */
-#define  OPT_CAST(x)
+#define OPT_CAST(x)
 
 #endif
 
 
 /* detect 64-bit mode if possible */
 #if defined(__x86_64__) 
-   #if !(defined(MP_64BIT) && defined(MP_16BIT) && defined(MP_8BIT))
-      #define MP_64BIT
-   #endif
+	#if !(defined(MP_64BIT) && defined(MP_16BIT) && defined(MP_8BIT))
+		#define MP_64BIT
+	#endif
 #endif
 
 /* some default configurations.
@@ -61,124 +47,123 @@ extern "C" {
  * [any size beyond that is ok provided it doesn't overflow the data type]
  */
 #ifdef MP_8BIT
-   typedef unsigned char      mp_digit;
-   typedef unsigned short     mp_word;
+	typedef unsigned char  mp_digit;
+	typedef unsigned short mp_word;
 #elif defined(MP_16BIT)
-   typedef unsigned short     mp_digit;
-   typedef unsigned long      mp_word;
+	typedef unsigned short mp_digit;
+	typedef unsigned long  mp_word;
 #elif defined(MP_64BIT)
-   /* for GCC only on supported platforms */
+	/* for GCC only on supported platforms */
 #ifndef CRYPT
-   typedef unsigned long long ulong64;
-   typedef signed long long   long64;
+	typedef unsigned long long ulong64;
+	typedef signed long long   long64;
 #endif
 
-   typedef unsigned long      mp_digit;
-   typedef unsigned long      mp_word __attribute__ ((mode(TI)));
+	typedef unsigned long mp_digit;
+	typedef unsigned long mp_word __attribute__ ((mode(TI)));
 
-   #define DIGIT_BIT          60
+   #define DIGIT_BIT 60
 #else
-   /* this is the default case, 28-bit digits */
-   
-   /* this is to make porting into LibTomCrypt easier :-) */
+	/* this is the default case, 28-bit digits */
+	/* this is to make porting into LibTomCrypt easier :-) */
 #ifndef CRYPT
-   #if defined(_MSC_VER) || defined(__BORLANDC__) 
-      typedef unsigned __int64   ulong64;
-      typedef signed __int64     long64;
-   #else
-      typedef unsigned long long ulong64;
-      typedef signed long long   long64;
-   #endif
+	#if defined(_MSC_VER) || defined(__BORLANDC__) 
+		typedef unsigned __int64 ulong64;
+		typedef signed __int64   long64;
+	#else
+		typedef unsigned long long ulong64;
+		typedef signed long long   long64;
+	#endif
 #endif
 
-   typedef unsigned long      mp_digit;
-   typedef ulong64            mp_word;
+	typedef unsigned long mp_digit;
+	typedef ulong64       mp_word;
 
 #ifdef MP_31BIT   
-   /* this is an extension that uses 31-bit digits */
-   #define DIGIT_BIT          31
+	/* this is an extension that uses 31-bit digits */
+	#define DIGIT_BIT 31
 #else
-   /* default case is 28-bit digits, defines MP_28BIT as a handy macro to test */
-   #define DIGIT_BIT          28
-   #define MP_28BIT
+	/* default case is 28-bit digits, defines MP_28BIT as a handy macro to test */
+	#define DIGIT_BIT 28
+	#define MP_28BIT
 #endif   
 #endif
 
 /* define heap macros */
 #ifndef CRYPT
-   /* default to libc stuff */
-   #ifndef XMALLOC 
-       #define XMALLOC  malloc
-       #define XFREE    free
-       #define XREALLOC realloc
-       #define XCALLOC  calloc
-   #else
-      /* prototypes for our heap functions */
-      extern void *XMALLOC(size_t n);
-      extern void *XREALLOC(void *p, size_t n);
-      extern void *XCALLOC(size_t n, size_t s);
-      extern void XFREE(void *p);
-   #endif
+	/* default to libc stuff */
+	#ifndef XMALLOC 
+		#define XMALLOC  malloc
+		#define XFREE    free
+		#define XREALLOC realloc
+		#define XCALLOC  calloc
+	#else
+		/* prototypes for our heap functions */
+		extern void *XMALLOC(size_t n);
+		extern void *XREALLOC(void *p, size_t n);
+		extern void *XCALLOC(size_t n, size_t s);
+		extern void XFREE(void *p);
+	#endif
 #endif
 
 
 /* otherwise the bits per digit is calculated automatically from the size of a mp_digit */
 #ifndef DIGIT_BIT
-   #define DIGIT_BIT     ((int)((CHAR_BIT * sizeof(mp_digit) - 1)))  /* bits per digit */
+	#define DIGIT_BIT ((int)((CHAR_BIT * sizeof(mp_digit) - 1)))  /* bits per digit */
 #endif
 
-#define MP_DIGIT_BIT     DIGIT_BIT
-#define MP_MASK          ((((mp_digit)1)<<((mp_digit)DIGIT_BIT))-((mp_digit)1))
-#define MP_DIGIT_MAX     MP_MASK
+#define MP_DIGIT_BIT DIGIT_BIT
+#define MP_MASK      ((((mp_digit)1)<<((mp_digit)DIGIT_BIT))-((mp_digit)1))
+#define MP_DIGIT_MAX MP_MASK
 
 /* equalities */
-#define MP_LT        -1   /* less than */
-#define MP_EQ         0   /* equal to */
-#define MP_GT         1   /* greater than */
+#define MP_LT    -1 /* less than */
+#define MP_EQ     0 /* equal to */
+#define MP_GT     1 /* greater than */
 
-#define MP_ZPOS       0   /* positive integer */
-#define MP_NEG        1   /* negative */
+#define MP_ZPOS   0 /* positive integer */
+#define MP_NEG    1 /* negative */
 
-#define MP_OKAY       0   /* ok result */
-#define MP_MEM        -2  /* out of mem */
-#define MP_VAL        -3  /* invalid input */
-#define MP_RANGE      MP_VAL
+#define MP_OKAY   0 /* ok result */
+#define MP_MEM   -2 /* out of mem */
+#define MP_VAL   -3 /* invalid input */
+#define MP_RANGE MP_VAL
 
-#define MP_YES        1   /* yes response */
-#define MP_NO         0   /* no response */
+#define MP_YES    1 /* yes response */
+#define MP_NO     0 /* no response */
 
 /* Primality generation flags */
-#define LTM_PRIME_BBS      0x0001 /* BBS style prime */
-#define LTM_PRIME_SAFE     0x0002 /* Safe prime (p-1)/2 == prime */
-#define LTM_PRIME_2MSB_ON  0x0008 /* force 2nd MSB to 1 */
+#define LTM_PRIME_BBS     0x0001 /* BBS style prime */
+#define LTM_PRIME_SAFE    0x0002 /* Safe prime (p-1)/2 == prime */
+#define LTM_PRIME_2MSB_ON 0x0008 /* force 2nd MSB to 1 */
 
-typedef int           mp_err;
+typedef int mp_err;
 
 /* you'll have to tune these... */
 extern int KARATSUBA_MUL_CUTOFF,
-           KARATSUBA_SQR_CUTOFF,
-           TOOM_MUL_CUTOFF,
-           TOOM_SQR_CUTOFF;
+	KARATSUBA_SQR_CUTOFF,
+	TOOM_MUL_CUTOFF,
+	TOOM_SQR_CUTOFF;
 
 /* define this to use lower memory usage routines (exptmods mostly) */
 /* #define MP_LOW_MEM */
 
 /* default precision */
 #ifndef MP_PREC
-   #ifndef MP_LOW_MEM
-      #define MP_PREC                 32     /* default digits of precision */
-   #else
-      #define MP_PREC                 8      /* default digits of precision */
-   #endif   
+	#ifndef MP_LOW_MEM
+		#define MP_PREC 32 /* default digits of precision */
+	#else
+		#define MP_PREC 8  /* default digits of precision */
+	#endif   
 #endif
 
 /* size of comba arrays, should be at least 2 * 2**(BITS_PER_WORD - BITS_PER_DIGIT*2) */
-#define MP_WARRAY               (1 << (sizeof(mp_word) * CHAR_BIT - 2 * DIGIT_BIT + 1))
+#define MP_WARRAY (1 << (sizeof(mp_word) * CHAR_BIT - 2 * DIGIT_BIT + 1))
 
 /* the infamous mp_int structure */
-typedef struct  {
-    int used, alloc, sign;
-    mp_digit *dp;
+typedef struct {
+	int used, alloc, sign;
+	mp_digit *dp;
 } mp_int;
 
 /* callback for mp_prime_random, should fill dst with random bytes and return how many read [upto len] */
@@ -447,9 +432,9 @@ int mp_exptmod(mp_int *a, mp_int *b, mp_int *c, mp_int *d);
 
 /* number of primes */
 #ifdef MP_8BIT
-   #define PRIME_SIZE      31
+	#define PRIME_SIZE      31
 #else
-   #define PRIME_SIZE      256
+	#define PRIME_SIZE      256
 #endif
 
 /* table of first PRIME_SIZE primes */
@@ -573,12 +558,7 @@ void bn_reverse(unsigned char *s, int len);
 extern const char *mp_s_rmap;
 
 #ifdef __cplusplus
-   }
+	}
 #endif
 
 #endif
-
-
-/* $Source: /cvs/libtom/libtommath/tommath.h,v $ */
-/* $Revision: 1.8 $ */
-/* $Date: 2006/03/31 14:18:44 $ */

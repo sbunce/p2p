@@ -17,17 +17,10 @@ complete.
 
 WINDOWS PORTABILITY
 
--New line not working in terminal. \r\n?
-
--Need to figure out CryptGenRandom for encryption::PRNG(). encryption::PRNG()
-currently set to kill program on windows.
-http://msdn.microsoft.com/en-us/library/aa379942.aspx
-
--Make diffie-hellman keys larger (1024bit). When connecting to a server have the
-client send it's host key and then the server send it's host key. Both the
-client and server should look to see if a key has been negotiated with the
-other before. If it has the client can just start sending without negotating a
-new key.
+-When connecting to a server have the client send it's host key and then the
+server send it's host key. Both the client and server should look to see if a
+key has been negotiated with the other before. If it has the client can just
+start sending without negotating a new key.
 
 
 DEFERRED FEATURES

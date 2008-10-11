@@ -59,9 +59,10 @@ namespace global
 	const std::string NAME = "p2p";
 	const std::string VERSION = "0.00 pre-alpha";
 
-#ifdef max
-#undef max
-#endif
+	//the windows libs have this defined somewhere
+	#ifdef max
+	#undef max
+	#endif
 
 	//default settings
 	const int MAX_CONNECTIONS = 1024; //maximum number of connections the server will accept

@@ -15,9 +15,8 @@ unsigned int number_generator::prime_count_priv()
 
 mpint number_generator::random_mpint_priv(const int & bytes)
 {
-	boost::mutex::scoped_lock lock(random_mpint_mutex);
-	assert(bytes < global::DH_KEY_SIZE + 1);
-	static unsigned char buff[global::DH_KEY_SIZE+1];
+	assert(bytes <= global::DH_KEY_SIZE);
+	unsigned char buff[global::DH_KEY_SIZE];
 	PRNG(buff, bytes, NULL);
 	return mpint(buff, bytes);
 }
@@ -41,12 +40,7 @@ void number_generator::generate_primes_thread()
 	portable_sleep::ms(1000);
 
 	while(true){
-		bool do_sleep = false;
 		if(DB_Prime.count() >= global::PRIME_CACHE){
-			do_sleep = true;
-		}
-
-		if(do_sleep){
 			//enough primes generated, sleep for a while
 			portable_sleep::ms(1000);
 			continue;
