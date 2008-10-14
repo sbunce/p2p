@@ -48,7 +48,7 @@ void number_generator::generate_primes_thread()
 
 		mpint m;
 		mp_prime_random_ex(
-			&m.data,               //mp_int structure
+			&m.c_struct(),
 			1,                     //Miller-Rabin tests
 			global::DH_KEY_SIZE*8, //size (bits) of prime to generate
 			0,                     //optional flags

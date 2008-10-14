@@ -1,5 +1,7 @@
 TODO
 
+-Write documentation for mpint.h.
+
 -Think about dynamic pipeline size that increases every time 0 is hit, up to a
 max value of 8.
 
@@ -13,6 +15,8 @@ are checked.
 
 -Sometimes gui download stat file percent complete stops at 99% when file is
 complete.
+
+-Store primes in DB as higher radix.
 
 
 WINDOWS PORTABILITY

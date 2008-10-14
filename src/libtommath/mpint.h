@@ -1,8 +1,3 @@
-/*
-  C++ wrapper for LibTomMath
-  Public domain.  Enjoy.
-  Tom St Denis, tomstdenis@gmail.com
-*/
 #ifndef H_MPINT
 #define H_MPINT
 
@@ -107,6 +102,27 @@ public:
    int to_bin_size()
 	{
 		return mp_unsigned_bin_size(&data);
+	}
+
+	char * to_str(int radix)
+	{
+		int n, err;
+		if(rstr){
+			free(rstr);
+			rstr = NULL;
+		}
+		if((err = mp_radix_size(&data, radix, &n)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
+		rstr = (char *)calloc(1, n+1);
+		if(rstr == NULL){
+			throw ltmpp_error(MP_MEM);
+			return NULL;
+		}
+		if((err = mp_toradix(&data, rstr, radix)) != MP_OKAY){
+			throw ltmpp_error(err);
+		}
+		return rstr;
 	}
 
 	void operator=(const mpint &b)
@@ -612,29 +628,17 @@ public:
 		return tmp;
 	}
 
-//private:
+	/*
+	Returns a NON-CONST reference to the C mp_int structure that is being wrapped.
+	This can be used for the libtommath functions which aren't wrapped.
+	*/
+	mp_int & c_struct()
+	{
+		return data;
+	}
+
+private:
 	mp_int data;
 	char * rstr;
-
-	char * to_str(int radix)
-	{
-		int n, err;
-		if(rstr){
-			free(rstr);
-			rstr = NULL;
-		}
-		if((err = mp_radix_size(&data, radix, &n)) != MP_OKAY){
-			throw ltmpp_error(err);
-		}
-		rstr = (char *)calloc(1, n+1);
-		if(rstr == NULL){
-			throw ltmpp_error(MP_MEM);
-			return NULL;
-		}
-		if((err = mp_toradix(&data, rstr, radix)) != MP_OKAY){
-			throw ltmpp_error(err);
-		}
-		return rstr;
-	}
 };
 #endif
