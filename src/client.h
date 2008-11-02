@@ -2,11 +2,11 @@
 #define H_CLIENT
 
 //boost
+#include <boost/bind.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
-#include <boost/bind.hpp>
 
 //custom
 #include "client_buffer.h"
@@ -20,6 +20,7 @@
 #include "download_info.h"
 #include "download_factory.h"
 #include "global.h"
+#include "locking_smart_pointer.h"
 #include "number_generator.h"
 #include "speed_calculator.h"
 
@@ -87,11 +88,11 @@ public:
 	int total_speed();
 
 private:
-	volatile bool stop_threads; //if true this will trigger thread termination
-	volatile int threads;       //how many threads are currently running
+	locking_smart_pointer<bool> stop_threads; //if true this will trigger thread termination
+	locking_smart_pointer<int> threads;       //how many threads are currently running
 
-	volatile int connections;     //currently established connections
-	volatile int max_connections; //connection limit
+	locking_smart_pointer<int> connections;     //currently established connections
+	locking_smart_pointer<int> max_connections; //connection limit
 
 	/*
 	Holds download_info for downloads that need to be started. The download_info

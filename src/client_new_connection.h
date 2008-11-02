@@ -14,6 +14,7 @@
 #include "DB_blacklist.h"
 #include "download_connection.h"
 #include "global.h"
+#include "locking_smart_pointer.h"
 #include "resolve.h"
 #include "thread_pool.h"
 
@@ -39,8 +40,8 @@ public:
 	client_new_connection(
 		fd_set & master_FDS_in,
 		int & FD_max_in,
-		volatile int & max_connections_in,
-		volatile int & connections_in
+		locking_smart_pointer<int> max_connections_in,
+		locking_smart_pointer<int> connections_in
 	);
 	~client_new_connection();
 
@@ -50,13 +51,10 @@ public:
 	void queue(download_connection DC);
 
 private:
-	volatile bool stop_threads; //if true this will trigger thread termination
-	volatile int threads;       //how many threads are currently running
-
-	fd_set * master_FDS;   //pointer to the same master_FDS in client
-	int * FD_max;          //pointer to FD_max which exists in client
-	volatile int * volatile max_connections; //maximum number of connections allowed
-	volatile int * volatile connections;     //number of connections currently established
+	fd_set * master_FDS;  //pointer to the same master_FDS in client
+	int * FD_max;         //pointer to FD_max which exists in client
+	locking_smart_pointer<int> max_connections; //maximum number of connections allowed
+	locking_smart_pointer<int> connections;     //number of connections currently established
 
 	/*
 	Used by the known_unresponsive function to check for servers that have

@@ -6,6 +6,7 @@
 
 //custom
 #include "global.h"
+#include "locking_smart_pointer.h"
 
 //libtommath
 #include <mpint.h>
@@ -29,14 +30,14 @@ public:
 	           returns true if prime retrieved, false if prime table empty
 	*/
 	void add(const mpint & prime);
-	unsigned int count();
+	int count();
 	bool retrieve(mpint & prime);
 
 private:
 	sqlite3 * sqlite3_DB;
 
-	static boost::mutex Mutex;                //mutex for all public functions
-	static volatile unsigned int prime_count; //how many primes are in the database
+	static boost::mutex Mutex;                     //mutex for all public functions
+	static locking_smart_pointer<int> prime_count; //how many primes are in the database
 
 	void retrieve_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
 	static int retrieve_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)

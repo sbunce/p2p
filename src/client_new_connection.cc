@@ -3,17 +3,15 @@
 client_new_connection::client_new_connection(
 	fd_set & master_FDS_in,
 	int & FD_max_in,
-	volatile int & max_connections_in,
-	volatile int & connections_in
+	locking_smart_pointer<int> max_connections_in,
+	locking_smart_pointer<int> connections_in
 ):
-	stop_threads(false),
-	threads(0),
-	Thread_Pool(8)
+	Thread_Pool(8),
+	max_connections(max_connections_in),
+	connections(connections_in)
 {
 	master_FDS = &master_FDS_in;
 	FD_max = &FD_max_in;
-	max_connections = &max_connections_in;
-	connections = &connections_in;
 
 	#ifdef WIN32
 	WORD wsock_ver = MAKEWORD(1,1);
@@ -28,6 +26,8 @@ client_new_connection::client_new_connection(
 
 client_new_connection::~client_new_connection()
 {
+	Thread_Pool.terminate();
+
 	#ifdef WIN32
 	WSACleanup();
 	#endif
@@ -97,10 +97,10 @@ void client_new_connection::new_connection(download_connection DC)
 	/*
 	Do not initiate new connections if at connection limit.
 	*/
-	if(*connections >= *max_connections){
+	if(**connections >= **max_connections){
 		return;
 	}else{
-		++(*connections);
+		++**connections;
 	}
 
 	/*
@@ -164,11 +164,9 @@ void client_new_connection::new_connection(download_connection DC)
 
 void client_new_connection::process_DC(download_connection DC)
 {
-	++threads;
 	block_concurrent(DC);
 	new_connection(DC);
 	unblock(DC);
-	--threads;
 }
 
 void client_new_connection::queue(download_connection DC)

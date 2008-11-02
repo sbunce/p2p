@@ -1,0 +1,21 @@
+import glob
+import os
+import sys
+platform = sys.platform
+
+if platform == 'linux2':
+	Program('dot_gen', glob.glob('*.cc'))
+	Command(
+		'p2p_gui.ps',
+		'dot_gen',
+		'./dep_graph/dot_gen main_gui.cc |dot -Tps -o dep_graph/p2p_gui.ps',
+		chdir='..'
+	)
+	Command(
+		'p2p_nogui.ps',
+		'dot_gen',
+		'./dep_graph/dot_gen main_nogui.cc |dot -Tps -o dep_graph/p2p_nogui.ps',
+		chdir='..'
+	)
+
+Clean('dot_gen',['p2p_gui.ps','p2p_nogui.ps'])

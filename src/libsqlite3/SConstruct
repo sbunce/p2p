@@ -1,0 +1,10 @@
+import sys
+platform = sys.platform
+
+env = Environment()
+if platform == 'win32':
+	env['CCFLAGS'].append('/Os')   #max optimizations
+if platform == 'linux2':
+	env['CCFLAGS'].append('-Os')   #small recommended for sqlite3
+
+StaticLibrary('sqlite3.c')

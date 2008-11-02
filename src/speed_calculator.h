@@ -6,6 +6,7 @@
 
 //custom
 #include "global.h"
+#include "locking_smart_pointer.h"
 
 //std
 #include <cmath>
@@ -31,14 +32,14 @@ public:
 	void update(const unsigned int & n_bytes);
 
 private:
-	volatile unsigned int speed_limit;   //used by rate_control
-	volatile unsigned int average_speed; //average speed over global::SPEED_AVERAGE seconds
+	locking_smart_pointer<unsigned int> speed_limit;   //used by rate_control
+	locking_smart_pointer<unsigned int> average_speed; //average speed over global::SPEED_AVERAGE seconds
 
 	/*
 	pair<second, bytes in second>
 	The low elements are more current in time.
 	*/
-	std::pair<time_t, volatile unsigned int> Second_Bytes[global::SPEED_AVERAGE + 1];
+	std::pair<time_t, unsigned int> Second_Bytes[global::SPEED_AVERAGE + 1];
 
 	//used by rate_control to control interval between usleep()'s
 	unsigned long rate_control_count;

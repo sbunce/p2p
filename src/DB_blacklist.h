@@ -6,6 +6,7 @@
 
 //custom
 #include "global.h"
+#include "locking_smart_pointer.h"
 
 //sqlite
 #include <sqlite3.h>
@@ -28,15 +29,14 @@ public:
 	static void add(const std::string & IP)
 	{
 		init();
-		++blacklist_state;
-		DB_Blacklist->add_worker(IP);
+		DB_Blacklist->add_priv(IP);
 	}
 
 	//returns true if the IP is blacklisted
 	static bool is_blacklisted(const std::string & IP)
 	{
 		init();
-		return DB_Blacklist->is_blacklisted_worker(IP);
+		return DB_Blacklist->is_blacklisted_priv(IP);
 	}
 
 	/*
@@ -52,12 +52,13 @@ public:
 	*/
 	static bool modified(int & blacklist_state_in)
 	{
-		if(blacklist_state_in == blacklist_state){
+		init();
+		if(blacklist_state_in == **DB_Blacklist->blacklist_state){
 			//blacklist has not been updated
 			return false;
 		}else{
 			//blacklist updated
-			blacklist_state_in = blacklist_state;
+			blacklist_state_in = **DB_Blacklist->blacklist_state;
 			return true;
 		}
 	}
@@ -83,13 +84,13 @@ private:
 
 	//the one possible instance of DB_blacklist
 	static DB_blacklist * DB_Blacklist;
-	static boost::mutex init_mutex; //mutex for init()
+	static boost::mutex init_mutex;
 
 	/*
 	This count starts at 1 and is incremented every time a server is added to the
 	blacklist.
 	*/
-	static volatile int blacklist_state;
+	locking_smart_pointer<int> blacklist_state;
 
 	sqlite3 * sqlite3_DB;
 	boost::mutex Mutex;     //mutex for functions called by public static functions
@@ -97,7 +98,7 @@ private:
 	/*
 	All these functions correspond to public static functions.
 	*/
-	void add_worker(const std::string & IP);
-	bool is_blacklisted_worker(const std::string & IP);
+	void add_priv(const std::string & IP);
+	bool is_blacklisted_priv(const std::string & IP);
 };
 #endif

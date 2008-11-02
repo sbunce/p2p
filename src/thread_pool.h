@@ -3,6 +3,7 @@
 
 //custom
 #include "global.h"
+#include "locking_smart_pointer.h"
 
 //boost
 #include <boost/thread/thread.hpp>
@@ -21,20 +22,23 @@ public:
 	~thread_pool();
 
 	/*
-	join  - blocks until job queue empties out and all threads terminate
-	queue - queue a job, example:
-	        member function:                TP.queue(boost::bind(&A::test, &a));
-			  member function with parameter: TP.queue(boost::bind(&A::test, &a, "test"));
-	        function:                       TP.queue(&test);
-	        function with parameter:        TP.queue(boost::bind(test, "test"));
+	join      - blocks until job queue empties out and all threads terminate
+	queue     - queue a job, example:
+	            member function:                TP.queue(boost::bind(&A::test, &a));
+			      member function with parameter: TP.queue(boost::bind(&A::test, &a, "test"));
+	            function:                       TP.queue(&test);
+	            function with parameter:        TP.queue(boost::bind(test, "test"));
+	terminate - empties work_queue and does a join, this should always be called
+	            in destructor of class that has-a thread_pool
 	*/
 	void join();
 	void queue(const boost::function0<void> & func);
+	void terminate();
 
 private:
-	volatile int thread_limit;  //maximum number of threads allowed to run
-	volatile bool stop_threads; //true when threads are being stopped
-	volatile int threads;       //how many threads are currently running
+	locking_smart_pointer<int> thread_limit;  //maximum number of threads allowed to run
+	locking_smart_pointer<bool> stop_threads; //true when threads are being stopped
+	locking_smart_pointer<int> threads;       //how many threads are currently running
 
 	/*
 	Work queue which contains an object pointer and a member function to run in

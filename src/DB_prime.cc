@@ -1,12 +1,12 @@
 #include "DB_prime.h"
 
 boost::mutex DB_prime::Mutex;
-volatile unsigned int DB_prime::prime_count(0);
+locking_smart_pointer<int> DB_prime::prime_count(new int(0));
 
 static int prime_count_call_back(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_names)
 {
 	std::istringstream size_iss(query_response[0]);
-	size_iss >> *((unsigned int *)object_ptr);
+	size_iss >> *((int *)object_ptr);
 	return 0;
 }
 
@@ -28,7 +28,7 @@ DB_prime::DB_prime()
 	}
 
 	//retrieve how many primes in table
-	if(sqlite3_exec(sqlite3_DB, "SELECT count(1) FROM prime", prime_count_call_back, (void *)&prime_count, NULL) != 0){
+	if(sqlite3_exec(sqlite3_DB, "SELECT count(1) FROM prime", prime_count_call_back, (void *)&**prime_count, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
 }
@@ -41,12 +41,12 @@ void DB_prime::add(const mpint & prime)
 	if(sqlite3_exec(sqlite3_DB, oss.str().c_str(), NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
-	++prime_count;
+	++**prime_count;
 }
 
-unsigned int DB_prime::count()
+int DB_prime::count()
 {
-	return prime_count;
+	return **prime_count;
 }
 
 bool DB_prime::retrieve(mpint & prime)
@@ -70,5 +70,5 @@ void DB_prime::retrieve_call_back(int & columns_retrieved, char ** query_respons
 	if(sqlite3_exec(sqlite3_DB, oss.str().c_str(), NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
-	--prime_count;
+	--**prime_count;
 }

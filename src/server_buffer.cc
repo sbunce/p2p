@@ -2,7 +2,7 @@
 
 std::map<int, server_buffer *> server_buffer::Server_Buffer;
 boost::mutex server_buffer::Mutex;
-volatile int server_buffer::send_pending(0);
+int server_buffer::send_pending(0);
 
 server_buffer::server_buffer()
 {

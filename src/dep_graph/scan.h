@@ -30,6 +30,6 @@ private:
 	                    if a header is found it's pushed on to headers vector
 	*/
 	void eat_comment(std::fstream & fin);
-	void read_preprocessor(std::fstream & fin, std::string & root_file);
+	void read_preprocessor(std::fstream & fin, std::string & root_file, std::set<std::string> & scan);
 };
 #endif

@@ -15,6 +15,7 @@
 #include "DB_share.h"
 #include "download.h"
 #include "global.h"
+#include "locking_smart_pointer.h"
 #include "hash_tree.h"
 #include "request_generator.h"
 
@@ -67,20 +68,20 @@ private:
 	partial download that has been resumed. Requests are only returned when hashing
 	is done which is indicated by this being set equal to false.
 	*/
-	volatile bool hashing;
+	locking_smart_pointer<bool> hashing;
 
 	/*
 	Percent done hashing the partial file when download resumed.
 	*/
-	volatile int hashing_percent;
+	locking_smart_pointer<int> hashing_percent;
 
 	/*
 	This is set to the first unreceived block (next block past end of file).
 	*/
 	boost::uint64_t first_unreceived;
 
-	volatile int threads;       //one if hash checking, otherwise zero
-	volatile bool stop_threads; //if set to true hash checking will stop early
+	locking_smart_pointer<int> threads;       //one if hash checking, otherwise zero
+	locking_smart_pointer<bool> stop_threads; //if set to true hash checking will stop early
 
 	/*
 	If download is terminated early the downloaded file will not be added to the

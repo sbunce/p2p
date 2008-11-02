@@ -2,15 +2,16 @@
 
 client::client():
 	blacklist_state(0),
-	connections(0),
+	connections(new int(0)),
+	max_connections(new int),
 	FD_max(0),
 	Download_Factory(),
-	stop_threads(false),
-	threads(0),
+	stop_threads(new bool(false)),
+	threads(new int(0)),
 	Client_New_Connection(master_FDS, FD_max, max_connections, connections)
 {
 	boost::filesystem::create_directory(global::DOWNLOAD_DIRECTORY);
-	max_connections = DB_Client_Preferences.get_max_connections();
+	**max_connections = DB_Client_Preferences.get_max_connections();
 	FD_ZERO(&master_FDS);
 	Speed_Calculator.set_speed_limit(DB_Client_Preferences.get_speed_limit_uint());
 
@@ -33,8 +34,8 @@ client::client():
 
 client::~client()
 {
-	stop_threads = true;
-	while(threads){
+	**stop_threads = true;
+	while(**threads){
 		portable_sleep::yield();
 	}
 	client_buffer::destroy();
@@ -91,7 +92,7 @@ inline void client::disconnect(const int & socket_FD)
 	close(socket_FD);
 	#endif
 
-	--connections;
+	--**connections;
 	FD_CLR(socket_FD, &master_FDS);
 	FD_CLR(socket_FD, &read_FDS);
 	FD_CLR(socket_FD, &write_FDS);
@@ -118,14 +119,14 @@ int client::prime_count()
 
 int client::get_max_connections()
 {
-	return max_connections;
+	return **max_connections;
 }
 
 void client::set_max_connections(int max_connections_in)
 {
-	max_connections = max_connections_in;
-	DB_Client_Preferences.set_max_connections(max_connections);
-	while(connections > max_connections){
+	**max_connections = max_connections_in;
+	DB_Client_Preferences.set_max_connections(**max_connections);
+	while(**connections > **max_connections){
 		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &master_FDS)){
 				disconnect(socket_FD);
@@ -171,11 +172,11 @@ void client::set_speed_limit(const std::string & speed_limit)
 
 void client::main_thread()
 {
-	++threads;
+	++**threads;
 	reconnect_unfinished();
 	while(true){
 
-		if(stop_threads){
+		if(**stop_threads){
 			break;
 		}
 
@@ -273,7 +274,7 @@ void client::main_thread()
 			}
 		}
 	}
-	--threads;
+	--**threads;
 }
 
 void client::reconnect_unfinished()

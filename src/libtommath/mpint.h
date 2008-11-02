@@ -80,6 +80,7 @@ public:
 		}
 	}
 
+	//return binary string of number, call to_bin_size for length
    unsigned char * to_bin()
 	{
 		int n, err;
@@ -99,11 +100,13 @@ public:
 		return (unsigned char *)rstr;
    }
 
+	//length of binary data
    int to_bin_size()
 	{
 		return mp_unsigned_bin_size(&data);
 	}
 
+	//returns the number in the specified radix (2 .. 64)
 	char * to_str(int radix)
 	{
 		int n, err;
@@ -125,14 +128,14 @@ public:
 		return rstr;
 	}
 
-	void operator=(const mpint &b)
+	void operator = (const mpint &b)
 	{
 		if(mp_copy((mp_int *)&b.data, &data) != MP_OKAY){
 			throw ltmpp_error(MP_MEM);
 		}
 	}
 
-	mpint operator+(const mpint &b)
+	mpint operator + (const mpint &b)
 	{
 		int err;
 		mpint tmp;
@@ -142,7 +145,7 @@ public:
 		return tmp;
    }
 
-   mpint operator-(const mpint &b)
+   mpint operator - (const mpint &b)
 	{
 		int err;
 		mpint tmp;
@@ -152,7 +155,7 @@ public:
 		return tmp;
 	}
 
-	mpint operator*(const mpint &b)
+	mpint operator * (const mpint &b)
 	{
 		int err;
 		mpint tmp;
@@ -162,7 +165,7 @@ public:
 		return tmp;
 	}
 
-	mpint operator/(const mpint &b){
+	mpint operator / (const mpint &b){
 		int err;
 		mpint tmp;
 		if((err = mp_div(&data, (mp_int *)&b.data, &tmp.data, NULL)) != MP_OKAY){
@@ -171,7 +174,7 @@ public:
 		return tmp;
 	}
 
-	mpint operator%(const mpint &b)
+	mpint operator % (const mpint &b)
 	{
 		int err;
 		mpint tmp;
@@ -181,7 +184,7 @@ public:
 		return tmp;
 	}
 
-   mpint operator^(const mpint &b)
+   mpint operator ^ (const mpint &b)
 	{
 		int err;
 		mpint tmp;
@@ -191,7 +194,7 @@ public:
 		return tmp;
 	}
 
-	mpint operator|(const mpint &b)
+	mpint operator | (const mpint &b)
 	{
 		int err;
 		mpint tmp;
@@ -201,7 +204,7 @@ public:
 		return tmp;
 	}
 
-	mpint operator&(const mpint &b)
+	mpint operator & (const mpint &b)
 	{
 		int err;
 		mpint tmp;
@@ -211,7 +214,7 @@ public:
 		return tmp;
 	}
 
-   mpint operator-()
+   mpint operator - ()
 	{
 		int err;
 		mpint tmp;
@@ -221,7 +224,7 @@ public:
 		return tmp;
 	}
 
-	mpint operator<<(int n)
+	mpint operator << (int n)
 	{
 		int err;
 		mpint tmp;
@@ -231,7 +234,7 @@ public:
 		return tmp;
    }
 
-   mpint operator>>(int n)
+   mpint operator >> (int n)
 	{
 		int err;
 		mpint tmp;
@@ -241,7 +244,7 @@ public:
 		return tmp;
 	}
 
-	mpint &operator+=(const mpint &b)
+	mpint &operator += (const mpint &b)
 	{
 		int err;
 		if((err = mp_add(&data, (mp_int *)&b.data, &data)) != MP_OKAY){
@@ -250,7 +253,7 @@ public:
 		return *this;
 	}
 
-	mpint &operator-=(const mpint &b)
+	mpint &operator -= (const mpint &b)
 	{
 		int err;
 		if((err = mp_sub(&data, (mp_int *)&b.data, &data)) != MP_OKAY){
@@ -259,7 +262,7 @@ public:
 		return *this;
 	}
 
-   mpint &operator*=(const mpint &b)
+   mpint &operator *= (const mpint &b)
 	{
 		int err;
 		if((err = mp_mul(&data, (mp_int *)&b.data, &data)) != MP_OKAY){
@@ -268,7 +271,7 @@ public:
 		return *this;
 	}
 
-	mpint &operator/=(const mpint &b)
+	mpint &operator /= (const mpint &b)
 	{
 		int err;
 		if((err = mp_div(&data, (mp_int *)&b.data, &data, NULL)) != MP_OKAY){
@@ -277,7 +280,7 @@ public:
 		return *this;
 	}
 
-	mpint &operator%=(const mpint &b)
+	mpint &operator %= (const mpint &b)
 	{
 		int err;
 		if((err = mp_mod(&data, (mp_int *)&b.data, &data)) != MP_OKAY){
@@ -286,7 +289,7 @@ public:
 		return *this;
 	}
 
-	mpint &operator^=(const mpint &b)
+	mpint &operator ^= (const mpint &b)
 	{
 		int err;
 		if((err = mp_xor(&data, (mp_int *)&b.data, &data)) != MP_OKAY){
@@ -295,7 +298,7 @@ public:
 		return *this;
 	}
 
-	mpint &operator&=(const mpint &b)
+	mpint &operator &= (const mpint &b)
 	{
 		int err;
 		if((err = mp_and(&data, (mp_int *)&b.data, &data)) != MP_OKAY){
@@ -304,7 +307,7 @@ public:
 		return *this;
 	}
 
-	mpint &operator|=(const mpint &b)
+	mpint &operator |= (const mpint &b)
 	{
 		int err;
 		if((err = mp_or(&data, (mp_int *)&b.data, &data)) != MP_OKAY){
@@ -313,7 +316,7 @@ public:
 		return *this;
 	}
 
-	mpint &operator<<=(int n)
+	mpint &operator <<= (int n)
 	{
 		int err;
 		if((err = mp_mul_2d(&data, n, &data)) != MP_OKAY){
@@ -322,7 +325,7 @@ public:
 		return *this;
 	}
 
-	mpint &operator>>=(int n)
+	mpint &operator >>= (int n)
 	{
 		int err;
 		if((err = mp_div_2d(&data, n, &data, NULL)) != MP_OKAY){
@@ -331,7 +334,7 @@ public:
 		return *this;
 	}
 
-   mpint &operator++()
+   mpint &operator ++ ()
 	{
 		int err;
 		if((err = mp_add_d(&data, 1, &data)) != MP_OKAY){
@@ -340,7 +343,7 @@ public:
 		return *this;
 	}
 
-	mpint &operator--()
+	mpint &operator -- ()
 	{
 		int err;
 		if((err = mp_sub_d(&data, 1, &data)) != MP_OKAY){
@@ -349,7 +352,7 @@ public:
 		return *this;
 	}
 
-	mpint &operator++(int)
+	mpint &operator ++ (int)
 	{
 		int err;
 		if((err = mp_add_d(&data, 1, &data)) != MP_OKAY){
@@ -358,7 +361,7 @@ public:
 		return *this;
 	}
 
-	mpint &operator--(int)
+	mpint &operator -- (int)
 	{
 		int err;
 		if((err = mp_sub_d(&data, 1, &data)) != MP_OKAY){
@@ -367,7 +370,7 @@ public:
 		return *this;
 	}
 
-	mpint &operator+=(const mp_digit b)
+	mpint &operator += (const mp_digit b)
 	{
 		int err;
 		mp_digit q;
@@ -384,7 +387,7 @@ public:
 		return *this;
    }
 
-	mpint &operator-=(const mp_digit b)
+	mpint &operator -= (const mp_digit b)
 	{
 		int err;
 		mp_digit q;
@@ -401,7 +404,7 @@ public:
       return *this;
    }
 
-	mpint &operator*=(const mp_digit b)
+	mpint &operator *= (const mp_digit b)
 	{
 		int err;
 		mp_digit q;
@@ -421,7 +424,7 @@ public:
 		return *this;
 	}
 
-	mpint &operator/=(const mp_digit b)
+	mpint &operator /= (const mp_digit b)
 	{
 		int err;
 		mp_digit q;
@@ -441,7 +444,7 @@ public:
 		return *this;
 	}
 
-	mpint &operator%=(const mp_digit b)
+	mpint &operator %= (const mp_digit b)
 	{
 		int err;
 		mp_digit q, r;
@@ -459,14 +462,14 @@ public:
 		return *this;
 	}
 
-   int operator==(const mpint &b){ return mp_cmp(&data, (mp_int *)&b.data) == MP_EQ ? 1 : 0; }
-   int operator!=(const mpint &b){ return mp_cmp(&data, (mp_int *)&b.data) == MP_EQ ? 0 : 1; }
-   int operator>(const mpint &b){ return mp_cmp(&data, (mp_int *)&b.data) == MP_GT ? 1 : 0; }
-   int operator<(const mpint &b){ return mp_cmp(&data, (mp_int *)&b.data) == MP_LT ? 1 : 0; }
-   int operator>=(const mpint &b){ return mp_cmp(&data, (mp_int *)&b.data) == MP_LT ? 0 : 1; }
-   int operator<=(const mpint &b){ return mp_cmp(&data, (mp_int *)&b.data) == MP_GT ? 0 : 1; }
+   int operator == (const mpint &b){ return mp_cmp(&data, (mp_int *)&b.data) == MP_EQ ? 1 : 0; }
+   int operator != (const mpint &b){ return mp_cmp(&data, (mp_int *)&b.data) == MP_EQ ? 0 : 1; }
+   int operator > (const mpint &b){ return mp_cmp(&data, (mp_int *)&b.data) == MP_GT ? 1 : 0; }
+   int operator < (const mpint &b){ return mp_cmp(&data, (mp_int *)&b.data) == MP_LT ? 1 : 0; }
+   int operator >= (const mpint &b){ return mp_cmp(&data, (mp_int *)&b.data) == MP_LT ? 0 : 1; }
+   int operator <= (const mpint &b){ return mp_cmp(&data, (mp_int *)&b.data) == MP_GT ? 0 : 1; }
 
-	int operator==(const mp_digit b)
+	int operator == (const mp_digit b)
 	{
 		mp_digit q;
 		int r;
@@ -484,7 +487,7 @@ public:
 		}
 	}
 
-	int operator!=(const mp_digit b)
+	int operator != (const mp_digit b)
 	{
 		mp_digit q;
 		int r;
@@ -502,7 +505,7 @@ public:
 		}
 	}
 
-	int operator>(const mp_digit b)
+	int operator > (const mp_digit b)
 	{
 		mp_digit q;
 		int r;
@@ -520,7 +523,7 @@ public:
 		}
 	}
 
-	int operator>=(const mp_digit b)
+	int operator >= (const mp_digit b)
 	{
 		mp_digit q;
 		int r;
@@ -538,7 +541,7 @@ public:
 		}
 	}
 
-	int operator<(const mp_digit b)
+	int operator < (const mp_digit b)
 	{
 		mp_digit q;
 		int r;
@@ -556,7 +559,7 @@ public:
 		}
 	}
 
-	int operator<=(const mp_digit b)
+	int operator <= (const mp_digit b)
 	{
 		mp_digit q;
 		int r;
@@ -579,7 +582,8 @@ public:
 		return lval << rval.to_str(10);
 	}
 
-   mpint gcd(const mpint &b)
+	//greatest common denominator
+   mpint gcd(const mpint & b)
 	{
 		int err;
 		mpint tmp;
@@ -589,7 +593,8 @@ public:
 		return tmp;
 	}
 
-	mpint lcm(const mpint &b)
+	//least common multiple
+	mpint lcm(const mpint & b)
 	{
 		int err;
 		mpint tmp;
@@ -599,7 +604,8 @@ public:
 		return tmp;
 	}
 
-	mpint invmod(const mpint &b)
+	//invers modulo
+	mpint invmod(const mpint & b)
 	{
 		int err;
 		mpint tmp;
@@ -618,7 +624,8 @@ public:
 		return n;
 	}
 
-	mpint exptmod(const mpint &y, const mpint &p)
+	//(this number)**y mod(p)
+	mpint exptmod(const mpint & y, const mpint & p)
 	{
 		int err;
 		mpint tmp;
@@ -630,7 +637,8 @@ public:
 
 	/*
 	Returns a NON-CONST reference to the C mp_int structure that is being wrapped.
-	This can be used for the libtommath functions which aren't wrapped.
+	This can be used for the libtommath functions which aren't wrapped. Be careful
+	or you'll poke your eye out.
 	*/
 	mp_int & c_struct()
 	{

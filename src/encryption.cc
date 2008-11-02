@@ -4,6 +4,9 @@ encryption::encryption()
 {
 	g = "2"; //fast generater, supposed to be secure
 	s = number_generator::random_mpint(global::DH_KEY_SIZE);
+
+	std::cout << "random: " << s.to_str(64) << "\n";
+
 	State = waiting_for_prime;
 }
 

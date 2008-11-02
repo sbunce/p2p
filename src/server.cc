@@ -3,8 +3,8 @@
 server::server():
 	blacklist_state(0),
 	connections(0),
-	stop_threads(false),
-	threads(0)
+	stop_threads(new bool(false)),
+	threads(new int(0))
 {
 	FD_ZERO(&master_FDS);
 	max_connections = DB_Server_Preferences.get_max_connections();
@@ -26,9 +26,9 @@ server::server():
 
 server::~server()
 {
-	stop_threads = true;
+	**stop_threads = true;
 	raise(SIGINT); //force select() to return
-	while(threads){
+	while(**threads){
 		portable_sleep::yield();
 	}
 
@@ -206,7 +206,7 @@ void server::new_connection(const int & listener)
 
 void server::main_thread()
 {
-	++threads;
+	++**threads;
 
 	//set listening socket
 	unsigned int listener;
@@ -271,7 +271,7 @@ void server::main_thread()
 	int n_bytes;
 	int send_limit = 0;
 	while(true){
-		if(stop_threads){
+		if(**stop_threads){
 			break;
 		}
 
@@ -347,7 +347,7 @@ void server::main_thread()
 		}
 	}
 
-	--threads;
+	--**threads;
 }
 
 int server::total_speed()

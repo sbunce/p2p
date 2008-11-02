@@ -13,6 +13,7 @@
 #include "DB_share.h"
 #include "DB_server_preferences.h"
 #include "global.h"
+#include "locking_smart_pointer.h"
 #include "hash_tree.h"
 #include "sha.h"
 
@@ -36,10 +37,9 @@ public:
 	bool is_indexing();
 
 private:
-	volatile bool stop_thread;  //if true this will trigger thread termination
-	volatile int threads;       //how many threads are currently running
-	bool indexing;              //true if server_index is currently indexing files
-	volatile bool change_share; //stops current indexing so that share_directory can be changed
+	locking_smart_pointer<bool> stop_thread;  //if true this will trigger thread termination
+	locking_smart_pointer<int> threads;       //how many threads are currently running
+	locking_smart_pointer<bool> indexing;     //true if server_index is currently indexing files
 
 	/*
 	generate_hash - generates hash tree for file

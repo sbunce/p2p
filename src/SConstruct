@@ -1,7 +1,6 @@
 import fnmatch
 import sys
 import os
-platform = sys.platform
 
 #source files for objects to be linked in to p2p_gui
 src_gui = [
@@ -47,17 +46,16 @@ src_common = [
 	'server_index.cc',
 	'sha.cc',
 	'speed_calculator.cc',
-	'thread_pool.cc',
-	'#sqlite3/sqlite3.c'
+	'thread_pool.cc'
 ]
 
 ##BEGIN FUNCTIONS
 #search files in list of directories, return path to static library
 def lib_path(LIBDIR, pattern):
 	#set up suffix to append to pattern
-	if platform == 'win32':
+	if sys.platform == 'win32':
 		pattern += '.lib'
-	if platform == 'linux2':
+	if sys.platform == 'linux2':
 		pattern += '.a'
 
 	#search directories for file name matching pattern
@@ -72,31 +70,26 @@ def lib_path(LIBDIR, pattern):
 ##END FUNCTIONS
 
 #sub-SConscripts to run
+SConscript('#dep_graph/SConstruct')
+SConscript('#libsqlite3/SConstruct')
 SConscript('#libtommath/SConstruct')
-
-#specify directories with libraries
-LIBDIR = ['#libtommath']
-if platform == 'win32':
-	LIBDIR.append('/Program Files/Microsoft SDKs/Windows/v6.0A/Lib')
-	LIBDIR.append('/Program Files/boost/boost_1_36_0/lib')
-	LIBDIR.append('/gtkmm/lib')
-if platform == 'linux2':
-	LIBDIR.append('/usr/local/lib')
+SConscript('#overlay_sim/SConstruct')
+SConscript('#test_manager/SConstruct')
 
 #setup base environment (what is common to both linux and windows)
 env_base = Environment(
-	CPPPATH = ['.', '#/libtommath', '#/sqlite3'],
-	LIBS = ['libtommath']
+	CPPPATH = ['.', '#/libtommath', '#/libsqlite3'],
+	LIBS = ['libtommath', 'libsqlite3']
 )
 
-static_libs = [
-		lib_path(LIBDIR, 'libboost_filesystem*'),
-		lib_path(LIBDIR, 'libboost_system*'),
-		lib_path(LIBDIR, 'libboost_thread*')
-]
+#where to look for libraries
+LIBDIR = ['#libtommath', '#libsqlite3']
 
 #setup platform specific environment options
-if platform == 'win32':
+if sys.platform == 'win32':
+	LIBDIR.append('/Program Files/Microsoft SDKs/Windows/v6.0A/Lib')
+	LIBDIR.append('/Program Files/boost/boost_1_36_0/lib')
+	LIBDIR.append('/gtkmm/lib')
 	env_base['CPPPATH'].append('/Program Files/Microsoft SDKs/Windows/v6.0A/Include')
 	env_base['CPPPATH'].append('/Program Files/boost/boost_1_36_0')
 	env_base['CCFLAGS'].append('/EHsc') #exception support
@@ -104,11 +97,18 @@ if platform == 'win32':
 	env_base['CCFLAGS'].append('/Ox')   #max optimizations
 	env_base['LIBS'].append('ws2_32')   #winsock lib
 	env_base['LIBS'].append('advapi32') #random number gen lib
-if platform == 'linux2':
+if sys.platform == 'linux2':
+	LIBDIR.append('/usr/local/lib')
 	env_base['CPPPATH'].append('/usr/local/include/boost-1_36')
 	env_base['CCFLAGS'].append('-O3')   #max optimizations
-	env_base['LIBS'].append('dl')       #needed for sqlite
-	env_base['LIBS'].append('pthread')  #needed for sqlite
+	env_base['LIBS'].append('dl')       #needed for sqlite3
+	env_base['LIBS'].append('pthread')  #needed for sqlite3
+
+static_libs = [
+		lib_path(LIBDIR, 'libboost_filesystem*'),
+		lib_path(LIBDIR, 'libboost_system*'),
+		lib_path(LIBDIR, 'libboost_thread*')
+]
 
 #create gui environment
 env_gui = env_base.Clone()

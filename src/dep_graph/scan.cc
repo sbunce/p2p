@@ -2,11 +2,13 @@
 
 scan::scan()
 {
+	//start of dot file
 	std::cout << "digraph G {\n";
 }
 
 scan::~scan()
 {
+	//end of dot file
 	std::cout << "}\n";
 }
 
@@ -38,42 +40,41 @@ void scan::eat_comment(std::fstream & fin)
 	}
 }
 
-void scan::read_preprocessor(std::fstream & fin, std::string & root_file)
+void scan::read_preprocessor(std::fstream & fin, std::string & root_file, std::set<std::string> & scan)
 {
-	//this function is called after a # is read from fin
+	//check to see if preprocessor directive is "include"
 	char * inc = "include";
 	char ch;
 	for(int x=0; x<7; ++x){
 		if(fin.get(ch)){
 			if(ch != inc[x]){
-				//not an include macro
 				return;
 			}
 		}
 	}
 
-	//after include but before " or < there might be a space
 	if(!fin.get(ch)){
-		//eof
 		return;
 	}
 
+	//may be a space between #include and "header.h"
 	if(ch == ' '){
 		//space, read again
 		if(!fin.get(ch)){
-			//eof
 			return;
 		}
 	}
 
-	//only read custom includes that begin with '"'
+	//only read includes that begin with '"' (exclude system headers)
 	if(ch == '"'){
-		//read header file name
 		std::string name;
 		while(fin.get(ch)){
-			if(ch == '"'){
+			if(ch == '"'){ //read until closing quote found
+				//echo dot file stuff
 				std::cout << "\"" << root_file << "\" -> \"" << name << "\";\n";
-				run(name);
+
+				//queue file to be scanned
+				scan.insert(name);
 				return;
 			}else{
 				name += ch;
@@ -84,7 +85,7 @@ void scan::read_preprocessor(std::fstream & fin, std::string & root_file)
 
 void scan::run(std::string root_file)
 {
-	//do not scan files which have already been scanned
+	//do not scan files which have already been scanned (memoize)
 	std::set<std::string>::iterator iter = scanned_files.find(root_file);
 	if(iter != scanned_files.end()){
 		//file already scanned
@@ -99,12 +100,24 @@ void scan::run(std::string root_file)
 		exit(1);
 	}
 
+	//holds files that need to be scanned
+	std::set<std::string> scan;
+
 	char ch;
 	while(fin.get(ch)){
 		if(ch == '/'){
 			eat_comment(fin);
 		}else if(ch == '#'){
-			read_preprocessor(fin, root_file);
+			read_preprocessor(fin, root_file, scan);
 		}
+	}
+	fin.close();
+
+	std::set<std::string>::iterator iter_cur, iter_end;
+	iter_cur = scan.begin();
+	iter_end = scan.end();
+	while(iter_cur != iter_end){
+		run(*iter_cur);
+		++iter_cur;
 	}
 }

@@ -14,6 +14,7 @@
 #include "DB_server_preferences.h"
 #include "encryption.h"
 #include "global.h"
+#include "locking_smart_pointer.h"
 #include "server_buffer.h"
 #include "server_index.h"
 #include "speed_calculator.h"
@@ -70,8 +71,8 @@ public:
 	int total_speed();
 
 private:
-	volatile bool stop_threads; //if true this will trigger thread termination
-	volatile int threads;       //how many threads are currently running
+	locking_smart_pointer<bool> stop_threads; //if true this will trigger thread termination
+	locking_smart_pointer<int> threads;       //how many threads are currently running
 
 	int connections;     //currently established connections
 	int max_connections; //connection limit

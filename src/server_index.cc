@@ -1,10 +1,9 @@
 #include "server_index.h"
 
 server_index::server_index():
-	indexing(false),
-	stop_thread(false),
-	change_share(false),
-	threads(0)
+	indexing(new bool(false)),
+	stop_thread(new bool(false)),
+	threads(new int(0))
 {
 	boost::filesystem::create_directory(global::SHARE_DIRECTORY);
 	boost::thread T(boost::bind(&server_index::index_share, this));
@@ -12,9 +11,9 @@ server_index::server_index():
 
 server_index::~server_index()
 {
-	stop_thread = true;
+	**stop_thread = true;
 	Hash_Tree.stop(); //force hash tree generation to terminate
-	while(threads){
+	while(**threads){
 		portable_sleep::yield();
 	}
 }
@@ -66,7 +65,7 @@ void server_index::scan_hashes()
 					std::remove((global::HASH_DIRECTORY+directory_iter->path().leaf()).c_str());
 				}
 
-				if(stop_thread){
+				if(**stop_thread){
 					return;
 				}
 			}
@@ -83,7 +82,7 @@ void server_index::scan_share(std::string directory_name)
 {
 	namespace fs = boost::filesystem;
 
-	if(stop_thread){
+	if(**stop_thread){
 		return;
 	}
 
@@ -114,7 +113,7 @@ void server_index::scan_share(std::string directory_name)
 						std::fstream fin((global::HASH_DIRECTORY+existing_hash).c_str(), std::ios::in);
 						if(!fin.is_open()){
 							//hash tree is missing
-							indexing = true;
+							**indexing = true;
 							DB_Share.delete_hash(existing_hash); //delete the entry
 							generate_hash(file_path);            //regenerate hash for file
 						}
@@ -126,17 +125,17 @@ void server_index::scan_share(std::string directory_name)
 						copying.
 						*/
 						if(existing_size != fs::file_size(file_path)){
-							indexing = true;
+							**indexing = true;
 							DB_Share.delete_hash(existing_hash);
 							generate_hash(file_path);
 						}
 					}else{
 						//hash tree doesn't yet exist, generate one
-						indexing = true;
+						**indexing = true;
 						generate_hash(file_path);
 					}
 
-					if(stop_thread){
+					if(**stop_thread){
 						return;
 					}
 				}
@@ -155,7 +154,7 @@ void server_index::scan_share(std::string directory_name)
 
 bool server_index::is_indexing()
 {
-	return indexing;
+	return **indexing;
 }
 
 void server_index::index_share()
@@ -167,10 +166,10 @@ void server_index::index_share()
 	*/
 	portable_sleep::ms(1000);
 
-	++threads;
-	indexing = false;
+	++**threads;
+	**indexing = false;
 	while(true){
-		if(stop_thread){
+		if(**stop_thread){
 			break;
 		}
 
@@ -183,11 +182,10 @@ void server_index::index_share()
 		//create hashes for all files in shares
 		scan_share(global::SHARE_DIRECTORY);
 
-		indexing = false;
-		change_share = false;
+		**indexing = false;
 
 		//wait 1 second between share scans and checks
 		portable_sleep::ms(1000);
 	}
-	--threads;
+	--**threads;
 }

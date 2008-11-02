@@ -2,9 +2,9 @@
 
 DB_blacklist * DB_blacklist::DB_Blacklist = NULL;
 boost::mutex DB_blacklist::init_mutex;
-volatile int DB_blacklist::blacklist_state = 0;
 
 DB_blacklist::DB_blacklist()
+: blacklist_state(new int(0))
 {
 	//open DB
 	if(sqlite3_open(global::DATABASE_PATH.c_str(), &sqlite3_DB) != 0){
@@ -24,15 +24,16 @@ DB_blacklist::DB_blacklist()
 	}
 }
 
-void DB_blacklist::add_worker(const std::string & IP)
+void DB_blacklist::add_priv(const std::string & IP)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	std::ostringstream query;
 	query << "INSERT INTO blacklist VALUES ('" << IP << "')";
 	sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL);
+	++**blacklist_state;
 }
 
-bool DB_blacklist::is_blacklisted_worker(const std::string & IP)
+bool DB_blacklist::is_blacklisted_priv(const std::string & IP)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	bool found = false;

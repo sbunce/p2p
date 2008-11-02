@@ -48,10 +48,8 @@ public:
 	{
 		boost::mutex::scoped_lock l1(*lp.pointee_mutex);
 		boost::mutex::scoped_lock l2(*lp.ref_count_mutex);
-
 		pointee = lp.pointee;
 		pointee_mutex = lp.pointee_mutex;
-
 		ref_count = lp.ref_count;
 		ref_count_mutex = lp.ref_count_mutex;
 		++*ref_count;
@@ -60,8 +58,7 @@ public:
 	~locking_smart_pointer()
 	{
 		ref_count_mutex->lock();
-		--ref_count;
-		if(*ref_count == 0){
+		if(*ref_count == 1){
 			//last reference, clean up
 			ref_count_mutex->unlock();
 			delete pointee;
@@ -69,6 +66,7 @@ public:
 			delete ref_count;
 			delete ref_count_mutex;
 		}else{
+			--*ref_count;
 			ref_count_mutex->unlock();
 		}
 	}
@@ -88,7 +86,7 @@ public:
 			pointee_mutex->unlock();
 		}
 
-		boost::shared_ptr<T> operator -> () { return pointee; }
+		T * operator -> (){ return pointee; }
 		T & operator * (){ return *pointee; }
 
 	private:
@@ -102,7 +100,6 @@ public:
 private:
 	T * pointee;
 	boost::mutex * pointee_mutex;
-
 	int * ref_count;
 	boost::mutex * ref_count_mutex;
 };

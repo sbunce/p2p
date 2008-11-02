@@ -1,13 +1,7 @@
 TODO
 
--Write documentation for mpint.h.
-
--Think about dynamic pipeline size that increases every time 0 is hit, up to a
+-Make pipeline size dynamic such that it increases every time 0 is hit, up to a
 max value of 8.
-
--Rerequests are happening when only one server connected. I speculate that this
-would make the rerequest buffer grow really large. Think about having a function
-in request_gen that could disable rerequests.
 
 -Get client_server_bridge working for hash trees. Use the hash tree recursive
 function to figure out how many blocks are in each row so it's known when blocks
@@ -16,20 +10,20 @@ are checked.
 -Sometimes gui download stat file percent complete stops at 99% when file is
 complete.
 
--Store primes in DB as higher radix.
-
-
-WINDOWS PORTABILITY
-
--When connecting to a server have the client send it's host key and then the
-server send it's host key. Both the client and server should look to see if a
-key has been negotiated with the other before. If it has the client can just
-start sending without negotating a new key.
+-Store primes in DB as base 64.
 
 
 DEFERRED FEATURES
 
--Carefully examine client and server public interfaces.
+-When connecting to a server have the client send it's host key and then the
+server send it's host key. Both the client and server should look to see if a
+key has been negotiated with the other before. If it has the client can just
+start sending without negotating a new key. Defer this feature until GUIDs
+are worked out.
+
+-Make hashing multithreaded. Have one thread that scans the share and queues
+files to be hashed. This thread can also calculate % complete. Multiple worker
+threads can then get files from a queue to hash. Use the thread pool for this.
 
 -client::set_download_directory() not doing anything but saving setting.
 
@@ -60,18 +54,3 @@ client does not.
 
 
 OVERLAY NETWORK IDEAS
-
--XOR key system where keys are organized by distance (distance measured in hops).
-
--Trackers which are organized in to a tree structure such that if the user adds
-a tracker the user will also get to see the files of the trackers that tracker
-trusts and the files that that tracker trusts etc. Have an option to limit trust
-levels to direct trust only, one level inheritance and all level inheritance.
-Children should be able to point to their parents.
-
--What about having one large overlay network reserved for tracker discovery.
-Have a rule that says an individual can advertise a tracker once per day (or
-some large time period). That'd make traffic on the large overlay very minimal.
-
--There must be a global catalogue. Do projections on how much space this would
-take up.

@@ -10,10 +10,10 @@ download_file::download_file(
 	file_name(file_name_in),
 	file_path(file_path_in),
 	file_size(file_size_in),
-	hashing(true),
-	hashing_percent(0),
-	threads(0),
-	stop_threads(false),
+	hashing(new bool(true)),
+	hashing_percent(new int(0)),
+	threads(new int(0)),
+	stop_threads(new bool(false)),
 	thread_root_hash_hex(root_hash_hex_in),
 	thread_file_path(file_path_in),
 	download_complete(false),
@@ -60,8 +60,8 @@ download_file::download_file(
 
 download_file::~download_file()
 {
-	stop_threads = true;
-	while(threads){
+	**stop_threads = true;
+	while(**threads){
 		portable_sleep::yield();
 	}
 
@@ -84,7 +84,7 @@ const std::string download_file::hash()
 
 void download_file::hash_check()
 {
-	++threads;
+	++**threads;
 	std::fstream fin(thread_file_path.c_str(), std::ios::in);
 	char block_buff[global::FILE_BLOCK_SIZE];
 	boost::uint64_t hash_latest = 0;
@@ -99,21 +99,21 @@ void download_file::hash_check()
 		}
 		++hash_latest;
 
-		hashing_percent = (int)(((double)hash_latest / first_unreceived) * 100);
+		**hashing_percent = (int)(((double)hash_latest / first_unreceived) * 100);
 
-		if(stop_threads){
+		if(**stop_threads){
 			break;
 		}
 	}
-	hashing = false;
-	--threads;
+	**hashing = false;
+	--**threads;
 }
 
 const std::string download_file::name()
 {
-	if(hashing){
+	if(**hashing){
 		std::ostringstream name;
-		name << file_name + " CHECK " << hashing_percent << "%";
+		name << file_name + " CHECK " << **hashing_percent << "%";
 		return name.str();
 	}else{
 		return file_name;
@@ -274,7 +274,7 @@ void download_file::response(const int & socket, std::string block)
 				Request_Generator.fulfil(conn->latest_request.front());
 			}
 			conn->latest_request.pop_front();
-			if(Request_Generator.complete() && !hashing){
+			if(Request_Generator.complete() && !**hashing){
 				//download is complete, start closing slots
 				close_slots = true;
 			}
@@ -315,7 +315,7 @@ void download_file::stop()
 	}else{
 		close_slots = true;
 	}
-	stop_threads = true; //stop hash check thread if it's running
+	**stop_threads = true; //stop hash check thread if it's running
 	canceled = true;     //this download will not be added to share since it was cancelled
 	_visible = false;
 }
