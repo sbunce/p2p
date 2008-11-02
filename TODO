@@ -1,5 +1,11 @@
 TODO
 
+-the main client thread is doing transitions, that should be handled by a diff
+thread.
+
+-Should keep track of the lowest socket number to limit loops. Problem is
+bad on windows.
+
 -Make pipeline size dynamic such that it increases every time 0 is hit, up to a
 max value of 8.
 

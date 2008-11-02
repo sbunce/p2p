@@ -9,6 +9,7 @@
 #include <boost/thread/mutex.hpp>
 
 //custom
+#include "atomic_int.h"
 #include "client_buffer.h"
 #include "client_new_connection.h"
 #include "DB_blacklist.h"
@@ -20,14 +21,13 @@
 #include "download_info.h"
 #include "download_factory.h"
 #include "global.h"
-#include "locking_smart_pointer.h"
 #include "number_generator.h"
 #include "speed_calculator.h"
 
 //networking
 #ifdef WIN32
 //max number of connections in FD_SET
-#define FD_SETSIZE 1000
+#define FD_SETSIZE 1024
 #include <winsock.h>
 #define socklen_t int
 #define MSG_NOSIGNAL 0
@@ -88,11 +88,11 @@ public:
 	int total_speed();
 
 private:
-	locking_smart_pointer<bool> stop_threads; //if true this will trigger thread termination
-	locking_smart_pointer<int> threads;       //how many threads are currently running
+	//thread for main_loop
+	boost::thread main_thread;
 
-	locking_smart_pointer<int> connections;     //currently established connections
-	locking_smart_pointer<int> max_connections; //connection limit
+	atomic_int<int> connections;     //currently established connections
+	atomic_int<int> max_connections; //connection limit
 
 	/*
 	Holds download_info for downloads that need to be started. The download_info
@@ -107,7 +107,8 @@ private:
 	fd_set master_FDS; //master file descriptor set
 	fd_set read_FDS;   //holds what sockets are ready to be read
 	fd_set write_FDS;  //holds what sockets can be written to without blocking
-	int FD_max;        //holds the number of the maximum socket
+	atomic_int<int> FD_min; //number of the lowest socket
+	atomic_int<int> FD_max; //number of the highest socket
 
 	//passed to DB_Blacklist to check for updates to blacklist
 	int blacklist_state;
@@ -129,7 +130,7 @@ private:
 	void check_blacklist();
 	void check_timeouts();
 	inline void disconnect(const int & socket_FD);
-	void main_thread();
+	void main_loop();
 	void reconnect_unfinished();
 	void remove_complete();
 	void remove_empty();

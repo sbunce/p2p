@@ -5,8 +5,8 @@
 #include <boost/thread/mutex.hpp>
 
 //custom
+#include "atomic_int.h"
 #include "global.h"
-#include "locking_smart_pointer.h"
 
 //std
 #include <cmath>
@@ -32,8 +32,8 @@ public:
 	void update(const unsigned int & n_bytes);
 
 private:
-	locking_smart_pointer<unsigned int> speed_limit;   //used by rate_control
-	locking_smart_pointer<unsigned int> average_speed; //average speed over global::SPEED_AVERAGE seconds
+	atomic_int<unsigned int> speed_limit;   //used by rate_control
+	atomic_int<unsigned int> average_speed; //average speed over global::SPEED_AVERAGE seconds
 
 	/*
 	pair<second, bytes in second>

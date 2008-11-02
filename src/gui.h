@@ -1,6 +1,9 @@
 #ifndef H_GUI
 #define H_GUI
 
+//boost
+#include <boost/shared_ptr.hpp>
+
 //custom
 #include "client.h"
 #include "convert.h"
@@ -113,7 +116,7 @@ private:
 	bool download_click(GdkEventButton * event);
 	void download_file();
 	void download_info_tab();
-	void download_info_tab_close(gui_download_status * status_window, bool * refresh);
+	void download_info_tab_close(gui_download_status * status_window, sigc::connection tab_conn);
 	void on_quit();
 	bool on_delete_event(GdkEventAny * event);
 	void search_input();

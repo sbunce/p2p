@@ -10,18 +10,18 @@
 #include <errno.h>
 
 //custom
+#include "atomic_int.h"
 #include "client_buffer.h"
 #include "DB_blacklist.h"
 #include "download_connection.h"
 #include "global.h"
-#include "locking_smart_pointer.h"
 #include "resolve.h"
 #include "thread_pool.h"
 
 //networking
 #ifdef WIN32
 //max number of connections in FD_SET
-#define FD_SETSIZE 1000
+#define FD_SETSIZE 1024
 #include <winsock.h>
 #else
 #include <arpa/inet.h>
@@ -39,9 +39,9 @@ class client_new_connection
 public:
 	client_new_connection(
 		fd_set & master_FDS_in,
-		int & FD_max_in,
-		locking_smart_pointer<int> max_connections_in,
-		locking_smart_pointer<int> connections_in
+		atomic_int<int> & FD_max_in,
+		atomic_int<int> & max_connections_in,
+		atomic_int<int> & connections_in
 	);
 	~client_new_connection();
 
@@ -51,10 +51,10 @@ public:
 	void queue(download_connection DC);
 
 private:
-	fd_set * master_FDS;  //pointer to the same master_FDS in client
-	int * FD_max;         //pointer to FD_max which exists in client
-	locking_smart_pointer<int> max_connections; //maximum number of connections allowed
-	locking_smart_pointer<int> connections;     //number of connections currently established
+	fd_set * master_FDS;               //pointer to master_FDS in client
+	atomic_int<int> * FD_max;          //pointer to FD_max which exists in client
+	atomic_int<int> * max_connections; //maximum number of connections allowed
+	atomic_int<int> * connections;     //number of connections currently established
 
 	/*
 	Used by the known_unresponsive function to check for servers that have

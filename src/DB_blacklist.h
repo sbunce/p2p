@@ -5,8 +5,8 @@
 #include <boost/thread/mutex.hpp>
 
 //custom
+#include "atomic_int.h"
 #include "global.h"
-#include "locking_smart_pointer.h"
 
 //sqlite
 #include <sqlite3.h>
@@ -53,12 +53,12 @@ public:
 	static bool modified(int & blacklist_state_in)
 	{
 		init();
-		if(blacklist_state_in == **DB_Blacklist->blacklist_state){
+		if(blacklist_state_in == DB_Blacklist->blacklist_state){
 			//blacklist has not been updated
 			return false;
 		}else{
 			//blacklist updated
-			blacklist_state_in = **DB_Blacklist->blacklist_state;
+			blacklist_state_in = DB_Blacklist->blacklist_state;
 			return true;
 		}
 	}
@@ -90,7 +90,7 @@ private:
 	This count starts at 1 and is incremented every time a server is added to the
 	blacklist.
 	*/
-	locking_smart_pointer<int> blacklist_state;
+	atomic_int<int> blacklist_state;
 
 	sqlite3 * sqlite3_DB;
 	boost::mutex Mutex;     //mutex for functions called by public static functions

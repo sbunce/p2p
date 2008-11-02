@@ -9,11 +9,12 @@
 #include <boost/thread/thread.hpp>
 
 //custom
+#include "atomic_bool.h"
+#include "atomic_int.h"
 #include "client_server_bridge.h"
 #include "DB_share.h"
 #include "DB_server_preferences.h"
 #include "global.h"
-#include "locking_smart_pointer.h"
 #include "hash_tree.h"
 #include "sha.h"
 
@@ -37,9 +38,8 @@ public:
 	bool is_indexing();
 
 private:
-	locking_smart_pointer<bool> stop_thread;  //if true this will trigger thread termination
-	locking_smart_pointer<int> threads;       //how many threads are currently running
-	locking_smart_pointer<bool> indexing;     //true if server_index is currently indexing files
+	boost::thread indexing_thread;
+	atomic_bool indexing; //true if server_index is currently indexing files
 
 	/*
 	generate_hash - generates hash tree for file

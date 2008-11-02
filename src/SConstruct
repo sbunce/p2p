@@ -70,11 +70,11 @@ def lib_path(LIBDIR, pattern):
 ##END FUNCTIONS
 
 #sub-SConscripts to run
-SConscript('#dep_graph/SConstruct')
+#SConscript('#dep_graph/SConstruct')
 SConscript('#libsqlite3/SConstruct')
 SConscript('#libtommath/SConstruct')
-SConscript('#overlay_sim/SConstruct')
-SConscript('#test_manager/SConstruct')
+#SConscript('#overlay_sim/SConstruct')
+#SConscript('#test_manager/SConstruct')
 
 #setup base environment (what is common to both linux and windows)
 env_base = Environment(

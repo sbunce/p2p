@@ -5,7 +5,7 @@ boost::mutex number_generator::Mutex;
 
 number_generator::number_generator()
 {
-	boost::thread T(boost::bind(&number_generator::generate_primes_thread, this));
+	genprime_thread = boost::thread(boost::bind(&number_generator::genprime_thread, this));
 }
 
 unsigned int number_generator::prime_count_priv()
@@ -31,7 +31,7 @@ mpint number_generator::random_prime_mpint_priv()
 	return m;
 }
 
-void number_generator::generate_primes_thread()
+void number_generator::genprime_loop()
 {
 	/*
 	Sleep for one second after program start to give time for other more important

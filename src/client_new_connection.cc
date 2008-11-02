@@ -2,13 +2,13 @@
 
 client_new_connection::client_new_connection(
 	fd_set & master_FDS_in,
-	int & FD_max_in,
-	locking_smart_pointer<int> max_connections_in,
-	locking_smart_pointer<int> connections_in
+	atomic_int<int> & FD_max_in,
+	atomic_int<int> & max_connections_in,
+	atomic_int<int> & connections_in
 ):
 	Thread_Pool(8),
-	max_connections(max_connections_in),
-	connections(connections_in)
+	max_connections(&max_connections_in),
+	connections(&connections_in)
 {
 	master_FDS = &master_FDS_in;
 	FD_max = &FD_max_in;
@@ -26,8 +26,6 @@ client_new_connection::client_new_connection(
 
 client_new_connection::~client_new_connection()
 {
-	Thread_Pool.terminate();
-
 	#ifdef WIN32
 	WSACleanup();
 	#endif
@@ -97,10 +95,10 @@ void client_new_connection::new_connection(download_connection DC)
 	/*
 	Do not initiate new connections if at connection limit.
 	*/
-	if(**connections >= **max_connections){
+	if(*connections >= *max_connections){
 		return;
 	}else{
-		++**connections;
+		++*connections;
 	}
 
 	/*

@@ -2,9 +2,7 @@
 
 server::server():
 	blacklist_state(0),
-	connections(0),
-	stop_threads(new bool(false)),
-	threads(new int(0))
+	connections(0)
 {
 	FD_ZERO(&master_FDS);
 	max_connections = DB_Server_Preferences.get_max_connections();
@@ -21,21 +19,16 @@ server::server():
 	}
 	#endif
 
-	boost::thread T(boost::bind(&server::main_thread, this));
+	main_thread = boost::thread(boost::bind(&server::main_loop, this));
 }
 
 server::~server()
 {
-	**stop_threads = true;
 	raise(SIGINT); //force select() to return
-	while(**threads){
-		portable_sleep::yield();
-	}
-
+	main_thread.join();
 	server_buffer::destroy();
 
 	#ifdef WIN32
-	//cleanup winsock
 	WSACleanup();
 	#endif
 }
@@ -45,7 +38,7 @@ void server::check_blacklist()
 	if(DB_blacklist::modified(blacklist_state)){
 		sockaddr_in temp_addr;
 		socklen_t len = sizeof(temp_addr);
-		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
+		for(int socket_FD = FD_min; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &master_FDS)){
 				getpeername(socket_FD, (sockaddr*)&temp_addr, &len);
 				std::string IP(inet_ntoa(temp_addr.sin_addr));
@@ -77,6 +70,14 @@ void server::disconnect(const int & socket_FD)
 
 	server_buffer::erase(socket_FD);
 
+	//increase FD_min if possibe
+	for(int x=0; x<FD_max; ++x){
+		if(FD_ISSET(x, &master_FDS)){
+			FD_min = x;
+			break;
+		}
+	}
+
 	//reduce FD_max if possible
 	for(int x = FD_max; x != 0; --x){
 		if(FD_ISSET(x, &master_FDS)){
@@ -96,7 +97,7 @@ void server::set_max_connections(int max_connections_in)
 	max_connections = max_connections_in;
 	DB_Server_Preferences.set_max_connections(max_connections);
 	while(connections > max_connections){
-		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
+		for(int socket_FD = FD_min; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &master_FDS)){
 				disconnect(socket_FD);
 				break;
@@ -170,7 +171,7 @@ void server::new_connection(const int & listener)
 
 	//make sure the client isn't already connected
 	sockaddr_in temp_addr;
-	for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
+	for(int socket_FD = FD_min; socket_FD <= FD_max; ++socket_FD){
 		if(FD_ISSET(socket_FD, &master_FDS)){
 			getpeername(socket_FD, (sockaddr*)&temp_addr, &len);
 			if(strcmp(new_IP.c_str(), inet_ntoa(temp_addr.sin_addr)) == 0){
@@ -204,10 +205,8 @@ void server::new_connection(const int & listener)
 	return;
 }
 
-void server::main_thread()
+void server::main_loop()
 {
-	++**threads;
-
 	//set listening socket
 	unsigned int listener;
 	if((listener = socket(PF_INET, SOCK_STREAM, 0)) == -1){
@@ -271,9 +270,7 @@ void server::main_thread()
 	int n_bytes;
 	int send_limit = 0;
 	while(true){
-		if(**stop_threads){
-			break;
-		}
+		boost::this_thread::interruption_point();
 
 		check_blacklist();
 
@@ -311,7 +308,7 @@ void server::main_thread()
 			}
 		}
 
-		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
+		for(int socket_FD = FD_min; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &read_FDS)){
 				if(socket_FD == listener){
 					//new client connected
@@ -346,8 +343,6 @@ void server::main_thread()
 			}
 		}
 	}
-
-	--**threads;
 }
 
 int server::total_speed()

@@ -12,10 +12,11 @@
 class CLI_args
 {
 public:
+	//pass argc and argv strait from the main() function parameters
 	CLI_args(const int & argc_in, char * argv_in[]);
 
 	/*
-	check_bool   - returns true if parameter was passed to program
+	check_bool   - returns true if specified parameter was passed to program
 	get_string   - sets str to string associated with param (ex: -path=/tra/la/la would set str to /tra/la/la)
 	               returns false if string not found, else true
 	help_message - prints a help message and exits the program if a specified parameter is found

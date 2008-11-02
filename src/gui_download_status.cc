@@ -93,15 +93,14 @@ gui_download_status::gui_download_status(
 	show_all_children();
 }
 
-bool gui_download_status::refresh(bool * refresh)
+bool gui_download_status::refresh()
 {
 	std::vector<download_info> info;
 	Client->current_downloads(info, root_hash);
 
-	if(*refresh == false || info.empty()){
-		//tab was closed or download finished
+	if(info.empty()){
+		//download finished
 		servers_list->clear();
-		delete refresh;
 		return false;
 	}
 

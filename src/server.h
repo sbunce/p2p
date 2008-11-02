@@ -10,11 +10,10 @@
 #include <signal.h>
 
 //custom
+#include "atomic_int.h"
 #include "DB_blacklist.h"
 #include "DB_server_preferences.h"
-#include "encryption.h"
 #include "global.h"
-#include "locking_smart_pointer.h"
 #include "server_buffer.h"
 #include "server_index.h"
 #include "speed_calculator.h"
@@ -22,7 +21,7 @@
 
 //networking
 #ifdef WIN32
-#define FD_SETSIZE 1000 //max number of connections in FD_SET
+#define FD_SETSIZE 1024 //max number of connections in FD_SET
 #include <winsock.h>
 #define socklen_t int
 #define MSG_NOSIGNAL 0
@@ -71,8 +70,7 @@ public:
 	int total_speed();
 
 private:
-	locking_smart_pointer<bool> stop_threads; //if true this will trigger thread termination
-	locking_smart_pointer<int> threads;       //how many threads are currently running
+	boost::thread main_thread;
 
 	int connections;     //currently established connections
 	int max_connections; //connection limit
@@ -81,6 +79,7 @@ private:
 	fd_set master_FDS;   //master file descriptor set
 	fd_set read_FDS;     //set when socket can read without blocking
 	fd_set write_FDS;    //set when socket can write without blocking
+	int FD_min;          //holds the number of the minimum socket
 	int FD_max;          //holds the number of the maximum socket
 
 	//passed to DB_Blacklist to check for updates to blacklist
@@ -95,12 +94,11 @@ private:
 	*/
 	void check_blacklist();
 	void disconnect(const int & socketfd);
-	void main_thread();
+	void main_loop();
 	void new_connection(const int & listener);
 	void process_request(const int & socket_FD, char * recv_buff, const int & n_bytes);
 
 	DB_server_preferences DB_Server_Preferences;
-	encryption Encryption;
 	server_index Server_Index;
 	speed_calculator Speed_Calculator;
 };

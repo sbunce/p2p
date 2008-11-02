@@ -17,7 +17,6 @@
 #include <list>
 #include <map>
 #include <set>
-#include <typeinfo>
 
 //custom
 #include "download.h"

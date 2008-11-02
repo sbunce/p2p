@@ -9,13 +9,13 @@
 #include <boost/thread/thread.hpp>
 
 //custom
+#include "atomic_int.h"
 #include "convert.h"
 #include "client_server_bridge.h"
 #include "DB_blacklist.h"
 #include "DB_share.h"
 #include "download.h"
 #include "global.h"
-#include "locking_smart_pointer.h"
 #include "hash_tree.h"
 #include "request_generator.h"
 
@@ -57,31 +57,11 @@ public:
 	virtual bool visible();
 
 private:
-	/*
-	When any writing is happening to the downloading file all read access should
-	be blocked.
-	*/
-	boost::mutex file_mutex;
 
-	/*
-	When the download_file is constructed a thread is spawned to hash check a
-	partial download that has been resumed. Requests are only returned when hashing
-	is done which is indicated by this being set equal to false.
-	*/
-	locking_smart_pointer<bool> hashing;
-
-	/*
-	Percent done hashing the partial file when download resumed.
-	*/
-	locking_smart_pointer<int> hashing_percent;
-
-	/*
-	This is set to the first unreceived block (next block past end of file).
-	*/
-	boost::uint64_t first_unreceived;
-
-	locking_smart_pointer<int> threads;       //one if hash checking, otherwise zero
-	locking_smart_pointer<bool> stop_threads; //if set to true hash checking will stop early
+	boost::thread hashing_thread;     //hashing thread
+	bool hashing;                     //true if hashing
+	atomic_int<int> hashing_percent;  //percent done hashing
+	boost::uint64_t first_unreceived; //block at end of file upon download start + 1
 
 	/*
 	If download is terminated early the downloaded file will not be added to the

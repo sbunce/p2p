@@ -2,21 +2,17 @@
 
 client::client():
 	blacklist_state(0),
-	connections(new int(0)),
-	max_connections(new int),
+	connections(0),
+	FD_min(0),
 	FD_max(0),
-	Download_Factory(),
-	stop_threads(new bool(false)),
-	threads(new int(0)),
 	Client_New_Connection(master_FDS, FD_max, max_connections, connections)
 {
 	boost::filesystem::create_directory(global::DOWNLOAD_DIRECTORY);
-	**max_connections = DB_Client_Preferences.get_max_connections();
+	max_connections = DB_Client_Preferences.get_max_connections();
 	FD_ZERO(&master_FDS);
 	Speed_Calculator.set_speed_limit(DB_Client_Preferences.get_speed_limit_uint());
 
 	#ifdef WIN32
-	//start winsock
 	WORD wsock_ver = MAKEWORD(1,1);
 	WSADATA wsock_data;
 	int startup;
@@ -25,23 +21,19 @@ client::client():
 		exit(1);
 	}
 	#endif
+	
+	main_thread = boost::thread(boost::bind(&client::main_loop, this));
 
-	boost::thread T(boost::bind(&client::main_thread, this));
-
-	//get number_generator singleton initialized so it starts generating primes
+	//start prime generation
 	number_generator::init();
 }
 
 client::~client()
 {
-	**stop_threads = true;
-	while(**threads){
-		portable_sleep::yield();
-	}
+	main_thread.join();
 	client_buffer::destroy();
 
 	#ifdef WIN32
-	//cleanup winsock
 	WSACleanup();
 	#endif
 }
@@ -51,7 +43,7 @@ void client::check_blacklist()
 	if(DB_blacklist::modified(blacklist_state)){
 		sockaddr_in temp_addr;
 		socklen_t len = sizeof(temp_addr);
-		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
+		for(int socket_FD = FD_min; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &master_FDS)){
 				getpeername(socket_FD, (sockaddr*)&temp_addr, &len);
 				std::string IP(inet_ntoa(temp_addr.sin_addr));
@@ -92,14 +84,22 @@ inline void client::disconnect(const int & socket_FD)
 	close(socket_FD);
 	#endif
 
-	--**connections;
+	--connections;
 	FD_CLR(socket_FD, &master_FDS);
 	FD_CLR(socket_FD, &read_FDS);
 	FD_CLR(socket_FD, &write_FDS);
 	client_buffer::erase(socket_FD);
 
+	//increase FD_min if possibe
+	for(int x=0; x<FD_max; ++x){
+		if(FD_ISSET(x, &master_FDS)){
+			FD_min = x;
+			break;
+		}
+	}
+
 	//reduce FD_max if possible
-	for(int x = FD_max; x != 0; --x){
+	for(int x=FD_max; x>0; --x){
 		if(FD_ISSET(x, &master_FDS)){
 			FD_max = x;
 			break;
@@ -119,15 +119,15 @@ int client::prime_count()
 
 int client::get_max_connections()
 {
-	return **max_connections;
+	return max_connections;
 }
 
 void client::set_max_connections(int max_connections_in)
 {
-	**max_connections = max_connections_in;
-	DB_Client_Preferences.set_max_connections(**max_connections);
-	while(**connections > **max_connections){
-		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
+	max_connections = max_connections_in;
+	DB_Client_Preferences.set_max_connections(max_connections);
+	while(connections > max_connections){
+		for(int socket_FD = FD_min; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &master_FDS)){
 				disconnect(socket_FD);
 				break;
@@ -164,21 +164,18 @@ void client::set_speed_limit(const std::string & speed_limit)
 	ss >> speed;
 	speed *= 1024;
 	if(speed == 0){
-		speed = speed - 1; //max speed
+		speed = std::numeric_limits<unsigned int>::max(); //max speed
 	}
 	DB_Client_Preferences.set_speed_limit(speed);
 	Speed_Calculator.set_speed_limit(speed);
 }
 
-void client::main_thread()
+void client::main_loop()
 {
-	++**threads;
 	reconnect_unfinished();
 	while(true){
 
-		if(**stop_threads){
-			break;
-		}
+		boost::this_thread::interruption_point();
 
 		check_blacklist();                  //check/disconnect blacklisted IPs
 		check_timeouts();                   //check/disconnect timed out sockets
@@ -236,7 +233,7 @@ void client::main_thread()
 		char recv_buff[global::C_MAX_SIZE*global::PIPELINE_SIZE];
 		int n_bytes;
 		int recv_limit = 0;
-		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
+		for(int socket_FD = FD_min; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &read_FDS)){
 				if((recv_limit = Speed_Calculator.rate_control(global::C_MAX_SIZE*global::PIPELINE_SIZE)) != 0){
 					if((n_bytes = recv(socket_FD, recv_buff, recv_limit, MSG_NOSIGNAL)) <= 0){
@@ -274,7 +271,6 @@ void client::main_thread()
 			}
 		}
 	}
-	--**threads;
 }
 
 void client::reconnect_unfinished()

@@ -230,7 +230,6 @@ private:
 	bool exchange_key;               //true when key exchange happening
 	std::string prime_remote_result; //holds prime and incoming result for key exchange
 	encryption Encryption;
-
 	DB_share DB_Share;
 };
 #endif

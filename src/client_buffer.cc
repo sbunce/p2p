@@ -50,12 +50,10 @@ void client_buffer::recv_buff_append(char * buff, const int & n_bytes)
 			recv_buff.clear();
 			exchange_key = false;
 		}
-
 		if(remote_result.size() > global::DH_KEY_SIZE){
 			logger::debug(LOGGER_P1,IP," abusive, failed key negotation, too many bytes");
 			DB_blacklist::add(IP);
 		}
-
 		return;
 	}
 

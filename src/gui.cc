@@ -265,30 +265,30 @@ void gui::download_info_tab()
 	show_all_children();
 
 	//used to tell the refresh function to stop when tab closed
-	bool * refresh = new bool(true);
+	boost::shared_ptr<bool> refresh(new bool(true));
+	//bool * refresh = new bool(true);
+
+	//set tab window to refresh
+	sigc::connection tab_conn = Glib::signal_timeout().connect(
+		sigc::mem_fun(status_window, &gui_download_status::refresh),
+		global::GUI_TICK
+	);
 
 	//signal to close tab, function pointer bound to window pointer associated with a tab
 	close_button->signal_clicked().connect(
-		sigc::bind<gui_download_status *, bool *>(
+		sigc::bind<gui_download_status *, sigc::connection>(
 			sigc::mem_fun(*this, &gui::download_info_tab_close),
-			status_window, refresh
+			status_window, tab_conn
 		)
-	);
-
-	//set tab window to refresh
-	Glib::signal_timeout().connect(
-		sigc::bind<bool *>(
-			sigc::mem_fun(status_window, &gui_download_status::refresh),
-			refresh
-		),
-		global::GUI_TICK
 	);
 }
 
-void gui::download_info_tab_close(gui_download_status * status_window, bool * refresh)
+void gui::download_info_tab_close(gui_download_status * status_window, sigc::connection tab_conn)
 {
 	//stop window from refreshing
-	*refresh = false;
+	tab_conn.disconnect();
+
+	//remove tab
 	notebook->remove_page(*status_window);
 }
 

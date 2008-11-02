@@ -115,7 +115,8 @@ private:
 	Generating primes takes a long time, all this function does is generate
 	primes in it's own thread.
 	*/
-	void generate_primes_thread();
+	boost::thread genprime_thread;
+	void genprime_loop();
 
 	DB_prime DB_Prime;
 };

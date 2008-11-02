@@ -1,6 +1,9 @@
 #ifndef H_GUI_DOWNLOAD_STATUS
 #define H_GUI_DOWNLOAD_STATUS
 
+//boost
+#include <boost/shared_ptr.hpp>
+
 //custom
 #include "client.h"
 #include "convert.h"
@@ -25,7 +28,7 @@ public:
 	/*
 	refresh - update all values, stops refreshing when refresh set to false
 	*/
-	bool refresh(bool * refresh);
+	bool refresh();
 
 private:
 	//pointer to client that exists in GUI class

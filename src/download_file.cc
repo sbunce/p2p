@@ -10,10 +10,8 @@ download_file::download_file(
 	file_name(file_name_in),
 	file_path(file_path_in),
 	file_size(file_size_in),
-	hashing(new bool(true)),
-	hashing_percent(new int(0)),
-	threads(new int(0)),
-	stop_threads(new bool(false)),
+	hashing(true),
+	hashing_percent(0),
 	thread_root_hash_hex(root_hash_hex_in),
 	thread_file_path(file_path_in),
 	download_complete(false),
@@ -55,15 +53,12 @@ download_file::download_file(
 	Request_Generator.init((boost::uint64_t)first_unreceived, last_block, global::RE_REQUEST);
 
 	//hash check for corrupt/missing blocks
-	boost::thread T(boost::bind(&download_file::hash_check, this));
+	hashing_thread = boost::thread(boost::bind(&download_file::hash_check, this));
 }
 
 download_file::~download_file()
 {
-	**stop_threads = true;
-	while(**threads){
-		portable_sleep::yield();
-	}
+	hashing_thread.join();
 
 	if(!canceled){
 		DB_Share.add_entry(root_hash_hex, file_size, file_path);
@@ -84,11 +79,12 @@ const std::string download_file::hash()
 
 void download_file::hash_check()
 {
-	++**threads;
 	std::fstream fin(thread_file_path.c_str(), std::ios::in);
 	char block_buff[global::FILE_BLOCK_SIZE];
 	boost::uint64_t hash_latest = 0;
 	while(true){
+		boost::this_thread::interruption_point();
+
 		if(hash_latest == first_unreceived){
 			break;
 		}
@@ -99,21 +95,16 @@ void download_file::hash_check()
 		}
 		++hash_latest;
 
-		**hashing_percent = (int)(((double)hash_latest / first_unreceived) * 100);
-
-		if(**stop_threads){
-			break;
-		}
+		hashing_percent = (int)(((double)hash_latest / first_unreceived) * 100);
 	}
-	**hashing = false;
-	--**threads;
+	hashing = false;
 }
 
 const std::string download_file::name()
 {
-	if(**hashing){
+	if(hashing){
 		std::ostringstream name;
-		name << file_name + " CHECK " << **hashing_percent << "%";
+		name << file_name + " CHECK " << hashing_percent << "%";
 		return name.str();
 	}else{
 		return file_name;
@@ -274,7 +265,7 @@ void download_file::response(const int & socket, std::string block)
 				Request_Generator.fulfil(conn->latest_request.front());
 			}
 			conn->latest_request.pop_front();
-			if(Request_Generator.complete() && !**hashing){
+			if(Request_Generator.complete() && !hashing){
 				//download is complete, start closing slots
 				close_slots = true;
 			}
@@ -315,13 +306,20 @@ void download_file::stop()
 	}else{
 		close_slots = true;
 	}
-	**stop_threads = true; //stop hash check thread if it's running
-	canceled = true;     //this download will not be added to share since it was cancelled
+
+	//cancelled downloads don't get added to share upon completion
+	canceled = true;
+
+	//make invisible, cancelling download may take a while
 	_visible = false;
 }
 
 void download_file::write_block(boost::uint64_t block_number, std::string & block)
 {
+	if(canceled){
+		return;
+	}
+
 	std::fstream fout(file_path.c_str(), std::ios::in | std::ios::out | std::ios::binary);
 	if(fout.is_open()){
 		fout.seekp(block_number * global::FILE_BLOCK_SIZE, std::ios::beg);
