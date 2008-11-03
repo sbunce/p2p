@@ -375,6 +375,7 @@ private:
 	*/
 	static int send_pending;
 
+	//main send/recv buffers
 	std::string recv_buff;
 	std::string send_buff;
 
@@ -388,6 +389,9 @@ private:
 	std::string IP;   //IP associated with this client_buffer
 	int socket;       //socket number of this element
 	time_t last_seen; //used for timeout
+
+	//this will be adjusted up or down depending on whether the server needs it
+	int max_pipeline_size;
 
 	class pending_response
 	{

@@ -107,7 +107,6 @@ private:
 	fd_set master_FDS; //master file descriptor set
 	fd_set read_FDS;   //holds what sockets are ready to be read
 	fd_set write_FDS;  //holds what sockets can be written to without blocking
-	atomic_int<int> FD_min; //number of the lowest socket
 	atomic_int<int> FD_max; //number of the highest socket
 
 	//passed to DB_Blacklist to check for updates to blacklist

@@ -5,7 +5,7 @@ boost::mutex number_generator::Mutex;
 
 number_generator::number_generator()
 {
-	genprime_thread = boost::thread(boost::bind(&number_generator::genprime_thread, this));
+	genprime_thread = boost::thread(boost::bind(&number_generator::genprime_loop, this));
 }
 
 unsigned int number_generator::prime_count_priv()

@@ -24,6 +24,7 @@ client_buffer::client_buffer(
 	IP(IP_in),
 	last_seen(time(NULL)),
 	slots_used(0),
+	max_pipeline_size(1),
 	exchange_key(true)
 {
 	recv_buff.reserve(global::C_MAX_SIZE*global::PIPELINE_SIZE);
@@ -140,10 +141,23 @@ void client_buffer::prepare_request()
 		return;
 	}
 
+	/*
+	If the pipeline size is zero that means the server satisfied all requests in
+	the pipeline and that the pipeline needs to be bigger.
+
+	If the pipeline is larger than one then we're overpipelining and the pipeline
+	size should be decreased.
+	*/
+	if(Pipeline.size() == 0 && max_pipeline_size < global::PIPELINE_SIZE){
+		++max_pipeline_size;
+	}else if(Pipeline.size() > 1 && max_pipeline_size > 1){
+		--max_pipeline_size;
+	}
+
 	//needed to stop infinite loop when all downloads waiting
 	bool buffer_change = true;
 	int initial_empty = send_buff.size() == 0;
-	while(Pipeline.size() < global::PIPELINE_SIZE){
+	while(Pipeline.size() < max_pipeline_size){
 		if(rotate_downloads()){
 			/*
 			When rotate_downloads returns true it means that a full rotation of the

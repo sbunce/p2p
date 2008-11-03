@@ -8,14 +8,12 @@ if platform == 'linux2':
 	Command(
 		'p2p_gui.ps',
 		'dot_gen',
-		'./dep_graph/dot_gen main_gui.cc |dot -Tps -o dep_graph/p2p_gui.ps',
-		chdir='..'
+		'./dep_graph/dot_gen main_gui.cc |dot -Tps -o dep_graph/p2p_gui.ps'
 	)
 	Command(
 		'p2p_nogui.ps',
 		'dot_gen',
-		'./dep_graph/dot_gen main_nogui.cc |dot -Tps -o dep_graph/p2p_nogui.ps',
-		chdir='..'
+		'./dep_graph/dot_gen main_nogui.cc |dot -Tps -o dep_graph/p2p_nogui.ps'
 	)
 
 Clean('dot_gen',['p2p_gui.ps','p2p_nogui.ps'])

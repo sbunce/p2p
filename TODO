@@ -1,22 +1,8 @@
 TODO
 
--the main client thread is doing transitions, that should be handled by a diff
-thread.
-
--Should keep track of the lowest socket number to limit loops. Problem is
-bad on windows.
-
--Make pipeline size dynamic such that it increases every time 0 is hit, up to a
-max value of 8.
-
 -Get client_server_bridge working for hash trees. Use the hash tree recursive
 function to figure out how many blocks are in each row so it's known when blocks
 are checked.
-
--Sometimes gui download stat file percent complete stops at 99% when file is
-complete.
-
--Store primes in DB as base 64.
 
 
 DEFERRED FEATURES
@@ -49,14 +35,3 @@ much since the hashes stay the same.
 Perhaps have a memmove type opteration one a file where hashes can be moved to
 get rid of gaps due to removed files. The intermediate step of the memmove
 operation would basically be a journal.
-
-
-PROTOCOL IDEAS
-
--Have a token that can be send to the server from the client which basically asks
-the server, "do you want to send data". Token should be offered once every 16
-seconds so the server can send information like servers it knows about that the
-client does not.
-
-
-OVERLAY NETWORK IDEAS

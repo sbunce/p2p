@@ -557,15 +557,13 @@ bool gui::update_status_bar()
 
 	//get the total client download speed
 	int client_speed = Client.total_speed();
-	client_speed = client_speed / 1024; //convert to kB
 	std::ostringstream client_speed_s;
-	client_speed_s << client_speed << " kB/s";
+	client_speed_s << convert::size_unit_select(client_speed) << "/s";
 
 	//get the total server upload speed
 	int server_speed = Server.total_speed();
-	server_speed = server_speed / 1024; //convert to kB
 	std::ostringstream server_speed_s;
-	server_speed_s << server_speed << " kB/s";
+	server_speed_s << convert::size_unit_select(server_speed) << "/s";
 
 	std::ostringstream oss;
 	oss << "  D: " + client_speed_s.str() << " U: " << server_speed_s.str() << "  P:" << Client.prime_count();

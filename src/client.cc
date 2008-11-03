@@ -3,7 +3,6 @@
 client::client():
 	blacklist_state(0),
 	connections(0),
-	FD_min(0),
 	FD_max(0),
 	Client_New_Connection(master_FDS, FD_max, max_connections, connections)
 {
@@ -43,7 +42,7 @@ void client::check_blacklist()
 	if(DB_blacklist::modified(blacklist_state)){
 		sockaddr_in temp_addr;
 		socklen_t len = sizeof(temp_addr);
-		for(int socket_FD = FD_min; socket_FD <= FD_max; ++socket_FD){
+		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &master_FDS)){
 				getpeername(socket_FD, (sockaddr*)&temp_addr, &len);
 				std::string IP(inet_ntoa(temp_addr.sin_addr));
@@ -90,14 +89,6 @@ inline void client::disconnect(const int & socket_FD)
 	FD_CLR(socket_FD, &write_FDS);
 	client_buffer::erase(socket_FD);
 
-	//increase FD_min if possibe
-	for(int x=0; x<FD_max; ++x){
-		if(FD_ISSET(x, &master_FDS)){
-			FD_min = x;
-			break;
-		}
-	}
-
 	//reduce FD_max if possible
 	for(int x=FD_max; x>0; --x){
 		if(FD_ISSET(x, &master_FDS)){
@@ -127,7 +118,7 @@ void client::set_max_connections(int max_connections_in)
 	max_connections = max_connections_in;
 	DB_Client_Preferences.set_max_connections(max_connections);
 	while(connections > max_connections){
-		for(int socket_FD = FD_min; socket_FD <= FD_max; ++socket_FD){
+		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &master_FDS)){
 				disconnect(socket_FD);
 				break;
@@ -233,7 +224,7 @@ void client::main_loop()
 		char recv_buff[global::C_MAX_SIZE*global::PIPELINE_SIZE];
 		int n_bytes;
 		int recv_limit = 0;
-		for(int socket_FD = FD_min; socket_FD <= FD_max; ++socket_FD){
+		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &read_FDS)){
 				if((recv_limit = Speed_Calculator.rate_control(global::C_MAX_SIZE*global::PIPELINE_SIZE)) != 0){
 					if((n_bytes = recv(socket_FD, recv_buff, recv_limit, MSG_NOSIGNAL)) <= 0){

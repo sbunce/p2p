@@ -79,7 +79,6 @@ private:
 	fd_set master_FDS;   //master file descriptor set
 	fd_set read_FDS;     //set when socket can read without blocking
 	fd_set write_FDS;    //set when socket can write without blocking
-	int FD_min;          //holds the number of the minimum socket
 	int FD_max;          //holds the number of the maximum socket
 
 	//passed to DB_Blacklist to check for updates to blacklist

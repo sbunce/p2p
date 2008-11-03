@@ -38,7 +38,7 @@ void server::check_blacklist()
 	if(DB_blacklist::modified(blacklist_state)){
 		sockaddr_in temp_addr;
 		socklen_t len = sizeof(temp_addr);
-		for(int socket_FD = FD_min; socket_FD <= FD_max; ++socket_FD){
+		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &master_FDS)){
 				getpeername(socket_FD, (sockaddr*)&temp_addr, &len);
 				std::string IP(inet_ntoa(temp_addr.sin_addr));
@@ -70,14 +70,6 @@ void server::disconnect(const int & socket_FD)
 
 	server_buffer::erase(socket_FD);
 
-	//increase FD_min if possibe
-	for(int x=0; x<FD_max; ++x){
-		if(FD_ISSET(x, &master_FDS)){
-			FD_min = x;
-			break;
-		}
-	}
-
 	//reduce FD_max if possible
 	for(int x = FD_max; x != 0; --x){
 		if(FD_ISSET(x, &master_FDS)){
@@ -97,7 +89,7 @@ void server::set_max_connections(int max_connections_in)
 	max_connections = max_connections_in;
 	DB_Server_Preferences.set_max_connections(max_connections);
 	while(connections > max_connections){
-		for(int socket_FD = FD_min; socket_FD <= FD_max; ++socket_FD){
+		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &master_FDS)){
 				disconnect(socket_FD);
 				break;
@@ -171,7 +163,7 @@ void server::new_connection(const int & listener)
 
 	//make sure the client isn't already connected
 	sockaddr_in temp_addr;
-	for(int socket_FD = FD_min; socket_FD <= FD_max; ++socket_FD){
+	for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 		if(FD_ISSET(socket_FD, &master_FDS)){
 			getpeername(socket_FD, (sockaddr*)&temp_addr, &len);
 			if(strcmp(new_IP.c_str(), inet_ntoa(temp_addr.sin_addr)) == 0){
@@ -308,7 +300,7 @@ void server::main_loop()
 			}
 		}
 
-		for(int socket_FD = FD_min; socket_FD <= FD_max; ++socket_FD){
+		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &read_FDS)){
 				if(socket_FD == listener){
 					//new client connected

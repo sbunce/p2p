@@ -29,7 +29,7 @@ public:
 	retrieve - retrieve a prime from the DB and delete the prime from the DB
 	           returns true if prime retrieved, false if prime table empty
 	*/
-	void add(const mpint & prime);
+	void add(mpint & prime);
 	int count();
 	bool retrieve(mpint & prime);
 

@@ -162,7 +162,7 @@ void server_index::index_share()
 
 		indexing = false;
 
-		//wait 1 second between share scans and checks
+		//wait between share scans and checks
 		portable_sleep::ms(1000);
 	}
 }

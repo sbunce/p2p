@@ -35,11 +35,11 @@ DB_prime::DB_prime()
 	}
 }
 
-void DB_prime::add(const mpint & prime)
+void DB_prime::add(mpint & prime)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	std::ostringstream oss;
-	oss << "INSERT INTO prime VALUES (NULL,'" << prime << "')";
+	oss << "INSERT INTO prime VALUES (NULL,'" << prime.to_str(64) << "')";
 	if(sqlite3_exec(sqlite3_DB, oss.str().c_str(), NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
@@ -65,7 +65,7 @@ bool DB_prime::retrieve(mpint & prime)
 void DB_prime::retrieve_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
 	retrieve_found = true;
-	*retrieve_mpint = mpint(query_response[1]);
+	*retrieve_mpint = mpint(query_response[1], 64);
 
 	std::ostringstream oss;
 	oss << "DELETE FROM prime WHERE key = " << query_response[0];
