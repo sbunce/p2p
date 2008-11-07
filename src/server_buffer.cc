@@ -210,8 +210,8 @@ std::cout << "HASH TREE UPLOAD WHILE DOWNLOAD NOT IMPLEMENTED\n";
 		}else if(DM == client_server_bridge::DOWNLOAD_FILE && SE->Slot_Type == SLOT_FILE){
 			//client requested a block from a file the client is currently downloading
 			if(!client_server_bridge::is_available(SE->hash, block_number)){
-std::cout << "sending P_WAIT\n";
 				//block is not available to be sent, tell the client to wait
+				logger::debug(LOGGER_P1,"sending P_WAIT to ",IP);
 				send += global::P_WAIT;
 				update_slot_speed(request[1], global::P_WAIT_SIZE);
 				return;
@@ -227,8 +227,8 @@ std::cout << "sending P_WAIT\n";
 			fin.read(send_block_buff, global::FILE_BLOCK_SIZE);
 
 			#ifdef CORRUPT_BLOCKS
-			if(rand() % 20 == 0){
-				send_block_buff[0] = (char)0;
+			if(rand() % 100 == 0){
+				send_block_buff[0] = ++send_block_buff[0];
 			}
 			#endif
 

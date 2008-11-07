@@ -1,13 +1,8 @@
 #ifndef H_GLOBALS
 #define H_GLOBALS
 
-//uncomment to disable all asserts
 //#define NDEBUG
-
-//uncomment to enable file block corruption test
 //#define CORRUPT_BLOCKS
-
-//uncomment to enable resolution of host names
 #define RESOLVE_HOST_NAMES
 
 //boost
