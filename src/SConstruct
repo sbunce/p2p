@@ -1,6 +1,21 @@
+#site_scons
+import boost
+import gtkmm
+import system
+
+#std
 import fnmatch
-import sys
 import os
+import sys
+
+SConscript([
+	'#dep_graph/SConstruct',
+	'#libsqlite3/SConstruct',
+	'#libtommath/SConstruct',
+	'#overlay_sim/SConstruct',
+	'#site_scons/SConstruct',
+	'#test_manager/SConstruct'
+])
 
 #source files for objects to be linked in to p2p_gui
 src_gui = [
@@ -49,87 +64,27 @@ src_common = [
 	'thread_pool.cc'
 ]
 
-##BEGIN FUNCTIONS
-#search files in list of directories, return path to static library
-def lib_path(LIBDIR, pattern):
-	#set up suffix to append to pattern
-	if sys.platform == 'win32':
-		pattern += '.lib'
-	if sys.platform == 'linux2':
-		pattern += '.a'
-
-	#search directories for file name matching pattern
-	for dir in LIBDIR:
-		if dir[0] != '#': #don't search directories within source tree
-			for file in os.listdir(dir):
-				if fnmatch.fnmatch(file, pattern):
-					return dir + "/" + file
-
-	print 'error: cannot find library with pattern "' + pattern
-	exit(1)
-##END FUNCTIONS
-
-#sub-SConscripts to run
-SConscript([
-	'#dep_graph/SConstruct',
-	'#libsqlite3/SConstruct',
-	'#libtommath/SConstruct',
-	'#overlay_sim/SConstruct',
-	'#test_manager/SConstruct'
-])
-
-#setup base environment (what is common to both linux and windows)
-env_base = Environment(
-	CPPPATH = ['.', '#/libtommath', '#/libsqlite3'],
-	LIBS = ['libtommath', 'libsqlite3']
-)
-
-#where to look for libraries
-LIBDIR = ['#libtommath', '#libsqlite3']
-
-#setup platform specific environment options
-if sys.platform == 'win32':
-	LIBDIR.append('/Program Files/Microsoft SDKs/Windows/v6.0A/Lib')
-	LIBDIR.append('/Program Files/boost/boost_1_36_0/lib')
-	LIBDIR.append('/gtkmm/lib')
-	env_base['CPPPATH'].append('/Program Files/Microsoft SDKs/Windows/v6.0A/Include')
-	env_base['CPPPATH'].append('/Program Files/boost/boost_1_36_0')
-	env_base['CCFLAGS'].append('/EHsc') #exception support
-	env_base['CCFLAGS'].append('/w')    #disable all warnings
-	env_base['CCFLAGS'].append('/Ox')   #max optimizations
-	env_base['LIBS'].append('ws2_32')   #winsock lib
-	env_base['LIBS'].append('advapi32') #random number gen lib
-if sys.platform == 'linux2':
-	LIBDIR.append('/usr/local/lib')
-	env_base['CPPPATH'].append('/usr/local/include/boost-1_36')
-	env_base['CCFLAGS'].append('-O3')   #max optimizations
-	env_base['LIBS'].append('dl')       #needed for sqlite3
-	env_base['LIBS'].append('pthread')  #needed for sqlite3
+env = Environment()
+env['CPPPATH'] = ['#/libtommath', '#/libsqlite3'] #header search path
+env['LIBPATH'] = ['#libtommath', '#libsqlite3']   #library search path
+env['LIBS'] = ['tommath', 'sqlite3']              #libraries to link in
+system.env_setup(env)
+boost.env_setup(env)
+env_gui = env.Clone()
+gtkmm.env_setup(env_gui)
 
 static_libs = [
-		lib_path(LIBDIR, 'libboost_filesystem*'),
-		lib_path(LIBDIR, 'libboost_system*'),
-		lib_path(LIBDIR, 'libboost_thread*')
+	boost.static_lib('date_time'),
+	boost.static_lib('filesystem'),
+	boost.static_lib('system'),
+	boost.static_lib('thread')
 ]
-
-#create gui environment
-env_gui = env_base.Clone()
-env_gui.ParseConfig('pkg-config gtkmm-2.4 --cflags --libs')
 
 #compile different object groups
 src_gui_obj = env_gui.Object(src_gui)
-src_nogui_obj = env_base.Object(src_nogui)
-src_common_obj = env_base.Object(src_common)
+src_nogui_obj = env.Object(src_nogui)
+src_common_obj = env.Object(src_common)
 
 #link
-env_gui.Program(
-	'p2p_gui',
-	src_gui_obj + src_common_obj + static_libs,
-	LIBPATH = LIBDIR
-)
-
-env_base.Program(
-	'p2p_nogui',
-	src_nogui_obj + src_common_obj + static_libs,
-	LIBPATH = LIBDIR
-)
+env_gui.Program('p2p_gui', src_gui_obj + src_common_obj + static_libs)
+env.Program('p2p_nogui', src_nogui_obj + src_common_obj + static_libs)

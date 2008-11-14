@@ -1,12 +1,10 @@
+#site_scons
+import system
+
+#std
 import glob
 import sys
-platform = sys.platform
 
 env = Environment()
-if platform == 'win32':
-	env['CCFLAGS'].append('/Ox')
-if platform == 'linux2':
-	env['CCFLAGS'].append('-O3')
-
-files = glob.glob('*.c')
-StaticLibrary('libtommath', files)
+system.env_setup(env)
+env.StaticLibrary('tommath', glob.glob('*.c'))

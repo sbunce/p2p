@@ -24,6 +24,7 @@ server::server():
 
 server::~server()
 {
+	main_thread.interrupt();
 	raise(SIGINT); //force select() to return
 	main_thread.join();
 	server_buffer::destroy();

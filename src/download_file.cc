@@ -58,6 +58,7 @@ download_file::download_file(
 
 download_file::~download_file()
 {
+	hashing_thread.interrupt();
 	hashing_thread.join();
 
 	if(!canceled){

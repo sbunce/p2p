@@ -10,6 +10,7 @@ server_index::server_index():
 server_index::~server_index()
 {
 	Hash_Tree.stop(); //force hash tree generation to terminate
+	indexing_thread.interrupt();
 	indexing_thread.join();
 }
 

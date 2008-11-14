@@ -1,1 +1,6 @@
-Program('test_manager', ['main.cc'])
+#site_scons
+import system
+
+env = Environment()
+system.env_setup(env)
+env.Program('test_manager', ['main.cc'])

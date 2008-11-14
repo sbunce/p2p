@@ -1,0 +1,4 @@
+#std
+import glob
+
+Clean('site_init.py',glob.glob('*.pyc'))

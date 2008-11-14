@@ -29,6 +29,7 @@ client::client():
 
 client::~client()
 {
+	main_thread.interrupt();
 	main_thread.join();
 	client_buffer::destroy();
 

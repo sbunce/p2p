@@ -1,9 +1,8 @@
 import glob
 import os
 import sys
-platform = sys.platform
 
-if platform == 'linux2':
+if sys.platform == 'linux2':
 	Program('dot_gen', glob.glob('*.cc'))
 	Command(
 		'p2p_gui.ps',

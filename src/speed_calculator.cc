@@ -65,7 +65,7 @@ unsigned int speed_calculator::rate_control(int max_possible_transfer)
 
 	while(Second_Bytes[0].second >= speed_limit){
 		//sleep until bytes can be requested
-		portable_sleep::yield();
+		portable_sleep::ms(1);
 
 		//recalculate speed
 		update(0);

@@ -4,6 +4,7 @@ TOP_DIR=`pwd`
 
 if [ "$1" == "clean" ]; then
 	#clean up
+	clear
 	cd src
 	scons -c
 	cd $TOP_DIR
@@ -12,6 +13,7 @@ if [ "$1" == "clean" ]; then
 	rm -f hash/*
 else
 	#build
+	clear
 	cd src
 	scons -j2
 	cd $TOP_DIR

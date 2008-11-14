@@ -11,7 +11,6 @@ void func()
 	for(int x=0; x<10; ++x){
 		Overlay.join(new node(x));
 	}
-	sleep(1);
 }
 
 int main(int argc, char ** argv)

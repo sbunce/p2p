@@ -5,6 +5,27 @@
 //#define CORRUPT_BLOCKS
 #define RESOLVE_HOST_NAMES
 
+/*
+This stops compilation when boost is too old. The MIN_MAJOR_VERSION and
+MIN_MINOR_VERSION need to be set to the minimum allowed version of boost.
+
+example: 1.36 would have major 1 and minor 36
+*/
+#include <boost/version.hpp>
+#define MIN_MAJOR_VERSION 1
+#define MIN_MINOR_VERSION 36
+
+#define CURRENT_MAJOR_VERSION BOOST_VERSION / 100000
+#define CURRENT_MINOR_VERSION BOOST_VERSION / 100 % 1000
+
+#if CURRENT_MAJOR_VERSION < MIN_MAJOR_VERSION
+	#error boost version too old
+#elif CURRENT_MAJOR_VERSION == MIN_MAJOR_VERSION
+	#if CURRENT_MINOR_VERSION < MIN_MINOR_VERSION
+		#error boost version too old
+	#endif
+#endif
+
 //boost
 #include <boost/cstdint.hpp>
 

@@ -43,7 +43,6 @@ void overlay::process()
 {
 	while(!main_thread_terminate){
 
-		sleep(1);
 		std::cout << "POIK\n";
 	}
 	std::cout << "DONE\n";

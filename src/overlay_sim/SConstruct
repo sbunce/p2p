@@ -1,41 +1,21 @@
+#site_scons
+import boost
+import system
+
+#std
 import glob
 import fnmatch
 import os
 import sys
 
-##BEGIN FUNCTIONS
-#search files in list of directories, return path to static library
-def lib_path(LIBDIR, pattern):
-	#set up suffix to append to pattern
-	if sys.platform == 'win32':
-		pattern += '.lib'
-	if sys.platform == 'linux2':
-		pattern += '.a'
-
-	#search directories for file name matching pattern
-	for dir in LIBDIR:
-		if dir[0] != '#': #don't search directories within source tree
-			for file in os.listdir(dir):
-				if fnmatch.fnmatch(file, pattern):
-					return dir + "/" + file
-
-	print 'error: cannot find library with pattern "' + pattern
-	exit(1)
-##END FUNCTIONS
-
-env_base = Environment(
-	CPPPATH = [],
-	LIBS = []
-)
-
-if sys.platform == 'linux2':
-	env_base['CPPPATH'].append('/usr/local/include/boost-1_36')
-	env_base['LIBS'].append('pthread')
-	LIBDIR = ['/usr/local/lib']
-	#Command('sim.ps', 'sim', 'sim |dot -Tps -o sim.ps')
+env = Environment()
+boost.env_setup(env)
+system.env_setup(env)
 
 static_libs = [
-	lib_path(LIBDIR, 'libboost_thread*')
+	boost.static_lib('date_time'),
+	boost.static_lib('system'),
+	boost.static_lib('thread')
 ]
 
-env_base.Program('sim', glob.glob('*.cc') + static_libs, LIBPATH = LIBDIR)
+env.Program('sim', glob.glob('*.cc') + static_libs)
