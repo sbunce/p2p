@@ -197,20 +197,31 @@ void gui::cancel_download()
 
 bool gui::download_click(GdkEventButton * event)
 {
-	if(event->type == GDK_BUTTON_PRESS && event->button == 3){
-		downloads_popup_menu.popup(event->button, event->time);
-
-		//select the row when the user right clicks on it
+	if(event->type == GDK_BUTTON_PRESS && event->button == 1){
+		//left click
 		int x, y;
 		Gtk::TreeModel::Path path;
 		Gtk::TreeViewColumn columnObject;
 		Gtk::TreeViewColumn * column = &columnObject;
 		if(download_view->get_path_at_pos((int)event->x, (int)event->y, path, column, x, y)){
 			download_view->set_cursor(path);
+		}else{
+			download_view->get_selection()->unselect_all();
 		}
-		return true;
+	}else if(event->type == GDK_BUTTON_PRESS && event->button == 3){
+		//right click
+		downloads_popup_menu.popup(event->button, event->time);
+		int x, y;
+		Gtk::TreeModel::Path path;
+		Gtk::TreeViewColumn columnObject;
+		Gtk::TreeViewColumn * column = &columnObject;
+		if(download_view->get_path_at_pos((int)event->x, (int)event->y, path, column, x, y)){
+			download_view->set_cursor(path);
+		}else{
+			download_view->get_selection()->unselect_all();
+		}
 	}
-	return false;
+	return true;
 }
 
 void gui::download_file()
@@ -250,6 +261,13 @@ void gui::download_info_tab()
 		}
 	}
 
+	//make sure download exists (user could have requested information on nothing)
+	std::string name;
+	boost::uint64_t tree_size, file_size;
+	if(!Client.file_info(root_hash, name, tree_size, file_size)){
+		return;
+	}
+
 	//objects needed for new tab
 	Gtk::HBox * hbox = Gtk::manage(new Gtk::HBox(false, 0));
 	Gtk::Label * tab_label = Gtk::manage(new Gtk::Label);
@@ -266,7 +284,6 @@ void gui::download_info_tab()
 
 	//used to tell the refresh function to stop when tab closed
 	boost::shared_ptr<bool> refresh(new bool(true));
-	//bool * refresh = new bool(true);
 
 	//set tab window to refresh
 	sigc::connection tab_conn = Glib::signal_timeout().connect(

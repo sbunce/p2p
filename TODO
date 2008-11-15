@@ -1,11 +1,5 @@
 TODO
 
--If no download found (right click/information on nothing) should not open a
-tab.
-
--Need to do something with downloads which have their file removed. Currently
-there is just write errors and rerequesting forever.
-
 -Add boost::thread::hardware_concurrency support to adjust indexing threads.
 
 -Get client_server_bridge working for hash trees. Use the hash tree recursive

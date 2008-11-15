@@ -21,7 +21,7 @@ gui_download_status::gui_download_status(
 		tmp = " " + tmp + " ";
 		tab_label->set_text(tmp);
 	}else{
-		tab_label->set_text("download not found");
+		tab_label->set_text("error: no download");
 	}
 
 	std::string tree_size_str = convert::size_unit_select(tree_size_bytes);

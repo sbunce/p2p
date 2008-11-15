@@ -345,15 +345,17 @@ boost::uint64_t hash_tree::locate_start(const std::string & root_hex_hash)
 	}
 }
 
-void hash_tree::write_hash(const std::string & root_hex_hash, const boost::uint64_t & number, const std::string & hash_block)
+bool hash_tree::write_hash(const std::string & root_hex_hash, const boost::uint64_t & number, const std::string & hash_block)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	std::fstream fout((global::HASH_DIRECTORY+root_hex_hash).c_str(), std::ios::in | std::ios::out | std::ios::binary);
 	if(fout.is_open()){
 		fout.seekp(sha::HASH_LENGTH * number, std::ios::beg);
 		fout.write(hash_block.c_str(), hash_block.length());
+		return true;
 	}else{
 		logger::debug(LOGGER_P1,"error opening file ",global::HASH_DIRECTORY+root_hex_hash);
+		return false;
 	}
 }
 

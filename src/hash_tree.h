@@ -36,13 +36,14 @@ public:
 	                          calling stop() while tree generating can trigger return of false
 	file_hash               - returns the file hash that corresponds to root_hash_hex and block_number
 	file_size_to_hash_count - returns how many hashes there would be for a file of size file_size
-	write_hash              - used to replace bad hashes found by check_hash_tree
+	write_hash              - write hash or hash block starting at number
+	                          returns true if block written, else false if file could not be opened
 	stop                    - sets stop_thread to true and allows create hash tree to exit early
 	*/
 	bool check_block(const std::string & root_hex_hash, const boost::uint64_t & block_number, const char * const block, const int & block_length);
 	bool check_hash_tree(const std::string file_name, const std::string & root_hash_hex, const boost::uint64_t & hash_count, std::pair<boost::uint64_t, boost::uint64_t> & bad_hash);
 	bool create_hash_tree(std::string file_path, std::string & root_hash);
-	void write_hash(const std::string & root_hex_hash, const boost::uint64_t & number, const std::string & hash_block);
+	bool write_hash(const std::string & root_hex_hash, const boost::uint64_t & number, const std::string & hash_block);
 	void stop();
 
 	//returns how many file hashes there would be for a file of size file_size

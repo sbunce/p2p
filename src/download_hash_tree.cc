@@ -10,7 +10,7 @@ download_hash_tree::download_hash_tree(
 	_download_file_name(download_file_name_in),
 	download_complete(false),
 	close_slots(false),
-	_canceled(false),
+	_cancel(false),
 	_visible(true)
 {
 	assert(global::FILE_BLOCK_SIZE % sha::HASH_LENGTH == 0);
@@ -69,7 +69,7 @@ download_hash_tree::~download_hash_tree()
 
 const bool & download_hash_tree::canceled()
 {
-	return _canceled;
+	return _cancel;
 }
 
 bool download_hash_tree::complete()
@@ -241,7 +241,13 @@ void download_hash_tree::response(const int & socket, std::string block)
 		if(block[0] == global::P_BLOCK){
 			//a block was received
 			block.erase(0, 1); //trim command
-			Hash_Tree.write_hash(root_hash_hex, conn->latest_request.front()*hashes_per_block, block);
+
+			//write hash only if not cancelled
+			if(!_cancel && !Hash_Tree.write_hash(root_hash_hex, conn->latest_request.front()*hashes_per_block, block)){
+				//hash file removed, stop download
+				stop();
+			}
+
 			client_server_bridge::download_block_received(root_hash_hex, conn->latest_request.front());
 			Request_Generator.fulfil(conn->latest_request.front());
 			conn->latest_request.pop_front();
@@ -293,7 +299,7 @@ void download_hash_tree::response(const int & socket, std::string block)
 
 void download_hash_tree::stop()
 {
-	_canceled = true;
+	_cancel = true;
 	_visible = false;
 	if(Connection.size() == 0){
 		download_complete = true;

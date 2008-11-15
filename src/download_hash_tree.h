@@ -61,7 +61,7 @@ private:
 	Downloads cancelled by a user immediately become invisible because they might
 	take a little while to clean up.
 	*/
-	bool _canceled;
+	bool _cancel;
 	bool _visible;
 
 	/*

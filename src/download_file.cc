@@ -16,7 +16,7 @@ download_file::download_file(
 	thread_file_path(file_path_in),
 	download_complete(false),
 	close_slots(false),
-	canceled(false),
+	_cancel(false),
 	_visible(true)
 {
 	client_server_bridge::transition_download(root_hash_hex);
@@ -61,7 +61,7 @@ download_file::~download_file()
 	hashing_thread.interrupt();
 	hashing_thread.join();
 
-	if(!canceled){
+	if(!_cancel){
 		DB_Share.add_entry(root_hash_hex, file_size, file_path);
 	}
 
@@ -309,7 +309,7 @@ void download_file::stop()
 	}
 
 	//cancelled downloads don't get added to share upon completion
-	canceled = true;
+	_cancel = true;
 
 	//make invisible, cancelling download may take a while
 	_visible = false;
@@ -317,7 +317,7 @@ void download_file::stop()
 
 void download_file::write_block(boost::uint64_t block_number, std::string & block)
 {
-	if(canceled){
+	if(_cancel){
 		return;
 	}
 
@@ -327,6 +327,7 @@ void download_file::write_block(boost::uint64_t block_number, std::string & bloc
 		fout.write(block.c_str(), block.size());
 	}else{
 		logger::debug(LOGGER_P1,"error opening file ",file_path);
+		stop();
 	}
 }
 
