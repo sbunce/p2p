@@ -57,6 +57,7 @@ void DB_share::add_entry_call_back(int & columns_retrieved, char ** query_respon
 
 void DB_share::delete_hash(const std::string & hash)
 {
+	boost::mutex::scoped_lock lock(Mutex);
 	std::ostringstream query;
 	query << "DELETE FROM share WHERE hash = '" << hash << "'";
 	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
@@ -66,6 +67,8 @@ void DB_share::delete_hash(const std::string & hash)
 
 bool DB_share::hash_exists(const std::string & hash)
 {
+	boost::mutex::scoped_lock lock(Mutex);
+	hash_exists_exists = false;
 	std::ostringstream query;
 	query << "SELECT count(1) FROM share WHERE hash = '" << hash << "'";
 	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), hash_exists_call_back_wrapper, (void *)this, NULL) != 0){
@@ -76,7 +79,7 @@ bool DB_share::hash_exists(const std::string & hash)
 
 void DB_share::hash_exists_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
-	hash_exists_exists = strcmp(query_response[0], "1") == 0;
+	hash_exists_exists = strcmp(query_response[0], "0") != 0;
 }
 
 bool DB_share::lookup_path(const std::string & path, std::string & hash, boost::uint64_t & size)
@@ -110,7 +113,7 @@ bool DB_share::lookup_hash(const std::string & hash, std::string & path)
 	lookup_hash_path = &path;
 
 	std::ostringstream query;
-	query << "SELECT path FROM share WHERE hash = '" << hash << "'";
+	query << "SELECT path FROM share WHERE hash = '" << hash << "' LIMIT 1";
 	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), lookup_hash_1_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
@@ -125,7 +128,7 @@ bool DB_share::lookup_hash(const std::string & hash, std::string & path, boost::
 	lookup_hash_size = &size;
 
 	std::ostringstream query;
-	query << "SELECT size, path FROM share WHERE hash = '" << hash << "'";
+	query << "SELECT size, path FROM share WHERE hash = '" << hash << "' LIMIT 1";
 	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), lookup_hash_2_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
@@ -141,33 +144,42 @@ void DB_share::lookup_hash_1_call_back(int & columns_retrieved, char ** query_re
 void DB_share::lookup_hash_2_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
 	lookup_hash_entry_exists = true;
-
 	std::istringstream size_iss(query_response[0]);
 	size_iss >> *lookup_hash_size;
-
 	*lookup_hash_path = query_response[1];
 }
 
 void DB_share::remove_missing(const std::string & share_directory)
 {
+	boost::mutex::scoped_lock lock(Mutex);
+	//find hash trees without corresponding files
 	if(sqlite3_exec(sqlite3_DB, "SELECT hash, path FROM share", remove_missing_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
+
+	//remove hash trees with no corresponding files
+	std::set<std::string>::iterator iter_cur, iter_end;
+	iter_cur = remove_missing_hashes.begin();
+	iter_end = remove_missing_hashes.end();
+	while(iter_cur != iter_end){
+		std::string orphan_hash = global::HASH_DIRECTORY + *iter_cur;
+		std::remove(orphan_hash.c_str());
+		++iter_cur;
+	}
+	remove_missing_hashes.clear();
 }
 
 void DB_share::remove_missing_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(Mutex);
 	std::fstream fin(query_response[1], std::ios::in);
-	if(!fin.is_open()){
-		std::string orphan_hash = global::HASH_DIRECTORY+std::string(query_response[0]);
-		std::remove(orphan_hash.c_str());
+	if(fin.is_open()){
+		remove_missing_hashes.erase(query_response[0]);
+	}else{
 		std::ostringstream query;
-		query << "DELETE FROM share WHERE hash = '" << query_response[0] << "'";
+		query << "DELETE FROM share WHERE hash = '" << query_response[0] << "' AND path = '" << query_response[1] << "'";
 		if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
 			logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 		}
+		remove_missing_hashes.insert(query_response[0]);
 	}
-	}//end lock scope
 }

@@ -15,6 +15,7 @@
 
 //std
 #include <fstream>
+#include <set>
 #include <sstream>
 #include <string>
 
@@ -56,14 +57,6 @@ private:
 	}
 	bool add_entry_entry_exists;
 
-	void remove_missing_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
-	static int remove_missing_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
-	{
-		DB_share * this_class = (DB_share *)object_ptr;
-		this_class->remove_missing_call_back(columns_retrieved, query_response, column_name);
-		return 0;
-	}
-
 	void hash_exists_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
 	static int hash_exists_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
 	{
@@ -103,5 +96,14 @@ private:
 	bool lookup_hash_entry_exists;
 	std::string * lookup_hash_path;
 	boost::uint64_t * lookup_hash_size;
+
+	void remove_missing_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
+	static int remove_missing_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
+	{
+		DB_share * this_class = (DB_share *)object_ptr;
+		this_class->remove_missing_call_back(columns_retrieved, query_response, column_name);
+		return 0;
+	}
+	std::set<std::string> remove_missing_hashes;
 };
 #endif

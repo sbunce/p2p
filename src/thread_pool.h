@@ -22,15 +22,16 @@ public:
 	~thread_pool();
 
 	/*
-	join      - blocks until job queue empties out and all threads terminate
-	queue     - queue a job, example:
-	            member function:                TP.queue(boost::bind(&A::test, &a));
-			      member function with parameter: TP.queue(boost::bind(&A::test, &a, "test"));
-	            function:                       TP.queue(&test);
-	            function with parameter:        TP.queue(boost::bind(test, "test"));
-	terminate - empties work_queue and does a join, this should always be called
-	            in destructor of class that has-a thread_pool
+	join  - blocks until job all jobs finished and all threads terminate
+	max   - set maximum threads allowed in Pool
+	queue - queue a job, example:
+	        member function:                TP.queue(boost::bind(&A::test, &a));
+	        member function with parameter: TP.queue(boost::bind(&A::test, &a, "test"));
+	        function:                       TP.queue(&test);
+	        function with parameter:        TP.queue(boost::bind(test, "test"));
 	*/
+	void join();
+	void max(int threads);
 	void queue(const boost::function0<void> & func);
 
 private:
@@ -47,6 +48,6 @@ private:
 	/*
 	process - process job queue
 	*/
-	void process();
+	void process(boost::thread * T);
 };
 #endif

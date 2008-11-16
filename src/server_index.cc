@@ -1,5 +1,8 @@
 #include "server_index.h"
 
+//3m38.315s single cpu
+//
+
 server_index::server_index():
 	indexing(false)
 {
@@ -9,35 +12,50 @@ server_index::server_index():
 
 server_index::~server_index()
 {
-	Hash_Tree.stop(); //force hash tree generation to terminate
+	//Hash_Tree.stop(); //force hash tree generation to terminate
 	indexing_thread.interrupt();
 	indexing_thread.join();
 }
 
-static bool file_exists(const std::string & path)
-{
-	std::fstream fin(path.c_str(), std::ios::in);
-	return fin.is_open();
-}
-
-void server_index::generate_hash(const boost::filesystem::path & file_path)
+void server_index::generate_hash(const boost::filesystem::path file_path)
 {
 	namespace fs = boost::filesystem;
 
-	//no entry for file exists, create hash tree
 	std::string hash;
-	if(!Hash_Tree.create_hash_tree(file_path.string(), hash)){
-		return;
+	boost::uint64_t existing_size;
+	if(DB_Share.lookup_path(file_path.string(), hash, existing_size)){
+		try{ //fs::file_size() might throw
+			//database entry exists, make sure there is a corresponding hash tree file
+			fs::path hash_path = fs::system_complete(fs::path(global::HASH_DIRECTORY+hash, fs::native));
+			if(fs::exists(hash_path)){
+				if(existing_size == fs::file_size(file_path)){
+					//no need to generate hash tree
+					return;
+				}else{
+					//file changed size, rehash it
+					DB_Share.delete_hash(hash);
+				}
+			}else{
+				//hash tree is missing
+				DB_Share.delete_hash(hash);
+			}
+		}catch(std::exception & ex){
+			logger::debug(LOGGER_P1, "caught ", ex.what());
+			return;
+		}
 	}
 
-	//make sure user didn't move the file while it was hashing
-	if(file_exists(file_path.string())){
-		//file still present
-		DB_Share.add_entry(hash, fs::file_size(file_path), file_path.string());
-	}else{
-		//file missing delete hash tree
-		fs::path path = fs::system_complete(fs::path(global::HASH_DIRECTORY+hash, fs::native));
-		fs::remove(path);
+	//create hash tree
+	if(Hash_Tree.create_hash_tree(file_path.string(), hash)){
+		//make sure user didn't move the file while it was hashing
+		if(fs::exists(file_path)){
+			//file still present
+			DB_Share.add_entry(hash, fs::file_size(file_path), file_path.string());
+		}else{
+			//file missing delete hash tree
+			fs::path path = fs::system_complete(fs::path(global::HASH_DIRECTORY+hash, fs::native));
+			fs::remove(path);
+		}
 	}
 }
 
@@ -47,23 +65,24 @@ void server_index::scan_hashes()
 	fs::path full_path = fs::system_complete(fs::path(global::HASH_DIRECTORY, fs::native));
 	fs::directory_iterator end_iter;
 	for(fs::directory_iterator directory_iter(full_path); directory_iter != end_iter; directory_iter++){
-		portable_sleep::yield(); //make it so directory scans don't hog all CPU
+		portable_sleep::ms(5); //make it so directory scans don't hog all CPU
 		try{
 			if(fs::is_directory(*directory_iter)){
-				logger::debug(LOGGER_P1,"found directory: ",directory_iter->path().leaf(),", in hash directory");
+				logger::debug(LOGGER_P1,"found directory: ",directory_iter->path().filename(),", in hash directory");
 			}else{
 				boost::this_thread::interruption_point();
-				if(directory_iter->path().leaf().length() != sha::HEX_HASH_LENGTH){
+				if(directory_iter->path().filename().length() != sha::HEX_HASH_LENGTH){
 					//file not a hash tree, it may be "upside_down" or "rightside_up" temporary files
 					continue;
 				}
-				if(client_server_bridge::is_downloading(directory_iter->path().leaf()) == client_server_bridge::NOT_DOWNLOADING && !DB_Share.hash_exists(directory_iter->path().leaf())){
-					std::remove((global::HASH_DIRECTORY+directory_iter->path().leaf()).c_str());
+				if(client_server_bridge::is_downloading(directory_iter->path().filename()) == client_server_bridge::NOT_DOWNLOADING
+					&& !DB_Share.hash_exists(directory_iter->path().filename()))
+				{
+					std::remove((global::HASH_DIRECTORY+directory_iter->path().filename()).c_str());
 				}
 			}
-		}
-		catch(std::exception & ex){
-			logger::debug(LOGGER_P1,"when trying to read file ",directory_iter->path().leaf()," caught exception ",ex.what());
+		}catch(std::exception & ex){
+			logger::debug(LOGGER_P1,"when trying to read file ",directory_iter->path().filename()," caught exception ",ex.what());
 		}
 	}
 	return;
@@ -82,54 +101,25 @@ void server_index::scan_share(std::string directory_name)
 	if(fs::is_directory(full_path)){
 		fs::directory_iterator end_iter;
 		for(fs::directory_iterator directory_iter(full_path); directory_iter != end_iter; directory_iter++){
-			portable_sleep::yield(); //make it so directory scans don't hog all CPU
+			boost::this_thread::interruption_point();
+			portable_sleep::ms(5); //make it so directory scans don't hog all CPU
 			try{
 				if(fs::is_directory(*directory_iter)){
 					//recurse to new directory
 					std::string sub_directory;
-					sub_directory = directory_name + directory_iter->path().leaf() + "/";
+					sub_directory = directory_name + directory_iter->path().filename() + "/";
 					scan_share(sub_directory);
 				}else{
-					//determine if a hash tree needs to be generated
-					fs::path file_path = fs::system_complete(fs::path(directory_name + directory_iter->path().leaf(), fs::native));
-					std::string existing_hash;
-					boost::uint64_t existing_size;
-					if(DB_Share.lookup_path(file_path.string(), existing_hash, existing_size)){
-						//database entry exists, make sure there is a corresponding hash tree file
-						std::fstream fin((global::HASH_DIRECTORY+existing_hash).c_str(), std::ios::in);
-						if(!fin.is_open()){
-							//hash tree is missing
-							indexing = true;
-							DB_Share.delete_hash(existing_hash); //delete the entry
-							generate_hash(file_path);            //regenerate hash for file
-						}
-						fin.close();
-
-						/*
-						Regenerate the hash if the file has changed size. The most
-						common cause of this is that the file was hashed while it was
-						copying.
-						*/
-						if(existing_size != fs::file_size(file_path)){
-							indexing = true;
-							DB_Share.delete_hash(existing_hash);
-							generate_hash(file_path);
-						}
-					}else{
-						//hash tree doesn't yet exist, generate one
-						indexing = true;
-						generate_hash(file_path);
-					}
-					boost::this_thread::interruption_point();
+					fs::path file_path = fs::system_complete(fs::path(directory_name + directory_iter->path().filename(), fs::native));
+					generate_hash(file_path);
 				}
-			}
-			catch(std::exception & ex){
-				logger::debug(LOGGER_P1,"when trying to read file ",directory_iter->path().leaf()," caught exception ",ex.what());
+			}catch(std::exception & ex){
+				logger::debug(LOGGER_P1,"when trying to read file ",directory_iter->path().filename()," caught exception ",ex.what());
 			}
 		}
 	}else{
 		logger::debug(LOGGER_P1,"index location is a file when it needs to be a directory");
-		assert(false);
+		exit(1);
 	}
 	return;
 }
@@ -146,9 +136,8 @@ void server_index::index_share()
 	sleep gives downloads a chance to start before their associated hashes are
 	deleted.
 	*/
-	portable_sleep::ms(1000);
+	portable_sleep::ms(5000);
 
-	indexing = false;
 	while(true){
 		boost::this_thread::interruption_point();
 
@@ -160,8 +149,6 @@ void server_index::index_share()
 
 		//create hashes for all files in shares
 		scan_share(global::SHARE_DIRECTORY);
-
-		indexing = false;
 
 		//wait between share scans and checks
 		portable_sleep::ms(1000);

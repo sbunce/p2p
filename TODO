@@ -1,6 +1,6 @@
 TODO
 
--Add boost::thread::hardware_concurrency support to adjust indexing threads.
+-If two files exist in share with same root hash do they continually hash?
 
 -Get client_server_bridge working for hash trees. Use the hash tree recursive
 function to figure out how many blocks are in each row so it's known when blocks

@@ -11,10 +11,21 @@ thread_pool::thread_pool(
 thread_pool::~thread_pool()
 {
 	thread_limit = 0;
+	Pool.interrupt_all();
 	Pool.join_all();
 }
 
-void thread_pool::process()
+void thread_pool::join()
+{
+	Pool.join_all();
+}
+
+void thread_pool::max(int threads)
+{
+	thread_limit = threads;
+}
+
+void thread_pool::process(boost::thread * T)
 {
 	boost::function0<void> func;
 	while(true){
@@ -30,6 +41,8 @@ void thread_pool::process()
 		}//end lock scope
 		func();
 	}
+	Pool.remove_thread(T);
+	delete T;
 }
 
 void thread_pool::queue(const boost::function0<void> & func)
@@ -37,6 +50,8 @@ void thread_pool::queue(const boost::function0<void> & func)
 	boost::mutex::scoped_lock lock(work_queue_mutex);
 	work_queue.push(func);
 	if(Pool.size() < thread_limit){
-		Pool.create_thread(boost::bind(&thread_pool::process, this));
+		boost::thread * T = new boost::thread;
+		*T = boost::thread(boost::bind(&thread_pool::process, this, T));
+		Pool.add_thread(T);
 	}
 }

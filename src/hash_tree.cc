@@ -179,8 +179,7 @@ bool hash_tree::create_hash_tree(std::string file_name, std::string & root_hash)
 	}
 
 	if(fin.bad() || !fin.eof()){
-		logger::debug(LOGGER_P1,"error reading file");
-		exit(1);
+		return false;
 	}
 
 	if(blocks_read == 0){
