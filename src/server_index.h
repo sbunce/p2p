@@ -17,6 +17,7 @@
 #include "global.h"
 #include "hash_tree.h"
 #include "sha.h"
+#include "thread_pool.h"
 
 //std
 #include <ctime>

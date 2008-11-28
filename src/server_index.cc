@@ -1,10 +1,8 @@
 #include "server_index.h"
 
-//3m38.315s single cpu
-//
-
 server_index::server_index():
-	indexing(false)
+	indexing(false),
+	byte_count(0)
 {
 	boost::filesystem::create_directory(global::SHARE_DIRECTORY);
 	indexing_thread = boost::thread(boost::bind(&server_index::index_share, this));
@@ -45,6 +43,8 @@ void server_index::generate_hash(const boost::filesystem::path file_path)
 		}
 	}
 
+	indexing = true;
+
 	//create hash tree
 	if(Hash_Tree.create_hash_tree(file_path.string(), hash)){
 		//make sure user didn't move the file while it was hashing
@@ -62,6 +62,7 @@ void server_index::generate_hash(const boost::filesystem::path file_path)
 void server_index::scan_hashes()
 {
 	namespace fs = boost::filesystem;
+
 	fs::path full_path = fs::system_complete(fs::path(global::HASH_DIRECTORY, fs::native));
 	fs::directory_iterator end_iter;
 	for(fs::directory_iterator directory_iter(full_path); directory_iter != end_iter; directory_iter++){
@@ -110,8 +111,8 @@ void server_index::scan_share(std::string directory_name)
 					sub_directory = directory_name + directory_iter->path().filename() + "/";
 					scan_share(sub_directory);
 				}else{
-					fs::path file_path = fs::system_complete(fs::path(directory_name + directory_iter->path().filename(), fs::native));
-					generate_hash(file_path);
+					fs::path path = fs::system_complete(fs::path(directory_name + directory_iter->path().filename(), fs::native));
+					generate_hash(path);
 				}
 			}catch(std::exception & ex){
 				logger::debug(LOGGER_P1,"when trying to read file ",directory_iter->path().filename()," caught exception ",ex.what());
@@ -149,6 +150,8 @@ void server_index::index_share()
 
 		//create hashes for all files in shares
 		scan_share(global::SHARE_DIRECTORY);
+
+		indexing = false;
 
 		//wait between share scans and checks
 		portable_sleep::ms(1000);

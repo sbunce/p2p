@@ -107,6 +107,16 @@ public:
 		boost::mutex::scoped_lock lock(*Mutex);
 		return x *= rval;
 	}
+	const T operator += (const T & rval)
+	{
+		boost::mutex::scoped_lock lock(*Mutex);
+		return x += rval;
+	}
+	const T operator -= (const T & rval)
+	{
+		boost::mutex::scoped_lock lock(*Mutex);
+		return x -= rval;
+	}
 
 	/*
 	Support using atomic_int in ostream's.

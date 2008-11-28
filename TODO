@@ -1,7 +1,5 @@
 TODO
 
--If two files exist in share with same root hash do they continually hash?
-
 -Get client_server_bridge working for hash trees. Use the hash tree recursive
 function to figure out how many blocks are in each row so it's known when blocks
 are checked.
@@ -14,10 +12,6 @@ server send it's host key. Both the client and server should look to see if a
 key has been negotiated with the other before. If it has the client can just
 start sending without negotating a new key. Defer this feature until GUIDs
 are worked out.
-
--Make hashing multithreaded. Have one thread that scans the share and queues
-files to be hashed. This thread can also calculate % complete. Multiple worker
-threads can then get files from a queue to hash. Use the thread pool for this.
 
 -client::set_download_directory() not doing anything but saving setting.
 
