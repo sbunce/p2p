@@ -1,5 +1,7 @@
 TODO
 
+-Need better signaling on when share_index should start indexing.
+
 -Get client_server_bridge working for hash trees. Use the hash tree recursive
 function to figure out how many blocks are in each row so it's known when blocks
 are checked.

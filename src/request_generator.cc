@@ -2,7 +2,7 @@
 
 request_generator::request_generator(
 ):
-	latest_request(0),
+	current(0),
 	initialized(false)
 {
 
@@ -26,7 +26,7 @@ bool request_generator::complete()
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	assert(initialized);
-	return (latest_request == max_request && unfulfilled_request.empty() && re_request.empty() && re_requested.empty());
+	return current == end && unfulfilled_request.empty() && re_request.empty() && re_requested.empty();
 }
 
 void request_generator::force_re_request(const boost::uint64_t & number)
@@ -48,18 +48,21 @@ void request_generator::fulfil(const boost::uint64_t & fulfilled_request)
 boost::uint64_t request_generator::highest_requested()
 {
 	boost::mutex::scoped_lock lock(Mutex);
-	return latest_request;
+	return current;
 }
 
-void request_generator::init(const boost::uint64_t & min_request_in, const boost::uint64_t & max_request_in, const int & timeout_in)
+void request_generator::init(const boost::uint64_t & begin_in, const boost::uint64_t & end_in, const int & timeout_in)
 {
+	//assert that there is at least 1 request to be made
+	assert(end_in - begin_in > 0);
+
 	initialized = true;
 	unfulfilled_request.clear();
 	re_request.clear();
 	re_requested.clear();
-	latest_request = min_request_in;
-	min_request = min_request_in;
-	max_request = max_request_in;
+	current = begin_in;
+	begin = begin_in;
+	end = end_in;
 	timeout = timeout_in;
 }
 
@@ -70,29 +73,13 @@ bool request_generator::request(std::deque<boost::uint64_t> & prev_request)
 	check_timeouts();
 	if(re_request.empty()){
 		//no re_requests to be made
-		if(latest_request == max_request){
-			/*
-			On the last request. Check to see if it has already been requested from
-			a server. If it has been return false because no more requests need to
-			be made.
-			*/
-			std::map<boost::uint64_t, request_info>::iterator iter_cur, iter_end;
-			iter_cur = unfulfilled_request.begin();
-			iter_end = unfulfilled_request.end();
-			while(iter_cur != iter_end){
-				if(iter_cur->first == max_request){
-					return false;
-				}
-				++iter_cur;
-			}
-			prev_request.push_back(max_request);
-			unfulfilled_request.insert(std::make_pair(max_request, request_info(time(NULL), prev_request.size())));
-			return true;
+		if(current == end){
+			return false;
 		}else{
-			//not on last request, proceed normally adding the next sequential request
-			prev_request.push_back(latest_request);
-			unfulfilled_request.insert(std::make_pair(latest_request, request_info(time(NULL), prev_request.size())));
-			++latest_request;
+			//proceed normally, adding the next sequential request
+			prev_request.push_back(current);
+			unfulfilled_request.insert(std::make_pair(current, request_info(time(NULL), prev_request.size())));
+			++current;
 			return true;
 		}
 	}else{

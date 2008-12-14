@@ -36,12 +36,13 @@ public:
 
 	/*
 	Lookup functions, the first parameter is what to look up the record by.
-	hash_exists - returns true if a record exists with the specified hash, else false
+	hash_exists - returns true if a record exists with the specified hash (hex), else false
 	lookup_<*>  - look up information by <*>, returns false if no info exists
 	*/
 	bool hash_exists(const std::string & hash);
 	bool lookup_path(const std::string & path, std::string & hash, boost::uint64_t & size);
 	bool lookup_hash(const std::string & hash, std::string & path);
+	bool lookup_hash(const std::string & hash, boost::uint64_t & size);
 	bool lookup_hash(const std::string & hash, std::string & path, boost::uint64_t & size);
 
 private:
@@ -85,7 +86,7 @@ private:
 		this_class->lookup_hash_1_call_back(columns_retrieved, query_response, column_name);
 		return 0;
 	}
-	//sets both lookup_hash_file_size and lookup_hash_file_path
+	//sets only lookup_hash_file_size
 	void lookup_hash_2_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
 	static int lookup_hash_2_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
 	{
@@ -93,9 +94,17 @@ private:
 		this_class->lookup_hash_2_call_back(columns_retrieved, query_response, column_name);
 		return 0;
 	}
+	//sets both lookup_hash_file_size and lookup_hash_file_path
+	void lookup_hash_3_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
+	static int lookup_hash_3_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
+	{
+		DB_share * this_class = (DB_share *)object_ptr;
+		this_class->lookup_hash_3_call_back(columns_retrieved, query_response, column_name);
+		return 0;
+	}
 	bool lookup_hash_entry_exists;
 	std::string * lookup_hash_path;
-	boost::uint64_t * lookup_hash_size;
+	boost::uint64_t * lookup_hash_file_size;
 
 	void remove_missing_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
 	static int remove_missing_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)

@@ -1,6 +1,10 @@
 #ifndef H_DOWNLOAD_HASH_TREE
 #define H_DOWNLOAD_HASH_TREE
 
+//boost
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+
 //custom
 #include "convert.h"
 #include "client_server_bridge.h"
@@ -72,9 +76,11 @@ private:
 
 	std::string root_hash_hex;        //root hash of the hash tree downloading
 	std::string hash_name;            //the name of this hash
-	boost::uint64_t hash_tree_count;  //number of hashes in the tree
-	boost::uint64_t hash_block_count; //number of hash blocks
-	boost::uint64_t hashes_per_block; //number of hashes in a hash block
+
+	/*
+	The tree_info for the file downloading.
+	*/
+	hash_tree::tree_info Tree_Info;
 
 	/*
 	When the file has finished downloading this will be set to true to indicate

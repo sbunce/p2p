@@ -60,6 +60,9 @@ src_common = [
 	'server.cc',
 	'server_index.cc',
 	'sha.cc',
+	'slot.cc',
+	'slot_file.cc',
+	'slot_hash_tree.cc',
 	'speed_calculator.cc',
 	'thread_pool.cc'
 ]

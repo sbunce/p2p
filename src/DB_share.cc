@@ -120,16 +120,30 @@ bool DB_share::lookup_hash(const std::string & hash, std::string & path)
 	return lookup_hash_entry_exists;
 }
 
-bool DB_share::lookup_hash(const std::string & hash, std::string & path, boost::uint64_t & size)
+bool DB_share::lookup_hash(const std::string & hash, boost::uint64_t & file_size)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	lookup_hash_entry_exists = false;
+	lookup_hash_file_size = &file_size;
+
+	std::ostringstream query;
+	query << "SELECT size FROM share WHERE hash = '" << hash << "' LIMIT 1";
+	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), lookup_hash_2_call_back_wrapper, (void *)this, NULL) != 0){
+		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
+	}
+	return lookup_hash_entry_exists;
+}
+
+bool DB_share::lookup_hash(const std::string & hash, std::string & path, boost::uint64_t & file_size)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	lookup_hash_entry_exists = false;
 	lookup_hash_path = &path;
-	lookup_hash_size = &size;
+	lookup_hash_file_size = &file_size;
 
 	std::ostringstream query;
 	query << "SELECT size, path FROM share WHERE hash = '" << hash << "' LIMIT 1";
-	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), lookup_hash_2_call_back_wrapper, (void *)this, NULL) != 0){
+	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), lookup_hash_3_call_back_wrapper, (void *)this, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
 	return lookup_hash_entry_exists;
@@ -144,8 +158,15 @@ void DB_share::lookup_hash_1_call_back(int & columns_retrieved, char ** query_re
 void DB_share::lookup_hash_2_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
 	lookup_hash_entry_exists = true;
-	std::istringstream size_iss(query_response[0]);
-	size_iss >> *lookup_hash_size;
+	std::istringstream iss(query_response[0]);
+	iss >> *lookup_hash_file_size;
+}
+
+void DB_share::lookup_hash_3_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
+{
+	lookup_hash_entry_exists = true;
+	std::istringstream iss(query_response[0]);
+	iss >> *lookup_hash_file_size;
 	*lookup_hash_path = query_response[1];
 }
 

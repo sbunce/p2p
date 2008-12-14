@@ -20,20 +20,23 @@ public:
 	request_generator();
 
 	/*
-	complete          - returns true if there are no more requests to be made
-	force_re_request  - makes a request immediately be re-requested
-	fulfil            - must be called whenever a request is fulfilled
-	highest_requested - returns the highest request given
+	complete          - returns true when requests are complete
+	force_re_request  - rerequest a number immediately
+	fulfil            - must be called whenever a request is fulfilled (otherwise rerequest will happen upon timeout)
+	highest_requested - returns the highest request yet made
 	init              - must be called before calling any other function
-	request           - pushes a needed request number on the back of prev_request
-	                    returns true if request pushed on to back of prev_request
-	set_timeout       - change the timeout on fulfilling requests
+	                    begin_in: the first request number to be generated
+	                    end_in: one past the last request number
+	                    timeout_in: how many seconds before an unfulfilled request is rerequested
+	request           - push a request number on the back of pre_request
+	                    returns true if request pushed, else false if no request needed
+	set_timeout       - set rerequest timeout
 	*/
 	bool complete();
 	void force_re_request(const boost::uint64_t & number);
 	void fulfil(const boost::uint64_t & fulfilled_request);
 	boost::uint64_t highest_requested();
-	void init(const boost::uint64_t & min_request_in, const boost::uint64_t & max_request_in, const int & timeout_in);
+	void init(const boost::uint64_t & begin_in, const boost::uint64_t & end_in, const int & timeout_in);
 	bool request(std::deque<boost::uint64_t> & prev_request);
 	void set_timeout(const unsigned int & timeout_in);
 
@@ -46,18 +49,18 @@ private:
 	*/
 	boost::mutex Mutex;
 
-	//if false and a public member function called program will terminate
+	//if false, and a public member function called, program will terminate
 	bool initialized;
 
 	/*
-	The latest request returned by new_request. This will not be changed when
+	This is the highest request yet made. This will not be changed when
 	new_request returns a re_request. This can only go forward one at a time.
 	*/
-	boost::uint64_t latest_request;
+	boost::uint64_t current;
 
 	//min and max request number
-	boost::uint64_t min_request;
-	boost::uint64_t max_request;
+	boost::uint64_t begin;
+	boost::uint64_t end;
 
 	//max age of a request (in seconds) before a re_request is made
 	unsigned int timeout;

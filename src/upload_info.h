@@ -22,8 +22,12 @@ public:
 		speed(speed_in),
 		percent_complete(percent_complete_in)
 	{
-		assert(path.find_last_of("/") != std::string::npos);
-		name = path.substr(path.find_last_of("/")+1);
+		int pos = path.find_last_of("/");
+		if(pos == std::string::npos){
+			name = path;
+		}else{
+			name = path.substr(path.find_last_of("/")+1);
+		}
 	}
 
 	std::string hash;

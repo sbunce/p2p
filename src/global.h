@@ -1,5 +1,5 @@
-#ifndef H_GLOBALS
-#define H_GLOBALS
+#ifndef H_GLOBAL
+#define H_GLOBAL
 
 //#define NDEBUG
 //#define CORRUPT_BLOCKS
@@ -31,6 +31,7 @@ example: 1.36 would have major 1 and minor 36
 
 //custom
 #include "logger.h"
+#include "sha.h"
 
 //std
 #include <cassert>
@@ -101,11 +102,26 @@ namespace global
 	const std::string HASH_DIRECTORY = "hash/";
 	const std::string DATABASE_PATH = "database";
 
+	/*
+	The size of the file block is always related to the size of a hash block so
+	that the same command and function can be used to serve both.
+
+	HASH_BLOCK_SIZE - number of hashes in a child node in the hash tree.
+		Note: HASH_BLOCK_SIZE % 2 must = 0 and should be >= 2;
+	HASH_NODE_SIZE  - how many hashes in one node in the hash tree
+	FILE_BLOCK_SIZE - number of bytes in a file block.
+	*/
+	const int HASH_BLOCK_SIZE = 256;
+	const int HASH_NODE_SIZE = HASH_BLOCK_SIZE / 2;
+
+//DEBUG, figure out why sha::HASH_LENGTH in place of 20 not working
+	const int FILE_BLOCK_SIZE = HASH_BLOCK_SIZE * 20;
+
 	//protocol commands client <-> server
 	const char P_ERROR = (char)0;
 	const int P_ERROR_SIZE = 1;
 	const char P_BLOCK = (char)5;
-	const int P_BLOCK_TO_CLIENT_SIZE = 5121;
+	const int P_BLOCK_TO_CLIENT_SIZE = FILE_BLOCK_SIZE + 1;
 	const int P_BLOCK_TO_SERVER_SIZE = 10;
 
 	//protocol commands client -> server
@@ -125,13 +141,5 @@ namespace global
 	//largest possible packet (used to determine buffer sizes)
 	const int S_MAX_SIZE = P_REQUEST_SLOT_FILE_SIZE;
 	const int C_MAX_SIZE = P_BLOCK_TO_CLIENT_SIZE;
-
-	/*
-	This is the size of a file block (hash block or file block) sent in a P_BLOCK
-	response. It is also the size that files are hashed in.
-
-	WARNING: FILE_BLOCK_SIZE % sha::HASH_LENGTH must equal 0
-	*/
-	const int FILE_BLOCK_SIZE = P_BLOCK_TO_CLIENT_SIZE - 1;
 }
 #endif

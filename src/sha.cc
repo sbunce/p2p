@@ -2,9 +2,9 @@
 
 static char hex[] = "0123456789ABCDEF";
 
-sha::sha(unsigned int reserve_buffer)
+sha::sha()
 {
-	load_buffer.reserve(reserve_buffer);
+	load_buffer.reserve(64);
 
 	//check endianness of hardware
 	sha_uint32_t IC = { 1 };
@@ -13,6 +13,11 @@ sha::sha(unsigned int reserve_buffer)
 	}else{
 		ENDIANNESS = BIG_ENDIAN_ENUM;
 	}
+}
+
+void sha::reserve(const unsigned int res)
+{
+	load_buffer.reserve(res);
 }
 
 void sha::init()
@@ -155,19 +160,5 @@ std::string sha::hex_hash()
 
 char * sha::raw_hash()
 {
-	return raw;
-}
-
-char * sha::raw_hash_no_null()
-{
-	int x=0;
-	for(; x<HASH_LENGTH; ++x){
-		if((int)(unsigned char)raw[x] != 0){
-			break;
-		}
-	}
-	if(x == HASH_LENGTH){
-		raw[x-1] = (char)1;
-	}
 	return raw;
 }

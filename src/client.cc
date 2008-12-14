@@ -101,7 +101,12 @@ inline void client::disconnect(const int & socket_FD)
 
 bool client::file_info(const std::string & hash, std::string & name, boost::uint64_t & tree_size, boost::uint64_t & file_size)
 {
-	return DB_Download.lookup_hash(hash, name, tree_size, file_size);
+	if(DB_Download.lookup_hash(hash, name, file_size)){
+		tree_size = hash_tree::file_size_to_tree_size(file_size);
+		return true;
+	}else{
+		return false;
+	}
 }
 
 int client::prime_count()

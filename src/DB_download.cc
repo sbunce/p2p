@@ -57,28 +57,6 @@ bool DB_download::lookup_hash(const std::string & hash, std::string & path, boos
 	}
 }
 
-bool DB_download::lookup_hash(const std::string & hash, std::string & name, boost::uint64_t & tree_size, boost::uint64_t & file_size)
-{
-	boost::mutex::scoped_lock lock(Mutex);
-	lookup_hash_entry_exits = false;
-	lookup_hash_name = &name;
-	lookup_hash_tree_size = &tree_size;
-	lookup_hash_file_size = &file_size;
-
-	//locate the record
-	std::ostringstream query;
-	query << "SELECT name, size FROM download WHERE hash = '" << hash << "'";
-	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), lookup_hash_3_call_back_wrapper, (void *)this, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-	if(lookup_hash_entry_exits){
-		return true;
-	}else{
-		logger::debug(LOGGER_P1,"download record not found");
-		return false;
-	}
-}
-
 void DB_download::lookup_hash_1_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
 {
 	lookup_hash_entry_exits = true;
@@ -92,18 +70,6 @@ void DB_download::lookup_hash_2_call_back(int & columns_retrieved, char ** query
 
 	std::istringstream size_iss(query_response[1]);
 	size_iss >> *lookup_hash_file_size;
-}
-
-void DB_download::lookup_hash_3_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
-{
-	lookup_hash_entry_exits = true;
-
-	*lookup_hash_name = query_response[0];
-
-	std::istringstream size_iss(query_response[1]);
-	size_iss >> *lookup_hash_file_size;
-
-	*lookup_hash_tree_size = sha::HASH_LENGTH * hash_tree::hash_tree_count(hash_tree::file_hash_count(*lookup_hash_file_size));
 }
 
 void DB_download::resume(std::vector<download_info> & resume_DL)

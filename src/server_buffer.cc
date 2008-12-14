@@ -52,28 +52,21 @@ void server_buffer::close_slot(const std::string & request)
 	if(Slot[(int)(unsigned char)request[1]] != NULL){
 		delete Slot[(int)(unsigned char)request[1]];
 		Slot[(int)(unsigned char)request[1]] = NULL;
+	}else{
+		logger::debug(LOGGER_P1,IP," attempted to close slot it didn't have open");
+		DB_blacklist::add(IP);
 	}
 }
 
-bool server_buffer::create_slot(char & slot_ID, const std::string & hash, const boost::uint64_t & size, const std::string & path, const slot_type ST)
+bool server_buffer::find_empty_slot(int & slot_num)
 {
 	for(int x=0; x<256; ++x){
 		if(Slot[x] == NULL){
-			slot_ID = (char)x;
-			Slot[x] = new slot_element(hash, size, path, ST);
+			slot_num = x;
 			return true;
 		}
 	}
 	return false;
-}
-
-server_buffer::slot_element * server_buffer::get_slot_element(const char & slot_ID)
-{
-	if(Slot[(int)(unsigned char)slot_ID] != NULL){
-		return Slot[(int)(unsigned char)slot_ID];
-	}else{
-		return NULL;
-	}
 }
 
 void server_buffer::process(char * buff, const int & n_bytes)
@@ -88,7 +81,7 @@ void server_buffer::process(char * buff, const int & n_bytes)
 			exchange_key = false;
 		}
 		if(prime_remote_result.size() > global::DH_KEY_SIZE*2){
-			logger::debug(LOGGER_P1,"abusive client ", IP, " failed key negotation, too many bytes");
+			logger::debug(LOGGER_P1,"abusive client ",IP," failed key negotation, too many bytes");
 			DB_blacklist::add(IP);
 		}
 		return;
@@ -131,6 +124,7 @@ void server_buffer::process(char * buff, const int & n_bytes)
 			break;
 		}
 
+		//encrypt bytes to send
 		Encryption.crypt_send(process_send);
 		send_buff += process_send;
 	}
@@ -138,55 +132,65 @@ void server_buffer::process(char * buff, const int & n_bytes)
 
 void server_buffer::request_slot_hash(const std::string & request, std::string & send)
 {
-	std::string hash_hex = convert::binary_to_hex(request.substr(1,20));
-	std::string hash_tree_path = global::HASH_DIRECTORY+hash_hex;
-	std::fstream fin(hash_tree_path.c_str(), std::ios::in | std::ios::ate);
-	if(fin.is_open()){
-		//hash tree exists, make slot
-		boost::uint64_t size = fin.tellg();
-		char slot_ID;
-		if(create_slot(slot_ID, hash_hex, size, hash_tree_path, SLOT_HASH_TREE)){
-			logger::debug(LOGGER_P1,"granting hash slot ",(int)(unsigned char)slot_ID, " to ",IP);
+	std::string root_hash_hex = convert::binary_to_hex(request.substr(1,20));
+	std::string hash_tree_path = global::HASH_DIRECTORY + root_hash_hex;
+	boost::uint64_t file_size;
+	if(DB_Share.lookup_hash(root_hash_hex, file_size)){
+		//found hash tree in share
+		int slot_num;
+		if(find_empty_slot(slot_num)){
+			//slot available
+			logger::debug(LOGGER_P1,"granting hash slot ",slot_num, " to ",IP);
+			Slot[slot_num] = new slot_hash_tree(&IP, root_hash_hex, file_size);
 			send += global::P_SLOT_ID;
-			send += slot_ID;
+			send += (char)slot_num;
 		}else{
-			logger::debug(LOGGER_P1,"server ",IP," requested more than 256 slots");
+			//client requested more than 256 slots, blacklist them
+			logger::debug(LOGGER_P1,IP," requested more than 256 slots");
 			DB_blacklist::add(IP);
 		}
 	}else{
-		//hash tree doesn't exist
+		//hash tree doesn't exist in share
 		logger::debug(LOGGER_P1,IP," requested hash that doesn't exist");
 		send += global::P_ERROR;
 	}
 }
 
-void server_buffer::make_slot_file(const std::string & root_hash_hex, const boost::uint64_t & size, const std::string & path, std::string & send)
-{
-	char slot_ID;
-	if(create_slot(slot_ID, root_hash_hex, size, path, SLOT_FILE)){
-		logger::debug(LOGGER_P1,"granting file slot ",(int)(unsigned char)slot_ID, " to ",IP);
-		send += global::P_SLOT_ID;
-		send += slot_ID;
-		update_slot_speed(slot_ID, global::P_REQUEST_SLOT_FILE_SIZE);
-	}else{
-		logger::debug(LOGGER_P1,"server ",IP," requested more than 256 slots");
-		DB_blacklist::add(IP);
-	}
-}
-
 void server_buffer::request_slot_file(const std::string & request, std::string & send)
 {
-	boost::uint64_t size;
-	std::string path;
 	std::string root_hash_hex = convert::binary_to_hex(request.substr(1,20));
-	if(DB_Share.lookup_hash(root_hash_hex, path, size)){
+	boost::uint64_t file_size;
+	std::string file_path;
+	if(DB_Share.lookup_hash(root_hash_hex, file_path, file_size)){
 		//hash found in share, create slot
-		make_slot_file(root_hash_hex, size, path, send);
+		int slot_num;
+		if(find_empty_slot(slot_num)){
+			//slot available
+			logger::debug(LOGGER_P1,"granting file slot ",slot_num, " to ",IP);
+			Slot[slot_num] = new slot_file(&IP, root_hash_hex, file_size, file_path);
+			send += global::P_SLOT_ID;
+			send += (char)slot_num;
+		}else{
+			//client requested more than 256 slots, blacklist them
+			logger::debug(LOGGER_P1,IP," requested more than 256 slots");
+			DB_blacklist::add(IP);
+		}
 	}else{
 		//file not in share, check to see if it's downloading
-		if(client_server_bridge::is_downloading_file(root_hash_hex, path, size)){
-			//file is downloading
-			make_slot_file(root_hash_hex, size, path, send);
+		if(client_server_bridge::is_downloading_file(root_hash_hex, file_path, file_size)){
+			//file is downloading, create slot
+			int slot_num;
+			if(find_empty_slot(slot_num)){
+				//slot available
+				logger::debug(LOGGER_P1,"granting file slot ",slot_num, " to ",IP);
+				Slot[slot_num] = new slot_file(&IP, root_hash_hex, file_size, file_path);
+				send += global::P_SLOT_ID;
+				send += (char)slot_num;
+			}else{
+				//client requested more than 256 slots, blacklist them
+				logger::debug(LOGGER_P1,IP," requested more than 256 slots");
+				DB_blacklist::add(IP);
+			}
 		}else{
 			//hash not found in share, send error
 			logger::debug(LOGGER_P1,IP," requested hash that doesn't exist");
@@ -197,86 +201,21 @@ void server_buffer::request_slot_file(const std::string & request, std::string &
 
 void server_buffer::send_block(const std::string & request, std::string & send)
 {
-	slot_element * SE;
-	if(SE = get_slot_element(request[1])){
-		boost::uint64_t block_number = convert::decode<boost::uint64_t>(request.substr(2, 8));
-		client_server_bridge::download_mode DM = client_server_bridge::is_downloading(SE->hash);
-		if(DM == client_server_bridge::DOWNLOAD_HASH_TREE && SE->Slot_Type == SLOT_HASH_TREE){
-			//client requested a block from a hash tree the client is currently downloadeding
-			send += global::P_WAIT;
-			update_slot_speed(request[1], global::P_WAIT_SIZE);
-std::cout << "HASH TREE UPLOAD WHILE DOWNLOAD NOT IMPLEMENTED\n";
-			return;
-		}else if(DM == client_server_bridge::DOWNLOAD_FILE && SE->Slot_Type == SLOT_FILE){
-			//client requested a block from a file the client is currently downloading
-			if(!client_server_bridge::is_available(SE->hash, block_number)){
-				//block is not available to be sent, tell the client to wait
-				logger::debug(LOGGER_P1,"sending P_WAIT to ",IP);
-				send += global::P_WAIT;
-				update_slot_speed(request[1], global::P_WAIT_SIZE);
-				return;
-			}
-		}
-
-		update_slot_percent_complete(request[1], block_number);
-		send += global::P_BLOCK;
-		std::ifstream fin(SE->path.c_str());
-		if(fin.is_open()){
-			//seek to the file_block the client wants (-1 for command space)
-			fin.seekg(block_number * global::FILE_BLOCK_SIZE);
-			fin.read(send_block_buff, global::FILE_BLOCK_SIZE);
-
-			#ifdef CORRUPT_BLOCKS
-			if(rand() % 100 == 0){
-				send_block_buff[0] = ++send_block_buff[0];
-			}
-			#endif
-
-			send.append(send_block_buff, fin.gcount());
-			update_slot_speed(request[1], fin.gcount());
-		}else{
-			//hash not found in share, send error
-			logger::debug(LOGGER_P1,"server could not open file: ",SE->path);
-			send += global::P_ERROR;
-		}
+	int slot_num = (int)(unsigned char)request[1];
+	if(Slot[slot_num] != NULL){
+		//valid slot
+		Slot[slot_num]->send_block(request, send);
 	}else{
-		logger::debug(LOGGER_P1,IP," sent invalid slot ID ",(int)(unsigned char)request[1]);
+		logger::debug(LOGGER_P1,IP," sent invalid slot ID ",slot_num);
 		DB_blacklist::add(IP);
 	}
 }
 
-void server_buffer::update_slot_percent_complete(char slot_ID, const boost::uint64_t & block_number)
-{
-	if(Slot[(int)(unsigned char)slot_ID] != NULL){
-		if(block_number != 0){
-			Slot[(int)(unsigned char)slot_ID]->percent_complete =
-				(int)(((double)(block_number * global::FILE_BLOCK_SIZE) / (double)Slot[(int)(unsigned char)slot_ID]->size)*100);
-			if(Slot[(int)(unsigned char)slot_ID]->percent_complete > 100){
-				Slot[(int)(unsigned char)slot_ID]->percent_complete = 100;
-			}
-		}
-	}
-}
-
-void server_buffer::update_slot_speed(char slot_ID, unsigned int bytes)
-{
-	if(Slot[(int)(unsigned char)slot_ID] != NULL){
-		Slot[(int)(unsigned char)slot_ID]->Speed_Calculator.update(bytes);
-	}
-}
-
-void server_buffer::uploads(std::vector<upload_info> & info)
+void server_buffer::uploads(std::vector<upload_info> & UI)
 {
 	for(int x=0; x<256; ++x){
 		if(Slot[x] != NULL){
-			info.push_back(upload_info(
-				Slot[x]->hash,
-				IP,
-				Slot[x]->size,
-				Slot[x]->path,
-				Slot[x]->Speed_Calculator.speed(),
-				Slot[x]->percent_complete
-			));
+			Slot[x]->info(UI);
 		}
 	}
 }

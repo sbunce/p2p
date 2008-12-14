@@ -17,20 +17,17 @@ download_file::download_file(
 	download_complete(false),
 	close_slots(false),
 	_cancel(false),
-	_visible(true)
+	_visible(true),
+	Tree_Info(root_hash_hex, file_size)
 {
 	client_server_bridge::transition_download(root_hash_hex);
 
-	/*
-	Block requests start at zero so the lst block is the number of file block
-	hashes there is minus one.
-	*/
 	if(file_size % global::FILE_BLOCK_SIZE == 0){
-		//exact block count, subtract one to get last_block number
-		last_block = file_size / global::FILE_BLOCK_SIZE - 1;
+		//exact block count, subtract one to get block_count number
+		block_count = file_size / global::FILE_BLOCK_SIZE;
 	}else{
 		//partial last block (decimal gets truncated which is effectively minus one)
-		last_block = file_size / global::FILE_BLOCK_SIZE;
+		block_count = file_size / global::FILE_BLOCK_SIZE + 1;
 	}
 
 	/*
@@ -50,10 +47,10 @@ download_file::download_file(
 	first_unreceived = fin.tellg() / global::FILE_BLOCK_SIZE;
 
 	//start re_requesting where the download left off
-	Request_Generator.init((boost::uint64_t)first_unreceived, last_block, global::RE_REQUEST);
+	Request_Generator.init((boost::uint64_t)first_unreceived, block_count, global::RE_REQUEST);
 
 	//hash check for corrupt/missing blocks
-	hashing_thread = boost::thread(boost::bind(&download_file::hash_check, this));
+	hashing_thread = boost::thread(boost::bind(&download_file::hash_check, this, Tree_Info));
 }
 
 download_file::~download_file()
@@ -78,9 +75,10 @@ const std::string download_file::hash()
 	return root_hash_hex;
 }
 
-void download_file::hash_check()
+void download_file::hash_check(const hash_tree::tree_info & Tree_Info)
 {
 	std::fstream fin(thread_file_path.c_str(), std::ios::in);
+	assert(fin.good());
 	char block_buff[global::FILE_BLOCK_SIZE];
 	boost::uint64_t hash_latest = 0;
 	while(true){
@@ -89,8 +87,11 @@ void download_file::hash_check()
 		if(hash_latest == first_unreceived){
 			break;
 		}
+
 		fin.read(block_buff, global::FILE_BLOCK_SIZE);
-		if(!Hash_Tree.check_block(thread_root_hash_hex, hash_latest, block_buff, fin.gcount())){
+		assert(fin.good());
+
+		if(!Hash_Tree.check_file_block(Tree_Info, hash_latest, block_buff, fin.gcount())){
 			logger::debug(LOGGER_P1,"found corrupt block ",hash_latest," in resumed download");
 			Request_Generator.force_re_request(hash_latest);
 		}
@@ -114,10 +115,10 @@ const std::string download_file::name()
 
 unsigned int download_file::percent_complete()
 {
-	if(last_block == 0){
+	if(block_count == 0){
 		return 0;
 	}else{
-		return (unsigned int)(((float)Request_Generator.highest_requested() / (float)last_block)*100);
+		return (unsigned int)(((float)Request_Generator.highest_requested() / (float)block_count)*100);
 	}
 }
 
@@ -208,7 +209,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 			request += conn->slot_ID;
 			request += convert::encode<boost::uint64_t>(conn->latest_request.back());
 			int size;
-			if(conn->latest_request.back() == last_block){
+			if(conn->latest_request.back() == block_count - 1){
 				size = last_block_size;
 				Request_Generator.set_timeout(global::RE_REQUEST_FINISHING);
 			}else{
@@ -255,15 +256,15 @@ void download_file::response(const int & socket, std::string block)
 	}else if(conn->State == connection_special::REQUEST_BLOCKS){
 		if(block[0] == global::P_BLOCK){
 			block.erase(0, 1); //trim command
-			if(!Hash_Tree.check_block(root_hash_hex, conn->latest_request.front(), block.c_str(), block.length())){
+			if(Hash_Tree.check_file_block(Tree_Info, conn->latest_request.front(), block.c_str(), block.length())){
+				write_block(conn->latest_request.front(), block);
+				client_server_bridge::download_block_received(root_hash_hex, conn->latest_request.front());
+				Request_Generator.fulfil(conn->latest_request.front());
+			}else{
 				logger::debug(LOGGER_P1,file_name,":",conn->latest_request.front()," hash failure");
 				Request_Generator.force_re_request(conn->latest_request.front());
 				DB_blacklist::add(conn->IP);
 				conn->State = connection_special::ABUSIVE;
-			}else{
-				write_block(conn->latest_request.front(), block);
-				client_server_bridge::download_block_received(root_hash_hex, conn->latest_request.front());
-				Request_Generator.fulfil(conn->latest_request.front());
 			}
 			conn->latest_request.pop_front();
 			if(Request_Generator.complete() && !hashing){

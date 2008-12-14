@@ -89,8 +89,13 @@ private:
 	std::string file_name;        //name of the file
 	std::string file_path;        //path to write file to
 	boost::uint64_t file_size;    //size of the file(bytes)
-	boost::uint64_t last_block;   //the last block number
+	boost::uint64_t block_count;  //number of file blocks (last block is block_count - 1)
 	unsigned int last_block_size; //holds the exact size of the last fileBlock(in bytes)
+
+	/*
+	The tree_info for the file downloading.
+	*/
+	hash_tree::tree_info Tree_Info;
 
 	/*
 	When the file has finished downloading this will be set to true to indicate
@@ -154,7 +159,7 @@ private:
 	hash_check  - checks partial download integrity (run in thread spawned in ctor)
 	write_block - writes a file block
 	*/
-	void hash_check();
+	void hash_check(const hash_tree::tree_info & Tree_Info);
 	void write_block(boost::uint64_t block_number, std::string & block);
 
 	DB_share DB_Share;

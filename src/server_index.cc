@@ -19,23 +19,23 @@ void server_index::generate_hash(const boost::filesystem::path file_path)
 {
 	namespace fs = boost::filesystem;
 
-	std::string hash;
+	std::string root_hash;
 	boost::uint64_t existing_size;
-	if(DB_Share.lookup_path(file_path.string(), hash, existing_size)){
+	if(DB_Share.lookup_path(file_path.string(), root_hash, existing_size)){
 		try{ //fs::file_size() might throw
 			//database entry exists, make sure there is a corresponding hash tree file
-			fs::path hash_path = fs::system_complete(fs::path(global::HASH_DIRECTORY+hash, fs::native));
+			fs::path hash_path = fs::system_complete(fs::path(global::HASH_DIRECTORY + root_hash, fs::native));
 			if(fs::exists(hash_path)){
 				if(existing_size == fs::file_size(file_path)){
 					//no need to generate hash tree
 					return;
 				}else{
 					//file changed size, rehash it
-					DB_Share.delete_hash(hash);
+					DB_Share.delete_hash(root_hash);
 				}
 			}else{
 				//hash tree is missing
-				DB_Share.delete_hash(hash);
+				DB_Share.delete_hash(root_hash);
 			}
 		}catch(std::exception & ex){
 			logger::debug(LOGGER_P1, "caught ", ex.what());
@@ -46,14 +46,14 @@ void server_index::generate_hash(const boost::filesystem::path file_path)
 	indexing = true;
 
 	//create hash tree
-	if(Hash_Tree.create_hash_tree(file_path.string(), hash)){
+	if(Hash_Tree.create(file_path.string(), root_hash)){
 		//make sure user didn't move the file while it was hashing
 		if(fs::exists(file_path)){
 			//file still present
-			DB_Share.add_entry(hash, fs::file_size(file_path), file_path.string());
+			DB_Share.add_entry(root_hash, fs::file_size(file_path), file_path.string());
 		}else{
 			//file missing delete hash tree
-			fs::path path = fs::system_complete(fs::path(global::HASH_DIRECTORY+hash, fs::native));
+			fs::path path = fs::system_complete(fs::path(global::HASH_DIRECTORY + root_hash, fs::native));
 			fs::remove(path);
 		}
 	}
@@ -72,7 +72,7 @@ void server_index::scan_hashes()
 				logger::debug(LOGGER_P1,"found directory: ",directory_iter->path().filename(),", in hash directory");
 			}else{
 				boost::this_thread::interruption_point();
-				if(directory_iter->path().filename().length() != sha::HEX_HASH_LENGTH){
+				if(directory_iter->path().filename().length() != sha::HEX_HASH_SIZE){
 					//file not a hash tree, it may be "upside_down" or "rightside_up" temporary files
 					continue;
 				}

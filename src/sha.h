@@ -12,20 +12,45 @@
 class sha
 {
 public:
-	sha(unsigned int reserve_buffer = 64);
+	/*
+	It is best to reserve a buffer that is as large as the chunks you are loading
+	with the load() function.
+	*/
+	sha();
 
-	//functions to load data to be hashed
+	/*
+	If you know exactly how much data you will be loading this can speed up
+	things by reserving space in the load buffer.
+	*/
+	void reserve(const unsigned int res);
+
+	/*
+	Functions to load data to be hashed.
+	init - must be called before load()'ing (clears buffers and does setup)
+	load - load data in chunks
+	end  - must be called before retrieving the hash with hex_hash or raw_hash
+	*/
 	void init();                           //call before load()'ing data
 	void load(const char * data, int len); //load data to hash, len in bytes
 	void end();                            //finished loading data
 
-	//access hashes after end()
-	std::string hex_hash(); //base 16 (slow, better to use raw if possible)
-	char * raw_hash();      //raw bytes (20 bytes)
-	char * raw_hash_no_null(); //if hash bytes are all 0 the last byte is changed to 1
+	/*
+	Functions to retrieve hash for data.
+	hex_hash - returns hash in hex
+	raw_hash - returns hash in binary
+	           WARNING - VIOLATES ENCAPSULATION (for performance)
+	*/
+	std::string hex_hash();
+	char * raw_hash();
 
-	static const int HASH_LENGTH = 20;
-	static const int HEX_HASH_LENGTH = 40;
+	/*
+	HASH_LENGTH     - length (in bytes) of the binary hash that raw_hash() returns
+	MIN_DATA_SIZE   - hashing a data block less than this size (in bytes) is insecure
+	HEX_HASH_LENGTH - length (in bytes) of the hex hash that hex_hash returns
+	*/
+	static const int HASH_SIZE = 20;
+	static const int MIN_DATA_SIZE = 64;
+	static const int HEX_HASH_SIZE = 40;
 
 private:
 	//holds last generated raw hash

@@ -2,14 +2,14 @@ DROP TABLE IF EXISTS search;
 CREATE TABLE search (hash TEXT, name TEXT, size INTEGER, server TEXT);
 CREATE INDEX IF NOT EXISTS name_index ON search (name);
 INSERT INTO search (hash, name, size, server)
-VALUES ('6E0F7F9554A1DD9D5281776FD98B7E3E1B9F3098', 'Double Dragon.avi', '23842790', 'topaz;emerald;ruby');
+VALUES ('5B93E438BC9CCC1FF5861BECBD33D64C310F3802', 'Double Dragon.avi', '23842790', 'topaz;emerald;ruby');
 INSERT INTO search (hash, name, size, server)
-VALUES ('56F99BBDBFFB68C0FD63F665759F96B0BED2EE0E', 'Double Dragon 2.avi', '20576554', 'topaz;emerald;ruby');
+VALUES ('2EBB6151F51384A3925DF58BD2AF1906E22DB2EB', 'Double Dragon 2.avi', '20576554', 'topaz;emerald;ruby');
 INSERT INTO search (hash, name, size, server)
-VALUES ('2DC4BEC5BC8A572C9CD315FDC66C4C34C68F7F3E', 'Excitebike.avi', '21953008', 'topaz;emerald;ruby');
+VALUES ('C3B08A1FD1F0DAD8C1805274EE0E2297197B62BE', 'Excitebike.avi', '21953008', 'topaz;emerald;ruby');
 INSERT INTO search (hash, name, size, server)
-VALUES ('A572A554B101636A3A6308CCF7D3AD88D84E2247', 'Super Mario 2 (Jap).avi', '21208890', 'topaz;emerald;ruby');
+VALUES ('19E86CF99ABA74775A0C3CD5D298CCF9C104D86C', 'Super Mario 2 (Jap).avi', '21208890', 'topaz;emerald;ruby');
 INSERT INTO search (hash, name, size, server)
-VALUES ('EBF74EA0E6F980E1F5072084EA16F167CB048308', 'Kings of Power 4 Billion %.avi', '337080320', 'topaz;emerald;ruby');
+VALUES ('44EAAFB02EB1EF5B54D58C4582FBAC35A47341F6', 'Kings of Power 4 Billion %.avi', '337080320', 'topaz;emerald;ruby');
 INSERT INTO search (hash, name, size, server)
-VALUES ('75EC2B493DF470BDCA5592BF0FD45ECC20ED35A1', 'Primer.avi', '734001152', 'topaz');
+VALUES ('93E1EFA2EBCD23112699B9FED27CE06F5EF3483C', 'Primer.avi', '734001152', 'topaz');

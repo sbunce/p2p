@@ -6,11 +6,14 @@
 
 //custom
 #include "convert.h"
-#include "client_server_bridge.h"
 #include "DB_blacklist.h"
 #include "DB_share.h"
 #include "encryption.h"
 #include "global.h"
+#include "hash_tree.h"
+#include "slot.h"
+#include "slot_file.h"
+#include "slot_hash_tree.h"
 #include "speed_calculator.h"
 #include "upload_info.h"
 
@@ -160,76 +163,37 @@ private:
 	int socket_FD;
 	std::string IP;
 
-	enum slot_type{
-		SLOT_HASH_TREE,
-		SLOT_FILE
-	};
-
-	class slot_element
-	{
-	public:
-		slot_element(
-			const std::string & hash_in,
-			const boost::uint64_t & size_in,
-			const std::string & path_in,
-			const slot_type & Slot_Type_in
-		):
-			hash(hash_in),
-			size(size_in),
-			path(path_in),
-			Slot_Type(Slot_Type_in),
-			percent_complete(0)
-		{
-			assert(path.find_last_of("/") != std::string::npos);
-			name = path.substr(path.find_last_of("/")+1);
-		}
-
-		slot_type Slot_Type;  //what type of slot this is
-		std::string hash;
-		boost::uint64_t size;
-		std::string path;     //path of file associated with slot
-		std::string name;     //name of file
-		int percent_complete; //what % client has downloaded
-
-		speed_calculator Speed_Calculator;
-	};
-
 	/*
 	The array location is the slot_ID. The string holds the path to the file the
 	slot is for. If the string is empty the slot is not yet taken.
 	*/
-	slot_element * Slot[256];
-
-	//buffer for reading file blocks from the HDD
-	char send_block_buff[global::FILE_BLOCK_SIZE];
+	slot * Slot[256];
 
 	//temp buffers used by process()
 	std::string process_send;
 	std::string process_request;
 
 	/*
-	create_slot_file             - create a download slot for a file
-	                               returns true if slot successfully created, else false
-	current_uploads              - adds upload information to the info vector
-	get_slot_element             - returns slot element associated with slot ID, returns NULL if bad slot
-	update_slot_percent_complete - updates the percentage complete an upload is
-	update_slot_speed            - updates speed for the upload the corresponds to the slot_ID
+Add this info
+	close_slot      - frees slot memory in Slot, sets pointer to NULL to indicate empty
+	find_empty_slot - locates and empty slot
+	                  returns true and sets slot_num if empty slot found
+	                  returns false if all slots full (this should trigger blacklist)
 	*/
 	void close_slot(const std::string & request);
-	bool create_slot(char & slot_ID, const std::string & hash, const boost::uint64_t & size, const std::string & path, const slot_type ST);
-	void uploads(std::vector<upload_info> & info);
-	slot_element * get_slot_element(const char & slot_ID);
+	bool find_empty_slot(int & slot_num);
 	void process(char * buff, const int & n_bytes);
 	void request_slot_hash(const std::string & request, std::string & send);
 	void request_slot_file(const std::string & request, std::string & send);
-	void make_slot_file(const std::string & root_hash_hex, const boost::uint64_t & size, const std::string & path, std::string & send);
 	void send_block(const std::string & request, std::string & send);
-	void update_slot_percent_complete(char slot_ID, const boost::uint64_t & block_number);
-	void update_slot_speed(char slot_ID, unsigned int bytes);
+	void uploads(std::vector<upload_info> & UI);
 
+	//encryption stuff
 	bool exchange_key;               //true when key exchange happening
 	std::string prime_remote_result; //holds prime and incoming result for key exchange
-	encryption Encryption;
+	encryption Encryption;           //object to do stream cyphers
+
 	DB_share DB_Share;
+	hash_tree Hash_Tree;
 };
 #endif
