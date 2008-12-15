@@ -135,16 +135,7 @@ private:
 		download_mode DM;    //DOWNLOAD_HASH_TREE or DOWNLOAD_FILE
 		bool first_received; //true when block 0 has been received
 
-		/*
-		Example: If blocks 0, 1, 2, 3, 7, 12 received highest_contiguous would be
-		equal to 3 and received blocks would contain 7, 12.
 
-		Highest contiguous is always the last block of the contiguous part of the
-		file which contains no unreceived blocks.
-
-		The recieved_blocks set keeps track of the non-contiguous front of the
-		file that blocks are getting added to.
-		*/
 		boost::uint64_t highest_contiguous;
 		std::set<boost::uint64_t> received_blocks;
 

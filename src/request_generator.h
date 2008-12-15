@@ -21,7 +21,7 @@ public:
 
 	/*
 	complete          - returns true when requests are complete
-	force_re_request  - rerequest a number immediately
+	force_rerequest   - rerequest a number immediately
 	fulfil            - must be called whenever a request is fulfilled (otherwise rerequest will happen upon timeout)
 	highest_requested - returns the highest request yet made
 	init              - must be called before calling any other function
@@ -33,7 +33,7 @@ public:
 	set_timeout       - set rerequest timeout
 	*/
 	bool complete();
-	void force_re_request(const boost::uint64_t & number);
+	void force_rerequest(const boost::uint64_t & number);
 	void fulfil(const boost::uint64_t & fulfilled_request);
 	boost::uint64_t highest_requested();
 	void init(const boost::uint64_t & begin_in, const boost::uint64_t & end_in, const int & timeout_in);

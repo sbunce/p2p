@@ -1,9 +1,12 @@
 #ifndef H_GLOBAL
 #define H_GLOBAL
 
+//uncomment to disable all asserts
 //#define NDEBUG
-//#define CORRUPT_BLOCKS
-#define RESOLVE_HOST_NAMES
+
+//testing features, uncomment to enable
+#define CORRUPT_HASH_BLOCK_TEST
+#define CORRUPT_FILE_BLOCK_TEST
 
 /*
 This stops compilation when boost is too old. The MIN_MAJOR_VERSION and
@@ -38,18 +41,22 @@ example: 1.36 would have major 1 and minor 36
 #include <limits>
 #include <string>
 
+#ifdef WIN32
+#include <windows.h>
+#undef max //this interferes with numeric_limits::max
+#endif
+
 /*
 These functions are used instead of platform specific sleep functions.
 */
 namespace portable_sleep
 {
-#ifdef WIN32
-#include <windows.h>
-#endif
-
 	//sleep for specified number of milliseconds
-	inline void ms(const int & milliseconds)
+	inline void ms(const unsigned int & milliseconds)
 	{
+		//if milliseconds = 0 then yield should be used
+		assert(milliseconds != 0);
+
 		#ifdef WIN32
 		Sleep(milliseconds);
 		#else
@@ -73,17 +80,12 @@ namespace global
 	const std::string NAME = "p2p";
 	const std::string VERSION = "0.00 pre-alpha";
 
-	//windows.h has this defined somewhere (stupid)
-	#ifdef max
-	#undef max
-	#endif
-
-	//default settings
+	//default settings, may be changed at run time
 	const int MAX_CONNECTIONS = 1024; //maximum number of connections the server will accept
 	const unsigned int UP_SPEED = std::numeric_limits<unsigned int>::max();   //upload speed limit (B/s)
 	const unsigned int DOWN_SPEED = std::numeric_limits<unsigned int>::max(); //download speed limit (B/s)
 
-	//hard settings
+	//hard settings, not changed at runtime
 	const int PRIME_CACHE = 256;         //number of primes to keep in prime cache for diffie-hellman
 	const int DH_KEY_SIZE = 64;          //size of key exchanged with diffie-hellman (bytes)
 	const int PIPELINE_SIZE = 16;        //max pre-requests that can be done (must be >= 2)
@@ -108,14 +110,10 @@ namespace global
 
 	HASH_BLOCK_SIZE - number of hashes in a child node in the hash tree.
 		Note: HASH_BLOCK_SIZE % 2 must = 0 and should be >= 2;
-	HASH_NODE_SIZE  - how many hashes in one node in the hash tree
 	FILE_BLOCK_SIZE - number of bytes in a file block.
 	*/
 	const int HASH_BLOCK_SIZE = 256;
-	const int HASH_NODE_SIZE = HASH_BLOCK_SIZE / 2;
-
-//DEBUG, figure out why sha::HASH_LENGTH in place of 20 not working
-	const int FILE_BLOCK_SIZE = HASH_BLOCK_SIZE * 20;
+	const int FILE_BLOCK_SIZE = HASH_BLOCK_SIZE * sha::HASH_SIZE;
 
 	//protocol commands client <-> server
 	const char P_ERROR = (char)0;

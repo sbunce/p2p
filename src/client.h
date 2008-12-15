@@ -74,7 +74,7 @@ public:
 	total_speed            - returns the total download speed(in bytes per second)
 	*/
 	void current_downloads(std::vector<download_info> & info, std::string hash = "");
-	bool file_info(const std::string & hash, std::string & name, boost::uint64_t & tree_size, boost::uint64_t & file_size);
+	bool file_info(const std::string & hash, std::string & path, boost::uint64_t & tree_size, boost::uint64_t & file_size);
 	int prime_count();
 	int get_max_connections();
 	void set_max_connections(int max_connections_in);

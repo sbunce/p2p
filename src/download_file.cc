@@ -75,12 +75,13 @@ const std::string download_file::hash()
 	return root_hash_hex;
 }
 
-void download_file::hash_check(const hash_tree::tree_info & Tree_Info)
+void download_file::hash_check(hash_tree::tree_info Tree_Info)
 {
-	std::fstream fin(thread_file_path.c_str(), std::ios::in);
+	std::fstream fin(thread_file_path.c_str(), std::ios::in | std::ios::binary);
 	assert(fin.good());
 	char block_buff[global::FILE_BLOCK_SIZE];
 	boost::uint64_t hash_latest = 0;
+	hash_tree Hash_Tree;
 	while(true){
 		boost::this_thread::interruption_point();
 
@@ -93,7 +94,7 @@ void download_file::hash_check(const hash_tree::tree_info & Tree_Info)
 
 		if(!Hash_Tree.check_file_block(Tree_Info, hash_latest, block_buff, fin.gcount())){
 			logger::debug(LOGGER_P1,"found corrupt block ",hash_latest," in resumed download");
-			Request_Generator.force_re_request(hash_latest);
+			Request_Generator.force_rerequest(hash_latest);
 		}
 		++hash_latest;
 
@@ -134,10 +135,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 	assert(iter != Connection_Special.end());
 	connection_special * conn = &iter->second;
 
-	if(conn->State == connection_special::ABUSIVE){
-		//server abusive but not yet disconnected
-		return download::NO_REQUEST;
-	}else if(conn->State == connection_special::REQUEST_SLOT){
+	if(conn->State == connection_special::REQUEST_SLOT){
 		//slot_ID not yet obtained from server
 		if(close_slots){
 			//download is in process of closing slots, don't request a slot
@@ -238,10 +236,7 @@ void download_file::response(const int & socket, std::string block)
 	assert(iter != Connection_Special.end());
 	connection_special * conn = &iter->second;
 
-	if(conn->State == connection_special::ABUSIVE){
-		//abusive but not yet disconnected, ignore data
-		return;
-	}else if(conn->State == connection_special::AWAITING_SLOT){
+	if(conn->State == connection_special::AWAITING_SLOT){
 		if(block[0] == global::P_SLOT_ID){
 			//received slot, ready to request blocks
 			conn->slot_ID = block[1];
@@ -262,9 +257,10 @@ void download_file::response(const int & socket, std::string block)
 				Request_Generator.fulfil(conn->latest_request.front());
 			}else{
 				logger::debug(LOGGER_P1,file_name,":",conn->latest_request.front()," hash failure");
-				Request_Generator.force_re_request(conn->latest_request.front());
+				Request_Generator.force_rerequest(conn->latest_request.front());
+				#ifndef CORRUPT_FILE_BLOCK_TEST
 				DB_blacklist::add(conn->IP);
-				conn->State = connection_special::ABUSIVE;
+				#endif
 			}
 			conn->latest_request.pop_front();
 			if(Request_Generator.complete() && !hashing){
@@ -273,7 +269,7 @@ void download_file::response(const int & socket, std::string block)
 			}
 		}else if(block[0] == global::P_WAIT){
 			//server doesn't yet have the requested block, immediately re_request block
-			Request_Generator.force_re_request(conn->latest_request.front());
+			Request_Generator.force_rerequest(conn->latest_request.front());
 			conn->latest_request.pop_front();
 			conn->wait_activated = true;
 			conn->wait_start = time(NULL);
@@ -341,7 +337,7 @@ void download_file::unregister_connection(const int & socket)
 		RB_iter_cur = iter->second.latest_request.begin();
 		RB_iter_end = iter->second.latest_request.end();
 		while(RB_iter_cur != RB_iter_end){
-			Request_Generator.force_re_request(*RB_iter_cur);
+			Request_Generator.force_rerequest(*RB_iter_cur);
 			++RB_iter_cur;
 		}
 	}

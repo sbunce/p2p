@@ -17,13 +17,6 @@ download_hash_tree::download_hash_tree(
 	client_server_bridge::start_download(root_hash_hex);
 	hash_name = _download_file_name + " HASH";
 
-	//create empty file for hash tree (hash_tree expects this)
-	std::fstream fin((global::HASH_DIRECTORY+root_hash_hex).c_str(), std::ios::in);
-	if(!fin.is_open()){
-		//hash tree does not exist yet
-		fin.open((global::HASH_DIRECTORY+root_hash_hex).c_str(), std::ios::out);
-	}
-
 	boost::uint64_t bad_block;
 	if(Hash_Tree.check(Tree_Info, bad_block)){
 		//hash tree good, signal download_complete
@@ -84,10 +77,7 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 	assert(iter != Connection_Special.end());
 	connection_special * conn = &iter->second;
 
-	if(conn->State == connection_special::ABUSIVE){
-		//server abusive but not yet disconnected
-		return download::NO_REQUEST;
-	}else if(conn->State == connection_special::REQUEST_SLOT){
+	if(conn->State == connection_special::REQUEST_SLOT){
 		//slot_ID not yet obtained from server
 		if(close_slots){
 			//download is in process of closing slots, don't request a slot
@@ -156,7 +146,6 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 			request += global::P_BLOCK;
 			request += conn->slot_ID;
 			request += convert::encode<boost::uint64_t>(conn->latest_request.back());
-			conn->requested_blocks.insert(conn->latest_request.back());
 			expected.push_back(std::make_pair(global::P_BLOCK, hash_tree::block_size(Tree_Info, conn->latest_request.back()) + 1));
 			expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
 			expected.push_back(std::make_pair(global::P_WAIT, global::P_WAIT_SIZE));
@@ -186,10 +175,7 @@ void download_hash_tree::response(const int & socket, std::string block)
 	assert(iter != Connection_Special.end());
 	connection_special * conn = &iter->second;
 
-	if(conn->State == connection_special::ABUSIVE){
-		//abusive but not yet disconnected, ignore data
-		return;
-	}else if(conn->State == connection_special::AWAITING_SLOT){
+	if(conn->State == connection_special::AWAITING_SLOT){
 		if(block[0] == global::P_SLOT_ID){
 			//received slot, ready to request blocks
 			conn->slot_ID = block[1];
@@ -206,41 +192,27 @@ void download_hash_tree::response(const int & socket, std::string block)
 			//a block was received
 			block.erase(0, 1); //trim command
 
+std::cout << "block: " << conn->latest_request.front() << " size: " << block.size() << "\n";
+
 			//write hash only if not cancelled
-			if(!_cancel && !Hash_Tree.write_block(Tree_Info, conn->latest_request.front(), block)){
-				//hash file removed, stop download
+			if(!_cancel && !Hash_Tree.write_block(Tree_Info, conn->latest_request.front(), block, conn->IP)){
+				//hash file removed or download cancelled, stop download
 				stop();
 			}
 
-			client_server_bridge::download_block_received(root_hash_hex, conn->latest_request.front());
 			Request_Generator.fulfil(conn->latest_request.front());
 			conn->latest_request.pop_front();
+
+			//see if hash tree has any blocks to rerequest
+			Tree_Info.rerequest_bad_blocks(Request_Generator);
+
 			if(Request_Generator.complete()){
-				//check for bad blocks in tree
-				boost::uint64_t bad_block;
-				if(Hash_Tree.check(Tree_Info, bad_block)){
-					//hash tree complete, close slots
-					close_slots = true;
-				}else{
-					//bad block found, find server that sent it
-					std::map<int, connection_special>::iterator iter_cur, iter_end;
-					iter_cur = Connection_Special.begin();
-					iter_end = Connection_Special.end();
-					while(iter_cur != iter_end){
-						std::set<boost::uint64_t>::iterator iter = iter_cur->second.requested_blocks.find(bad_block);
-						if(iter != iter_cur->second.requested_blocks.end()){
-							//re_request all blocks gotten from the server that sent a bad block
-							iter_cur->second.State = connection_special::ABUSIVE;
-							DB_blacklist::add(iter_cur->second.IP);
-							return;
-						}
-						++iter_cur;
-					}
-				}
+				//hash tree complete, close slots
+				close_slots = true;
 			}
 		}else if(block[0] == global::P_WAIT){
 			//server doesn't yet have the requested block, immediately re_request block
-			Request_Generator.force_re_request(conn->latest_request.front());
+			Request_Generator.force_rerequest(conn->latest_request.front());
 			conn->latest_request.pop_front();
 			conn->wait_activated = true;
 			conn->wait_start = time(NULL);
@@ -281,12 +253,12 @@ void download_hash_tree::unregister_connection(const int & socket)
 	//re_request all blocks that are pending for the server that's getting disconnected
 	std::map<int, connection_special>::iterator iter = Connection_Special.find(socket);
 	if(iter != Connection_Special.end()){
-		std::set<boost::uint64_t>::iterator RB_iter_cur, RB_iter_end;
-		RB_iter_cur = iter->second.requested_blocks.begin();
-		RB_iter_end = iter->second.requested_blocks.end();
-		while(RB_iter_cur != RB_iter_end){
-			Request_Generator.force_re_request(*RB_iter_cur);
-			++RB_iter_cur;
+		std::deque<boost::uint64_t>::iterator iter_cur, iter_end;
+		iter_cur = iter->second.latest_request.begin();
+		iter_end = iter->second.latest_request.end();
+		while(iter_cur != iter_end){
+			Request_Generator.force_rerequest(*iter_cur);
+			++iter_cur;
 		}
 	}
 

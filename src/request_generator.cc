@@ -10,7 +10,7 @@ request_generator::request_generator(
 
 void request_generator::check_timeouts()
 {
-	//do re_request on requests that are older than max_age.
+	//do re_request on requests that are older than timeout seconds
 	std::map<boost::uint64_t, request_info>::iterator iter_cur, iter_end;
 	iter_cur = unfulfilled_request.begin();
 	iter_end = unfulfilled_request.end();
@@ -29,7 +29,7 @@ bool request_generator::complete()
 	return current == end && unfulfilled_request.empty() && re_request.empty() && re_requested.empty();
 }
 
-void request_generator::force_re_request(const boost::uint64_t & number)
+void request_generator::force_rerequest(const boost::uint64_t & number)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	assert(initialized);

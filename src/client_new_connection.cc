@@ -169,13 +169,11 @@ void client_new_connection::process_DC(download_connection DC)
 
 void client_new_connection::queue(download_connection DC)
 {
-	#ifdef RESOLVE_HOST_NAMES
 	//resolve hostname
 	if(!resolve::hostname(DC.IP)){
 		logger::debug(LOGGER_P1,"failed to resolve ",DC.IP);
 		return;
 	}
-	#endif
 
 	/*
 	Before using a thread, check to see if a connection to this server already

@@ -4,12 +4,14 @@
 //boost
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
-#include <boost/thread/mutex.hpp>
 
 //custom
 #include "atomic_bool.h"
 #include "convert.h"
+#include "contiguous.h"
+#include "DB_blacklist.h"
 #include "global.h"
+#include "request_generator.h"
 #include "sha.h"
 
 //std
@@ -25,9 +27,11 @@ public:
 	hash_tree();
 
 	/*
-	Needed by add_block and get_block. This is required because there is a lot of
-	calculation required to determine block offsets and lengths. By having this
-	object that calculation only has to be done once.
+	There is a lot of calculation required to determine block offsets and lengths.
+	By having this object that calculation only has to be done once.
+
+	This object holds most of the state for needed for hash trees. The exception
+	to this is the block buffer and SHA object which are large and can be reused.
 	*/
 	class tree_info
 	{
@@ -38,12 +42,23 @@ public:
 			const boost::uint64_t file_size_in
 		):
 			root_hash(root_hash_in),
-			file_size(file_size_in)
+			file_size(file_size_in),
+			highest_good(0)
 		{
 			file_size_to_tree_hash(file_size, row);
 			block_count = row_to_block_count(row);
 			file_hash_offset = row_to_file_hash_offset(row);
 			tree_size = file_size_to_tree_size(file_size);
+
+			Contiguous = NULL;
+		}
+
+		~tree_info()
+		{
+			if(Contiguous != NULL){
+				delete Contiguous;
+				Contiguous = NULL;
+			}
 		}
 
 		const boost::uint64_t & get_block_count()
@@ -61,37 +76,76 @@ public:
 			return tree_size;
 		}
 
+		const boost::uint64_t & get_highest_good()
+		{
+			return highest_good;
+		}
+
+		/*
+		Rerequests bad hash blocks.
+		Note: this should only be used for when downloading hash trees.
+		*/
+		void rerequest_bad_blocks(request_generator & Request_Generator)
+		{
+			std::vector<boost::uint64_t>::iterator iter_cur, iter_end;
+			iter_cur = bad_block.begin();
+			iter_end = bad_block.end();
+			while(iter_cur != iter_end){
+				Request_Generator.force_rerequest(*iter_cur);
+				++iter_cur;
+			}
+			bad_block.clear();
+		}
+
 	private:
 		//minimum info needed to know everything about hash tree
 		std::string root_hash;     //root hash (hex)
 		boost::uint64_t file_size; //size of file hash tree is for
 
 		//these are all calculated based on root_hash and file_size
-		boost::uint64_t block_count;      //total hash block count
 		std::deque<boost::uint64_t> row;  //number of hashes in each row
+		boost::uint64_t block_count;      //total hash block count
 		boost::uint64_t file_hash_offset; //offset (bytes) to start of file hashes
 		boost::uint64_t tree_size;        //size of the hash tree (bytes)
+
+		/*
+		Hash block mapped to IP. This is only needed if adding blocks to the hash
+		tree. This is new'd by check() if there is a bad block in the tree.
+
+		Note: If this is NULL when passed to write_block program will be terminated.
+		*/
+		contiguous<boost::uint64_t, std::string> * Contiguous;
+
+		/*
+		When a block is detected as being bad all blocks that were requested from
+		the server that sent the bad block are put here to be rerequested.
+		*/
+		std::vector<boost::uint64_t> bad_block;
+
+		//number of the highest good block (all blocks before this also good)
+		boost::uint64_t highest_good;
 	};
 
 	/*
-	check            - check hash tree
-	                   returns true if tree is good
-	                   returns false and sets bad_block tree is bad
+	check            - checks the entire hash tree
+	                   returns true if tree good, else false and sets bad_block to first bad block
+	                   Note: must call this with the tree_info before calling write_block
+	check_file_block - checks a file block against a hash in the hash tree
+	                   returns true if block good, else false
 	create           - create hash tree
 	                   returns true and sets root_hash if creation suceeded
 	                   returns false if creation failed, or if stop called
-	check_file_block - checks a file block against a hash in the hash tree
-	                   returns true if block good, else false
-	read_block       - add block to hash tree, or replace block in hash tree
+	read_block       - get block from hash tree
+	                   returns true if suceeded, else false if error opening file
+	write_block      - add block to hash tree, or replace block in hash tree
 	                   returns true if block written, else false if writing error
-	write_block      - get block from hash tree
-	                   returns true if suceeded, else false if invalid block num
+	                   precondition: must have called check() with the tree_info
 	*/
-	bool check(const tree_info & Tree_Info, boost::uint64_t & bad_block);
-	bool create(const std::string & file_path, std::string & root_hash);
+	bool check(tree_info & Tree_Info, boost::uint64_t & bad_block);
 	bool check_file_block(const tree_info & Tree_Info, const boost::uint64_t & file_block_num, const char * block, const int & size);
+	bool create(const std::string & file_path, std::string & root_hash);
 	bool read_block(const tree_info & Tree_Info, const boost::uint64_t & block_num, std::string & block);
-	bool write_block(const tree_info & Tree_Info, const boost::uint64_t & block_num, const std::string & block);
+	bool write_block(tree_info & Tree_Info, const boost::uint64_t & block_num, const std::string & block, const std::string & IP);
 
 	/*
 	If a thread is in the check() functions this will trigger it to terminate
@@ -104,9 +158,9 @@ public:
 	Given a block number determines the size of the block (in bytes). Terminates
 	the program if invalid block is specified.
 	*/
-	static boost::uint64_t block_size(const tree_info & Tree_Info, const boost::uint64_t & block_num)
+	static unsigned int block_size(const tree_info & Tree_Info, const boost::uint64_t & block_num)
 	{
-		std::pair<boost::uint64_t, boost::uint64_t> info;
+		std::pair<boost::uint64_t, unsigned int> info;
 		if(block_info(block_num, Tree_Info.row, info)){
 			return info.second;
 		}else{
@@ -124,20 +178,23 @@ public:
 		return sha::HASH_SIZE * file_hash_to_tree_hash(file_size_to_file_hash(file_size));
 	}
 
-private:
+//private:
 
 	/*
 	Given a block number, sets info to the offset and length of the hash block.
 	Returns true if valid block used as parameter, else false.
-	info: std::pair<offset, size>
+	info:   std::pair<offset(bytes), size(bytes)>
+	parent: offset(bytes)
+
+	Note: if block is 0 then paren't won't be set.
 	*/
-	static bool block_info(boost::uint64_t block, const std::deque<boost::uint64_t> & row,
-		std::pair<boost::uint64_t, boost::uint64_t> & info)
+	static bool block_info(const boost::uint64_t & block, const std::deque<boost::uint64_t> & row,
+		std::pair<boost::uint64_t, unsigned int> & info, boost::uint64_t & parent)
 	{
-		boost::uint64_t offset = 0;          //byte offset from beginning of file
+		boost::uint64_t offset = 0;          //hash offset from beginning of file to start of row
 		boost::uint64_t block_count = 0;     //total block count in all previous rows
 		boost::uint64_t row_block_count = 0; //total block count in current row
-		for(int x=0; x<row.size(); ++x){
+		for(unsigned int x=0; x<row.size(); ++x){
 			if(row[x] % global::HASH_BLOCK_SIZE == 0){
 				row_block_count = row[x] / global::HASH_BLOCK_SIZE;
 			}else{
@@ -146,24 +203,49 @@ private:
 
 			if(block_count + row_block_count > block){
 				//end of row greater than block we're looking for, block exists in row
-				info.first = offset + (block - block_count) * global::HASH_BLOCK_SIZE * sha::HASH_SIZE;
+				info.first = offset + (block - block_count) * global::HASH_BLOCK_SIZE;
 
-				//bytes between offset and end of current row
-				boost::uint64_t delta = (offset + row[x] * sha::HASH_SIZE) - info.first;
-				if(delta > global::HASH_BLOCK_SIZE * sha::HASH_SIZE){
+				//hashes between offset and end of current row
+				boost::uint64_t delta = offset + row[x] - info.first;
+
+				//determine size of block
+				if(delta > global::HASH_BLOCK_SIZE){
 					//full hash block
-					info.second = global::HASH_BLOCK_SIZE * sha::HASH_SIZE;
+					info.second = global::HASH_BLOCK_SIZE;
 				}else{
 					//partial hash block
 					info.second = delta;
 				}
+
+				//locate parent
+				if(x != 0){
+					//only set parent if not on first row (parent of first row is root hash)
+					parent = offset - row[x-1]  //start of previous row
+						+ block - block_count; //hash offset in to previous row is block offset in to current row
+				}
+
+				//convert to bytes
+				info.first = info.first * sha::HASH_SIZE;
+				info.second = info.second * sha::HASH_SIZE;
+				parent = parent * sha::HASH_SIZE;
+
 				return true;
 			}
 
 			block_count += row_block_count;
-			offset += row[x] * sha::HASH_SIZE;
+			offset += row[x];
 		}
 		return false;
+	}
+
+	/*
+	Wrapper for above function. Used when parent is not needed.
+	*/
+	static boost::uint64_t throw_away;
+	static bool block_info(const boost::uint64_t & block, const std::deque<boost::uint64_t> & row,
+		std::pair<boost::uint64_t, unsigned int> & info)
+	{
+		return block_info(block, row, info, throw_away);
 	}
 
 	/*
@@ -262,15 +344,6 @@ private:
 	}
 
 	/*
-	Only one hash tree can be generated at a time. To enforce this generate_mutex
-	is acquired whenever generate_hash_tree() is called.
-
-	Note: This is static, one generate call at a time is enforced program wide.
-	      This requirement exists because of temporary files.
-	*/
-	static boost::mutex generate_mutex;
-
-	/*
 	Buffer for both file blocks and file hash blocks.
 	Note: A file block is always equal to the size of global::HASH_BLOCK_SIZE hashes.
 	*/
@@ -283,8 +356,14 @@ private:
 	atomic_bool stop_thread;
 
 	/*
-	create_recurse - recursively create hash tree, called by create()
+	check_block      - checks a hash tree block
+	                   returns true if block good, else false if block bad
+	                   precondition: the parent of this block must be valid an the block must exist
+	check_contiguous - called after write_block() to check contiguous hash blocks blocks
+	create_recurse   - recursively create hash tree, called by create()
 	*/
+	bool check_block(const tree_info & Tree_Info, const boost::uint64_t & block_num);
+	void check_contiguous(tree_info & Tree_Info);
 	bool create_recurse(std::fstream & scratch, boost::uint64_t start_RRN,
 		boost::uint64_t end_RRN, std::string & root_hash);
 

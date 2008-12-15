@@ -11,15 +11,18 @@ gui_download_status::gui_download_status(
 {
 	Client = Client_in;
 
-	std::string name;
+	std::string name; //starts as path
 	if(Client->file_info(root_hash, name, tree_size_bytes, file_size_bytes)){
-		int max_tab_label_size = 24;
-		std::string tmp = name.substr(0, max_tab_label_size);
-		if(name.size() > max_tab_label_size){
-			tmp += "..";
+		if(!name.empty()){
+			//isolate file name
+			name = name.substr(name.find_last_of('/') + 1);
 		}
-		tmp = " " + tmp + " ";
-		tab_label->set_text(tmp);
+		int max_tab_label_size = 24;
+		name = name.substr(0, max_tab_label_size);
+		if(name.size() > max_tab_label_size){
+			name += "..";
+		}
+		tab_label->set_text(" " + name + " ");
 	}else{
 		tab_label->set_text("error: no download");
 	}

@@ -5,7 +5,14 @@ TODO
 -Get client_server_bridge working for hash trees. Use the hash tree recursive
 function to figure out how many blocks are in each row so it's known when blocks
 are checked.
-										
+
+
+THINK ABOUT
+
+-Think about CMWC4096 PRNG seed issue.
+
+-Think about detecting protocol via knowing handshake size/port.
+
 
 DEFERRED FEATURES
 

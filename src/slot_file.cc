@@ -22,6 +22,10 @@ slot_file::slot_file(
 		//partial last block (decimal gets truncated which is effectively minus one)
 		block_count = file_size / global::FILE_BLOCK_SIZE + 1;
 	}
+
+	#ifdef CORRUPT_FILE_BLOCKS
+	std::srand(time(NULL));
+	#endif
 }
 
 void slot_file::info(std::vector<upload_info> & UI)
@@ -56,8 +60,9 @@ void slot_file::send_block(const std::string & request, std::string & send)
 		//seek to the file_block the client wants (-1 for command space)
 		fin.seekg(block_number * global::FILE_BLOCK_SIZE);
 		fin.read(send_block_buff, global::FILE_BLOCK_SIZE);
-		#ifdef CORRUPT_BLOCKS
-		if(rand() % 100 == 0){
+		#ifdef CORRUPT_FILE_BLOCK_TEST
+		if(std::rand() % 5 == 0){
+			logger::debug(LOGGER_P1,"CORRUPT FILE BLOCK TEST, block ",block_number," -> ",*IP);
 			send_block_buff[0] = ~send_block_buff[0];
 		}
 		#endif

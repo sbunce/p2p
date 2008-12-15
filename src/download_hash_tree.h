@@ -106,7 +106,6 @@ private:
 		}
 
 		enum state{
-			ABUSIVE,        //server violated protocol but has not yet been disconnected
 			REQUEST_SLOT,   //need to request a slot
 			AWAITING_SLOT,  //slot requested, awaiting slot
 			REQUEST_BLOCKS, //slot received, requesting blocks
@@ -122,23 +121,12 @@ private:
 		were requested. When a block is received from the server the block number
 		is latest_request.front().
 
-		When new requests are made they should be pushed on to the back of
+		When new requests are made they should are pushed on to the back of
 		latest_request.
+
+		This is basically the pipeline for the server.
 		*/
 		std::deque<boost::uint64_t> latest_request;
-
-		/*
-		This stores all the blocks that have been received from the server. When the
-		every block is downloaded there will be a hash check. If any block from this
-		server fails a hash check all blocks later than the bad block requested from
-		this server will be re_requested.
-
-		The purpose of re_requesting before checking is to maximize the speed of the
-		download. In order to re_request sequentially the block would have be be
-		re_requested from one server and all others would have to wait until it was
-		known that the replacement block was good.
-		*/
-		std::set<boost::uint64_t> requested_blocks;
 
 		/*
 		If wait_activated is true then the server has sent a P_WAIT to indicate it

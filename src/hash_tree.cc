@@ -1,6 +1,6 @@
 #include "hash_tree.h"
 
-boost::mutex hash_tree::generate_mutex;
+boost::uint64_t hash_tree::throw_away;
 
 hash_tree::hash_tree():
 	stop_thread(false)
@@ -9,151 +9,140 @@ hash_tree::hash_tree():
 	boost::filesystem::create_directory(global::HASH_DIRECTORY.c_str());
 }
 
-bool hash_tree::check(const tree_info & Tree_Info, boost::uint64_t & bad_block)
+bool hash_tree::check(tree_info & Tree_Info, boost::uint64_t & bad_block)
 {
-	//keeps track of current block so bad_block can be set if bad block detected
-	boost::uint64_t current_block = 0;
+	assert(Tree_Info.Contiguous == NULL);
 
-	//used to keep track of how full the block_buff is
-	int block_buff_size = 0;
+	//create empty file for hash tree if it doesn't exist
+	std::fstream fin((global::HASH_DIRECTORY+Tree_Info.root_hash).c_str(), std::ios::in);
+	if(!fin.is_open()){
+		//hash tree does not exist yet
+		fin.open((global::HASH_DIRECTORY+Tree_Info.root_hash).c_str(), std::ios::out);
+		bad_block = 0;
+		Tree_Info.Contiguous = new contiguous<boost::uint64_t,
+			std::string>(0, Tree_Info.block_count);
+		return false;
+	}
 
+	for(boost::uint64_t x=0; x<Tree_Info.block_count; ++x){
+		if(!check_block(Tree_Info, x)){
+			logger::debug(LOGGER_P1,"bad block ",x," in tree ",Tree_Info.root_hash);
+			Tree_Info.Contiguous = new contiguous<boost::uint64_t,
+				std::string>(x, Tree_Info.block_count);
+			bad_block = x;
+			return false;
+		}
+	}
+	return true;
+}
+
+bool hash_tree::check_block(const tree_info & Tree_Info, const boost::uint64_t & block_num)
+{
 	if(Tree_Info.block_count == 0){
 		//only one hash, it's the root hash and the file hash
 		return true;
 	}
 
-	//reserve space for speed up
-	SHA.reserve(global::HASH_BLOCK_SIZE * sha::HASH_SIZE);
+	std::pair<boost::uint64_t, unsigned int> info;
+	boost::uint64_t parent;
+	if(!block_info(block_num, Tree_Info.row, info, parent)){
+		//invalid block sent to block_info
+		logger::debug(LOGGER_P1,"programmer error\n");
+		exit(1);
+	}
 
 	std::fstream fin((global::HASH_DIRECTORY + Tree_Info.root_hash).c_str(), std::ios::in | std::ios::binary);
 	if(!fin.is_open()){
-		//hash tree doesn't exist
-		bad_block = 0;
+		logger::debug(LOGGER_P1,"cannot open hash tree ",Tree_Info.root_hash);
+		exit(1);
+	}
+
+	fin.seekg(info.first, std::ios::beg);
+	fin.read(block_buff, info.second);
+	if(fin.gcount() != info.second){
 		return false;
 	}
 
-	//check first row with root hash
-	std::string root_hash_bin = convert::hex_to_binary(Tree_Info.root_hash);
-	if(Tree_Info.row[0] * sha::HASH_SIZE < sha::MIN_DATA_SIZE){
-		//not enough hashes to meet sha::MIN_DATA_SIZE, more documentation on this in generate_hash_tree()
-		for(boost::uint64_t x = 0; x * sha::HASH_SIZE < sha::MIN_DATA_SIZE; ++x){
-			fin.seekg((x % Tree_Info.row[0]) * sha::HASH_SIZE , std::ios::beg);
-			fin.read(block_buff + block_buff_size, sha::HASH_SIZE);
-			if(!fin.good()){
-				bad_block = 0;
-				logger::debug(LOGGER_P1,"bad block ",bad_block," in ",Tree_Info.root_hash);
-				return false;
-			}
-			block_buff_size += sha::HASH_SIZE;
-		}
+	//reserve space for speed up
+	SHA.reserve(global::HASH_BLOCK_SIZE * sha::HASH_SIZE);
+
+	//create hash for children
+	SHA.init();
+	SHA.load(block_buff, info.second);
+	SHA.end();
+
+	//check child hash
+	if(block_num == 0){
+		//first row has to be checked against root hash
+		return strncmp(convert::hex_to_binary(Tree_Info.root_hash).data(), SHA.raw_hash(), sha::HASH_SIZE) == 0;
 	}else{
-		fin.read(block_buff, Tree_Info.row[0] * sha::HASH_SIZE);
+		//read parent hash
+		fin.seekg(parent, std::ios::beg);
+		fin.read(block_buff, sha::HASH_SIZE);
 		if(!fin.good()){
-			bad_block = 0;
-			logger::debug(LOGGER_P1,"bad block ",bad_block," in ",Tree_Info.root_hash);
 			return false;
 		}
-		block_buff_size = Tree_Info.row[0] * sha::HASH_SIZE;
+
+		return strncmp(block_buff, SHA.raw_hash(), sha::HASH_SIZE) == 0;
 	}
-	SHA.init();
-	SHA.load(block_buff, block_buff_size);
-	SHA.end();
-	if(strncmp(root_hash_bin.data(), SHA.raw_hash(), sha::HASH_SIZE) != 0){
-		bad_block = current_block;
-		logger::debug(LOGGER_P1,"bad block ",bad_block," in ",Tree_Info.root_hash);
-		return false;
-	}
+}
 
-	//check lower rows
-	boost::uint64_t row_start = 0, row_end = 0; //hash RRNs
-	boost::uint64_t parent = 0;                 //RRN of parent hash
-	current_block = 1;
-	for(int x=1; x<Tree_Info.row.size(); ++x){
-		row_start = row_start + Tree_Info.row[x-1];
-		row_end = row_start + Tree_Info.row[x];
-		for(int y=0; y<Tree_Info.row[x]; y+=global::HASH_BLOCK_SIZE){
-			boost::uint64_t current = row_start + y;
-			block_buff_size = 0;
-			if(row_end - current < global::HASH_BLOCK_SIZE){
-				if((row_end - current) * sha::HASH_SIZE < sha::MIN_DATA_SIZE){
-					/*
-					Not enough hashes left in row to meet sha::MIN_DATA_SIZE. Loop back
-					to beginning or row to get enough hashes.
+void hash_tree::check_contiguous(tree_info & Tree_Info)
+{
+	assert(Tree_Info.Contiguous != NULL);
+	contiguous<boost::uint64_t, std::string>::contiguous_iterator c_iter_cur, c_iter_end;
+	c_iter_cur = Tree_Info.Contiguous->begin_contiguous();
+	c_iter_end = Tree_Info.Contiguous->end_contiguous();
+	while(c_iter_cur != c_iter_end){
+		if(!check_block(Tree_Info, c_iter_cur->first)){
 
-					Further documentation about this in generate_hash_tree().
-					*/
-					boost::uint64_t row_RRN_length = row_end - row_start; //# of hashes in row
-					boost::uint64_t offset_RRN = current - row_start;     //offset from start of row
+			#ifdef CORRUPT_HASH_BLOCK_TEST
+			//rerequest only the bad block and don't blacklist
+			Tree_Info.bad_block.push_back(c_iter_cur->first);
+			Tree_Info.Contiguous->erase(c_iter_cur->first);
+			#else
 
-					/*
-					Loop over row, starting at current position, until the amount of
-					hashes gotten is >= sha::MIN_DATA_SIZE.
-					*/
-					for(boost::uint64_t tmp = offset_RRN; (tmp - offset_RRN) * sha::HASH_SIZE < sha::MIN_DATA_SIZE; ++tmp){
-						fin.seekg((row_start + tmp % row_RRN_length) * sha::HASH_SIZE , std::ios::beg);
-						fin.read(block_buff + block_buff_size, sha::HASH_SIZE);
-						if(!fin.good()){
-							bad_block = current_block;
-							return false;
-						}
-						block_buff_size += sha::HASH_SIZE;
-					}
-				}else{
-					/*
-					Enough hashes to meet sha::MIN_DATA_SIZE. Read the remainder of
-					the hashes.
-					*/
-					fin.seekg(current * sha::HASH_SIZE, std::ios::beg);
-					fin.read(block_buff, (row_end - current) * sha::HASH_SIZE);
-					if(!fin.good()){
-						bad_block = current_block;
-						return false;
-					}
-					block_buff_size = (row_end - current) * sha::HASH_SIZE;
+			//blacklist server that sent bad block
+			logger::debug(LOGGER_P1,c_iter_cur->second," sent bad hash block, blacklist");
+			DB_blacklist::add(c_iter_cur->second);
+
+			//bad block, add all blocks this server sent to bad_block
+			std::vector<boost::uint64_t> bad;
+			contiguous<boost::uint64_t, std::string>::iterator iter_cur, iter_end;
+			iter_cur = Tree_Info.Contiguous->begin();
+			iter_end = Tree_Info.Contiguous->end();
+			while(iter_cur != iter_end){
+				if(c_iter_cur->second == iter_cur->second){
+					//found block that same server sent
+					Tree_Info.bad_block.push_back(iter_cur->first);
+					bad.push_back(iter_cur->first);
 				}
-			}else{
-				//enough hashes for full hash block
-				fin.seekg(current * sha::HASH_SIZE, std::ios::beg);
-				fin.read(block_buff, global::HASH_BLOCK_SIZE * sha::HASH_SIZE);
-				if(!fin.good()){
-					bad_block = current_block;
-					return false;
-				}
-				block_buff_size = global::HASH_BLOCK_SIZE * sha::HASH_SIZE;
+				++iter_cur;
 			}
 
-			//create hash for children
-			SHA.init();
-			SHA.load(block_buff, block_buff_size);
-			SHA.end();
-
-			//read parent hash
-			fin.seekg(parent * sha::HASH_SIZE, std::ios::beg);
-			fin.read(block_buff, sha::HASH_SIZE);
-			if(!fin.good()){
-				logger::debug(LOGGER_P1,"error reading hash tree ",Tree_Info.root_hash);
-				exit(1);
+			{
+			//erase blocks found to be bad
+			std::vector<boost::uint64_t>::iterator iter_cur, iter_end;
+			iter_cur = bad.begin();
+			iter_end = bad.end();
+			while(iter_cur != iter_end){
+				Tree_Info.Contiguous->erase(*iter_cur);
+				++iter_cur;
 			}
-
-			//validate
-			if(strncmp(block_buff, SHA.raw_hash(), sha::HASH_SIZE) != 0){
-				bad_block = current_block;
-				logger::debug(LOGGER_P1,"bad block ",bad_block," in ",Tree_Info.root_hash);
-				return false;
 			}
-			++current_block;
-			++parent;
+			#endif
+
+			break;
 		}
-		parent = row_start;
+		++c_iter_cur;
 	}
 
-	return true;
+	//any contiguous blocks left were checked and can now be removed
+	Tree_Info.Contiguous->trim_contiguous();
 }
 
 bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 {
-	boost::mutex::scoped_lock lock(generate_mutex);
-
 	//reserve space for speed up
 	SHA.reserve(global::HASH_BLOCK_SIZE * sha::HASH_SIZE);
 
@@ -243,51 +232,13 @@ bool hash_tree::create_recurse(std::fstream & scratch, boost::uint64_t start_RRN
 		int block_buff_size = 0;
 		if(end_RRN - scratch_read_RRN < global::HASH_BLOCK_SIZE){
 			//not enough hashes for full hash block
-			if((end_RRN - scratch_read_RRN) * sha::HASH_SIZE < sha::MIN_DATA_SIZE){
-				/*
-				Not enough hashes to meet sha::MIN_DATA_SIZE. In this case hash past
-				the end modulo row size. In other words if there isn't enough hashes
-				remaining in the row to meet the sha::MIN_DATA_SIZE then include
-				hashes at beginning of row until sha::MIN_DATA_SIZE is reached.
-
-				Example: Let each number represent a hash. Assume we need a minimum of
-				         4 hashes to meet sha::MIN_DATA_SIZE.
-				start:  A B
-				hashed: A B A B
-
-				Example 2:
-				start:  A B C
-				hashed: A B C A
-				*/
-				boost::uint64_t row_RRN_length = end_RRN - start_RRN;      //# of hashes in row
-				boost::uint64_t offset_RRN = scratch_read_RRN - start_RRN; //offset from start of row
-
-				/*
-				Loop over row, starting at current position, until the amount of
-				hashes gotten is >= sha::MIN_DATA_SIZE.
-				*/
-				for(boost::uint64_t x = offset_RRN; (x - offset_RRN) * sha::HASH_SIZE < sha::MIN_DATA_SIZE; ++x){
-					scratch.seekg((start_RRN + x % row_RRN_length) * sha::HASH_SIZE , std::ios::beg);
-					scratch.read(block_buff + block_buff_size, sha::HASH_SIZE);
-					if(!scratch.good()){
-						logger::debug(LOGGER_P1,"error reading scratch file");
-						return false;
-					}
-					block_buff_size += sha::HASH_SIZE;
-				}
-			}else{
-				/*
-				Enough hashes to meet sha::MIN_DATA_SIZE. Read the remainder of
-				the hashes.
-				*/
-				scratch.seekg(scratch_read_RRN * sha::HASH_SIZE, std::ios::beg);
-				scratch.read(block_buff, (end_RRN - scratch_read_RRN) * sha::HASH_SIZE);
-				if(!scratch.good()){
-					logger::debug(LOGGER_P1,"error reading scratch file");
-					return false;
-				}
-				block_buff_size = (end_RRN - scratch_read_RRN) * sha::HASH_SIZE;
+			scratch.seekg(scratch_read_RRN * sha::HASH_SIZE, std::ios::beg);
+			scratch.read(block_buff, (end_RRN - scratch_read_RRN) * sha::HASH_SIZE);
+			if(!scratch.good()){
+				logger::debug(LOGGER_P1,"error reading scratch file");
+				return false;
 			}
+			block_buff_size = (end_RRN - scratch_read_RRN) * sha::HASH_SIZE;
 		}else{
 			//enough hashes for full hash block
 			scratch.seekg(scratch_read_RRN * sha::HASH_SIZE, std::ios::beg);
@@ -400,7 +351,7 @@ void hash_tree::stop()
 
 bool hash_tree::read_block(const tree_info & Tree_Info, const boost::uint64_t & block_num, std::string & block)
 {
-	std::pair<boost::uint64_t, boost::uint64_t> info;
+	std::pair<boost::uint64_t, unsigned int> info;
 	if(block_info(block_num, Tree_Info.row, info)){
 		//open file to read
 		std::fstream fin((global::HASH_DIRECTORY + Tree_Info.root_hash).c_str(), std::ios::in | std::ios::binary);
@@ -413,17 +364,18 @@ bool hash_tree::read_block(const tree_info & Tree_Info, const boost::uint64_t & 
 			fin.read(block_buff, info.second);
 			block.clear();
 			block.assign(block_buff, fin.gcount());
+			return true;
 		}
-		return true;
 	}else{
 		logger::debug(LOGGER_P1,"invalid block number, programming error");
 		exit(1);
 	}
 }
 
-bool hash_tree::write_block(const tree_info & Tree_Info, const boost::uint64_t & block_num, const std::string & block)
+bool hash_tree::write_block(tree_info & Tree_Info, const boost::uint64_t & block_num, const std::string & block, const std::string & IP)
 {
-	std::pair<boost::uint64_t, boost::uint64_t> info;
+	assert(Tree_Info.Contiguous != NULL);
+	std::pair<boost::uint64_t, unsigned int> info;
 	if(block_info(block_num, Tree_Info.row, info)){
 		if(info.second != block.size()){
 			//incorrect block size
@@ -440,10 +392,13 @@ bool hash_tree::write_block(const tree_info & Tree_Info, const boost::uint64_t &
 			//write file
 			fout.seekp(info.first, std::ios::beg);
 			fout.write(block.data(), block.size());
+			fout.close(); //must be closed to flush to file, check_contiguous can error if this is not here
+			Tree_Info.Contiguous->insert(std::make_pair(block_num, IP));
+			check_contiguous(Tree_Info);
+			return true;
 		}
-		return true;
 	}else{
-		logger::debug(LOGGER_P1,"invalid block number, programming error");
+		logger::debug(LOGGER_P1,"invalid block number, programmer error");
 		exit(1);
 	}
 }

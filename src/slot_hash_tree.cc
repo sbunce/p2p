@@ -12,6 +12,10 @@ slot_hash_tree::slot_hash_tree(
 	IP = IP_in;
 	root_hash = root_hash_in;
 	file_size = file_size_in;
+
+	#ifdef CORRUPT_HASH_BLOCKS
+	std::srand(time(NULL));
+	#endif
 }
 
 void slot_hash_tree::info(std::vector<upload_info> & UI)
@@ -38,6 +42,12 @@ void slot_hash_tree::send_block(const std::string & request, std::string & send)
 	}else{
 		//hash tree not downloading, see if it is in the share
 		if(Hash_Tree.read_block(Tree_Info, block_number, send)){
+			#ifdef CORRUPT_HASH_BLOCK_TEST
+			if(std::rand() % 5 == 0){
+				logger::debug(LOGGER_P1,"CORRUPT HASH BLOCK TEST, block ",block_number," -> ",*IP);
+				send[0] = ~send[0];
+			}
+			#endif
 			send = global::P_BLOCK + send;
 			Speed_Calculator.update(send.size());
 			update_percent(block_number);

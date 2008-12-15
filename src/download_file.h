@@ -121,7 +121,6 @@ private:
 		}
 
 		enum state{
-			ABUSIVE,        //server violated protocol but has not yet been disconnected
 			REQUEST_SLOT,   //need to request a slot
 			AWAITING_SLOT,  //slot requested, awaiting slot
 			REQUEST_BLOCKS, //slot received, requesting blocks
@@ -159,7 +158,7 @@ private:
 	hash_check  - checks partial download integrity (run in thread spawned in ctor)
 	write_block - writes a file block
 	*/
-	void hash_check(const hash_tree::tree_info & Tree_Info);
+	void hash_check(hash_tree::tree_info Tree_Info);
 	void write_block(boost::uint64_t block_number, std::string & block);
 
 	DB_share DB_Share;

@@ -1,8 +1,10 @@
 #ifndef H_SHA
 #define H_SHA
 
-//custom
-#include "global.h"
+//global.h not included intentionally because of circular dependency
+
+//boost
+#include <boost/cstdint.hpp>
 
 //std
 #include <algorithm>
@@ -45,11 +47,9 @@ public:
 
 	/*
 	HASH_LENGTH     - length (in bytes) of the binary hash that raw_hash() returns
-	MIN_DATA_SIZE   - hashing a data block less than this size (in bytes) is insecure
 	HEX_HASH_LENGTH - length (in bytes) of the hex hash that hex_hash returns
 	*/
 	static const int HASH_SIZE = 20;
-	static const int MIN_DATA_SIZE = 64;
 	static const int HEX_HASH_SIZE = 40;
 
 private:
