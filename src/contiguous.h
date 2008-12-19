@@ -208,19 +208,16 @@ public:
 		return range.end();
 	}
 
-	/*
-	If there are no more elements to add the contiguous instantiation is
-	considered complete.
-	*/
-	bool complete()
-	{
-		return start_key == end_key;
-	}
-
 	//erase element with key TK
 	void erase(const T_key & TK)
 	{
 		range.erase(TK);
+	}
+
+	//find element with key TK
+	typename std::map<T_key, T_val>::iterator find(const T_key & TK)
+	{
+		return range.find(TK);
 	}
 
 	//insert element in to range
@@ -264,6 +261,18 @@ public:
 			HC = tmp - 1;
 			return true;
 		}
+	}
+
+	//returns the lower boundary of the range (inclusive)
+	const T_key & start_range()
+	{
+		return start_key;
+	}
+
+	//returns upper boundary of the range (exclusive)
+	const T_key & end_range()
+	{
+		return end_key;
 	}
 
 	/*

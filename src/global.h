@@ -5,8 +5,9 @@
 //#define NDEBUG
 
 //testing features, uncomment to enable
-#define CORRUPT_HASH_BLOCK_TEST
-#define CORRUPT_FILE_BLOCK_TEST
+//#define CORRUPT_HASH_BLOCK_TEST
+//#define CORRUPT_FILE_BLOCK_TEST
+//#define ALLOW_LOCALHOST_CONNECTION
 
 /*
 This stops compilation when boost is too old. The MIN_MAJOR_VERSION and
@@ -56,7 +57,6 @@ namespace portable_sleep
 	{
 		//if milliseconds = 0 then yield should be used
 		assert(milliseconds != 0);
-
 		#ifdef WIN32
 		Sleep(milliseconds);
 		#else

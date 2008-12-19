@@ -23,7 +23,7 @@ class download_hash_tree : public download
 {
 public:
 	download_hash_tree(
-		const std::string & root_hash_hex_in,
+		const std::string & root_hash_in,
 		const boost::uint64_t & download_file_size_in,
 		const std::string & download_file_name_in
 	);
@@ -74,7 +74,7 @@ private:
 	*/
 	bool download_complete;
 
-	std::string root_hash_hex;        //root hash of the hash tree downloading
+	std::string root_hash;        //root hash of the hash tree downloading
 	std::string hash_name;            //the name of this hash
 
 	/*

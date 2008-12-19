@@ -7,6 +7,7 @@
 //custom
 #include "convert.h"
 #include "DB_blacklist.h"
+#include "DB_download.h"
 #include "DB_share.h"
 #include "encryption.h"
 #include "global.h"
@@ -174,11 +175,16 @@ private:
 	std::string process_request;
 
 	/*
-Add this info
-	close_slot      - frees slot memory in Slot, sets pointer to NULL to indicate empty
-	find_empty_slot - locates and empty slot
-	                  returns true and sets slot_num if empty slot found
-	                  returns false if all slots full (this should trigger blacklist)
+	close_slot        - frees slot memory in Slot, sets pointer to NULL to indicate empty
+	find_empty_slot   - locates and empty slot
+	                    returns true and sets slot_num if empty slot found
+	                    returns false if all slots full (this should trigger blacklist)
+	process           - decrypt incoming bytes, break apart individual messages, send
+	                    messages to processing functions
+	request_slot_hash - prepares response to a request for a hash tree slot
+	request_slot_file - prepares response to a request for a file slot
+	send_block        - prepares response for a hash block or file block request
+	uploads           - returns information about files currently uploading
 	*/
 	void close_slot(const std::string & request);
 	bool find_empty_slot(int & slot_num);
@@ -193,6 +199,7 @@ Add this info
 	std::string prime_remote_result; //holds prime and incoming result for key exchange
 	encryption Encryption;           //object to do stream cyphers
 
+	DB_download DB_Download;
 	DB_share DB_Share;
 	hash_tree Hash_Tree;
 };

@@ -35,7 +35,7 @@ class download_file : public download
 {
 public:
 	download_file(
-		const std::string & root_hash_hex_in,
+		const std::string & root_hash_in,
 		const std::string & file_name_in, 
 		const std::string & file_path_in,
 		const boost::uint64_t & file_size_in
@@ -58,7 +58,7 @@ public:
 
 private:
 
-	boost::thread hashing_thread;     //hashing thread
+	boost::thread hashing_thread;     //thread to check file
 	bool hashing;                     //true if hashing
 	atomic_int<int> hashing_percent;  //percent done hashing
 	boost::uint64_t first_unreceived; //block at end of file upon download start + 1
@@ -74,18 +74,12 @@ private:
 	bool _visible;
 
 	/*
-	These variables are only to be used by the hash_check() thread.
-	*/
-	std::string thread_root_hash_hex;
-	std::string thread_file_path;
-
-	/*
 	After P_CLOSE_SLOT is sent to all servers and there are no pending responses
 	from any server this should be set to true.
 	*/
 	bool download_complete;
 
-	std::string root_hash_hex;    //hash tree root hash
+	std::string root_hash;        //hash tree root hash
 	std::string file_name;        //name of the file
 	std::string file_path;        //path to write file to
 	boost::uint64_t file_size;    //size of the file(bytes)
@@ -158,7 +152,7 @@ private:
 	hash_check  - checks partial download integrity (run in thread spawned in ctor)
 	write_block - writes a file block
 	*/
-	void hash_check(hash_tree::tree_info Tree_Info);
+	void hash_check(hash_tree::tree_info Tree_Info, std::string file_path);
 	void write_block(boost::uint64_t block_number, std::string & block);
 
 	DB_share DB_Share;

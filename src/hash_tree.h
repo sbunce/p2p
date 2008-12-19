@@ -4,6 +4,7 @@
 //boost
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
+#include <boost/thread/mutex.hpp>
 
 //custom
 #include "atomic_bool.h"
@@ -42,43 +43,79 @@ public:
 			const boost::uint64_t file_size_in
 		):
 			root_hash(root_hash_in),
-			file_size(file_size_in),
-			highest_good(0)
+			file_size(file_size_in)
 		{
 			file_size_to_tree_hash(file_size, row);
 			block_count = row_to_block_count(row);
 			file_hash_offset = row_to_file_hash_offset(row);
 			tree_size = file_size_to_tree_size(file_size);
 
-			Contiguous = NULL;
-		}
+			Contiguous = boost::shared_ptr<contiguous<boost::uint64_t,
+				std::string> >(new contiguous<boost::uint64_t, std::string>(0, block_count));
+			Contiguous_mutex = boost::shared_ptr<boost::mutex>(new boost::mutex());
 
-		~tree_info()
-		{
-			if(Contiguous != NULL){
-				delete Contiguous;
-				Contiguous = NULL;
+			if(file_size % global::FILE_BLOCK_SIZE == 0){
+				file_block_count = file_size / global::FILE_BLOCK_SIZE;
+			}else{
+				file_block_count = file_size / global::FILE_BLOCK_SIZE + 1;
+			}
+
+			if(file_size % global::FILE_BLOCK_SIZE == 0){
+				last_file_block_size = global::FILE_BLOCK_SIZE;
+			}else{
+				last_file_block_size = file_size % global::FILE_BLOCK_SIZE;
 			}
 		}
 
+		//returns root hash of tree
+		const std::string & get_root_hash()
+		{
+			return root_hash;
+		}
+
+		//returns number of hash blocks in tree
 		const boost::uint64_t & get_block_count()
 		{
 			return block_count;
 		}
 
-		const boost::uint64_t & get_file_size()
-		{
-			return file_size;
-		}
-
+		//returns size of tree in bytes
 		const boost::uint64_t & get_tree_size()
 		{
 			return tree_size;
 		}
 
-		const boost::uint64_t & get_highest_good()
+		//returns number of file blocks in file the tree is for
+		const boost::uint64_t & get_file_block_count()
 		{
-			return highest_good;
+			return file_block_count;
+		}
+
+		//returns size of file the tree is for
+		const boost::uint64_t & get_file_size()
+		{
+			return file_size;
+		}
+
+		//returns size of the last file block
+		const boost::uint64_t & get_last_file_block_size()
+		{
+			return last_file_block_size;
+		}
+
+		/*
+		Returns true and sets highest_good if there is a good range of blocks in
+		the hash tree. Returns false if there are no good blocks yet.
+		*/
+		const bool highest_good(boost::uint64_t & HG)
+		{
+			HG = Contiguous->start_range();
+			if(HG != 0){
+				--HG;
+				return true;
+			}else{
+				return false;
+			}
 		}
 
 		/*
@@ -103,10 +140,12 @@ public:
 		boost::uint64_t file_size; //size of file hash tree is for
 
 		//these are all calculated based on root_hash and file_size
-		std::deque<boost::uint64_t> row;  //number of hashes in each row
-		boost::uint64_t block_count;      //total hash block count
-		boost::uint64_t file_hash_offset; //offset (bytes) to start of file hashes
-		boost::uint64_t tree_size;        //size of the hash tree (bytes)
+		std::deque<boost::uint64_t> row;      //number of hashes in each row
+		boost::uint64_t block_count;          //hash block count
+		boost::uint64_t tree_size;            //size of the hash tree (bytes)
+		boost::uint64_t file_hash_offset;     //offset (bytes) to start of file hashes
+		boost::uint64_t file_block_count;     //file block count
+		boost::uint64_t last_file_block_size; //size of last file block
 
 		/*
 		Hash block mapped to IP. This is only needed if adding blocks to the hash
@@ -114,16 +153,14 @@ public:
 
 		Note: If this is NULL when passed to write_block program will be terminated.
 		*/
-		contiguous<boost::uint64_t, std::string> * Contiguous;
+		boost::shared_ptr<contiguous<boost::uint64_t, std::string> > Contiguous;
+		boost::shared_ptr<boost::mutex> Contiguous_mutex; //locks all access to Contiguous
 
 		/*
 		When a block is detected as being bad all blocks that were requested from
 		the server that sent the bad block are put here to be rerequested.
 		*/
 		std::vector<boost::uint64_t> bad_block;
-
-		//number of the highest good block (all blocks before this also good)
-		boost::uint64_t highest_good;
 	};
 
 	/*
@@ -178,7 +215,7 @@ public:
 		return sha::HASH_SIZE * file_hash_to_tree_hash(file_size_to_file_hash(file_size));
 	}
 
-//private:
+private:
 
 	/*
 	Given a block number, sets info to the offset and length of the hash block.
@@ -220,8 +257,8 @@ public:
 				//locate parent
 				if(x != 0){
 					//only set parent if not on first row (parent of first row is root hash)
-					parent = offset - row[x-1]  //start of previous row
-						+ block - block_count; //hash offset in to previous row is block offset in to current row
+					parent = offset - row[x-1] //start of previous row
+						+ block - block_count;  //hash offset in to previous row is block offset in to current row
 				}
 
 				//convert to bytes

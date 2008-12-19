@@ -1,10 +1,23 @@
 TODO
 
+-Downloads show 0B when reading 0 bytes per second. It should be 0 B/s.
+
+-Download specific speed doesn't have good enough resolution.
+
+-Look in to what unit tests can be added. Definetlely do one for contiguous.
+
+-When hash tree download cancelled the download_file file doesn't get removed.
+
+-Free up file slot after P_ERROR is sent in server_buffer.
+
+-Need a check to make sure client not requesting same slot for same file
+multiple times.
+
+-Rename contiguous to contiguous_map, and create a contiguous_set.
+
 -Need better signaling on when share_index should start indexing.
 
--Get client_server_bridge working for hash trees. Use the hash tree recursive
-function to figure out how many blocks are in each row so it's known when blocks
-are checked.
+-Share index should not run while resumed downloads are hash checking.
 
 
 THINK ABOUT

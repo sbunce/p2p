@@ -2,6 +2,7 @@
 import boost
 import gtkmm
 import system
+import unit_test
 
 #std
 import fnmatch
@@ -82,6 +83,11 @@ static_libs = [
 	boost.static_lib('system'),
 	boost.static_lib('thread')
 ]
+
+print 'building with',env.GetOption('num_jobs'),'threads'
+
+#do unit tests
+#env.unit_test('blarg.cc');
 
 #compile different object groups
 src_gui_obj = env_gui.Object(src_gui)

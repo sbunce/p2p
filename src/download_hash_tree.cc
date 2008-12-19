@@ -1,20 +1,21 @@
 #include "download_hash_tree.h"
 
 download_hash_tree::download_hash_tree(
-	const std::string & root_hash_hex_in,
+	const std::string & root_hash_in,
 	const boost::uint64_t & download_file_size_in,
 	const std::string & download_file_name_in
 ):
-	root_hash_hex(root_hash_hex_in),
+	root_hash(root_hash_in),
 	_download_file_size(download_file_size_in),
 	_download_file_name(download_file_name_in),
 	download_complete(false),
 	close_slots(false),
 	_cancel(false),
 	_visible(true),
-	Tree_Info(root_hash_hex, _download_file_size)
+	Tree_Info(root_hash, _download_file_size)
 {
-	client_server_bridge::start_download(root_hash_hex);
+	client_server_bridge::start_download(root_hash);
+
 	hash_name = _download_file_name + " HASH";
 
 	boost::uint64_t bad_block;
@@ -29,7 +30,9 @@ download_hash_tree::download_hash_tree(
 
 download_hash_tree::~download_hash_tree()
 {
-
+	if(_cancel){
+		client_server_bridge::finish_download(root_hash);
+	}
 }
 
 const bool & download_hash_tree::canceled()
@@ -54,7 +57,7 @@ const std::string & download_hash_tree::download_file_name()
 
 const std::string download_hash_tree::hash()
 {
-	return root_hash_hex;
+	return root_hash;
 }
 
 const std::string download_hash_tree::name()
@@ -88,7 +91,7 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 			//no free slots left, wait for one to free up
 			return download::NO_REQUEST;
 		}else{
-			request = global::P_REQUEST_SLOT_HASH + convert::hex_to_binary(root_hash_hex);
+			request = global::P_REQUEST_SLOT_HASH + convert::hex_to_binary(root_hash);
 			++slots_used;
 			expected.push_back(std::make_pair(global::P_SLOT_ID, global::P_SLOT_ID_SIZE));
 			expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
@@ -192,12 +195,15 @@ void download_hash_tree::response(const int & socket, std::string block)
 			//a block was received
 			block.erase(0, 1); //trim command
 
-std::cout << "block: " << conn->latest_request.front() << " size: " << block.size() << "\n";
-
 			//write hash only if not cancelled
 			if(!_cancel && !Hash_Tree.write_block(Tree_Info, conn->latest_request.front(), block, conn->IP)){
 				//hash file removed or download cancelled, stop download
 				stop();
+			}
+
+			boost::uint64_t highest_good;
+			if(Tree_Info.highest_good(highest_good)){
+				client_server_bridge::update_hash_tree_highest(root_hash, highest_good);
 			}
 
 			Request_Generator.fulfil(conn->latest_request.front());

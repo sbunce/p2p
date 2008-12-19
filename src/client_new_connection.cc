@@ -175,6 +175,14 @@ void client_new_connection::queue(download_connection DC)
 		return;
 	}
 
+	#ifndef ALLOW_LOCALHOST_CONNECTION
+	//stop connections to localhost
+	if(DC.IP.find("127.") != std::string::npos){
+		logger::debug(LOGGER_P1,"stopping connection to localhost");
+		return;
+	}
+	#endif
+
 	/*
 	Before using a thread, check to see if a connection to this server already
 	exists. If it does add the download connection to it.

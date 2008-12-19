@@ -3,8 +3,8 @@
 slot_file::slot_file(
 	std::string * IP_in,
 	const std::string & root_hash_in,
-	const boost::uint64_t & file_size_in,
-	const std::string & path_in
+	const std::string & path_in,
+	const boost::uint64_t & file_size_in
 ):
 	path(path_in),
 	block_count(0),
@@ -40,41 +40,51 @@ void slot_file::info(std::vector<upload_info> & UI)
 	));
 }
 
-void slot_file::send_block(const std::string & request, std::string & send)
+bool slot_file::read_block(const boost::uint64_t & block_num, std::string & send)
 {
-	boost::uint64_t block_number = convert::decode<boost::uint64_t>(request.substr(2, 8));
-	client_server_bridge::download_mode DM = client_server_bridge::is_downloading(root_hash);
-	if(DM == client_server_bridge::DOWNLOAD_FILE){
-		//client requested a block from a file the client is currently downloading
-		if(!client_server_bridge::is_available(root_hash, block_number)){
-			//block is not available to be sent, tell the client to wait
-			logger::debug(LOGGER_P1,"sending P_WAIT to ",*IP);
-			send += global::P_WAIT;
-			Speed_Calculator.update(global::P_WAIT_SIZE);
-			return;
-		}
-	}
-
 	std::fstream fin(path.c_str(), std::ios::in | std::ios::binary);
 	if(fin.is_open()){
 		//seek to the file_block the client wants (-1 for command space)
-		fin.seekg(block_number * global::FILE_BLOCK_SIZE);
+		fin.seekg(block_num * global::FILE_BLOCK_SIZE);
 		fin.read(send_block_buff, global::FILE_BLOCK_SIZE);
 		#ifdef CORRUPT_FILE_BLOCK_TEST
 		if(std::rand() % 5 == 0){
-			logger::debug(LOGGER_P1,"CORRUPT FILE BLOCK TEST, block ",block_number," -> ",*IP);
+			logger::debug(LOGGER_P1,"CORRUPT FILE BLOCK TEST, block ",block_num," -> ",*IP);
 			send_block_buff[0] = ~send_block_buff[0];
 		}
 		#endif
 		send += global::P_BLOCK;
 		send.append(send_block_buff, fin.gcount());
 		Speed_Calculator.update(send.size());
-		update_percent(block_number);
+		update_percent(block_num);
+		return true;
 	}else{
-		//file not found in share, error
-		logger::debug(LOGGER_P1,"server could not open file: ",path);
-		send += global::P_ERROR;
-		Speed_Calculator.update(global::P_ERROR_SIZE);
+		return false;
+	}
+}
+
+void slot_file::send_block(const std::string & request, std::string & send)
+{
+	boost::uint64_t block_num = convert::decode<boost::uint64_t>(request.substr(2, 8));
+
+	if(block_num >= block_count){
+		//client requested block higher than last block
+		logger::debug(LOGGER_P1,*IP," requested block higher than maximum, blacklist");
+		DB_blacklist::add(*IP);
+	}
+
+	client_server_bridge::download_state DS = client_server_bridge::file_block_available(root_hash, block_num);
+	if(DS == client_server_bridge::DOWNLOADING_NOT_AVAILABLE){
+		logger::debug(LOGGER_P1,"sending P_WAIT to ",*IP);
+		send += global::P_WAIT;
+		Speed_Calculator.update(global::P_WAIT_SIZE);
+	}else{
+		if(!read_block(block_num, send)){
+			//could not read file
+			logger::debug(LOGGER_P1,"server could not open file: ",path);
+			send += global::P_ERROR;
+			Speed_Calculator.update(global::P_ERROR_SIZE);
+		}
 	}
 }
 

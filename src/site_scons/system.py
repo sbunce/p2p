@@ -5,11 +5,17 @@ import environment
 import search
 
 #std
+import os
 import sys
 
-#Setup platform specific environment options.
+#setup platform specific environment options
 def env_setup(env):
 	environment.define_keys(env)
+
+	#start n build threads where n is the # of CPUs
+	num_cpu = int(os.environ.get('NUM_CPU', 2))
+	env.SetOption('num_jobs', num_cpu)
+
 	if sys.platform == 'linux2':
 		env['CCFLAGS'].append('-O3')   #max optimizations
 		env['LIBS'].append('dl')       #needed for sqlite3

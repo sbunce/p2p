@@ -27,7 +27,7 @@ download_file * download_factory::start_file(download_hash_tree * DHT, std::list
 
 bool download_factory::start_hash(const download_info & info, download *& Download, std::list<download_connection> & servers)
 {
-	if(DB_Share.hash_exists(info.hash)){
+	if(DB_Share.lookup_hash(info.hash)){
 		//file exists in share, don't redownload it
 		logger::debug(LOGGER_P1,"file '",info.name,"' already exists in share");
 		return false;

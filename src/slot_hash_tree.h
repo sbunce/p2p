@@ -2,6 +2,7 @@
 #define H_SLOT_HASH_TREE
 
 //custom
+#include "client_server_bridge.h"
 #include "DB_blacklist.h"
 #include "DB_share.h"
 #include "global.h"

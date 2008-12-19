@@ -11,24 +11,20 @@ hash_tree::hash_tree():
 
 bool hash_tree::check(tree_info & Tree_Info, boost::uint64_t & bad_block)
 {
-	assert(Tree_Info.Contiguous == NULL);
-
 	//create empty file for hash tree if it doesn't exist
 	std::fstream fin((global::HASH_DIRECTORY+Tree_Info.root_hash).c_str(), std::ios::in);
 	if(!fin.is_open()){
 		//hash tree does not exist yet
 		fin.open((global::HASH_DIRECTORY+Tree_Info.root_hash).c_str(), std::ios::out);
 		bad_block = 0;
-		Tree_Info.Contiguous = new contiguous<boost::uint64_t,
-			std::string>(0, Tree_Info.block_count);
 		return false;
 	}
 
 	for(boost::uint64_t x=0; x<Tree_Info.block_count; ++x){
 		if(!check_block(Tree_Info, x)){
 			logger::debug(LOGGER_P1,"bad block ",x," in tree ",Tree_Info.root_hash);
-			Tree_Info.Contiguous = new contiguous<boost::uint64_t,
-				std::string>(x, Tree_Info.block_count);
+			boost::mutex::scoped_lock lock(*Tree_Info.Contiguous_mutex);
+			Tree_Info.Contiguous->trim(x);
 			bad_block = x;
 			return false;
 		}
@@ -89,7 +85,7 @@ bool hash_tree::check_block(const tree_info & Tree_Info, const boost::uint64_t &
 
 void hash_tree::check_contiguous(tree_info & Tree_Info)
 {
-	assert(Tree_Info.Contiguous != NULL);
+	boost::mutex::scoped_lock lock(*Tree_Info.Contiguous_mutex);
 	contiguous<boost::uint64_t, std::string>::contiguous_iterator c_iter_cur, c_iter_end;
 	c_iter_cur = Tree_Info.Contiguous->begin_contiguous();
 	c_iter_end = Tree_Info.Contiguous->end_contiguous();
@@ -103,7 +99,7 @@ void hash_tree::check_contiguous(tree_info & Tree_Info)
 			#else
 
 			//blacklist server that sent bad block
-			logger::debug(LOGGER_P1,c_iter_cur->second," sent bad hash block, blacklist");
+			logger::debug(LOGGER_P1,c_iter_cur->second," sent bad hash block ",c_iter_cur->first);
 			DB_blacklist::add(c_iter_cur->second);
 
 			//bad block, add all blocks this server sent to bad_block
@@ -374,7 +370,6 @@ bool hash_tree::read_block(const tree_info & Tree_Info, const boost::uint64_t & 
 
 bool hash_tree::write_block(tree_info & Tree_Info, const boost::uint64_t & block_num, const std::string & block, const std::string & IP)
 {
-	assert(Tree_Info.Contiguous != NULL);
 	std::pair<boost::uint64_t, unsigned int> info;
 	if(block_info(block_num, Tree_Info.row, info)){
 		if(info.second != block.size()){
@@ -393,12 +388,16 @@ bool hash_tree::write_block(tree_info & Tree_Info, const boost::uint64_t & block
 			fout.seekp(info.first, std::ios::beg);
 			fout.write(block.data(), block.size());
 			fout.close(); //must be closed to flush to file, check_contiguous can error if this is not here
+			{
+			boost::mutex::scoped_lock lock(*Tree_Info.Contiguous_mutex);
 			Tree_Info.Contiguous->insert(std::make_pair(block_num, IP));
+			}
 			check_contiguous(Tree_Info);
 			return true;
 		}
 	}else{
-		logger::debug(LOGGER_P1,"invalid block number, programmer error");
-		exit(1);
+		logger::debug(LOGGER_P1,"client requested invalid block number");
+		DB_blacklist::add(IP);
+		return false;
 	}
 }

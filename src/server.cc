@@ -162,6 +162,13 @@ void server::new_connection(const int & listener)
 		return;
 	}
 
+	#ifndef ALLOW_LOCALHOST_CONNECTION
+	if(new_IP.find("127.") != std::string::npos){
+		logger::debug(LOGGER_P1,"stopping connection to localhost");
+		return;
+	}
+	#endif
+
 	//make sure the client isn't already connected
 	sockaddr_in temp_addr;
 	for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){

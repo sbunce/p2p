@@ -76,8 +76,9 @@ void server_index::scan_hashes()
 					//file not a hash tree, it may be "upside_down" or "rightside_up" temporary files
 					continue;
 				}
-				if(client_server_bridge::is_downloading(directory_iter->path().filename()) == client_server_bridge::NOT_DOWNLOADING
-					&& !DB_Share.hash_exists(directory_iter->path().filename()))
+
+				if(!client_server_bridge::is_downloading(directory_iter->path().filename())
+					&& !DB_Share.lookup_hash(directory_iter->path().filename()))
 				{
 					std::remove((global::HASH_DIRECTORY+directory_iter->path().filename()).c_str());
 				}
