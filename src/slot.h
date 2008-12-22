@@ -14,6 +14,11 @@ public:
 	slot();
 
 	/*
+	get_root_hash - returns hash this slot is for
+	*/
+	const std::string & get_root_hash();
+
+	/*
 	send_block  - answers a send block request
 	              request: the P_BLOCK request
 	              send: the response that is prepared in this function

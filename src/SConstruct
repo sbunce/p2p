@@ -2,12 +2,6 @@
 import boost
 import gtkmm
 import system
-import unit_test
-
-#std
-import fnmatch
-import os
-import sys
 
 SConscript([
 	'#dep_graph/SConstruct',
@@ -15,7 +9,8 @@ SConscript([
 	'#libtommath/SConstruct',
 	'#overlay_sim/SConstruct',
 	'#site_scons/SConstruct',
-	'#test_manager/SConstruct'
+	'#test_manager/SConstruct',
+	'#unit_tests/SConstruct'
 ])
 
 #source files for objects to be linked in to p2p_gui
@@ -69,9 +64,6 @@ src_common = [
 ]
 
 env = Environment()
-env['CPPPATH'] = ['#/libtommath', '#/libsqlite3'] #header search path
-env['LIBPATH'] = ['#libtommath', '#libsqlite3']   #library search path
-env['LIBS'] = ['tommath', 'sqlite3']              #libraries to link in
 system.env_setup(env)
 boost.env_setup(env)
 env_gui = env.Clone()
@@ -85,9 +77,6 @@ static_libs = [
 ]
 
 print 'building with',env.GetOption('num_jobs'),'threads'
-
-#do unit tests
-#env.unit_test('blarg.cc');
 
 #compile different object groups
 src_gui_obj = env_gui.Object(src_gui)

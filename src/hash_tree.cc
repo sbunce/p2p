@@ -86,7 +86,7 @@ bool hash_tree::check_block(const tree_info & Tree_Info, const boost::uint64_t &
 void hash_tree::check_contiguous(tree_info & Tree_Info)
 {
 	boost::mutex::scoped_lock lock(*Tree_Info.Contiguous_mutex);
-	contiguous<boost::uint64_t, std::string>::contiguous_iterator c_iter_cur, c_iter_end;
+	contiguous_map<boost::uint64_t, std::string>::contiguous_iterator c_iter_cur, c_iter_end;
 	c_iter_cur = Tree_Info.Contiguous->begin_contiguous();
 	c_iter_end = Tree_Info.Contiguous->end_contiguous();
 	while(c_iter_cur != c_iter_end){
@@ -104,7 +104,7 @@ void hash_tree::check_contiguous(tree_info & Tree_Info)
 
 			//bad block, add all blocks this server sent to bad_block
 			std::vector<boost::uint64_t> bad;
-			contiguous<boost::uint64_t, std::string>::iterator iter_cur, iter_end;
+			contiguous_map<boost::uint64_t, std::string>::iterator iter_cur, iter_end;
 			iter_cur = Tree_Info.Contiguous->begin();
 			iter_end = Tree_Info.Contiguous->end();
 			while(iter_cur != iter_end){

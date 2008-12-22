@@ -2,6 +2,7 @@
 
 client_server_bridge * client_server_bridge::Client_Server_Bridge = NULL;
 boost::mutex client_server_bridge::Mutex;
+atomic_bool client_server_bridge::server_index_blocked(true);
 
 client_server_bridge::client_server_bridge()
 {
@@ -42,7 +43,7 @@ void client_server_bridge::add_file_block_priv(const std::string & hash, const b
 	iter = File_State.find(hash);
 	assert(iter != File_State.end());
 	iter->second.initialized = true;
-	iter->second.Contiguous.insert(std::make_pair(block_num, 'x'));
+	iter->second.Contiguous.insert(block_num);
 	iter->second.Contiguous.trim_contiguous();
 }
 
@@ -108,7 +109,7 @@ client_server_bridge::download_state client_server_bridge::file_block_available_
 					return DOWNLOADING_AVAILABLE;
 				}else{
 					//block not in contiguous space, check incontiguous blocks
-					contiguous<boost::uint64_t, char>::iterator inc_iter;
+					contiguous_set<boost::uint64_t>::iterator inc_iter;
 					inc_iter = iter->second.Contiguous.find(block_num);
 					if(inc_iter == iter->second.Contiguous.end()){
 						return DOWNLOADING_NOT_AVAILABLE;

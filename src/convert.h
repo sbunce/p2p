@@ -121,7 +121,7 @@ namespace convert
 
 	static std::string binary_to_hex(const std::string & binary)
 	{
-		char hex[] = "0123456789ABCDEF";
+		static const char hex[] = "0123456789ABCDEF";
 		std::string hash;
 		for(int x=0; x<binary.size(); ++x){
 			hash += hex[(int)((binary[x] >> 4) & 15)]; //left side of byte

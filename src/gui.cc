@@ -123,12 +123,13 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	//add elements to the notebook
 	notebook->append_page(*search_VBox, *search_label);
 	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
+	notebook->append_page(*tracker_VBox, *tracker_label);
+	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
 	notebook->append_page(*download_scrolled_window, *download_label);
 	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
 	notebook->append_page(*upload_scrolled_window, *upload_label);
 	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
-	notebook->append_page(*tracker_VBox, *tracker_label);
-	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
+
 
 	//add items to the main VBox
 	main_VBox->pack_start(*menubar, Gtk::PACK_SHRINK, 0);

@@ -39,7 +39,9 @@ download_file::~download_file()
 {
 	hashing_thread.interrupt();
 	hashing_thread.join();
-	if(!_cancel){
+	if(_cancel){
+		std::remove(file_path.c_str());
+	}else{
 		DB_Share.add_entry(root_hash, file_size, file_path);
 	}
 	client_server_bridge::finish_download(root_hash);

@@ -58,14 +58,27 @@ void server_buffer::close_slot(const std::string & request)
 	}
 }
 
-bool server_buffer::find_empty_slot(int & slot_num)
+bool server_buffer::find_empty_slot(const std::string & root_hash, int & slot_num)
 {
+	//check to make sure slot for file not already requested
+	for(int x=0; x<256; ++x){
+		if(Slot[x] != NULL && Slot[x]->get_root_hash() == root_hash){
+			logger::debug(LOGGER_P1,IP," requested slot for ",root_hash," twice");
+			DB_blacklist::add(IP);
+			return false;
+		}
+	}
+
+	//find empty slot
 	for(int x=0; x<256; ++x){
 		if(Slot[x] == NULL){
 			slot_num = x;
 			return true;
 		}
 	}
+
+	logger::debug(LOGGER_P1,IP," requested more than 256 slots");
+	DB_blacklist::add(IP);
 	return false;
 }
 
@@ -138,14 +151,11 @@ void server_buffer::request_slot_hash(const std::string & request, std::string &
 	boost::uint64_t file_size;
 	if(DB_Download.lookup_hash(root_hash, file_size)){
 		int slot_num;
-		if(find_empty_slot(slot_num)){
+		if(find_empty_slot(root_hash, slot_num)){
 			logger::debug(LOGGER_P1,"granting slot ",slot_num," to ",IP);
 			Slot[slot_num] = new slot_hash_tree(&IP, root_hash, file_size);
 			send += global::P_SLOT_ID;
 			send += (char)slot_num;
-		}else{
-			logger::debug(LOGGER_P1,IP," requested more than 256 slots");
-			DB_blacklist::add(IP);
 		}
 		return;
 	}
@@ -153,14 +163,11 @@ void server_buffer::request_slot_hash(const std::string & request, std::string &
 	//check if hash tree exists in share
 	if(DB_Share.lookup_hash(root_hash, file_size)){
 		int slot_num;
-		if(find_empty_slot(slot_num)){
+		if(find_empty_slot(root_hash, slot_num)){
 			logger::debug(LOGGER_P1,"granting slot ",slot_num," to ",IP);
 			Slot[slot_num] = new slot_hash_tree(&IP, root_hash, file_size);
 			send += global::P_SLOT_ID;
 			send += (char)slot_num;
-		}else{
-			logger::debug(LOGGER_P1,IP," requested more than 256 slots");
-			DB_blacklist::add(IP);
 		}
 		return;
 	}
@@ -178,32 +185,24 @@ void server_buffer::request_slot_file(const std::string & request, std::string &
 	std::string file_path;
 	if(DB_Download.lookup_hash(root_hash, file_path, file_size)){
 		int slot_num;
-		if(find_empty_slot(slot_num)){
+		if(find_empty_slot(root_hash, slot_num)){
 			//slot available
 			logger::debug(LOGGER_P1,"granting file slot ",slot_num, " to ",IP);
 			Slot[slot_num] = new slot_file(&IP, root_hash, file_path, file_size);
 			send += global::P_SLOT_ID;
 			send += (char)slot_num;
-		}else{
-			//client requested more than 256 slots, blacklist them
-			logger::debug(LOGGER_P1,IP," requested more than 256 slots");
-			DB_blacklist::add(IP);
 		}
 		return;
 	}
 
 	if(DB_Share.lookup_hash(root_hash, file_path, file_size)){
 		int slot_num;
-		if(find_empty_slot(slot_num)){
+		if(find_empty_slot(root_hash, slot_num)){
 			//slot available
 			logger::debug(LOGGER_P1,"granting file slot ",slot_num, " to ",IP);
 			Slot[slot_num] = new slot_file(&IP, root_hash, file_path, file_size);
 			send += global::P_SLOT_ID;
 			send += (char)slot_num;
-		}else{
-			//client requested more than 256 slots, blacklist them
-			logger::debug(LOGGER_P1,IP," requested more than 256 slots");
-			DB_blacklist::add(IP);
 		}
 		return;
 	}

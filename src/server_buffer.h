@@ -187,7 +187,7 @@ private:
 	uploads           - returns information about files currently uploading
 	*/
 	void close_slot(const std::string & request);
-	bool find_empty_slot(int & slot_num);
+	bool find_empty_slot(const std::string & root_hash, int & slot_num);
 	void process(char * buff, const int & n_bytes);
 	void request_slot_hash(const std::string & request, std::string & send);
 	void request_slot_file(const std::string & request, std::string & send);

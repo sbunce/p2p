@@ -2,7 +2,7 @@
 
 encryption::encryption()
 {
-	g = "2"; //fast generater, supposed to be secure
+	g = "2"; //fast generater
 	s = number_generator::random_mpint(global::DH_KEY_SIZE);
 	State = waiting_for_prime;
 }

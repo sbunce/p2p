@@ -9,7 +9,7 @@
 //custom
 #include "atomic_bool.h"
 #include "convert.h"
-#include "contiguous.h"
+#include "contiguous_map.h"
 #include "DB_blacklist.h"
 #include "global.h"
 #include "request_generator.h"
@@ -50,8 +50,8 @@ public:
 			file_hash_offset = row_to_file_hash_offset(row);
 			tree_size = file_size_to_tree_size(file_size);
 
-			Contiguous = boost::shared_ptr<contiguous<boost::uint64_t,
-				std::string> >(new contiguous<boost::uint64_t, std::string>(0, block_count));
+			Contiguous = boost::shared_ptr<contiguous_map<boost::uint64_t,
+				std::string> >(new contiguous_map<boost::uint64_t, std::string>(0, block_count));
 			Contiguous_mutex = boost::shared_ptr<boost::mutex>(new boost::mutex());
 
 			if(file_size % global::FILE_BLOCK_SIZE == 0){
@@ -153,7 +153,7 @@ public:
 
 		Note: If this is NULL when passed to write_block program will be terminated.
 		*/
-		boost::shared_ptr<contiguous<boost::uint64_t, std::string> > Contiguous;
+		boost::shared_ptr<contiguous_map<boost::uint64_t, std::string> > Contiguous;
 		boost::shared_ptr<boost::mutex> Contiguous_mutex; //locks all access to Contiguous
 
 		/*

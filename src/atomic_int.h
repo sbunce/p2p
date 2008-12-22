@@ -53,6 +53,16 @@ public:
 		boost::mutex::scoped_lock lock(*Mutex);
 		return x <= rval.get_value();
 	}
+	const bool operator > (const atomic_int<T> & rval)
+	{
+		boost::mutex::scoped_lock lock(*Mutex);
+		return x > rval.get_value();
+	}
+	const bool operator < (const atomic_int<T> & rval)
+	{
+		boost::mutex::scoped_lock lock(*Mutex);
+		return x < rval.get_value();
+	}
 	//pre-increment
 	const T operator ++ ()
 	{

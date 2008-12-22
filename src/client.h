@@ -12,6 +12,7 @@
 #include "atomic_int.h"
 #include "client_buffer.h"
 #include "client_new_connection.h"
+#include "client_server_bridge.h"
 #include "DB_blacklist.h"
 #include "DB_download.h"
 #include "DB_client_preferences.h"

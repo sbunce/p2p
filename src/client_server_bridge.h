@@ -5,7 +5,8 @@
 #include <boost/thread/mutex.hpp>
 
 //custom
-#include "contiguous.h"
+#include "atomic_bool.h"
+#include "contiguous_set.h"
 #include "global.h"
 
 //std
@@ -114,6 +115,20 @@ public:
 		return Client_Server_Bridge->file_block_available_priv(hash, block_num);
 	}
 
+	/*
+	The client must resume all downloads before server indexing starts. Otherwise
+	if the server index hits a downloading file not yet resumed it will remove the
+	hash tree for it.
+	*/
+	static void unblock_server_index()
+	{
+		server_index_blocked = false;
+	}
+	static bool server_index_is_blocked()
+	{
+		return server_index_blocked;
+	}
+
 private:
 	client_server_bridge();
 
@@ -128,6 +143,9 @@ private:
 	//the one possible instance of DB_blacklist
 	static client_server_bridge * Client_Server_Bridge;
 	static boost::mutex Mutex; //mutex for all static public functions
+
+	//used by server_index_is_blocked() to indicate whether indexing can start
+	static atomic_bool server_index_blocked;
 
 	//used to keep track of progress of downloading hash tree
 	class hash_tree_state
@@ -152,8 +170,7 @@ private:
 		bool initialized;
 
 		//keeps track of leading edge of blocks
-//DEBUG, replace this with contiguous_set
-		contiguous<boost::uint64_t, char> Contiguous;
+		contiguous_set<boost::uint64_t> Contiguous;
 	};
 	std::map<std::string, file_state> File_State;
 

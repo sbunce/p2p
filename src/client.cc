@@ -281,6 +281,8 @@ void client::reconnect_unfinished()
 		start_download(*iter_cur);
 		++iter_cur;
 	}
+
+	client_server_bridge::unblock_server_index();
 }
 
 void client::remove_complete()

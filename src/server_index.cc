@@ -1,8 +1,7 @@
 #include "server_index.h"
 
 server_index::server_index():
-	indexing(false),
-	byte_count(0)
+	indexing(false)
 {
 	boost::filesystem::create_directory(global::SHARE_DIRECTORY);
 	indexing_thread = boost::thread(boost::bind(&server_index::index_share, this));
@@ -133,12 +132,10 @@ bool server_index::is_indexing()
 
 void server_index::index_share()
 {
-	/*
-	If hashes aren't in the DB or if they're not downloading they're deleted. This
-	sleep gives downloads a chance to start before their associated hashes are
-	deleted.
-	*/
-	portable_sleep::ms(5000);
+	//delay start indexing until all downloads resumed
+	while(client_server_bridge::server_index_is_blocked()){
+		portable_sleep::ms(100);
+	}
 
 	while(true){
 		boost::this_thread::interruption_point();

@@ -32,6 +32,7 @@ download_hash_tree::~download_hash_tree()
 {
 	if(_cancel){
 		client_server_bridge::finish_download(root_hash);
+		std::remove((global::DOWNLOAD_DIRECTORY+_download_file_name).c_str());
 	}
 }
 

@@ -16,6 +16,11 @@ def env_setup(env):
 	num_cpu = int(os.environ.get('NUM_CPU', 2))
 	env.SetOption('num_jobs', num_cpu)
 
+	env['CPPPATH'] = ['#/libtommath', '#/libsqlite3'] #header search path
+	env['LIBPATH'] = ['#libtommath', '#libsqlite3']   #library search path
+	env['LIBS'] = ['tommath', 'sqlite3']              #libraries to link in
+
+	#platform specific options
 	if sys.platform == 'linux2':
 		env['CCFLAGS'].append('-O3')   #max optimizations
 		env['LIBS'].append('dl')       #needed for sqlite3

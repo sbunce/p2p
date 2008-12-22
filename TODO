@@ -1,30 +1,23 @@
 TODO
 
--Downloads show 0B when reading 0 bytes per second. It should be 0 B/s.
+-Combine hash tree's in to one file. Keep track of starting locations in DB.
+Perhaps have a memmove type opteration one a file where hashes can be moved to
+get rid of gaps due to removed files. The intermediate step of the memmove
+operation would basically be a journal.
 
--Download specific speed doesn't have good enough resolution.
 
--Look in to what unit tests can be added. Definetlely do one for contiguous.
+UNIT TESTS
 
--When hash tree download cancelled the download_file file doesn't get removed.
-
--Free up file slot after P_ERROR is sent in server_buffer.
-
--Need a check to make sure client not requesting same slot for same file
-multiple times.
-
--Rename contiguous to contiguous_map, and create a contiguous_set.
-
--Need better signaling on when share_index should start indexing.
-
--Share index should not run while resumed downloads are hash checking.
+-all database classes
+-hash_tree
+-request_generator
 
 
 THINK ABOUT
 
 -Think about CMWC4096 PRNG seed issue.
 
--Think about detecting protocol via knowing handshake size/port.
+-Think about how ISP might detect protocol via knowing handshake size/port.
 
 
 DEFERRED FEATURES
@@ -49,7 +42,12 @@ because it would allow writes to slow down reads and visa versa.
 Probably just rename the files according to some rules. It doesn't matter too
 much since the hashes stay the same.
 
--Combine hash tree's in to one file. Keep track of starting locations in DB.
-Perhaps have a memmove type opteration one a file where hashes can be moved to
-get rid of gaps due to removed files. The intermediate step of the memmove
-operation would basically be a journal.
+-Have a directory where partially downloaded files reside. When a file finishes
+downloading it can be moved to a directory which can be indexed normally. This
+way users can rename files and do what they want and files will just get
+rehashed without complication.
+
+
+IDEAS
+
+-Have a tab that shows share stats, upload/download stats, duplicate files, etc.

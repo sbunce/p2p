@@ -43,9 +43,6 @@ private:
 	boost::thread indexing_thread;
 	atomic_bool indexing; //true if server_index is currently indexing files
 
-	//the total byte count for all the files in indexing_queue
-	atomic_int<boost::uint64_t> byte_count;
-
 	/*
 	generate_hash - generates hash tree for file
 	index_share   - removes files listed in index that don't exist in share
