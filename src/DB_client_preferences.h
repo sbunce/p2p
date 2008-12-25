@@ -28,7 +28,7 @@ public:
 	*/
 	std::string get_download_directory();
 	void set_download_directory(const std::string & download_directory);
-	unsigned int get_speed_limit_uint();
+	unsigned int get_speed_limit();
 	void set_speed_limit(const unsigned int & speed_limit);
 	int get_max_connections();
 	void set_max_connections(const unsigned int & max_connections);

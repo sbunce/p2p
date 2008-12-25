@@ -6,13 +6,6 @@ get rid of gaps due to removed files. The intermediate step of the memmove
 operation would basically be a journal.
 
 
-UNIT TESTS
-
--all database classes
--hash_tree
--request_generator
-
-
 THINK ABOUT
 
 -Think about CMWC4096 PRNG seed issue.

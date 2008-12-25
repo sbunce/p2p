@@ -1,0 +1,22 @@
+
+XOR key distance metric
+
+Having the GUIDS and the root hashes be the same length and then
+storing root hashes on hosts which are "close" to the root hashes (by XOR'ing
+their GUID against the root hash) a la Kademlia.
+
+There needs to be a way to order the network by real distance (possibly measured
+by a trace route).
+
+Skip list is an idea that permeates all the overlay schemes I've seen.
+
+Could a chord network be setup where you locate a ring in your geographical area
+and only query that?
+
+Ring of rings.
+
+Overlay needs to factor in distance/latency.
+
+If other types of data are to be searchable over the network could the protocol
+be set up to support different kinds of search "objects". Like file name, size,
+bitrate, etc?

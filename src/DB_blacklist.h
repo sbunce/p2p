@@ -40,25 +40,26 @@ public:
 	}
 
 	/*
-	This function is used to communicate back to different objects if one of more
-	IPs have been added to the blacklist.
+	This function is used to communicate back to the caller whether or not the
+	blacklist was modified since last checked.
 
-	The way this function works is an integer in the client object is initialized
-	to zero and passed to this function. The first time this function is used it
-	will always return true.
+	This function should be passed the same integer each time calling it.
 
-	All other times if blacklist_state_in is different than modified_count true
-	will be returned and blacklist_state_in will be set equal to blacklist_state.
+	This function returns true if the last state seen by the caller is different
+	from the current state of the blacklist.
+
+	If this function should return true the first time it is called the
+	last_state_seen should be initialized to non-zero.
 	*/
-	static bool modified(int & blacklist_state_in)
+	static bool modified(int & last_state_seen)
 	{
 		init();
-		if(blacklist_state_in == DB_Blacklist->blacklist_state){
+		if(last_state_seen == DB_Blacklist->blacklist_state){
 			//blacklist has not been updated
 			return false;
 		}else{
 			//blacklist updated
-			blacklist_state_in = DB_Blacklist->blacklist_state;
+			last_state_seen = DB_Blacklist->blacklist_state;
 			return true;
 		}
 	}

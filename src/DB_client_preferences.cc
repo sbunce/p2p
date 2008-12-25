@@ -62,7 +62,7 @@ void DB_client_preferences::set_download_directory(const std::string & download_
 	}
 }
 
-unsigned int DB_client_preferences::get_speed_limit_uint()
+unsigned int DB_client_preferences::get_speed_limit()
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	if(sqlite3_exec(sqlite3_DB, "SELECT speed_limit FROM client_preferences", get_speed_limit_call_back_wrapper, (void *)this, NULL) != 0){

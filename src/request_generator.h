@@ -38,7 +38,7 @@ public:
 	boost::uint64_t highest_requested();
 	void init(const boost::uint64_t & begin_in, const boost::uint64_t & end_in, const int & timeout_in);
 	bool request(std::deque<boost::uint64_t> & prev_request);
-	void set_timeout(const unsigned int & timeout_in);
+	void set_timeout(const unsigned & timeout_in);
 
 private:
 	/*

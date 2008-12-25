@@ -55,6 +55,7 @@ void request_generator::init(const boost::uint64_t & begin_in, const boost::uint
 {
 	//assert that there is at least 1 request to be made
 	assert(end_in - begin_in > 0);
+	assert(timeout_in != 0);
 
 	initialized = true;
 	unfulfilled_request.clear();
@@ -116,7 +117,7 @@ bool request_generator::request(std::deque<boost::uint64_t> & prev_request)
 	}
 }
 
-void request_generator::set_timeout(const unsigned int & timeout_in)
+void request_generator::set_timeout(const unsigned & timeout_in)
 {
 	timeout = timeout_in;
 }

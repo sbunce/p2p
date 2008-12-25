@@ -33,7 +33,6 @@ public:
 	                     returns true if download could be added, else false
 	terminate_download - removes the download entry from the database
 	*/
-
 	bool start_download(const download_info & info);
 	void terminate_download(const std::string & hash);
 

@@ -53,7 +53,7 @@ These functions are used instead of platform specific sleep functions.
 namespace portable_sleep
 {
 	//sleep for specified number of milliseconds
-	inline void ms(const unsigned int & milliseconds)
+	inline void ms(const unsigned & milliseconds)
 	{
 		//if milliseconds = 0 then yield should be used
 		assert(milliseconds != 0);
@@ -81,22 +81,22 @@ namespace global
 	const std::string VERSION = "0.00 pre-alpha";
 
 	//default settings, may be changed at run time
-	const int MAX_CONNECTIONS = 1024; //maximum number of connections the server will accept
-	const unsigned int UP_SPEED = std::numeric_limits<unsigned int>::max();   //upload speed limit (B/s)
-	const unsigned int DOWN_SPEED = std::numeric_limits<unsigned int>::max(); //download speed limit (B/s)
+	const unsigned MAX_CONNECTIONS = 1024; //maximum number of connections the server will accept
+	const unsigned UP_SPEED = std::numeric_limits<unsigned int>::max();   //upload speed limit (B/s)
+	const unsigned DOWN_SPEED = std::numeric_limits<unsigned int>::max(); //download speed limit (B/s)
 
 	//hard settings, not changed at runtime
-	const int PRIME_CACHE = 256;         //number of primes to keep in prime cache for diffie-hellman
-	const int DH_KEY_SIZE = 64;          //size of key exchanged with diffie-hellman (bytes)
-	const int PIPELINE_SIZE = 16;        //max pre-requests that can be done (must be >= 2)
-	const int RE_REQUEST = 16;           //seconds before a file block is re-requested
-	const int P_WAIT_TIMEOUT = 8;        //when a client download_file/download_hash_tree receives a P_WAIT it will not make any requests for this long
-	const int RE_REQUEST_FINISHING = 4;  //seconds before a file block is re-requested when download is in finishing phase (last block requested)
-	const int P2P_PORT = 6969;           //port client connects to and server receives on
-	const int GUI_TICK = 100;            //time(in milliseconds) between gui updates
-	const int SPEED_AVERAGE = 4;         //how many seconds to average speed over
-	const int TIMEOUT = 16;              //how long before an unresponsive socket times out
-	const int UNRESPONSIVE_TIMEOUT = 60; //if connection to server fails, new connection attempts to it are stopped for this time (seconds)
+	const unsigned PRIME_CACHE = 256;         //number of primes to keep in prime cache for diffie-hellman
+	const unsigned DH_KEY_SIZE = 64;          //size of key exchanged with diffie-hellman (bytes)
+	const unsigned PIPELINE_SIZE = 16;        //max pre-requests that can be done (must be >= 2)
+	const unsigned RE_REQUEST = 16;           //seconds before a file block is re-requested
+	const unsigned P_WAIT_TIMEOUT = 8;        //when a client download_file/download_hash_tree receives a P_WAIT it will not make any requests for this long
+	const unsigned RE_REQUEST_FINISHING = 4;  //seconds before a file block is re-requested when download is in finishing phase (last block requested)
+	const unsigned P2P_PORT = 6969;           //port client connects to and server receives on
+	const unsigned GUI_TICK = 100;            //time(in milliseconds) between gui updates
+	const unsigned SPEED_AVERAGE = 4;         //how many seconds to average speed over
+	const unsigned TIMEOUT = 16;              //how long before an unresponsive socket times out
+	const unsigned UNRESPONSIVE_TIMEOUT = 60; //if connection to server fails, new connection attempts to it are stopped for this time (seconds)
 
 	//default locations
 	const std::string DOWNLOAD_DIRECTORY = "download/";
@@ -112,32 +112,32 @@ namespace global
 		Note: HASH_BLOCK_SIZE % 2 must = 0 and should be >= 2;
 	FILE_BLOCK_SIZE - number of bytes in a file block.
 	*/
-	const int HASH_BLOCK_SIZE = 256;
-	const int FILE_BLOCK_SIZE = HASH_BLOCK_SIZE * sha::HASH_SIZE;
+	const unsigned HASH_BLOCK_SIZE = 256;
+	const unsigned FILE_BLOCK_SIZE = HASH_BLOCK_SIZE * sha::HASH_SIZE;
 
 	//protocol commands client <-> server
 	const char P_ERROR = (char)0;
-	const int P_ERROR_SIZE = 1;
+	const unsigned P_ERROR_SIZE = 1;
 	const char P_BLOCK = (char)5;
-	const int P_BLOCK_TO_CLIENT_SIZE = FILE_BLOCK_SIZE + 1;
-	const int P_BLOCK_TO_SERVER_SIZE = 10;
+	const unsigned P_BLOCK_TO_CLIENT_SIZE = FILE_BLOCK_SIZE + 1;
+	const unsigned P_BLOCK_TO_SERVER_SIZE = 10;
 
 	//protocol commands client -> server
 	const char P_REQUEST_SLOT_HASH = (char)1;
-	const int P_REQUEST_SLOT_HASH_SIZE = 21;
+	const unsigned P_REQUEST_SLOT_HASH_SIZE = 21;
 	const char P_REQUEST_SLOT_FILE = (char)2;
-	const int P_REQUEST_SLOT_FILE_SIZE = 21;
+	const unsigned P_REQUEST_SLOT_FILE_SIZE = 21;
 	const char P_CLOSE_SLOT = (char)4;
-	const int P_CLOSE_SLOT_SIZE = 2;
+	const unsigned P_CLOSE_SLOT_SIZE = 2;
 
 	//protocol commands server -> client
 	const char P_SLOT_ID = (char)3;
-	const int P_SLOT_ID_SIZE = 2;
+	const unsigned P_SLOT_ID_SIZE = 2;
 	const char P_WAIT = (char)6;
-	const int P_WAIT_SIZE = 1;
+	const unsigned P_WAIT_SIZE = 1;
 
 	//largest possible packet (used to determine buffer sizes)
-	const int S_MAX_SIZE = P_REQUEST_SLOT_FILE_SIZE;
-	const int C_MAX_SIZE = P_BLOCK_TO_CLIENT_SIZE;
+	const unsigned S_MAX_SIZE = P_REQUEST_SLOT_FILE_SIZE;
+	const unsigned C_MAX_SIZE = P_BLOCK_TO_CLIENT_SIZE;
 }
 #endif

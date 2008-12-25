@@ -9,7 +9,7 @@ client::client():
 	boost::filesystem::create_directory(global::DOWNLOAD_DIRECTORY);
 	max_connections = DB_Client_Preferences.get_max_connections();
 	FD_ZERO(&master_FDS);
-	Speed_Calculator.set_speed_limit(DB_Client_Preferences.get_speed_limit_uint());
+	Speed_Calculator.set_speed_limit(DB_Client_Preferences.get_speed_limit());
 
 	#ifdef WIN32
 	WORD wsock_ver = MAKEWORD(1,1);

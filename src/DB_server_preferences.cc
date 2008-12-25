@@ -63,7 +63,7 @@ void DB_server_preferences::set_share_directory(const std::string & share_direct
 	}
 }
 
-unsigned int DB_server_preferences::get_speed_limit_uint()
+unsigned DB_server_preferences::get_speed_limit()
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	if(sqlite3_exec(sqlite3_DB, "SELECT speed_limit FROM server_preferences", get_speed_limit_call_back_wrapper, (void *)this, NULL) != 0){
@@ -71,7 +71,7 @@ unsigned int DB_server_preferences::get_speed_limit_uint()
 	}
 
 	std::stringstream ss(get_speed_limit_speed_limit);
-	unsigned int speed_limit;
+	unsigned speed_limit;
 	ss >> speed_limit;
 	return speed_limit;
 }
@@ -81,7 +81,7 @@ void DB_server_preferences::get_speed_limit_call_back(int & columns_retrieved, c
 	get_speed_limit_speed_limit.assign(query_response[0]);
 }
 
-void DB_server_preferences::set_speed_limit(const unsigned int & speed_limit)
+void DB_server_preferences::set_speed_limit(const unsigned & speed_limit)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	std::ostringstream query;
@@ -91,7 +91,7 @@ void DB_server_preferences::set_speed_limit(const unsigned int & speed_limit)
 	}
 }
 
-int DB_server_preferences::get_max_connections()
+unsigned DB_server_preferences::get_max_connections()
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	if(sqlite3_exec(sqlite3_DB, "SELECT max_connections FROM server_preferences", get_max_connections_call_back_wrapper, (void *)this, NULL) != 0){
@@ -99,7 +99,7 @@ int DB_server_preferences::get_max_connections()
 	}
 
 	std::stringstream ss(get_max_connections_max_connections);
-	int max_connections;
+	unsigned max_connections;
 	ss >> max_connections;
 	return max_connections;
 }
@@ -109,7 +109,7 @@ void DB_server_preferences::get_max_connections_call_back(int & columns_retrieve
 	get_max_connections_max_connections.assign(query_response[0]);
 }
 
-void DB_server_preferences::set_max_connections(const unsigned int & max_connections)
+void DB_server_preferences::set_max_connections(const unsigned & max_connections)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	std::ostringstream query;

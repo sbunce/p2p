@@ -11,6 +11,10 @@ hash_tree::hash_tree():
 
 bool hash_tree::check(tree_info & Tree_Info, boost::uint64_t & bad_block)
 {
+	if(Tree_Info.block_count == 0){
+		return true;
+	}
+
 	//create empty file for hash tree if it doesn't exist
 	std::fstream fin((global::HASH_DIRECTORY+Tree_Info.root_hash).c_str(), std::ios::in);
 	if(!fin.is_open()){

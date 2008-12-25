@@ -6,7 +6,7 @@ server::server():
 {
 	FD_ZERO(&master_FDS);
 	max_connections = DB_Server_Preferences.get_max_connections();
-	Speed_Calculator.set_speed_limit(DB_Server_Preferences.get_speed_limit_uint());
+	Speed_Calculator.set_speed_limit(DB_Server_Preferences.get_speed_limit());
 
 	#ifdef WIN32
 	//start winsock

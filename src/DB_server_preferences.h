@@ -25,10 +25,10 @@ public:
 	*/
 	std::string get_share_directory();
 	void set_share_directory(const std::string & share_directory);
-	unsigned int get_speed_limit_uint();
-	void set_speed_limit(const unsigned int & speed_limit);
-	int get_max_connections();
-	void set_max_connections(const unsigned int & max_connections);
+	unsigned get_speed_limit();
+	void set_speed_limit(const unsigned & speed_limit);
+	unsigned get_max_connections();
+	void set_max_connections(const unsigned & max_connections);
 
 private:
 	sqlite3 * sqlite3_DB;
