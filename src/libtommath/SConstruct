@@ -2,10 +2,9 @@
 import system
 
 #std
+import glob
 import sys
 
 env = Environment()
 system.env_setup(env)
-env.StaticLibrary('sqlite3.c')
-
-env.Program('shell.c')
+env.StaticLibrary('tommath', glob.glob('*.c'))
