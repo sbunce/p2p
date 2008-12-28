@@ -13,16 +13,12 @@ static int check_entry_exists(void * object_ptr, int columns_retrieved, char ** 
 
 DB_client_preferences::DB_client_preferences()
 {
-	//open DB
 	if(sqlite3_open(global::DATABASE_PATH.c_str(), &sqlite3_DB) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
-
-	//DB timeout to 1 second
-	if(sqlite3_busy_timeout(sqlite3_DB, 1000) != 0){
+	if(sqlite3_busy_timeout(sqlite3_DB, global::DB_TIMEOUT) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}
-
 	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS client_preferences (download_directory TEXT, speed_limit TEXT, max_connections TEXT)", NULL, NULL, NULL) != 0){
 		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
 	}

@@ -19,7 +19,7 @@ DB_server_preferences::DB_server_preferences()
 	}
 
 	//DB timeout to 1 second
-	if(sqlite3_busy_timeout(sqlite3_DB, 1000) != 0){
+	if(sqlite3_busy_timeout(sqlite3_DB, global::DB_TIMEOUT) != 0){
 		logger::debug(LOGGER_P1,"#2 ",sqlite3_errmsg(sqlite3_DB));
 	}
 

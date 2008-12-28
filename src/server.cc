@@ -337,7 +337,10 @@ void server::main_loop()
 						//remove bytes sent from buffer
 						Speed_Calculator.update(n_bytes);
 						buff->erase(0, n_bytes);
-						server_buffer::post_send(socket_FD);
+						if(!server_buffer::post_send(socket_FD)){
+							//disconnect upon empty buffer (server buffer requested this)
+							disconnect(socket_FD);
+						}
 					}
 				}
 			}

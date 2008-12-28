@@ -12,6 +12,7 @@
 #include "encryption.h"
 #include "global.h"
 #include "hash_tree.h"
+#include "http.h"
 #include "slot.h"
 #include "slot_file.h"
 #include "slot_hash_tree.h"
@@ -110,16 +111,22 @@ public:
 
 	/*
 	Should be called after sending data. This function evaluates whether or not the
-	send_buff was emptied. If it was then it decrements send_pending.
+	send_buff was emptied. If it was then it decrements send_pending. Returns false
+	to indicate the server should be disconnected.
 	*/
-	static void post_send(const int & socket_FD)
+	static bool post_send(const int & socket_FD)
 	{
 		boost::mutex::scoped_lock lock(Mutex);
 		std::map<int, server_buffer *>::iterator iter = Server_Buffer.find(socket_FD);
 		assert(iter != Server_Buffer.end());
-
 		if(iter->second->send_buff.empty()){
 			--send_pending;
+		}
+
+		if(iter->second->disconnect_on_empty && iter->second->send_buff.empty()){
+			return false;
+		}else{
+			return true;
 		}
 	}
 
@@ -155,6 +162,12 @@ private:
 	are given to the client_buffer elements so they can increment it.
 	*/
 	static int send_pending;
+
+	/*
+	Certain responses require the server be disconnected upon message send. When
+	this is true the server is disconnected when the send_buff is empty.
+	*/
+	bool disconnect_on_empty;
 
 	//main send/recv buffers
 	std::string recv_buff;
@@ -202,5 +215,6 @@ private:
 	DB_download DB_Download;
 	DB_share DB_Share;
 	hash_tree Hash_Tree;
+	http HTTP;
 };
 #endif

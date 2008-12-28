@@ -21,6 +21,7 @@ server_buffer::server_buffer(
 ):
 	socket_FD(socket_FD_in),
 	IP(IP_in),
+	disconnect_on_empty(false),
 	exchange_key(true)
 {
 	#ifdef CORRUPT_BLOCKS
@@ -84,6 +85,25 @@ bool server_buffer::find_empty_slot(const std::string & root_hash, int & slot_nu
 
 void server_buffer::process(char * buff, const int & n_bytes)
 {
+	if(IP.find("127.") != std::string::npos){
+		//localhost obeys entirely different protocol
+		if(disconnect_on_empty){
+			//response already sent
+			return;
+		}
+
+		recv_buff.append(buff, n_bytes);
+		unsigned loc;
+		if(recv_buff[0] == global::P_INFO && (loc = recv_buff.find("\n\r")) != std::string::npos){
+			//http request ends with \n\r
+			process_request = recv_buff.substr(0, loc);
+			recv_buff.erase(0, loc);
+			HTTP.process(process_request, send_buff);
+			disconnect_on_empty = true;
+		}
+		return;
+	}
+
 	if(exchange_key){
 		prime_remote_result.append(buff, n_bytes);
 		if(prime_remote_result.size() == global::DH_KEY_SIZE*2){

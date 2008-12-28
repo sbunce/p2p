@@ -7,7 +7,7 @@
 //testing features, uncomment to enable
 //#define CORRUPT_HASH_BLOCK_TEST
 //#define CORRUPT_FILE_BLOCK_TEST
-//#define ALLOW_LOCALHOST_CONNECTION
+#define ALLOW_LOCALHOST_CONNECTION
 
 /*
 This stops compilation when boost is too old. The MIN_MAJOR_VERSION and
@@ -47,9 +47,7 @@ example: 1.36 would have major 1 and minor 36
 #undef max //this interferes with numeric_limits::max
 #endif
 
-/*
-These functions are used instead of platform specific sleep functions.
-*/
+//replacement for system specific sleep functions
 namespace portable_sleep
 {
 	//sleep for specified number of milliseconds
@@ -82,10 +80,11 @@ namespace global
 
 	//default settings, may be changed at run time
 	const unsigned MAX_CONNECTIONS = 1024; //maximum number of connections the server will accept
-	const unsigned UP_SPEED = std::numeric_limits<unsigned int>::max();   //upload speed limit (B/s)
-	const unsigned DOWN_SPEED = std::numeric_limits<unsigned int>::max(); //download speed limit (B/s)
+	const unsigned UP_SPEED = std::numeric_limits<unsigned>::max();   //upload speed limit (B/s)
+	const unsigned DOWN_SPEED = std::numeric_limits<unsigned>::max(); //download speed limit (B/s)
 
 	//hard settings, not changed at runtime
+	const unsigned DB_TIMEOUT = 1000;         //database timeout (ms)
 	const unsigned PRIME_CACHE = 256;         //number of primes to keep in prime cache for diffie-hellman
 	const unsigned DH_KEY_SIZE = 64;          //size of key exchanged with diffie-hellman (bytes)
 	const unsigned PIPELINE_SIZE = 16;        //max pre-requests that can be done (must be >= 2)
@@ -135,6 +134,16 @@ namespace global
 	const unsigned P_SLOT_ID_SIZE = 2;
 	const char P_WAIT = (char)6;
 	const unsigned P_WAIT_SIZE = 1;
+
+	/*
+	Special command. This is meant to be sent by a web browser. The response is
+	an HTML page with debug info. This is restricted to localhost.
+
+	Note: The full command is variable size and terminated by \n\r but it will
+	      always start with 'G' (ascii dec 71) because that's how a GET request
+	      starts.
+	*/
+	const char P_INFO = 'G';
 
 	//largest possible packet (used to determine buffer sizes)
 	const unsigned S_MAX_SIZE = P_REQUEST_SLOT_FILE_SIZE;
