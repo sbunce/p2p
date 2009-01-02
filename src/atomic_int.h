@@ -127,26 +127,6 @@ public:
 		boost::mutex::scoped_lock lock(*Mutex);
 		return x -= rval;
 	}
-	const bool operator >= (const T & rval)
-	{
-		boost::mutex::scoped_lock lock(*Mutex);
-		return x >= rval;
-	}
-	const bool operator <= (const T & rval)
-	{
-		boost::mutex::scoped_lock lock(*Mutex);
-		return x <= rval;
-	}
-	const bool operator > (const T & rval)
-	{
-		boost::mutex::scoped_lock lock(*Mutex);
-		return x > rval;
-	}
-	const bool operator < (const T & rval)
-	{
-		boost::mutex::scoped_lock lock(*Mutex);
-		return x < rval;
-	}
 
 	/*
 	Support using atomic_int in ostream's and istream's.

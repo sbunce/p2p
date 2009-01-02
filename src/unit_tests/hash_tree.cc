@@ -11,8 +11,7 @@ void create_test_file(const std::string & name, const unsigned & bytes)
 		return;
 	}
 
-	f.open((global::SHARE_DIRECTORY + name).c_str(), std::ios::out | std::ios::binary);
-	f.clear();
+	f.open((global::SHARE_DIRECTORY + name).c_str(), std::ios::out);
 	for(int x=0; x<bytes; ++x){
 		if(x % 80 == 0 && x != 0){
 			f.put('\n');

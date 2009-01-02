@@ -171,5 +171,6 @@ int main()
 		return 1;
 	}
 
+	std::cout << "contiguous_map.h unit test passed\n";
 	return 0;
 }

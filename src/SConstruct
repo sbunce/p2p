@@ -71,7 +71,6 @@ env_gui = env.Clone()
 gtkmm.env_setup(env_gui)
 
 static_libs = [
-	boost.static_lib('date_time'),
 	boost.static_lib('filesystem'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')

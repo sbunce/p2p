@@ -6,9 +6,6 @@
 
 int main()
 {
-	//initial tests fail without this
-	std::remove(global::DATABASE_PATH.c_str());
-
 	DB_blacklist DB_Blacklist;
 	std::string IP_1 = "1.1.1.1", IP_2 = "2.2.2.2";
 

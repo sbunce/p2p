@@ -28,12 +28,11 @@ def env_setup(env):
 	if sys.platform == 'win32':
 		env['LIBPATH'].append(__win32_lib_dir())
 		env['CPPPATH'].append(__win32_include_dir())
-		env['CCFLAGS'].append('/EHsc')   #exception support
-		env['CCFLAGS'].append('/w')      #disable warnings
-		env['CCFLAGS'].append('/Ox')     #max optimizations
-		env['CCFLAGS'].append('/DWIN32') #make sure this is defined
-		env['LIBS'].append('ws2_32')     #winsock
-		env['LIBS'].append('advapi32')   #random number gen
+		env['CCFLAGS'].append('/EHsc') #exception support
+		env['CCFLAGS'].append('/w')    #disable warnings
+		env['CCFLAGS'].append('/Ox')   #max optimizations
+		env['LIBS'].append('ws2_32')   #winsock
+		env['LIBS'].append('advapi32') #random number gen
 
 def __win32_lib_dir():
 	search_dir = '/Program Files/Microsoft SDKs/Windows/'
