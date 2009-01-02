@@ -459,5 +459,7 @@ private:
 	bool exchange_key;
 	std::string remote_result; //holds remote result for key exchange
 	encryption Encryption;
+
+	DB_blacklist DB_Blacklist;
 };
 #endif

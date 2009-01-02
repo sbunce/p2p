@@ -1,8 +1,7 @@
 /*
 Thanks to Dr. George Marsaglia of Washington State University for the PRNG.
 
-The period is 10^39460.877333. This PRNG is not cryptographically secure but is
-good enough to stop ISPs from messing with packets.
+The period is 10^39460.877333. This PRNG is not cryptographically secure.
 
 Proof:
 

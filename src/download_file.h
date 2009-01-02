@@ -155,6 +155,7 @@ private:
 	void hash_check(hash_tree::tree_info Tree_Info, std::string file_path);
 	void write_block(boost::uint64_t block_number, std::string & block);
 
+	DB_blacklist DB_Blacklist;
 	DB_share DB_Share;
 	request_generator Request_Generator;
 	hash_tree Hash_Tree;

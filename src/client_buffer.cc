@@ -12,7 +12,7 @@ client_buffer::client_buffer()
 	locate a client_buffer that doesn't exist the default ctor will be called and
 	the program will be killed.
 	*/
-	logger::debug(LOGGER_P1,"improperly constructed client_buffer");
+	LOGGER << "improperly constructed client_buffer";
 	exit(1);
 }
 
@@ -52,8 +52,8 @@ void client_buffer::recv_buff_append(char * buff, const int & n_bytes)
 			exchange_key = false;
 		}
 		if(remote_result.size() > global::DH_KEY_SIZE){
-			logger::debug(LOGGER_P1,IP," abusive, failed key negotation, too many bytes");
-			DB_blacklist::add(IP);
+			LOGGER << " abusive, failed key negotation, too many bytes";
+			DB_Blacklist.add(IP);
 		}
 		return;
 	}
@@ -86,8 +86,8 @@ void client_buffer::post_recv()
 			}
 
 			if(iter_cur == iter_end){
-				logger::debug(LOGGER_P1,"abusive ",IP,", unexpected command ", (int)(unsigned char)recv_buff[0]);
-				DB_blacklist::add(IP);
+				LOGGER << "abusive " << IP << ", unexpected command " << (int)(unsigned char)recv_buff[0];
+				DB_Blacklist.add(IP);
 				return;
 			}else{
 				if(recv_buff.size() < iter_cur->second){
@@ -119,15 +119,15 @@ void client_buffer::post_recv()
 				break;
 			}
 		}else{
-			logger::debug(LOGGER_P1,"invalid mode");
+			LOGGER << "invalid mode";
 			exit(1);
 		}
 	}
 
 	if(recv_buff.size() > global::PIPELINE_SIZE * global::C_MAX_SIZE){
 		//server sent more than the maximum possible
-		logger::debug(LOGGER_P1,"abusive server (exceeded maximum buffer size) ",IP);
-		DB_blacklist::add(IP);
+		LOGGER << "abusive server (exceeded maximum buffer size) " << IP;
+		DB_Blacklist.add(IP);
 	}
 }
 

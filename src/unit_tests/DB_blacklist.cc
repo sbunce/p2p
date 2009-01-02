@@ -6,27 +6,31 @@
 
 int main()
 {
+	//initial tests fail without this
+	std::remove(global::DATABASE_PATH.c_str());
+
+	DB_blacklist DB_Blacklist;
 	std::string IP_1 = "1.1.1.1", IP_2 = "2.2.2.2";
 
 	int state = 0;
-	if(DB_blacklist::modified(state)){
+	if(DB_Blacklist.modified(state)){
 		std::cout << "modified test 1 failed\n";
 		return 1;
 	}
 
-	DB_blacklist::add(IP_1);
+	DB_Blacklist.add(IP_1);
 
-	if(!DB_blacklist::modified(state)){
+	if(!DB_Blacklist.modified(state)){
 		std::cout << "modified test 2 failed\n";
 		return 1;
 	}
 
-	if(!DB_blacklist::is_blacklisted(IP_1)){
+	if(!DB_Blacklist.is_blacklisted(IP_1)){
 		std::cout << "is_blacklisted test 1 failed\n";
 		return 1;
 	}
 
-	if(DB_blacklist::is_blacklisted(IP_2)){
+	if(DB_Blacklist.is_blacklisted(IP_2)){
 		std::cout << "is_blacklisted test 2 failed\n";
 		return 1;
 	}

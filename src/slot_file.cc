@@ -49,7 +49,7 @@ bool slot_file::read_block(const boost::uint64_t & block_num, std::string & send
 		fin.read(send_block_buff, global::FILE_BLOCK_SIZE);
 		#ifdef CORRUPT_FILE_BLOCK_TEST
 		if(std::rand() % 5 == 0){
-			logger::debug(LOGGER_P1,"CORRUPT FILE BLOCK TEST, block ",block_num," -> ",*IP);
+			LOGGER << "CORRUPT FILE BLOCK TEST, block " << block_num << " -> " << *IP;
 			send_block_buff[0] = ~send_block_buff[0];
 		}
 		#endif
@@ -69,19 +69,19 @@ void slot_file::send_block(const std::string & request, std::string & send)
 
 	if(block_num >= block_count){
 		//client requested block higher than last block
-		logger::debug(LOGGER_P1,*IP," requested block higher than maximum, blacklist");
-		DB_blacklist::add(*IP);
+		LOGGER << *IP << " requested block higher than maximum, blacklist";
+		DB_Blacklist.add(*IP);
 	}
 
 	client_server_bridge::download_state DS = client_server_bridge::file_block_available(root_hash, block_num);
 	if(DS == client_server_bridge::DOWNLOADING_NOT_AVAILABLE){
-		logger::debug(LOGGER_P1,"sending P_WAIT to ",*IP);
+		LOGGER << "sending P_WAIT to " << *IP;
 		send += global::P_WAIT;
 		Speed_Calculator.update(global::P_WAIT_SIZE);
 	}else{
 		if(!read_block(block_num, send)){
 			//could not read file
-			logger::debug(LOGGER_P1,"server could not open file: ",path);
+			LOGGER << "server could not open file: " << path;
 			send += global::P_ERROR;
 			Speed_Calculator.update(global::P_ERROR_SIZE);
 		}

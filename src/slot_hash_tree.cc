@@ -36,15 +36,15 @@ void slot_hash_tree::send_block(const std::string & request, std::string & send)
 
 	if(block_num >= Tree_Info.get_block_count()){
 		//client requested block higher than last block
-		logger::debug(LOGGER_P1,*IP," requested block higher than maximum, blacklist");
-		DB_blacklist::add(*IP);
+		LOGGER << *IP << " requested block higher than maximum, blacklist";
+		DB_Blacklist.add(*IP);
 	}
 
 	client_server_bridge::download_state DS;
 	DS = client_server_bridge::hash_block_available(root_hash, block_num);
 	if(DS == client_server_bridge::DOWNLOADING_NOT_AVAILABLE){
 		//hash tree downloading but it client doesn't yet have requested block
-		logger::debug(LOGGER_P1,"sending P_WAIT to ",*IP);
+		LOGGER << "sending P_WAIT to " << *IP;
 		send += global::P_WAIT;
 		Speed_Calculator.update(global::P_WAIT_SIZE);
 	}else{
@@ -52,7 +52,7 @@ void slot_hash_tree::send_block(const std::string & request, std::string & send)
 		if(Hash_Tree.read_block(Tree_Info, block_num, send)){
 			#ifdef CORRUPT_HASH_BLOCK_TEST
 			if(std::rand() % 5 == 0){
-				logger::debug(LOGGER_P1,"CORRUPT HASH BLOCK TEST, block ",block_num," -> ",*IP);
+				LOGGER << "CORRUPT HASH BLOCK TEST, block " << block_num << " -> " << *IP;
 				send[0] = ~send[0];
 			}
 			#endif

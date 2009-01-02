@@ -139,6 +139,7 @@ private:
 	void transition_download(download * Download_Stop);
 
 	client_new_connection Client_New_Connection;
+	DB_blacklist DB_Blacklist;
 	DB_download DB_Download;
 	DB_client_preferences DB_Client_Preferences;
 	DB_search DB_Search;

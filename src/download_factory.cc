@@ -9,7 +9,7 @@ download_file * download_factory::start_file(download_hash_tree * DHT, std::list
 {
 	std::string file_path;
 	if(!DB_Download.lookup_hash(DHT->hash(), file_path)){
-		logger::debug(LOGGER_P1,"download ",DHT->download_file_name()," not found in database");
+		LOGGER << "download " << DHT->download_file_name() << " not found in database";
 	}
 	download_file * Download = new download_file(
 		DHT->hash(),
@@ -29,13 +29,13 @@ bool download_factory::start_hash(const download_info & info, download *& Downlo
 {
 	if(DB_Share.lookup_hash(info.hash)){
 		//file exists in share, don't redownload it
-		logger::debug(LOGGER_P1,"file '",info.name,"' already exists in share");
+		LOGGER << "file '" << info.name << "' already exists in share";
 		return false;
 	}
 
 	if(client_buffer::is_downloading(info.hash)){
 		//file already downloading
-		logger::debug(LOGGER_P1,"file '",info.name,"' already downloading");
+		LOGGER << "file '" << info.name << "' already downloading";
 		return false;
 	}
 
@@ -85,7 +85,7 @@ bool download_factory::stop(download * Download_Stop, download *& Download_Start
 		delete Download_Stop;
 		return false;
 	}else{
-		logger::debug(LOGGER_P1,"unrecognized download type");
+		LOGGER << "unrecognized download type";
 		exit(1);
 	}
 }

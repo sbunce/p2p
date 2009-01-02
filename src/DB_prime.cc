@@ -1,48 +1,32 @@
 #include "DB_prime.h"
 
-boost::mutex DB_prime::Mutex;
-atomic_int<unsigned int> DB_prime::prime_count(0);
+atomic_bool DB_prime::program_start(true);
+atomic_int<unsigned> DB_prime::prime_count(0);
 
-static int prime_count_call_back(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_names)
+static int prime_count_call_back(atomic_int<unsigned> & prime_count, int columns_retrieved,
+	char ** response, char ** column_names)
 {
-	std::istringstream size_iss(query_response[0]);
-	int size;
-	size_iss >> size;
-	*(atomic_int<unsigned int> *)object_ptr = size;
+	assert(response[0]);
+	std::stringstream ss(response[0]);
+	ss >> prime_count;
 	return 0;
 }
 
 DB_prime::DB_prime()
+: DB(global::DATABASE_PATH)
 {
-	boost::mutex::scoped_lock lock(Mutex);
-	//open DB
-	if(sqlite3_open(global::DATABASE_PATH.c_str(), &sqlite3_DB) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-
-	//DB timeout to 1 second
-	if(sqlite3_busy_timeout(sqlite3_DB, global::DB_TIMEOUT) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-
-	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS prime (key INTEGER PRIMARY KEY, number TEXT)", NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-
-	//retrieve how many primes in table
-	if(sqlite3_exec(sqlite3_DB, "SELECT count(1) FROM prime", prime_count_call_back, (void *)&prime_count, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
+	DB.query("CREATE TABLE IF NOT EXISTS prime (key INTEGER PRIMARY KEY, number TEXT)");
+	if(program_start){
+		DB.query("SELECT count(1) FROM prime", &prime_count_call_back, prime_count);
+		program_start = false;
 	}
 }
 
 void DB_prime::add(mpint & prime)
 {
-	boost::mutex::scoped_lock lock(Mutex);
-	std::ostringstream oss;
-	oss << "INSERT INTO prime VALUES (NULL,'" << prime.to_str(64) << "')";
-	if(sqlite3_exec(sqlite3_DB, oss.str().c_str(), NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
+	std::ostringstream query;
+	query << "INSERT INTO prime VALUES (NULL,'" << prime.to_str(64) << "')";
+	DB.query(query.str());
 	++prime_count;
 }
 
@@ -51,26 +35,22 @@ int DB_prime::count()
 	return prime_count;
 }
 
-bool DB_prime::retrieve(mpint & prime)
+//std::pair<true if found, prime>
+int DB_prime::retrieve_call_back(std::pair<bool, mpint *> & info, int columns_retrieved, char ** response, char ** column_name)
 {
-	boost::mutex::scoped_lock lock(Mutex);
-	retrieve_mpint = &prime;
-	retrieve_found = false;
-	if(sqlite3_exec(sqlite3_DB, "SELECT key, number FROM prime LIMIT 1", retrieve_call_back_wrapper, (void *)this, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-	return retrieve_found;
+	assert(response[0] && response[1]);
+	info.first = true;
+	*info.second = mpint(response[1], 64);
+	std::ostringstream query;
+	query << "DELETE FROM prime WHERE key = " << response[0];
+	DB.query(query.str());
+	--prime_count;
+	return 0;
 }
 
-void DB_prime::retrieve_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
+bool DB_prime::retrieve(mpint & prime)
 {
-	retrieve_found = true;
-	*retrieve_mpint = mpint(query_response[1], 64);
-
-	std::ostringstream oss;
-	oss << "DELETE FROM prime WHERE key = " << query_response[0];
-	if(sqlite3_exec(sqlite3_DB, oss.str().c_str(), NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-	--prime_count;
+	std::pair<bool, mpint *> info(false, &prime);
+	DB.query("SELECT key, number FROM prime LIMIT 1", this, &DB_prime::retrieve_call_back, info);
+	return info.first;
 }

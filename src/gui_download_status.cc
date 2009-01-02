@@ -11,13 +11,15 @@ gui_download_status::gui_download_status(
 {
 	Client = Client_in;
 
-	std::string name; //starts as path
+	std::string name;             //starts as path
+	std::string untruncated_name; //full name for display within tab
 	if(Client->file_info(root_hash, name, tree_size_bytes, file_size_bytes)){
 		std::string label_name = name;
 		if(!label_name.empty()){
 			//isolate file name
 			label_name = label_name.substr(label_name.find_last_of('/') + 1);
 		}
+		untruncated_name = label_name;
 		int max_tab_label_size = 24;
 		if(label_name.size() > max_tab_label_size){
 			label_name = label_name.substr(0, max_tab_label_size);
@@ -45,7 +47,7 @@ gui_download_status::gui_download_status(
 	hash_tree_percent_label = Gtk::manage(new Gtk::Label("Complete: "));
 	hash_tree_percent_value = Gtk::manage(new Gtk::Label("0%"));
 	file_name_label = Gtk::manage(new Gtk::Label("File Name: "));
-	file_name_value = Gtk::manage(new Gtk::Label(name));
+	file_name_value = Gtk::manage(new Gtk::Label(untruncated_name));
 	file_size_label = Gtk::manage(new Gtk::Label("File Size: "));
 	file_size_value = Gtk::manage(new Gtk::Label(file_size_str));
 	file_percent_label = Gtk::manage(new Gtk::Label("Complete: "));

@@ -51,7 +51,6 @@ src_common = [
 	'encryption.cc',
 	'hash_tree.cc',
 	'http.cc',
-	'logger.cc',
 	'number_generator.cc',
 	'request_generator.cc',
 	'server_buffer.cc',
@@ -72,6 +71,7 @@ env_gui = env.Clone()
 gtkmm.env_setup(env_gui)
 
 static_libs = [
+	boost.static_lib('date_time'),
 	boost.static_lib('filesystem'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')

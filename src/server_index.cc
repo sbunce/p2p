@@ -30,14 +30,14 @@ void server_index::generate_hash(const boost::filesystem::path file_path)
 					return;
 				}else{
 					//file changed size, rehash it
-					DB_Share.delete_hash(root_hash);
+					DB_Share.delete_hash(root_hash, file_path.string());
 				}
 			}else{
 				//hash tree is missing
-				DB_Share.delete_hash(root_hash);
+				DB_Share.delete_hash(root_hash, file_path.string());
 			}
 		}catch(std::exception & ex){
-			logger::debug(LOGGER_P1, "caught ", ex.what());
+			LOGGER << "caught " << ex.what();
 			return;
 		}
 	}
@@ -68,7 +68,7 @@ void server_index::scan_hashes()
 		portable_sleep::ms(5); //make it so directory scans don't hog all CPU
 		try{
 			if(fs::is_directory(*directory_iter)){
-				logger::debug(LOGGER_P1,"found directory: ",directory_iter->path().filename(),", in hash directory");
+				LOGGER << "found directory: " << directory_iter->path().filename() << ", in hash directory";
 			}else{
 				boost::this_thread::interruption_point();
 				if(directory_iter->path().filename().length() != sha::HEX_HASH_SIZE){
@@ -83,7 +83,7 @@ void server_index::scan_hashes()
 				}
 			}
 		}catch(std::exception & ex){
-			logger::debug(LOGGER_P1,"when trying to read file ",directory_iter->path().filename()," caught exception ",ex.what());
+			LOGGER << "when trying to read file " << directory_iter->path().filename() << " caught exception " << ex.what();
 		}
 	}
 	return;
@@ -95,7 +95,7 @@ void server_index::scan_share(std::string directory_name)
 	boost::this_thread::interruption_point();
 	fs::path full_path = fs::system_complete(fs::path(directory_name, fs::native));
 	if(!fs::exists(full_path)){
-		logger::debug(LOGGER_P1,"can't locate ", full_path.string());
+		LOGGER << "can't locate " << full_path.string();
 		return;
 	}
 
@@ -115,11 +115,11 @@ void server_index::scan_share(std::string directory_name)
 					generate_hash(path);
 				}
 			}catch(std::exception & ex){
-				logger::debug(LOGGER_P1,"when trying to read file ",directory_iter->path().filename()," caught exception ",ex.what());
+				LOGGER << "when trying to read file " << directory_iter->path().filename() << " caught exception " << ex.what();
 			}
 		}
 	}else{
-		logger::debug(LOGGER_P1,"index location is a file when it needs to be a directory");
+		LOGGER << "index location is a file when it needs to be a directory";
 		exit(1);
 	}
 	return;
@@ -132,9 +132,13 @@ bool server_index::is_indexing()
 
 void server_index::index_share()
 {
-	//delay start indexing until all downloads resumed
-	while(client_server_bridge::server_index_is_blocked()){
-		portable_sleep::ms(100);
+	/*
+	Delay start indexing until unblocked by client, or until 10 seconds have
+	elapsed.
+	*/
+	time_t Time = time(NULL);
+	while(client_server_bridge::server_index_is_blocked() || time(NULL) - Time < 10){
+		portable_sleep::ms(1000);
 	}
 
 	while(true){

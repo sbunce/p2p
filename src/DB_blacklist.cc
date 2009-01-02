@@ -1,46 +1,45 @@
 #include "DB_blacklist.h"
 
-DB_blacklist * DB_blacklist::DB_Blacklist = NULL;
-boost::mutex DB_blacklist::init_mutex;
-
 DB_blacklist::DB_blacklist()
-: blacklist_state(0)
+:
+	DB(global::DATABASE_PATH),
+	blacklist_state(0)
 {
-	//open DB
-	if(sqlite3_open(global::DATABASE_PATH.c_str(), &sqlite3_DB) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-
-	//DB timeout to 1 second
-	if(sqlite3_busy_timeout(sqlite3_DB, global::DB_TIMEOUT) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-
-	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS blacklist (IP TEXT UNIQUE)", NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-	if(sqlite3_exec(sqlite3_DB, "CREATE INDEX IF NOT EXISTS blacklist_index ON blacklist (IP)", NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
+	DB.query("CREATE TABLE IF NOT EXISTS blacklist (IP TEXT UNIQUE)");
+	DB.query("CREATE INDEX IF NOT EXISTS blacklist_index ON blacklist (IP)");
 }
 
-void DB_blacklist::add_priv(const std::string & IP)
+void DB_blacklist::add(const std::string & IP)
 {
-	boost::mutex::scoped_lock lock(Mutex);
 	std::ostringstream query;
 	query << "INSERT INTO blacklist VALUES ('" << IP << "')";
-	sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL);
+	DB.query(query.str());
 	++blacklist_state;
 }
 
-bool DB_blacklist::is_blacklisted_priv(const std::string & IP)
+static int is_blacklisted_call_back(bool & found, int columns, char ** response, char ** column_name)
 {
-	boost::mutex::scoped_lock lock(Mutex);
+	found = true;
+	return 0;
+}
+
+bool DB_blacklist::is_blacklisted(const std::string & IP)
+{
 	bool found = false;
 	std::ostringstream query;
 	query << "SELECT 1 FROM blacklist WHERE IP = '" << IP << "'";
-	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), is_blacklisted_call_back, &found, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
+	DB.query(query.str(), &is_blacklisted_call_back, found);
 	return found;
+}
+
+bool DB_blacklist::modified(int & last_state_seen)
+{
+	if(last_state_seen == blacklist_state){
+		//blacklist has not been updated
+		return false;
+	}else{
+		//blacklist updated
+		last_state_seen = blacklist_state;
+		return true;
+	}
 }

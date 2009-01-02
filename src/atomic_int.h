@@ -127,13 +127,38 @@ public:
 		boost::mutex::scoped_lock lock(*Mutex);
 		return x -= rval;
 	}
+	const bool operator >= (const T & rval)
+	{
+		boost::mutex::scoped_lock lock(*Mutex);
+		return x >= rval;
+	}
+	const bool operator <= (const T & rval)
+	{
+		boost::mutex::scoped_lock lock(*Mutex);
+		return x <= rval;
+	}
+	const bool operator > (const T & rval)
+	{
+		boost::mutex::scoped_lock lock(*Mutex);
+		return x > rval;
+	}
+	const bool operator < (const T & rval)
+	{
+		boost::mutex::scoped_lock lock(*Mutex);
+		return x < rval;
+	}
 
 	/*
-	Support using atomic_int in ostream's.
+	Support using atomic_int in ostream's and istream's.
 	*/
 	friend std::ostream & operator << (std::ostream & lval, const atomic_int<T> & rval)
 	{
 		return lval << rval.get_value();
+	}
+	friend std::istream & operator >> (std::istream & lval, atomic_int<T> & rval)
+	{
+		boost::mutex::scoped_lock lock(*rval.Mutex);
+		return lval >> rval.x;
 	}
 
 private:

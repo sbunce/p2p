@@ -99,6 +99,7 @@ private:
 	void process_DC(download_connection DC);
 	void unblock(const download_connection & DC);
 
+	DB_blacklist DB_Blacklist;
 	thread_pool Thread_Pool;
 };
 #endif

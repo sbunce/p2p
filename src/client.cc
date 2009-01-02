@@ -16,7 +16,7 @@ client::client():
 	WSADATA wsock_data;
 	int startup;
 	if((startup = WSAStartup(wsock_ver, &wsock_data)) != 0){
-		logger::debug(LOGGER_P1,"winsock startup error ", startup);
+		LOGGER << "winsock startup error " << startup;
 		exit(1);
 	}
 	#endif
@@ -40,15 +40,15 @@ client::~client()
 
 void client::check_blacklist()
 {
-	if(DB_blacklist::modified(blacklist_state)){
+	if(DB_Blacklist.modified(blacklist_state)){
 		sockaddr_in temp_addr;
 		socklen_t len = sizeof(temp_addr);
 		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &master_FDS)){
 				getpeername(socket_FD, (sockaddr*)&temp_addr, &len);
 				std::string IP(inet_ntoa(temp_addr.sin_addr));
-				if(DB_blacklist::is_blacklisted(IP)){
-					logger::debug(LOGGER_P1,"disconnecting blacklisted IP ",IP);
+				if(DB_Blacklist.is_blacklisted(IP)){
+					LOGGER << "disconnecting blacklisted IP " << IP;
 					disconnect(socket_FD);
 				}
 			}
@@ -76,7 +76,7 @@ void client::current_downloads(std::vector<download_info> & info, std::string ha
 
 inline void client::disconnect(const int & socket_FD)
 {
-	logger::debug(LOGGER_P1,"disconnecting socket ",socket_FD);
+	LOGGER << "disconnecting socket " << socket_FD;
 
 	#ifdef WIN32
 	closesocket(socket_FD);
@@ -204,7 +204,7 @@ void client::main_loop()
 			if(select(FD_max+1, &read_FDS, &write_FDS, NULL, &tv) == -1){
 				if(errno != EINTR){ //EINTR is caused by gprof
 					#ifdef WIN32
-					logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+					LOGGER << "winsock error " << WSAGetLastError();
 					#else
 					perror("client select");
 					#endif
@@ -217,7 +217,7 @@ void client::main_loop()
 			if(select(FD_max+1, &read_FDS, NULL, NULL, &tv) == -1){
 				if(errno != EINTR){ //EINTR is caused by gprof
 					#ifdef WIN32
-					logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+					LOGGER << "winsock error " << WSAGetLastError();
 					#else
 					perror("client select");
 					#endif
@@ -236,7 +236,7 @@ void client::main_loop()
 					if((n_bytes = recv(socket_FD, recv_buff, recv_limit, MSG_NOSIGNAL)) <= 0){
 						if(n_bytes == -1){
 							#ifdef WIN32
-							logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+							LOGGER << "winsock error " << WSAGetLastError();
 							#else
 							perror("client recv");
 							#endif
@@ -254,7 +254,7 @@ void client::main_loop()
 					if((n_bytes = send(socket_FD, buff->c_str(), buff->size(), MSG_NOSIGNAL)) < 0){
 						if(n_bytes == -1){
 							#ifdef WIN32
-							logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+							LOGGER << "winsock error " << WSAGetLastError();
 							#else
 							perror("client send");
 							#endif

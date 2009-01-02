@@ -1,18 +1,14 @@
 #ifndef H_DB_PRIME
 #define H_DB_PRIME
 
-//boost
-#include <boost/thread/mutex.hpp>
-
 //custom
+#include "atomic_bool.h"
 #include "atomic_int.h"
 #include "global.h"
+#include "sqlite3_wrapper.h"
 
 //libtommath
 #include <mpint.h>
-
-//sqlite
-#include <sqlite3.h>
 
 //std
 #include <iostream>
@@ -34,19 +30,14 @@ public:
 	bool retrieve(mpint & prime);
 
 private:
-	sqlite3 * sqlite3_DB;
+	sqlite3_wrapper DB;
 
-	static boost::mutex Mutex;                   //mutex for all public functions
-	static atomic_int<unsigned int> prime_count; //how many primes are in the database
+	static atomic_bool program_start;        //true when program just started
+	static atomic_int<unsigned> prime_count; //how many primes are in the database
 
-	void retrieve_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
-	static int retrieve_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
-	{
-		DB_prime * this_class = (DB_prime *)object_ptr;
-		this_class->retrieve_call_back(columns_retrieved, query_response, column_name);
-		return 0;
-	}
-	bool retrieve_found;
-	mpint * retrieve_mpint;
+	/*
+	retrieve_call_back - call back for retrieve()
+	*/
+	int retrieve_call_back(std::pair<bool, mpint *> & info, int columns_retrieved, char ** response, char ** column_name);
 };
 #endif

@@ -41,7 +41,7 @@ void encryption::set_remote_result(std::string result)
 	//(remote_result)^s % p
 	shared_key = remote_result.exptmod(s, p);
 
-	//get Mersenne_Twister ready to create stream
+	//get PRNG ready to create stream
 	std::string seed((char *)shared_key.to_bin(), shared_key.to_bin_size());
 	PRNG_send.seed(seed);
 	PRNG_recv.seed(seed);
@@ -51,7 +51,7 @@ void encryption::set_remote_result(std::string result)
 
 void encryption::crypt_send(std::string & bytes)
 {
-	#ifdef ENCRYPTION
+	#ifndef DISABLE_ENCRYPTION
 	assert(ready_to_encrypt);
 	PRNG_send.extract_bytes(stream_send, bytes.length());
 	for(int x=0; x<bytes.length(); ++x){
@@ -63,7 +63,7 @@ void encryption::crypt_send(std::string & bytes)
 
 void encryption::crypt_send(char * bytes, const int & length)
 {
-	#ifdef ENCRYPTION
+	#ifndef DISABLE_ENCRYPTION
 	assert(ready_to_encrypt);
 	PRNG_send.extract_bytes(stream_send, length);
 	for(int x=0; x<length; ++x){
@@ -75,7 +75,7 @@ void encryption::crypt_send(char * bytes, const int & length)
 
 void encryption::crypt_recv(std::string & bytes)
 {
-	#ifdef ENCRYPTION
+	#ifndef DISABLE_ENCRYPTION
 	assert(ready_to_encrypt);
 	PRNG_recv.extract_bytes(stream_recv, bytes.length());
 	for(int x=0; x<bytes.length(); ++x){
@@ -87,7 +87,7 @@ void encryption::crypt_recv(std::string & bytes)
 
 void encryption::crypt_recv(char * bytes, const int & length)
 {
-	#ifdef ENCRYPTION
+	#ifndef DISABLE_ENCRYPTION
 	assert(ready_to_encrypt);
 	PRNG_recv.extract_bytes(stream_recv, length);
 	for(int x=0; x<length; ++x){

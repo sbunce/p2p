@@ -90,7 +90,7 @@ void download_file::hash_check(hash_tree::tree_info Tree_Info, std::string file_
 		if(Hash_Tree.check_file_block(Tree_Info, check_block, block_buff, fin.gcount())){
 			client_server_bridge::add_file_block(Tree_Info.get_root_hash(), check_block);
 		}else{
-			logger::debug(LOGGER_P1,"found corrupt block ",check_block," in resumed download");
+			LOGGER << "found corrupt block " << check_block << " in resumed download";
 			Request_Generator.force_rerequest(check_block);
 		}
 		++check_block;
@@ -228,7 +228,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 		return download::NO_REQUEST;
 	}
 
-	logger::debug(LOGGER_P1,"logic error: unhandled case");
+	LOGGER << "logic error: unhandled case";
 	exit(1);
 }
 
@@ -244,9 +244,9 @@ void download_file::response(const int & socket, std::string block)
 			conn->slot_ID = block[1];
 			conn->State = connection_special::REQUEST_BLOCKS;
 		}else if(block[0] == global::P_ERROR){
-			logger::debug(LOGGER_P1,"server ",conn->IP," does not have file, REMOVAL FROM DB NOT IMPLEMENTED");
+			LOGGER << "server " << conn->IP << " does not have file, REMOVAL FROM DB NOT IMPLEMENTED";
 		}else{
-			logger::debug(LOGGER_P1,"logic error: unhandled case");
+			LOGGER << "logic error: unhandled case";
 			exit(1);
 		}
 		return;
@@ -258,10 +258,10 @@ void download_file::response(const int & socket, std::string block)
 				client_server_bridge::add_file_block(root_hash, conn->latest_request.front());
 				Request_Generator.fulfil(conn->latest_request.front());
 			}else{
-				logger::debug(LOGGER_P1,file_name,":",conn->latest_request.front()," hash failure");
+				LOGGER << file_name << ":" << conn->latest_request.front() << " hash failure";
 				Request_Generator.force_rerequest(conn->latest_request.front());
 				#ifndef CORRUPT_FILE_BLOCK_TEST
-				DB_blacklist::add(conn->IP);
+				DB_Blacklist.add(conn->IP);
 				#endif
 			}
 			conn->latest_request.pop_front();
@@ -276,9 +276,9 @@ void download_file::response(const int & socket, std::string block)
 			conn->wait_activated = true;
 			conn->wait_start = time(NULL);
 		}else if(block[0] == global::P_ERROR){
-			logger::debug(LOGGER_P1,"server ",conn->IP," does not have file, REMOVAL FROM DB NOT IMPLEMENTED");
+			LOGGER << "server " << conn->IP << " does not have file, REMOVAL FROM DB NOT IMPLEMENTED";
 		}else{
-			logger::debug(LOGGER_P1,"logic error: unhandled case");
+			LOGGER << "logic error: unhandled case";
 			exit(1);
 		}
 		return;
@@ -287,7 +287,7 @@ void download_file::response(const int & socket, std::string block)
 		return;
 	}
 
-	logger::debug(LOGGER_P1,"logic error: unhandled case");
+	LOGGER << "logic error: unhandled case";
 	exit(1);
 }
 
@@ -325,7 +325,7 @@ void download_file::write_block(boost::uint64_t block_number, std::string & bloc
 		fout.seekp(block_number * global::FILE_BLOCK_SIZE, std::ios::beg);
 		fout.write(block.c_str(), block.size());
 	}else{
-		logger::debug(LOGGER_P1,"error opening file ",file_path);
+		LOGGER << "error opening file " << file_path;
 		stop();
 	}
 }

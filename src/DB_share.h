@@ -2,16 +2,14 @@
 #define H_DB_SHARE
 
 //boost
-#include <boost/thread/mutex.hpp>
+#include <boost/tuple/tuple.hpp>
 
 //C
 #include <cstdio>
 
 //custom
 #include "global.h"
-
-//sqlite
-#include <sqlite3.h>
+#include "sqlite3_wrapper.h"
 
 //std
 #include <fstream>
@@ -27,11 +25,11 @@ public:
 	/*
 	Functions to modify the database:
 	add_entry      - adds an entry to the database if none exists for the file
-	delete_hash    - deletes the record associated with hash
+	delete_hash    - deletes all records with hash
 	remove_missing - removes files from the database that aren't present in the share
 	*/
 	void add_entry(const std::string & hash, const boost::uint64_t & size, const std::string & path);
-	void delete_hash(const std::string & hash);
+	void delete_hash(const std::string & hash, const std::string & path);
 	void remove_missing(const std::string & share_directory);
 
 	/*
@@ -45,72 +43,12 @@ public:
 	bool lookup_path(const std::string & path, std::string & hash, boost::uint64_t & size);
 
 private:
-	sqlite3 * sqlite3_DB;
-	boost::mutex Mutex;   //mutex for all public functions
+	sqlite3_wrapper DB;
 
-	void add_entry_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
-	static int add_entry_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
-	{
-		DB_share * this_class = (DB_share *)object_ptr;
-		this_class->add_entry_call_back(columns_retrieved, query_response, column_name);
-		return 0;
-	}
-	bool add_entry_entry_exists;
-
-	//only used to determine if entry exists
-	void lookup_hash_0_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
-	static int lookup_hash_0_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
-	{
-		DB_share * this_class = (DB_share *)object_ptr;
-		this_class->lookup_hash_0_call_back(columns_retrieved, query_response, column_name);
-		return 0;
-	}
-	//sets only lookup_hash_file_path
-	void lookup_hash_1_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
-	static int lookup_hash_1_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
-	{
-		DB_share * this_class = (DB_share *)object_ptr;
-		this_class->lookup_hash_1_call_back(columns_retrieved, query_response, column_name);
-		return 0;
-	}
-	//sets only lookup_hash_file_size
-	void lookup_hash_2_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
-	static int lookup_hash_2_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
-	{
-		DB_share * this_class = (DB_share *)object_ptr;
-		this_class->lookup_hash_2_call_back(columns_retrieved, query_response, column_name);
-		return 0;
-	}
-	//sets both lookup_hash_file_size and lookup_hash_file_path
-	void lookup_hash_3_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
-	static int lookup_hash_3_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
-	{
-		DB_share * this_class = (DB_share *)object_ptr;
-		this_class->lookup_hash_3_call_back(columns_retrieved, query_response, column_name);
-		return 0;
-	}
-	bool lookup_hash_entry_exists;
-	std::string * lookup_hash_path;
-	boost::uint64_t * lookup_hash_file_size;
-
-	void lookup_path_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
-	static int lookup_path_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
-	{
-		DB_share * this_class = (DB_share *)object_ptr;
-		this_class->lookup_path_call_back(columns_retrieved, query_response, column_name);
-		return 0;
-	}
-	bool lookup_path_entry_exists;
-	std::string * lookup_path_hash;
-	boost::uint64_t * lookup_path_size;
-
-	void remove_missing_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
-	static int remove_missing_call_back_wrapper(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
-	{
-		DB_share * this_class = (DB_share *)object_ptr;
-		this_class->remove_missing_call_back(columns_retrieved, query_response, column_name);
-		return 0;
-	}
-	std::set<std::string> remove_missing_hashes;
+	/*
+	remove_missing_call_back - call back for remove missing
+	*/
+	int remove_missing_call_back(std::set<std::string> & missing_hashes,
+		int columns_retrieved, char ** response, char ** column_name);
 };
 #endif

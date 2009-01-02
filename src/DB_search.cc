@@ -1,92 +1,73 @@
 #include "DB_search.h"
 
 DB_search::DB_search()
+: DB(global::DATABASE_PATH)
 {
-	//open DB
-	if(sqlite3_open(global::DATABASE_PATH.c_str(), &sqlite3_DB) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-
-	//DB timeout to 1 second
-	if(sqlite3_busy_timeout(sqlite3_DB, global::DB_TIMEOUT) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-
-	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS search (hash TEXT, name TEXT, size TEXT, server TEXT)", NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-	if(sqlite3_exec(sqlite3_DB, "CREATE INDEX IF NOT EXISTS search_hash_index ON search (hash)", NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-	if(sqlite3_exec(sqlite3_DB, "CREATE INDEX IF NOT EXISTS search_name_index ON search (name)", NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
+	DB.query("CREATE TABLE IF NOT EXISTS search (hash TEXT, name TEXT, size TEXT, server TEXT)");
+	DB.query("CREATE INDEX IF NOT EXISTS search_hash_index ON search (hash)");
+	DB.query("CREATE INDEX IF NOT EXISTS search_name_index ON search (name)");
 }
 
-void DB_search::search(std::string & search_word, std::vector<download_info> & search_results)
+static int search_call_back(std::vector<download_info> & search_results, int columns_retrieved,
+	char ** response, char ** column_name)
 {
-	boost::mutex::scoped_lock lock(Mutex);
-	search_results.clear();
-	search_results_ptr = &search_results;
-
-	//convert the asterisk to a % for more common wildcard notation
-	for(std::string::iterator iter0 = search_word.begin(); iter0 != search_word.end(); ++iter0){
-		if(*iter0 == '*'){
-			*iter0 = '%';
-		}
-	}
-	logger::debug(LOGGER_P1,"search entered: '",search_word,"'");
-	if(!search_word.empty()){
-		std::ostringstream query;
-		query << "SELECT * FROM search WHERE name LIKE '%" << search_word << "%'";
-		if(sqlite3_exec(sqlite3_DB, query.str().c_str(), search_call_back_wrapper, (void *)this, NULL) != 0){
-			logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-		}
-	}
-}
-
-void DB_search::search_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
-{
-	std::istringstream size_iss(query_response[2]);
+	assert(response[0] && response[1] && response[2] && response[3]);
+	std::istringstream size_iss(response[2]);
 	boost::uint64_t size;
 	size_iss >> size;
 	download_info Download_Info(
-		query_response[0], //hash
-		query_response[1], //name
-		size,              //size
-		0,                 //latest request
+		response[0], //hash
+		response[1], //name
+		size,        //size
+		0,           //latest request
 		0
 	);
 
 	//get servers
 	char delims[] = ";";
 	char * result = NULL;
-	result = strtok(query_response[3], delims);
+	result = strtok(response[3], delims);
 	while(result != NULL){
 		Download_Info.IP.push_back(result);
 		result = strtok(NULL, delims);
 	}
-	search_results_ptr->push_back(Download_Info);
+	search_results.push_back(Download_Info);
+	return 0;
+}
+
+void DB_search::search(std::string & search_term, std::vector<download_info> & search_results)
+{
+	search_results.clear();
+
+	//use more common wildcard notation
+	std::replace(search_term.begin(), search_term.end(), '*', '%');
+
+	LOGGER << "search entered: '" << search_term << "'";
+	if(!search_term.empty()){
+		std::ostringstream query;
+		query << "SELECT hash, name, size, server FROM search WHERE name LIKE '%"
+			<< search_term << "%'";
+		DB.query(query.str(), &search_call_back, search_results);
+	}
+}
+
+static int get_servers_call_back(std::vector<std::string> & servers, int columns_retrieved,
+	char ** response, char ** column_name)
+{
+	assert(response[0]);
+	char delims[] = ";";
+	char * result = NULL;
+	result = strtok(response[0], delims);
+	while(result != NULL){
+		servers.push_back(result);
+		result = strtok(NULL, delims);
+	}
+	return 0;
 }
 
 void DB_search::get_servers(const std::string & hash, std::vector<std::string> & servers)
 {
-	boost::mutex::scoped_lock lock(Mutex);
-	get_servers_results_ptr = &servers;
 	std::ostringstream query;
 	query << "SELECT server FROM search WHERE hash = '" << hash << "'";
-	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), get_servers_call_back_wrapper, (void *)this, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-}
-
-void DB_search::get_servers_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
-{
-	char delims[] = ";";
-	char * result = NULL;
-	result = strtok(query_response[0], delims);
-	while(result != NULL){
-		get_servers_results_ptr->push_back(result);
-		result = strtok(NULL, delims);
-	}
+	DB.query(query.str(), &get_servers_call_back, servers);
 }

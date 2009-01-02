@@ -3,6 +3,16 @@ import boost
 import system
 import unit_test
 
+#std
+import sys
+
+#determines path to object needed for unit test (in parent directory)
+def obj(obj_name):
+	if sys.platform == 'linux2':
+		return '../'+obj_name+'.o'
+	if sys.platform == 'win32':
+		return '../'+obj_name+'.obj'
+
 env = Environment()
 system.env_setup(env)
 boost.env_setup(env)
@@ -13,22 +23,22 @@ env.unit_test('contiguous_set.cc')
 
 env.unit_test([
 	'DB_blacklist.cc',
-	'../DB_blacklist.o',
-	'../logger.o',
+	obj('DB_blacklist'),
+	boost.static_lib('date_time'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
 	'DB_client_preferences.cc',
-	'../DB_client_preferences.o',
-	'../logger.o',
+	obj('DB_client_preferences'),
+	boost.static_lib('date_time'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
 	'DB_download.cc',
-	'../DB_download.o',
-	'../logger.o',
+	obj('DB_download'),
+	boost.static_lib('date_time'),
 	boost.static_lib('filesystem'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')
@@ -36,38 +46,48 @@ env.unit_test([
 
 env.unit_test([
 	'DB_prime.cc',
-	'../DB_prime.o',
-	'../logger.o',
+	obj('DB_prime'),
+	boost.static_lib('date_time'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
 	'DB_search.cc',
-	'../DB_search.o',
-	'../logger.o',
+	obj('DB_search'),
+	boost.static_lib('date_time'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
 	'DB_server_preferences.cc',
-	'../DB_server_preferences.o',
-	'../logger.o',
+	obj('DB_server_preferences'),
+	boost.static_lib('date_time'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
 	'DB_share.cc',
-	'../DB_share.o',
-	'../logger.o',
+	obj('DB_share'),
+	boost.static_lib('date_time'),
+	boost.static_lib('thread')
+])
+
+env.unit_test([
+	'encryption.cc',
+	obj('encryption'),
+	obj('CMWC4096'),
+	obj('DB_prime'),
+	obj('number_generator'),
+	boost.static_lib('date_time'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
 	'hash_tree.cc',
-	'../hash_tree.o',
-	'../DB_blacklist.o',
-	'../logger.o',
-	'../sha.o',
+	obj('hash_tree'),
+	obj('DB_blacklist'),
+	obj('sha'),
+	boost.static_lib('date_time'),
 	boost.static_lib('filesystem'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')
@@ -75,8 +95,14 @@ env.unit_test([
 
 env.unit_test([
 	'request_generator.cc',
-	'../request_generator.o',
-	'../logger.o',
+	obj('request_generator'),
+	boost.static_lib('date_time'),
+	boost.static_lib('thread')
+])
+
+env.unit_test([
+	'sqlite3_wrapper.cc',
+	boost.static_lib('date_time'),
 	boost.static_lib('thread')
 ])
 

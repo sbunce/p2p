@@ -97,6 +97,7 @@ private:
 	void new_connection(const int & listener);
 	void process_request(const int & socket_FD, char * recv_buff, const int & n_bytes);
 
+	DB_blacklist DB_Blacklist;
 	DB_server_preferences DB_Server_Preferences;
 	server_index Server_Index;
 	speed_calculator Speed_Calculator;

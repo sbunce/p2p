@@ -201,7 +201,7 @@ public:
 		if(block_info(block_num, Tree_Info.row, info)){
 			return info.second;
 		}else{
-			logger::debug(LOGGER_P1,"programmer error, invalid block specified");
+			LOGGER << "programmer error, invalid block specified";
 			exit(1);
 		}
 	}
@@ -404,6 +404,7 @@ private:
 	bool create_recurse(std::fstream & scratch, boost::uint64_t start_RRN,
 		boost::uint64_t end_RRN, std::string & root_hash);
 
+	DB_blacklist DB_Blacklist;
 	sha SHA;
 };
 #endif

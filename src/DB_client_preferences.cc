@@ -1,115 +1,101 @@
 #include "DB_client_preferences.h"
 
-//used to check if there is an entry in preference tables
-static int check_entry_exists(void * object_ptr, int columns_retrieved, char ** query_response, char ** column_name)
+boost::mutex DB_client_preferences::Mutex;
+
+//client_preferences should only have one row, this checks to see if it exists
+int check_exists(bool & exists, int columns_retrieved, char ** query_response,
+	char ** column_name)
 {
-	if(strcmp(query_response[0], "0") == 0){
-		*((bool *)object_ptr) = false;
-	}else{
-		*((bool *)object_ptr) = true;
-	}
+	exists = strcmp(query_response[0], "0") != 0;
 	return 0;
 }
 
 DB_client_preferences::DB_client_preferences()
+:
+	DB(global::DATABASE_PATH)
 {
-	if(sqlite3_open(global::DATABASE_PATH.c_str(), &sqlite3_DB) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-	if(sqlite3_busy_timeout(sqlite3_DB, global::DB_TIMEOUT) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS client_preferences (download_directory TEXT, speed_limit TEXT, max_connections TEXT)", NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-	bool client_preferences_exist;
-	if(sqlite3_exec(sqlite3_DB, "SELECT count(1) FROM client_preferences", check_entry_exists, (void *)&client_preferences_exist, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-	if(!client_preferences_exist){
+	boost::mutex::scoped_lock lock(Mutex);
+	DB.query("CREATE TABLE IF NOT EXISTS client_preferences (download_directory TEXT, speed_limit TEXT, max_connections TEXT)");
+	bool exists;
+	DB.query("SELECT count(1) FROM client_preferences", &check_exists, exists);
+	if(!exists){
 		std::stringstream query;
-		query << "INSERT INTO client_preferences VALUES('" << global::DOWNLOAD_DIRECTORY << "', '" << global::DOWN_SPEED << "', '" << global::MAX_CONNECTIONS << "')";
-		if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
-			logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-		}
+		query << "INSERT INTO client_preferences VALUES('" << global::DOWNLOAD_DIRECTORY
+			<< "', '" << global::DOWN_SPEED << "', '" << global::MAX_CONNECTIONS << "')";
+		DB.query(query.str());
 	}
+}
+
+static int get_download_directory_call_back(std::string & download_directory,
+	int columns_retrieved, char ** response, char ** column_name)
+{
+	assert(response[0]);
+	download_directory.assign(response[0]);
+	return 0;
 }
 
 std::string DB_client_preferences::get_download_directory()
 {
-	boost::mutex::scoped_lock lock(Mutex);
-	if(sqlite3_exec(sqlite3_DB, "SELECT download_directory FROM client_preferences", get_download_directory_call_back_wrapper, (void *)this, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-	return get_download_directory_download_directory;
+	std::string download_directory;
+	DB.query("SELECT download_directory FROM client_preferences",
+		&get_download_directory_call_back, download_directory);
+	return download_directory;
 }
 
-void DB_client_preferences::get_download_directory_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
-{
-	get_download_directory_download_directory.assign(query_response[0]);
-}
-
-void DB_client_preferences::set_download_directory(const std::string & download_directory)
+void DB_client_preferences::set_download_directory(
+	const std::string & download_directory)
 {
 	std::ostringstream query;
-	query << "UPDATE client_preferences SET download_directory = '" << download_directory << "'";
-	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
+	query << "UPDATE client_preferences SET download_directory = '"
+		<< download_directory << "'";
+	DB.query(query.str());
 }
 
-unsigned int DB_client_preferences::get_speed_limit()
+static int get_speed_limit_call_back(unsigned & speed_limit, int columns_retrieved,
+	char ** response, char ** column_name)
 {
-	boost::mutex::scoped_lock lock(Mutex);
-	if(sqlite3_exec(sqlite3_DB, "SELECT speed_limit FROM client_preferences", get_speed_limit_call_back_wrapper, (void *)this, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-
-	std::stringstream ss(get_speed_limit_speed_limit);
-	unsigned int speed_limit;
+	assert(response[0]);
+	std::stringstream ss(response[0]);
 	ss >> speed_limit;
+	return 0;
+}
+
+unsigned DB_client_preferences::get_speed_limit()
+{
+	unsigned speed_limit;
+	DB.query("SELECT speed_limit FROM client_preferences",
+		&get_speed_limit_call_back, speed_limit);
 	return speed_limit;
 }
 
-void DB_client_preferences::get_speed_limit_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
+void DB_client_preferences::set_speed_limit(const unsigned & speed_limit)
 {
-	get_speed_limit_speed_limit.assign(query_response[0]);
-}
-
-void DB_client_preferences::set_speed_limit(const unsigned int & speed_limit)
-{
-	boost::mutex::scoped_lock lock(Mutex);
 	std::ostringstream query;
 	query << "UPDATE client_preferences SET speed_limit = '" << speed_limit << "'";
-	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
+	DB.query(query.str());
 }
 
-int DB_client_preferences::get_max_connections()
+static int get_max_connections_call_back(unsigned & max_connections,
+	int columns_retrieved, char ** response, char ** column_name)
 {
-	boost::mutex::scoped_lock lock(Mutex);
-	if(sqlite3_exec(sqlite3_DB, "SELECT max_connections FROM client_preferences", get_max_connections_call_back_wrapper, (void *)this, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-
-	std::stringstream ss(get_max_connections_max_connections);
-	int max_connections;
+	assert(response[0]);
+	std::stringstream ss(response[0]);
 	ss >> max_connections;
+	return 0;
+}
+
+unsigned DB_client_preferences::get_max_connections()
+{
+	unsigned max_connections;
+	DB.query("SELECT max_connections FROM client_preferences",
+		&get_max_connections_call_back, max_connections);
 	return max_connections;
 }
 
-void DB_client_preferences::get_max_connections_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
+void DB_client_preferences::set_max_connections(const unsigned & max_connections)
 {
-	get_max_connections_max_connections.assign(query_response[0]);
-}
-
-void DB_client_preferences::set_max_connections(const unsigned int & max_connections)
-{
-	boost::mutex::scoped_lock lock(Mutex);
 	std::ostringstream query;
-	query << "UPDATE client_preferences SET max_connections = '" << max_connections << "'";
-	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
+	query << "UPDATE client_preferences SET max_connections = '"
+		<< max_connections << "'";
+	DB.query(query.str());
 }

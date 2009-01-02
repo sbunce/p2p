@@ -26,7 +26,7 @@ bool hash_tree::check(tree_info & Tree_Info, boost::uint64_t & bad_block)
 
 	for(boost::uint64_t x=0; x<Tree_Info.block_count; ++x){
 		if(!check_block(Tree_Info, x)){
-			logger::debug(LOGGER_P1,"bad block ",x," in tree ",Tree_Info.root_hash);
+			LOGGER << "bad block " << x << " in tree " << Tree_Info.root_hash;
 			boost::mutex::scoped_lock lock(*Tree_Info.Contiguous_mutex);
 			Tree_Info.Contiguous->trim(x);
 			bad_block = x;
@@ -47,13 +47,13 @@ bool hash_tree::check_block(const tree_info & Tree_Info, const boost::uint64_t &
 	boost::uint64_t parent;
 	if(!block_info(block_num, Tree_Info.row, info, parent)){
 		//invalid block sent to block_info
-		logger::debug(LOGGER_P1,"programmer error\n");
+		LOGGER << "programmer error\n";
 		exit(1);
 	}
 
 	std::fstream fin((global::HASH_DIRECTORY + Tree_Info.root_hash).c_str(), std::ios::in | std::ios::binary);
 	if(!fin.is_open()){
-		logger::debug(LOGGER_P1,"cannot open hash tree ",Tree_Info.root_hash);
+		LOGGER << "cannot open hash tree " << Tree_Info.root_hash;
 		exit(1);
 	}
 
@@ -103,8 +103,8 @@ void hash_tree::check_contiguous(tree_info & Tree_Info)
 			#else
 
 			//blacklist server that sent bad block
-			logger::debug(LOGGER_P1,c_iter_cur->second," sent bad hash block ",c_iter_cur->first);
-			DB_blacklist::add(c_iter_cur->second);
+			LOGGER << c_iter_cur->second << " sent bad hash block " << c_iter_cur->first;
+			DB_Blacklist.add(c_iter_cur->second);
 
 			//bad block, add all blocks this server sent to bad_block
 			std::vector<boost::uint64_t> bad;
@@ -149,13 +149,13 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 	//open file to hash, and create scratch file in which to build hash tree
 	std::fstream fin(file_path.c_str(), std::ios::in | std::ios::binary);
 	if(!fin.good()){
-		logger::debug(LOGGER_P1,"error opening file ", file_path);
+		LOGGER << "error opening file " << file_path;
 		return false;
 	}
 	std::fstream scratch((global::HASH_DIRECTORY+"upside_down").c_str(), std::ios::in
 		| std::ios::out | std::ios::trunc | std::ios::binary);
 	if(!scratch.good()){
-		logger::debug(LOGGER_P1,"error opening scratch file");
+		LOGGER << "error opening scratch file";
 		return false;
 	}
 
@@ -172,7 +172,7 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 		SHA.end();
 		scratch.write(SHA.raw_hash(), sha::HASH_SIZE);
 		if(!scratch.good()){
-			logger::debug(LOGGER_P1,"error writing to scratch file");
+			LOGGER << "error writing to scratch file";
 			return false;
 		}
 		++blocks_read;
@@ -183,7 +183,7 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 	}
 
 	if(fin.bad() || !fin.eof()){
-		logger::debug(LOGGER_P1,"error reading file \"",file_path,"\"");
+		LOGGER << "error reading file \"" << file_path << "\"";
 		return false;
 	}
 
@@ -235,7 +235,7 @@ bool hash_tree::create_recurse(std::fstream & scratch, boost::uint64_t start_RRN
 			scratch.seekg(scratch_read_RRN * sha::HASH_SIZE, std::ios::beg);
 			scratch.read(block_buff, (end_RRN - scratch_read_RRN) * sha::HASH_SIZE);
 			if(!scratch.good()){
-				logger::debug(LOGGER_P1,"error reading scratch file");
+				LOGGER << "error reading scratch file";
 				return false;
 			}
 			block_buff_size = (end_RRN - scratch_read_RRN) * sha::HASH_SIZE;
@@ -244,7 +244,7 @@ bool hash_tree::create_recurse(std::fstream & scratch, boost::uint64_t start_RRN
 			scratch.seekg(scratch_read_RRN * sha::HASH_SIZE, std::ios::beg);
 			scratch.read(block_buff, global::HASH_BLOCK_SIZE * sha::HASH_SIZE);
 			if(!scratch.good()){
-				logger::debug(LOGGER_P1,"error reading scratch file");
+				LOGGER << "error reading scratch file";
 				return false;
 			}
 			block_buff_size = global::HASH_BLOCK_SIZE * sha::HASH_SIZE;
@@ -260,7 +260,7 @@ bool hash_tree::create_recurse(std::fstream & scratch, boost::uint64_t start_RRN
 		scratch.seekp(scratch_write_RRN * sha::HASH_SIZE, std::ios::beg);
 		scratch.write(SHA.raw_hash(), sha::HASH_SIZE);
 		if(!scratch.good()){
-			logger::debug(LOGGER_P1,"error writing scratch file");
+			LOGGER << "error writing scratch file";
 			return false;
 		}
 		++scratch_write_RRN;
@@ -298,14 +298,14 @@ bool hash_tree::create_recurse(std::fstream & scratch, boost::uint64_t start_RRN
 		//create the file with the root hash as the name
 		fout.open((global::HASH_DIRECTORY+"rightside_up").c_str(), std::ios::out | std::ios::app | std::ios::binary);
 		if(!scratch.good()){
-			logger::debug(LOGGER_P1,"error opening rightside_up file");
+			LOGGER << "error opening rightside_up file";
 			return false;
 		}
 	}else{
 		//this is not the recursive call with the root hash
 		fout.open((global::HASH_DIRECTORY+"rightside_up").c_str(), std::ios::out | std::ios::app | std::ios::binary);
 		if(!scratch.good()){
-			logger::debug(LOGGER_P1,"error opening rightside up file");
+			LOGGER << "error opening rightside up file";
 			return false;
 		}
 	}
@@ -315,7 +315,7 @@ bool hash_tree::create_recurse(std::fstream & scratch, boost::uint64_t start_RRN
 		scratch.seekg(x * sha::HASH_SIZE, std::ios::beg);
 		scratch.read(block_buff, sha::HASH_SIZE);
 		if(!scratch.good()){
-			logger::debug(LOGGER_P1,"error reading scratch file");
+			LOGGER << "error reading scratch file";
 			return false;
 		}
 		fout.write(block_buff, sha::HASH_SIZE);
@@ -327,7 +327,7 @@ bool hash_tree::check_file_block(const tree_info & Tree_Info, const boost::uint6
 {
 	std::fstream fin((global::HASH_DIRECTORY + Tree_Info.root_hash).c_str(), std::ios::in | std::ios::binary);
 	if(!fin.is_open()){
-		logger::debug(LOGGER_P1,"error reading hash tree ",Tree_Info.root_hash);
+		LOGGER << "error reading hash tree " << Tree_Info.root_hash;
 		exit(1);
 	}else{
 		//read file hash
@@ -356,7 +356,7 @@ bool hash_tree::read_block(const tree_info & Tree_Info, const boost::uint64_t & 
 		//open file to read
 		std::fstream fin((global::HASH_DIRECTORY + Tree_Info.root_hash).c_str(), std::ios::in | std::ios::binary);
 		if(!fin.is_open()){
-			logger::debug(LOGGER_P1,"error opening file");
+			LOGGER << "error opening file";
 			return false;
 		}else{
 			//write file
@@ -367,7 +367,7 @@ bool hash_tree::read_block(const tree_info & Tree_Info, const boost::uint64_t & 
 			return true;
 		}
 	}else{
-		logger::debug(LOGGER_P1,"invalid block number, programming error");
+		LOGGER << "invalid block number, programming error";
 		exit(1);
 	}
 }
@@ -378,14 +378,14 @@ bool hash_tree::write_block(tree_info & Tree_Info, const boost::uint64_t & block
 	if(block_info(block_num, Tree_Info.row, info)){
 		if(info.second != block.size()){
 			//incorrect block size
-			logger::debug(LOGGER_P1,"incorrect block size, programming error");
+			LOGGER << "incorrect block size, programming error";
 			exit(1);
 		}
 
 		//open file to write
 		std::fstream fout((global::HASH_DIRECTORY + Tree_Info.root_hash).c_str(), std::ios::in | std::ios::out | std::ios::binary);
 		if(!fout.is_open()){
-			logger::debug(LOGGER_P1,"error opening file");
+			LOGGER << "error opening file";
 			return false;
 		}else{
 			//write file
@@ -400,8 +400,8 @@ bool hash_tree::write_block(tree_info & Tree_Info, const boost::uint64_t & block
 			return true;
 		}
 	}else{
-		logger::debug(LOGGER_P1,"client requested invalid block number");
-		DB_blacklist::add(IP);
+		LOGGER << "client requested invalid block number";
+		DB_Blacklist.add(IP);
 		return false;
 	}
 }

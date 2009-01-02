@@ -1,10 +1,15 @@
 TODO
 
+-Make blog post about scons.
+
+-Add table to database to record all logger events. Record time, and also add
+a severity to log entries.
+
 -Combine hash tree's in to one file. Keep track of starting locations in DB.
 Perhaps have a memmove type opteration one a file where hashes can be moved to
 get rid of gaps due to removed files. The intermediate step of the memmove
 operation would basically be a journal. Develope this in parallel with existing
-system.
+system. DB_hash_free should be implemented as singleton.
 
 
 THINK ABOUT

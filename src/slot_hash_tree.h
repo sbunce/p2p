@@ -40,6 +40,8 @@ private:
 	void update_percent(const boost::uint64_t & latest_block);
 
 	hash_tree::tree_info Tree_Info;
+
+	DB_blacklist DB_Blacklist;
 	DB_share DB_Share;
 	hash_tree Hash_Tree;
 };

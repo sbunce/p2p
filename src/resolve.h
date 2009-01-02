@@ -30,7 +30,7 @@ namespace resolve
 		boost::mutex::scoped_lock lock(gethostbyname_mutex);
 		hostent * he = gethostbyname(hostname_IP.c_str());
 		if(he == NULL){
-			logger::debug(LOGGER_P1,"error resolving ",hostname_IP);
+			LOGGER << "error resolving " << hostname_IP;
 			return false;
 		}
 		hostname_IP = inet_ntoa(*(struct in_addr*)he->h_addr);

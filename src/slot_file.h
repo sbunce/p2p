@@ -48,5 +48,7 @@ private:
 	*/
 	bool read_block(const boost::uint64_t & block_num, std::string & send);
 	void update_percent(const boost::uint64_t & latest_block);
+
+	DB_blacklist DB_Blacklist;
 };
 #endif

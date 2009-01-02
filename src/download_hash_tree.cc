@@ -163,7 +163,7 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 		return download::NO_REQUEST;
 	}
 
-	logger::debug(LOGGER_P1,"logic error: unhandled case");
+	LOGGER << "logic error: unhandled case";
 	exit(1);
 }
 
@@ -185,9 +185,9 @@ void download_hash_tree::response(const int & socket, std::string block)
 			conn->slot_ID = block[1];
 			conn->State = connection_special::REQUEST_BLOCKS;
 		}else if(block[0] == global::P_ERROR){
-			logger::debug(LOGGER_P1,"server ",conn->IP," does not have hash tree, REMOVAL FROM DB NOT IMPLEMENTED");
+			LOGGER << "server " << conn->IP << " does not have hash tree, REMOVAL FROM DB NOT IMPLEMENTED";
 		}else{
-			logger::debug(LOGGER_P1,"logic error: unhandled case");
+			LOGGER << "logic error: unhandled case";
 			exit(1);
 		}
 		return;
@@ -224,9 +224,9 @@ void download_hash_tree::response(const int & socket, std::string block)
 			conn->wait_activated = true;
 			conn->wait_start = time(NULL);
 		}else if(block[0] == global::P_ERROR){
-			logger::debug(LOGGER_P1,"server ",conn->IP," does not have hash tree, REMOVAL FROM DB NOT IMPLEMENTED");
+			LOGGER << "server " << conn->IP << " does not have hash tree, REMOVAL FROM DB NOT IMPLEMENTED";
 		}else{
-			logger::debug(LOGGER_P1,"logic error: unhandled case");
+			LOGGER << "logic error: unhandled case";
 			exit(1);
 		}
 		return;
@@ -235,7 +235,7 @@ void download_hash_tree::response(const int & socket, std::string block)
 		return;
 	}
 
-	logger::debug(LOGGER_P1,"logic error: unhandled case");
+	LOGGER << "logic error: unhandled case";
 	exit(1);
 }
 

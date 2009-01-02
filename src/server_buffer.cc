@@ -11,7 +11,7 @@ server_buffer::server_buffer()
 	locate a client_buffer that doesn't exist the default ctor will be called and
 	the program will be killed.
 	*/
-	logger::debug(LOGGER_P1,"improperly constructed server_buffer");
+	LOGGER << "improperly constructed server_buffer";
 	exit(1);
 }
 
@@ -54,8 +54,8 @@ void server_buffer::close_slot(const std::string & request)
 		delete Slot[(int)(unsigned char)request[1]];
 		Slot[(int)(unsigned char)request[1]] = NULL;
 	}else{
-		logger::debug(LOGGER_P1,IP," attempted to close slot it didn't have open");
-		DB_blacklist::add(IP);
+		LOGGER << IP << " attempted to close slot it didn't have open";
+		DB_Blacklist.add(IP);
 	}
 }
 
@@ -64,8 +64,8 @@ bool server_buffer::find_empty_slot(const std::string & root_hash, int & slot_nu
 	//check to make sure slot for file not already requested
 	for(int x=0; x<256; ++x){
 		if(Slot[x] != NULL && Slot[x]->get_root_hash() == root_hash){
-			logger::debug(LOGGER_P1,IP," requested slot for ",root_hash," twice");
-			DB_blacklist::add(IP);
+			LOGGER << IP << " requested slot for " << root_hash << " twice";
+			DB_Blacklist.add(IP);
 			return false;
 		}
 	}
@@ -78,8 +78,8 @@ bool server_buffer::find_empty_slot(const std::string & root_hash, int & slot_nu
 		}
 	}
 
-	logger::debug(LOGGER_P1,IP," requested more than 256 slots");
-	DB_blacklist::add(IP);
+	LOGGER << IP << " requested more than 256 slots";
+	DB_Blacklist.add(IP);
 	return false;
 }
 
@@ -101,6 +101,12 @@ void server_buffer::process(char * buff, const int & n_bytes)
 			HTTP.process(process_request, send_buff);
 			disconnect_on_empty = true;
 		}
+
+		if(recv_buff.size() > 1024*1024){
+			//very generous sanity check for local recv buff
+			recv_buff.clear();
+		}
+
 		return;
 	}
 
@@ -114,8 +120,8 @@ void server_buffer::process(char * buff, const int & n_bytes)
 			exchange_key = false;
 		}
 		if(prime_remote_result.size() > global::DH_KEY_SIZE*2){
-			logger::debug(LOGGER_P1,"abusive client ",IP," failed key negotation, too many bytes");
-			DB_blacklist::add(IP);
+			LOGGER << "abusive client " << IP << " failed key negotation, too many bytes";
+			DB_Blacklist.add(IP);
 		}
 		return;
 	}
@@ -126,8 +132,8 @@ void server_buffer::process(char * buff, const int & n_bytes)
 
 	//disconnect clients that have pipelined more than is allowed
 	if(recv_buff.size() > global::S_MAX_SIZE*global::PIPELINE_SIZE){
-		logger::debug(LOGGER_P1,"server ",IP," over pipelined");
-		DB_blacklist::add(IP);
+		LOGGER << "server " << IP << " over pipelined";
+		DB_Blacklist.add(IP);
 		return;
 	}
 
@@ -172,7 +178,7 @@ void server_buffer::request_slot_hash(const std::string & request, std::string &
 	if(DB_Download.lookup_hash(root_hash, file_size)){
 		int slot_num;
 		if(find_empty_slot(root_hash, slot_num)){
-			logger::debug(LOGGER_P1,"granting slot ",slot_num," to ",IP);
+			LOGGER << "granting slot " << slot_num << " to " << IP;
 			Slot[slot_num] = new slot_hash_tree(&IP, root_hash, file_size);
 			send += global::P_SLOT_ID;
 			send += (char)slot_num;
@@ -184,7 +190,7 @@ void server_buffer::request_slot_hash(const std::string & request, std::string &
 	if(DB_Share.lookup_hash(root_hash, file_size)){
 		int slot_num;
 		if(find_empty_slot(root_hash, slot_num)){
-			logger::debug(LOGGER_P1,"granting slot ",slot_num," to ",IP);
+			LOGGER << "granting slot " << slot_num << " to " << IP;
 			Slot[slot_num] = new slot_hash_tree(&IP, root_hash, file_size);
 			send += global::P_SLOT_ID;
 			send += (char)slot_num;
@@ -192,7 +198,7 @@ void server_buffer::request_slot_hash(const std::string & request, std::string &
 		return;
 	}
 
-	logger::debug(LOGGER_P1,IP," requested unavailable hash tree ", root_hash);
+	LOGGER << IP << " requested unavailable hash tree " << root_hash;
 	send += global::P_ERROR;
 }
 
@@ -207,7 +213,7 @@ void server_buffer::request_slot_file(const std::string & request, std::string &
 		int slot_num;
 		if(find_empty_slot(root_hash, slot_num)){
 			//slot available
-			logger::debug(LOGGER_P1,"granting file slot ",slot_num, " to ",IP);
+			LOGGER << "granting file slot " << slot_num << " to " << IP;
 			Slot[slot_num] = new slot_file(&IP, root_hash, file_path, file_size);
 			send += global::P_SLOT_ID;
 			send += (char)slot_num;
@@ -219,7 +225,7 @@ void server_buffer::request_slot_file(const std::string & request, std::string &
 		int slot_num;
 		if(find_empty_slot(root_hash, slot_num)){
 			//slot available
-			logger::debug(LOGGER_P1,"granting file slot ",slot_num, " to ",IP);
+			LOGGER << "granting file slot " << slot_num << " to " << IP;
 			Slot[slot_num] = new slot_file(&IP, root_hash, file_path, file_size);
 			send += global::P_SLOT_ID;
 			send += (char)slot_num;
@@ -227,7 +233,7 @@ void server_buffer::request_slot_file(const std::string & request, std::string &
 		return;
 	}
 
-	logger::debug(LOGGER_P1,IP," requested unavailable hash tree ", root_hash);
+	LOGGER << IP << " requested unavailable hash tree " << root_hash;
 	send += global::P_ERROR;
 }
 
@@ -238,8 +244,8 @@ void server_buffer::send_block(const std::string & request, std::string & send)
 		//valid slot
 		Slot[slot_num]->send_block(request, send);
 	}else{
-		logger::debug(LOGGER_P1,IP," sent invalid slot ID ",slot_num);
-		DB_blacklist::add(IP);
+		LOGGER << IP << " sent invalid slot ID " << slot_num;
+		DB_Blacklist.add(IP);
 	}
 }
 

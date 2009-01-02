@@ -5,6 +5,7 @@
 //#define NDEBUG
 
 //testing features, uncomment to enable
+//#define DISABLE_ENCRYPTION
 //#define CORRUPT_HASH_BLOCK_TEST
 //#define CORRUPT_FILE_BLOCK_TEST
 #define ALLOW_LOCALHOST_CONNECTION
@@ -84,7 +85,7 @@ namespace global
 	const unsigned DOWN_SPEED = std::numeric_limits<unsigned>::max(); //download speed limit (B/s)
 
 	//hard settings, not changed at runtime
-	const unsigned DB_TIMEOUT = 1000;         //database timeout (ms)
+	const unsigned DB_TIMEOUT = 4000;         //database timeout (ms)
 	const unsigned PRIME_CACHE = 256;         //number of primes to keep in prime cache for diffie-hellman
 	const unsigned DH_KEY_SIZE = 64;          //size of key exchanged with diffie-hellman (bytes)
 	const unsigned PIPELINE_SIZE = 16;        //max pre-requests that can be done (must be >= 2)

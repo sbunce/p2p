@@ -1,86 +1,67 @@
 #ifndef H_LOGGER
 #define H_LOGGER
 
-//this is more conventient to use for the first 3 parameters function
-#define LOGGER_P1 __FILE__, __FUNCTION__, __LINE__
-
-//boost
-#include <boost/thread/mutex.hpp>
-
 //std
 #include <iostream>
 #include <sstream>
-#include <string>
 
 //custom
 #include "global.h"
 
+/*
+Example usage of logger:
+	LOGGER << "error message " << 123;
+*/
+#define LOGGER logger::make(__FILE__, __FUNCTION__, __LINE__)
+
 class logger
 {
 public:
-	//replace this mess with a variadic template when C++0x comes out
-	template<class t_1>
-	static void debug(const char * file, const char * function, int line, t_1 T_1)
+	~logger()
 	{
-		init();
-		std::ostringstream message;
-		message << file << ":" << function << ":" << line << " " << T_1;
-		Logger->write_log(message.str());
+		std::cout << file << ":" << func << ":" << line << " " << buffer.str() << "\n";
 	}
-	template<class t_1, class t_2>
-	static void debug(const char * file, const char * function, int line, t_1 T_1, t_2 T_2)
+
+	static logger make(const char * file, const char * func, const int & line)
 	{
-		init();
-		std::ostringstream message;
-		message << file << ":" << function << ":" << line << " " << T_1 << T_2;
-		Logger->write_log(message.str());
+		return logger(file, func, line);
 	}
-	template<class t_1, class t_2, class t_3>
-	static void debug(const char * file, const char * function, int line, t_1 T_1, t_2 T_2, t_3 T_3)
+
+	template <typename T>
+	logger & operator << (const T & t)
 	{
-		init();
-		std::ostringstream message;
-		message << file << ":" << function << ":" << line << " " << T_1 << T_2 << T_3;
-		Logger->write_log(message.str());
-	}
-	template<class t_1, class t_2, class t_3, class t_4>
-	static void debug(const char * file, const char * function, int line, t_1 T_1, t_2 T_2, t_3 T_3, t_4 T_4)
-	{
-		init();
-		std::ostringstream message;
-		message << file << ":" << function << ":" << line << " " << T_1 << T_2 << T_3 << T_4;
-		Logger->write_log(message.str());
-	}
-	template<class t_1, class t_2, class t_3, class t_4, class t_5>
-	static void debug(const char * file, const char * function, int line, t_1 T_1, t_2 T_2, t_3 T_3, t_4 T_4, t_5 T_5)
-	{
-		init();
-		std::ostringstream message;
-		message << file << ":" << function << ":" << line << " " << T_1 << T_2 << T_3 << T_4 << T_5;
-		Logger->write_log(message.str());
+		buffer << t;
+		return *this;
 	}
 
 private:
-	//only the logger can initialize itself
-	logger();
-
-	static void init()
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		if(Logger == NULL){
-			Logger = new logger;
-		}
-	}
-
-	//the one possible instance
-	static logger * Logger;
-
-	//mutex for checking if singleton was initialized
-	static boost::mutex Mutex;
+	//only logger::make() can instantiate a logger
+	logger(
+		const char * file_in,
+		const char * func_in,
+		const int & line_in
+	):
+		file(file_in),
+		func(func_in),
+		line(line_in)
+	{}
 
 	/*
-	write_log - does something with the log message
+	Most likely not used, but possible if temporary not optimized away in
+	logger::make()?
 	*/
-	void write_log(const std::string & message);
+	logger(
+		const logger & Logger
+	):
+		file(Logger.file),
+		func(Logger.func),
+		line(Logger.line)
+	{
+		buffer << Logger.buffer.str();
+	}
+
+	const char * file, * func;
+	int line;
+	std::ostringstream buffer;
 };
 #endif

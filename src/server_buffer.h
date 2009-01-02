@@ -212,6 +212,7 @@ private:
 	std::string prime_remote_result; //holds prime and incoming result for key exchange
 	encryption Encryption;           //object to do stream cyphers
 
+	DB_blacklist DB_Blacklist;
 	DB_download DB_Download;
 	DB_share DB_Share;
 	hash_tree Hash_Tree;

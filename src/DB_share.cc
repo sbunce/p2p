@@ -1,207 +1,170 @@
 #include "DB_share.h"
 
 DB_share::DB_share()
+: DB(global::DATABASE_PATH)
 {
-	//open DB
-	if(sqlite3_open(global::DATABASE_PATH.c_str(), &sqlite3_DB) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
+	DB.query("CREATE TABLE IF NOT EXISTS share (hash TEXT, size TEXT, path TEXT)");
+	DB.query("CREATE INDEX IF NOT EXISTS share_path_index ON share (path)");
+	DB.query("CREATE INDEX IF NOT EXISTS share_hash_index ON share (hash)");
+}
 
-	//DB timeout to 1 second
-	if(sqlite3_busy_timeout(sqlite3_DB, global::DB_TIMEOUT) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-
-	if(sqlite3_exec(sqlite3_DB, "CREATE TABLE IF NOT EXISTS share (hash TEXT, size TEXT, path TEXT)", NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-	if(sqlite3_exec(sqlite3_DB, "CREATE INDEX IF NOT EXISTS share_path_index ON share (path)", NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-	if(sqlite3_exec(sqlite3_DB, "CREATE INDEX IF NOT EXISTS share_hash_index ON share (hash)", NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
+static int add_entry_call_back(bool & entry_exists, int columns_retrieved, char ** query_response, char ** column_name)
+{
+	entry_exists = true;
+	return 0;
 }
 
 void DB_share::add_entry(const std::string & hash, const boost::uint64_t & size, const std::string & path)
 {
-	boost::mutex::scoped_lock lock(Mutex);
-
-	//if this is set to true after the query the entry exists in the database
-	add_entry_entry_exists = false;
-
-	//determine if the entry already exists
+	//determine if entry already exists for file
+	bool entry_exists = false;
 	char * path_sqlite = sqlite3_mprintf("%q", path.c_str());
 	std::ostringstream query;
-	query << "SELECT * FROM share WHERE path = '" << path_sqlite << "' LIMIT 1";
-	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), add_entry_call_back_wrapper, (void *)this, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
+	query << "SELECT 1 FROM share WHERE path = '" << path_sqlite << "'";
+	DB.query(query.str(), &add_entry_call_back, entry_exists);
 	sqlite3_free(path_sqlite);
 
-	if(!add_entry_entry_exists){
+	if(!entry_exists){
+		//entry doesn't exist, add one
 		char * path_sqlite = sqlite3_mprintf("%q", path.c_str());
 		std::ostringstream query;
 		query << "INSERT INTO share (hash, size, path) VALUES ('" << hash << "', '" << size << "', '" << path_sqlite << "')";
-		if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
-			logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-		}
+		DB.query(query.str());
 		sqlite3_free(path_sqlite);
 	}
 }
 
-void DB_share::add_entry_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
+void DB_share::delete_hash(const std::string & hash, const std::string & path)
 {
-	add_entry_entry_exists = true;
+	std::ostringstream query;
+	query << "DELETE FROM share WHERE hash = '" << hash << "' AND path = '" << path << "'";
+	DB.query(query.str());
 }
 
-void DB_share::delete_hash(const std::string & hash)
+static int lookup_hash_0_call_back(bool & entry_exists, int columns_retrieved,
+	char ** response, char ** column_name)
 {
-	boost::mutex::scoped_lock lock(Mutex);
-	std::ostringstream query;
-	query << "DELETE FROM share WHERE hash = '" << hash << "'";
-	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
+	assert(response[0]);
+	entry_exists = strcmp(response[0], "0") != 0;
+	return 0;
 }
 
 bool DB_share::lookup_hash(const std::string & hash)
 {
-	boost::mutex::scoped_lock lock(Mutex);
-	lookup_hash_entry_exists = false;
-
+	bool entry_exists = false;
 	std::ostringstream query;
-	query << "SELECT count(1) FROM share WHERE hash = '" << hash << "'";
-	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), lookup_hash_0_call_back_wrapper, (void *)this, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-	return lookup_hash_entry_exists;
+	query << "SELECT count(1) FROM share WHERE hash = '" << hash << "' LIMIT 1";
+	DB.query(query.str(), &lookup_hash_0_call_back, entry_exists);
+	return entry_exists;
+}
+
+//std::pair<true if found, file path>
+static int lookup_hash_1_call_back(std::pair<bool, std::string *> & info,
+	int columns_retrieved, char ** response, char ** column_name)
+{
+	assert(response[0]);
+	info.first = true;
+	*info.second = response[0];
+	return 0;
 }
 
 bool DB_share::lookup_hash(const std::string & hash, std::string & path)
 {
-	boost::mutex::scoped_lock lock(Mutex);
-	lookup_hash_entry_exists = false;
-	lookup_hash_path = &path;
-
+	std::pair<bool, std::string *> info(false, &path);
 	std::ostringstream query;
 	query << "SELECT path FROM share WHERE hash = '" << hash << "' LIMIT 1";
-	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), lookup_hash_1_call_back_wrapper, (void *)this, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-	return lookup_hash_entry_exists;
+	DB.query(query.str(), &lookup_hash_1_call_back, info);
+	return info.first;
+}
+
+//std::pair<true if found, file_size>
+static int lookup_hash_2_call_back(std::pair<bool, boost::uint64_t *> & info,
+	int columns_retrieved, char ** response, char ** column_name)
+{
+	info.first = true;
+	std::stringstream ss(response[0]);
+	ss >> *info.second;
+	return 0;
 }
 
 bool DB_share::lookup_hash(const std::string & hash, boost::uint64_t & file_size)
 {
-	boost::mutex::scoped_lock lock(Mutex);
-	lookup_hash_entry_exists = false;
-	lookup_hash_file_size = &file_size;
-
+	std::pair<bool, boost::uint64_t *> info(false, &file_size);
 	std::ostringstream query;
 	query << "SELECT size FROM share WHERE hash = '" << hash << "' LIMIT 1";
-	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), lookup_hash_2_call_back_wrapper, (void *)this, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-	return lookup_hash_entry_exists;
+	DB.query(query.str(), &lookup_hash_2_call_back, info);
+	return info.first;
+}
+
+static int lookup_hash_3_call_back(boost::tuple<bool, boost::uint64_t *, std::string *> & info,
+	int columns_retrieved, char ** response, char ** column_name)
+{
+	assert(response[0] && response[1]);
+	info.get<0>() = true;
+	std::stringstream ss(response[0]);
+	ss >> *info.get<1>();
+	*info.get<2>() = response[1];
+	return 0;
 }
 
 bool DB_share::lookup_hash(const std::string & hash, std::string & path, boost::uint64_t & file_size)
 {
-	boost::mutex::scoped_lock lock(Mutex);
-	lookup_hash_entry_exists = false;
-	lookup_hash_path = &path;
-	lookup_hash_file_size = &file_size;
-
+	boost::tuple<bool, boost::uint64_t *, std::string *> info(false, &file_size, &path);
 	std::ostringstream query;
 	query << "SELECT size, path FROM share WHERE hash = '" << hash << "' LIMIT 1";
-	if(sqlite3_exec(sqlite3_DB, query.str().c_str(), lookup_hash_3_call_back_wrapper, (void *)this, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
-	return lookup_hash_entry_exists;
+	DB.query(query.str(), &lookup_hash_3_call_back, info);
+	return info.get<0>();
 }
 
-void DB_share::lookup_hash_0_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
+static int lookup_path_call_back(boost::tuple<bool, std::string *, boost::uint64_t *> & info,
+	int columns_retrieved, char ** response, char ** column_name)
 {
-	lookup_hash_entry_exists = strncmp(query_response[0], "0", 1) != 0;
-}
-
-void DB_share::lookup_hash_1_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
-{
-	lookup_hash_entry_exists = true;
-	*lookup_hash_path = query_response[0];
-}
-
-void DB_share::lookup_hash_2_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
-{
-	lookup_hash_entry_exists = true;
-	std::istringstream iss(query_response[0]);
-	iss >> *lookup_hash_file_size;
-}
-
-void DB_share::lookup_hash_3_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
-{
-	lookup_hash_entry_exists = true;
-	std::istringstream iss(query_response[0]);
-	iss >> *lookup_hash_file_size;
-	*lookup_hash_path = query_response[1];
+	assert(response[0] && response[1]);
+	info.get<0>() = true;
+	*info.get<1>() = response[0];
+	std::stringstream ss(response[1]);
+	ss >> *info.get<2>();
+	return 0;
 }
 
 bool DB_share::lookup_path(const std::string & path, std::string & hash, boost::uint64_t & size)
 {
-	boost::mutex::scoped_lock lock(Mutex);
-	lookup_path_entry_exists = false;
-	lookup_path_hash = &hash;
-	lookup_path_size = &size;
-
+	boost::tuple<bool, std::string *, boost::uint64_t *> info(false, &hash, &size);
 	char * query = sqlite3_mprintf("SELECT hash, size FROM share WHERE path = '%q' LIMIT 1", path.c_str());
-	if(sqlite3_exec(sqlite3_DB, query, lookup_path_call_back_wrapper, (void *)this, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
+	DB.query(query, &lookup_path_call_back, info);
 	sqlite3_free(query);
-	return lookup_path_entry_exists;
+	return info.get<0>();
 }
 
-void DB_share::lookup_path_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
+int DB_share::remove_missing_call_back(std::set<std::string> & missing_hashes,
+	int columns_retrieved, char ** response, char ** column_name)
 {
-	lookup_path_entry_exists = true;
-	*lookup_path_hash = query_response[0];
-
-	std::istringstream size_iss(query_response[1]);
-	size_iss >> *lookup_path_size;
+	assert(response[0] && response[1]);
+	std::fstream fin(response[1], std::ios::in);
+	if(fin.is_open()){
+		missing_hashes.erase(response[0]);
+	}else{
+		std::ostringstream query;
+		query << "DELETE FROM share WHERE hash = '" << response[0] << "' AND path = '" << response[1] << "'";
+		DB.query(query.str());
+		missing_hashes.insert(response[0]);
+	}
+	return 0;
 }
 
 void DB_share::remove_missing(const std::string & share_directory)
 {
-	boost::mutex::scoped_lock lock(Mutex);
-	//find hash trees without corresponding files
-	if(sqlite3_exec(sqlite3_DB, "SELECT hash, path FROM share", remove_missing_call_back_wrapper, (void *)this, NULL) != 0){
-		logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-	}
+	std::set<std::string> missing_hashes;
+	DB.query("SELECT hash, path FROM share", this, &DB_share::remove_missing_call_back, missing_hashes);
 
 	//remove hash trees with no corresponding files
 	std::set<std::string>::iterator iter_cur, iter_end;
-	iter_cur = remove_missing_hashes.begin();
-	iter_end = remove_missing_hashes.end();
+	iter_cur = missing_hashes.begin();
+	iter_end = missing_hashes.end();
 	while(iter_cur != iter_end){
 		std::string orphan_hash = global::HASH_DIRECTORY + *iter_cur;
 		std::remove(orphan_hash.c_str());
 		++iter_cur;
 	}
-	remove_missing_hashes.clear();
-}
-
-void DB_share::remove_missing_call_back(int & columns_retrieved, char ** query_response, char ** column_name)
-{
-	std::fstream fin(query_response[1], std::ios::in);
-	if(fin.is_open()){
-		remove_missing_hashes.erase(query_response[0]);
-	}else{
-		std::ostringstream query;
-		query << "DELETE FROM share WHERE hash = '" << query_response[0] << "' AND path = '" << query_response[1] << "'";
-		if(sqlite3_exec(sqlite3_DB, query.str().c_str(), NULL, NULL, NULL) != 0){
-			logger::debug(LOGGER_P1,sqlite3_errmsg(sqlite3_DB));
-		}
-		remove_missing_hashes.insert(query_response[0]);
-	}
+	missing_hashes.clear();
 }

@@ -6,9 +6,10 @@
 
 //custom
 #include "global.h"
+#include "sqlite3_wrapper.h"
 
-//sqlite
-#include <sqlite3.h>
+//std
+#include <string>
 
 class DB_server_preferences
 {
@@ -31,34 +32,9 @@ public:
 	void set_max_connections(const unsigned & max_connections);
 
 private:
-	sqlite3 * sqlite3_DB;
-	boost::mutex Mutex;   //mutex for all public functions
+	sqlite3_wrapper DB;
 
-	void get_share_directory_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
-	static int get_share_directory_call_back_wrapper(void * obj_ptr, int columns_retrieved, char ** query_response, char ** column_name)
-	{
-		DB_server_preferences * this_class = (DB_server_preferences *)obj_ptr;
-		this_class->get_share_directory_call_back(columns_retrieved, query_response, column_name);
-		return 0;
-	}
-	std::string get_share_directory_download_directory;
-
-	void get_speed_limit_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
-	static int get_speed_limit_call_back_wrapper(void * obj_ptr, int columns_retrieved, char ** query_response, char ** column_name)
-	{
-		DB_server_preferences * this_class = (DB_server_preferences *)obj_ptr;
-		this_class->get_speed_limit_call_back(columns_retrieved, query_response, column_name);
-		return 0;
-	}
-	std::string get_speed_limit_speed_limit;
-
-	void get_max_connections_call_back(int & columns_retrieved, char ** query_response, char ** column_name);
-	static int get_max_connections_call_back_wrapper(void * obj_ptr, int columns_retrieved, char ** query_response, char ** column_name)
-	{
-		DB_server_preferences * this_class = (DB_server_preferences *)obj_ptr;
-		this_class->get_max_connections_call_back(columns_retrieved, query_response, column_name);
-		return 0;
-	}
-	std::string get_max_connections_max_connections;
+	//mutex for checking for, and creation of, the one row
+	static boost::mutex Mutex;
 };
 #endif

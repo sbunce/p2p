@@ -18,7 +18,7 @@ client_new_connection::client_new_connection(
 	WSADATA wsock_data;
 	int startup;
 	if((startup = WSAStartup(wsock_ver, &wsock_data)) != 0){
-		logger::debug(LOGGER_P1,"winsock startup error ", startup);
+		LOGGER << "winsock startup error " << startup;
 		exit(1);
 	}
 	#endif
@@ -107,13 +107,13 @@ void client_new_connection::new_connection(download_connection DC)
 	connection.
 	*/
 	if(check_unresponsive(DC.IP)){
-		logger::debug(LOGGER_P1,"stopping connection to known unresponsive server ",DC.IP);
+		LOGGER << "stopping connection to known unresponsive server " << DC.IP;
 		return;
 	}
 
 	//do not connect to servers that are blacklisted
-	if(DB_blacklist::is_blacklisted(DC.IP)){
-		logger::debug(LOGGER_P1,"stopping connection to blacklisted IP ",DC.IP);
+	if(DB_Blacklist.is_blacklisted(DC.IP)){
+		LOGGER << "stopping connection to blacklisted IP " << DC.IP;
 		return;
 	}
 
@@ -147,10 +147,10 @@ void client_new_connection::new_connection(download_connection DC)
 	}
 
 	if(connect(DC.socket, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0){
-		logger::debug(LOGGER_P1,"connection to ",DC.IP," failed");
+		LOGGER << "connection to " << DC.IP << " failed";
 		add_unresponsive(DC.IP);
 	}else{
-		logger::debug(LOGGER_P1,"created socket ",DC.socket," for ",DC.IP);
+		LOGGER << "created socket " << DC.socket << " for " << DC.IP;
 		if(DC.socket > *FD_max){
 			*FD_max = DC.socket;
 		}
@@ -171,14 +171,14 @@ void client_new_connection::queue(download_connection DC)
 {
 	//resolve hostname
 	if(!resolve::hostname(DC.IP)){
-		logger::debug(LOGGER_P1,"failed to resolve ",DC.IP);
+		LOGGER << "failed to resolve " << DC.IP;
 		return;
 	}
 
 	#ifndef ALLOW_LOCALHOST_CONNECTION
 	//stop connections to localhost
 	if(DC.IP.find("127.") != std::string::npos){
-		logger::debug(LOGGER_P1,"stopping connection to localhost");
+		LOGGER << "stopping connection to localhost";
 		return;
 	}
 	#endif

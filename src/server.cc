@@ -14,7 +14,7 @@ server::server():
 	WSADATA wsock_data;
 	int startup;
 	if((startup = WSAStartup(wsock_ver, &wsock_data)) != 0){
-		logger::debug(LOGGER_P1,"winsock startup error ", startup);
+		LOGGER << "winsock startup error " << startup;
 		exit(1);
 	}
 	#endif
@@ -36,15 +36,15 @@ server::~server()
 
 void server::check_blacklist()
 {
-	if(DB_blacklist::modified(blacklist_state)){
+	if(DB_Blacklist.modified(blacklist_state)){
 		sockaddr_in temp_addr;
 		socklen_t len = sizeof(temp_addr);
 		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &master_FDS)){
 				getpeername(socket_FD, (sockaddr*)&temp_addr, &len);
 				std::string IP(inet_ntoa(temp_addr.sin_addr));
-				if(DB_blacklist::is_blacklisted(IP)){
-					logger::debug(LOGGER_P1,"disconnecting blacklisted IP ",IP);
+				if(DB_Blacklist.is_blacklisted(IP)){
+					LOGGER << "disconnecting blacklisted IP " << IP;
 					disconnect(socket_FD);
 				}
 			}
@@ -59,7 +59,7 @@ void server::current_uploads(std::vector<upload_info> & info)
 
 void server::disconnect(const int & socket_FD)
 {
-	logger::debug(LOGGER_P1,"disconnecting socket ",socket_FD);
+	LOGGER << "disconnecting socket " << socket_FD;
 	FD_CLR(socket_FD, &master_FDS);
 	--connections;
 
@@ -107,7 +107,6 @@ std::string server::get_share_directory()
 void server::set_share_directory(const std::string & share_directory)
 {
 	DB_Server_Preferences.set_share_directory(share_directory);
-
 	std::cout << "SETTING SHARE FEATURE UNIMPLEMENTED\n";
 }
 
@@ -147,7 +146,7 @@ void server::new_connection(const int & listener)
 	int new_FD = accept(listener, (sockaddr *)&remoteaddr, &len);
 	if(new_FD == -1){
 		#ifdef WIN32
-		logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+		LOGGER << "winsock error " << WSAGetLastError();
 		#else
 		perror("accept");
 		#endif
@@ -157,14 +156,14 @@ void server::new_connection(const int & listener)
 	std::string new_IP(inet_ntoa(remoteaddr.sin_addr));
 
 	//do not allow clients to connect that are blacklisted
-	if(DB_blacklist::is_blacklisted(new_IP)){
-		logger::debug(LOGGER_P1,"stopping connection from blacklisted IP ",new_IP);
+	if(DB_Blacklist.is_blacklisted(new_IP)){
+		LOGGER << "stopping connection from blacklisted IP " << new_IP;
 		return;
 	}
 
 	#ifndef ALLOW_LOCALHOST_CONNECTION
 	if(new_IP.find("127.") != std::string::npos){
-		logger::debug(LOGGER_P1,"stopping connection to localhost");
+		LOGGER << "stopping connection to localhost";
 		return;
 	}
 	#endif
@@ -175,7 +174,7 @@ void server::new_connection(const int & listener)
 		if(FD_ISSET(socket_FD, &master_FDS)){
 			getpeername(socket_FD, (sockaddr*)&temp_addr, &len);
 			if(strcmp(new_IP.c_str(), inet_ntoa(temp_addr.sin_addr)) == 0){
-				logger::debug(LOGGER_P1,"server ",new_IP," attempted multiple connections");
+				LOGGER << "server " << new_IP << " attempted multiple connections";
 				#ifdef WIN32
 				closesocket(new_FD);
 				#else
@@ -193,7 +192,7 @@ void server::new_connection(const int & listener)
 		if(new_FD > FD_max){
 			FD_max = new_FD;
 		}
-		logger::debug(LOGGER_P1,"client ",inet_ntoa(remoteaddr.sin_addr)," socket ",new_FD," connected");
+		LOGGER << "client " << inet_ntoa(remoteaddr.sin_addr) << " socket " << new_FD << " connected";
 	}else{
 		#ifdef WIN32
 		closesocket(new_FD);
@@ -211,7 +210,7 @@ void server::main_loop()
 	unsigned int listener;
 	if((listener = socket(PF_INET, SOCK_STREAM, 0)) == -1){
 		#ifdef WIN32
-		logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+		LOGGER << "winsock error " << WSAGetLastError();
 		#else
 		perror("socket");
 		#endif
@@ -229,7 +228,7 @@ void server::main_loop()
 	if(setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1){
 	#endif
 		#ifdef WIN32
-		logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+		LOGGER << "winsock error " << WSAGetLastError();
 		#else
 		perror("setsockopt");
 		#endif
@@ -245,7 +244,7 @@ void server::main_loop()
 	//set listener info to what we set above
 	if(bind(listener, (sockaddr *)&myaddr, sizeof(myaddr)) == -1){
 		#ifdef WIN32
-		logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+		LOGGER << "winsock error " << WSAGetLastError();
 		#else
 		perror("bind");
 		#endif
@@ -255,13 +254,13 @@ void server::main_loop()
 	//start listener socket listening
 	if(listen(listener, 10) == -1){
 		#ifdef WIN32
-		logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+		LOGGER << "winsock error " << WSAGetLastError();
 		#else
 		perror("listen");
 		#endif
 		exit(1);
 	}
-	logger::debug(LOGGER_P1,"created listening socket ",listener);
+	LOGGER << "created listening socket " << listener;
 
 	FD_SET(listener, &master_FDS);
 	FD_max = listener;
@@ -285,7 +284,7 @@ void server::main_loop()
 				//gprof will send PROF signal, this will ignore it
 				if(errno != EINTR){
 					#ifdef WIN32
-					logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+					LOGGER << "winsock error " << WSAGetLastError();
 					#else
 					perror("server select");
 					#endif
@@ -299,7 +298,7 @@ void server::main_loop()
 				//gprof will send PROF signal, this will ignore it
 				if(errno != EINTR){
 					#ifdef WIN32
-					logger::debug(LOGGER_P1,"winsock error ",WSAGetLastError());
+					LOGGER << "winsock error " << WSAGetLastError();
 					#else
 					perror("server select");
 					#endif

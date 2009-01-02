@@ -24,7 +24,7 @@ int main()
 		return 1;
 	}
 
-	DBS.delete_hash("ABC");
+	DBS.delete_hash("ABC", "DEF");
 
 	if(DBS.lookup_hash("ABC")){
 		std::cout << "failed lookup hash 3 test\n";
