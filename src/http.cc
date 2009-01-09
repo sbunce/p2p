@@ -73,9 +73,9 @@ void http::process(const std::string & request, std::string & send)
 }
 
 static int column_name_call_back(std::string & send, int columns_retrieved,
-	char ** query_response, char ** column_name)
+	char ** response, char ** column_name)
 {
-	"\t<b><tr>\n";
+	send += "\t<b><tr>\n";
 	for(int x=0; x<columns_retrieved; ++x){
 		send += "\t<td>";
 		if(column_name[x]){
@@ -88,13 +88,13 @@ static int column_name_call_back(std::string & send, int columns_retrieved,
 }
 
 static int data_call_back(std::string & send, int columns_retrieved,
-	char ** query_response, char ** column_name)
+	char ** response, char ** column_name)
 {
-	"\t<tr>\n";
+	send += "\t<tr>\n";
 	for(int x=0; x<columns_retrieved; ++x){
 		send += "\t<td>";
-		if(query_response[x]){
-			send += query_response[x];
+		if(response[x]){
+			send += response[x];
 		}
 		send += "</td>\n";
 	}

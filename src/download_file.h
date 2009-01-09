@@ -47,7 +47,7 @@ public:
 	virtual bool complete();
 	virtual const std::string hash();
 	virtual const std::string name();
-	virtual unsigned int percent_complete();
+	virtual unsigned percent_complete();
 	virtual void register_connection(const download_connection & DC);
 	virtual download::mode request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected, int & slots_used);
 	virtual void response(const int & socket, std::string block);
@@ -79,12 +79,12 @@ private:
 	*/
 	bool download_complete;
 
-	std::string root_hash;        //hash tree root hash
-	std::string file_name;        //name of the file
-	std::string file_path;        //path to write file to
-	boost::uint64_t file_size;    //size of the file(bytes)
-	boost::uint64_t block_count;  //number of file blocks (last block is block_count - 1)
-	unsigned int last_block_size; //holds the exact size of the last fileBlock(in bytes)
+	std::string root_hash;       //hash tree root hash
+	std::string file_name;       //name of the file
+	std::string file_path;       //path to write file to
+	boost::uint64_t file_size;   //size of the file(bytes)
+	boost::uint64_t block_count; //number of file blocks (last block is block_count - 1)
+	unsigned last_block_size;    //holds the exact size of the last fileBlock(in bytes)
 
 	/*
 	The tree_info for the file downloading.

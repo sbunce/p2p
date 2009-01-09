@@ -6,6 +6,9 @@
 
 int main()
 {
+	sqlite3_wrapper DB(global::DATABASE_PATH);
+	DB.query("DROP TABLE IF EXISTS blacklist");
+
 	DB_blacklist DB_Blacklist;
 	std::string IP_1 = "1.1.1.1", IP_2 = "2.2.2.2";
 

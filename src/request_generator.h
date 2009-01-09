@@ -63,7 +63,7 @@ private:
 	boost::uint64_t end;
 
 	//max age of a request (in seconds) before a re_request is made
-	unsigned int timeout;
+	unsigned timeout;
 
 	/*
 	Requests that have been made associated with the time they were made. This is

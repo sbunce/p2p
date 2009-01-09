@@ -5,8 +5,8 @@ server::server():
 	connections(0)
 {
 	FD_ZERO(&master_FDS);
-	max_connections = DB_Server_Preferences.get_max_connections();
-	Speed_Calculator.set_speed_limit(DB_Server_Preferences.get_speed_limit());
+	max_connections = DB_Preferences.get_server_connections();
+	Rate_Limit.set_upload_rate(DB_Preferences.get_upload_rate());
 
 	#ifdef WIN32
 	//start winsock
@@ -80,15 +80,15 @@ void server::disconnect(const int & socket_FD)
 	}
 }
 
-int server::get_max_connections()
+unsigned server::get_max_connections()
 {
 	return max_connections;
 }
 
-void server::set_max_connections(int max_connections_in)
+void server::set_connections(const unsigned & max_connections_in)
 {
 	max_connections = max_connections_in;
-	DB_Server_Preferences.set_max_connections(max_connections);
+	DB_Preferences.set_server_connections(max_connections);
 	while(connections > max_connections){
 		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &master_FDS)){
@@ -101,37 +101,34 @@ void server::set_max_connections(int max_connections_in)
 
 std::string server::get_share_directory()
 {
-	return DB_Server_Preferences.get_share_directory();
+	return DB_Preferences.get_share_directory();
 }
 
 void server::set_share_directory(const std::string & share_directory)
 {
-	DB_Server_Preferences.set_share_directory(share_directory);
+	DB_Preferences.set_share_directory(share_directory);
 	std::cout << "SETTING SHARE FEATURE UNIMPLEMENTED\n";
 }
 
 std::string server::get_speed_limit()
 {
 	std::ostringstream sl;
-	if(Speed_Calculator.get_speed_limit() == std::numeric_limits<unsigned int>::max()){
+	if(Rate_Limit.get_upload_rate() == std::numeric_limits<unsigned>::max()){
 		sl << "0";
 	}else{
-		sl << Speed_Calculator.get_speed_limit() / 1024;
+		sl << Rate_Limit.get_upload_rate() / 1024;
 	}
 	return sl.str();
 }
 
-void server::set_speed_limit(const std::string & speed_limit)
+void server::set_upload_rate(unsigned upload_rate)
 {
-	std::stringstream ss(speed_limit);
-	unsigned int speed;
-	ss >> speed;
-	speed *= 1024;
-	if(speed == 0){
-		speed = speed - 1;
+	upload_rate *= 1024;
+	if(upload_rate == 0){
+		upload_rate = std::numeric_limits<unsigned>::max();
 	}
-	DB_Server_Preferences.set_speed_limit(speed);
-	Speed_Calculator.set_speed_limit(speed);
+	DB_Preferences.set_upload_rate(upload_rate);
+	Rate_Limit.set_upload_rate(upload_rate);
 }
 
 bool server::is_indexing()
@@ -207,7 +204,7 @@ void server::new_connection(const int & listener)
 void server::main_loop()
 {
 	//set listening socket
-	unsigned int listener;
+	unsigned listener;
 	if((listener = socket(PF_INET, SOCK_STREAM, 0)) == -1){
 		#ifdef WIN32
 		LOGGER << "winsock error " << WSAGetLastError();
@@ -266,8 +263,9 @@ void server::main_loop()
 	FD_max = listener;
 
 	char recv_buff[global::S_MAX_SIZE*global::PIPELINE_SIZE];
-	int n_bytes;
-	int send_limit = 0;
+	int n_bytes;        //how many bytes sent or received by send()/recv()
+	int transfer_limit; //speed_calculator stores how much may be sent here
+	bool transfer;      //triggers sleep if nothing sent or received last iteration
 	while(true){
 		boost::this_thread::interruption_point();
 
@@ -307,48 +305,51 @@ void server::main_loop()
 			}
 		}
 
+		transfer = false;
 		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &read_FDS)){
 				if(socket_FD == listener){
-					//new client connected
 					new_connection(listener);
 				}else{
-					//existing socket sending data
 					if((n_bytes = recv(socket_FD, recv_buff, global::S_MAX_SIZE*global::PIPELINE_SIZE, 0)) <= 0){
-						//error or disconnect
 						disconnect(socket_FD);
 						continue;
 					}else{
-						//incoming data from client socket
+						Rate_Limit.add_download_bytes(n_bytes);
 						server_buffer::process(socket_FD, recv_buff, n_bytes);
+						transfer = true;
 					}
 				}
 			}
 
-			//do not check for writes on listener
 			if(socket_FD != listener && FD_ISSET(socket_FD, &write_FDS)){
 				std::string * buff = &server_buffer::get_send_buff(socket_FD);
 				if(!buff->empty()){
-					send_limit = Speed_Calculator.rate_control(buff->size());
-					if((n_bytes = send(socket_FD, buff->c_str(), send_limit, MSG_NOSIGNAL)) < 0){
-						disconnect(socket_FD);
-					}else{
-						//remove bytes sent from buffer
-						Speed_Calculator.update(n_bytes);
-						buff->erase(0, n_bytes);
-						if(!server_buffer::post_send(socket_FD)){
-							//disconnect upon empty buffer (server buffer requested this)
+					if((transfer_limit = Rate_Limit.upload_rate_control(buff->size())) != 0){
+						if((n_bytes = send(socket_FD, buff->c_str(), transfer_limit, MSG_NOSIGNAL)) < 0){
 							disconnect(socket_FD);
+						}else{
+							Rate_Limit.add_upload_bytes(n_bytes);
+							buff->erase(0, n_bytes);
+							if(!server_buffer::post_send(socket_FD)){
+								//disconnect upon empty buffer (server buffer requested this)
+								disconnect(socket_FD);
+							}
+							transfer = true;
 						}
 					}
 				}
 			}
 		}
+
+		if(!transfer){
+			portable_sleep::yield();
+		}
 	}
 }
 
-int server::total_speed()
+unsigned server::total_speed()
 {
-	Speed_Calculator.update(0);
-	return Speed_Calculator.speed();
+	Rate_Limit.add_upload_bytes(0);
+	return Rate_Limit.upload_speed();
 }

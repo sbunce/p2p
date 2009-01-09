@@ -37,6 +37,6 @@ public:
 	//these are only set when returning information about running downloads
 	int percent_complete;            //0-100
 	int total_speed;                 //total download speed (bytes/second)
-	std::vector<unsigned int> speed; //speed of servers (parallel to IP vector)
+	std::vector<unsigned> speed; //speed of servers (parallel to IP vector)
 };
 #endif

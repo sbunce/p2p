@@ -3,7 +3,7 @@ This is a wrapper meant to be used with integers. It makes access to the wrapped
 integer atomic with the use of a mutex.
 
 The template parameter is used to specify what kind of integer you want:
-example atomic_int<int>, atomic_int<unsigned int>, etc..
+example atomic_int<int>, atomic_int<unsigned>, etc..
 */
 
 #ifndef H_ATOMIC_INT
@@ -126,6 +126,26 @@ public:
 	{
 		boost::mutex::scoped_lock lock(*Mutex);
 		return x -= rval;
+	}
+	const bool operator >= (const T & rval)
+	{
+		boost::mutex::scoped_lock lock(*Mutex);
+		return x >= rval;
+	}
+	const bool operator <= (const T & rval)
+	{
+		boost::mutex::scoped_lock lock(*Mutex);
+		return x <= rval;
+	}
+	const bool operator > (const T & rval)
+	{
+		boost::mutex::scoped_lock lock(*Mutex);
+		return x > rval;
+	}
+	const bool operator < (const T & rval)
+	{
+		boost::mutex::scoped_lock lock(*Mutex);
+		return x < rval;
 	}
 
 	/*

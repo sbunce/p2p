@@ -30,6 +30,9 @@ Call back with object (can be value or reference):
 //boost
 #include <boost/thread/recursive_mutex.hpp>
 
+//custom
+#include "global.h"
+
 //sqlite
 #include <sqlite3.h>
 
@@ -42,7 +45,7 @@ class sqlite3_wrapper
 public:
 	class sqlite3_wrapper_exception: public std::exception
 	{
-		virtual const char* what() const throw()
+		virtual const char * what() const throw()
 		{
 			return "failed to open sqlite database";
 		}
@@ -68,6 +71,9 @@ public:
 		int code;
 		if(code = sqlite3_exec(sqlite3_DB, query.c_str(), NULL, NULL, NULL) != 0){
 			LOGGER << "sqlite error: " << code << " " << sqlite3_errmsg(sqlite3_DB) << " query: " << query;
+			#ifndef NDEBUG
+			exit(1);
+			#endif
 		}
 		return code;
 	}
@@ -79,6 +85,9 @@ public:
 		int code;
 		if(code = sqlite3_exec(sqlite3_DB, query.c_str(), fun_call_back_wrapper, (void *)fun_ptr, NULL) != 0){
 			LOGGER << "sqlite error: " << code << " " << sqlite3_errmsg(sqlite3_DB) << " query: " << query;
+			#ifndef NDEBUG
+			exit(1);
+			#endif
 		}
 		return code;
 	}
@@ -95,6 +104,9 @@ public:
 			(void *)&call_back_info, NULL) != 0)
 		{
 			LOGGER << "sqlite error: " << code << " " << sqlite3_errmsg(sqlite3_DB) << " query: " << query;
+			#ifndef NDEBUG
+			exit(1);
+			#endif
 		}
 		return code;
 	}
@@ -111,6 +123,9 @@ public:
 			(void *)&call_back_info, NULL) != 0)
 		{
 			LOGGER << "sqlite error: " << code << " " << sqlite3_errmsg(sqlite3_DB) << " query: " << query;
+			#ifndef NDEBUG
+			exit(1);
+			#endif
 		}
 		return code;
 	}
@@ -127,6 +142,9 @@ public:
 			(void *)&call_back_info, NULL) != 0)
 		{
 			LOGGER << "sqlite error: " << code << " " << sqlite3_errmsg(sqlite3_DB) << " query: " << query;
+			#ifndef NDEBUG
+			exit(1);
+			#endif
 		}
 		return code;
 	}
@@ -147,6 +165,9 @@ public:
 			(void *)&call_back_info, NULL) != 0)
 		{
 			LOGGER << "sqlite error: " << code << " " << sqlite3_errmsg(sqlite3_DB) << " query: " << query;
+			#ifndef NDEBUG
+			exit(1);
+			#endif
 		}
 		return code;
 	}
@@ -167,9 +188,13 @@ public:
 			(void *)&call_back_info, NULL) != 0)
 		{
 			LOGGER << "sqlite error: " << code << " " << sqlite3_errmsg(sqlite3_DB) << " query: " << query;
+			#ifndef NDEBUG
+			exit(1);
+			#endif
 		}
 		return code;
 	}
+
 private:
 	sqlite3 * sqlite3_DB;
 

@@ -24,7 +24,7 @@ public:
 	If you know exactly how much data you will be loading this can speed up
 	things by reserving space in the load buffer.
 	*/
-	void reserve(const unsigned int res);
+	void reserve(const unsigned res);
 
 	/*
 	Functions to load data to be hashed.

@@ -7,9 +7,9 @@ client::client():
 	Client_New_Connection(master_FDS, FD_max, max_connections, connections)
 {
 	boost::filesystem::create_directory(global::DOWNLOAD_DIRECTORY);
-	max_connections = DB_Client_Preferences.get_max_connections();
+	max_connections = DB_Preferences.get_client_connections();
 	FD_ZERO(&master_FDS);
-	Speed_Calculator.set_speed_limit(DB_Client_Preferences.get_speed_limit());
+	Rate_Limit.set_download_rate(DB_Preferences.get_download_rate());
 
 	#ifdef WIN32
 	WORD wsock_ver = MAKEWORD(1,1);
@@ -74,7 +74,7 @@ void client::current_downloads(std::vector<download_info> & info, std::string ha
 	client_buffer::current_downloads(info, hash);
 }
 
-inline void client::disconnect(const int & socket_FD)
+void client::disconnect(const int & socket_FD)
 {
 	LOGGER << "disconnecting socket " << socket_FD;
 
@@ -109,84 +109,62 @@ bool client::file_info(const std::string & hash, std::string & path, boost::uint
 	}
 }
 
-int client::prime_count()
+unsigned client::prime_count()
 {
 	return number_generator::prime_count();
 }
 
-int client::get_max_connections()
+unsigned client::get_max_connections()
 {
 	return max_connections;
 }
 
-void client::set_max_connections(int max_connections_in)
-{
-	max_connections = max_connections_in;
-	DB_Client_Preferences.set_max_connections(max_connections);
-	while(connections > max_connections){
-		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
-			if(FD_ISSET(socket_FD, &master_FDS)){
-				disconnect(socket_FD);
-				break;
-			}
-		}
-	}
-}
-
 std::string client::get_download_directory()
 {
-	return DB_Client_Preferences.get_download_directory();
-}
-
-void client::set_download_directory(const std::string & download_directory)
-{
-	DB_Client_Preferences.set_download_directory(download_directory);
+	return DB_Preferences.get_download_directory();
 }
 
 std::string client::get_speed_limit()
 {
 	std::ostringstream sl;
-	if(Speed_Calculator.get_speed_limit() == std::numeric_limits<unsigned int>::max()){
+	if(Rate_Limit.get_download_rate() == std::numeric_limits<unsigned>::max()){
 		sl << "0";
 	}else{
-		sl << Speed_Calculator.get_speed_limit() / 1024;
+		sl << Rate_Limit.get_download_rate() / 1024;
 	}
 	return sl.str();
-}
-
-void client::set_speed_limit(const std::string & speed_limit)
-{
-	std::stringstream ss(speed_limit);
-	unsigned int speed;
-	ss >> speed;
-	speed *= 1024;
-	if(speed == 0){
-		speed = std::numeric_limits<unsigned int>::max(); //max speed
-	}
-	DB_Client_Preferences.set_speed_limit(speed);
-	Speed_Calculator.set_speed_limit(speed);
 }
 
 void client::main_loop()
 {
 	reconnect_unfinished();
-	while(true){
 
+	char recv_buff[global::C_MAX_SIZE*global::PIPELINE_SIZE];
+	int n_bytes;        //how many bytes sent or received by send()/recv()
+	int transfer_limit; //speed_calculator stores how much may be recv'd here
+	bool transfer;      //triggers sleep if nothing sent or received last iteration
+	time_t Time(0);     //used to limit selected function calls to 1 per second max
+	timeval tv;
+
+	while(true){
 		boost::this_thread::interruption_point();
 
+		client_buffer::generate_requests(); //let downloads generate requests
 		check_blacklist();                  //check/disconnect blacklisted IPs
-		check_timeouts();                   //check/disconnect timed out sockets
-		client_buffer::generate_requests(); //process client_buffers, let them generate requests
-		remove_complete();                  //remove completed downloads
-		remove_empty();                     //remove empty client_buffers (no downloads)
-		start_pending_downloads();          //start downloads queue'd by the GUI
+
+		if(Time != std::time(NULL)){
+			check_timeouts();          //check/disconnect timed out sockets
+			remove_complete();         //remove completed downloads
+			remove_empty();            //remove empty client_buffers (no downloads)
+			start_pending_downloads(); //start downloads queue'd by the GUI
+			Time = std::time(NULL);
+		}
 
 		/*
 		These must be initialized every iteration on linux(and possibly other OS's)
 		because linux will change them(POSIX.1-2001 allows this) to reflect the
 		time that select() has blocked for.
 		*/
-		timeval tv;
 		tv.tv_sec = 1;
 		tv.tv_usec = 0;
 
@@ -227,13 +205,11 @@ void client::main_loop()
 		}
 
 		//process reads/writes
-		char recv_buff[global::C_MAX_SIZE*global::PIPELINE_SIZE];
-		int n_bytes;
-		int recv_limit = 0;
+		transfer = false;
 		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &read_FDS)){
-				if((recv_limit = Speed_Calculator.rate_control(global::C_MAX_SIZE*global::PIPELINE_SIZE)) != 0){
-					if((n_bytes = recv(socket_FD, recv_buff, recv_limit, MSG_NOSIGNAL)) <= 0){
+				if((transfer_limit = Rate_Limit.download_rate_control(global::C_MAX_SIZE*global::PIPELINE_SIZE)) != 0){
+					if((n_bytes = recv(socket_FD, recv_buff, transfer_limit, MSG_NOSIGNAL)) <= 0){
 						if(n_bytes == -1){
 							#ifdef WIN32
 							LOGGER << "winsock error " << WSAGetLastError();
@@ -243,11 +219,13 @@ void client::main_loop()
 						}
 						disconnect(socket_FD);
 					}else{
-						Speed_Calculator.update(n_bytes);
+						Rate_Limit.add_download_bytes(n_bytes);
 						client_buffer::recv_buff_append(socket_FD, recv_buff, n_bytes);
+						transfer = true;
 					}
 				}
 			}
+
 			if(FD_ISSET(socket_FD, &write_FDS)){
 				std::string * buff = &client_buffer::get_send_buff(socket_FD);
 				if(!buff->empty()){
@@ -261,11 +239,17 @@ void client::main_loop()
 						}
 					}else{
 						//remove bytes sent from buffer
+						Rate_Limit.add_upload_bytes(n_bytes);
 						buff->erase(0, n_bytes);
 						client_buffer::post_send(socket_FD);
+						transfer = true;
 					}
 				}
 			}
+		}
+
+		if(!transfer){
+			portable_sleep::yield();
 		}
 	}
 }
@@ -321,6 +305,35 @@ void client::search(std::string search_word, std::vector<download_info> & Search
 	DB_Search.search(search_word, Search_Info);
 }
 
+void client::set_connections(const unsigned & max_connections_in)
+{
+	max_connections = max_connections_in;
+	DB_Preferences.set_client_connections(max_connections);
+	while(connections > max_connections){
+		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
+			if(FD_ISSET(socket_FD, &master_FDS)){
+				disconnect(socket_FD);
+				break;
+			}
+		}
+	}
+}
+
+void client::set_download_directory(const std::string & download_directory)
+{
+	DB_Preferences.set_download_directory(download_directory);
+}
+
+void client::set_download_rate(unsigned download_rate)
+{
+	download_rate *= 1024;
+	if(download_rate == 0){
+		download_rate = std::numeric_limits<unsigned>::max();
+	}
+	DB_Preferences.set_download_rate(download_rate);
+	Rate_Limit.set_download_rate(download_rate);
+}
+
 void client::start_download(const download_info & info)
 {
 	boost::mutex::scoped_lock lock(PD_mutex);
@@ -373,14 +386,14 @@ void client::start_pending_downloads()
 	}
 }
 
-int client::total_speed()
+unsigned client::total_speed()
 {
 	/*
 	If there is no I/O the speed won't get updated. This will update the speed
 	as long as the client cares to check it.
 	*/
-	Speed_Calculator.update(0);
-	return Speed_Calculator.speed();
+	Rate_Limit.add_download_bytes(0);
+	return Rate_Limit.download_speed();
 }
 
 void client::transition_download(download * Download_Stop)
@@ -407,3 +420,4 @@ void client::transition_download(download * Download_Stop)
 		}
 	}
 }
+	

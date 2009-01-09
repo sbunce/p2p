@@ -115,12 +115,12 @@ const std::string download_file::name()
 	}
 }
 
-unsigned int download_file::percent_complete()
+unsigned download_file::percent_complete()
 {
 	if(Tree_Info.get_file_block_count() == 0){
 		return 0;
 	}else{
-		return (unsigned int)(((float)Request_Generator.highest_requested()
+		return (unsigned)(((float)Request_Generator.highest_requested()
 			/ (float)Tree_Info.get_file_block_count())*100);
 	}
 }

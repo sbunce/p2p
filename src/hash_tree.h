@@ -195,9 +195,9 @@ public:
 	Given a block number determines the size of the block (in bytes). Terminates
 	the program if invalid block is specified.
 	*/
-	static unsigned int block_size(const tree_info & Tree_Info, const boost::uint64_t & block_num)
+	static unsigned block_size(const tree_info & Tree_Info, const boost::uint64_t & block_num)
 	{
-		std::pair<boost::uint64_t, unsigned int> info;
+		std::pair<boost::uint64_t, unsigned> info;
 		if(block_info(block_num, Tree_Info.row, info)){
 			return info.second;
 		}else{
@@ -226,12 +226,12 @@ private:
 	Note: if block is 0 then paren't won't be set.
 	*/
 	static bool block_info(const boost::uint64_t & block, const std::deque<boost::uint64_t> & row,
-		std::pair<boost::uint64_t, unsigned int> & info, boost::uint64_t & parent)
+		std::pair<boost::uint64_t, unsigned> & info, boost::uint64_t & parent)
 	{
 		boost::uint64_t offset = 0;          //hash offset from beginning of file to start of row
 		boost::uint64_t block_count = 0;     //total block count in all previous rows
 		boost::uint64_t row_block_count = 0; //total block count in current row
-		for(unsigned int x=0; x<row.size(); ++x){
+		for(unsigned x=0; x<row.size(); ++x){
 			if(row[x] % global::HASH_BLOCK_SIZE == 0){
 				row_block_count = row[x] / global::HASH_BLOCK_SIZE;
 			}else{
@@ -280,7 +280,7 @@ private:
 	*/
 	static boost::uint64_t throw_away;
 	static bool block_info(const boost::uint64_t & block, const std::deque<boost::uint64_t> & row,
-		std::pair<boost::uint64_t, unsigned int> & info)
+		std::pair<boost::uint64_t, unsigned> & info)
 	{
 		return block_info(block, row, info, throw_away);
 	}

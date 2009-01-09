@@ -1,22 +1,19 @@
 TODO
 
--Make blog post about scons.
-
--Add table to database to record all logger events. Record time, and also add
-a severity to log entries.
-
--Combine hash tree's in to one file. Keep track of starting locations in DB.
-Perhaps have a memmove type opteration one a file where hashes can be moved to
-get rid of gaps due to removed files. The intermediate step of the memmove
-operation would basically be a journal. Develope this in parallel with existing
-system. DB_hash_free should be implemented as singleton.
-
 
 THINK ABOUT
 
--Think about CMWC4096 PRNG seed issue.
+-Think about CMWC4096 PRNG seed issue. After key exchange, each client/server
+sends 1/2 the size of the PRNG seed encrypted to the other.
 
 -Think about how ISP might detect protocol via knowing handshake size/port.
+Initial send sizes need to be be randomized? Perhaps do a modulo of some number
+against the secret key, this could say how many extra random bytes to send.
+
+-Possible system to do uploads. Favor the highest request, but assure that
+requests are arriving sequentially.
+
+-Is starvation a problem between the client and server upload?
 
 
 DEFERRED FEATURES
@@ -31,12 +28,6 @@ are worked out.
 
 -Support for multiple share directories.
 
--Total upload/download needs to be kept track of in client_server_bridge. Think
-about having a minimum speed on the client/server upload/download (like 1kB/s).
-If there's no minimum it could be possible for the client to starve the server
-or vise versa. The sleep method in the socket checking loop won't work here
-because it would allow writes to slow down reads and visa versa.
-
 -Figure out how to handle naming conflicts. It should be fully automatic.
 Probably just rename the files according to some rules. It doesn't matter too
 much since the hashes stay the same.
@@ -45,8 +36,5 @@ much since the hashes stay the same.
 downloading it can be moved to a directory which can be indexed normally. This
 way users can rename files and do what they want and files will just get
 rehashed without complication.
-
-
-IDEAS
 
 -Have a tab that shows share stats, upload/download stats, duplicate files, etc.

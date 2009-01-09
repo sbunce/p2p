@@ -22,12 +22,12 @@ const std::string download::name()
 	return "FUNCTION NOT SET IN DERIVED";
 }
 
-unsigned int download::percent_complete()
+unsigned download::percent_complete()
 {
 	return 0;
 }
 
-unsigned int download::speed()
+unsigned download::speed()
 {
 	return Speed_Calculator.speed();
 }
@@ -42,7 +42,7 @@ void download::register_connection(const download_connection & DC)
 	Connection.insert(std::make_pair(DC.socket, server_info(DC.IP)));
 }
 
-void download::servers(std::vector<std::string> & IP, std::vector<unsigned int> & speed)
+void download::servers(std::vector<std::string> & IP, std::vector<unsigned> & speed)
 {
 	std::map<int, server_info>::iterator iter_cur, iter_end;
 	iter_cur = Connection.begin();

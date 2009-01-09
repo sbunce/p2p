@@ -34,8 +34,8 @@ public:
 	virtual bool visible();
 	virtual const std::string hash();
 	virtual const std::string name();
-	virtual unsigned int percent_complete();
-	virtual unsigned int speed();
+	virtual unsigned percent_complete();
+	virtual unsigned speed();
 	virtual const boost::uint64_t size();
 
 	/*
@@ -66,7 +66,7 @@ public:
 	server_info  - populates the first vector with IP's and the second with speeds
 	*/
 	void update_speed(const int & socket, const int & n_bytes);
-	void servers(std::vector<std::string> & IP, std::vector<unsigned int> & speed);
+	void servers(std::vector<std::string> & IP, std::vector<unsigned> & speed);
 
 protected:
 	class server_info

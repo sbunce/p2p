@@ -1,13 +1,10 @@
 #site_scons
 import boost
-import system
 
 #std
 import glob
 
-env = Environment()
-system.env_setup(env)
-boost.env_setup(env)
+Import('env')
 
 static_libs = [
 	boost.static_lib('date_time'),

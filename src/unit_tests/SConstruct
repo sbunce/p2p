@@ -1,11 +1,11 @@
 #site_scons
 import boost
-import system
 import unit_test
 
-env = Environment()
-system.env_setup(env)
-boost.env_setup(env)
+#std
+import sys
+
+Import('env')
 
 env.unit_test('convert.cc')
 env.unit_test('contiguous_map.cc')
@@ -13,71 +13,72 @@ env.unit_test('contiguous_set.cc')
 
 env.unit_test([
 	'DB_blacklist.cc',
-	'../DB_blacklist.o',
-	'../logger.o',
-	boost.static_lib('thread')
-])
-
-env.unit_test([
-	'DB_client_preferences.cc',
-	'../DB_client_preferences.o',
-	'../logger.o',
+	'../DB_blacklist.cc',
+	boost.static_lib('date_time'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
 	'DB_download.cc',
-	'../DB_download.o',
-	'../logger.o',
+	'../DB_download.cc',
+	boost.static_lib('date_time'),
 	boost.static_lib('filesystem'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
+	'DB_hash.cc',
+	'../DB_hash.cc',
+	boost.static_lib('date_time'),
+	boost.static_lib('system'),
+	boost.static_lib('thread')
+])
+
+env.unit_test([
+	'DB_preferences.cc',
+	'../DB_preferences.cc',
+	boost.static_lib('date_time'),
+	boost.static_lib('thread')
+])
+
+env.unit_test([
 	'DB_prime.cc',
-	'../DB_prime.o',
-	'../logger.o',
+	'../DB_prime.cc',
+	boost.static_lib('date_time'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
 	'DB_search.cc',
-	'../DB_search.o',
-	'../logger.o',
-	boost.static_lib('thread')
-])
-
-env.unit_test([
-	'DB_server_preferences.cc',
-	'../DB_server_preferences.o',
-	'../logger.o',
+	'../DB_search.cc',
+	boost.static_lib('date_time'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
 	'DB_share.cc',
-	'../DB_share.o',
-	'../logger.o',
+	'../DB_share.cc',
+	boost.static_lib('date_time'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
 	'encryption.cc',
-	'../encryption.o',
-	'../CMWC4096.o',
-	'../DB_prime.o',
-	'../logger.o',
-	'../number_generator.o',
+	'../encryption.cc',
+	'../CMWC4096.cc',
+	'../DB_prime.cc',
+	'../number_generator.cc',
+	boost.static_lib('date_time'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
 	'hash_tree.cc',
-	'../hash_tree.o',
-	'../DB_blacklist.o',
-	'../logger.o',
-	'../sha.o',
+	'../hash_tree.cc',
+	'../DB_blacklist.cc',
+	'../sha.cc',
+	boost.static_lib('date_time'),
 	boost.static_lib('filesystem'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')
@@ -85,14 +86,14 @@ env.unit_test([
 
 env.unit_test([
 	'request_generator.cc',
-	'../request_generator.o',
-	'../logger.o',
+	'../request_generator.cc',
+	boost.static_lib('date_time'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
 	'sqlite3_wrapper.cc',
-	'../logger.o',
+	boost.static_lib('date_time'),
 	boost.static_lib('thread')
 ])
 

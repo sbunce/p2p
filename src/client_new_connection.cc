@@ -97,8 +97,6 @@ void client_new_connection::new_connection(download_connection DC)
 	*/
 	if(*connections >= *max_connections){
 		return;
-	}else{
-		++*connections;
 	}
 
 	/*
@@ -154,9 +152,9 @@ void client_new_connection::new_connection(download_connection DC)
 		if(DC.socket > *FD_max){
 			*FD_max = DC.socket;
 		}
-
 		client_buffer::new_connection(DC);
 		FD_SET(DC.socket, master_FDS);
+		++*connections;
 	}
 }
 

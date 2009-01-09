@@ -34,7 +34,7 @@ public:
 	virtual bool complete();
 	virtual const std::string hash();
 	virtual const std::string name();
-	virtual unsigned int percent_complete();
+	virtual unsigned percent_complete();
 	virtual download::mode request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected, int & slots_used);
 	virtual void response(const int & socket, std::string block);
 	virtual void stop();

@@ -30,7 +30,7 @@ public:
 	Returns the amount of primes that are waiting in cache to be returned by the
 	random_prime_mpint() function.
 	*/
-	static unsigned int prime_count()
+	static unsigned prime_count()
 	{
 		init();
 		return ((number_generator *)Number_Generator)->prime_count_priv();
@@ -87,7 +87,7 @@ private:
 				return length;
 			}
 		}
-		logger::debug(LOGGER_P1,"error generating random number");
+		LOGGER << "error generating random number";
 		exit(1);
 #else
 		char ch;
@@ -107,7 +107,7 @@ private:
 
 	Do not request more than global::DH_KEY_SIZE + 1 from random_mpint_priv().
 	*/
-	unsigned int prime_count_priv();
+	unsigned prime_count_priv();
 	mpint random_mpint_priv(const int & bytes);
 	mpint random_prime_mpint_priv();
 

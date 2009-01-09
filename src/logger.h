@@ -5,13 +5,7 @@
 #include <iostream>
 #include <sstream>
 
-//custom
-#include "global.h"
-
-/*
-Example usage of logger:
-	LOGGER << "error message " << 123;
-*/
+//example usage: LOGGER << "test" << 123;
 #define LOGGER logger::make(__FILE__, __FUNCTION__, __LINE__)
 
 class logger
@@ -62,6 +56,6 @@ private:
 
 	const char * file, * func;
 	int line;
-	std::ostringstream buffer;
+	std::stringstream buffer;
 };
 #endif

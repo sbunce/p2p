@@ -7,8 +7,8 @@
 
 int main()
 {
-	//initial tests fail without this
-	std::remove(global::DATABASE_PATH.c_str());
+	sqlite3_wrapper DB(global::DATABASE_PATH);
+	DB.query("DROP TABLE IF EXISTS search");
 
 	DB_search DBS;
 

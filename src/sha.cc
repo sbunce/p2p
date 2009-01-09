@@ -15,7 +15,7 @@ sha::sha()
 	}
 }
 
-void sha::reserve(const unsigned int res)
+void sha::reserve(const unsigned res)
 {
 	load_buffer.reserve(res);
 }

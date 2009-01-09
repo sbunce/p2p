@@ -37,7 +37,7 @@ private:
 	boost::uint64_t block_count;
 
 	//percent complete uploading (0-100)
-	unsigned int percent;
+	unsigned percent;
 	boost::uint64_t highest_block_seen;
 
 	/*

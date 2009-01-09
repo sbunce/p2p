@@ -34,13 +34,14 @@ example: 1.36 would have major 1 and minor 36
 //boost
 #include <boost/cstdint.hpp>
 
-//custom
+//custom, nothing included here can include global.h
 #include "logger.h"
 #include "sha.h"
 
 //std
 #include <cassert>
 #include <limits>
+#include <sstream>
 #include <string>
 
 #ifdef WIN32
@@ -48,41 +49,16 @@ example: 1.36 would have major 1 and minor 36
 #undef max //this interferes with numeric_limits::max
 #endif
 
-//replacement for system specific sleep functions
-namespace portable_sleep
-{
-	//sleep for specified number of milliseconds
-	inline void ms(const unsigned & milliseconds)
-	{
-		//if milliseconds = 0 then yield should be used
-		assert(milliseconds != 0);
-		#ifdef WIN32
-		Sleep(milliseconds);
-		#else
-		usleep(milliseconds * 1000);
-		#endif
-	}
-
-	//yield time slice
-	inline void yield()
-	{
-		#ifdef WIN32
-		Sleep(0);
-		#else
-		usleep(1);
-		#endif
-	}
-}
-
 namespace global
 {
 	const std::string NAME = "p2p";
 	const std::string VERSION = "0.00 pre-alpha";
 
 	//default settings, may be changed at run time
-	const unsigned MAX_CONNECTIONS = 1024; //maximum number of connections the server will accept
-	const unsigned UP_SPEED = std::numeric_limits<unsigned>::max();   //upload speed limit (B/s)
-	const unsigned DOWN_SPEED = std::numeric_limits<unsigned>::max(); //download speed limit (B/s)
+	const unsigned CLIENT_CONNECTIONS = 1024; //default max connections by client
+	const unsigned SERVER_CONNECTIONS = 1024; //default max connections to server
+	const unsigned DOWNLOAD_RATE = std::numeric_limits<unsigned>::max(); //default max download rate (B/s)
+	const unsigned UPLOAD_RATE = std::numeric_limits<unsigned>::max();   //default max upload rate (B/s)
 
 	//hard settings, not changed at runtime
 	const unsigned DB_TIMEOUT = 4000;         //database timeout (ms)
@@ -149,5 +125,31 @@ namespace global
 	//largest possible packet (used to determine buffer sizes)
 	const unsigned S_MAX_SIZE = P_REQUEST_SLOT_FILE_SIZE;
 	const unsigned C_MAX_SIZE = P_BLOCK_TO_CLIENT_SIZE;
+}
+
+//replacement for system specific sleep functions
+namespace portable_sleep
+{
+	//sleep for specified number of milliseconds
+	inline void ms(const unsigned & milliseconds)
+	{
+		//if milliseconds = 0 then yield should be used
+		assert(milliseconds != 0);
+		#ifdef WIN32
+		Sleep(milliseconds);
+		#else
+		usleep(milliseconds * 1000);
+		#endif
+	}
+
+	//yield time slice
+	inline void yield()
+	{
+		#ifdef WIN32
+		Sleep(0);
+		#else
+		usleep(1);
+		#endif
+	}
 }
 #endif

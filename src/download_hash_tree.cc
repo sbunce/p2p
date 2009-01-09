@@ -66,12 +66,12 @@ const std::string download_hash_tree::name()
 	return hash_name;
 }
 
-unsigned int download_hash_tree::percent_complete()
+unsigned download_hash_tree::percent_complete()
 {
 	if(Tree_Info.get_block_count() == 0){
 		return 0;
 	}else{
-		return (unsigned int)(((float)Request_Generator.highest_requested() / (float)Tree_Info.get_block_count())*100);
+		return (unsigned)(((float)Request_Generator.highest_requested() / (float)Tree_Info.get_block_count())*100);
 	}
 }
 

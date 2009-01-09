@@ -43,7 +43,7 @@ bool hash_tree::check_block(const tree_info & Tree_Info, const boost::uint64_t &
 		return true;
 	}
 
-	std::pair<boost::uint64_t, unsigned int> info;
+	std::pair<boost::uint64_t, unsigned> info;
 	boost::uint64_t parent;
 	if(!block_info(block_num, Tree_Info.row, info, parent)){
 		//invalid block sent to block_info
@@ -215,7 +215,7 @@ bool hash_tree::create_recurse(std::fstream & scratch, boost::uint64_t start_RRN
 	boost::uint64_t end_RRN, std::string & root_hash)
 {
 	//general purpose, used for row offsets
-	unsigned int offset = 0;
+	unsigned offset = 0;
 
 	//used to store scratch locations for read/write
 	boost::uint64_t scratch_read_RRN = start_RRN; //read starts at beginning of row
@@ -351,7 +351,7 @@ void hash_tree::stop()
 
 bool hash_tree::read_block(const tree_info & Tree_Info, const boost::uint64_t & block_num, std::string & block)
 {
-	std::pair<boost::uint64_t, unsigned int> info;
+	std::pair<boost::uint64_t, unsigned> info;
 	if(block_info(block_num, Tree_Info.row, info)){
 		//open file to read
 		std::fstream fin((global::HASH_DIRECTORY + Tree_Info.root_hash).c_str(), std::ios::in | std::ios::binary);
@@ -374,7 +374,7 @@ bool hash_tree::read_block(const tree_info & Tree_Info, const boost::uint64_t & 
 
 bool hash_tree::write_block(tree_info & Tree_Info, const boost::uint64_t & block_num, const std::string & block, const std::string & IP)
 {
-	std::pair<boost::uint64_t, unsigned int> info;
+	std::pair<boost::uint64_t, unsigned> info;
 	if(block_info(block_num, Tree_Info.row, info)){
 		if(info.second != block.size()){
 			//incorrect block size

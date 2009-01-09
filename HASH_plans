@@ -1,0 +1,112 @@
+Create a hash_tree_arbiter and file_arbiter class. They should both probably be
+singletons.
+
+Also, the hash_tree_arbiter should probably be the only class that has access to
+DB_hash (think about this though).
+
+The hash_tree_arbiter will maintain a std::set<hash> protected by mutex. All
+access to hashes will be done through this class so it can arbitrate everything
+(provide mutual exclusion).
+
+enum status{
+	GOOD, //hash block appended to buff
+	BAD,    //hash tree no longer exists
+	WAIT    //hash tree downloading but hash block not available yet
+};
+
+Whenever a hash_tree_arbiter function gets called with a hash it doesn't have in
+memory it should do a database query so that it can get information about the
+hash tree. If the hash tree is downloading the arbiter will have to keep track
+of what blocks are available for reading. The hashes should be timed out when
+not in use. This timeout should be set to the connection timeout.
+The hash_tree::check function will update the highest good hash block with the
+hash_tree_arbiter. When hash_tree::check says the highest block good is the last
+block the state of the hash_tree element will change to complete.
+
+Add an additional state to the hash table.
+3 - downloading
+This will be needed so that the hash_tree_arbiter can tell whether a hash tree
+is downloading. If the file is downloading there will still be an entry in
+downloading. Without this state the hash_tree_arbiter wouldn't know if the hash
+tree was complete or not. This additional state can also be used to skip hash
+tree checks upon program start.
+
+/*
+Read specified block from tree. Block appended to buff (if return status ==
+GOOD).
+*/
+status read_block(hash_tree::tree_info & Tree_Info, const boost::uint64_t & block_num,
+std::string & buff);
+
+/*
+Write specified block to tree. Always succeeds.
+May block for a short time if tree is being moved.
+*/
+void write_block(hash_tree::tree_info & Tree_Info, const boost::uint64_t & block_num,
+const std::string & block);
+
+/*
+Updates the highest good block available for upload. This should be called by
+hash_tree::check. 
+*/
+void update_highest_good(const std::string & hash, const boost::uint64_t & block_num);
+
+/*
+IMPLEMENT THIS LAST
+
+Move a hash tree. Used when compacting. This operation blocks all access to the
+hash tree while it runs.
+
+Flags the hash tree as modified. See MODIFIED below.
+
+begin_offset should be location (byte offset from start of file) of start of
+hash tree.
+end_offset should be the location to move the hash tree to.
+size is the size of the hash tree.
+
+see MOVE OPERATION
+*/
+void move(const std::string & hash, const boost::uint64_t & begin_offset,
+const boost::uint64_t & end_offset, const boost::uint64_t & size);
+
+MODIFIED NOTE:
+The hash tree modification should be implemented with a counter. There should be
+a modification counter inside the hash_tree_arbiter for the specific tree, and a
+counter within all tree_info's. This counter should start at 0 in both
+locations. Whenever the location of a hash tree is modified this counter within
+hash_tree_arbiter should be incremented. All functions which depend upon the
+location of the hash tree should always check this counter. If the counter
+within hash_tree_arbiter is higher than the one in tree_info then DB_hash should
+be used to obtain updated information. After updated information is obtained the
+counter in tree_info should be set equal to the counter in hash_tree_arbiter.
+
+MOVE OPERATION:
+Locations may overlap. Partial moves must be avoided so there needs to be a
+journal file. The journal file will not be able to roll back an operation, it
+will only roll forward. When a move is to take place the entire tree should be
+copied to the journal file(HASH.journal). The format of this file should be
+<begin_offset 8 byte big-endian><end_offset 8 bytes big-endian>
+<size 8 byte big-endian><hash tree>.
+
+Order of operations:
+0. create journal (make sure to fout.flush())
+1. flush_journal() (verify size, write)
+2. update hash table to reflect move
+3. delete journal
+
+Hypothetical Interruptions
+0        - Partial journal file detected as invalid. No operation happens.
+0 to 1 - goto step 1 upon program restart
+1        - goto step 1 upon program restart
+1 to 2 - goto step 1 upon program restart
+2        - goto step 1 upon program restart
+2 to 3 - goto step 1 upon program restart
+
+Failing at any step is not fatal.
+
+
+The file_arbiter should be really simple. Same idea as the hash_tree_arbiter
+with the DB query when hash doesn't exist.
+
+-To truncate HASH file on linux use truncate() or ftruncate() system call.
+For windows http://msdn.microsoft.com/en-us/library/whx354w1(VS.80).aspx

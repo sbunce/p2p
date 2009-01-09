@@ -18,8 +18,8 @@ namespace convert
 	*/
 	enum { BIG_ENDIAN_ENUM, LITTLE_ENDIAN_ENUM };
 	union num_char {
-		unsigned int num;
-		unsigned char byte[sizeof(unsigned int)];
+		unsigned num;
+		unsigned char byte[sizeof(unsigned)];
 	};
 
 	static int endianness()

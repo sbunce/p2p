@@ -33,7 +33,8 @@ private:
 	Gtk::Button * cancel_button;
 	Gtk::Button * apply_button;
 	Gtk::HButtonBox * button_box;
-	Gtk::HScale * connection_limit_hscale;
+	Gtk::HScale * client_connections_hscale;
+	Gtk::HScale * server_connections_hscale;
 	Gtk::Fixed * fixed;
 
 	//holds pointers to the client/server the GUI has while preferences are open
@@ -41,14 +42,16 @@ private:
 	server * Server;
 
 	/*
-	apply_click    - apply button clicked
-	apply_settings - read input preferences and set them
-	cancel_click   - cancel button clicked
-	ok_click       - ok button clicked
+	apply_click                - apply button clicked
+	apply_settings             - read input preferences and set them
+	cancel_click               - cancel button clicked
+	server_connections_changed - called when server_connections_hscale changes value
+	ok_click                   - ok button clicked
 	*/
 	void apply_click();
 	void apply_settings();
 	void cancel_click();
+	void server_connections_changed();
 	void ok_click();
 };
 #endif

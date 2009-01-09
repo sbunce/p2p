@@ -7,6 +7,8 @@
 int main()
 {
 #ifndef DISABLE_ENCRYPTION
+	std::remove(global::DATABASE_PATH.c_str());
+
 	encryption E_server, E_client;
 
 	//client generates prime

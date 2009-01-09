@@ -3,16 +3,6 @@ import boost
 import gtkmm
 import system
 
-SConscript([
-	'#dep_graph/SConstruct',
-	'#libsqlite3/SConstruct',
-	'#libtommath/SConstruct',
-	'#overlay_sim/SConstruct',
-	'#site_scons/SConstruct',
-	'#test_manager/SConstruct',
-	'#unit_tests/SConstruct'
-])
-
 #source files for objects to be linked in to p2p_gui
 src_gui = [
 	'gui.cc',
@@ -36,12 +26,11 @@ src_common = [
 	'client_server_bridge.cc',
 	'CMWC4096.cc',
 	'DB_blacklist.cc',
-	'DB_client_preferences.cc',
 	'DB_download.cc',
-	'DB_hash_free.cc',
+	'DB_hash.cc',
+	'DB_preferences.cc',
 	'DB_prime.cc',
 	'DB_search.cc',
-	'DB_server_preferences.cc',
 	'DB_share.cc',
 	'download.cc',
 	'download_factory.cc',
@@ -52,6 +41,7 @@ src_common = [
 	'hash_tree.cc',
 	'http.cc',
 	'number_generator.cc',
+	'rate_limit.cc',
 	'request_generator.cc',
 	'server_buffer.cc',
 	'server.cc',
@@ -70,7 +60,23 @@ boost.env_setup(env)
 env_gui = env.Clone()
 gtkmm.env_setup(env_gui)
 
+#export environment to sub scons files
+Export('env')
+Export('env_gui')
+
+#sub scons files
+SConscript([
+	'dep_graph/SConstruct',
+	'libsqlite3/SConstruct',
+	'libtommath/SConstruct',
+	'overlay_sim/SConstruct',
+	'site_scons/SConstruct',
+	'test_manager/SConstruct',
+	'unit_tests/SConstruct'
+])
+
 static_libs = [
+	boost.static_lib('date_time'),
 	boost.static_lib('filesystem'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')

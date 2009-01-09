@@ -51,6 +51,8 @@ int DB_prime::retrieve_call_back(std::pair<bool, mpint *> & info, int columns_re
 bool DB_prime::retrieve(mpint & prime)
 {
 	std::pair<bool, mpint *> info(false, &prime);
+	DB.query("BEGIN TRANSACTION");
 	DB.query("SELECT key, number FROM prime LIMIT 1", this, &DB_prime::retrieve_call_back, info);
+	DB.query("END TRANSACTION");
 	return info.first;
 }

@@ -168,6 +168,5 @@ int main()
 		return 1;
 	}
 
-	std::cout << "contiguous_set.h unit test passed\n";
 	return 0;
 }

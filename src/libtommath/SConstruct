@@ -1,10 +1,5 @@
-#site_scons
-import system
-
 #std
 import glob
-import sys
 
-env = Environment()
-system.env_setup(env)
+Import('env')
 env.StaticLibrary('tommath', glob.glob('*.c'))

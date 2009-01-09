@@ -12,11 +12,11 @@
 //custom
 #include "atomic_int.h"
 #include "DB_blacklist.h"
-#include "DB_server_preferences.h"
+#include "DB_preferences.h"
 #include "global.h"
+#include "rate_limit.h"
 #include "server_buffer.h"
 #include "server_index.h"
-#include "speed_calculator.h"
 #include "upload_info.h"
 
 //networking
@@ -60,14 +60,14 @@ public:
 	total_speed         - returns the total speed of all uploads (bytes per second)
 	*/
 	void current_uploads(std::vector<upload_info> & info);
-	int get_max_connections();
-	void set_max_connections(int max_connections_in);
+	unsigned get_max_connections();
+	void set_connections(const unsigned & max_connections_in);
 	std::string get_share_directory();
 	void set_share_directory(const std::string & share_directory);
 	std::string get_speed_limit();
-	void set_speed_limit(const std::string & speed_limit);
+	void set_upload_rate(unsigned upload_rate);
 	bool is_indexing();
-	int total_speed();
+	unsigned total_speed();
 
 private:
 	boost::thread main_thread;
@@ -98,8 +98,8 @@ private:
 	void process_request(const int & socket_FD, char * recv_buff, const int & n_bytes);
 
 	DB_blacklist DB_Blacklist;
-	DB_server_preferences DB_Server_Preferences;
+	DB_preferences DB_Preferences;
+	rate_limit Rate_Limit;
 	server_index Server_Index;
-	speed_calculator Speed_Calculator;
 };
 #endif

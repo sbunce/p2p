@@ -16,32 +16,24 @@
 class speed_calculator
 {
 public:
-	speed_calculator(unsigned int speed_limit_in = 0);
+	speed_calculator();
 
 	/*
-	get_speed_limit - returns the speed limit
-	rate_control    - returns how many bytes can be sent to maintain rate
-	speed           - returns the speed averaged over the last global::SPEED_AVERAGE time
-	                  interval, average doesn't include current second
-	update          - adds a n_bytes to be factored in to average speed
+	current_second_bytes - returns how many bytes have been received in the current second
+	speed                - returns average speed
+	update               - add n_bytes to the average
 	*/
-	unsigned int get_speed_limit();
-	unsigned int rate_control(int max_possible_transfer);
-	void set_speed_limit(const unsigned int & new_speed_limit);
-	unsigned int speed();
-	void update(const unsigned int & n_bytes);
+	unsigned current_second_bytes();
+	unsigned speed();
+	void update(const unsigned & n_bytes);
 
 private:
-	atomic_int<unsigned int> speed_limit;   //used by rate_control
-	atomic_int<unsigned int> average_speed; //average speed over global::SPEED_AVERAGE seconds
+	atomic_int<unsigned> average;
 
 	/*
 	pair<second, bytes in second>
 	The low elements are more current in time.
 	*/
-	std::pair<time_t, unsigned int> Second_Bytes[global::SPEED_AVERAGE + 1];
-
-	//used by rate_control to control interval between usleep()'s
-	unsigned long rate_control_count;
+	std::pair<time_t, atomic_int<unsigned> > Second_Bytes[global::SPEED_AVERAGE + 1];
 };
 #endif

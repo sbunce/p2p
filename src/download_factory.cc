@@ -59,13 +59,6 @@ bool download_factory::start_hash(const download_info & info, download *& Downlo
 	return true;
 }
 
-bool download_factory::start_tracker(download *& Download, std::list<download_connection> & servers)
-{
-	Download = new download_tracker;
-	servers.push_back(download_connection(Download,"192.168.1.6"));
-	return true;
-}
-
 bool download_factory::stop(download * Download_Stop, download *& Download_Start, std::list<download_connection> & servers)
 {
 	if(typeid(*Download_Stop) == typeid(download_hash_tree)){

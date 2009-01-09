@@ -15,7 +15,7 @@
 #include "client_server_bridge.h"
 #include "DB_blacklist.h"
 #include "DB_download.h"
-#include "DB_client_preferences.h"
+#include "DB_preferences.h"
 #include "DB_search.h"
 #include "download.h"
 #include "download_connection.h"
@@ -23,6 +23,7 @@
 #include "download_factory.h"
 #include "global.h"
 #include "number_generator.h"
+#include "rate_limit.h"
 #include "speed_calculator.h"
 
 //networking
@@ -76,17 +77,17 @@ public:
 	*/
 	void current_downloads(std::vector<download_info> & info, std::string hash = "");
 	bool file_info(const std::string & hash, std::string & path, boost::uint64_t & tree_size, boost::uint64_t & file_size);
-	int prime_count();
-	int get_max_connections();
-	void set_max_connections(int max_connections_in);
+	unsigned get_max_connections();
 	std::string get_download_directory();
-	void set_download_directory(const std::string & download_directory);
 	std::string get_speed_limit();
-	void set_speed_limit(const std::string & speed_limit);
+	unsigned prime_count();
 	void search(std::string search_word, std::vector<download_info> & Search_Info);
+	void set_connections(const unsigned & max_connections_in);
+	void set_download_directory(const std::string & download_directory);
+	void set_download_rate(unsigned download_rate);
 	void start_download(const download_info & info);
 	void stop_download(std::string hash);
-	int total_speed();
+	unsigned total_speed();
 
 private:
 	//thread for main_loop
@@ -141,10 +142,10 @@ private:
 	client_new_connection Client_New_Connection;
 	DB_blacklist DB_Blacklist;
 	DB_download DB_Download;
-	DB_client_preferences DB_Client_Preferences;
+	DB_preferences DB_Preferences;
 	DB_search DB_Search;
 	download_factory Download_Factory;
-	speed_calculator Speed_Calculator;
+	rate_limit Rate_Limit;
 	sha SHA;
 };
 #endif
