@@ -30,7 +30,7 @@ public:
 	bool retrieve(mpint & prime);
 
 private:
-	sqlite3_wrapper DB;
+	sqlite3_wrapper::database DB;
 
 	static atomic_bool program_start;        //true when program just started
 	static atomic_int<unsigned> prime_count; //how many primes are in the database

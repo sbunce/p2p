@@ -1,23 +1,17 @@
 #include "download_hash_tree.h"
 
 download_hash_tree::download_hash_tree(
-	const std::string & root_hash_in,
-	const boost::uint64_t & download_file_size_in,
-	const std::string & download_file_name_in
+	const download_info & Download_Info_in
 ):
-	root_hash(root_hash_in),
-	_download_file_size(download_file_size_in),
-	_download_file_name(download_file_name_in),
+	Download_Info(Download_Info_in),
 	download_complete(false),
 	close_slots(false),
 	_cancel(false),
 	_visible(true),
-	Tree_Info(root_hash, _download_file_size)
+	Tree_Info(Download_Info_in.hash, Download_Info_in.size, Download_Info_in.key),
+	DB_Hash(DB)
 {
-	client_server_bridge::start_download(root_hash);
-
-	hash_name = _download_file_name + " HASH";
-
+	client_server_bridge::start_hash_tree(Download_Info.hash);
 	boost::uint64_t bad_block;
 	if(Hash_Tree.check(Tree_Info, bad_block)){
 		//hash tree good, signal download_complete
@@ -31,8 +25,11 @@ download_hash_tree::download_hash_tree(
 download_hash_tree::~download_hash_tree()
 {
 	if(_cancel){
-		client_server_bridge::finish_download(root_hash);
-		std::remove((global::DOWNLOAD_DIRECTORY+_download_file_name).c_str());
+		DB_Download.terminate(Download_Info.hash);
+		client_server_bridge::finish_download(Download_Info.hash);
+		std::remove((global::DOWNLOAD_DIRECTORY + Download_Info.name).c_str());
+	}else{
+		DB_Hash.set_state(Download_Info.key, DB_hash::COMPLETE);
 	}
 }
 
@@ -46,24 +43,19 @@ bool download_hash_tree::complete()
 	return download_complete;
 }
 
-const boost::uint64_t & download_hash_tree::download_file_size()
+const download_info & download_hash_tree::get_download_info()
 {
-	return _download_file_size;
-}
-
-const std::string & download_hash_tree::download_file_name()
-{
-	return _download_file_name;
+	return Download_Info;
 }
 
 const std::string download_hash_tree::hash()
 {
-	return root_hash;
+	return Download_Info.hash;
 }
 
 const std::string download_hash_tree::name()
 {
-	return hash_name;
+	return Download_Info.name + " HASH";
 }
 
 unsigned download_hash_tree::percent_complete()
@@ -92,7 +84,7 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 			//no free slots left, wait for one to free up
 			return download::NO_REQUEST;
 		}else{
-			request = global::P_REQUEST_SLOT_HASH + convert::hex_to_binary(root_hash);
+			request = global::P_REQUEST_SLOT_HASH + convert::hex_to_binary(Download_Info.hash);
 			++slots_used;
 			expected.push_back(std::make_pair(global::P_SLOT_ID, global::P_SLOT_ID_SIZE));
 			expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
@@ -204,7 +196,7 @@ void download_hash_tree::response(const int & socket, std::string block)
 
 			boost::uint64_t highest_good;
 			if(Tree_Info.highest_good(highest_good)){
-				client_server_bridge::update_hash_tree_highest(root_hash, highest_good);
+				client_server_bridge::update_hash_tree_highest(Download_Info.hash, highest_good);
 			}
 
 			Request_Generator.fulfil(conn->latest_request.front());

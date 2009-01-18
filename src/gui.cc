@@ -123,8 +123,10 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	//add elements to the notebook
 	notebook->append_page(*search_VBox, *search_label);
 	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
+/*
 	notebook->append_page(*tracker_VBox, *tracker_label);
 	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
+*/
 	notebook->append_page(*download_scrolled_window, *download_label);
 	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
 	notebook->append_page(*upload_scrolled_window, *upload_label);
@@ -574,23 +576,23 @@ bool gui::update_status_bar()
 	std::string status; //holds entire status line
 
 	//get the total client download speed
-	int client_speed = Client.total_speed();
-	std::ostringstream client_speed_s;
-	client_speed_s << convert::size_unit_select(client_speed) << "/s";
+	int client_rate = Client.total_rate();
+	std::stringstream client_rate_s;
+	client_rate_s << convert::size_unit_select(client_rate) << "/s";
 
 	//get the total server upload speed
-	int server_speed = Server.total_speed();
-	std::ostringstream server_speed_s;
-	server_speed_s << convert::size_unit_select(server_speed) << "/s";
+	int server_rate = Server.total_rate();
+	std::stringstream server_rate_s;
+	server_rate_s << convert::size_unit_select(server_rate) << "/s";
 
-	std::ostringstream oss;
-	oss << "  D: " + client_speed_s.str() << " U: " << server_speed_s.str() << "  P:" << Client.prime_count();
+	std::stringstream ss;
+	ss << "  D: " + client_rate_s.str() << " U: " << server_rate_s.str() << "  P:" << Client.prime_count();
 	if(Server.is_indexing()){
-		oss << "  Indexing Share";
+		ss << "  Indexing Share";
 	}
 
 	statusbar->pop();
-	statusbar->push(oss.str());
+	statusbar->push(ss.str());
 
 	return true;
 }

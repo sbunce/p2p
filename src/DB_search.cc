@@ -1,7 +1,6 @@
 #include "DB_search.h"
 
 DB_search::DB_search()
-: DB(global::DATABASE_PATH)
 {
 	DB.query("CREATE TABLE IF NOT EXISTS search (hash TEXT, name TEXT, size TEXT, server TEXT)");
 	DB.query("CREATE INDEX IF NOT EXISTS search_hash_index ON search (hash)");

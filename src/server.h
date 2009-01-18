@@ -51,23 +51,23 @@ public:
 	/*
 	current_uploads     - returns current upload information
 	get_max_connections - returns maximum connections server will accept
-	set_max_connections - sets maximum connections server will accept
 	get_share_directory - returns the location to be shared/indexed
-	set_share_directory - sets the share directory
-	get_speed_limit     - returns the download speed limit (kilobytes/second)
-	set_speed_limit     - sets a new download speed limit (kilobytes/second)
+	get_upload_rate     - returns the download speed limit (B/s)
 	is_indexing         - returns true if the server is indexing files
-	total_speed         - returns the total speed of all uploads (bytes per second)
+	set_max_connections - sets maximum connections server will accept
+	set_share_directory - sets the share directory
+	set_max_upload_rate - sets a new upload rate limit (B/s)
+	total_rate          - returns total upload rate (B/s)
 	*/
 	void current_uploads(std::vector<upload_info> & info);
 	unsigned get_max_connections();
-	void set_connections(const unsigned & max_connections_in);
 	std::string get_share_directory();
-	void set_share_directory(const std::string & share_directory);
-	std::string get_speed_limit();
-	void set_upload_rate(unsigned upload_rate);
+	unsigned get_upload_rate();
 	bool is_indexing();
-	unsigned total_speed();
+	void set_max_connections(const unsigned & max_connections_in);
+	void set_share_directory(const std::string & share_directory);
+	void set_max_upload_rate(unsigned upload_rate);
+	unsigned total_rate();
 
 private:
 	boost::thread main_thread;

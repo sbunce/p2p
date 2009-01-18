@@ -172,7 +172,7 @@ void server_buffer::process(char * buff, const int & n_bytes)
 void server_buffer::request_slot_hash(const std::string & request, std::string & send)
 {
 	std::string root_hash = convert::binary_to_hex(request.substr(1,20));
-
+/*
 	//check if hash tree currently downloading
 	boost::uint64_t file_size;
 	if(DB_Download.lookup_hash(root_hash, file_size)){
@@ -200,6 +200,7 @@ void server_buffer::request_slot_hash(const std::string & request, std::string &
 
 	LOGGER << IP << " requested unavailable hash tree " << root_hash;
 	send += global::P_ERROR;
+*/
 }
 
 void server_buffer::request_slot_file(const std::string & request, std::string & send)

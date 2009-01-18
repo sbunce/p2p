@@ -1,10 +1,12 @@
 //custom
 #include "../global.h"
+#include "../logger.h"
 #include "../sqlite3_wrapper.h"
 
 //std
-#include <iostream>
 #include <string>
+
+sqlite3_wrapper::database DB;
 
 class test
 {
@@ -71,59 +73,68 @@ int call_back_with_object_reference(std::string & str, int columns, char ** resp
 	return 0;
 }
 
+void test_call_backs()
+{
+	DB.query("DROP TABLE IF EXISTS sqlite3_wrapper");
+	if(DB.query("CREATE TABLE sqlite3_wrapper(test_text TEXT)") != 0){
+		LOGGER; exit(1);
+	}
+	if(DB.query("INSERT INTO sqlite3_wrapper(test_text) VALUES ('abc')") != 0){
+		LOGGER; exit(1);
+	}
+	//function call back
+	if(DB.query("SELECT test_text FROM sqlite3_wrapper", call_back) != 0){
+		LOGGER; exit(1);
+	}
+	//function call back with object
+	std::string str = "test";
+	if(DB.query("SELECT test_text FROM sqlite3_wrapper", call_back_with_object, &str) != 0){
+		LOGGER; exit(1);
+	}
+	//function call back with an object by reference
+	if(DB.query("SELECT test_text FROM sqlite3_wrapper", call_back_with_object_reference, str) != 0){
+		LOGGER; exit(1);
+	}
+	//member function call back
+	test Test;
+	if(DB.query("SELECT test_text FROM sqlite3_wrapper", &Test, &test::call_back) != 0){
+		LOGGER; exit(1);
+	}
+	//member function call back with object
+	if(DB.query("SELECT test_text FROM sqlite3_wrapper", &Test, &test::call_back_with_object, &str) != 0){
+		LOGGER; exit(1);
+	}
+	//member function call back with object by reference
+	if(DB.query("SELECT test_text FROM sqlite3_wrapper", &Test, &test::call_back_with_object_reference, str) != 0){
+		LOGGER; exit(1);
+	}
+}
+
+void test_blob_funcs()
+{
+	DB.query("DROP TABLE IF EXISTS sqlite3_wrapper");
+	if(DB.query("CREATE TABLE sqlite3_wrapper(test_blob BLOB)") != 0){
+		LOGGER; exit(1);
+	}
+
+	boost::int64_t rowid;
+	rowid = DB.blob_allocate("INSERT INTO sqlite3_wrapper(test_blob) VALUES(?)", 1);
+	rowid = DB.blob_allocate("UPDATE sqlite3_wrapper SET test_blob = ?", 4);
+	sqlite3_wrapper::blob Blob("sqlite3_wrapper", "test_blob", rowid);
+	const char * write_buff = "ABC";
+	Blob.write(write_buff, 4, 0);
+	char read_buff[4];
+	Blob.read(read_buff, 4, 0);
+
+	if(strcmp(write_buff, read_buff) != 0){
+		LOGGER; exit(1);
+	}
+}
+
 int main()
 {
-	//for debug purposes
-	std::remove(global::DATABASE_PATH.c_str());
-
-	//create database
-	sqlite3_wrapper DB(global::DATABASE_PATH);
-	if(DB.query("CREATE TABLE IF NOT EXISTS test (bla TEXT)") != 0){
-		std::cout << "failed query 1\n";
-		return 1;
-	}
-	if(DB.query("INSERT INTO test VALUES ('abc')") != 0){
-		std::cout << "failed query 2\n";
-		return 1;
-	}
-
-	//test function call back
-	if(DB.query("SELECT bla FROM test", call_back) != 0){
-		std::cout << "failed query 3\n";
-		return 1;
-	}
-
-	//test function call back with object
-	std::string str = "test";
-	if(DB.query("SELECT bla FROM test", call_back_with_object, &str) != 0){
-		std::cout << "failed query 4\n";
-		return 1;
-	}
-
-	//test function call back with an object by reference
-	if(DB.query("SELECT bla FROM test", call_back_with_object_reference, str) != 0){
-		std::cout << "failed query 5\n";
-		return 1;
-	}
-
-	//test member function call back
-	test Test;
-	if(DB.query("SELECT bla FROM test", &Test, &test::call_back) != 0){
-		std::cout << "failed query 6\n";
-		return 1;
-	}
-
-	//test member function call back with object
-	if(DB.query("SELECT bla FROM test", &Test, &test::call_back_with_object, &str) != 0){
-		std::cout << "failed query 7\n";
-		return 1;
-	}
-
-	//test member function call back with object by reference
-	if(DB.query("SELECT bla FROM test", &Test, &test::call_back_with_object_reference, str) != 0){
-		std::cout << "failed query 8\n";
-		return 1;
-	}
+	test_call_backs();
+	test_blob_funcs();
 
 	return 0;
 }

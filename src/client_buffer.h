@@ -380,6 +380,13 @@ private:
 	std::string send_buff;
 
 	/*
+	Used when parsing the recv_buff. This placeholder indicates how many bytes in
+	the recv_buff have already been seen in previous calls to post_recv(). This
+	is used to update the speed_calculators in the downloads.
+	*/
+	unsigned bytes_seen;
+
+	/*
 	The Download container is effectively a ring. The rotate_downloads() function will move
 	Download_iter through it in a circular fashion.
 	*/

@@ -3,65 +3,61 @@
 #include "../global.h"
 
 //std
-#include <iostream>
+#include <vector>
 
 int main()
 {
-	sqlite3_wrapper DB(global::DATABASE_PATH);
+	sqlite3_wrapper::database DB;
 	DB.query("DROP TABLE IF EXISTS download");
 
 	DB_download DBD;
 	download_info DI("ABC", "NAME", 123);
 
-	if(!DBD.start_download(DI)){
-		std::cout << "failed start download 1 test\n";
-		return 1;
+	if(!DBD.start(DI)){
+		LOGGER; exit(1);
 	}
 
-	if(DBD.start_download(DI)){
-		std::cout << "failed start download 2 test\n";
-		return 1;
+	if(!DBD.start(DI)){
+		LOGGER; exit(1);
 	}
 
-	boost::uint64_t file_size;
-	if(DBD.lookup_hash("ABC", file_size)){
-		if(file_size != 123){
-			std::cout << "failed lookup hash 1 test, bad file size\n";
-			return 1;
+	boost::int64_t key;
+	if(DBD.lookup_hash("ABC", key)){
+		if(key != DI.key){
+			LOGGER; exit(1);
 		}
 	}else{
-		std::cout << "failed lookup hash 1 test, lookup failure\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 
 	std::string path;
 	if(DBD.lookup_hash("ABC", path)){
 		if(path != global::DOWNLOAD_DIRECTORY+"NAME"){
-			std::cout << "failed lookup hash 2 test, bad path\n";
-			return 1;
+			LOGGER; exit(1);
 		}
 	}else{
-		std::cout << "failed lookup hash 2 test, lookup failure\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 
 	path = "";
-	file_size = 0;
+	boost::uint64_t file_size = 0;
 	if(DBD.lookup_hash("ABC", path, file_size)){
 		if(file_size != 123){
-			std::cout << "failed lookup hash 3 test, bad file size\n";
-			return 1;
+			LOGGER; exit(1);
 		}
 		if(path != global::DOWNLOAD_DIRECTORY+"NAME"){
-			std::cout << "failed lookup hash 3 test, bad path\n";
-			return 1;
+			LOGGER; exit(1);
 		}
 	}else{
-		std::cout << "failed lookup hash 3 test, lookup failure\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 
-	//DBD::resume is not tested
+	std::vector<download_info> resume;
+	DBD.resume(resume);
+	if(resume.size() != 1){std::cout<< "size: " << resume.size() << "\n"; LOGGER; exit(1); }
+	if(resume.front().hash != "ABC"){ LOGGER; exit(1); }
+	if(resume.front().name != "NAME"){ LOGGER; exit(1); }
+	if(resume.front().size != 123){ LOGGER; exit(1); }
 
 	return 0;
 }

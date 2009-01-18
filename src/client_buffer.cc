@@ -22,6 +22,7 @@ client_buffer::client_buffer(
 ):
 	socket(socket_in),
 	IP(IP_in),
+	bytes_seen(0),
 	last_seen(time(NULL)),
 	slots_used(0),
 	max_pipeline_size(1),
@@ -92,6 +93,10 @@ void client_buffer::post_recv()
 			}else{
 				if(recv_buff.size() < iter_cur->second){
 					//not enough bytes yet received to fulfill download's request
+					if(Pipeline.front().Download != NULL){
+						Pipeline.front().Download->update_speed(socket, recv_buff.size() - bytes_seen);
+					}
+					bytes_seen = recv_buff.size();
 					break;
 				}
 
@@ -101,8 +106,11 @@ void client_buffer::post_recv()
 				}else{
 					//pass response to download
 					Pipeline.front().Download->response(socket, recv_buff.substr(0, iter_cur->second));
+					if(Pipeline.front().Download != NULL){
+						Pipeline.front().Download->update_speed(socket, iter_cur->second - bytes_seen);
+					}
+					bytes_seen = 0;
 					recv_buff.erase(0, iter_cur->second);
-					Pipeline.front().Download->update_speed(socket, iter_cur->second);
 				}
 				Pipeline.pop_front();
 			}

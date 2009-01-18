@@ -2,7 +2,6 @@
 
 DB_blacklist::DB_blacklist()
 :
-	DB(global::DATABASE_PATH),
 	blacklist_state(0)
 {
 	DB.query("CREATE TABLE IF NOT EXISTS blacklist (IP TEXT UNIQUE)");

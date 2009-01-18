@@ -8,14 +8,14 @@ gui_preferences::gui_preferences(client * Client_in, server * Server_in)
 	window = this;
 	download_directory_entry = Gtk::manage(new Gtk::Entry());
 	share_directory_entry = Gtk::manage(new Gtk::Entry());
-	download_speed_entry = Gtk::manage(new Gtk::Entry());
-	upload_speed_entry = Gtk::manage(new Gtk::Entry());
+	max_download_rate_entry = Gtk::manage(new Gtk::Entry());
+	max_upload_rate_entry = Gtk::manage(new Gtk::Entry());
 	downloads_label = Gtk::manage(new Gtk::Label("Download Directory"));
 	share_label = Gtk::manage(new Gtk::Label("Share Directory"));
-	speed_label = Gtk::manage(new Gtk::Label("Speed (kB/s)"));
+	rate_label = Gtk::manage(new Gtk::Label("Speed (kB/s)"));
 	connection_limit_label = Gtk::manage(new Gtk::Label("Connection Limit"));
-	upload_speed_label = Gtk::manage(new Gtk::Label("UL"));
-	download_speed_label = Gtk::manage(new Gtk::Label("DL"));
+	upload_rate_label = Gtk::manage(new Gtk::Label("UL"));
+	download_rate_label = Gtk::manage(new Gtk::Label("DL"));
 	apply_button = Gtk::manage(new Gtk::Button(Gtk::StockID("gtk-apply")));
 	cancel_button = Gtk::manage(new Gtk::Button(Gtk::StockID("gtk-cancel")));
 	ok_button = Gtk::manage(new Gtk::Button(Gtk::StockID("gtk-ok")));
@@ -37,11 +37,24 @@ gui_preferences::gui_preferences(client * Client_in, server * Server_in)
 	share_directory_entry->set_size_request(320,23);
 	share_directory_entry->set_text(Server->get_share_directory());
 
-	download_speed_entry->set_size_request(75,23);
-	download_speed_entry->set_text(Client->get_speed_limit());
+	std::stringstream ss;
+	unsigned download_rate, upload_rate;
+	ss << Client->get_download_rate();
+	ss >> download_rate;
+	download_rate /= 1024;
+	ss.str(""); ss.clear();
+	ss << download_rate;
+	max_download_rate_entry->set_size_request(75,23);
+	max_download_rate_entry->set_text(ss.str());
 
-	upload_speed_entry->set_size_request(75,23);
-	upload_speed_entry->set_text(Server->get_speed_limit());
+	ss.str(""); ss.clear();
+	ss << Server->get_upload_rate();
+	ss >> upload_rate;
+	upload_rate /= 1024;
+	ss.str(""); ss.clear();
+	ss << upload_rate;
+	max_upload_rate_entry->set_size_request(75,23);
+	max_upload_rate_entry->set_text(ss.str());
 
 	downloads_label->set_size_request(141,17);
 	downloads_label->set_alignment(0.5,0.5);
@@ -56,12 +69,12 @@ gui_preferences::gui_preferences(client * Client_in, server * Server_in)
 	share_label->set_line_wrap(false);
 	share_label->set_use_markup(false);
 	share_label->set_selectable(false);
-	speed_label->set_size_request(142,17);
-	speed_label->set_alignment(0.5,0.5);
-	speed_label->set_justify(Gtk::JUSTIFY_LEFT);
-	speed_label->set_line_wrap(false);
-	speed_label->set_use_markup(false);
-	speed_label->set_selectable(false);
+	rate_label->set_size_request(142,17);
+	rate_label->set_alignment(0.5,0.5);
+	rate_label->set_justify(Gtk::JUSTIFY_LEFT);
+	rate_label->set_line_wrap(false);
+	rate_label->set_use_markup(false);
+	rate_label->set_selectable(false);
 
 	connection_limit_label->set_size_request(143,17);
 	connection_limit_label->set_alignment(0.5,0.5);
@@ -70,19 +83,19 @@ gui_preferences::gui_preferences(client * Client_in, server * Server_in)
 	connection_limit_label->set_use_markup(false);
 	connection_limit_label->set_selectable(false);
 
-	upload_speed_label->set_size_request(38,17);
-	upload_speed_label->set_alignment(0.5,0.5);
-	upload_speed_label->set_justify(Gtk::JUSTIFY_LEFT);
-	upload_speed_label->set_line_wrap(false);
-	upload_speed_label->set_use_markup(false);
-	upload_speed_label->set_selectable(false);
+	upload_rate_label->set_size_request(38,17);
+	upload_rate_label->set_alignment(0.5,0.5);
+	upload_rate_label->set_justify(Gtk::JUSTIFY_LEFT);
+	upload_rate_label->set_line_wrap(false);
+	upload_rate_label->set_use_markup(false);
+	upload_rate_label->set_selectable(false);
 
-	download_speed_label->set_size_request(38,17);
-	download_speed_label->set_alignment(0.5,0.5);
-	download_speed_label->set_justify(Gtk::JUSTIFY_LEFT);
-	download_speed_label->set_line_wrap(false);
-	download_speed_label->set_use_markup(false);
-	download_speed_label->set_selectable(false);
+	download_rate_label->set_size_request(38,17);
+	download_rate_label->set_alignment(0.5,0.5);
+	download_rate_label->set_justify(Gtk::JUSTIFY_LEFT);
+	download_rate_label->set_line_wrap(false);
+	download_rate_label->set_use_markup(false);
+	download_rate_label->set_selectable(false);
 
 	client_connections_hscale->set_size_request(200,37);
 	client_connections_hscale->set_draw_value(true);
@@ -102,14 +115,14 @@ gui_preferences::gui_preferences(client * Client_in, server * Server_in)
 
 	fixed->put(*download_directory_entry, 16, 40);
 	fixed->put(*share_directory_entry, 16, 104);
-	fixed->put(*download_speed_entry, 40, 184);
-	fixed->put(*upload_speed_entry, 40, 224);
+	fixed->put(*max_download_rate_entry, 40, 184);
+	fixed->put(*max_upload_rate_entry, 40, 224);
 	fixed->put(*downloads_label, 8, 16);
 	fixed->put(*share_label, 8, 80);
-	fixed->put(*speed_label, 4, 152);
+	fixed->put(*rate_label, 4, 152);
 	fixed->put(*connection_limit_label, 140, 152);
-	fixed->put(*download_speed_label, 8, 187);
-	fixed->put(*upload_speed_label, 8, 227);
+	fixed->put(*download_rate_label, 8, 187);
+	fixed->put(*upload_rate_label, 8, 227);
 	fixed->put(*client_connections_hscale, 140, 171);
 	fixed->put(*server_connections_hscale, 140, 211);
 	fixed->put(*button_box, 80, 256);
@@ -130,14 +143,12 @@ void gui_preferences::apply_click()
 
 void gui_preferences::apply_settings()
 {
-//DEBUG, change upload_speed_entry to upload_rate_entry
-
 	int download_rate, upload_rate;
 	std::stringstream ss;
-	ss << download_speed_entry->get_text();
+	ss << max_download_rate_entry->get_text();
 	ss >> download_rate;
 	ss.str(""); ss.clear();
-	ss << upload_speed_entry->get_text();
+	ss << max_upload_rate_entry->get_text();
 	ss >> upload_rate;
 	ss.str(""); ss.clear();
 
@@ -145,23 +156,23 @@ void gui_preferences::apply_settings()
 	Maintain minimum of 1 to 256 ratio of upload to download. Without this
 	downloads can starve because they don't have enough upload to make requests.
 	*/
-	if(upload_rate != 0 && upload_rate < (int)((float)download_rate / 256 + 0.5)){
-		upload_rate = (int)((float)download_rate / 256 + 0.5);
+	if(upload_rate != 0 && upload_rate < (unsigned)((float)download_rate / 256 + 0.5)){
+		upload_rate = (unsigned)((float)download_rate / 256 + 0.5);
 		ss << upload_rate;
-		upload_speed_entry->set_text(ss.str());
+		max_upload_rate_entry->set_text(ss.str());
 	}
 
 	if(download_rate == 0){
 		upload_rate = 0;
-		upload_speed_entry->set_text("0");
+		max_upload_rate_entry->set_text("0");
 	}
 
 	Client->set_download_directory(download_directory_entry->get_text());
-	Client->set_download_rate(download_rate);
-	Client->set_connections((int)client_connections_hscale->get_value());
+	Client->set_max_download_rate(download_rate * 1024);
+	Client->set_max_connections((int)client_connections_hscale->get_value());
 	Server->set_share_directory(share_directory_entry->get_text());
-	Server->set_upload_rate(upload_rate);
-	Server->set_connections((int)server_connections_hscale->get_value());
+	Server->set_max_upload_rate(upload_rate * 1024);
+	Server->set_max_connections((int)server_connections_hscale->get_value());
 }
 
 void gui_preferences::cancel_click()

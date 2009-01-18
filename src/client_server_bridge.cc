@@ -9,17 +9,17 @@ client_server_bridge::client_server_bridge()
 
 }
 
-void client_server_bridge::start_download_priv(const std::string & hash)
+void client_server_bridge::start_hash_tree_priv(const std::string & hash)
 {
+	//assert file is not started, hash tree must download before file
+	assert(File_State.find(hash) == File_State.end());
 	Hash_Tree_State.insert(std::make_pair(hash, hash_tree_state()));
 }
 
-void client_server_bridge::transition_download_priv(const std::string & hash, const boost::uint64_t & file_block_count)
+void client_server_bridge::start_file_priv(const std::string & hash, const boost::uint64_t & file_block_count)
 {
-	std::map<std::string, hash_tree_state>::iterator iter;
-	iter = Hash_Tree_State.find(hash);
-	assert(iter != Hash_Tree_State.end());
-	File_State.insert(std::make_pair(iter->first, file_state(file_block_count)));
+	Hash_Tree_State.erase(hash);
+	File_State.insert(std::make_pair(hash, file_state(file_block_count)));
 }
 
 void client_server_bridge::finish_download_priv(const std::string & hash)

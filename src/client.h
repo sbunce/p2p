@@ -63,31 +63,31 @@ public:
 	file_info              - returns specific information about file that corresponds to hash (for currently running downloads)
 	                         WARNING: Expensive call that includes database access, do not poll this.
 	                                  A good possible use of this is to get info when opening download info tabs.
-	prime_count            - returns the number of primes cached for Diffie-Hellman
 	get_max_connections    - returns maximum connections client will make
-	set_max_connections    - sets maximum connections client will make
 	get_download_directory - returns the location where downloads are saved to
-	set_download_directory - sets the download directory
-	get_speed_limit        - returns the download speed limit (bytes/second)
-	set_speed_limit        - sets a new download speed limit (bytes/second)
+	get_download_rate        - returns the download speed limit (bytes/second)
+	prime_count            - returns the number of primes cached for Diffie-Hellman
 	search                 - populates info with download_info that match the search_word
+	set_max_connections    - sets maximum connections client will make
+	set_download_directory - sets the download directory
+	set_max_download_rate  - sets a new download rate limit (B/s)
 	start_download         - schedules a download_file to be started
 	stop_download          - marks a download as completed so it will be stopped
-	total_speed            - returns the total download speed(in bytes per second)
+	total_rate             - returns the total download rate(B/s)
 	*/
 	void current_downloads(std::vector<download_info> & info, std::string hash = "");
 	bool file_info(const std::string & hash, std::string & path, boost::uint64_t & tree_size, boost::uint64_t & file_size);
 	unsigned get_max_connections();
 	std::string get_download_directory();
-	std::string get_speed_limit();
+	unsigned get_download_rate();
 	unsigned prime_count();
 	void search(std::string search_word, std::vector<download_info> & Search_Info);
-	void set_connections(const unsigned & max_connections_in);
+	void set_max_connections(const unsigned & max_connections_in);
 	void set_download_directory(const std::string & download_directory);
-	void set_download_rate(unsigned download_rate);
+	void set_max_download_rate(unsigned download_rate);
 	void start_download(const download_info & info);
 	void stop_download(std::string hash);
-	unsigned total_speed();
+	unsigned total_rate();
 
 private:
 	//thread for main_loop

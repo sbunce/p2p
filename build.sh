@@ -10,7 +10,6 @@ if [ "$1" == "clean" ]; then
 	cd $TOP_DIR
 	rm -f p2p_gui p2p_nogui
 	rm -f download/*
-	rm -f hash/*
 else
 	#build
 	clear

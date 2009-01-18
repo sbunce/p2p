@@ -23,6 +23,6 @@ public:
 	void get_servers(const std::string & hash, std::vector<std::string> & servers);
 
 private:
-	sqlite3_wrapper DB;
+	sqlite3_wrapper::database DB;
 };
 #endif

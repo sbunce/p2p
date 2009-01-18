@@ -1,7 +1,6 @@
 #include "http.h"
 
 http::http()
-: DB(global::DATABASE_PATH)
 {
 
 }
@@ -36,7 +35,7 @@ void http::process(const std::string & request, std::string & send)
 	send +=
 	"<html>\n"
 	"<head>\n"
-	"\t<title>p2p local webserver</title>\n"
+	"\t<title>p2p</title>\n"
 	"</head>\n"
 	"<body>\n";
 	if(get_path == "/"){
@@ -111,13 +110,14 @@ void http::table_table(const std::string & table_name, std::string & send)
 	std::string query = "SELECT * FROM " + table_name + " LIMIT 1";
 	DB.query(query, &column_name_call_back, send);
 
-	//prepare data
-	query = "SELECT * FROM " + table_name;
-	unsigned orig_size = send.size();
-	DB.query(query, &data_call_back, send);
-	if(orig_size == send.size()){
-		//nothing added to buffer, table empty
-		send += "\t<p>empty table</p>\n";
+	if(table_name == "hash"){
+		//hash table includes a blob that shouldn't be selected
+		query = "SELECT key, state FROM " + table_name;
+	}else{
+		//prepare data
+		query = "SELECT * FROM " + table_name;
 	}
+
+	DB.query(query, &data_call_back, send);
 	send += "\t</table><br>\n";
 }

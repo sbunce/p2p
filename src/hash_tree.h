@@ -4,6 +4,7 @@
 //boost
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
 
 //custom
@@ -11,9 +12,11 @@
 #include "convert.h"
 #include "contiguous_map.h"
 #include "DB_blacklist.h"
+#include "DB_hash.h"
 #include "global.h"
 #include "request_generator.h"
 #include "sha.h"
+#include "sqlite3_wrapper.h"
 
 //std
 #include <deque>
@@ -40,10 +43,12 @@ public:
 	public:
 		tree_info(
 			const std::string & root_hash_in,
-			const boost::uint64_t file_size_in
+			const boost::uint64_t & file_size_in,
+			const boost::int64_t & key
 		):
 			root_hash(root_hash_in),
-			file_size(file_size_in)
+			file_size(file_size_in),
+			Blob("hash", "tree", key)
 		{
 			file_size_to_tree_hash(file_size, row);
 			block_count = row_to_block_count(row);
@@ -139,6 +144,9 @@ public:
 		std::string root_hash;     //root hash (hex)
 		boost::uint64_t file_size; //size of file hash tree is for
 
+		//DB connection and open blob handle for space to write tree
+		sqlite3_wrapper::blob Blob;
+
 		//these are all calculated based on root_hash and file_size
 		std::deque<boost::uint64_t> row;      //number of hashes in each row
 		boost::uint64_t block_count;          //hash block count
@@ -179,9 +187,9 @@ public:
 	                   precondition: must have called check() with the tree_info
 	*/
 	bool check(tree_info & Tree_Info, boost::uint64_t & bad_block);
-	bool check_file_block(const tree_info & Tree_Info, const boost::uint64_t & file_block_num, const char * block, const int & size);
-	bool create(const std::string & file_path, std::string & root_hash);
-	bool read_block(const tree_info & Tree_Info, const boost::uint64_t & block_num, std::string & block);
+	bool check_file_block(tree_info & Tree_Info, const boost::uint64_t & file_block_num, const char * block, const int & size);
+	bool create(const std::string & file_path, std::string & root_hash, boost::int64_t & key);
+	bool read_block(tree_info & Tree_Info, const boost::uint64_t & block_num, std::string & block);
 	bool write_block(tree_info & Tree_Info, const boost::uint64_t & block_num, const std::string & block, const std::string & IP);
 
 	/*
@@ -212,7 +220,7 @@ public:
 	*/
 	static boost::uint64_t file_size_to_tree_size(const boost::uint64_t & file_size)
 	{
-		return sha::HASH_SIZE * file_hash_to_tree_hash(file_size_to_file_hash(file_size));
+		return global::HASH_SIZE * file_hash_to_tree_hash(file_size_to_file_hash(file_size));
 	}
 
 private:
@@ -262,9 +270,9 @@ private:
 				}
 
 				//convert to bytes
-				info.first = info.first * sha::HASH_SIZE;
-				info.second = info.second * sha::HASH_SIZE;
-				parent = parent * sha::HASH_SIZE;
+				info.first = info.first * global::HASH_SIZE;
+				info.second = info.second * global::HASH_SIZE;
+				parent = parent * global::HASH_SIZE;
 
 				return true;
 			}
@@ -374,7 +382,7 @@ private:
 
 		//add up the size (bytes) of all rows until reaching the beginning of the last row
 		for(int x=0; x<row.size()-1; ++x){
-			file_hash_offset += row[x] * sha::HASH_SIZE;
+			file_hash_offset += row[x] * global::HASH_SIZE;
 		}
 
 		return file_hash_offset;
@@ -399,11 +407,13 @@ private:
 	check_contiguous - called after write_block() to check contiguous hash blocks blocks
 	create_recurse   - recursively create hash tree, called by create()
 	*/
-	bool check_block(const tree_info & Tree_Info, const boost::uint64_t & block_num);
+	bool check_block(tree_info & Tree_Info, const boost::uint64_t & block_num);
 	void check_contiguous(tree_info & Tree_Info);
 	bool create_recurse(std::fstream & scratch, boost::uint64_t start_RRN,
-		boost::uint64_t end_RRN, std::string & root_hash);
+		boost::uint64_t end_RRN, std::string & root_hash, sqlite3_wrapper::blob & Blob, int & offset);
 
+	sqlite3_wrapper::database DB;
+	DB_hash DB_Hash;
 	DB_blacklist DB_Blacklist;
 	sha SHA;
 };

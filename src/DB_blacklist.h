@@ -31,7 +31,7 @@ public:
 	bool modified(int & last_state_seen);
 
 private:
-	sqlite3_wrapper DB;
+	sqlite3_wrapper::database DB;
 	atomic_int<int> blacklist_state;
 };
 #endif

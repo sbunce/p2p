@@ -43,7 +43,7 @@ void scan::eat_comment(std::fstream & fin)
 void scan::read_preprocessor(std::fstream & fin, std::string & root_file, std::set<std::string> & scan)
 {
 	//check to see if preprocessor directive is "include"
-	char * inc = "include";
+	const char * inc = "include";
 	char ch;
 	for(int x=0; x<7; ++x){
 		if(fin.get(ch)){

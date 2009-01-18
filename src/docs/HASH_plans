@@ -79,34 +79,3 @@ location of the hash tree should always check this counter. If the counter
 within hash_tree_arbiter is higher than the one in tree_info then DB_hash should
 be used to obtain updated information. After updated information is obtained the
 counter in tree_info should be set equal to the counter in hash_tree_arbiter.
-
-MOVE OPERATION:
-Locations may overlap. Partial moves must be avoided so there needs to be a
-journal file. The journal file will not be able to roll back an operation, it
-will only roll forward. When a move is to take place the entire tree should be
-copied to the journal file(HASH.journal). The format of this file should be
-<begin_offset 8 byte big-endian><end_offset 8 bytes big-endian>
-<size 8 byte big-endian><hash tree>.
-
-Order of operations:
-0. create journal (make sure to fout.flush())
-1. flush_journal() (verify size, write)
-2. update hash table to reflect move
-3. delete journal
-
-Hypothetical Interruptions
-0        - Partial journal file detected as invalid. No operation happens.
-0 to 1 - goto step 1 upon program restart
-1        - goto step 1 upon program restart
-1 to 2 - goto step 1 upon program restart
-2        - goto step 1 upon program restart
-2 to 3 - goto step 1 upon program restart
-
-Failing at any step is not fatal.
-
-
-The file_arbiter should be really simple. Same idea as the hash_tree_arbiter
-with the DB query when hash doesn't exist.
-
--To truncate HASH file on linux use truncate() or ftruncate() system call.
-For windows http://msdn.microsoft.com/en-us/library/whx354w1(VS.80).aspx

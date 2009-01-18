@@ -2,7 +2,6 @@
 #include "../convert.h"
 
 //std
-#include <iostream>
 #include <string>
 
 bool test_encode_decode()
@@ -28,18 +27,13 @@ bool test_endianness()
 int main()
 {
 	if(!test_encode_decode()){
-		std::cout << "failed encode/decode test\n";
-		return 1;
+		LOGGER; exit(1);
 	}
-
 	if(!test_hex_conversion()){
-		std::cout << "failed hex conversion test\n";
-		return 1;
+		LOGGER; exit(1);
 	}
-
 	if(!test_endianness()){
-		std::cout << "failed endianness test\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 
 	return 0;

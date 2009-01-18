@@ -85,50 +85,18 @@ unsigned server::get_max_connections()
 	return max_connections;
 }
 
-void server::set_connections(const unsigned & max_connections_in)
-{
-	max_connections = max_connections_in;
-	DB_Preferences.set_server_connections(max_connections);
-	while(connections > max_connections){
-		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
-			if(FD_ISSET(socket_FD, &master_FDS)){
-				disconnect(socket_FD);
-				break;
-			}
-		}
-	}
-}
-
 std::string server::get_share_directory()
 {
 	return DB_Preferences.get_share_directory();
 }
 
-void server::set_share_directory(const std::string & share_directory)
+unsigned server::get_upload_rate()
 {
-	DB_Preferences.set_share_directory(share_directory);
-	std::cout << "SETTING SHARE FEATURE UNIMPLEMENTED\n";
-}
-
-std::string server::get_speed_limit()
-{
-	std::ostringstream sl;
 	if(Rate_Limit.get_upload_rate() == std::numeric_limits<unsigned>::max()){
-		sl << "0";
+		return 0;
 	}else{
-		sl << Rate_Limit.get_upload_rate() / 1024;
+		return Rate_Limit.get_upload_rate();
 	}
-	return sl.str();
-}
-
-void server::set_upload_rate(unsigned upload_rate)
-{
-	upload_rate *= 1024;
-	if(upload_rate == 0){
-		upload_rate = std::numeric_limits<unsigned>::max();
-	}
-	DB_Preferences.set_upload_rate(upload_rate);
-	Rate_Limit.set_upload_rate(upload_rate);
 }
 
 bool server::is_indexing()
@@ -343,12 +311,41 @@ void server::main_loop()
 		}
 
 		if(!transfer){
-			portable_sleep::yield();
+			portable_sleep::ms(1);
 		}
 	}
 }
 
-unsigned server::total_speed()
+void server::set_max_connections(const unsigned & max_connections_in)
+{
+	max_connections = max_connections_in;
+	DB_Preferences.set_server_connections(max_connections);
+	while(connections > max_connections){
+		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
+			if(FD_ISSET(socket_FD, &master_FDS)){
+				disconnect(socket_FD);
+				break;
+			}
+		}
+	}
+}
+
+void server::set_share_directory(const std::string & share_directory)
+{
+	DB_Preferences.set_share_directory(share_directory);
+	std::cout << "SETTING SHARE FEATURE UNIMPLEMENTED\n";
+}
+
+void server::set_max_upload_rate(unsigned upload_rate)
+{
+	if(upload_rate == 0){
+		upload_rate = std::numeric_limits<unsigned>::max();
+	}
+	DB_Preferences.set_upload_rate(upload_rate);
+	Rate_Limit.set_upload_rate(upload_rate);
+}
+
+unsigned server::total_rate()
 {
 	Rate_Limit.add_upload_bytes(0);
 	return Rate_Limit.upload_speed();

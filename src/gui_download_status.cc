@@ -65,21 +65,21 @@ gui_download_status::gui_download_status(
 	servers_scrolled_window->set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_NEVER);
 
 	info_fixed->put(*root_hash_label, 8, 0);
-	info_fixed->put(*root_hash_value, 85, 0);
+	info_fixed->put(*root_hash_value, 90, 0);
 	info_fixed->put(*hash_tree_size_label, 8, 16);
-	info_fixed->put(*hash_tree_size_value, 85, 16);
+	info_fixed->put(*hash_tree_size_value, 90, 16);
 	info_fixed->put(*hash_tree_percent_label, 8, 32);
-	info_fixed->put(*hash_tree_percent_value, 85, 32);
+	info_fixed->put(*hash_tree_percent_value, 90, 32);
 	info_fixed->put(*file_name_label, 8, 64);
-	info_fixed->put(*file_name_value, 85, 64);
+	info_fixed->put(*file_name_value, 90, 64);
 	info_fixed->put(*file_size_label, 8, 80);
-	info_fixed->put(*file_size_value, 85, 80);
+	info_fixed->put(*file_size_value, 90, 80);
 	info_fixed->put(*file_percent_label, 8, 96);
-	info_fixed->put(*file_percent_value, 85, 96);
+	info_fixed->put(*file_percent_value, 90, 96);
 	info_fixed->put(*total_speed_label, 8, 128);
-	info_fixed->put(*total_speed_value, 85, 128);
+	info_fixed->put(*total_speed_value, 90, 128);
 	info_fixed->put(*servers_connected_label, 8, 144);
-	info_fixed->put(*servers_connected_value, 85, 144);
+	info_fixed->put(*servers_connected_value, 90, 144);
 
 	//server info setup
 	Gtk::TreeModel::ColumnRecord column;

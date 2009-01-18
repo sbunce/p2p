@@ -2,12 +2,9 @@
 #include "../DB_search.h"
 #include "../global.h"
 
-//std
-#include <iostream>
-
 int main()
 {
-	sqlite3_wrapper DB(global::DATABASE_PATH);
+	sqlite3_wrapper::database DB;
 	DB.query("DROP TABLE IF EXISTS search");
 
 	DB_search DBS;

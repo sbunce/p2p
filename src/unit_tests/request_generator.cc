@@ -1,9 +1,9 @@
 //custom
+#include "../global.h"
 #include "../request_generator.h"
 
 //std
 #include <deque>
-#include <iostream>
 
 int main()
 {
@@ -13,15 +13,13 @@ int main()
 
 	for(int x=0; x<10; ++x){
 		if(!RG.request(prev)){
-			std::cout << "failed request test\n";
-			return 1;
+			LOGGER; exit(1);
 		}
 		RG.fulfil(prev.back());
 	}
 
 	if(!RG.complete()){
-		std::cout << "failed complete test\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 
 	return 0;

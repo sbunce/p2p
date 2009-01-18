@@ -27,7 +27,7 @@ class server_buffer
 {
 public:
 	/*
-	WARNING: do not use this ctor it will terminate the program.
+	WARNING: do not use this ctor, it will terminate the program.
 	*/
 	server_buffer();
 

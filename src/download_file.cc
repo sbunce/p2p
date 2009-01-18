@@ -1,30 +1,29 @@
 #include "download_file.h"
 
 download_file::download_file(
-	const std::string & root_hash_in,
-	const std::string & file_name_in, 
-	const std::string & file_path_in,
-	const boost::uint64_t & file_size_in
+	const download_info & Download_Info_in
 ):
-	root_hash(root_hash_in),
-	file_name(file_name_in),
-	file_path(file_path_in),
-	file_size(file_size_in),
+	Download_Info(Download_Info_in),
+	file_path(global::DOWNLOAD_DIRECTORY + Download_Info_in.name),
 	hashing(true),
 	hashing_percent(0),
 	download_complete(false),
 	close_slots(false),
 	_cancel(false),
 	_visible(true),
-	Tree_Info(root_hash, file_size)
+	Tree_Info(Download_Info_in.hash, Download_Info_in.size, Download_Info_in.key)
 {
-	std::fstream fin((global::DOWNLOAD_DIRECTORY+file_name).c_str(), std::ios::in | std::ios::ate);
-	assert(fin.is_open());
+	client_server_bridge::start_file(Download_Info.hash, Tree_Info.get_file_block_count());
 
-	client_server_bridge::transition_download(root_hash, Tree_Info.get_file_block_count());
+	//create empty file for download if one doesn't already exist
+	std::fstream fs(file_path.c_str(), std::ios::in | std::ios::ate);
+	if(fs.is_open()){
+		first_unreceived = fs.tellg() / global::FILE_BLOCK_SIZE;
+	}else{
+		fs.open(file_path.c_str(), std::ios::out);
+		first_unreceived = 0;
+	}
 
-	//start re_requesting where the download left off
-	first_unreceived = fin.tellg() / global::FILE_BLOCK_SIZE;
 	Request_Generator.init((boost::uint64_t)first_unreceived, Tree_Info.get_file_block_count(), global::RE_REQUEST);
 
 	//hash check for corrupt/missing blocks
@@ -41,10 +40,12 @@ download_file::~download_file()
 	hashing_thread.join();
 	if(_cancel){
 		std::remove(file_path.c_str());
+		DB_Download.terminate(Download_Info.hash);
 	}else{
-		DB_Share.add_entry(root_hash, file_size, file_path);
+		DB_Share.add_entry(Download_Info.hash, Download_Info.key, Download_Info.size, file_path);
+		DB_Download.complete(Download_Info.hash);
 	}
-	client_server_bridge::finish_download(root_hash);
+	client_server_bridge::finish_download(Download_Info.hash);
 }
 
 bool download_file::complete()
@@ -54,7 +55,7 @@ bool download_file::complete()
 
 const std::string download_file::hash()
 {
-	return root_hash;
+	return Download_Info.hash;
 }
 
 void download_file::hash_check(hash_tree::tree_info Tree_Info, std::string file_path)
@@ -108,10 +109,10 @@ const std::string download_file::name()
 {
 	if(hashing){
 		std::ostringstream name;
-		name << file_name + " CHECK " << hashing_percent << "%";
+		name << Download_Info.name + " CHECK " << hashing_percent << "%";
 		return name.str();
 	}else{
-		return file_name;
+		return Download_Info.name;
 	}
 }
 
@@ -150,7 +151,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 		}
 
 		//slot available, make slot request
-		request = global::P_REQUEST_SLOT_FILE + convert::hex_to_binary(root_hash);
+		request = global::P_REQUEST_SLOT_FILE + convert::hex_to_binary(Download_Info.hash);
 		conn->State = connection_special::AWAITING_SLOT;
 		++slots_used;
 		expected.push_back(std::make_pair(global::P_SLOT_ID, global::P_SLOT_ID_SIZE));
@@ -255,10 +256,10 @@ void download_file::response(const int & socket, std::string block)
 			block.erase(0, 1); //trim command
 			if(Hash_Tree.check_file_block(Tree_Info, conn->latest_request.front(), block.c_str(), block.length())){
 				write_block(conn->latest_request.front(), block);
-				client_server_bridge::add_file_block(root_hash, conn->latest_request.front());
+				client_server_bridge::add_file_block(Download_Info.hash, conn->latest_request.front());
 				Request_Generator.fulfil(conn->latest_request.front());
 			}else{
-				LOGGER << file_name << ":" << conn->latest_request.front() << " hash failure";
+				LOGGER << Download_Info.name << ":" << conn->latest_request.front() << " hash failure";
 				Request_Generator.force_rerequest(conn->latest_request.front());
 				#ifndef CORRUPT_FILE_BLOCK_TEST
 				DB_Blacklist.add(conn->IP);
@@ -293,7 +294,7 @@ void download_file::response(const int & socket, std::string block)
 
 const boost::uint64_t download_file::size()
 {
-	return file_size;
+	return Download_Info.size;
 }
 
 void download_file::stop()

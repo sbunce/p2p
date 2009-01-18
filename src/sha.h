@@ -45,13 +45,6 @@ public:
 	std::string hex_hash();
 	char * raw_hash();
 
-	/*
-	HASH_LENGTH     - length (in bytes) of the binary hash that raw_hash() returns
-	HEX_HASH_LENGTH - length (in bytes) of the hex hash that hex_hash returns
-	*/
-	static const int HASH_SIZE = 20;
-	static const int HEX_HASH_SIZE = 40;
-
 private:
 	//holds last generated raw hash
 	char raw[20];

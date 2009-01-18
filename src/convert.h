@@ -142,9 +142,9 @@ namespace convert
 		}else if(bytes >= 1024*1024*1024){
 			oss << std::fixed << std::setprecision(2) << bytes / (double)(1024*1024*1024) << "gB";
 		}else if(bytes >= 1024*1024){
-			oss << std::fixed << std::setprecision(1) << bytes / (double)(1024*1024) << "mB";
+			oss << std::fixed << std::setprecision(2) << bytes / (double)(1024*1024) << "mB";
 		}else if(bytes >= 1024){
-			oss << std::fixed << std::setprecision(0) << bytes / (double)1024 << "kB";
+			oss << std::fixed << std::setprecision(1) << bytes / (double)1024 << "kB";
 		}
 		return oss.str();
 	}

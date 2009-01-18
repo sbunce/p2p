@@ -9,8 +9,11 @@
 #include "convert.h"
 #include "client_server_bridge.h"
 #include "DB_blacklist.h"
+#include "DB_download.h"
+#include "DB_hash.h"
 #include "download.h"
 #include "download_connection.h"
+#include "download_info.h"
 #include "global.h"
 #include "hash_tree.h"
 #include "request_generator.h"
@@ -22,12 +25,7 @@
 class download_hash_tree : public download
 {
 public:
-	download_hash_tree(
-		const std::string & root_hash_in,
-		const boost::uint64_t & download_file_size_in,
-		const std::string & download_file_name_in
-	);
-
+	download_hash_tree(const download_info & Download_Info_in);
 	~download_hash_tree();
 
 	//documentation for virtual functions in abstract base class
@@ -49,14 +47,9 @@ public:
 	download_file_name - returns the name of the file the hash tree was generated for
 	*/
 	const bool & canceled();
-	const boost::uint64_t & download_file_size();
-	const std::string & download_file_name();
+	const download_info & get_download_info();
 
 private:
-	//this information is for the file the hash tree was generated for
-	boost::uint64_t _download_file_size;
-	std::string _download_file_name;
-
 	/*
 	If the hash tree download gets cancelled early by the user this will be set
 	to true which will make the completion of the hash tree not trigger a
@@ -73,9 +66,6 @@ private:
 	from any server this should be set to true.
 	*/
 	bool download_complete;
-
-	std::string root_hash;        //root hash of the hash tree downloading
-	std::string hash_name;            //the name of this hash
 
 	/*
 	The tree_info for the file downloading.
@@ -141,6 +131,10 @@ private:
 	//socket number mapped to connection special pointer
 	std::map<int, connection_special> Connection_Special;
 
+	sqlite3_wrapper::database DB;
+	DB_hash DB_Hash;
+	DB_download DB_Download;
+	download_info Download_Info;
 	request_generator Request_Generator;
 	hash_tree Hash_Tree;
 };

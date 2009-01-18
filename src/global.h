@@ -36,7 +36,6 @@ example: 1.36 would have major 1 and minor 36
 
 //custom, nothing included here can include global.h
 #include "logger.h"
-#include "sha.h"
 
 //std
 #include <cassert>
@@ -62,7 +61,7 @@ namespace global
 
 	//hard settings, not changed at runtime
 	const unsigned DB_TIMEOUT = 4000;         //database timeout (ms)
-	const unsigned PRIME_CACHE = 256;         //number of primes to keep in prime cache for diffie-hellman
+	const unsigned PRIME_CACHE = 16;          //number of primes to keep in prime cache for diffie-hellman
 	const unsigned DH_KEY_SIZE = 64;          //size of key exchanged with diffie-hellman (bytes)
 	const unsigned PIPELINE_SIZE = 16;        //max pre-requests that can be done (must be >= 2)
 	const unsigned RE_REQUEST = 16;           //seconds before a file block is re-requested
@@ -77,8 +76,10 @@ namespace global
 	//default locations
 	const std::string DOWNLOAD_DIRECTORY = "download/";
 	const std::string SHARE_DIRECTORY = "share/";
-	const std::string HASH_DIRECTORY = "hash/";
 	const std::string DATABASE_PATH = "database";
+
+//DEBUG, this needs to be deleted
+	//const std::string HASH_DIRECTORY = "hash/";
 
 	/*
 	The size of the file block is always related to the size of a hash block so
@@ -88,8 +89,10 @@ namespace global
 		Note: HASH_BLOCK_SIZE % 2 must = 0 and should be >= 2;
 	FILE_BLOCK_SIZE - number of bytes in a file block.
 	*/
-	const unsigned HASH_BLOCK_SIZE = 256;
-	const unsigned FILE_BLOCK_SIZE = HASH_BLOCK_SIZE * sha::HASH_SIZE;
+	const unsigned HASH_SIZE = 20;        //size of one hash (binary)
+	const unsigned HEX_HASH_SIZE = 40;    //size of one hash (hex)
+	const unsigned HASH_BLOCK_SIZE = 256; //number of hashes in hash block
+	const unsigned FILE_BLOCK_SIZE = HASH_BLOCK_SIZE * HASH_SIZE;
 
 	//protocol commands client <-> server
 	const char P_ERROR = (char)0;

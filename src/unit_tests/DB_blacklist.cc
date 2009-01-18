@@ -1,12 +1,10 @@
 //custom
 #include "../DB_blacklist.h"
-
-//std
-#include <iostream>
+#include "../global.h"
 
 int main()
 {
-	sqlite3_wrapper DB(global::DATABASE_PATH);
+	sqlite3_wrapper::database DB;
 	DB.query("DROP TABLE IF EXISTS blacklist");
 
 	DB_blacklist DB_Blacklist;
@@ -14,25 +12,21 @@ int main()
 
 	int state = 0;
 	if(DB_Blacklist.modified(state)){
-		std::cout << "modified test 1 failed\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 
 	DB_Blacklist.add(IP_1);
 
 	if(!DB_Blacklist.modified(state)){
-		std::cout << "modified test 2 failed\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 
 	if(!DB_Blacklist.is_blacklisted(IP_1)){
-		std::cout << "is_blacklisted test 1 failed\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 
 	if(DB_Blacklist.is_blacklisted(IP_2)){
-		std::cout << "is_blacklisted test 2 failed\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 
 	return 0;

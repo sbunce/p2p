@@ -124,15 +124,13 @@ std::string client::get_download_directory()
 	return DB_Preferences.get_download_directory();
 }
 
-std::string client::get_speed_limit()
+unsigned client::get_download_rate()
 {
-	std::ostringstream sl;
 	if(Rate_Limit.get_download_rate() == std::numeric_limits<unsigned>::max()){
-		sl << "0";
+		return 0;
 	}else{
-		sl << Rate_Limit.get_download_rate() / 1024;
+		return Rate_Limit.get_download_rate();
 	}
-	return sl.str();
 }
 
 void client::main_loop()
@@ -249,7 +247,7 @@ void client::main_loop()
 		}
 
 		if(!transfer){
-			portable_sleep::yield();
+			portable_sleep::ms(1);
 		}
 	}
 }
@@ -265,7 +263,6 @@ void client::reconnect_unfinished()
 		start_download(*iter_cur);
 		++iter_cur;
 	}
-
 	client_server_bridge::unblock_server_index();
 }
 
@@ -305,7 +302,7 @@ void client::search(std::string search_word, std::vector<download_info> & Search
 	DB_Search.search(search_word, Search_Info);
 }
 
-void client::set_connections(const unsigned & max_connections_in)
+void client::set_max_connections(const unsigned & max_connections_in)
 {
 	max_connections = max_connections_in;
 	DB_Preferences.set_client_connections(max_connections);
@@ -324,9 +321,8 @@ void client::set_download_directory(const std::string & download_directory)
 	DB_Preferences.set_download_directory(download_directory);
 }
 
-void client::set_download_rate(unsigned download_rate)
+void client::set_max_download_rate(unsigned download_rate)
 {
-	download_rate *= 1024;
 	if(download_rate == 0){
 		download_rate = std::numeric_limits<unsigned>::max();
 	}
@@ -349,7 +345,7 @@ void client::start_download_process(const download_info & info)
 {
 	download * Download;
 	std::list<download_connection> servers;
-	if(Download_Factory.start_hash(info, Download, servers)){
+	if(Download_Factory.start(info, Download, servers)){
 		client_buffer::add_download(Download);
 		std::list<download_connection>::iterator iter_cur, iter_end;
 		iter_cur = servers.begin();
@@ -367,7 +363,7 @@ void client::start_pending_downloads()
 	The pending downloads are copied so that PD_mutex can be unlocked as soon as
 	possible. PD_mutex locks start_download() which the GUI accesses. The
 	start_download function needs to be as fast as possible so the GUI doesn't
-	freeze up when starting a download.
+	"hiccup" when starting a download.
 	*/
 	std::list<download_info> Pending_Download_Temp;
 	{//begin lock scope
@@ -386,7 +382,7 @@ void client::start_pending_downloads()
 	}
 }
 
-unsigned client::total_speed()
+unsigned client::total_rate()
 {
 	/*
 	If there is no I/O the speed won't get updated. This will update the speed

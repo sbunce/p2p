@@ -1,3 +1,13 @@
+import sys
+
 Import('env')
-env.StaticLibrary('sqlite3.c')
-env.Program('shell.c')
+env_sqlite = env.Clone()
+
+#compile as multithreaded http://www.sqlite.org/compile.html#threadsafe
+if sys.platform == 'linux2':
+	env_sqlite['CCFLAGS'].append('-DSQLITE_THREADSAFE=2')
+if sys.platform == 'win32':
+	env_sqlite['CCFLAGS'].append('/DSQLITE_THREADSAFE=2')
+
+env_sqlite.StaticLibrary('sqlite3.c')
+env_sqlite.Program('shell.c')

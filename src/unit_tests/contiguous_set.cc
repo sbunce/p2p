@@ -1,8 +1,6 @@
 //custom
 #include "../contiguous_set.h"
-
-//std
-#include <iostream>
+#include "../global.h"
 
 bool test_iterator()
 {
@@ -133,39 +131,27 @@ bool test_empty()
 int main()
 {
 	if(!test_iterator()){
-		std::cout << "failed iterator test\n";
-		return 1;
+		LOGGER; exit(1);
 	}
-
 	if(!test_contiguous_iterator()){
-		std::cout << "failed contiguous iterator test\n";
-		return 1;
+		LOGGER; exit(1);
 	}
-
 	if(!test_incontiguous_iterator()){
-		std::cout << "failed incontiguous iterator test\n";
-		return 1;
+		LOGGER; exit(1);
 	}
-
 	if(!test_highest_contiguous()){
-		std::cout << "failed highest contiguous test\n";
-		return 1;
+		LOGGER; exit(1);
 	}
-
 	if(!test_trim_contiguous()){
-		std::cout << "failed trim contiguous test\n";
-		return 1;
+		LOGGER; exit(1);
 	}
-
 	if(!test_trim()){
-		std::cout << "failed trim test\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 
 	//make sure nothing blows up when container empty
 	if(!test_empty()){
-		std::cout << "failed empty test\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 
 	return 0;

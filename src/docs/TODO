@@ -1,19 +1,43 @@
 TODO
 
+-Break up download_info in to download_info and download_status.
+-Move hex array in to convert functions.
+-Add retry-upon SQLITE_BUSY support in the wrapper.
+-hash tree slots don't work
+-replace server tokenizing with strtok (shitty) with the boost tokenizer.
+-Servers can time out if they're finishing while hash checking.
+-Indexing starting before downloads resume.
+-Slot requesting currently disabled.
+
+
+GROSS CODE
+
+-Hex to binary code in convert.h is ugly. Nice looking code in the
+sqlite optimization guide.
+
+
+PERFORMANCE
+
+-Investigate keeping hash trees in separate database file. Would this
+decrease lock contention?
+-Copying hash tree in to DB that may not be used (if a tree with the same root
+hash already exists) takes up DB access time.
+-Share scanning is ownage. Perhaps keep hash to key associations in memory.
+-Add performance measurement to sqlite unit test.
+
 
 THINK ABOUT
 
 -Think about CMWC4096 PRNG seed issue. After key exchange, each client/server
 sends 1/2 the size of the PRNG seed encrypted to the other.
-
 -Think about how ISP might detect protocol via knowing handshake size/port.
 Initial send sizes need to be be randomized? Perhaps do a modulo of some number
 against the secret key, this could say how many extra random bytes to send.
-
 -Possible system to do uploads. Favor the highest request, but assure that
 requests are arriving sequentially.
-
 -Is starvation a problem between the client and server upload?
+-SQLite blob write offset is a signed int. This limits the maximum tree size
+to 2gB. Create document like this: http://www.sqlite.org/limits.html
 
 
 DEFERRED FEATURES
@@ -23,18 +47,15 @@ server send it's host key. Both the client and server should look to see if a
 key has been negotiated with the other before. If it has the client can just
 start sending without negotating a new key. Defer this feature until GUIDs
 are worked out.
-
 -client::set_download_directory() not doing anything but saving setting.
-
 -Support for multiple share directories.
-
 -Figure out how to handle naming conflicts. It should be fully automatic.
 Probably just rename the files according to some rules. It doesn't matter too
 much since the hashes stay the same.
-
 -Have a directory where partially downloaded files reside. When a file finishes
 downloading it can be moved to a directory which can be indexed normally. This
 way users can rename files and do what they want and files will just get
 rehashed without complication.
-
 -Have a tab that shows share stats, upload/download stats, duplicate files, etc.
+-Make sure program works when out of hard drive space.
+-Graylist feature to blacklist.

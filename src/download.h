@@ -82,6 +82,9 @@ protected:
 		speed_calculator Speed_Calculator;
 	};
 
+	//total speed for the download
+	speed_calculator Speed_Calculator;
+
 	/*
 	client_buffers register/unregister with the download by storing information
 	here.
@@ -89,8 +92,5 @@ protected:
 	This maps the socket number to the server IP.
 	*/
 	std::map<int, server_info> Connection;
-
-	//overall speed for the download
-	speed_calculator Speed_Calculator;
 };
 #endif

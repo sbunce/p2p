@@ -3,9 +3,10 @@
 slot_hash_tree::slot_hash_tree(
 	std::string * IP_in,
 	const std::string & root_hash_in,
-	const boost::uint64_t & file_size_in
+	const boost::uint64_t & file_size_in,
+	const boost::int64_t & key
 ):
-	Tree_Info(root_hash_in, file_size_in),
+	Tree_Info(root_hash_in, file_size_in, key),
 	percent(0),
 	highest_block_seen(0)
 {
@@ -24,7 +25,7 @@ void slot_hash_tree::info(std::vector<upload_info> & UI)
 		root_hash,
 		*IP,
 		Tree_Info.get_tree_size(),
-		global::HASH_DIRECTORY + slot::root_hash,
+		"",
 		Speed_Calculator.speed(),
 		percent
 	));

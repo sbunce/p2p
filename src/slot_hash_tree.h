@@ -18,7 +18,8 @@ public:
 	slot_hash_tree(
 		std::string * IP_in,
 		const std::string & root_hash_in,
-		const boost::uint64_t & file_size_in
+		const boost::uint64_t & file_size_in,
+		const boost::int64_t & key
 	);
 
 	/*

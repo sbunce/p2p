@@ -2,6 +2,7 @@
 #define H_SCAN
 
 //std
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <set>

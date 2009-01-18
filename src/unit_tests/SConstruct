@@ -21,16 +21,9 @@ env.unit_test([
 env.unit_test([
 	'DB_download.cc',
 	'../DB_download.cc',
-	boost.static_lib('date_time'),
-	boost.static_lib('filesystem'),
-	boost.static_lib('system'),
-	boost.static_lib('thread')
-])
-
-env.unit_test([
-	'DB_hash.cc',
 	'../DB_hash.cc',
 	boost.static_lib('date_time'),
+	boost.static_lib('filesystem'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])
@@ -59,6 +52,7 @@ env.unit_test([
 env.unit_test([
 	'DB_share.cc',
 	'../DB_share.cc',
+	'../DB_hash.cc',
 	boost.static_lib('date_time'),
 	boost.static_lib('thread')
 ])
@@ -77,6 +71,7 @@ env.unit_test([
 	'hash_tree.cc',
 	'../hash_tree.cc',
 	'../DB_blacklist.cc',
+	'../DB_hash.cc',
 	'../sha.cc',
 	boost.static_lib('date_time'),
 	boost.static_lib('filesystem'),

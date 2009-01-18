@@ -13,8 +13,10 @@
 #include "convert.h"
 #include "client_server_bridge.h"
 #include "DB_blacklist.h"
+#include "DB_download.h"
 #include "DB_share.h"
 #include "download.h"
+#include "download_info.h"
 #include "global.h"
 #include "hash_tree.h"
 #include "request_generator.h"
@@ -34,12 +36,7 @@
 class download_file : public download
 {
 public:
-	download_file(
-		const std::string & root_hash_in,
-		const std::string & file_name_in, 
-		const std::string & file_path_in,
-		const boost::uint64_t & file_size_in
-	);
+	download_file(const download_info & Download_Info_in);
 
 	~download_file();
 
@@ -79,10 +76,7 @@ private:
 	*/
 	bool download_complete;
 
-	std::string root_hash;       //hash tree root hash
-	std::string file_name;       //name of the file
 	std::string file_path;       //path to write file to
-	boost::uint64_t file_size;   //size of the file(bytes)
 	boost::uint64_t block_count; //number of file blocks (last block is block_count - 1)
 	unsigned last_block_size;    //holds the exact size of the last fileBlock(in bytes)
 
@@ -155,7 +149,9 @@ private:
 	void hash_check(hash_tree::tree_info Tree_Info, std::string file_path);
 	void write_block(boost::uint64_t block_number, std::string & block);
 
+	download_info Download_Info;
 	DB_blacklist DB_Blacklist;
+	DB_download DB_Download;
 	DB_share DB_Share;
 	request_generator Request_Generator;
 	hash_tree Hash_Tree;

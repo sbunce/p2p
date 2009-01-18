@@ -3,6 +3,7 @@
 
 //boost
 #include <boost/bind.hpp>
+#include <boost/filesystem/convenience.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/thread/mutex.hpp>
@@ -46,12 +47,10 @@ private:
 	/*
 	generate_hash - generates hash tree for file
 	index_share   - removes files listed in index that don't exist in share
-	scan_hashes   - scans hash directory
 	scan_share    - recursively scan a share directory
 	*/
-	void generate_hash(const boost::filesystem::path file_path);
+	void generate_hash_tree(const std::string & file_path);
 	void index_share();
-	void scan_hashes();
 	void scan_share(std::string directory_name);
 
 	DB_share DB_Share;

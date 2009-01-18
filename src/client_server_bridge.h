@@ -24,22 +24,21 @@ public:
 
 	block_num: highest hash_block available for upload
 	*/
-	static void start_download(const std::string & hash)
+	static void start_hash_tree(const std::string & hash)
 	{
 		boost::mutex::scoped_lock lock(Mutex);
 		init();
-		Client_Server_Bridge->start_download_priv(hash);
+		Client_Server_Bridge->start_hash_tree_priv(hash);
 	}
 
 	/*
-	When the download transitions from downloading the hash_tree to downloading
-	the file this will be called.
+	This is called when a file starts downloading.
 	*/
-	static void transition_download(const std::string & hash, const boost::uint64_t & file_block_count)
+	static void start_file(const std::string & hash, const boost::uint64_t & file_block_count)
 	{
 		boost::mutex::scoped_lock lock(Mutex);
 		init();
-		Client_Server_Bridge->transition_download_priv(hash, file_block_count);
+		Client_Server_Bridge->start_file_priv(hash, file_block_count);
 	}
 
 	/*
@@ -155,6 +154,7 @@ private:
 		bool initialized;                  //when false no blocks available
 		boost::uint64_t highest_available; //any block <= this is available
 	};
+	//std::map<root hash, info>
 	std::map<std::string, hash_tree_state> Hash_Tree_State;
 
 	//used to keep track of progress of downloading file
@@ -172,13 +172,14 @@ private:
 		//keeps track of leading edge of blocks
 		contiguous_set<boost::uint64_t> Contiguous;
 	};
+	//std::map<root hash, info>
 	std::map<std::string, file_state> File_State;
 
 	/*
 	These functions all correspond to public member functions.
 	*/
-	void start_download_priv(const std::string & hash);
-	void transition_download_priv(const std::string & hash, const boost::uint64_t & file_block_count);
+	void start_hash_tree_priv(const std::string & hash);
+	void start_file_priv(const std::string & hash, const boost::uint64_t & file_block_count);
 	void finish_download_priv(const std::string & hash);
 	void update_hash_tree_highest_priv(const std::string & hash, const boost::uint64_t & block_num);
 	void add_file_block_priv(const std::string & hash, const boost::uint64_t & block_num);

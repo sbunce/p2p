@@ -39,7 +39,7 @@ public:
 	void set_upload_rate(const unsigned & rate);
 
 private:
-	sqlite3_wrapper DB;
+	sqlite3_wrapper::database DB;
 
 	//mutex for checking for, and creation of, the one row
 	static boost::mutex Mutex;

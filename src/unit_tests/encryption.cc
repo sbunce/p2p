@@ -1,8 +1,6 @@
 //custom
 #include "../encryption.h"
-
-//std
-#include <iostream>
+#include "../global.h"
 
 int main()
 {
@@ -27,16 +25,14 @@ int main()
 	E_client.crypt_send(client_buffer);
 
 	if(client_buffer == "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"){
-		std::cout << "failed client encrypt test\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 
 	//server decrypts message from client
 	E_server.crypt_recv(client_buffer);
 
 	if(client_buffer != "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"){
-		std::cout << "failed server decrypt test\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 
 	//now server encrypts message
@@ -44,16 +40,14 @@ int main()
 	E_server.crypt_send(server_buffer);
 
 	if(server_buffer == "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"){
-		std::cout << "failed server encrypt test\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 
 	//client decrypts message from server
 	E_client.crypt_recv(server_buffer);
 
 	if(server_buffer != "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"){
-		std::cout << "failed client decrypt test\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 #endif
 	return 0;

@@ -1,8 +1,7 @@
 //custom
+#include "../global.h"
 #include "../hash_tree.h"
-
-//std
-#include <iostream>
+#include "../logger.h"
 
 void create_test_file(const std::string & name, const unsigned & bytes)
 {
@@ -37,64 +36,57 @@ int main()
 
 	std::string root_hash;
 	boost::uint64_t bad_block;
-	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "1_block", root_hash)){
-		std::cout << "failed to create 1 block tree\n";
-		return 1;
+	boost::int64_t key;
+	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "1_block", root_hash, key)){
+		LOGGER; exit(1);
 	}
-	hash_tree::tree_info TE_1(root_hash, 1 * global::FILE_BLOCK_SIZE);
+	if(key != 0){
+		LOGGER; exit(1);
+	}
+	hash_tree::tree_info TE_1(root_hash, 1 * global::FILE_BLOCK_SIZE, key);
 	if(!Hash_Tree.check(TE_1, bad_block)){
-		std::cout << "failed to check 1 block tree\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 
-	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "2_block", root_hash)){
-		std::cout << "failed to create 2 block tree\n";
-		return 1;
+	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "2_block", root_hash, key)){
+		LOGGER; exit(1);
 	}
-	hash_tree::tree_info TE_2(root_hash, 2 * global::FILE_BLOCK_SIZE);
+	hash_tree::tree_info TE_2(root_hash, 2 * global::FILE_BLOCK_SIZE, key);
 	if(!Hash_Tree.check(TE_2, bad_block)){
-		std::cout << "failed to check 2 block tree\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 
-	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "3_block", root_hash)){
-		std::cout << "failed to create 3 block tree\n";
-		return 1;
+	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "3_block", root_hash, key)){
+		LOGGER; exit(1);
 	}
-	hash_tree::tree_info TE_3(root_hash, 3 * global::FILE_BLOCK_SIZE);
+
+	hash_tree::tree_info TE_3(root_hash, 3 * global::FILE_BLOCK_SIZE, key);
 	if(!Hash_Tree.check(TE_3, bad_block)){
-		std::cout << "failed to check 3 block tree\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 
-	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "4_block", root_hash)){
-		std::cout << "failed to create 4 block tree\n";
-		return 1;
+	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "4_block", root_hash, key)){
+		LOGGER; exit(1);
 	}
-	hash_tree::tree_info TE_4(root_hash, 4 * global::FILE_BLOCK_SIZE);
+	hash_tree::tree_info TE_4(root_hash, 4 * global::FILE_BLOCK_SIZE, key);
 	if(!Hash_Tree.check(TE_4, bad_block)){
-		std::cout << "failed to check 4 block tree\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 
-	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "256_block", root_hash)){
-		std::cout << "failed to create 256 block tree\n";
-		return 1;
+	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "256_block", root_hash, key)){
+		LOGGER; exit(1);
 	}
-	hash_tree::tree_info TE_256(root_hash, 256 * global::FILE_BLOCK_SIZE);
+	hash_tree::tree_info TE_256(root_hash, 256 * global::FILE_BLOCK_SIZE, key);
 	if(!Hash_Tree.check(TE_256, bad_block)){
-		std::cout << "failed to check 256 block tree\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 
-	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "257_block", root_hash)){
-		std::cout << "failed to create 257 block tree\n";
-		return 1;
+	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "257_block", root_hash, key)){
+		LOGGER; exit(1);
 	}
-	hash_tree::tree_info TE_257(root_hash, 257 * global::FILE_BLOCK_SIZE);
+	hash_tree::tree_info TE_257(root_hash, 257 * global::FILE_BLOCK_SIZE, key);
 	if(!Hash_Tree.check(TE_257, bad_block)){
-		std::cout << "failed to check 257 block tree\n";
-		return 1;
+		LOGGER; exit(1);
 	}
 
 	return 0;

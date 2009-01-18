@@ -5,9 +5,6 @@
 #include "global.h"
 #include "sqlite3_wrapper.h"
 
-//sqlite
-#include <sqlite3.h>
-
 //std
 #include <algorithm>
 #include <string>
@@ -25,7 +22,7 @@ public:
 	void process(const std::string & request, std::string & send);
 
 private:
-	sqlite3_wrapper DB;
+	sqlite3_wrapper::database DB;
 
 	/*
 	table_table - adds html table to send for database table

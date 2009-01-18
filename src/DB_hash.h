@@ -2,56 +2,49 @@
 #define H_DB_HASH
 
 //boost
-#include <boost/tuple/tuple.hpp>
+#include <boost/thread/mutex.hpp>
 
 //custom
-#include "atomic_bool.h"
 #include "global.h"
 #include "sqlite3_wrapper.h"
 
 //std
-#include <string>
+#include <sstream>
 
 class DB_hash
 {
 public:
-	DB_hash();
+	/*
+	The DB hash table will need to be accessed within transactions involving
+	other tables. For this reason it doesn't have its own instantation of the
+	sqlite3_wrapper.
+	*/
+	DB_hash(sqlite3_wrapper::database & DB_in);
 
-	//does memmove like operations to compact HASH file
-	void compact();
+	enum state{
+		DNE,         //indicates that no tree with key exists
+		RESERVED,    //0 - reserved, any rows with this state are deleted on program start
+		DOWNLOADING, //1 - downloading, incomplete tree
+		COMPLETE     //2 - complete, hash tree complete and checked
+	};
 
 	/*
-	Will de-allocate space that was used for a hash tree.
+	delete_tree   - deletes row with the specified key
+	get_state     - returns the state of the hash tree (see enum state)
+	tree_allocate - allocates space for tree of specified size and sets state = 0 (remember to call use!)
+	tree_open     - returns a blob object that can be used to read/write a blob
+	tree_use      - marks tree as used so it doesn't get deleted on startup
 	*/
-	void free(const std::string & hash);
-
-	/*
-	Locates a free space in the HASH file large enough to accomodate a hash
-	tree of the given tree_size (bytes). The return value is an offset from the
-	start of the file (bytes) at which to start writing the hash tree.
-	*/
-	boost::uint64_t reserve(const boost::uint64_t tree_size);
-
-	/*
-	Use a space that was reserve()'ed.
-	precondition: the space pointed to by offset must have reserved
-	*/
-	void use(const boost::uint64_t & offset, const std::string & hash);
+	void delete_tree(const boost::int64_t & key);
+	state get_state(const boost::int64_t & key);
+	void set_state(const boost::int64_t & key, const state & State);
+	boost::int64_t tree_allocate(const int & size);
+	sqlite3_wrapper::blob tree_open(const boost::int64_t & key);
+	void tree_use(const boost::int64_t & key);
 
 private:
-	sqlite3_wrapper DB;
-	static atomic_bool program_start;
-
-	/*
-	best_fix_call_back     - call back used by find_and_reserve() to determine best fit
-	create_space_call_back - call back used by find_and_reserve() to allocate space
-	use_call_back          - call back used by use() to change state to used
-	*/
-	int best_fit_call_back(std::pair<bool, boost::uint64_t> & info,
-		int columns_retrieved, char ** response, char ** column_name);
-	int create_space_call_back(std::pair<bool, boost::uint64_t> & info,
-		int columns_retrieved, char ** response, char ** column_name);
-	int use_call_back(boost::tuple<bool, const boost::uint64_t *, const std::string *> & info,
-		int columns_retrieved, char ** response, char ** column_name);
+	sqlite3_wrapper::database * DB;
+	static bool program_start;
+	static boost::mutex program_start_mutex;
 };
 #endif

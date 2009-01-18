@@ -36,7 +36,6 @@ src_common = [
 	'download_factory.cc',
 	'download_file.cc',
 	'download_hash_tree.cc',
-	'download_tracker.cc',
 	'encryption.cc',
 	'hash_tree.cc',
 	'http.cc',

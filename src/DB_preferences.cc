@@ -10,8 +10,6 @@ static int check_exists(bool & exists, int columns_retrieved, char ** query_resp
 }
 
 DB_preferences::DB_preferences()
-:
-	DB(global::DATABASE_PATH)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	DB.query("CREATE TABLE IF NOT EXISTS preferences (client_connections INTEGER, \
