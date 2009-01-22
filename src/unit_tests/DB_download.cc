@@ -22,11 +22,7 @@ int main()
 	}
 
 	boost::int64_t key;
-	if(DBD.lookup_hash("ABC", key)){
-		if(key != DI.key){
-			LOGGER; exit(1);
-		}
-	}else{
+	if(!DBD.lookup_hash("ABC")){
 		LOGGER; exit(1);
 	}
 

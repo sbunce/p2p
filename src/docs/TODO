@@ -1,12 +1,16 @@
 TODO
 
+-servers on download info tab doesn't go to zero when download finishes
+-speed on download info tab doesn't go to zero when download finished
+-get server index status working (probably defer until after path_memoize)
+-unit test for DB_hash
+-scons is not cleaning up scratch files
 -Break up download_info in to download_info and download_status.
 -Move hex array in to convert functions.
 -Add retry-upon SQLITE_BUSY support in the wrapper.
 -hash tree slots don't work
 -replace server tokenizing with strtok (shitty) with the boost tokenizer.
 -Servers can time out if they're finishing while hash checking.
--Indexing starting before downloads resume.
 -Slot requesting currently disabled.
 
 
@@ -18,6 +22,7 @@ sqlite optimization guide.
 
 PERFORMANCE
 
+-Make sure DB_Hash functions are using index. Is a multi-column index needed?
 -Investigate keeping hash trees in separate database file. Would this
 decrease lock contention?
 -Copying hash tree in to DB that may not be used (if a tree with the same root
@@ -34,7 +39,9 @@ sends 1/2 the size of the PRNG seed encrypted to the other.
 Initial send sizes need to be be randomized? Perhaps do a modulo of some number
 against the secret key, this could say how many extra random bytes to send.
 -Possible system to do uploads. Favor the highest request, but assure that
-requests are arriving sequentially.
+requests are arriving sequentially. Actually this wouldn't have to be assured,
+if someone started downloading mid file to try to get an advantage they might
+have to wait a long time to download the beginning of the file.
 -Is starvation a problem between the client and server upload?
 -SQLite blob write offset is a signed int. This limits the maximum tree size
 to 2gB. Create document like this: http://www.sqlite.org/limits.html

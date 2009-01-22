@@ -8,7 +8,7 @@ download_hash_tree::download_hash_tree(
 	close_slots(false),
 	_cancel(false),
 	_visible(true),
-	Tree_Info(Download_Info_in.hash, Download_Info_in.size, Download_Info_in.key),
+	Tree_Info(Download_Info_in.hash, Download_Info_in.size),
 	DB_Hash(DB)
 {
 	client_server_bridge::start_hash_tree(Download_Info.hash);
@@ -25,11 +25,11 @@ download_hash_tree::download_hash_tree(
 download_hash_tree::~download_hash_tree()
 {
 	if(_cancel){
-		DB_Download.terminate(Download_Info.hash);
+		DB_Download.terminate(Download_Info.hash, Download_Info.size);
 		client_server_bridge::finish_download(Download_Info.hash);
 		std::remove((global::DOWNLOAD_DIRECTORY + Download_Info.name).c_str());
 	}else{
-		DB_Hash.set_state(Download_Info.key, DB_hash::COMPLETE);
+		DB_Hash.set_state(Download_Info.hash, Tree_Info.get_tree_size(), DB_hash::COMPLETE);
 	}
 }
 

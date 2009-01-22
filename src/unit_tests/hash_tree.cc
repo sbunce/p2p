@@ -24,7 +24,10 @@ void create_test_file(const std::string & name, const unsigned & bytes)
 
 int main()
 {
+
 	boost::filesystem::create_directory(global::SHARE_DIRECTORY.c_str());
+	sqlite3_wrapper::database DB;
+	DB_hash DB_Hash(DB);
 	hash_tree Hash_Tree;
 
 	create_test_file("1_block", 1 * global::FILE_BLOCK_SIZE);
@@ -36,55 +39,51 @@ int main()
 
 	std::string root_hash;
 	boost::uint64_t bad_block;
-	boost::int64_t key;
-	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "1_block", root_hash, key)){
+	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "1_block", root_hash)){
 		LOGGER; exit(1);
 	}
-	if(key != 0){
-		LOGGER; exit(1);
-	}
-	hash_tree::tree_info TE_1(root_hash, 1 * global::FILE_BLOCK_SIZE, key);
+	hash_tree::tree_info TE_1(root_hash, 1 * global::FILE_BLOCK_SIZE);
 	if(!Hash_Tree.check(TE_1, bad_block)){
 		LOGGER; exit(1);
 	}
 
-	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "2_block", root_hash, key)){
+	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "2_block", root_hash)){
 		LOGGER; exit(1);
 	}
-	hash_tree::tree_info TE_2(root_hash, 2 * global::FILE_BLOCK_SIZE, key);
+
+	hash_tree::tree_info TE_2(root_hash, 2 * global::FILE_BLOCK_SIZE);
 	if(!Hash_Tree.check(TE_2, bad_block)){
 		LOGGER; exit(1);
 	}
 
-	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "3_block", root_hash, key)){
+	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "3_block", root_hash)){
 		LOGGER; exit(1);
 	}
-
-	hash_tree::tree_info TE_3(root_hash, 3 * global::FILE_BLOCK_SIZE, key);
+	hash_tree::tree_info TE_3(root_hash, 3 * global::FILE_BLOCK_SIZE);
 	if(!Hash_Tree.check(TE_3, bad_block)){
 		LOGGER; exit(1);
 	}
 
-	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "4_block", root_hash, key)){
+	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "4_block", root_hash)){
 		LOGGER; exit(1);
 	}
-	hash_tree::tree_info TE_4(root_hash, 4 * global::FILE_BLOCK_SIZE, key);
+	hash_tree::tree_info TE_4(root_hash, 4 * global::FILE_BLOCK_SIZE);
 	if(!Hash_Tree.check(TE_4, bad_block)){
 		LOGGER; exit(1);
 	}
 
-	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "256_block", root_hash, key)){
+	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "256_block", root_hash)){
 		LOGGER; exit(1);
 	}
-	hash_tree::tree_info TE_256(root_hash, 256 * global::FILE_BLOCK_SIZE, key);
+	hash_tree::tree_info TE_256(root_hash, 256 * global::FILE_BLOCK_SIZE);
 	if(!Hash_Tree.check(TE_256, bad_block)){
 		LOGGER; exit(1);
 	}
 
-	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "257_block", root_hash, key)){
+	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "257_block", root_hash)){
 		LOGGER; exit(1);
 	}
-	hash_tree::tree_info TE_257(root_hash, 257 * global::FILE_BLOCK_SIZE, key);
+	hash_tree::tree_info TE_257(root_hash, 257 * global::FILE_BLOCK_SIZE);
 	if(!Hash_Tree.check(TE_257, bad_block)){
 		LOGGER; exit(1);
 	}

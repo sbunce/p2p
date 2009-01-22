@@ -112,7 +112,7 @@ void http::table_table(const std::string & table_name, std::string & send)
 
 	if(table_name == "hash"){
 		//hash table includes a blob that shouldn't be selected
-		query = "SELECT key, state FROM " + table_name;
+		query = "SELECT key, hash, state, size FROM " + table_name;
 	}else{
 		//prepare data
 		query = "SELECT * FROM " + table_name;

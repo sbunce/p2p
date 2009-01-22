@@ -8,6 +8,7 @@
 #include "atomic_bool.h"
 #include "DB_hash.h"
 #include "global.h"
+#include "hash_tree.h"
 #include "sqlite3_wrapper.h"
 
 //std
@@ -28,8 +29,8 @@ public:
 	delete_hash    - 
 	remove_missing - removes files from the database that aren't present in the share
 	*/
-	void add_entry(const std::string & hash, const boost::int64_t & key, const boost::uint64_t & size, const std::string & path);
-	void delete_entry(const boost::int64_t & key, const std::string & path);
+	void add_entry(const std::string & hash, const boost::uint64_t & size, const std::string & path);
+	void delete_entry(const std::string & hash, const std::string & path);
 	void remove_missing(const std::string & share_directory);
 
 	/*
@@ -40,7 +41,7 @@ public:
 	bool lookup_hash(const std::string & hash, std::string & path);
 	bool lookup_hash(const std::string & hash, boost::uint64_t & size);
 	bool lookup_hash(const std::string & hash, std::string & path, boost::uint64_t & size);
-	bool lookup_path(const std::string & path, boost::int64_t & key, boost::uint64_t & size);
+	bool lookup_path(const std::string & path, std::string & hash, boost::uint64_t & size);
 
 private:
 	sqlite3_wrapper::database DB;
@@ -51,7 +52,7 @@ private:
 	*/
 	int remove_missing_call_back(std::map<std::string, std::string> & missing,
 		int columns_retrieved, char ** response, char ** column_name);
-	bool unique_key(const boost::int64_t & key);
+	bool unique_hash(const std::string & hash);
 
 	DB_hash DB_Hash;
 };

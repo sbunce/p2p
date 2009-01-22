@@ -11,7 +11,7 @@ download_file::download_file(
 	close_slots(false),
 	_cancel(false),
 	_visible(true),
-	Tree_Info(Download_Info_in.hash, Download_Info_in.size, Download_Info_in.key)
+	Tree_Info(Download_Info_in.hash, Download_Info_in.size)
 {
 	client_server_bridge::start_file(Download_Info.hash, Tree_Info.get_file_block_count());
 
@@ -40,10 +40,10 @@ download_file::~download_file()
 	hashing_thread.join();
 	if(_cancel){
 		std::remove(file_path.c_str());
-		DB_Download.terminate(Download_Info.hash);
+		DB_Download.terminate(Download_Info.hash, Download_Info.size);
 	}else{
-		DB_Share.add_entry(Download_Info.hash, Download_Info.key, Download_Info.size, file_path);
-		DB_Download.complete(Download_Info.hash);
+		DB_Share.add_entry(Download_Info.hash, Download_Info.size, file_path);
+		DB_Download.complete(Download_Info.hash, Download_Info.size);
 	}
 	client_server_bridge::finish_download(Download_Info.hash);
 }

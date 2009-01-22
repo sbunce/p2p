@@ -56,8 +56,8 @@ namespace global
 	//default settings, may be changed at run time
 	const unsigned CLIENT_CONNECTIONS = 1024; //default max connections by client
 	const unsigned SERVER_CONNECTIONS = 1024; //default max connections to server
-	const unsigned DOWNLOAD_RATE = std::numeric_limits<unsigned>::max(); //default max download rate (B/s)
-	const unsigned UPLOAD_RATE = std::numeric_limits<unsigned>::max();   //default max upload rate (B/s)
+	const unsigned DOWNLOAD_RATE = 16*1024;   //default max download rate (B/s)
+	const unsigned UPLOAD_RATE = 16*1024;     //default max upload rate (B/s)
 
 	//hard settings, not changed at runtime
 	const unsigned DB_TIMEOUT = 4000;         //database timeout (ms)

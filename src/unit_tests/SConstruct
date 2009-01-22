@@ -54,6 +54,7 @@ env.unit_test([
 	'../DB_share.cc',
 	'../DB_hash.cc',
 	boost.static_lib('date_time'),
+	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])
 

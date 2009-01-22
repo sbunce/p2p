@@ -3,13 +3,13 @@
 DB_download::DB_download()
 : DB_Hash(DB)
 {
-	DB.query("CREATE TABLE IF NOT EXISTS download (hash TEXT, key INTEGER, name TEXT, size TEXT, server TEXT)");
+	DB.query("CREATE TABLE IF NOT EXISTS download (hash TEXT, name TEXT, size TEXT, server TEXT)");
 }
 
-void DB_download::complete(const std::string & hash)
+void DB_download::complete(const std::string & hash, const int & file_size)
 {
 	std::ostringstream ss;
-	ss << "DELETE FROM download WHERE hash = '" << hash << "'";
+	ss << "DELETE FROM download WHERE hash = '" << hash << "' AND size = " << file_size;
 	DB.query(ss.str());
 }
 
@@ -30,28 +30,8 @@ bool DB_download::lookup_hash(const std::string & hash)
 	return entry_exists;
 }
 
-//std::pair<true if exists, key>
-static int lookup_hash_call_back_1(std::pair<bool, boost::int64_t *> & info,
-	int columns_retrieved, char ** response, char ** column_name)
-{
-	assert(response[0]);
-	info.first = true;
-	std::stringstream ss(response[0]);
-	ss >> *info.second;
-	return 0;
-}
-
-bool DB_download::lookup_hash(const std::string & hash, boost::int64_t & key)
-{
-	std::pair<bool, boost::int64_t *> info(false, &key);
-	std::ostringstream query;
-	query << "SELECT key FROM download WHERE hash = '" << hash << "'";
-	DB.query(query.str(), &lookup_hash_call_back_1, info);
-	return info.first;
-}
-
 //std::pair<true if exists, file_path>
-static int lookup_hash_call_back_2(std::pair<bool, std::string *> & info,
+static int lookup_hash_call_back_1(std::pair<bool, std::string *> & info,
 	int columns_retrieved, char ** response, char ** column_name)
 {
 	assert(response[0]);
@@ -65,13 +45,13 @@ bool DB_download::lookup_hash(const std::string & hash, std::string & path)
 	std::pair<bool, std::string *> info(false, &path);
 	std::ostringstream query;
 	query << "SELECT name, size FROM download WHERE hash = '" << hash << "'";
-	DB.query(query.str(), &lookup_hash_call_back_2, info);
+	DB.query(query.str(), &lookup_hash_call_back_1, info);
 	return info.first;
 }
 
 
 //boost::tuple<true if exists, path, file_size>
-static int lookup_hash_call_back_3(boost::tuple<bool, std::string *, boost::uint64_t *> & info,
+static int lookup_hash_call_back_2(boost::tuple<bool, std::string *, boost::uint64_t *> & info,
 	int columns_retrieved, char ** response, char ** column_name)
 {
 	assert(response[0] && response[1]);
@@ -87,41 +67,37 @@ bool DB_download::lookup_hash(const std::string & hash, std::string & path, boos
 	boost::tuple<bool, std::string *, boost::uint64_t *> info(false, &path, &file_size);
 	std::ostringstream query;
 	query << "SELECT name, size FROM download WHERE hash = '" << hash << "'";
-	DB.query(query.str(), &lookup_hash_call_back_3, info);
+	DB.query(query.str(), &lookup_hash_call_back_2, info);
 	return info.get<0>();
 }
 
 int DB_download::resume_call_back(std::vector<download_info> & resume, int columns_retrieved,
 	char ** response, char ** column_name)
 {
-	assert(response[0] && response[1] && response[2] && response[3] && response[4]);
+	assert(response[0] && response[1] && response[2] && response[3]);
 	boost::uint64_t size;
-	std::stringstream ss(response[3]);
+	std::stringstream ss(response[2]);
 	ss >> size;
 	resume.push_back(download_info(
 		response[0], //hash
-		response[2], //name
+		response[1], //name
 		size         //size
 	));
 
 	//tokenize servers
 	char delims[] = ";";
 	char * result = NULL;
-	result = strtok(response[4], delims);
+	result = strtok(response[3], delims);
 	while(result != NULL){
 		resume.back().IP.push_back(result);
 		result = strtok(NULL, delims);
 	}
-
-	ss.str(""); ss.clear();
-	ss << response[1];
-	ss >> resume.back().key;
 	return 0;
 }
 
 void DB_download::resume(std::vector<download_info> & resume)
 {
-	DB.query("SELECT hash, key, name, size, server FROM download",
+	DB.query("SELECT hash, name, size, server FROM download",
 		this, &DB_download::resume_call_back, resume);
 }
 
@@ -155,11 +131,11 @@ bool DB_download::start(download_info & info)
 		return true;
 	}
 	DB.query("BEGIN TRANSACTION");
-	info.key = DB_Hash.tree_allocate(tree_size);
-	DB_Hash.tree_use(info.key);
+	DB_Hash.tree_allocate(info.hash, tree_size);
+	DB_Hash.set_state(info.hash, tree_size, DB_hash::DOWNLOADING);
 	std::ostringstream query;
-	query << "INSERT INTO download (hash, key, name, size, server) VALUES ('"
-		<< info.hash << "', " << info.key << ", '" << info.name << "', '" << info.size << "', '";
+	query << "INSERT INTO download (hash, name, size, server) VALUES ('"
+		<< info.hash << "', '" << info.name << "', '" << info.size << "', '";
 	for(int x = 0; x < info.IP.size(); ++x){
 		if(x+1 == info.IP.size()){
 			query << info.IP[x];
@@ -173,15 +149,12 @@ bool DB_download::start(download_info & info)
 	return true;
 }
 
-void DB_download::terminate(const std::string & hash)
+void DB_download::terminate(const std::string & hash, const int & file_size)
 {
 	DB.query("BEGIN TRANSACTION");
-	boost::int64_t key;
-	if(lookup_hash(hash, key)){
-		DB_Hash.delete_tree(key);
-	}
+	DB_Hash.delete_tree(hash, hash_tree::file_size_to_tree_size(file_size));
 	std::ostringstream ss;
-	ss << "DELETE FROM download WHERE hash = '" << hash << "'";
+	ss << "DELETE FROM download WHERE hash = '" << hash << "' AND size = " << file_size;
 	DB.query(ss.str());
 	DB.query("END TRANSACTION");
 }

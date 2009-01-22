@@ -99,7 +99,6 @@ public:
 			LOGGER << "sqlite error: " << sqlite3_errmsg(DB_handle);
 			throw SWE;
 		}
-
 		if(sqlite3_exec(DB_handle,
 			"PRAGMA auto_vacuum = full;"     //move free pages to EOF and truncate at every commit
 			"PRAGMA journal_mode = PERSIST;" //do not delete the journal file between uses

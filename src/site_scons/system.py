@@ -22,7 +22,7 @@ def env_setup(env):
 
 	#platform specific options
 	if sys.platform == 'linux2':
-		#env['CCFLAGS'].append('-O3')   #max optimizations
+		env['CCFLAGS'].append('-O3')   #max optimizations
 		env['LIBS'].append('dl')       #needed for sqlite3
 		env['LIBS'].append('pthread')  #needed for sqlite3
 	if sys.platform == 'win32':

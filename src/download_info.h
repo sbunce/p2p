@@ -41,8 +41,5 @@ status of a running download, and download_info for info to start a download.
 	int percent_complete;        //0-100
 	int total_speed;             //total download speed (bytes/second)
 	std::vector<unsigned> speed; //speed of servers (parallel to IP vector)
-
-	//rowid in the hash table (set by download_factory when adding download)
-	boost::int64_t key;
 };
 #endif

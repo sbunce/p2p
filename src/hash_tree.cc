@@ -117,21 +117,36 @@ void hash_tree::check_contiguous(tree_info & Tree_Info)
 	Tree_Info.Contiguous->trim_contiguous();
 }
 
-bool hash_tree::create(const std::string & file_path, std::string & root_hash, boost::int64_t & key)
+bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 {
-	//reserve space for speed up
 	SHA.reserve(global::HASH_BLOCK_SIZE * global::HASH_SIZE);
 
-	//open file to hash, and create scratch file in which to build hash tree
 	std::fstream fin(file_path.c_str(), std::ios::in | std::ios::binary);
 	if(!fin.good()){
 		LOGGER << "error opening file " << file_path;
 		return false;
 	}
-	std::fstream scratch("SCRATCH", std::ios::in
-		| std::ios::out | std::ios::trunc | std::ios::binary);
-	if(!scratch.good()){
-		LOGGER << "error opening scratch file";
+
+	/*
+	Scratch files for building the tree.
+
+	The "upside_down" file contains the tree as it's initially built, with the
+	file hashes at the beginning of the file. This is not convenient for later
+	use because the file would need to be read backwards. Because of this the
+	tree is reversed, copied from the upside_down file to the rightside_up
+	file in such a way that the second row is at the start of the file.
+
+	Note: The root hash is not included in the file because that would be
+	      redundant information and a waste of space.
+	*/
+	std::fstream upside_down("upside_down", std::ios::in | std::ios::out | std::ios::trunc | std::ios::binary);
+	if(!upside_down.good()){
+		LOGGER << "error opening upside_down file";
+		return false;
+	}
+	std::fstream rightside_up("rightside_up", std::ios::in | std::ios::out | std::ios::trunc | std::ios::binary);
+	if(!rightside_up.good()){
+		LOGGER << "error opening rightside_up file";
 		return false;
 	}
 
@@ -147,9 +162,9 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash, b
 		SHA.init();
 		SHA.load(block_buff, fin.gcount());
 		SHA.end();
-		scratch.write(SHA.raw_hash(), global::HASH_SIZE);
-		if(!scratch.good()){
-			LOGGER << "error writing to scratch file";
+		upside_down.write(SHA.raw_hash(), global::HASH_SIZE);
+		if(!upside_down.good()){
+			LOGGER << "error writing to upside_down file";
 			return false;
 		}
 		++blocks_read;
@@ -173,7 +188,6 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash, b
 	//base case, the file size is <= one block
 	if(blocks_read == 1){
 		root_hash = SHA.hex_hash();
-		key = 0; //this signifies that no hash tree exists in hash table
 		return true;
 	}
 
@@ -183,21 +197,48 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash, b
 		return false;
 	}
 
-	//allocate space
-	key = DB_Hash.tree_allocate(tree_size);
-	sqlite3_wrapper::blob Blob = DB_Hash.tree_open(key);
+	create_recurse(upside_down, rightside_up, 0, blocks_read, root_hash);
 
-	//start recursive tree generating function
-	int offset = 0; //stores offset in to tree (used for offset needed when writing to database)
-	create_recurse(scratch, 0, blocks_read, root_hash, Blob, offset);
-	scratch.close();
-
-	//root hash may be empty if hashing stopped with stop()
-	return !root_hash.empty();
+	if(root_hash.empty()){
+		//tree didn't generate, i/o error or cancelled with stop()
+		return false;
+	}else{
+		/*
+		Tree sucessfully created. Look in the database to see if a tree with this
+		hash already exists, if it does then return the key of that tree.
+		*/
+		assert(tree_size == rightside_up.tellp());
+		if(!DB_Hash.exists(root_hash, tree_size)){
+			DB_Hash.tree_allocate(root_hash, tree_size);
+			sqlite3_wrapper::blob Blob = DB_Hash.tree_open(root_hash, tree_size);
+			rightside_up.seekg(0, std::ios::beg);
+			//rightside_up.clear();
+			int offset = 0, bytes_remaining = tree_size, read_size;
+			while(bytes_remaining){
+				if(bytes_remaining > global::FILE_BLOCK_SIZE){
+					read_size = global::FILE_BLOCK_SIZE;
+				}else{
+					read_size = bytes_remaining;
+				}
+				rightside_up.read(block_buff, read_size);
+				if(rightside_up.gcount() != read_size){
+					DB_Hash.delete_tree(root_hash, tree_size);
+					LOGGER << "error reading rightside_up file";
+					return false;
+				}else{
+					Blob.write(block_buff, read_size, offset);
+					offset += read_size;
+					bytes_remaining -= read_size;
+				}
+			}
+			DB_Hash.set_state(root_hash, tree_size, DB_hash::COMPLETE);
+		}
+		return true;
+	}
 }
 
-bool hash_tree::create_recurse(std::fstream & scratch, boost::uint64_t start_RRN,
-	boost::uint64_t end_RRN, std::string & root_hash, sqlite3_wrapper::blob & Blob, int & offset)
+bool hash_tree::create_recurse(std::fstream & upside_down, std::fstream & rightside_up,
+	boost::uint64_t start_RRN, boost::uint64_t end_RRN, std::string & root_hash)
 {
 	//used to store scratch locations for read/write
 	boost::uint64_t scratch_read_RRN = start_RRN; //read starts at beginning of row
@@ -214,18 +255,18 @@ bool hash_tree::create_recurse(std::fstream & scratch, boost::uint64_t start_RRN
 		int block_buff_size = 0;
 		if(end_RRN - scratch_read_RRN < global::HASH_BLOCK_SIZE){
 			//not enough hashes for full hash block
-			scratch.seekg(scratch_read_RRN * global::HASH_SIZE, std::ios::beg);
-			scratch.read(block_buff, (end_RRN - scratch_read_RRN) * global::HASH_SIZE);
-			if(!scratch.good()){
+			upside_down.seekg(scratch_read_RRN * global::HASH_SIZE, std::ios::beg);
+			upside_down.read(block_buff, (end_RRN - scratch_read_RRN) * global::HASH_SIZE);
+			if(!upside_down.good()){
 				LOGGER << "error reading scratch file";
 				return false;
 			}
 			block_buff_size = (end_RRN - scratch_read_RRN) * global::HASH_SIZE;
 		}else{
 			//enough hashes for full hash block
-			scratch.seekg(scratch_read_RRN * global::HASH_SIZE, std::ios::beg);
-			scratch.read(block_buff, global::HASH_BLOCK_SIZE * global::HASH_SIZE);
-			if(!scratch.good()){
+			upside_down.seekg(scratch_read_RRN * global::HASH_SIZE, std::ios::beg);
+			upside_down.read(block_buff, global::HASH_BLOCK_SIZE * global::HASH_SIZE);
+			if(!upside_down.good()){
 				LOGGER << "error reading scratch file";
 				return false;
 			}
@@ -239,9 +280,9 @@ bool hash_tree::create_recurse(std::fstream & scratch, boost::uint64_t start_RRN
 		scratch_read_RRN += block_buff_size / global::HASH_SIZE;
 
 		//write resulting hash
-		scratch.seekp(scratch_write_RRN * global::HASH_SIZE, std::ios::beg);
-		scratch.write(SHA.raw_hash(), global::HASH_SIZE);
-		if(!scratch.good()){
+		upside_down.seekp(scratch_write_RRN * global::HASH_SIZE, std::ios::beg);
+		upside_down.write(SHA.raw_hash(), global::HASH_SIZE);
+		if(!upside_down.good()){
 			LOGGER << "error writing scratch file";
 			return false;
 		}
@@ -258,7 +299,7 @@ bool hash_tree::create_recurse(std::fstream & scratch, boost::uint64_t start_RRN
 	}
 
 	//recurse
-	if(!create_recurse(scratch, end_RRN, scratch_write_RRN, root_hash, Blob, offset)){
+	if(!create_recurse(upside_down, rightside_up, end_RRN, scratch_write_RRN, root_hash)){
 		return false;
 	}
 
@@ -272,43 +313,24 @@ bool hash_tree::create_recurse(std::fstream & scratch, boost::uint64_t start_RRN
 
 	//write hashes that were passed to this function
 	for(int x=start_RRN; x<end_RRN; ++x){
-		scratch.seekg(x * global::HASH_SIZE, std::ios::beg);
-		scratch.read(block_buff, global::HASH_SIZE);
-		if(!scratch.good()){
+		upside_down.seekg(x * global::HASH_SIZE, std::ios::beg);
+		upside_down.read(block_buff, global::HASH_SIZE);
+		if(!upside_down.good()){
 			LOGGER << "error reading scratch file";
 			return false;
 		}
-
-		Blob.write(block_buff, global::HASH_SIZE, offset);
-		offset += global::HASH_SIZE;
+		rightside_up.write(block_buff, global::HASH_SIZE);
 	}
 	return true; 
 }
 
 bool hash_tree::check_file_block(tree_info & Tree_Info, const boost::uint64_t & file_block_num, const char * block, const int & size)
 {
-/*
-	std::fstream fin((global::HASH_DIRECTORY + Tree_Info.root_hash).c_str(), std::ios::in | std::ios::binary);
-	if(!fin.is_open()){
-		LOGGER << "error reading hash tree " << Tree_Info.root_hash;
-		exit(1);
-	}else{
-*/
 	Tree_Info.Blob.read(block_buff, global::HASH_SIZE, Tree_Info.file_hash_offset + file_block_num * global::HASH_SIZE);
-
-/*
-		//read file hash
-		fin.seekg(Tree_Info.file_hash_offset + file_block_num * global::HASH_SIZE, std::ios::beg);
-		fin.read(block_buff, global::HASH_SIZE);
-*/
-		//hash file block
-		SHA.init();
-		SHA.load(block, size);
-		SHA.end();
-
-		//validate
-		return strncmp(block_buff, SHA.raw_hash(), global::HASH_SIZE) == 0;
-//	}
+	SHA.init();
+	SHA.load(block, size);
+	SHA.end();
+	return strncmp(block_buff, SHA.raw_hash(), global::HASH_SIZE) == 0;
 }
 
 void hash_tree::stop()
@@ -320,27 +342,10 @@ bool hash_tree::read_block(tree_info & Tree_Info, const boost::uint64_t & block_
 {
 	std::pair<boost::uint64_t, unsigned> info;
 	if(block_info(block_num, Tree_Info.row, info)){
-		//open file to read
-/*
-		std::fstream fin((global::HASH_DIRECTORY + Tree_Info.root_hash).c_str(), std::ios::in | std::ios::binary);
-		if(!fin.is_open()){
-			LOGGER << "error opening file";
-			return false;
-		}else{
-*/
-
-/*
-			//write file
-			fin.seekg(info.first, std::ios::beg);
-			fin.read(block_buff, info.second);
-*/
-			Tree_Info.Blob.read(block_buff, info.second, info.first);
-
-
-			block.clear();
-			block.assign(block_buff, info.second);
-			return true;
-//		}
+		Tree_Info.Blob.read(block_buff, info.second, info.first);
+		block.clear();
+		block.assign(block_buff, info.second);
+		return true;
 	}else{
 		LOGGER << "invalid block number, programming error";
 		exit(1);
@@ -356,32 +361,13 @@ bool hash_tree::write_block(tree_info & Tree_Info, const boost::uint64_t & block
 			LOGGER << "incorrect block size, programming error";
 			exit(1);
 		}
-
-/*
-		//open file to write
-		std::fstream fout((global::HASH_DIRECTORY + Tree_Info.root_hash).c_str(), std::ios::in | std::ios::out | std::ios::binary);
-		if(!fout.is_open()){
-			LOGGER << "error opening file";
-			return false;
-		}else{
-*/
-
-/*
-			//write file
-			fout.seekp(info.first, std::ios::beg);
-			fout.write(block.data(), block.size());
-*/
-
-			Tree_Info.Blob.write(block.data(), block.size(), info.first);
-
-//			fout.close(); //must be closed to flush to file, check_contiguous can error if this is not here
-			{
-			boost::mutex::scoped_lock lock(*Tree_Info.Contiguous_mutex);
-			Tree_Info.Contiguous->insert(std::make_pair(block_num, IP));
-			}
-			check_contiguous(Tree_Info);
-			return true;
-//		}
+		Tree_Info.Blob.write(block.data(), block.size(), info.first);
+		{
+		boost::mutex::scoped_lock lock(*Tree_Info.Contiguous_mutex);
+		Tree_Info.Contiguous->insert(std::make_pair(block_num, IP));
+		}
+		check_contiguous(Tree_Info);
+		return true;
 	}else{
 		LOGGER << "client requested invalid block number";
 		DB_Blacklist.add(IP);

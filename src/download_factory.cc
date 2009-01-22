@@ -12,15 +12,14 @@ bool download_factory::start(download_info info, download *& Download, std::list
 		LOGGER << "file '" << info.name << "' already downloading";
 		return false;
 	}
-
 	if(DB_Share.lookup_hash(info.hash)){
 		LOGGER << "file '" << info.name << "' already exists in share";
 		return false;
 	}
 
-	if(DB_Download.lookup_hash(info.hash, info.key)){
+	if(DB_Download.lookup_hash(info.hash)){
 		//download being resumed
-		DB_hash::state State = DB_Hash.get_state(info.key);
+		DB_hash::state State = DB_Hash.get_state(info.hash, hash_tree::file_size_to_tree_size(info.size));
 		if(State == DB_hash::DOWNLOADING){
 			Download = start_hash_tree(info, servers);
 		}else if(State == DB_hash::COMPLETE){

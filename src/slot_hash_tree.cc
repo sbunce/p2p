@@ -3,10 +3,9 @@
 slot_hash_tree::slot_hash_tree(
 	std::string * IP_in,
 	const std::string & root_hash_in,
-	const boost::uint64_t & file_size_in,
-	const boost::int64_t & key
+	const boost::uint64_t & file_size_in
 ):
-	Tree_Info(root_hash_in, file_size_in, key),
+	Tree_Info(root_hash_in, file_size_in),
 	percent(0),
 	highest_block_seen(0)
 {

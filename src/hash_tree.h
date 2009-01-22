@@ -43,12 +43,11 @@ public:
 	public:
 		tree_info(
 			const std::string & root_hash_in,
-			const boost::uint64_t & file_size_in,
-			const boost::int64_t & key
+			const boost::uint64_t & file_size_in
 		):
 			root_hash(root_hash_in),
 			file_size(file_size_in),
-			Blob("hash", "tree", key)
+			Blob(DB_hash::tree_open(root_hash_in, file_size_to_tree_size(file_size_in)))
 		{
 			file_size_to_tree_hash(file_size, row);
 			block_count = row_to_block_count(row);
@@ -188,7 +187,7 @@ public:
 	*/
 	bool check(tree_info & Tree_Info, boost::uint64_t & bad_block);
 	bool check_file_block(tree_info & Tree_Info, const boost::uint64_t & file_block_num, const char * block, const int & size);
-	bool create(const std::string & file_path, std::string & root_hash, boost::int64_t & key);
+	bool create(const std::string & file_path, std::string & root_hash);
 	bool read_block(tree_info & Tree_Info, const boost::uint64_t & block_num, std::string & block);
 	bool write_block(tree_info & Tree_Info, const boost::uint64_t & block_num, const std::string & block, const std::string & IP);
 
@@ -409,8 +408,8 @@ private:
 	*/
 	bool check_block(tree_info & Tree_Info, const boost::uint64_t & block_num);
 	void check_contiguous(tree_info & Tree_Info);
-	bool create_recurse(std::fstream & scratch, boost::uint64_t start_RRN,
-		boost::uint64_t end_RRN, std::string & root_hash, sqlite3_wrapper::blob & Blob, int & offset);
+	bool create_recurse(std::fstream & upside_down, std::fstream & rightside_up,
+		boost::uint64_t start_RRN, boost::uint64_t end_RRN, std::string & root_hash);
 
 	sqlite3_wrapper::database DB;
 	DB_hash DB_Hash;

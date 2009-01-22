@@ -35,9 +35,9 @@ public:
 	            returns true and sets key if download could be added
 	terminate - removes the download entry and tree
 	*/
-	void complete(const std::string & hash);
+	void complete(const std::string & hash, const int & file_size);
 	bool start(download_info & info);
-	void terminate(const std::string & hash);
+	void terminate(const std::string & hash, const int & file_size);
 
 	/*
 	Lookup functions:
@@ -45,7 +45,6 @@ public:
 	resume      - fill the vector with download information (used to resume downloads on program start)
 	*/
 	bool lookup_hash(const std::string & hash);
-	bool lookup_hash(const std::string & hash, boost::int64_t & key);
 	bool lookup_hash(const std::string & hash, std::string & path);
 	bool lookup_hash(const std::string & hash, std::string & path, boost::uint64_t & file_size);
 	void resume(std::vector<download_info> & resume_DL);

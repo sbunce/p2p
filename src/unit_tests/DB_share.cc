@@ -12,17 +12,17 @@ int main()
 		LOGGER; exit(1);
 	}
 
-	DBS.add_entry("ABC", 1, 123, "DEF");
+	DBS.add_entry("ABC", 123, "DEF");
 	if(!DBS.lookup_hash("ABC")){
 		LOGGER; exit(1);
 	}
 
-	DBS.delete_entry(1, "DEF");
+	DBS.delete_entry("ABC", "DEF");
 	if(DBS.lookup_hash("ABC")){
 		LOGGER; exit(1);
 	}
 
-	DBS.add_entry("ABC", 1, 123, "DEF");
+	DBS.add_entry("ABC", 123, "DEF");
 	if(!DBS.lookup_hash("ABC")){
 		LOGGER; exit(1);
 	}
@@ -58,9 +58,9 @@ int main()
 	}
 
 	size = 0;
-	boost::int64_t key;
-	if(DBS.lookup_path("DEF", key, size)){
-		if(key != 1){
+	std::string hash;
+	if(DBS.lookup_path("DEF", hash, size)){
+		if(hash != "ABC"){
 			LOGGER; exit(1);
 		}
 		if(size != 123){

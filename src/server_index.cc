@@ -17,7 +17,6 @@ void server_index::generate_hash_tree(const std::string & file_path)
 {
 	namespace fs = boost::filesystem;
 	boost::uint64_t existing_size, current_size;
-	boost::int64_t key;
 
 	try{
 		current_size = fs::file_size(file_path);
@@ -26,17 +25,18 @@ void server_index::generate_hash_tree(const std::string & file_path)
 		return;
 	}
 
-	if(DB_Share.lookup_path(file_path, key, existing_size)){
+	std::string hash;
+	if(DB_Share.lookup_path(file_path, hash, existing_size)){
 		if(existing_size == current_size){
 			return;
 		}else{
-			DB_Share.delete_entry(key, file_path);
+			DB_Share.delete_entry(hash, file_path);
 		}
 	}
 
 	std::string root_hash;
-	if(Hash_Tree.create(file_path, root_hash, key)){
-		DB_Share.add_entry(root_hash, key, current_size, file_path);
+	if(Hash_Tree.create(file_path, root_hash)){
+		DB_Share.add_entry(root_hash, current_size, file_path);
 	}
 }
 
