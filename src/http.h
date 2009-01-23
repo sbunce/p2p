@@ -2,8 +2,8 @@
 #define H_HTTP
 
 //custom
+#include "database.h"
 #include "global.h"
-#include "sqlite3_wrapper.h"
 
 //std
 #include <algorithm>
@@ -22,7 +22,7 @@ public:
 	void process(const std::string & request, std::string & send);
 
 private:
-	sqlite3_wrapper::database DB;
+	database DB;
 
 	/*
 	table_table - adds html table to send for database table

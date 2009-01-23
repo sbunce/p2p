@@ -4,14 +4,14 @@ download_file::download_file(
 	const download_info & Download_Info_in
 ):
 	Download_Info(Download_Info_in),
+	Tree_Info(Download_Info_in.hash, Download_Info_in.size),
 	file_path(global::DOWNLOAD_DIRECTORY + Download_Info_in.name),
 	hashing(true),
 	hashing_percent(0),
 	download_complete(false),
 	close_slots(false),
 	_cancel(false),
-	_visible(true),
-	Tree_Info(Download_Info_in.hash, Download_Info_in.size)
+	_visible(true)
 {
 	client_server_bridge::start_file(Download_Info.hash, Tree_Info.get_file_block_count());
 

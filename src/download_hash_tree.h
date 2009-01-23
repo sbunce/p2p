@@ -8,6 +8,7 @@
 //custom
 #include "convert.h"
 #include "client_server_bridge.h"
+#include "database.h"
 #include "DB_blacklist.h"
 #include "DB_download.h"
 #include "DB_hash.h"
@@ -131,7 +132,7 @@ private:
 	//socket number mapped to connection special pointer
 	std::map<int, connection_special> Connection_Special;
 
-	sqlite3_wrapper::database DB;
+	database DB;
 	DB_hash DB_Hash;
 	DB_download DB_Download;
 	download_info Download_Info;

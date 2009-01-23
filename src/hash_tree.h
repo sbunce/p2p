@@ -11,12 +11,12 @@
 #include "atomic_bool.h"
 #include "convert.h"
 #include "contiguous_map.h"
+#include "database.h"
 #include "DB_blacklist.h"
 #include "DB_hash.h"
 #include "global.h"
 #include "request_generator.h"
 #include "sha.h"
-#include "sqlite3_wrapper.h"
 
 //std
 #include <deque>
@@ -144,7 +144,7 @@ public:
 		boost::uint64_t file_size; //size of file hash tree is for
 
 		//DB connection and open blob handle for space to write tree
-		sqlite3_wrapper::blob Blob;
+		database::blob Blob;
 
 		//these are all calculated based on root_hash and file_size
 		std::deque<boost::uint64_t> row;      //number of hashes in each row
@@ -411,7 +411,7 @@ private:
 	bool create_recurse(std::fstream & upside_down, std::fstream & rightside_up,
 		boost::uint64_t start_RRN, boost::uint64_t end_RRN, std::string & root_hash);
 
-	sqlite3_wrapper::database DB;
+	database DB;
 	DB_hash DB_Hash;
 	DB_blacklist DB_Blacklist;
 	sha SHA;

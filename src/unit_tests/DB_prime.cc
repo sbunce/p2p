@@ -1,10 +1,11 @@
 //custom
+#include "../database.h"
 #include "../DB_prime.h"
 #include "../global.h"
 
 int main()
 {
-	sqlite3_wrapper::database DB;
+	database DB;
 	DB.query("DROP TABLE IF EXISTS prime");
 	DB_prime DBP;
 

@@ -1,4 +1,5 @@
 //custom
+#include "../database.h"
 #include "../DB_download.h"
 #include "../global.h"
 
@@ -7,7 +8,7 @@
 
 int main()
 {
-	sqlite3_wrapper::database DB;
+	database DB;
 	DB.query("DROP TABLE IF EXISTS download");
 
 	DB_download DBD;

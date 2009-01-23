@@ -1,10 +1,11 @@
 //custom
+#include "../database.h"
 #include "../DB_preferences.h"
 #include "../global.h"
 
 int main()
 {
-	sqlite3_wrapper::database DB;
+	database DB;
 	DB.query("DROP TABLE IF EXISTS preferences");
 	DB_preferences DBP;
 	if(DBP.get_client_connections() != global::CLIENT_CONNECTIONS){

@@ -25,6 +25,7 @@ src_common = [
 	'client_new_connection.cc',
 	'client_server_bridge.cc',
 	'CMWC4096.cc',
+	'database.cc',
 	'DB_blacklist.cc',
 	'DB_download.cc',
 	'DB_hash.cc',

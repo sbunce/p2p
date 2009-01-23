@@ -3,7 +3,7 @@
 bool DB_hash::program_start(true);
 boost::mutex DB_hash::program_start_mutex;
 
-DB_hash::DB_hash(sqlite3_wrapper::database & DB_in)
+DB_hash::DB_hash(database & DB_in)
 : DB(&DB_in)
 {
 	DB->query("CREATE TABLE IF NOT EXISTS hash(key INTEGER PRIMARY KEY, hash TEXT, state INTEGER, size INTEGER, tree BLOB)");

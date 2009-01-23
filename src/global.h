@@ -60,7 +60,6 @@ namespace global
 	const unsigned UPLOAD_RATE = 16*1024;     //default max upload rate (B/s)
 
 	//hard settings, not changed at runtime
-	const unsigned DB_TIMEOUT = 4000;         //database timeout (ms)
 	const unsigned PRIME_CACHE = 16;          //number of primes to keep in prime cache for diffie-hellman
 	const unsigned DH_KEY_SIZE = 64;          //size of key exchanged with diffie-hellman (bytes)
 	const unsigned PIPELINE_SIZE = 16;        //max pre-requests that can be done (must be >= 2)
@@ -76,10 +75,6 @@ namespace global
 	//default locations
 	const std::string DOWNLOAD_DIRECTORY = "download/";
 	const std::string SHARE_DIRECTORY = "share/";
-	const std::string DATABASE_PATH = "database";
-
-//DEBUG, this needs to be deleted
-	//const std::string HASH_DIRECTORY = "hash/";
 
 	/*
 	The size of the file block is always related to the size of a hash block so

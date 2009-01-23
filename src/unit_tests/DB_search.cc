@@ -1,10 +1,11 @@
 //custom
+#include "../database.h"
 #include "../DB_search.h"
 #include "../global.h"
 
 int main()
 {
-	sqlite3_wrapper::database DB;
+	database DB;
 	DB.query("DROP TABLE IF EXISTS search");
 
 	DB_search DBS;

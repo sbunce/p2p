@@ -5,8 +5,8 @@
 #include <boost/thread/mutex.hpp>
 
 //custom
+#include "database.h"
 #include "global.h"
-#include "sqlite3_wrapper.h"
 
 //std
 #include <string>
@@ -39,7 +39,7 @@ public:
 	void set_upload_rate(const unsigned & rate);
 
 private:
-	sqlite3_wrapper::database DB;
+	database DB;
 
 	//mutex for checking for, and creation of, the one row
 	static boost::mutex Mutex;

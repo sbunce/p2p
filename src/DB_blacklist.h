@@ -6,8 +6,8 @@
 
 //custom
 #include "atomic_int.h"
+#include "database.h"
 #include "global.h"
-#include "sqlite3_wrapper.h"
 
 //std
 #include <iostream>
@@ -31,7 +31,7 @@ public:
 	bool modified(int & last_state_seen);
 
 private:
-	sqlite3_wrapper::database DB;
+	database DB;
 	atomic_int<int> blacklist_state;
 };
 #endif

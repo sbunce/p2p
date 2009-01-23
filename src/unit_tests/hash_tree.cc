@@ -26,7 +26,7 @@ int main()
 {
 
 	boost::filesystem::create_directory(global::SHARE_DIRECTORY.c_str());
-	sqlite3_wrapper::database DB;
+	database DB;
 	DB_hash DB_Hash(DB);
 	hash_tree Hash_Tree;
 

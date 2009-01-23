@@ -78,107 +78,45 @@ Read blob:
 #include <exception>
 #include <iostream>
 
-namespace sqlite3_wrapper{
-
 class database
 {
-	friend class blob;
 public:
-	database():
-		ref_cnt(new atomic_int<int>(0)),
-		Mutex(new boost::recursive_mutex())
-	{
-		if(sqlite3_open_v2(global::DATABASE_PATH.c_str(), &DB_handle,
-			SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX,
-			0) != SQLITE_OK)
-		{
-			LOGGER << "sqlite error: " << sqlite3_errmsg(DB_handle);
-			throw SWE;
-		}
-		if(sqlite3_busy_timeout(DB_handle, global::DB_TIMEOUT) != SQLITE_OK){
-			LOGGER << "sqlite error: " << sqlite3_errmsg(DB_handle);
-			throw SWE;
-		}
-		if(sqlite3_exec(DB_handle,
-			"PRAGMA auto_vacuum = full;"     //move free pages to EOF and truncate at every commit
-			"PRAGMA journal_mode = PERSIST;" //do not delete the journal file between uses
-			"PRAGMA cache_size = 32768;"     //increase max in memory pages from 2000
-			"PRAGMA temp_store = MEMORY;"    //make sure temp store is memory and not a file
-			, NULL, NULL, NULL) != SQLITE_OK){
-			LOGGER << "sqlite error: " << sqlite3_errmsg(DB_handle);
-		}
-	}
+	database();
+	database(const database & DB);
+	~database();
 
-	database(
-		const sqlite3_wrapper::database & DB
-	):
-		DB_handle(DB.DB_handle),
-		ref_cnt(DB.ref_cnt)
+	class blob
 	{
-		++*ref_cnt;
-	}
+		friend class database;
+	public:
+		blob(
+			const std::string & table_in,
+			const std::string & column_in,
+			const boost::int64_t & rowid_in
+		):
+			table(table_in),
+			column(column_in),
+			rowid(rowid_in)
+		{}
 
-	~database()
-	{
-		if(*ref_cnt == 0){
-			if(sqlite3_close(DB_handle) != SQLITE_OK){
-				LOGGER << "sqlite error: " << sqlite3_errmsg(DB_handle);
-			}
-		}else{
-			--*ref_cnt;
-		}
-	}
+		const std::string table;
+		const std::string column;
+		const boost::int64_t rowid;
+
+	private:
+		sqlite3_blob * blob_handle;
+	};
 
 	//allocate blob of specified size
-	boost::int64_t blob_allocate(const std::string & query, const int & size)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		sqlite3_stmt * prepared_statement;
-		if(sqlite3_prepare_v2(
-			DB_handle,
-			query.c_str(),
-			query.size(),
-			&prepared_statement,
-			0 //not needed unless multiple statements
-		) != SQLITE_OK){
-			LOGGER << sqlite3_errmsg(DB_handle);
-		}
-		if(sqlite3_bind_zeroblob(prepared_statement, 1, size) != SQLITE_OK){
-			LOGGER << sqlite3_errmsg(DB_handle);
-			exit(1);
-		}
-		int code;
-		while((code = sqlite3_step(prepared_statement)) != SQLITE_DONE){
-			LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle);
-		}
-		if(sqlite3_finalize(prepared_statement) != SQLITE_OK){
-			LOGGER << sqlite3_errmsg(DB_handle);
-			exit(1);
-		}
-		return sqlite3_last_insert_rowid(DB_handle);
-	}
+	boost::int64_t blob_allocate(const std::string & query, const int & size);
+	void blob_read(blob & Blob, char * const buff, const int & size, const int & offset);
+	void blob_write(blob & Blob, const char * const buff, const int & size, const int & offset);
 
 	//query with no call back
-	int query(const std::string & query)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		int code;
-		if((code = sqlite3_exec(DB_handle, query.c_str(), NULL, NULL, NULL)) != SQLITE_OK){
-			LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
-		}
-		return code;
-	}
+	int query(const std::string & query);
 
 	//query with function call back
-	int query(const std::string & query, int (*fun_ptr)(int, char **, char **))
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		int code;
-		if((code = sqlite3_exec(DB_handle, query.c_str(), fun_call_back_wrapper, (void *)fun_ptr, NULL)) != 0){
-			LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
-		}
-		return code;
-	}
+	int query(const std::string & query, int (*fun_ptr)(int, char **, char **));
 
 	//query with function call back and object
 	template <typename T>
@@ -278,15 +216,6 @@ private:
 	*/
 	boost::shared_ptr<boost::recursive_mutex> Mutex;
 
-	//to be thrown when there are ctor errors
-	class sqlite3_wrapper_exception: public std::exception
-	{
-		virtual const char * what() const throw()
-		{
-			return "failed to open sqlite database";
-		}
-	} SWE;
-
 	//call back wrapper for functions
 	static int fun_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)
 	{
@@ -342,84 +271,11 @@ private:
 		return ((*call_back_info->first.first).*(call_back_info->first.second))
 			(*(call_back_info->second), columns, response, column_name);
 	}
+
+	//opens specified blob
+	void blob_close(blob & Blob);
+
+	//closes specified blob
+	void blob_open(blob & Blob, const bool & writeable);
 };
-
-class blob
-{
-public:
-	blob(
-		const std::string & table_in,
-		const std::string & column_in,
-		const boost::int64_t & rowid_in
-	):
-		table(table_in),
-		column(column_in),
-		rowid(rowid_in),
-		ref_cnt(new atomic_int<int>(0)),
-		Mutex(new boost::mutex())
-	{}
-
-	void read(char * const buff, const int & size, const int & offset)
-	{
-		boost::mutex::scoped_lock lock(*Mutex);
-		open(false);
-		if(sqlite3_blob_read(blob_handle, (void *)buff, size, offset) != SQLITE_OK){
-			LOGGER << sqlite3_errmsg(DB.DB_handle);
-			exit(1);
-		}
-		close();
-	}
-
-	void write(const char * const buff, const int & size, const int & offset)
-	{
-		boost::mutex::scoped_lock lock(*Mutex);
-		open(true);
-		if(sqlite3_blob_write(blob_handle, (const void *)buff, size, offset) != SQLITE_OK){
-			LOGGER << sqlite3_errmsg(DB.DB_handle);
-			exit(1);
-		}
-		close();
-	}
-private:
-	void open(const bool & writeable)
-	{
-		assert(rowid != 0);
-		int tries = 0;
-		while(sqlite3_blob_open(
-			DB.DB_handle,
-			"main",         //symbolic DB name ("main" is default)
-			table.c_str(),
-			column.c_str(),
-			rowid,          //row ID (primary key) of row with blob
-			(int)writeable, //0 = read only, non-zero = read/write
-			&blob_handle
-		) != SQLITE_OK){
-			if(tries++ >= 7){
-				LOGGER << "8 consecutive blob open errors, aborting";
-				exit(1);
-			}else{
-				LOGGER << sqlite3_errmsg(DB.DB_handle);
-			}
-		}
-	}
-	void close()
-	{
-		if(sqlite3_blob_close(blob_handle) != SQLITE_OK){
-			LOGGER << "sqlite error: " << sqlite3_errmsg(DB.DB_handle);
-		}
-	}
-
-	const std::string table;
-	const std::string column;
-	const boost::int64_t rowid;
-
-	database DB;
-	sqlite3_blob * blob_handle;
-	boost::shared_ptr<boost::mutex> Mutex; //used for all DB access
-
-	//blob closed if this equal to zero and dtor called
-	boost::shared_ptr<atomic_int<int> > ref_cnt;
-};
-
-}//end sqlite3_wrapper namespace
 #endif

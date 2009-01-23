@@ -3,6 +3,7 @@
 
 //custom
 #include "client_buffer.h"
+#include "database.h"
 #include "DB_download.h"
 #include "download.h"
 #include "download_connection.h"
@@ -13,7 +14,6 @@
 #include "download_hash_tree.h"
 #include "download_info.h"
 #include "hash_tree.h"
-#include "sqlite3_wrapper.h"
 
 //std
 #include <fstream>
@@ -38,7 +38,7 @@ private:
 	download * start_file(const download_info & info, std::list<download_connection> & servers);
 	download * start_hash_tree(const download_info & info, std::list<download_connection> & servers);
 
-	sqlite3_wrapper::database DB;
+	database DB;
 	DB_hash DB_Hash;
 	DB_download DB_Download;
 	DB_search DB_Search;

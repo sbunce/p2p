@@ -1,5 +1,13 @@
 TODO
 
+-have all db functions put as static functions in a namespace. they should
+all take a sqlite3_wrapper::database as a first parameter. ie
+database::share::add();
+database::blacklist::is_blacklisted();
+
+-perhaps all DB classes should take a sqlite3_wrapper::database in their ctor like DB_hash does,
+transactions are way hard with the different connections
+-void DB_share::delete_entry(const std::string & hash, const std::string & path) is this function needed? path is unique..
 -servers on download info tab doesn't go to zero when download finishes
 -speed on download info tab doesn't go to zero when download finished
 -get server index status working (probably defer until after path_memoize)
@@ -12,6 +20,15 @@ TODO
 -replace server tokenizing with strtok (shitty) with the boost tokenizer.
 -Servers can time out if they're finishing while hash checking.
 -Slot requesting currently disabled.
+
+
+KNOWN BUGS WITH UNKNOWN FIX
+
+-With sqlite3_shared_chache enabled the program will crash if you create the
+database with the shell program with
+"./src/libsqlite3/shell database < default.sql" and then start the program. If
+you start the program and then do ".read default.sql" in the shell then
+everything works.
 
 
 GROSS CODE

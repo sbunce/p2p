@@ -5,8 +5,8 @@
 #include <boost/thread/mutex.hpp>
 
 //custom
+#include "database.h"
 #include "global.h"
-#include "sqlite3_wrapper.h"
 
 //std
 #include <sstream>
@@ -19,7 +19,7 @@ public:
 	connection. This is needed to be accessed within transactions involving
 	other tables.
 	*/
-	DB_hash(sqlite3_wrapper::database & DB_in);
+	DB_hash(database & DB_in);
 
 	enum state{
 		DNE,         //indicates that no tree with key exists
@@ -44,15 +44,15 @@ public:
 	void tree_allocate(const std::string & hash, const int & tree_size);
 
 	//opens/returns a blob to the tree with the specified hash and size
-	static sqlite3_wrapper::blob tree_open(const std::string & hash, const int & tree_size)
+	static database::blob tree_open(const std::string & hash, const int & tree_size)
 	{
-		sqlite3_wrapper::database DB;
+		database DB;
 		std::pair<bool, boost::int64_t> info;
 		std::stringstream ss;
 		ss << "SELECT key FROM hash WHERE hash = '" << hash << "' AND size = " << tree_size;
 		DB.query(ss.str(), &get_key_call_back, info);
 		if(info.first){
-			return sqlite3_wrapper::blob("hash", "tree", info.second);
+			return database::blob("hash", "tree", info.second);
 		}else{
 			/*
 			No tree exists in database that corresponds to hash. This is not
@@ -62,12 +62,12 @@ public:
 			However, if this is an error and someone attempts to read/write to this
 			returned blob then the program will be terminated.
 			*/
-			return sqlite3_wrapper::blob("hash", "tree", 0);
+			return database::blob("hash", "tree", 0);
 		}
 	}
 
 private:
-	sqlite3_wrapper::database * DB;
+	database * DB;
 	static bool program_start;
 	static boost::mutex program_start_mutex;
 

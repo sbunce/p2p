@@ -2,8 +2,8 @@
 #define H_DB_SEARCH
 
 //custom
+#include "database.h"
 #include "download_info.h"
-#include "sqlite3_wrapper.h"
 
 //std
 #include <algorithm>
@@ -23,6 +23,6 @@ public:
 	void get_servers(const std::string & hash, std::vector<std::string> & servers);
 
 private:
-	sqlite3_wrapper::database DB;
+	database DB;
 };
 #endif

@@ -43,7 +43,7 @@ bool hash_tree::check_block(tree_info & Tree_Info, const boost::uint64_t & block
 		exit(1);
 	}
 
-	Tree_Info.Blob.read(block_buff, info.second, info.first);
+	DB.blob_read(Tree_Info.Blob, block_buff, info.second, info.first);
 
 	//reserve space for speed up
 	SHA.reserve(global::HASH_BLOCK_SIZE * global::HASH_SIZE);
@@ -58,7 +58,7 @@ bool hash_tree::check_block(tree_info & Tree_Info, const boost::uint64_t & block
 		//first row has to be checked against root hash
 		return strncmp(convert::hex_to_binary(Tree_Info.root_hash).data(), SHA.raw_hash(), global::HASH_SIZE) == 0;
 	}else{
-		Tree_Info.Blob.read(block_buff, global::HASH_SIZE, parent);
+		DB.blob_read(Tree_Info.Blob, block_buff, global::HASH_SIZE, parent);
 		return strncmp(block_buff, SHA.raw_hash(), global::HASH_SIZE) == 0;
 	}
 }
@@ -210,10 +210,10 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 		assert(tree_size == rightside_up.tellp());
 		if(!DB_Hash.exists(root_hash, tree_size)){
 			DB_Hash.tree_allocate(root_hash, tree_size);
-			sqlite3_wrapper::blob Blob = DB_Hash.tree_open(root_hash, tree_size);
+			database::blob Blob = DB_Hash.tree_open(root_hash, tree_size);
 			rightside_up.seekg(0, std::ios::beg);
-			//rightside_up.clear();
 			int offset = 0, bytes_remaining = tree_size, read_size;
+			DB.query("BEGIN TRANSACTION");
 			while(bytes_remaining){
 				if(bytes_remaining > global::FILE_BLOCK_SIZE){
 					read_size = global::FILE_BLOCK_SIZE;
@@ -226,12 +226,13 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 					LOGGER << "error reading rightside_up file";
 					return false;
 				}else{
-					Blob.write(block_buff, read_size, offset);
+					DB.blob_write(Blob, block_buff, read_size, offset);
 					offset += read_size;
 					bytes_remaining -= read_size;
 				}
 			}
 			DB_Hash.set_state(root_hash, tree_size, DB_hash::COMPLETE);
+			DB.query("END TRANSACTION");
 		}
 		return true;
 	}
@@ -326,7 +327,7 @@ bool hash_tree::create_recurse(std::fstream & upside_down, std::fstream & rights
 
 bool hash_tree::check_file_block(tree_info & Tree_Info, const boost::uint64_t & file_block_num, const char * block, const int & size)
 {
-	Tree_Info.Blob.read(block_buff, global::HASH_SIZE, Tree_Info.file_hash_offset + file_block_num * global::HASH_SIZE);
+	DB.blob_read(Tree_Info.Blob, block_buff, global::HASH_SIZE, Tree_Info.file_hash_offset + file_block_num * global::HASH_SIZE);
 	SHA.init();
 	SHA.load(block, size);
 	SHA.end();
@@ -342,7 +343,7 @@ bool hash_tree::read_block(tree_info & Tree_Info, const boost::uint64_t & block_
 {
 	std::pair<boost::uint64_t, unsigned> info;
 	if(block_info(block_num, Tree_Info.row, info)){
-		Tree_Info.Blob.read(block_buff, info.second, info.first);
+		DB.blob_read(Tree_Info.Blob, block_buff, info.second, info.first);
 		block.clear();
 		block.assign(block_buff, info.second);
 		return true;
@@ -361,7 +362,7 @@ bool hash_tree::write_block(tree_info & Tree_Info, const boost::uint64_t & block
 			LOGGER << "incorrect block size, programming error";
 			exit(1);
 		}
-		Tree_Info.Blob.write(block.data(), block.size(), info.first);
+		DB.blob_write(Tree_Info.Blob, block.data(), block.size(), info.first);
 		{
 		boost::mutex::scoped_lock lock(*Tree_Info.Contiguous_mutex);
 		Tree_Info.Contiguous->insert(std::make_pair(block_num, IP));

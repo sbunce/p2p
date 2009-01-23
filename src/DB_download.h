@@ -9,13 +9,11 @@
 
 //custom
 #include "DB_hash.h"
+#include "database.h"
 #include "download_info.h"
 #include "global.h"
 #include "hash_tree.h"
 #include "sha.h"
-
-//sqlite
-#include <sqlite3.h>
 
 //std
 #include <fstream>
@@ -57,7 +55,7 @@ private:
 	bool is_downloading(const std::string & hash);
 	int resume_call_back(std::vector<download_info> & resume, int columns_retrieved, char ** response, char ** column_name);
 
-	sqlite3_wrapper::database DB;
+	database DB;
 	DB_hash DB_Hash;
 };
 #endif

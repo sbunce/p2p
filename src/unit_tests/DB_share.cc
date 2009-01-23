@@ -1,10 +1,11 @@
 //custom
+#include "../database.h"
 #include "../DB_share.h"
 #include "../global.h"
 
 int main()
 {
-	sqlite3_wrapper::database DB;
+	database DB;
 	DB.query("DROP TABLE IF EXISTS share");
 	DB_share DBS;
 
@@ -17,7 +18,7 @@ int main()
 		LOGGER; exit(1);
 	}
 
-	DBS.delete_entry("ABC", "DEF");
+	DBS.delete_entry("DEF");
 	if(DBS.lookup_hash("ABC")){
 		LOGGER; exit(1);
 	}
