@@ -7,7 +7,7 @@
 #include <boost/thread/thread.hpp>
 
 //custom
-#include "DB_prime.h"
+#include "database.h"
 #include "global.h"
 
 //libtommath
@@ -118,6 +118,6 @@ private:
 	boost::thread genprime_thread;
 	void genprime_loop();
 
-	DB_prime DB_Prime;
+	database::table::prime DB_Prime;
 };
 #endif

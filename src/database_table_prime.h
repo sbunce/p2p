@@ -1,10 +1,9 @@
-#ifndef H_DB_PRIME
-#define H_DB_PRIME
+#ifndef H_DATABASE_TABLE_PRIME
+#define H_DATABASE_TABLE_PRIME
 
 //custom
-#include "atomic_bool.h"
 #include "atomic_int.h"
-#include "database.h"
+#include "database_connection.h"
 #include "global.h"
 
 //libtommath
@@ -14,10 +13,12 @@
 #include <iostream>
 #include <sstream>
 
-class DB_prime
+namespace database{
+namespace table{
+class prime
 {
 public:
-	DB_prime();
+	prime();
 
 	/*
 	add      - add a prime to the DB
@@ -30,13 +31,20 @@ public:
 	bool retrieve(mpint & prime);
 
 private:
-	database DB;
-	static atomic_bool program_start;        //true when program just started
-	static atomic_int<unsigned> prime_count; //how many primes are in the database
+	database::connection DB;
+
+	//used at program start to retrieve prime_count (see ctor)
+	static boost::mutex program_start_mutex;
+	static bool program_start;
+
+	//how many primes are in the database
+	static atomic_int<unsigned> prime_count;
 
 	/*
 	retrieve_call_back - call back for retrieve()
 	*/
 	int retrieve_call_back(std::pair<bool, mpint *> & info, int columns_retrieved, char ** response, char ** column_name);
 };
+}//end of table namespace
+}//end of database namespace
 #endif

@@ -19,17 +19,17 @@ env.unit_test([
 ])
 
 env.unit_test([
-	'DB_blacklist.cc',
-	'../DB_blacklist.cc',
+	'database_blacklist.cc',
+	'../database_blacklist.cc',
 	'../database.cc',
 	boost.static_lib('date_time'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
-	'DB_download.cc',
-	'../DB_download.cc',
-	'../DB_hash.cc',
+	'database_download.cc',
+	'../database_download.cc',
+	'../database_hash.cc',
 	'../database.cc',
 	boost.static_lib('date_time'),
 	boost.static_lib('filesystem'),
@@ -38,33 +38,33 @@ env.unit_test([
 ])
 
 env.unit_test([
-	'DB_preferences.cc',
-	'../DB_preferences.cc',
+	'database_preferences.cc',
+	'../database_preferences.cc',
 	'../database.cc',
 	boost.static_lib('date_time'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
-	'DB_prime.cc',
-	'../DB_prime.cc',
+	'database_prime.cc',
+	'../database_prime.cc',
 	'../database.cc',
 	boost.static_lib('date_time'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
-	'DB_search.cc',
-	'../DB_search.cc',
+	'database_search.cc',
+	'../database_search.cc',
 	'../database.cc',
 	boost.static_lib('date_time'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
-	'DB_share.cc',
-	'../DB_share.cc',
-	'../DB_hash.cc',
+	'database_share.cc',
+	'../database_share.cc',
+	'../database_hash.cc',
 	'../database.cc',
 	boost.static_lib('date_time'),
 	boost.static_lib('system'),
@@ -76,7 +76,7 @@ env.unit_test([
 	'../encryption.cc',
 	'../CMWC4096.cc',
 	'../database.cc',
-	'../DB_prime.cc',
+	'../database_prime.cc',
 	'../number_generator.cc',
 	boost.static_lib('date_time'),
 	boost.static_lib('thread')
@@ -86,8 +86,8 @@ env.unit_test([
 	'hash_tree.cc',
 	'../hash_tree.cc',
 	'../database.cc',
-	'../DB_blacklist.cc',
-	'../DB_hash.cc',
+	'../database_blacklist.cc',
+	'../database_hash.cc',
 	'../sha.cc',
 	boost.static_lib('date_time'),
 	boost.static_lib('filesystem'),

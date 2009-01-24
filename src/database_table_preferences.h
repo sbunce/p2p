@@ -1,20 +1,22 @@
-#ifndef H_DB_PREFERENCES
-#define H_DB_PREFERENCES
+#ifndef H_DATABASE_TABLE_PREFERENCES
+#define H_DATABASE_TABLE_PREFERENCES
 
 //boost
 #include <boost/thread/mutex.hpp>
 
 //custom
-#include "database.h"
+#include "database_connection.h"
 #include "global.h"
 
 //std
 #include <string>
 
-class DB_preferences
+namespace database{
+namespace table{
+class preferences
 {
 public:
-	DB_preferences();
+	preferences();
 
 	/*
 	"get"|"set"_download_directory - directory where downloads are to be placed
@@ -39,9 +41,11 @@ public:
 	void set_upload_rate(const unsigned & rate);
 
 private:
-	database DB;
+	database::connection DB;
 
-	//mutex for checking for, and creation of, the one row
+	//mutex for checking for, and creation of, the one row (look in ctor)
 	static boost::mutex Mutex;
 };
+}//end of table namespace
+}//end of database namespace
 #endif

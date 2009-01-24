@@ -1,12 +1,12 @@
-#include "DB_download.h"
+#include "database_table_download.h"
 
-DB_download::DB_download()
+database::table::download::download()
 : DB_Hash(DB)
 {
 	DB.query("CREATE TABLE IF NOT EXISTS download (hash TEXT, name TEXT, size TEXT, server TEXT)");
 }
 
-void DB_download::complete(const std::string & hash, const int & file_size)
+void database::table::download::complete(const std::string & hash, const int & file_size)
 {
 	std::ostringstream ss;
 	ss << "DELETE FROM download WHERE hash = '" << hash << "' AND size = " << file_size;
@@ -21,7 +21,7 @@ static int lookup_hash_call_back_0(bool & entry_exists, int columns_retrieved,
 	return 0;
 }
 
-bool DB_download::lookup_hash(const std::string & hash)
+bool database::table::download::lookup_hash(const std::string & hash)
 {
 	bool entry_exists = false;
 	std::ostringstream ss;
@@ -40,7 +40,7 @@ static int lookup_hash_call_back_1(std::pair<bool, std::string *> & info,
 	return 0;
 }
 
-bool DB_download::lookup_hash(const std::string & hash, std::string & path)
+bool database::table::download::lookup_hash(const std::string & hash, std::string & path)
 {
 	std::pair<bool, std::string *> info(false, &path);
 	std::ostringstream query;
@@ -62,7 +62,7 @@ static int lookup_hash_call_back_2(boost::tuple<bool, std::string *, boost::uint
 	return 0;
 }
 
-bool DB_download::lookup_hash(const std::string & hash, std::string & path, boost::uint64_t & file_size)
+bool database::table::download::lookup_hash(const std::string & hash, std::string & path, boost::uint64_t & file_size)
 {
 	boost::tuple<bool, std::string *, boost::uint64_t *> info(false, &path, &file_size);
 	std::ostringstream query;
@@ -71,7 +71,7 @@ bool DB_download::lookup_hash(const std::string & hash, std::string & path, boos
 	return info.get<0>();
 }
 
-int DB_download::resume_call_back(std::vector<download_info> & resume, int columns_retrieved,
+int database::table::download::resume_call_back(std::vector<download_info> & resume, int columns_retrieved,
 	char ** response, char ** column_name)
 {
 	assert(response[0] && response[1] && response[2] && response[3]);
@@ -95,10 +95,10 @@ int DB_download::resume_call_back(std::vector<download_info> & resume, int colum
 	return 0;
 }
 
-void DB_download::resume(std::vector<download_info> & resume)
+void database::table::download::resume(std::vector<download_info> & resume)
 {
 	DB.query("SELECT hash, name, size, server FROM download",
-		this, &DB_download::resume_call_back, resume);
+		this, &database::table::download::resume_call_back, resume);
 }
 
 static int is_downloading_call_back(bool & downloading, int columns_retrieved, char ** response, char ** column_name)
@@ -107,7 +107,7 @@ static int is_downloading_call_back(bool & downloading, int columns_retrieved, c
 	return 0;
 }
 
-bool DB_download::is_downloading(const std::string & hash)
+bool database::table::download::is_downloading(const std::string & hash)
 {
 	bool downloading = false;
 	std::ostringstream query;
@@ -116,7 +116,7 @@ bool DB_download::is_downloading(const std::string & hash)
 	return downloading;
 }
 
-bool DB_download::start(download_info & info)
+bool database::table::download::start(download_info & info)
 {
 	boost::uint64_t tree_size = hash_tree::file_size_to_tree_size(info.size);
 	if(tree_size > std::numeric_limits<int>::max()){
@@ -132,7 +132,7 @@ bool DB_download::start(download_info & info)
 	}
 	DB.query("BEGIN TRANSACTION");
 	DB_Hash.tree_allocate(info.hash, tree_size);
-	DB_Hash.set_state(info.hash, tree_size, DB_hash::DOWNLOADING);
+	DB_Hash.set_state(info.hash, tree_size, database::table::hash::DOWNLOADING);
 	std::ostringstream query;
 	query << "INSERT INTO download (hash, name, size, server) VALUES ('"
 		<< info.hash << "', '" << info.name << "', '" << info.size << "', '";
@@ -149,7 +149,7 @@ bool DB_download::start(download_info & info)
 	return true;
 }
 
-void DB_download::terminate(const std::string & hash, const int & file_size)
+void database::table::download::terminate(const std::string & hash, const int & file_size)
 {
 	DB.query("BEGIN TRANSACTION");
 	DB_Hash.delete_tree(hash, hash_tree::file_size_to_tree_size(file_size));

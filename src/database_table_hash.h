@@ -1,25 +1,22 @@
-#ifndef H_DB_HASH
-#define H_DB_HASH
+#ifndef H_DATABASE_TABLE_HASH
+#define H_DATABASE_TABLE_HASH
 
 //boost
 #include <boost/thread/mutex.hpp>
 
 //custom
-#include "database.h"
+#include "database_connection.h"
 #include "global.h"
 
 //std
 #include <sstream>
 
-class DB_hash
+namespace database{
+namespace table{
+class hash
 {
 public:
-	/*
-	This ctor is provided to let a DB_hash instantiation share a database
-	connection. This is needed to be accessed within transactions involving
-	other tables.
-	*/
-	DB_hash(database & DB_in);
+	hash(database::connection & DB_in);
 
 	enum state{
 		DNE,         //indicates that no tree with key exists
@@ -34,7 +31,6 @@ public:
 	get_key       - returns key necessary to open blob
 	get_state     - returns the state of the hash tree (see enum state)
 	tree_allocate - allocates space for tree of specified size and sets state = 0 (remember to call use!)
-	tree_open     - returns a blob object that can be used to read/write a blob
 	tree_use      - marks tree as used so it doesn't get deleted on startup
 	*/
 	void delete_tree(const std::string & hash, const int & tree_size);
@@ -44,15 +40,15 @@ public:
 	void tree_allocate(const std::string & hash, const int & tree_size);
 
 	//opens/returns a blob to the tree with the specified hash and size
-	static database::blob tree_open(const std::string & hash, const int & tree_size)
+	static database::connection::blob tree_open(const std::string & hash, const int & tree_size)
 	{
-		database DB;
+		database::connection DB;
 		std::pair<bool, boost::int64_t> info;
 		std::stringstream ss;
 		ss << "SELECT key FROM hash WHERE hash = '" << hash << "' AND size = " << tree_size;
 		DB.query(ss.str(), &get_key_call_back, info);
 		if(info.first){
-			return database::blob("hash", "tree", info.second);
+			return database::connection::blob("hash", "tree", info.second);
 		}else{
 			/*
 			No tree exists in database that corresponds to hash. This is not
@@ -62,12 +58,14 @@ public:
 			However, if this is an error and someone attempts to read/write to this
 			returned blob then the program will be terminated.
 			*/
-			return database::blob("hash", "tree", 0);
+			return database::connection::blob("hash", "tree", 0);
 		}
 	}
 
 private:
-	database * DB;
+	database::connection * DB;
+
+	//used by ctor to run something upon first instantiation
 	static bool program_start;
 	static boost::mutex program_start_mutex;
 
@@ -87,4 +85,6 @@ private:
 	*/
 	boost::int64_t get_key(const std::string & hash);
 };
+}//end of table namespace
+}//end of database namespace
 #endif

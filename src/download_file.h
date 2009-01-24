@@ -12,9 +12,7 @@
 #include "atomic_int.h"
 #include "convert.h"
 #include "client_server_bridge.h"
-#include "DB_blacklist.h"
-#include "DB_download.h"
-#include "DB_share.h"
+#include "database.h"
 #include "download.h"
 #include "download_info.h"
 #include "global.h"
@@ -150,9 +148,9 @@ private:
 	void write_block(boost::uint64_t block_number, std::string & block);
 
 	download_info Download_Info;
-	DB_blacklist DB_Blacklist;
-	DB_download DB_Download;
-	DB_share DB_Share;
+	database::table::blacklist DB_Blacklist;
+	database::table::download DB_Download;
+	database::table::share DB_Share;
 	request_generator Request_Generator;
 	hash_tree Hash_Tree;
 };

@@ -1,5 +1,5 @@
-#ifndef H_DB_DOWNLOAD
-#define H_DB_DOWNLOAD
+#ifndef H_DATABASE_TABLE_DOWNLOAD
+#define H_DATABASE_TABLE_DOWNLOAD
 
 //boost
 #include <boost/filesystem/operations.hpp>
@@ -8,8 +8,8 @@
 #include <boost/tuple/tuple.hpp>
 
 //custom
-#include "DB_hash.h"
-#include "database.h"
+#include "database_connection.h"
+#include "database_table_hash.h"
 #include "download_info.h"
 #include "global.h"
 #include "hash_tree.h"
@@ -22,10 +22,12 @@
 #include <string>
 #include <vector>
 
-class DB_download
+namespace database{
+namespace table{
+class download
 {
 public:
-	DB_download();
+	download();
 
 	/*
 	complete  - removes the download entry
@@ -48,6 +50,8 @@ public:
 	void resume(std::vector<download_info> & resume_DL);
 
 private:
+	database::connection DB;
+
 	/*
 	is_downloading   - returns true if hash is found in download table, else false
 	resume_call_back - call back for resume()
@@ -55,7 +59,8 @@ private:
 	bool is_downloading(const std::string & hash);
 	int resume_call_back(std::vector<download_info> & resume, int columns_retrieved, char ** response, char ** column_name);
 
-	database DB;
-	DB_hash DB_Hash;
+	database::table::hash DB_Hash;
 };
+}//end of table namespace
+}//end of database namespace
 #endif

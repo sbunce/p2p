@@ -299,7 +299,7 @@ void client::remove_empty()
 
 void client::search(std::string search_word, std::vector<download_info> & Search_Info)
 {
-	DB_Search.search(search_word, Search_Info);
+	DB_Search.run_search(search_word, Search_Info);
 }
 
 void client::set_max_connections(const unsigned & max_connections_in)

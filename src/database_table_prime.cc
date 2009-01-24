@@ -1,7 +1,8 @@
-#include "DB_prime.h"
+#include "database_table_prime.h"
 
-atomic_bool DB_prime::program_start(true);
-atomic_int<unsigned> DB_prime::prime_count(0);
+boost::mutex database::table::prime::program_start_mutex;
+bool database::table::prime::program_start(true);
+atomic_int<unsigned> database::table::prime::prime_count(0);
 
 static int prime_count_call_back(atomic_int<unsigned> & prime_count, int columns_retrieved,
 	char ** response, char ** column_names)
@@ -12,16 +13,19 @@ static int prime_count_call_back(atomic_int<unsigned> & prime_count, int columns
 	return 0;
 }
 
-DB_prime::DB_prime()
+database::table::prime::prime()
 {
 	DB.query("CREATE TABLE IF NOT EXISTS prime (key INTEGER PRIMARY KEY, number TEXT)");
+	{
+	boost::mutex::scoped_lock lock(program_start_mutex);
 	if(program_start){
-		DB.query("SELECT count(1) FROM prime", &prime_count_call_back, prime_count);
 		program_start = false;
+		DB.query("SELECT count(1) FROM prime", &prime_count_call_back, prime_count);
+	}
 	}
 }
 
-void DB_prime::add(mpint & prime)
+void database::table::prime::add(mpint & prime)
 {
 	std::ostringstream query;
 	query << "INSERT INTO prime VALUES (NULL,'" << prime.to_str(64) << "')";
@@ -29,13 +33,13 @@ void DB_prime::add(mpint & prime)
 	++prime_count;
 }
 
-int DB_prime::count()
+int database::table::prime::count()
 {
 	return prime_count;
 }
 
 //std::pair<true if found, prime>
-int DB_prime::retrieve_call_back(std::pair<bool, mpint *> & info, int columns_retrieved, char ** response, char ** column_name)
+int database::table::prime::retrieve_call_back(std::pair<bool, mpint *> & info, int columns_retrieved, char ** response, char ** column_name)
 {
 	assert(response[0] && response[1]);
 	info.first = true;
@@ -47,9 +51,9 @@ int DB_prime::retrieve_call_back(std::pair<bool, mpint *> & info, int columns_re
 	return 0;
 }
 
-bool DB_prime::retrieve(mpint & prime)
+bool database::table::prime::retrieve(mpint & prime)
 {
 	std::pair<bool, mpint *> info(false, &prime);
-	DB.query("SELECT key, number FROM prime LIMIT 1", this, &DB_prime::retrieve_call_back, info);
+	DB.query("SELECT key, number FROM prime LIMIT 1", this, &database::table::prime::retrieve_call_back, info);
 	return info.first;
 }

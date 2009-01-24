@@ -13,10 +13,7 @@
 #include "client_buffer.h"
 #include "client_new_connection.h"
 #include "client_server_bridge.h"
-#include "DB_blacklist.h"
-#include "DB_download.h"
-#include "DB_preferences.h"
-#include "DB_search.h"
+#include "database.h"
 #include "download.h"
 #include "download_connection.h"
 #include "download_info.h"
@@ -140,10 +137,10 @@ private:
 	void transition_download(download * Download_Stop);
 
 	client_new_connection Client_New_Connection;
-	DB_blacklist DB_Blacklist;
-	DB_download DB_Download;
-	DB_preferences DB_Preferences;
-	DB_search DB_Search;
+	database::table::blacklist DB_Blacklist;
+	database::table::download DB_Download;
+	database::table::preferences DB_Preferences;
+	database::table::search DB_Search;
 	download_factory Download_Factory;
 	rate_limit Rate_Limit;
 	sha SHA;

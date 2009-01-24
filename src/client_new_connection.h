@@ -12,7 +12,7 @@
 //custom
 #include "atomic_int.h"
 #include "client_buffer.h"
-#include "DB_blacklist.h"
+#include "database.h"
 #include "download_connection.h"
 #include "global.h"
 #include "resolve.h"
@@ -99,7 +99,7 @@ private:
 	void process_DC(download_connection DC);
 	void unblock(const download_connection & DC);
 
-	DB_blacklist DB_Blacklist;
+	database::table::blacklist DB_Blacklist;
 	thread_pool Thread_Pool;
 };
 #endif

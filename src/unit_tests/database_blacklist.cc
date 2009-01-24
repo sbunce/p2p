@@ -1,6 +1,6 @@
 //custom
 #include "../database.h"
-#include "../DB_blacklist.h"
+#include "../database_blacklist.h"
 #include "../global.h"
 
 int main()
@@ -8,25 +8,25 @@ int main()
 	database DB;
 	DB.query("DROP TABLE IF EXISTS blacklist");
 
-	DB_blacklist DB_Blacklist;
+	database::blacklist DBB;
 	std::string IP_1 = "1.1.1.1", IP_2 = "2.2.2.2";
 
 	int state = 0;
-	if(DB_Blacklist.modified(state)){
+	if(DBB.modified(state)){
 		LOGGER; exit(1);
 	}
 
-	DB_Blacklist.add(IP_1);
+	DBB.add(IP_1);
 
-	if(!DB_Blacklist.modified(state)){
+	if(!DBB.modified(state)){
 		LOGGER; exit(1);
 	}
 
-	if(!DB_Blacklist.is_blacklisted(IP_1)){
+	if(!DBB.is_blacklisted(DB, IP_1)){
 		LOGGER; exit(1);
 	}
 
-	if(DB_Blacklist.is_blacklisted(IP_2)){
+	if(DBB.is_blacklisted(DB, IP_2)){
 		LOGGER; exit(1);
 	}
 

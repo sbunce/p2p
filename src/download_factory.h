@@ -4,12 +4,8 @@
 //custom
 #include "client_buffer.h"
 #include "database.h"
-#include "DB_download.h"
 #include "download.h"
 #include "download_connection.h"
-#include "DB_hash.h"
-#include "DB_search.h"
-#include "DB_share.h"
 #include "download_file.h"
 #include "download_hash_tree.h"
 #include "download_info.h"
@@ -38,10 +34,10 @@ private:
 	download * start_file(const download_info & info, std::list<download_connection> & servers);
 	download * start_hash_tree(const download_info & info, std::list<download_connection> & servers);
 
-	database DB;
-	DB_hash DB_Hash;
-	DB_download DB_Download;
-	DB_search DB_Search;
-	DB_share DB_Share;
+	database::connection DB;
+	database::table::hash DB_Hash;
+	database::table::download DB_Download;
+	database::table::search DB_Search;
+	database::table::share DB_Share;
 };
 #endif

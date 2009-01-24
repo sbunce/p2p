@@ -153,10 +153,7 @@ void server_index::main_loop()
 
 	while(true){
 		boost::this_thread::interruption_point();
-std::cout << "start scan\n";
 		scan_share(global::SHARE_DIRECTORY);
-
-std::cout << "check missing\n";
 		check_missing();
 
 		//1 second sleep between scans, needed for when share empty

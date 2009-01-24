@@ -1,5 +1,5 @@
-#ifndef H_DB_SHARE
-#define H_DB_SHARE
+#ifndef H_DATABASE_TABLE_SHARE
+#define H_DATABASE_TABLE_SHARE
 
 //boost
 #include <boost/tuple/tuple.hpp>
@@ -7,7 +7,6 @@
 //custom
 #include "atomic_bool.h"
 #include "database.h"
-#include "DB_hash.h"
 #include "global.h"
 #include "hash_tree.h"
 
@@ -17,10 +16,12 @@
 #include <sstream>
 #include <string>
 
-class DB_share
+namespace database{
+namespace table{
+class share
 {
 public:
-	DB_share();
+	share();
 
 	/*
 	Functions to modify the database:
@@ -41,13 +42,15 @@ public:
 	bool lookup_path(const std::string & path, std::string & hash, boost::uint64_t & size);
 
 private:
-	database DB;
+	database::connection DB;
 
 	/*
 	unique_key - returns true key is unique in share table
 	*/
 	bool unique_hash(const std::string & hash);
 
-	DB_hash DB_Hash;
+	database::table::hash DB_Hash;
 };
+}//end of table namespace
+}//end of database namespace
 #endif

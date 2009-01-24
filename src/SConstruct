@@ -25,14 +25,14 @@ src_common = [
 	'client_new_connection.cc',
 	'client_server_bridge.cc',
 	'CMWC4096.cc',
-	'database.cc',
-	'DB_blacklist.cc',
-	'DB_download.cc',
-	'DB_hash.cc',
-	'DB_preferences.cc',
-	'DB_prime.cc',
-	'DB_search.cc',
-	'DB_share.cc',
+	'database_connection.cc',
+	'database_table_blacklist.cc',
+	'database_table_download.cc',
+	'database_table_hash.cc',
+	'database_table_preferences.cc',
+	'database_table_prime.cc',
+	'database_table_search.cc',
+	'database_table_share.cc',
 	'download.cc',
 	'download_factory.cc',
 	'download_file.cc',
@@ -71,8 +71,7 @@ SConscript([
 	'libtommath/SConstruct',
 	'overlay_sim/SConstruct',
 	'site_scons/SConstruct',
-	'test_manager/SConstruct',
-	'unit_tests/SConstruct'
+	'test_manager/SConstruct'
 ])
 
 static_libs = [

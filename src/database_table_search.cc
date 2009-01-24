@@ -1,6 +1,6 @@
-#include "DB_search.h"
+#include "database_table_search.h"
 
-DB_search::DB_search()
+database::table::search::search()
 {
 	DB.query("CREATE TABLE IF NOT EXISTS search (hash TEXT, name TEXT, size TEXT, server TEXT)");
 	DB.query("CREATE INDEX IF NOT EXISTS search_hash_index ON search (hash)");
@@ -34,7 +34,7 @@ static int search_call_back(std::vector<download_info> & search_results, int col
 	return 0;
 }
 
-void DB_search::search(std::string & search_term, std::vector<download_info> & search_results)
+void database::table::search::run_search(std::string & search_term, std::vector<download_info> & search_results)
 {
 	search_results.clear();
 
@@ -64,7 +64,7 @@ static int get_servers_call_back(std::vector<std::string> & servers, int columns
 	return 0;
 }
 
-void DB_search::get_servers(const std::string & hash, std::vector<std::string> & servers)
+void database::table::search::get_servers(const std::string & hash, std::vector<std::string> & servers)
 {
 	std::ostringstream query;
 	query << "SELECT server FROM search WHERE hash = '" << hash << "'";

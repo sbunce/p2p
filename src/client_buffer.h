@@ -6,7 +6,7 @@
 
 //custom
 #include "convert.h"
-#include "DB_blacklist.h"
+#include "database.h"
 #include "download_info.h"
 #include "encryption.h"
 
@@ -467,6 +467,6 @@ private:
 	std::string remote_result; //holds remote result for key exchange
 	encryption Encryption;
 
-	DB_blacklist DB_Blacklist;
+	database::table::blacklist DB_Blacklist;
 };
 #endif

@@ -22,7 +22,7 @@ public:
 	void process(const std::string & request, std::string & send);
 
 private:
-	database DB;
+	database::connection DB;
 
 	/*
 	table_table - adds html table to send for database table

@@ -210,7 +210,7 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 		assert(tree_size == rightside_up.tellp());
 		if(!DB_Hash.exists(root_hash, tree_size)){
 			DB_Hash.tree_allocate(root_hash, tree_size);
-			database::blob Blob = DB_Hash.tree_open(root_hash, tree_size);
+			database::connection::blob Blob = DB_Hash.tree_open(root_hash, tree_size);
 			rightside_up.seekg(0, std::ios::beg);
 			int offset = 0, bytes_remaining = tree_size, read_size;
 			DB.query("BEGIN TRANSACTION");
@@ -231,7 +231,7 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 					bytes_remaining -= read_size;
 				}
 			}
-			DB_Hash.set_state(root_hash, tree_size, DB_hash::COMPLETE);
+			DB_Hash.set_state(root_hash, tree_size, database::table::hash::COMPLETE);
 			DB.query("END TRANSACTION");
 		}
 		return true;

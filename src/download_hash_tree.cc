@@ -29,7 +29,7 @@ download_hash_tree::~download_hash_tree()
 		client_server_bridge::finish_download(Download_Info.hash);
 		std::remove((global::DOWNLOAD_DIRECTORY + Download_Info.name).c_str());
 	}else{
-		DB_Hash.set_state(Download_Info.hash, Tree_Info.get_tree_size(), DB_hash::COMPLETE);
+		DB_Hash.set_state(Download_Info.hash, Tree_Info.get_tree_size(), database::table::hash::COMPLETE);
 	}
 }
 

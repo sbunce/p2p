@@ -1,9 +1,9 @@
-#include "DB_hash.h"
+#include "database_table_hash.h"
 
-bool DB_hash::program_start(true);
-boost::mutex DB_hash::program_start_mutex;
+bool database::table::hash::program_start(true);
+boost::mutex database::table::hash::program_start_mutex;
 
-DB_hash::DB_hash(database & DB_in)
+database::table::hash::hash(database::connection & DB_in)
 : DB(&DB_in)
 {
 	DB->query("CREATE TABLE IF NOT EXISTS hash(key INTEGER PRIMARY KEY, hash TEXT, state INTEGER, size INTEGER, tree BLOB)");
@@ -11,14 +11,16 @@ DB_hash::DB_hash(database & DB_in)
 	DB->query("CREATE INDEX IF NOT EXISTS hash_state_index ON hash(state)");
 	DB->query("CREATE INDEX IF NOT EXISTS hash_size_index ON hash(size)");
 
+	{
 	boost::mutex::scoped_lock lock(program_start_mutex);
 	if(program_start){
-		DB->query("DELETE FROM hash WHERE state = 0");
 		program_start = false;
+		DB->query("DELETE FROM hash WHERE state = 0");
+	}
 	}
 }
 
-void DB_hash::delete_tree(const std::string & hash, const int & tree_size)
+void database::table::hash::delete_tree(const std::string & hash, const int & tree_size)
 {
 	std::stringstream ss;
 	ss << "DELETE FROM hash WHERE hash = '" << hash << "' AND size = " << tree_size;
@@ -33,7 +35,7 @@ static int exists_call_back(bool & tree_exists, int columns_retrieved,
 	return 0;
 }
 
-bool DB_hash::exists(const std::string & hash, const int & tree_size)
+bool database::table::hash::exists(const std::string & hash, const int & tree_size)
 {
 	bool tree_exists = false;
 	std::stringstream ss;
@@ -42,7 +44,7 @@ bool DB_hash::exists(const std::string & hash, const int & tree_size)
 	return tree_exists;
 }
 
-boost::int64_t DB_hash::get_key(const std::string & hash)
+boost::int64_t database::table::hash::get_key(const std::string & hash)
 {
 	std::pair<bool, boost::int64_t> info;
 	std::stringstream ss;
@@ -66,7 +68,7 @@ static int get_state_call_back(std::pair<bool, unsigned> & info, int columns_ret
 	return 0;
 }
 
-DB_hash::state DB_hash::get_state(const std::string & hash, const int & tree_size)
+database::table::hash::state database::table::hash::get_state(const std::string & hash, const int & tree_size)
 {
 	//std::pair<true if found, key>
 	std::pair<bool, unsigned> info;
@@ -75,21 +77,21 @@ DB_hash::state DB_hash::get_state(const std::string & hash, const int & tree_siz
 	DB->query(ss.str(), &get_state_call_back, info);
 	if(info.first){
 		if(info.second == 0){
-			return DB_hash::RESERVED;
+			return database::table::hash::RESERVED;
 		}else if(info.second == 1){
-			return DB_hash::DOWNLOADING;
+			return database::table::hash::DOWNLOADING;
 		}else if(info.second == 2){
-			return DB_hash::COMPLETE;
+			return database::table::hash::COMPLETE;
 		}else{
 			LOGGER << "unknown state in database";
 			exit(1);
 		}
 	}else{
-		return DB_hash::DNE;
+		return database::table::hash::DNE;
 	}
 }
 
-void DB_hash::set_state(const std::string & hash, const int & tree_size, const state & State)
+void database::table::hash::set_state(const std::string & hash, const int & tree_size, const state & State)
 {
 	std::stringstream ss;
 	ss << "UPDATE hash SET state = ";
@@ -107,7 +109,7 @@ void DB_hash::set_state(const std::string & hash, const int & tree_size, const s
 	DB->query(ss.str());
 }
 
-void DB_hash::tree_allocate(const std::string & hash, const int & tree_size)
+void database::table::hash::tree_allocate(const std::string & hash, const int & tree_size)
 {
 	std::stringstream ss;
 	ss << "INSERT INTO hash(key, hash, state, size, tree) VALUES(NULL, '" << hash << "', 0, " << tree_size << ", ?)";

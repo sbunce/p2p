@@ -1,10 +1,8 @@
 TODO
 
--have all db functions put as static functions in a namespace. they should
-all take a sqlite3_wrapper::database as a first parameter. ie
-database::share::add();
-database::blacklist::is_blacklisted();
-
+-think about the ctor kill thing in client/server_buffer
+-move blob out of database::connection and in to database::
+-switch from .h to .hpp and from .cc to .cpp
 -perhaps all DB classes should take a sqlite3_wrapper::database in their ctor like DB_hash does,
 transactions are way hard with the different connections
 -void DB_share::delete_entry(const std::string & hash, const std::string & path) is this function needed? path is unique..
@@ -24,11 +22,14 @@ transactions are way hard with the different connections
 
 KNOWN BUGS WITH UNKNOWN FIX
 
--With sqlite3_shared_chache enabled the program will crash if you create the
-database with the shell program with
-"./src/libsqlite3/shell database < default.sql" and then start the program. If
-you start the program and then do ".read default.sql" in the shell then
-everything works.
+-With sqlite3 shared chache enabled the program will crash with this procedure.
+1. insert stuff in to search table with shell
+2. start program
+or
+1. start program
+2. insert stuff in to search table with shell
+3. close program
+4. start program
 
 
 GROSS CODE

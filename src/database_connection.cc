@@ -1,6 +1,6 @@
-#include "database.h"
+#include "database_connection.h"
 
-database::database():
+database::connection::connection():
 	ref_cnt(new atomic_int<int>(0)),
 	Mutex(new boost::recursive_mutex())
 {
@@ -14,23 +14,21 @@ database::database():
 		LOGGER << "sqlite error: " << sqlite3_errmsg(DB_handle);
 		exit(1);
 	}
-	if(sqlite3_busy_timeout(DB_handle, 2000) != SQLITE_OK){
+
+	//timeout in ms, this can not be zero with concurrency
+	if(sqlite3_busy_timeout(DB_handle, 4000) != SQLITE_OK){
 		LOGGER << "sqlite error: " << sqlite3_errmsg(DB_handle);
 		exit(1);
 	}
-	if(sqlite3_exec(DB_handle,
-		"PRAGMA auto_vacuum = full;"     //move free pages to EOF and truncate at every commit
-		"PRAGMA journal_mode = PERSIST;" //do not delete the journal file between uses
-		"PRAGMA cache_size = 8192;"      //increase max in memory pages from 2000
-		"PRAGMA temp_store = MEMORY;"    //make sure temp store is memory and not a file
-		, NULL, NULL, NULL) != SQLITE_OK)
-	{
+
+	//move free pages to EOF and truncate at every commit
+	if(sqlite3_exec(DB_handle, "PRAGMA auto_vacuum = full;" , NULL, NULL, NULL) != SQLITE_OK){
 		LOGGER << "sqlite error: " << sqlite3_errmsg(DB_handle);
 	}
 }
 
-database::database(
-	const database & DB
+database::connection::connection(
+	const database::connection & DB
 ):
 	DB_handle(DB.DB_handle),
 	ref_cnt(DB.ref_cnt)
@@ -38,7 +36,7 @@ database::database(
 	++*ref_cnt;
 }
 
-database::~database()
+database::connection::~connection()
 {
 	if(*ref_cnt == 0){
 		if(sqlite3_close(DB_handle) != SQLITE_OK){
@@ -49,7 +47,7 @@ database::~database()
 	}
 }
 
-boost::int64_t database::blob_allocate(const std::string & query, const int & size)
+boost::int64_t database::connection::blob_allocate(const std::string & query, const int & size)
 {
 	boost::recursive_mutex::scoped_lock lock(*Mutex);
 	sqlite3_stmt * prepared_statement;
@@ -77,16 +75,18 @@ boost::int64_t database::blob_allocate(const std::string & query, const int & si
 	return sqlite3_last_insert_rowid(DB_handle);
 }
 
-void database::blob_close(blob & Blob)
+void database::connection::blob_close(sqlite3_blob * blob_handle)
 {
-	if(sqlite3_blob_close(Blob.blob_handle) != SQLITE_OK){
+	if(sqlite3_blob_close(blob_handle) != SQLITE_OK){
 		LOGGER << "sqlite error: " << sqlite3_errmsg(DB_handle);
+		exit(1);
 	}
 }
 
-void database::blob_open(blob & Blob, const bool & writeable)
+sqlite3_blob * database::connection::blob_open(blob & Blob, const bool & writeable)
 {
 	assert(Blob.rowid != 0);
+	sqlite3_blob * blob_handle;
 	int tries = 0;
 	while(sqlite3_blob_open(
 		DB_handle,
@@ -95,7 +95,7 @@ void database::blob_open(blob & Blob, const bool & writeable)
 		Blob.column.c_str(),
 		Blob.rowid,          //row ID (primary key) of row with blob
 		(int)writeable, //0 = read only, non-zero = read/write
-		&Blob.blob_handle
+		&blob_handle
 	) != SQLITE_OK){
 		if(tries++ >= 7){
 			LOGGER << "8 consecutive blob open errors, aborting";
@@ -104,31 +104,32 @@ void database::blob_open(blob & Blob, const bool & writeable)
 			LOGGER << sqlite3_errmsg(DB_handle);
 		}
 	}
+	return blob_handle;
 }
 
-void database::blob_read(blob & Blob, char * const buff, const int & size, const int & offset)
+void database::connection::blob_read(blob & Blob, char * const buff, const int & size, const int & offset)
 {
 	boost::recursive_mutex::scoped_lock lock(*Mutex);
-	blob_open(Blob, false);
-	if(sqlite3_blob_read(Blob.blob_handle, (void *)buff, size, offset) != SQLITE_OK){
+	sqlite3_blob * blob_handle = blob_open(Blob, false);
+	if(sqlite3_blob_read(blob_handle, (void *)buff, size, offset) != SQLITE_OK){
 		LOGGER << sqlite3_errmsg(DB_handle);
 		exit(1);
 	}
-	blob_close(Blob);
+	blob_close(blob_handle);
 }
 
-void database::blob_write(blob & Blob, const char * const buff, const int & size, const int & offset)
+void database::connection::blob_write(blob & Blob, const char * const buff, const int & size, const int & offset)
 {
 	boost::recursive_mutex::scoped_lock lock(*Mutex);
-	blob_open(Blob, true);
-	if(sqlite3_blob_write(Blob.blob_handle, (const void *)buff, size, offset) != SQLITE_OK){
+	sqlite3_blob * blob_handle = blob_open(Blob, true);
+	if(sqlite3_blob_write(blob_handle, (const void *)buff, size, offset) != SQLITE_OK){
 		LOGGER << sqlite3_errmsg(DB_handle);
 		exit(1);
 	}
-	blob_close(Blob);
+	blob_close(blob_handle);
 }
 
-int database::query(const std::string & query)
+int database::connection::query(const std::string & query)
 {
 	boost::recursive_mutex::scoped_lock lock(*Mutex);
 	int code;
@@ -138,7 +139,7 @@ int database::query(const std::string & query)
 	return code;
 }
 
-int database::query(const std::string & query, int (*fun_ptr)(int, char **, char **))
+int database::connection::query(const std::string & query, int (*fun_ptr)(int, char **, char **))
 {
 	boost::recursive_mutex::scoped_lock lock(*Mutex);
 	int code;

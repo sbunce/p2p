@@ -9,9 +9,6 @@
 #include "convert.h"
 #include "client_server_bridge.h"
 #include "database.h"
-#include "DB_blacklist.h"
-#include "DB_download.h"
-#include "DB_hash.h"
 #include "download.h"
 #include "download_connection.h"
 #include "download_info.h"
@@ -132,9 +129,9 @@ private:
 	//socket number mapped to connection special pointer
 	std::map<int, connection_special> Connection_Special;
 
-	database DB;
-	DB_hash DB_Hash;
-	DB_download DB_Download;
+	database::connection DB;
+	database::table::hash DB_Hash;
+	database::table::download DB_Download;
 	download_info Download_Info;
 	request_generator Request_Generator;
 	hash_tree Hash_Tree;

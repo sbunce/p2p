@@ -6,9 +6,7 @@
 
 //custom
 #include "convert.h"
-#include "DB_blacklist.h"
-#include "DB_download.h"
-#include "DB_share.h"
+#include "database.h"
 #include "encryption.h"
 #include "global.h"
 #include "hash_tree.h"
@@ -212,9 +210,9 @@ private:
 	std::string prime_remote_result; //holds prime and incoming result for key exchange
 	encryption Encryption;           //object to do stream cyphers
 
-	DB_blacklist DB_Blacklist;
-	DB_download DB_Download;
-	DB_share DB_Share;
+	database::table::blacklist DB_Blacklist;
+	database::table::download DB_Download;
+	database::table::share DB_Share;
 	hash_tree Hash_Tree;
 	http HTTP;
 };

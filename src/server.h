@@ -11,8 +11,7 @@
 
 //custom
 #include "atomic_int.h"
-#include "DB_blacklist.h"
-#include "DB_preferences.h"
+#include "database.h"
 #include "global.h"
 #include "rate_limit.h"
 #include "server_buffer.h"
@@ -97,8 +96,8 @@ private:
 	void new_connection(const int & listener);
 	void process_request(const int & socket_FD, char * recv_buff, const int & n_bytes);
 
-	DB_blacklist DB_Blacklist;
-	DB_preferences DB_Preferences;
+	database::table::blacklist DB_Blacklist;
+	database::table::preferences DB_Preferences;
 	rate_limit Rate_Limit;
 	server_index Server_Index;
 };

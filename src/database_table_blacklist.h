@@ -1,24 +1,25 @@
-#ifndef H_DB_BLACKLIST
-#define H_DB_BLACKLIST
+#ifndef H_DATABASE_TABLE_BLACKLIST
+#define H_DATABASE_TABLE_BLACKLIST
 
 //boost
 #include <boost/thread/mutex.hpp>
 
 //custom
 #include "atomic_int.h"
-#include "database.h"
+#include "database_connection.h"
 #include "global.h"
 
 //std
 #include <iostream>
 #include <sstream>
-#include <sstream>
 #include <string>
 
-class DB_blacklist
+namespace database{
+namespace table{
+class blacklist
 {
 public:
-	DB_blacklist();
+	blacklist();
 
 	/*
 	add            - add IP to blacklist
@@ -29,9 +30,12 @@ public:
 	void add(const std::string & IP);
 	bool is_blacklisted(const std::string & IP);
 	bool modified(int & last_state_seen);
-
 private:
-	database DB;
-	atomic_int<int> blacklist_state;
+	database::connection DB;
+
+	//starts at zero and increments every time a host is added to blacklist
+	static atomic_int<int> blacklist_state;
 };
+}//end of table namespace
+}//end of database namespace
 #endif

@@ -3,8 +3,7 @@
 
 //custom
 #include "client_server_bridge.h"
-#include "DB_blacklist.h"
-#include "DB_share.h"
+#include "database.h"
 #include "global.h"
 #include "hash_tree.h"
 #include "slot.h"
@@ -40,8 +39,8 @@ private:
 	void update_percent(const boost::uint64_t & latest_block);
 
 	hash_tree::tree_info Tree_Info;
-	DB_blacklist DB_Blacklist;
-	DB_share DB_Share;
+	database::table::blacklist DB_Blacklist;
+	database::table::share DB_Share;
 	hash_tree Hash_Tree;
 };
 #endif

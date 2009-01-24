@@ -19,10 +19,10 @@ bool download_factory::start(download_info info, download *& Download, std::list
 
 	if(DB_Download.lookup_hash(info.hash)){
 		//download being resumed
-		DB_hash::state State = DB_Hash.get_state(info.hash, hash_tree::file_size_to_tree_size(info.size));
-		if(State == DB_hash::DOWNLOADING){
+		database::table::hash::state State = DB_Hash.get_state(info.hash, hash_tree::file_size_to_tree_size(info.size));
+		if(State == database::table::hash::DOWNLOADING){
 			Download = start_hash_tree(info, servers);
-		}else if(State == DB_hash::COMPLETE){
+		}else if(State == database::table::hash::COMPLETE){
 			Download = start_file(info, servers);
 		}else{
 			LOGGER << "unknown state: " << State;

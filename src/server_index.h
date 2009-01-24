@@ -14,8 +14,7 @@
 #include "atomic_bool.h"
 #include "atomic_int.h"
 #include "client_server_bridge.h"
-#include "DB_preferences.h"
-#include "DB_share.h"
+#include "database.h"
 #include "global.h"
 #include "hash_tree.h"
 #include "sha.h"
@@ -91,8 +90,8 @@ private:
 	void scan_share(std::string directory_name);
 	void tokenize_path(const std::string & path, std::deque<std::string> & tokens);
 
-	DB_share DB_Share;
-	DB_preferences DB_Preferences;
+	database::table::share DB_Share;
+	database::table::preferences DB_Preferences;
 	hash_tree Hash_Tree;
 };
 #endif
