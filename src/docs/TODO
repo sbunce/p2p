@@ -1,26 +1,22 @@
 TODO
 
--think about the ctor kill thing in client/server_buffer
--move blob out of database::connection and in to database::
--switch from .h to .hpp and from .cc to .cpp
--perhaps all DB classes should take a sqlite3_wrapper::database in their ctor like DB_hash does,
-transactions are way hard with the different connections
--void DB_share::delete_entry(const std::string & hash, const std::string & path) is this function needed? path is unique..
--servers on download info tab doesn't go to zero when download finishes
--speed on download info tab doesn't go to zero when download finished
--get server index status working (probably defer until after path_memoize)
--unit test for DB_hash
--scons is not cleaning up scratch files
--Break up download_info in to download_info and download_status.
--Move hex array in to convert functions.
--Add retry-upon SQLITE_BUSY support in the wrapper.
--hash tree slots don't work
--replace server tokenizing with strtok (shitty) with the boost tokenizer.
--Servers can time out if they're finishing while hash checking.
--Slot requesting currently disabled.
+-client locking up on Rate_Limit.download_rate_limit call
+
+-label all threadsafe classes //THREADSAFE at top of header
 
 
-KNOWN BUGS WITH UNKNOWN FIX
+KEY EXCHANGE ALGORITHM
+-Client connects and sends his host key.
+A. I've seen his host key before and send a "tell me what I said" packet.
+	1. he sends incorrect response, I disconnect
+	2. he sends correct response, session is open
+B. I haven't seen his host key before, I trigger key exchange.
+
+Get this all fleshed out and make detailed html page describing procedure. Maybe
+do flow chart.
+
+
+SQLITE SHARED CACHE BUG
 
 -With sqlite3 shared chache enabled the program will crash with this procedure.
 1. insert stuff in to search table with shell
@@ -32,25 +28,10 @@ or
 4. start program
 
 
-GROSS CODE
-
--Hex to binary code in convert.h is ugly. Nice looking code in the
-sqlite optimization guide.
-
-
-PERFORMANCE
-
--Make sure DB_Hash functions are using index. Is a multi-column index needed?
--Investigate keeping hash trees in separate database file. Would this
-decrease lock contention?
--Copying hash tree in to DB that may not be used (if a tree with the same root
-hash already exists) takes up DB access time.
--Share scanning is ownage. Perhaps keep hash to key associations in memory.
--Add performance measurement to sqlite unit test.
-
-
 THINK ABOUT
 
+-Think about having a link on a webpage you could click to run the p2p program.
+The paramter could be all the info needed to dl the file.
 -Think about CMWC4096 PRNG seed issue. After key exchange, each client/server
 sends 1/2 the size of the PRNG seed encrypted to the other.
 -Think about how ISP might detect protocol via knowing handshake size/port.
@@ -60,18 +41,14 @@ against the secret key, this could say how many extra random bytes to send.
 requests are arriving sequentially. Actually this wouldn't have to be assured,
 if someone started downloading mid file to try to get an advantage they might
 have to wait a long time to download the beginning of the file.
--Is starvation a problem between the client and server upload?
--SQLite blob write offset is a signed int. This limits the maximum tree size
-to 2gB. Create document like this: http://www.sqlite.org/limits.html
 
 
 DEFERRED FEATURES
 
--When connecting to a server have the client send it's host key and then the
-server send it's host key. Both the client and server should look to see if a
-key has been negotiated with the other before. If it has the client can just
-start sending without negotating a new key. Defer this feature until GUIDs
-are worked out.
+-SQLite blob write offset is a signed int. This limits the maximum tree size
+to 2gB. Create document like this: http://www.sqlite.org/limits.html with size
+limits.
+-have temp directory for files that aren't done downloading
 -client::set_download_directory() not doing anything but saving setting.
 -Support for multiple share directories.
 -Figure out how to handle naming conflicts. It should be fully automatic.

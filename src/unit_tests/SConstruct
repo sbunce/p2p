@@ -2,35 +2,49 @@
 import boost
 import unit_test
 
-#std
-import sys
-
 Import('env')
 
-env.unit_test('convert.cc')
-env.unit_test('contiguous_map.cc')
-env.unit_test('contiguous_set.cc')
-
 env.unit_test([
-	'database.cc',
-	'../database.cc',
-	boost.static_lib('date_time'),
+	'atomic_bool.cpp',
+	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
-	'database_blacklist.cc',
-	'../database_blacklist.cc',
-	'../database.cc',
+	'atomic_int.cpp',
+	boost.static_lib('system'),
+	boost.static_lib('thread')
+])
+
+env.unit_test('convert.cpp')
+env.unit_test('contiguous_map.cpp')
+env.unit_test('contiguous_set.cpp')
+
+env.unit_test([
+	'database_connection.cpp',
+	'../database_connection.cpp',
+	'../speed_calculator.cpp',
 	boost.static_lib('date_time'),
+	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
-	'database_download.cc',
-	'../database_download.cc',
-	'../database_hash.cc',
-	'../database.cc',
+	'database_table_blacklist.cpp',
+	'../database_table_blacklist.cpp',
+	'../database_connection.cpp',
+	'../speed_calculator.cpp',
+	boost.static_lib('date_time'),
+	boost.static_lib('system'),
+	boost.static_lib('thread')
+])
+
+env.unit_test([
+	'database_table_download.cpp',
+	'../database_table_download.cpp',
+	'../database_connection.cpp',
+	'../database_table_hash.cpp',
+	'../speed_calculator.cpp',
 	boost.static_lib('date_time'),
 	boost.static_lib('filesystem'),
 	boost.static_lib('system'),
@@ -38,57 +52,67 @@ env.unit_test([
 ])
 
 env.unit_test([
-	'database_preferences.cc',
-	'../database_preferences.cc',
-	'../database.cc',
-	boost.static_lib('date_time'),
-	boost.static_lib('thread')
-])
-
-env.unit_test([
-	'database_prime.cc',
-	'../database_prime.cc',
-	'../database.cc',
-	boost.static_lib('date_time'),
-	boost.static_lib('thread')
-])
-
-env.unit_test([
-	'database_search.cc',
-	'../database_search.cc',
-	'../database.cc',
-	boost.static_lib('date_time'),
-	boost.static_lib('thread')
-])
-
-env.unit_test([
-	'database_share.cc',
-	'../database_share.cc',
-	'../database_hash.cc',
-	'../database.cc',
+	'database_table_preferences.cpp',
+	'../database_table_preferences.cpp',
+	'../database_connection.cpp',
+	'../speed_calculator.cpp',
 	boost.static_lib('date_time'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
-	'encryption.cc',
-	'../encryption.cc',
-	'../CMWC4096.cc',
-	'../database.cc',
-	'../database_prime.cc',
-	'../number_generator.cc',
+	'database_table_prime.cpp',
+	'../database_table_prime.cpp',
+	'../database_connection.cpp',
+	'../speed_calculator.cpp',
 	boost.static_lib('date_time'),
+	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
-	'hash_tree.cc',
-	'../hash_tree.cc',
-	'../database.cc',
-	'../database_blacklist.cc',
-	'../database_hash.cc',
-	'../sha.cc',
+	'database_table_search.cpp',
+	'../database_table_search.cpp',
+	'../database_connection.cpp',
+	'../speed_calculator.cpp',
+	boost.static_lib('date_time'),
+	boost.static_lib('system'),
+	boost.static_lib('thread')
+])
+
+env.unit_test([
+	'database_table_share.cpp',
+	'../database_table_share.cpp',
+	'../database_connection.cpp',
+	'../database_table_hash.cpp',
+	'../speed_calculator.cpp',
+	boost.static_lib('date_time'),
+	boost.static_lib('system'),
+	boost.static_lib('thread')
+])
+
+env.unit_test([
+	'encryption.cpp',
+	'../encryption.cpp',
+	'../CMWC4096.cpp',
+	'../database_connection.cpp',
+	'../database_table_prime.cpp',
+	'../number_generator.cpp',
+	'../speed_calculator.cpp',
+	boost.static_lib('date_time'),
+	boost.static_lib('system'),
+	boost.static_lib('thread')
+])
+
+env.unit_test([
+	'hash_tree.cpp',
+	'../hash_tree.cpp',
+	'../database_connection.cpp',
+	'../database_table_blacklist.cpp',
+	'../database_table_hash.cpp',
+	'../sha.cpp',
+	'../speed_calculator.cpp',
 	boost.static_lib('date_time'),
 	boost.static_lib('filesystem'),
 	boost.static_lib('system'),
@@ -96,12 +120,20 @@ env.unit_test([
 ])
 
 env.unit_test([
-	'request_generator.cc',
-	'../request_generator.cc',
+	'request_generator.cpp',
+	'../request_generator.cpp',
 	boost.static_lib('date_time'),
 	boost.static_lib('thread')
 ])
 
-Clean('database','database')
+env.unit_test([
+	'sha.cpp',
+	'../sha.cpp'
+])
+
+Clean('DB','DB')
+Clean('DB-journal', 'DB-journal')
 Clean('hash','hash')
 Clean('share','share')
+Clean('upside_down','upside_down')
+Clean('rightside_up','rightside_up')

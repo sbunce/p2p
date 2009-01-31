@@ -12,4 +12,4 @@ static_libs = [
 	boost.static_lib('thread')
 ]
 
-env.Program('sim', glob.glob('*.cc') + static_libs)
+env.Program('sim', glob.glob('*.cpp') + static_libs)

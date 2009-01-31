@@ -2,16 +2,16 @@ import glob
 import sys
 
 if sys.platform == 'linux2':
-	Program('dot_gen', glob.glob('*.cc'))
+	Program('dot_gen', glob.glob('*.cpp'))
 	Command(
 		'p2p_gui.ps',
 		'dot_gen',
-		'./dep_graph/dot_gen main_gui.cc |dot -Tps -o dep_graph/p2p_gui.ps'
+		'./dep_graph/dot_gen main_gui.cpp |dot -Tps -o dep_graph/p2p_gui.ps'
 	)
 	Command(
 		'p2p_nogui.ps',
 		'dot_gen',
-		'./dep_graph/dot_gen main_nogui.cc |dot -Tps -o dep_graph/p2p_nogui.ps'
+		'./dep_graph/dot_gen main_nogui.cpp |dot -Tps -o dep_graph/p2p_nogui.ps'
 	)
 
 Clean('dot_gen',['p2p_gui.ps','p2p_nogui.ps'])

@@ -5,53 +5,53 @@ import system
 
 #source files for objects to be linked in to p2p_gui
 src_gui = [
-	'gui.cc',
-	'gui_about.cc',
-	'gui_download_status.cc',
-	'gui_preferences.cc',
-	'main_gui.cc'
+	'gui.cpp',
+	'gui_about.cpp',
+	'gui_download_status.cpp',
+	'gui_preferences.cpp',
+	'main_gui.cpp'
 ]
 
 #source files for objects to be linked in to p2p_nogui
 src_nogui = [
-	'main_nogui.cc'
+	'main_nogui.cpp'
 ]
 
 #source files for objects to be linked in to p2p_gui and p2p_nogui
 src_common = [
-	'CLI_args.cc',
-	'client_buffer.cc',
-	'client.cc',
-	'client_new_connection.cc',
-	'client_server_bridge.cc',
-	'CMWC4096.cc',
-	'database_connection.cc',
-	'database_table_blacklist.cc',
-	'database_table_download.cc',
-	'database_table_hash.cc',
-	'database_table_preferences.cc',
-	'database_table_prime.cc',
-	'database_table_search.cc',
-	'database_table_share.cc',
-	'download.cc',
-	'download_factory.cc',
-	'download_file.cc',
-	'download_hash_tree.cc',
-	'encryption.cc',
-	'hash_tree.cc',
-	'http.cc',
-	'number_generator.cc',
-	'rate_limit.cc',
-	'request_generator.cc',
-	'server_buffer.cc',
-	'server.cc',
-	'server_index.cc',
-	'sha.cc',
-	'slot.cc',
-	'slot_file.cc',
-	'slot_hash_tree.cc',
-	'speed_calculator.cc',
-	'thread_pool.cc'
+	'CLI_args.cpp',
+	'client_buffer.cpp',
+	'client.cpp',
+	'client_new_connection.cpp',
+	'client_server_bridge.cpp',
+	'CMWC4096.cpp',
+	'database_connection.cpp',
+	'database_table_blacklist.cpp',
+	'database_table_download.cpp',
+	'database_table_hash.cpp',
+	'database_table_preferences.cpp',
+	'database_table_prime.cpp',
+	'database_table_search.cpp',
+	'database_table_share.cpp',
+	'download.cpp',
+	'download_factory.cpp',
+	'download_file.cpp',
+	'download_hash_tree.cpp',
+	'encryption.cpp',
+	'hash_tree.cpp',
+	'http.cpp',
+	'number_generator.cpp',
+	'rate_limit.cpp',
+	'request_generator.cpp',
+	'server_buffer.cpp',
+	'server.cpp',
+	'server_index.cpp',
+	'sha.cpp',
+	'slot.cpp',
+	'slot_file.cpp',
+	'slot_hash_tree.cpp',
+	'speed_calculator.cpp',
+	'thread_pool.cpp'
 ]
 
 env = Environment()
@@ -71,7 +71,8 @@ SConscript([
 	'libtommath/SConstruct',
 	'overlay_sim/SConstruct',
 	'site_scons/SConstruct',
-	'test_manager/SConstruct'
+	'test_manager/SConstruct',
+	'unit_tests/SConstruct'
 ])
 
 static_libs = [
