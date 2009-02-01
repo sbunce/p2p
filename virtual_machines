@@ -1,0 +1,61 @@
+#!/usr/bin/perl
+
+$VM_count = 8;
+
+if(not defined(@ARGV[0])){
+	print "usage: $0 <mode>\n";
+	print "modes: off, push, start\n";
+}
+
+if(@ARGV[0] eq "off"){
+	off();
+}
+if(@ARGV[0] eq "push"){
+	push_servers();
+}
+if(@ARGV[0] eq "start"){
+	start();
+}
+
+sub off
+{
+	for($x=128; $x<128+$VM_count; ++$x){
+		print "sending shut down command to 192.168.1.$x\n";
+		system("ssh root\@192.168.1.$x shutdown now -h");
+	}
+}
+
+sub push_servers
+{
+	for($x=128; $x<128+$VM_count; ++$x){
+		print "pushing to 192.168.1.$x\n";
+		system("ssh 192.168.1.$x killall screen");
+		system("scp p2p_nogui 192.168.1.$x:/home/smack");
+	}
+}
+
+sub start
+{
+	for($x=0; $x<$VM_count; ++$x){
+		my $pid = fork;
+		die("fork failed: $!") unless defined($pid);
+		if($pid == 0){
+			#this is child process
+			if($x<10){
+				$port = "330$x";
+				$machine = "0$x";
+			}else{
+				$port = "33$x";
+				$machine = "$x";
+			}
+			system("/usr/bin/VBoxHeadless -vrdpport $port -startvm \"Debian CLI $machine\"");
+			exit();
+		}else{
+			#error if too many VMs starting concurrently
+			sleep(20);
+		}
+	}
+
+	#wait for children to die
+	while(wait() != -1){}
+}

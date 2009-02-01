@@ -1,5 +1,10 @@
+//THREADSAFE
+
 #ifndef H_CLI_ARGS
 #define H_CLI_ARGS
+
+//boost
+#include <boost/thread.hpp>
 
 //std
 #include <iostream>
@@ -28,6 +33,9 @@ public:
 	const std::string & program_name();
 
 private:
+	//locks all public member functions
+	boost::recursive_mutex Mutex;
+
 	//holds original arguments as passed in by ctor
 	int argc;
 	std::vector<std::string> argv;

@@ -1,7 +1,6 @@
 #include "client.hpp"
 
 client::client():
-	blacklist_state(0),
 	connections(0),
 	FD_max(0),
 	Client_New_Connection(master_FDS, FD_max, max_connections, connections)
@@ -38,7 +37,7 @@ client::~client()
 	#endif
 }
 
-void client::check_blacklist()
+void client::check_blacklist(int & blacklist_state)
 {
 	if(DB_Blacklist.modified(blacklist_state)){
 		sockaddr_in temp_addr;
@@ -137,6 +136,9 @@ void client::main_loop()
 {
 	reconnect_unfinished();
 
+	//see documentation in database_table_blacklist to see what this does
+	int blacklist_state = 0;
+
 	char recv_buff[global::C_MAX_SIZE*global::PIPELINE_SIZE];
 	int n_bytes;             //how many bytes sent or received by send()/recv()
 	unsigned transfer_limit; //speed_calculator stores how much may be recv'd here
@@ -150,7 +152,7 @@ void client::main_loop()
 std::cout << "POIK1\n";
 		client_buffer::generate_requests(); //let downloads generate requests
 std::cout << "POIK2\n";
-		check_blacklist();                  //check/disconnect blacklisted IPs
+		check_blacklist(blacklist_state);   //check/disconnect blacklisted IPs
 std::cout << "POIK3\n";
 		if(Time != std::time(NULL)){
 std::cout << "POIK4\n";
@@ -391,8 +393,7 @@ void client::set_max_download_rate(unsigned download_rate)
 
 void client::start_download(const download_info & info)
 {
-	boost::mutex::scoped_lock lock(PD_mutex);
-	Pending_Download.push_back(info);
+	Pending_Download->push_back(info);
 }
 
 void client::stop_download(std::string hash)
@@ -419,17 +420,15 @@ void client::start_download_process(const download_info & info)
 void client::start_pending_downloads()
 {
 	/*
-	The pending downloads are copied so that PD_mutex can be unlocked as soon as
-	possible. PD_mutex locks start_download() which the GUI accesses. The
-	start_download function needs to be as fast as possible so the GUI doesn't
-	"hiccup" when starting a download.
+	The start_download_process function is slow so we copy all the download_info
+	so the Pending_Download container can be unlocked as soon as possible.
 	*/
 	std::list<download_info> Pending_Download_Temp;
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(PD_mutex);
-	Pending_Download_Temp.assign(Pending_Download.begin(), Pending_Download.end());
-	Pending_Download.clear();
-	}//end lock scope
+
+	Pending_Download.lock();
+	Pending_Download_Temp.assign(Pending_Download->begin(), Pending_Download->end());
+	Pending_Download->clear();
+	Pending_Download.unlock();
 
 	std::list<download_info>::iterator iter_cur, iter_end;
 	iter_cur = Pending_Download_Temp.begin();

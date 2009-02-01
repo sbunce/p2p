@@ -1,3 +1,9 @@
+//THREADSAFE
+
+/*
+This class instantiates itself.
+*/
+
 #ifndef H_CLIENT_BUFFER
 #define H_CLIENT_BUFFER
 
@@ -25,7 +31,9 @@ class client_buffer : private boost::noncopyable
 {
 public:
 	/*
-	WARNING: do not use this ctor it will terminate the program.
+	The client_buffer is used in a std::map. If std::map::[] is ever used to
+	locate a client_buffer that doesn't exist the default ctor will be called and
+	the program will be killed.
 	*/
 	client_buffer();
 
@@ -36,240 +44,80 @@ public:
 	then return true. If no client_buffer is found false will be returned and a
 	new connection should be made.
 	*/
-	static bool add_connection(download_connection & DC)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, client_buffer *>::iterator iter_cur, iter_end;
-		iter_cur = Client_Buffer.begin();
-		iter_end = Client_Buffer.end();
-		while(iter_cur != iter_end){
-			if(DC.IP == iter_cur->second->IP){
-				DC.socket = iter_cur->second->socket;             //set socket of the discovered client_buffer
-				DC.Download->register_connection(DC);             //register connection with download
-				iter_cur->second->register_download(DC.Download); //register download with client_buffer
-				return true;
-			}
-			++iter_cur;
-		}
-		return false;
-	}
+	static bool add_connection(download_connection & DC);
 
 	/*
 	Add a download to the client_buffer. Doesn't associate the download with any
 	instantiation of client_buffer.
 	*/
-	static void add_download(download * Download)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		Unique_Download.insert(Download);
-	}
+	static void add_download(download * Download);
 
 	/*
 	Populates the info vector with download information for all downloads running
 	in all client_buffers. The vector passed in is cleared before download info is
 	added.
 	*/
-	static void current_downloads(std::vector<download_status> & info, std::string hash)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		info.clear();
-
-		if(hash.empty()){
-			//info for all downloads
-			std::set<download *>::iterator iter_cur, iter_end;
-			iter_cur = Unique_Download.begin();
-			iter_end = Unique_Download.end();
-			while(iter_cur != iter_end){
-				if((*iter_cur)->visible()){
-					download_status Download_Status(
-						(*iter_cur)->hash(),
-						(*iter_cur)->name(),
-						(*iter_cur)->size(),
-						(*iter_cur)->speed(),
-						(*iter_cur)->percent_complete()
-					);
-					(*iter_cur)->servers(Download_Status.IP, Download_Status.speed);
-					info.push_back(Download_Status);
-				}
-				++iter_cur;
-			}
-		}else{
-			//info for one download
-			std::set<download *>::iterator iter_cur, iter_end;
-			iter_cur = Unique_Download.begin();
-			iter_end = Unique_Download.end();
-			while(iter_cur != iter_end){
-				if((*iter_cur)->hash() == hash){
-					download_status Download_Status(
-						(*iter_cur)->hash(),
-						(*iter_cur)->name(),
-						(*iter_cur)->size(),
-						(*iter_cur)->speed(),
-						(*iter_cur)->percent_complete()
-					);
-					(*iter_cur)->servers(Download_Status.IP, Download_Status.speed);
-					info.push_back(Download_Status);
-					break;
-				}
-				++iter_cur;
-			}
-		}
-	}
+	static void current_downloads(std::vector<download_status> & info, std::string hash);
 
 	/*
 	Deletes all downloads in client_buffer and deletes all client_buffer instantiations.
 	This is used when client is being destroyed.
 	*/
-	static void destroy()
-	{
-		while(!Unique_Download.empty()){
-			delete *Unique_Download.begin();
-			Unique_Download.erase(Unique_Download.begin());
-		}
-		while(!Client_Buffer.empty()){
-			delete Client_Buffer.begin()->second;
-			Client_Buffer.erase(Client_Buffer.begin());
-		}
-	}
+	static void destroy();
 
 	/*
 	Erases an element from Client_Buffer associated with socket_FD. This should be
 	called whenever a socket is disconnected.
 	*/
-	static void erase(const int & socket_FD)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, client_buffer *>::iterator iter = Client_Buffer.find(socket_FD);
-		assert(iter != Client_Buffer.end());
-		if(!iter->second->send_buff.empty()){
-			//send_buff contains data, decrement send_pending
-			--send_pending;
-		}
-		delete iter->second;
-		Client_Buffer.erase(iter);
-	}
+	static void erase(const int & socket_FD);
 
 	/*
 	Check if a download is running. Returns true if yes, else false.
 	*/
-	static bool is_downloading(download * Download)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::set<download *>::iterator iter = Unique_Download.find(Download);
-		return iter != Unique_Download.end();
-	}
+	static bool is_downloading(download * Download);
 
 	/*
 	Check by hash if a download is running. Returns true if yes, else false.
 	*/
-	static bool is_downloading(const std::string & hash)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::set<download *>::iterator iter_cur, iter_end;
-		iter_cur = Unique_Download.begin();
-		iter_end = Unique_Download.end();
-		while(iter_cur != iter_end){
-			if((*iter_cur)->hash() == hash){
-				return true;
-			}
-			++iter_cur;
-		}
-		return false;
-	}
+	static bool is_downloading(const std::string & hash);
 
 	/*
 	Populates the complete list with pointers to downloads which are completed.
 	WARNING: Do not do anything with these pointers but compare them by value. Any
 	         dereferencing of these pointers is NOT thread safe.
 	*/
-	static void find_complete(std::list<download *> & complete)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::set<download *>::iterator iter_cur, iter_end;
-		iter_cur = Unique_Download.begin();
-		iter_end = Unique_Download.end();
-		while(iter_cur != iter_end){
-			if((*iter_cur)->complete()){
-				complete.push_back(*iter_cur);
-			}
-			++iter_cur;
-		}
-	}
+	static void find_complete(std::list<download *> & complete);
 
 	/*
 	Removes all empty client_buffers and returns their socket numbers which need
 	to be disconnected.
 	*/
-	static void find_empty(std::vector<int> & disconnect_sockets)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, client_buffer *>::iterator iter_cur, iter_end;
-		iter_cur = Client_Buffer.begin();
-		iter_end = Client_Buffer.end();
-		while(iter_cur != iter_end){
-			if(iter_cur->second->empty()){
-				disconnect_sockets.push_back(iter_cur->first);
-			}
-			++iter_cur;
-		}
-	}
+	static void find_empty(std::vector<int> & disconnect_sockets);
 
 	/*
 	Removes client_buffers that have timed out. Puts sockets to disconnect in
 	timed_out vector.
 	*/
-	static void find_timed_out(std::vector<int> & timed_out)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, client_buffer *>::iterator iter_cur, iter_end;
-		iter_cur = Client_Buffer.begin();
-		iter_end = Client_Buffer.end();
-		while(iter_cur != iter_end){
-			if(time(0) - iter_cur->second->last_seen >= global::TIMEOUT){
-				timed_out.push_back(iter_cur->first);
-			}
-			++iter_cur;
-		}
-	}
+	static void find_timed_out(std::vector<int> & timed_out);
 
 	/*
 	Causes all client_buffers to query their downloads to see if they need to make
 	new requests.
 	*/
-	static void generate_requests()
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, client_buffer *>::iterator iter_cur, iter_end;
-		iter_cur = Client_Buffer.begin();
-		iter_end = Client_Buffer.end();
-		while(iter_cur != iter_end){
-			iter_cur->second->prepare_request();
-			++iter_cur;
-		}
-	}
+	static void generate_requests();
 
 	/*
 	Returns the counter that indicates whether a send needs to be done. If it is
 	zero no send needs to be done. Every +1 above zero it is indicates a send_buff
 	has something in it.
 	*/
-	static int get_send_pending()
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		return send_pending;
-	}
+	static int get_send_pending();
 
 	/*
 	Returns the client_buffer send_buff that corresponds to socket_FD.
 	WARNING: violates encapsulation, NOT thread safe to call this from multiple threads
 	*/
-	static std::string & get_send_buff(const int & socket_FD)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, client_buffer *>::iterator iter = Client_Buffer.find(socket_FD);
-		assert(iter != Client_Buffer.end());
-		return iter->second->send_buff;
-	}
+	static std::string & get_send_buff(const int & socket_FD);
 
 	/*
 	Creates new client_buffer. Registers the download with the client_buffer.
@@ -281,81 +129,27 @@ public:
 	Returns true if the download associated with the DC was found, else false.
 	If the download is not found the connection can not be added.
 	*/
-	static void new_connection(const download_connection & DC)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		Client_Buffer.insert(std::make_pair(DC.socket, new client_buffer(DC.socket, DC.IP)));
-
-		/*
-		Add download to new client_buffer. It's possible that the download was
-		ended before this function was called. When this happens there will be an
-		empty client_buffer that will get cleaned up by the client.
-		*/
-		std::set<download *>::iterator iter = Unique_Download.find(DC.Download);
-		if(iter != Unique_Download.end()){
-			Client_Buffer[DC.socket]->register_download(DC.Download);
-			DC.Download->register_connection(DC);
-		}
-	}
+	static void new_connection(const download_connection & DC);
 
 	/*
 	Should be called after sending data. This function evaluates whether or not the
 	send_buff was emptied. If it was then it decrements send_pending.
 	*/
-	static void post_send(const int & socket_FD)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, client_buffer *>::iterator iter = Client_Buffer.find(socket_FD);
-		assert(iter != Client_Buffer.end());
-
-		if(iter->second->send_buff.empty()){
-			--send_pending;
-		}
-	}
+	static void post_send(const int & socket_FD);
 
 	/*
 	Append bytes to a buffer for a specified socket.
 	*/
-	static void recv_buff_append(const int & socket_FD, char * buff, const int & n_bytes)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, client_buffer *>::iterator iter = Client_Buffer.find(socket_FD);
-		assert(iter != Client_Buffer.end());
-		iter->second->recv_buff_append(buff, n_bytes);
-	}
+	static void recv_buff_append(const int & socket_FD, char * buff, const int & n_bytes);
 
 	/*
 	Remove the download from the Unique_Download container and from any instantiation
 	of the client_buffer.
 	*/
-	static void remove_download(download * Download)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		Unique_Download.erase(Download);
-		std::map<int, client_buffer *>::iterator iter_cur, iter_end;
-		iter_cur = Client_Buffer.begin();
-		iter_end = Client_Buffer.end();
-		while(iter_cur != iter_end){
-			iter_cur->second->terminate_download(Download);
-			++iter_cur;
-		}
-	}
+	static void remove_download(download * Download);
 
 	//stops the download associated with hash
-	static void stop_download(const std::string & hash)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::set<download *>::iterator iter_cur, iter_end;
-		iter_cur = Unique_Download.begin();
-		iter_end = Unique_Download.end();
-		while(iter_cur != iter_end){
-			if(hash == (*iter_cur)->hash()){
-				(*iter_cur)->stop();
-				break;
-			}
-			++iter_cur;
-		}
-	}
+	static void stop_download(const std::string & hash);
 
 private:
 	//only the client_buffer can instantiate itself

@@ -1,4 +1,4 @@
-//THREADSAFE
+//THREADSAFE, CTOR THREAD SPAWNING
 
 #ifndef H_CLIENT
 #define H_CLIENT
@@ -21,6 +21,7 @@
 #include "download_status.hpp"
 #include "download_factory.hpp"
 #include "global.hpp"
+#include "locking_shared_ptr.hpp"
 #include "number_generator.hpp"
 #include "rate_limit.hpp"
 #include "speed_calculator.hpp"
@@ -99,23 +100,14 @@ private:
 	is put in this container and later processed by main_thread(). This is done
 	because the logic which starts the download takes long enough to where the
 	GUI function which calls it blocks for an unacceptible amount of time.
-
-	WARNING: all access to Pending_Download must be locked with PD_mutex
 	*/
-	boost::mutex PD_mutex;
-	std::list<download_info> Pending_Download;
+	locking_shared_ptr<std::list<download_info> > Pending_Download;
 
 	//networking related
 	fd_set master_FDS;      //master file descriptor set
 	fd_set read_FDS;        //holds what sockets are ready to be read
 	fd_set write_FDS;       //holds what sockets can be written to without blocking
 	atomic_int<int> FD_max; //number of the highest socket
-
-	/*
-	Passed to DB_Blacklist to check for updates to blacklist.
-	WARNING: this should only be used by main_thread
-	*/
-	int blacklist_state;
 
 	/*
 	check_blacklist         - checks if blacklist was updated, if so checks connected IP's to see if any are blacklisted
@@ -131,7 +123,7 @@ private:
 	start_pending_downloads - called by main_thread() to start downloads added by start_download()
 	transition_download     - passes terminating download to download_factory, starts downloads download_factory may return
 	*/
-	void check_blacklist();
+	void check_blacklist(int & blacklist_state);
 	void check_timeouts();
 	inline void disconnect(const int & socket_FD);
 	void main_loop();

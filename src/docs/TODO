@@ -1,8 +1,15 @@
 TODO
 
+-replace download pointers in client_buffer with shared_ptr's
+
 -client locking up on Rate_Limit.download_rate_limit call
 
--label all threadsafe classes //THREADSAFE at top of header
+
+HEADER FILE TAGS
+
+THREADSAFE      - object is internally locked and threadsafe
+NON-THREADSAFE  - object not threadsafe
+THREAD SPAWNING - instantiating or calling member functions of this object may spawn threads
 
 
 KEY EXCHANGE ALGORITHM
@@ -14,18 +21,6 @@ B. I haven't seen his host key before, I trigger key exchange.
 
 Get this all fleshed out and make detailed html page describing procedure. Maybe
 do flow chart.
-
-
-SQLITE SHARED CACHE BUG
-
--With sqlite3 shared chache enabled the program will crash with this procedure.
-1. insert stuff in to search table with shell
-2. start program
-or
-1. start program
-2. insert stuff in to search table with shell
-3. close program
-4. start program
 
 
 THINK ABOUT

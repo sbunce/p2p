@@ -10,6 +10,7 @@ CLI_args::CLI_args(const int & argc_in, char * argv_in[])
 
 bool CLI_args::check_bool(const std::string & param)
 {
+	boost::recursive_mutex::scoped_lock lock(Mutex);
 	std::vector<std::string>::iterator iter_cur, iter_end;
 	iter_cur = argv.begin();
 	iter_end = argv.end();
@@ -24,6 +25,7 @@ bool CLI_args::check_bool(const std::string & param)
 
 bool CLI_args::get_string(const std::string & param, std::string & str)
 {
+	boost::recursive_mutex::scoped_lock lock(Mutex);
 	std::vector<std::string>::iterator iter_cur, iter_end;
 	iter_cur = argv.begin();
 	iter_end = argv.end();
@@ -39,6 +41,7 @@ bool CLI_args::get_string(const std::string & param, std::string & str)
 
 void CLI_args::help_message(const std::string & help_param, const std::string & help_message)
 {
+	boost::recursive_mutex::scoped_lock lock(Mutex);
 	if(check_bool(help_param)){
 		std::cout << help_message;
 		exit(0);
@@ -47,5 +50,6 @@ void CLI_args::help_message(const std::string & help_param, const std::string & 
 
 const std::string & CLI_args::program_name()
 {
+	boost::recursive_mutex::scoped_lock lock(Mutex);
 	return argv[0];
 }
