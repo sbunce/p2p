@@ -1,3 +1,5 @@
+//NOT-THREADSAFE
+
 #ifndef H_DOWNLOAD_FILE
 #define H_DOWNLOAD_FILE
 
@@ -38,6 +40,7 @@ public:
 
 	//documentation for virtual functions in abstract base class
 	virtual bool complete();
+	virtual download_info get_download_info();
 	virtual const std::string hash();
 	virtual const std::string name();
 	virtual unsigned percent_complete();
@@ -47,7 +50,6 @@ public:
 	virtual void stop();
 	virtual const boost::uint64_t size();
 	virtual void unregister_connection(const int & socket);
-	virtual bool visible();
 
 private:
 
@@ -57,22 +59,11 @@ private:
 	boost::uint64_t first_unreceived; //block at end of file upon download start + 1
 
 	/*
-	If download is terminated early the downloaded file will not be added to the
-	share.
-
-	Downloads cancelled by a user immediately become invisible because they might
-	take a little while to clean up.
-	*/
-	bool _cancel;
-	bool _visible;
-
-	/*
 	After P_CLOSE_SLOT is sent to all servers and there are no pending responses
 	from any server this should be set to true.
 	*/
 	bool download_complete;
 
-	std::string file_path;       //path to write file to
 	boost::uint64_t block_count; //number of file blocks (last block is block_count - 1)
 	unsigned last_block_size;    //holds the exact size of the last fileBlock(in bytes)
 
@@ -147,8 +138,6 @@ private:
 
 	download_info Download_Info;
 	database::table::blacklist DB_Blacklist;
-	database::table::download DB_Download;
-	database::table::share DB_Share;
 	request_generator Request_Generator;
 	hash_tree Hash_Tree;
 };

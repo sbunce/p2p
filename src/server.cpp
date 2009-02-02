@@ -1,8 +1,7 @@
 #include "server.hpp"
 
-server::server():
-	blacklist_state(0),
-	connections(0)
+server::server()
+: connections(0)
 {
 	FD_ZERO(&master_FDS);
 	max_connections = DB_Preferences.get_server_connections();
@@ -34,7 +33,7 @@ server::~server()
 	#endif
 }
 
-void server::check_blacklist()
+void server::check_blacklist(int & blacklist_state)
 {
 	if(DB_Blacklist.modified(blacklist_state)){
 		sockaddr_in temp_addr;
@@ -101,7 +100,7 @@ unsigned server::get_upload_rate()
 
 bool server::is_indexing()
 {
-	return Server_Index.is_indexing();
+	return server_index::is_indexing();
 }
 
 void server::new_connection(const int & listener)
@@ -171,6 +170,12 @@ void server::new_connection(const int & listener)
 
 void server::main_loop()
 {
+	//give GUI some time to start
+	portable_sleep::ms(1000);
+
+	//start server index if not already started
+	server_index::init();
+
 	//set listening socket
 	unsigned listener;
 	if((listener = socket(PF_INET, SOCK_STREAM, 0)) == -1){
@@ -230,6 +235,9 @@ void server::main_loop()
 	FD_SET(listener, &master_FDS);
 	FD_max = listener;
 
+	//see documentation in database_table_blacklist to see what this does
+	int blacklist_state = 0;
+
 	char recv_buff[global::S_MAX_SIZE*global::PIPELINE_SIZE];
 	int n_bytes;             //how many bytes sent or received by send()/recv()
 	unsigned transfer_limit; //speed_calculator stores how much may be sent here
@@ -238,7 +246,7 @@ void server::main_loop()
 
 	while(true){
 		boost::this_thread::interruption_point();
-		check_blacklist();
+		check_blacklist(blacklist_state);
 
 		/*
 		This if(send_pending) exists to saves CPU time by not checking if sockets
@@ -342,7 +350,7 @@ void server::main_loop()
 		}
 
 		if(!transfer){
-			boost::this_thread::yield();
+			portable_sleep::ms(1);
 		}
 	}
 }

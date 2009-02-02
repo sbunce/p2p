@@ -6,12 +6,13 @@ download_hash_tree::download_hash_tree(
 	Download_Info(Download_Info_in),
 	download_complete(false),
 	close_slots(false),
-	_cancel(false),
-	_visible(true),
 	Tree_Info(Download_Info_in.hash, Download_Info_in.size),
 	DB_Hash(DB)
 {
 	client_server_bridge::start_hash_tree(Download_Info.hash);
+
+	visible = true;
+
 	boost::uint64_t bad_block;
 	if(Hash_Tree.check(Tree_Info, bad_block)){
 		//hash tree good, signal download_complete
@@ -24,7 +25,7 @@ download_hash_tree::download_hash_tree(
 
 download_hash_tree::~download_hash_tree()
 {
-	if(_cancel){
+	if(cancel){
 		DB_Download.terminate(Download_Info.hash, Download_Info.size);
 		client_server_bridge::finish_download(Download_Info.hash);
 		std::remove((global::DOWNLOAD_DIRECTORY + Download_Info.name).c_str());
@@ -33,17 +34,12 @@ download_hash_tree::~download_hash_tree()
 	}
 }
 
-const bool & download_hash_tree::canceled()
-{
-	return _cancel;
-}
-
 bool download_hash_tree::complete()
 {
 	return download_complete;
 }
 
-const download_info & download_hash_tree::get_download_info()
+download_info download_hash_tree::get_download_info()
 {
 	return Download_Info;
 }
@@ -189,7 +185,7 @@ void download_hash_tree::response(const int & socket, std::string block)
 			block.erase(0, 1); //trim command
 
 			//write hash only if not cancelled
-			if(!_cancel && !Hash_Tree.write_block(Tree_Info, conn->latest_request.front(), block, conn->IP)){
+			if(!cancel && !Hash_Tree.write_block(Tree_Info, conn->latest_request.front(), block, conn->IP)){
 				//hash file removed or download cancelled, stop download
 				stop();
 			}
@@ -231,20 +227,20 @@ void download_hash_tree::response(const int & socket, std::string block)
 	exit(1);
 }
 
+const boost::uint64_t download_hash_tree::size()
+{
+	return Tree_Info.get_tree_size();
+}
+
 void download_hash_tree::stop()
 {
-	_cancel = true;
-	_visible = false;
-	if(Connection.size() == 0){
+	cancel = true;
+	visible = false;
+	if(download::connection_count() == 0){
 		download_complete = true;
 	}else{
 		close_slots = true;
 	}
-}
-
-const boost::uint64_t download_hash_tree::size()
-{
-	return Tree_Info.get_tree_size();
 }
 
 void download_hash_tree::unregister_connection(const int & socket)
@@ -263,9 +259,4 @@ void download_hash_tree::unregister_connection(const int & socket)
 
 	download::unregister_connection(socket);
 	Connection_Special.erase(socket);
-}
-
-bool download_hash_tree::visible()
-{
-	return _visible;
 }

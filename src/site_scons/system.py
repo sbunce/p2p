@@ -16,9 +16,23 @@ def env_setup(env):
 	num_cpu = int(os.environ.get('NUM_CPU', 2))
 	env.SetOption('num_jobs', num_cpu)
 
-	env['CPPPATH'] = ['#/libtommath', '#/libsqlite3'] #header search path
-	env['LIBPATH'] = ['#libtommath', '#libsqlite3']   #library search path
-	env['LIBS'] = ['tommath', 'sqlite3']              #libraries to link in
+	#header search path
+	env['CPPPATH'] = [
+		'#/libtommath',
+		'#/libsqlite3'
+	]
+
+	#library search path
+	env['LIBPATH'] = [
+		'#libtommath',
+		'#libsqlite3'
+	]
+
+	#libraries to link in
+	env['LIBS'] = [
+		'tommath', 
+		'sqlite3'
+	]
 
 	#platform specific options
 	if sys.platform == 'linux2':
@@ -34,6 +48,13 @@ def env_setup(env):
 		env['CCFLAGS'].append('/DWIN32') #make sure this is defined
 		env['LIBS'].append('ws2_32')     #winsock
 		env['LIBS'].append('advapi32')   #random number gen
+
+def env_setup_static(env):
+	environment.define_keys(env)
+	if sys.platform == 'linux2':
+		env['LINKFLAGS'].append('-static')
+		env['LINKFLAGS'].append('-static-libgcc')
+		env['LINKFLAGS'].append('`g++ -print-file-name=libstdc++.a`')
 
 def __win32_lib_dir():
 	search_dir = '/Program Files/Microsoft SDKs/Windows/'

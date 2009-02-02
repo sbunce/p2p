@@ -1,8 +1,8 @@
-/*
-Info necessary to start a download.
-*/
 #ifndef H_DOWNLOAD_INFO
 #define H_DOWNLOAD_INFO
+
+//boost
+#include <boost/filesystem.hpp>
 
 //custom
 #include "global.hpp"
@@ -21,12 +21,16 @@ public:
 		hash(hash_in),
 		name(name_in),
 		size(size_in)
-	{}
+	{
+		namespace fs = boost::filesystem;
+		fs::path path = fs::system_complete(fs::path(global::DOWNLOAD_DIRECTORY + name, fs::native));
+		file_path = path.string();
+	}
 
-	//information guaranteed to be set
-	std::vector<std::string> IP; //IP's off all servers downloading file from
+	std::vector<std::string> IP; //IP's of all servers that possibly have the file
 	std::string hash;            //root hash of hash tree
 	std::string name;            //name of the file
+	std::string file_path;       //full path to downloading file
 	boost::uint64_t size;        //size of the file (bytes)
 };
 #endif

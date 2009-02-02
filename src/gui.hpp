@@ -8,6 +8,7 @@
 //custom
 #include "client.hpp"
 #include "convert.hpp"
+#include "database.hpp"
 #include "download_info.hpp"
 #include "global.hpp"
 #include "gui_about.hpp"

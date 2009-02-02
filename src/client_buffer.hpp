@@ -1,7 +1,10 @@
-//THREADSAFE
+//NOT-THREADSAFE
 
 /*
-This class instantiates itself.
+The NOT-THREADSAFE functions are annotated at the top of the class definition.
+
+The client_buffer was intentionally made NOT-THREADSAFE to avoid copying a
+buffer. However, it's simple to follow the imposed constrains due to this.
 */
 
 #ifndef H_CLIENT_BUFFER
@@ -18,6 +21,7 @@ This class instantiates itself.
 #include "download_status.hpp"
 #include "encryption.hpp"
 #include "global.hpp"
+#include "locking_shared_ptr.hpp"
 
 //std
 #include <ctime>
@@ -39,6 +43,28 @@ public:
 
 	~client_buffer();
 
+
+	/****************************************************************************
+	BEGIN NOT-THREADSAFE
+	WARNING: These functions should only be called by main_thread in the client.
+	****************************************************************************/
+	/*
+	Causes all client_buffers to query their downloads to see if they need to make
+	new requests.
+	WARNING: This function touches send_buff which get_send_buff() returns.
+	*/
+	static void generate_requests();
+
+	/*
+	Returns the client_buffer send_buff that corresponds to socket_FD.
+	WARNING: Returns a reference to the buffer that generate_requests() modifies.
+	*/
+	static std::string & get_send_buff(const int & socket_FD);
+	/****************************************************************************
+	END NOT-THREADSAFE
+	****************************************************************************/
+
+
 	/*
 	Try to add download to an existing client_buffer. If client_buffer is found
 	then return true. If no client_buffer is found false will be returned and a
@@ -50,7 +76,7 @@ public:
 	Add a download to the client_buffer. Doesn't associate the download with any
 	instantiation of client_buffer.
 	*/
-	static void add_download(download * Download);
+	static void add_download(locking_shared_ptr<download> Download);
 
 	/*
 	Populates the info vector with download information for all downloads running
@@ -60,21 +86,22 @@ public:
 	static void current_downloads(std::vector<download_status> & info, std::string hash);
 
 	/*
-	Deletes all downloads in client_buffer and deletes all client_buffer instantiations.
-	This is used when client is being destroyed.
-	*/
-	static void destroy();
-
-	/*
 	Erases an element from Client_Buffer associated with socket_FD. This should be
 	called whenever a socket is disconnected.
 	*/
 	static void erase(const int & socket_FD);
 
 	/*
+	Returns the counter that indicates whether a send needs to be done. If it is
+	zero no send needs to be done. Every +1 above zero it is indicates a send_buff
+	has something in it.
+	*/
+	static int get_send_pending();
+
+	/*
 	Check if a download is running. Returns true if yes, else false.
 	*/
-	static bool is_downloading(download * Download);
+	static bool is_downloading(locking_shared_ptr<download> Download);
 
 	/*
 	Check by hash if a download is running. Returns true if yes, else false.
@@ -86,7 +113,7 @@ public:
 	WARNING: Do not do anything with these pointers but compare them by value. Any
 	         dereferencing of these pointers is NOT thread safe.
 	*/
-	static void find_complete(std::list<download *> & complete);
+	static void find_complete(std::vector<locking_shared_ptr<download> > & complete);
 
 	/*
 	Removes all empty client_buffers and returns their socket numbers which need
@@ -101,25 +128,6 @@ public:
 	static void find_timed_out(std::vector<int> & timed_out);
 
 	/*
-	Causes all client_buffers to query their downloads to see if they need to make
-	new requests.
-	*/
-	static void generate_requests();
-
-	/*
-	Returns the counter that indicates whether a send needs to be done. If it is
-	zero no send needs to be done. Every +1 above zero it is indicates a send_buff
-	has something in it.
-	*/
-	static int get_send_pending();
-
-	/*
-	Returns the client_buffer send_buff that corresponds to socket_FD.
-	WARNING: violates encapsulation, NOT thread safe to call this from multiple threads
-	*/
-	static std::string & get_send_buff(const int & socket_FD);
-
-	/*
 	Creates new client_buffer. Registers the download with the client_buffer.
 	Registers the download_conn with the download.
 
@@ -132,10 +140,11 @@ public:
 	static void new_connection(const download_connection & DC);
 
 	/*
-	Should be called after sending data. This function evaluates whether or not the
-	send_buff was emptied. If it was then it decrements send_pending.
+	Should be called after sending data. This function erases the sent bytes and
+	evaluates whether or not the send_buff was emptied. If it was then it
+	decrements send_pending.
 	*/
-	static void post_send(const int & socket_FD);
+	static void post_send(const int & socket_FD, const int & n_bytes);
 
 	/*
 	Append bytes to a buffer for a specified socket.
@@ -146,7 +155,7 @@ public:
 	Remove the download from the Unique_Download container and from any instantiation
 	of the client_buffer.
 	*/
-	static void remove_download(download * Download);
+	static void remove_download(locking_shared_ptr<download> Download);
 
 	//stops the download associated with hash
 	static void stop_download(const std::string & hash);
@@ -155,9 +164,19 @@ private:
 	//only the client_buffer can instantiate itself
 	client_buffer(const int & socket_in, const std::string & IP_in);
 
-	static boost::mutex Mutex;                           //mutex for any access to a download
-	static std::map<int, client_buffer *> Client_Buffer; //socket mapped to client_buffer
-	static std::set<download *> Unique_Download;         //all current downloads
+	//used to protect all public static functions
+	static boost::mutex Mutex;
+
+	/*
+	All currently running downloads. All use of Unique_Download should be locked with UD_mutex.
+	*/
+	static std::set<locking_shared_ptr<download> > Unique_Download;
+
+	/*
+	Socket mapped to client_buffer. All use of Client_Buffer should be locked with CB_mutex.
+	This includes all calls to client_buffer member functions.
+	*/
+	static std::map<int, boost::shared_ptr<client_buffer> > Client_Buffer;
 
 	/*
 	When this is zero there are no pending requests to send. This exists for the
@@ -183,8 +202,8 @@ private:
 	The Download container is effectively a ring. The rotate_downloads() function will move
 	Download_iter through it in a circular fashion.
 	*/
-	std::list<download *> Download;                //all downloads that this client_buffer is serving
-	std::list<download *>::iterator Download_iter; //last download a request was gotten from
+	std::list<locking_shared_ptr<download> > Download;                //all downloads that this client_buffer is serving
+	std::list<locking_shared_ptr<download> >::iterator Download_iter; //last download a request was gotten from
 
 	std::string IP;   //IP associated with this client_buffer
 	int socket;       //socket number of this element
@@ -199,19 +218,20 @@ private:
 		pending_response(){}
 
 		//copy ctor
-		pending_response(const pending_response & PR)
-		{
-			Mode = PR.Mode;
-			expected = PR.expected;
-			Download = PR.Download;
-		}
+		pending_response(
+			const pending_response & PR
+		):
+			Mode(PR.Mode),
+			expected(PR.expected),
+			Download(PR.Download)
+		{}
 
 		//mode determines how to parse the response
 		download::mode Mode;
 
 		//possible responses paired with size of the possible response
 		std::vector<std::pair<char, int> > expected;
-		download * Download;
+		locking_shared_ptr<download> Download;
 	};
 
 	/*
@@ -247,9 +267,9 @@ private:
 	bool empty();
 	void post_recv();
 	void prepare_request();
-	void register_download(download * new_download);
+	void register_download(locking_shared_ptr<download> new_download);
 	bool rotate_downloads();
-	void terminate_download(download * term_DL);
+	void terminate_download(locking_shared_ptr<download> term_DL);
 	void unregister_all();
 
 	/*

@@ -1,3 +1,5 @@
+//NOT-THREADSAFE
+
 #ifndef H_SHA
 #define H_SHA
 

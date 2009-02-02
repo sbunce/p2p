@@ -1,3 +1,9 @@
+//SINGLETON, THREADSAFE, THREAD SPAWNING
+
+/*
+this must be shared between client and server, make it a singleton?
+*/
+
 #ifndef H_SERVERINDEX
 #define H_SERVERINDEX
 
@@ -9,8 +15,6 @@
 #include <boost/utility.hpp>
 
 //custom
-#include "atomic_bool.hpp"
-#include "atomic_int.hpp"
 #include "client_server_bridge.hpp"
 #include "database.hpp"
 #include "global.hpp"
@@ -30,19 +34,30 @@
 class server_index : private boost::noncopyable
 {
 public:
-	server_index();
 	~server_index();
 
 	/*
-	is_indexing - true if indexing(scanning for new files and hashing)
+	Adds a path to the directory tree if one doesn't already exist. The files
+	pointed to by the path isn't hashed. It is only added to the tree.
+
+	This function is commonly used when a download finishes and the downloaded
+	file needs to be added to the tree.
 	*/
-	bool is_indexing();
+	static void add_path(const std::string & path);
+
+	//instantiates the singleton
+	static void init();
+
+	//returns true if indexing
+	static bool is_indexing();
 
 private:
-	/*
-	WARNING: All private functions and data should only be used by indexing_thread.
-	The only exception to this is variable: indexing
-	*/
+	server_index();
+
+	static boost::mutex init_mutex;     //mutex specifically for init()
+	static server_index * Server_Index; //one possible instance of server_index
+
+	//indexing thread (runs in main_loop)
 	boost::thread indexing_thread;
 
 	class directory_contents
@@ -55,6 +70,15 @@ private:
 
 	//root node of directory tree
 	std::map<std::string, directory_contents> Root;
+
+	/*
+	The add_path function stores paths to be added to the tree here. These paths
+	are in turn processed in the main_loop() functino by the indexing_thread.
+
+	All access to Pending_Add_Path should be locked with PAD_mutex.
+	*/
+	boost::mutex PAD_mutex;
+	std::vector<std::string> Pending_Add_Path;
 
 	/*
 	Returned by is_indexing. This indicates the server_index is hashing files.
@@ -96,10 +120,12 @@ private:
 	bool check_missing_recurse_2(directory_contents & DC, std::string current_directory);
 
 	/*
+	add_pending        - processes Pending_Add_Path
 	generate_hash_tree - generates a hash tree and adds information to database
 	scan_share         - calls check_path() on every file in share
 	tokenize_path      - breaks up a path in to tokens, ex: /full/path -> "full", "path" (with no quotes/comma)
 	*/
+	void add_pending();
 	void generate_hash_tree(const std::string & file_path);
 	void scan_share(std::string directory_name);
 	void tokenize_path(const std::string & path, std::deque<std::string> & tokens);

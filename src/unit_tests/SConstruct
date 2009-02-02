@@ -77,6 +77,7 @@ env.unit_test([
 	'../database_connection.cpp',
 	'../speed_calculator.cpp',
 	boost.static_lib('date_time'),
+	boost.static_lib('filesystem'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])

@@ -60,7 +60,7 @@ namespace global
 	const unsigned UPLOAD_RATE = std::numeric_limits<unsigned>::max();   //default max upload rate (B/s)
 
 	//hard settings, not changed at runtime
-	const unsigned SHARE_SCAN_RATE = 2;       //share scan rate (files/second)
+	const unsigned SHARE_SCAN_RATE = 8;       //share scan rate (files/second)
 	const unsigned PRIME_CACHE = 32;          //number of primes to keep in prime cache for diffie-hellman
 	const unsigned DH_KEY_SIZE = 64;          //size of key exchanged with diffie-hellman (bytes)
 	const unsigned PIPELINE_SIZE = 16;        //max pre-requests that can be done (must be >= 2)

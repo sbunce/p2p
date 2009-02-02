@@ -1,15 +1,14 @@
 TODO
 
--replace download pointers in client_buffer with shared_ptr's
-
--client locking up on Rate_Limit.download_rate_limit call
+-add stop/start functions to download, and rename cancel to remove
 
 
-HEADER FILE TAGS
+HEADER ANNOTATIONS
 
 THREADSAFE      - object is internally locked and threadsafe
 NON-THREADSAFE  - object not threadsafe
 THREAD SPAWNING - instantiating or calling member functions of this object may spawn threads
+SINGLETON       - class implements singleton design pattern
 
 
 KEY EXCHANGE ALGORITHM

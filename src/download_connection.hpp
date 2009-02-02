@@ -3,6 +3,7 @@
 
 //custom
 #include "download.hpp"
+#include "locking_shared_ptr.hpp"
 
 //std
 #include <string>
@@ -14,7 +15,7 @@ class download_connection
 {
 public:
 	download_connection(
-		download * Download_in,
+		locking_shared_ptr<download> Download_in,
 		const std::string & IP_in
 	):
 		Download(Download_in),
@@ -24,6 +25,6 @@ public:
 
 	int socket;
 	std::string IP;
-	download * Download;
+	locking_shared_ptr<download> Download;
 };
 #endif

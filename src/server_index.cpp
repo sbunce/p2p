@@ -1,5 +1,31 @@
 #include "server_index.hpp"
 
+//BEGIN STATIC
+boost::mutex server_index::init_mutex;
+server_index * server_index::Server_Index(NULL);
+
+void server_index::add_path(const std::string & path)
+{
+	init();
+	boost::mutex::scoped_lock lock(Server_Index->PAD_mutex);
+	Server_Index->Pending_Add_Path.push_back(path);
+}
+
+bool server_index::is_indexing()
+{
+	init();
+	return Server_Index->indexing;
+}
+
+void server_index::init()
+{
+	boost::mutex::scoped_lock lock(init_mutex);
+	if(Server_Index == NULL){
+		Server_Index = new server_index();
+	}
+}
+//END STATIC
+
 server_index::server_index()
 :
 	indexing(false),
@@ -13,6 +39,21 @@ server_index::~server_index()
 {
 	indexing_thread.interrupt();
 	indexing_thread.join();
+}
+
+void server_index::add_pending()
+{
+	boost::mutex::scoped_lock lock(PAD_mutex);
+	generate_hash_tree_disabled = true;
+	std::vector<std::string>::iterator iter_cur, iter_end;
+	iter_cur = Pending_Add_Path.begin();
+	iter_end = Pending_Add_Path.end();
+	while(iter_cur != iter_end){
+		check_path(*iter_cur);
+		++iter_cur;
+	}
+	Pending_Add_Path.clear();
+	generate_hash_tree_disabled = false;
 }
 
 void server_index::check_path(const std::string & path)
@@ -148,11 +189,6 @@ void server_index::generate_hash_tree(const std::string & file_path)
 	}
 }
 
-bool server_index::is_indexing()
-{
-	return indexing;
-}
-
 int server_index::path_call_back(int columns_retrieved, char ** response, char ** column_name)
 {
 	assert(response[0]);
@@ -166,6 +202,7 @@ void server_index::main_loop()
 		portable_sleep::ms(1000);
 	}
 
+	//populate directory tree
 	DB.query("SELECT path FROM share", this, &server_index::path_call_back);
 	generate_hash_tree_disabled = false;
 
@@ -174,6 +211,7 @@ void server_index::main_loop()
 		scan_share(global::SHARE_DIRECTORY);
 		indexing = false;
 		check_missing();
+		add_pending();
 
 		//1 second sleep between scans, needed for when share empty
 		portable_sleep::ms(1000);

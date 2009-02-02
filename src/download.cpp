@@ -1,6 +1,7 @@
 #include "download.hpp"
 
 download::download()
+: cancel(false), visible(false)
 {
 
 }
@@ -10,10 +11,30 @@ download::~download()
 
 }
 
+int download::connection_count()
+{
+	return Connection.size();
+}
+
+bool download::is_cancelled()
+{
+	return cancel;
+}
+
+download_info download::get_download_info()
+{
+	return download_info("FUNCTION NOT SET IN DERIVED", "FUNCTION NOT SET IN DERIVED", 0);
+}
+
 const std::string download::hash()
 {
 	//if download visible this should be defined in derived
 	return "FUNCTION NOT SET IN DERIVED";
+}
+
+bool download::is_visible()
+{
+	return visible;
 }
 
 const std::string download::name()
@@ -27,6 +48,11 @@ unsigned download::percent_complete()
 	return 0;
 }
 
+const boost::uint64_t download::size()
+{
+	return 0;
+}
+
 unsigned download::speed()
 {
 	if(Connection.empty()){
@@ -34,11 +60,6 @@ unsigned download::speed()
 	}else{
 		return Speed_Calculator.speed();
 	}
-}
-
-const boost::uint64_t download::size()
-{
-	return 0;
 }
 
 void download::register_connection(const download_connection & DC)
@@ -61,11 +82,6 @@ void download::servers(std::vector<std::string> & IP, std::vector<unsigned> & sp
 void download::unregister_connection(const int & socket)
 {
 	Connection.erase(socket);
-}
-
-bool download::visible()
-{
-	return false;
 }
 
 void download::update_speed(const int & socket, const int & n_bytes)

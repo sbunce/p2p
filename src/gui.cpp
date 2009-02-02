@@ -585,9 +585,18 @@ bool gui::update_status_bar()
 	server_rate_s << convert::size_unit_select(server_rate) << "/s";
 
 	std::stringstream ss;
-	ss << "  D: " + client_rate_s.str() << " U: " << server_rate_s.str() << "  P:" << Client.prime_count();
+	ss << " D: " << client_rate_s.str();
+	ss << std::string(16 - ss.str().size(), ' ');
+	ss << " U: " << server_rate_s.str();
+	ss << std::string(32 - ss.str().size(), ' ');
+	ss << " P: " << Client.prime_count();
+	ss << std::string(42 - ss.str().size(), ' ');
+	ss << " OPS: " << database::connection::open_speed();
+	ss << std::string(52 - ss.str().size(), ' ');
+	ss << " QPS: " << database::connection::query_speed();
+
 	if(Server.is_indexing()){
-		ss << "  Indexing Share";
+		ss << "  INDEXING";
 	}
 
 	statusbar->pop();

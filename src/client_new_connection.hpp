@@ -1,3 +1,5 @@
+//THREADSAFE, THREAD SPAWNING
+
 #ifndef H_CLIENT_NEW_CONNECTION
 #define H_CLIENT_NEW_CONNECTION
 
@@ -73,13 +75,6 @@ private:
 	*/
 	boost::mutex CCA_mutex;
 	std::list<download_connection> Connection_Current_Attempt;
-
-	/*
-	Mutex for gethostbyname() function which is not reentrant. It uses static
-	memory which makes it so you have to copy what gethostbyname() returns before
-	allowing another thread to use the function.
-	*/
-	boost::mutex gethostbyname_mutex;
 
 	/*
 	add_unresponsive   - adds a IP to the unresponsive map so that connection attempts won't be wasted on it

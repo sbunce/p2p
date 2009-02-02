@@ -132,7 +132,7 @@ private:
 	void remove_empty();
 	void start_download_process(const download_info & info);
 	void start_pending_downloads();
-	void transition_download(download * Download_Stop);
+	void transition_download(locking_shared_ptr<download> Download_Stop);
 
 	client_new_connection Client_New_Connection;
 	database::table::blacklist DB_Blacklist;

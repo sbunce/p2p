@@ -54,13 +54,20 @@ src_common = [
 	'thread_pool.cpp'
 ]
 
+#setup base environment
 env = Environment()
 system.env_setup(env)
 boost.env_setup(env)
+
+#setup base environment with static linking
+env_static = env.Clone()
+system.env_setup_static(env_static)
+
+#setup gui environment
 env_gui = env.Clone()
 gtkmm.env_setup(env_gui)
 
-#export environment to sub scons files
+#export environments to sub scons files
 Export('env')
 Export('env_gui')
 
@@ -90,5 +97,6 @@ src_nogui_obj = env.Object(src_nogui)
 src_common_obj = env.Object(src_common)
 
 #link
-env_gui.Program('p2p_gui', src_gui_obj + src_common_obj + static_libs)
 env.Program('p2p_nogui', src_nogui_obj + src_common_obj + static_libs)
+env_static.Program('p2p_nogui_static', src_nogui_obj + src_common_obj + static_libs)
+env_gui.Program('p2p_gui', src_gui_obj + src_common_obj + static_libs)

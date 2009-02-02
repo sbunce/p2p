@@ -1,3 +1,5 @@
+//THREADSAFE
+
 #ifndef H_SERVER
 #define H_SERVER
 
@@ -82,19 +84,13 @@ private:
 	int FD_max;        //holds the number of the maximum socket
 
 	/*
-	Passed to DB_Blacklist to check for updates to blacklist.
-	WARNING: this should only be used by main_thread
-	*/
-	int blacklist_state;
-
-	/*
 	check_blacklist - disconects servers which have been blacklisted
 	disconnect      - disconnect client and remove socket from master set
 	main_thread     - where the party is at
 	new_conn        - sets up socket for client
 	process_request - adds received bytes to buffer and interprets buffer
 	*/
-	void check_blacklist();
+	void check_blacklist(int & blacklist_state);
 	void disconnect(const int & socketfd);
 	void main_loop();
 	void new_connection(const int & listener);
@@ -103,6 +99,5 @@ private:
 	database::table::blacklist DB_Blacklist;
 	database::table::preferences DB_Preferences;
 	rate_limit Rate_Limit;
-	server_index Server_Index;
 };
 #endif

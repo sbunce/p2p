@@ -5,22 +5,21 @@ download_file::download_file(
 ):
 	Download_Info(Download_Info_in),
 	Tree_Info(Download_Info_in.hash, Download_Info_in.size),
-	file_path(global::DOWNLOAD_DIRECTORY + Download_Info_in.name),
 	hashing(true),
 	hashing_percent(0),
 	download_complete(false),
-	close_slots(false),
-	_cancel(false),
-	_visible(true)
+	close_slots(false)
 {
 	client_server_bridge::start_file(Download_Info.hash, Tree_Info.get_file_block_count());
 
+	visible = true;
+
 	//create empty file for download if one doesn't already exist
-	std::fstream fs(file_path.c_str(), std::ios::in | std::ios::ate);
+	std::fstream fs(Download_Info.file_path.c_str(), std::ios::in | std::ios::ate);
 	if(fs.is_open()){
 		first_unreceived = fs.tellg() / global::FILE_BLOCK_SIZE;
 	}else{
-		fs.open(file_path.c_str(), std::ios::out);
+		fs.open(Download_Info.file_path.c_str(), std::ios::out);
 		first_unreceived = 0;
 	}
 
@@ -30,7 +29,7 @@ download_file::download_file(
 	if(first_unreceived == 0){
 		hashing = false;
 	}else{
-		hashing_thread = boost::thread(boost::bind(&download_file::hash_check, this, Tree_Info, file_path));
+		hashing_thread = boost::thread(boost::bind(&download_file::hash_check, this, Tree_Info, Download_Info.file_path));
 	}
 }
 
@@ -38,12 +37,8 @@ download_file::~download_file()
 {
 	hashing_thread.interrupt();
 	hashing_thread.join();
-	if(_cancel){
-		std::remove(file_path.c_str());
-		DB_Download.terminate(Download_Info.hash, Download_Info.size);
-	}else{
-		DB_Share.add_entry(Download_Info.hash, Download_Info.size, file_path);
-		DB_Download.complete(Download_Info.hash, Download_Info.size);
+	if(cancel){
+		std::remove(Download_Info.file_path.c_str());
 	}
 	client_server_bridge::finish_download(Download_Info.hash);
 }
@@ -51,6 +46,11 @@ download_file::~download_file()
 bool download_file::complete()
 {
 	return download_complete;
+}
+
+download_info download_file::get_download_info()
+{
+	return Download_Info;
 }
 
 const std::string download_file::hash()
@@ -299,34 +299,31 @@ const boost::uint64_t download_file::size()
 
 void download_file::stop()
 {
-	namespace fs = boost::filesystem;
-	fs::path path = fs::system_complete(fs::path(file_path, fs::native));
-	fs::remove(path);
-	if(Connection.size() == 0){
+	if(download::connection_count() == 0){
 		download_complete = true;
 	}else{
 		close_slots = true;
 	}
 
 	//cancelled downloads don't get added to share upon completion
-	_cancel = true;
+	cancel = true;
 
 	//make invisible, cancelling download may take a while
-	_visible = false;
+	visible = false;
 }
 
 void download_file::write_block(boost::uint64_t block_number, std::string & block)
 {
-	if(_cancel){
+	if(cancel){
 		return;
 	}
 
-	std::fstream fout(file_path.c_str(), std::ios::in | std::ios::out | std::ios::binary);
+	std::fstream fout(Download_Info.file_path.c_str(), std::ios::in | std::ios::out | std::ios::binary);
 	if(fout.is_open()){
 		fout.seekp(block_number * global::FILE_BLOCK_SIZE, std::ios::beg);
 		fout.write(block.c_str(), block.size());
 	}else{
-		LOGGER << "error opening file " << file_path;
+		LOGGER << "error opening file " << Download_Info.file_path;
 		stop();
 	}
 }
@@ -347,9 +344,4 @@ void download_file::unregister_connection(const int & socket)
 
 	download::unregister_connection(socket);
 	Connection_Special.erase(socket);
-}
-
-bool download_file::visible()
-{
-	return _visible;
 }

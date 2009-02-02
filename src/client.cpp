@@ -3,6 +3,7 @@
 client::client():
 	connections(0),
 	FD_max(0),
+	Pending_Download(new std::list<download_info>()),
 	Client_New_Connection(master_FDS, FD_max, max_connections, connections)
 {
 	boost::filesystem::create_directory(global::DOWNLOAD_DIRECTORY);
@@ -30,7 +31,6 @@ client::~client()
 {
 	main_thread.interrupt();
 	main_thread.join();
-	client_buffer::destroy();
 
 	#ifdef WIN32
 	WSACleanup();
@@ -134,6 +134,9 @@ unsigned client::get_download_rate()
 
 void client::main_loop()
 {
+	//give GUI some time to start
+	portable_sleep::ms(1000);
+
 	reconnect_unfinished();
 
 	//see documentation in database_table_blacklist to see what this does
@@ -149,27 +152,14 @@ void client::main_loop()
 
 	while(true){
 		boost::this_thread::interruption_point();
-std::cout << "POIK1\n";
 		client_buffer::generate_requests(); //let downloads generate requests
-std::cout << "POIK2\n";
 		check_blacklist(blacklist_state);   //check/disconnect blacklisted IPs
-std::cout << "POIK3\n";
 		if(Time != std::time(NULL)){
-std::cout << "POIK4\n";
 			check_timeouts();          //check/disconnect timed out sockets
-std::cout << "POIK5\n";
 			remove_complete();         //remove completed downloads
-std::cout << "POIK6\n";
 			remove_empty();            //remove empty client_buffers (no downloads)
-std::cout << "POIK7\n";
 			start_pending_downloads(); //start downloads queue'd by the GUI
-std::cout << "POIK8\n";
 			Time = std::time(NULL);
-
-//DEBUG
-std::cout << "open_speed:  " << database::connection::open_speed() << "\n";
-std::cout << "query_speed: " << database::connection::query_speed() << "\n";
-std::cout << "total:       " << database::connection::open_speed() + database::connection::query_speed() << "\n\n";
 		}
 
 		/*
@@ -187,7 +177,7 @@ std::cout << "total:       " << database::connection::open_speed() + database::c
 			continue;
 		}
 		#endif
-std::cout << "POIK9\n";
+
 		if(client_buffer::get_send_pending() != 0){
 			read_FDS = master_FDS;
 			write_FDS = master_FDS;
@@ -215,7 +205,7 @@ std::cout << "POIK9\n";
 				}
 			}
 		}
-std::cout << "POIK10\n";
+
 		/*
 		There is a starvation problem that happens when rate limiting. If all sockets
 		are checked in order and the rate limit is lower than the total bandwidth
@@ -242,18 +232,17 @@ std::cout << "POIK10\n";
 				max_recv = tmp;
 			}
 		}
-std::cout << "POIK11\n";
+
 		//process reads/writes
 		transfer = false;
 		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
-std::cout << "POIK12\n";
 			if(FD_ISSET(socket_FD, &read_FDS)){
-std::cout << "POIK13\n";
+//std::cout << "RL 1\n";
 				if((transfer_limit = Rate_Limit.download_rate_control(global::C_MAX_SIZE*global::PIPELINE_SIZE)) != 0){
+//std::cout << "RL 2\n";
 					if(transfer_limit > max_recv){
 						transfer_limit = max_recv;
 					}
-std::cout << "POIK14\n";
 					if((n_bytes = recv(socket_FD, recv_buff, transfer_limit, MSG_NOSIGNAL)) <= 0){
 						if(n_bytes == -1){
 							#ifdef WIN32
@@ -263,27 +252,20 @@ std::cout << "POIK14\n";
 							#endif
 						}
 						disconnect(socket_FD);
+						continue;
 					}else{
-std::cout << "POIK15\n";
 						Rate_Limit.add_download_bytes(n_bytes);
-std::cout << "POIK16\n";
 						client_buffer::recv_buff_append(socket_FD, recv_buff, n_bytes);
-std::cout << "POIK17\n";
 						transfer = true;
 					}
-std::cout << "POIK18\n";
 				}
-std::cout << "POIK19\n";
 			}
-std::cout << "POIK20\n";
+//std::cout << "RL 3\n";
+
 			if(FD_ISSET(socket_FD, &write_FDS)){
-std::cout << "POIK21\n";
 				std::string * buff = &client_buffer::get_send_buff(socket_FD);
-std::cout << "POIK22\n";
 				if(!buff->empty()){
-std::cout << "POIK23\n";
 					if((n_bytes = send(socket_FD, buff->c_str(), buff->size(), MSG_NOSIGNAL)) < 0){
-std::cout << "POIK24\n";
 						if(n_bytes == -1){
 							#ifdef WIN32
 							LOGGER << "winsock error " << WSAGetLastError();
@@ -292,23 +274,16 @@ std::cout << "POIK24\n";
 							#endif
 						}
 					}else{
-std::cout << "POIK25\n";
-						//remove bytes sent from buffer
 						Rate_Limit.add_upload_bytes(n_bytes);
-std::cout << "POIK26\n";
-						buff->erase(0, n_bytes);
-						client_buffer::post_send(socket_FD);
-std::cout << "POIK27\n";
+						client_buffer::post_send(socket_FD, n_bytes);
 						transfer = true;
 					}
 				}
-std::cout << "POIK28\n";
 			}
-std::cout << "POIK29\n";
 		}
-std::cout << "POIK30\n";
+
 		if(!transfer){
-			boost::this_thread::yield();
+			portable_sleep::ms(1);
 		}
 	}
 }
@@ -329,13 +304,13 @@ void client::reconnect_unfinished()
 
 void client::remove_complete()
 {
-	std::list<download *> complete;
+	std::vector<locking_shared_ptr<download> > complete;
 	client_buffer::find_complete(complete);
 	if(complete.empty()){
 		return;
 	}
 
-	std::list<download *>::iterator C_iter_cur, C_iter_end;
+	std::vector<locking_shared_ptr<download> >::iterator C_iter_cur, C_iter_end;
 	C_iter_cur = complete.begin();
 	C_iter_end = complete.end();
 	while(C_iter_cur != C_iter_end){
@@ -403,11 +378,12 @@ void client::stop_download(std::string hash)
 
 void client::start_download_process(const download_info & info)
 {
-	download * Download;
-	std::list<download_connection> servers;
-	if(Download_Factory.start(info, Download, servers)){
+	locking_shared_ptr<download> Download;
+	std::vector<download_connection> servers;
+	Download = Download_Factory.start(info, servers);
+	if(Download.get() != NULL){
 		client_buffer::add_download(Download);
-		std::list<download_connection>::iterator iter_cur, iter_end;
+		std::vector<download_connection>::iterator iter_cur, iter_end;
 		iter_cur = servers.begin();
 		iter_end = servers.end();
 		while(iter_cur != iter_end){
@@ -450,7 +426,7 @@ unsigned client::total_rate()
 	return Rate_Limit.download_speed();
 }
 
-void client::transition_download(download * Download_Stop)
+void client::transition_download(locking_shared_ptr<download> Download_Stop)
 {
 	client_buffer::remove_download(Download_Stop);
 	/*
@@ -461,11 +437,12 @@ void client::transition_download(download * Download_Stop)
 	the DC's for that server will be added to client_buffers so that no
 	reconnecting has to be done.
 	*/
-	std::list<download_connection> servers;
-	download * Download_Start;
-	if(Download_Factory.stop(Download_Stop, Download_Start, servers)){
+	std::vector<download_connection> servers;
+	locking_shared_ptr<download> Download_Start;
+	Download_Start = Download_Factory.stop(Download_Stop, servers);
+	if(Download_Start.get() != NULL){
 		client_buffer::add_download(Download_Start);
-		std::list<download_connection>::iterator iter_cur, iter_end;
+		std::vector<download_connection>::iterator iter_cur, iter_end;
 		iter_cur = servers.begin();
 		iter_end = servers.end();
 		while(iter_cur != iter_end){

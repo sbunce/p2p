@@ -6,17 +6,18 @@ download_factory::download_factory()
 
 }
 
-bool download_factory::start(download_info info, download *& Download, std::list<download_connection> & servers)
+locking_shared_ptr<download> download_factory::start(download_info info, std::vector<download_connection> & servers)
 {
 	if(client_buffer::is_downloading(info.hash)){
 		LOGGER << "file '" << info.name << "' already downloading";
-		return false;
+		return locking_shared_ptr<download>();
 	}
 	if(DB_Share.lookup_hash(info.hash)){
 		LOGGER << "file '" << info.name << "' already exists in share";
-		return false;
+		return locking_shared_ptr<download>();
 	}
 
+	locking_shared_ptr<download> Download;
 	if(DB_Download.lookup_hash(info.hash)){
 		//download being resumed
 		database::table::hash::state State = DB_Hash.get_state(info.hash, hash_tree::file_size_to_tree_size(info.size));
@@ -30,50 +31,50 @@ bool download_factory::start(download_info info, download *& Download, std::list
 		}
 	}else{
 		//new download being started
-		if(!DB_Download.start(info)){
-			return false;
+		if(DB_Download.start(info)){
+			Download = start_hash_tree(info, servers);
 		}
-		Download = start_hash_tree(info, servers);
 	}
-	return true;
+	return Download;
 }
 
-download * download_factory::start_file(const download_info & info, std::list<download_connection> & servers)
+locking_shared_ptr<download> download_factory::start_file(const download_info & info, std::vector<download_connection> & servers)
 {
-	download * Download = new download_file(info);
+	locking_shared_ptr<download> Download(new download_file(info));
 	for(int x=0; x < info.IP.size(); ++x){
 		servers.push_back(download_connection(Download, info.IP[x]));
 	}
 	return Download;
 }
 
-download * download_factory::start_hash_tree(const download_info & info, std::list<download_connection> & servers)
+locking_shared_ptr<download> download_factory::start_hash_tree(const download_info & info, std::vector<download_connection> & servers)
 {
-	download * Download = new download_hash_tree(info);
+	locking_shared_ptr<download> Download(new download_hash_tree(info));
 	for(int x=0; x < info.IP.size(); ++x){
 		servers.push_back(download_connection(Download, info.IP[x]));
 	}
 	return Download;
 }
 
-bool download_factory::stop(download * Download_Stop, download *& Download_Start, std::list<download_connection> & servers)
+locking_shared_ptr<download> download_factory::stop(locking_shared_ptr<download> Download_Stop, std::vector<download_connection> & servers)
 {
-	if(typeid(*Download_Stop) == typeid(download_hash_tree)){
-		if(((download_hash_tree *)Download_Stop)->canceled() == true){
-			//user cancelled download, don't trigger download_file start
-			delete Download_Stop;
-			return false;
+	locking_shared_ptr<download> Download_Start;
+	if(typeid(**Download_Stop) == typeid(download_hash_tree)){
+		if(!Download_Stop->is_cancelled()){
+			Download_Start = start_file(Download_Stop->get_download_info(), servers);
+		}
+	}else if(typeid(**Download_Stop) == typeid(download_file)){
+		download_info Download_Info = Download_Stop->get_download_info();
+		if(Download_Stop->is_cancelled()){
+			DB_Download.terminate(Download_Info.hash, Download_Info.size);
 		}else{
-			//trigger download_file start
-			Download_Start = start_file(((download_hash_tree *)Download_Stop)->get_download_info(), servers);
-			delete Download_Stop;
-			return true;
+			DB_Share.add_entry(Download_Info.hash, Download_Info.size, Download_Info.file_path);
+			DB_Download.complete(Download_Info.hash, Download_Info.size);
+			server_index::add_path(Download_Info.file_path);
 		}
-	}else if(typeid(*Download_Stop) == typeid(download_file)){
-		delete Download_Stop;
-		return false;
 	}else{
 		LOGGER << "unrecognized download type";
 		exit(1);
 	}
+	return Download_Start;
 }

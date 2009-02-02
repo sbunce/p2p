@@ -1,15 +1,16 @@
 #include "client_buffer.hpp"
 
 //BEGIN STATIC
-std::map<int, client_buffer *> client_buffer::Client_Buffer;
-std::set<download *> client_buffer::Unique_Download;
 boost::mutex client_buffer::Mutex;
+std::map<int, boost::shared_ptr<client_buffer> > client_buffer::Client_Buffer;
+std::set<locking_shared_ptr<download> > client_buffer::Unique_Download;
 int client_buffer::send_pending(0);
 
 bool client_buffer::add_connection(download_connection & DC)
 {
+//std::cout << "start 1\n";
 	boost::mutex::scoped_lock lock(Mutex);
-	std::map<int, client_buffer *>::iterator iter_cur, iter_end;
+	std::map<int, boost::shared_ptr<client_buffer> >::iterator iter_cur, iter_end;
 	iter_cur = Client_Buffer.begin();
 	iter_end = Client_Buffer.end();
 	while(iter_cur != iter_end){
@@ -17,31 +18,36 @@ bool client_buffer::add_connection(download_connection & DC)
 			DC.socket = iter_cur->second->socket;             //set socket of the discovered client_buffer
 			DC.Download->register_connection(DC);             //register connection with download
 			iter_cur->second->register_download(DC.Download); //register download with client_buffer
+//std::cout << "end 1\n";
 			return true;
 		}
 		++iter_cur;
 	}
+//std::cout << "end 1\n";
 	return false;
 }
 
-void client_buffer::add_download(download * Download)
+void client_buffer::add_download(locking_shared_ptr<download> Download)
 {
+//std::cout << "start 2\n";
 	boost::mutex::scoped_lock lock(Mutex);
 	Unique_Download.insert(Download);
+//std::cout << "end 2\n";
 }
 
 void client_buffer::current_downloads(std::vector<download_status> & info, std::string hash)
 {
+//std::cout << "start 3\n";
 	boost::mutex::scoped_lock lock(Mutex);
 	info.clear();
 
 	if(hash.empty()){
 		//info for all downloads
-		std::set<download *>::iterator iter_cur, iter_end;
+		std::set<locking_shared_ptr<download> >::iterator iter_cur, iter_end;
 		iter_cur = Unique_Download.begin();
 		iter_end = Unique_Download.end();
 		while(iter_cur != iter_end){
-			if((*iter_cur)->visible()){
+			if((*iter_cur)->is_visible()){
 				download_status Download_Status(
 					(*iter_cur)->hash(),
 					(*iter_cur)->name(),
@@ -56,7 +62,7 @@ void client_buffer::current_downloads(std::vector<download_status> & info, std::
 		}
 	}else{
 		//info for one download
-		std::set<download *>::iterator iter_cur, iter_end;
+		std::set<locking_shared_ptr<download> >::iterator iter_cur, iter_end;
 		iter_cur = Unique_Download.begin();
 		iter_end = Unique_Download.end();
 		while(iter_cur != iter_end){
@@ -75,59 +81,55 @@ void client_buffer::current_downloads(std::vector<download_status> & info, std::
 			++iter_cur;
 		}
 	}
-}
-
-void client_buffer::destroy()
-{
-	while(!Unique_Download.empty()){
-		delete *Unique_Download.begin();
-		Unique_Download.erase(Unique_Download.begin());
-	}
-	while(!Client_Buffer.empty()){
-		delete Client_Buffer.begin()->second;
-		Client_Buffer.erase(Client_Buffer.begin());
-	}
+//std::cout << "end 3\n";
 }
 
 void client_buffer::erase(const int & socket_FD)
 {
+//std::cout << "start 4\n";
 	boost::mutex::scoped_lock lock(Mutex);
-	std::map<int, client_buffer *>::iterator iter = Client_Buffer.find(socket_FD);
+	std::map<int, boost::shared_ptr<client_buffer> >::iterator iter = Client_Buffer.find(socket_FD);
 	assert(iter != Client_Buffer.end());
 	if(!iter->second->send_buff.empty()){
 		//send_buff contains data, decrement send_pending
 		--send_pending;
 	}
-	delete iter->second;
 	Client_Buffer.erase(iter);
+//std::cout << "end 4\n";
 }
 
-bool client_buffer::is_downloading(download * Download)
+bool client_buffer::is_downloading(locking_shared_ptr<download> Download)
 {
+//std::cout << "start 5\n";
 	boost::mutex::scoped_lock lock(Mutex);
-	std::set<download *>::iterator iter = Unique_Download.find(Download);
+	std::set<locking_shared_ptr<download> >::iterator iter = Unique_Download.find(Download);
 	return iter != Unique_Download.end();
+//std::cout << "end 5\n";
 }
 
 bool client_buffer::is_downloading(const std::string & hash)
 {
+//std::cout << "start 6\n";
 	boost::mutex::scoped_lock lock(Mutex);
-	std::set<download *>::iterator iter_cur, iter_end;
+	std::set<locking_shared_ptr<download> >::iterator iter_cur, iter_end;
 	iter_cur = Unique_Download.begin();
 	iter_end = Unique_Download.end();
 	while(iter_cur != iter_end){
 		if((*iter_cur)->hash() == hash){
+//std::cout << "end 6\n";
 			return true;
 		}
 		++iter_cur;
 	}
+//std::cout << "end 6\n";
 	return false;
 }
 
-void client_buffer::find_complete(std::list<download *> & complete)
+void client_buffer::find_complete(std::vector<locking_shared_ptr<download> > & complete)
 {
+//std::cout << "start 7\n";
 	boost::mutex::scoped_lock lock(Mutex);
-	std::set<download *>::iterator iter_cur, iter_end;
+	std::set<locking_shared_ptr<download> >::iterator iter_cur, iter_end;
 	iter_cur = Unique_Download.begin();
 	iter_end = Unique_Download.end();
 	while(iter_cur != iter_end){
@@ -136,12 +138,14 @@ void client_buffer::find_complete(std::list<download *> & complete)
 		}
 		++iter_cur;
 	}
+//std::cout << "end 7\n";
 }
 
 void client_buffer::find_empty(std::vector<int> & disconnect_sockets)
 {
+//std::cout << "start 8\n";
 	boost::mutex::scoped_lock lock(Mutex);
-	std::map<int, client_buffer *>::iterator iter_cur, iter_end;
+	std::map<int, boost::shared_ptr<client_buffer> >::iterator iter_cur, iter_end;
 	iter_cur = Client_Buffer.begin();
 	iter_end = Client_Buffer.end();
 	while(iter_cur != iter_end){
@@ -150,12 +154,14 @@ void client_buffer::find_empty(std::vector<int> & disconnect_sockets)
 		}
 		++iter_cur;
 	}
+//std::cout << "end 8\n";
 }
 
 void client_buffer::find_timed_out(std::vector<int> & timed_out)
 {
+//std::cout << "start 9\n";
 	boost::mutex::scoped_lock lock(Mutex);
-	std::map<int, client_buffer *>::iterator iter_cur, iter_end;
+	std::map<int, boost::shared_ptr<client_buffer> >::iterator iter_cur, iter_end;
 	iter_cur = Client_Buffer.begin();
 	iter_end = Client_Buffer.end();
 	while(iter_cur != iter_end){
@@ -164,37 +170,46 @@ void client_buffer::find_timed_out(std::vector<int> & timed_out)
 		}
 		++iter_cur;
 	}
+//std::cout << "end 9\n";
 }
 
 void client_buffer::generate_requests()
 {
+//std::cout << "start 10\n";
 	boost::mutex::scoped_lock lock(Mutex);
-	std::map<int, client_buffer *>::iterator iter_cur, iter_end;
+	std::map<int, boost::shared_ptr<client_buffer> >::iterator iter_cur, iter_end;
 	iter_cur = Client_Buffer.begin();
 	iter_end = Client_Buffer.end();
 	while(iter_cur != iter_end){
 		iter_cur->second->prepare_request();
 		++iter_cur;
 	}
+//std::cout << "end 10\n";
 }
 
 int client_buffer::get_send_pending()
 {
+//std::cout << "start 11\n";
 	boost::mutex::scoped_lock lock(Mutex);
+	assert(send_pending >= 0);
 	return send_pending;
+//std::cout << "end 11\n";
 }
 
 std::string & client_buffer::get_send_buff(const int & socket_FD)
 {
+//std::cout << "start 12\n";
 	boost::mutex::scoped_lock lock(Mutex);
-	std::map<int, client_buffer *>::iterator iter = Client_Buffer.find(socket_FD);
+	std::map<int, boost::shared_ptr<client_buffer> >::iterator iter = Client_Buffer.find(socket_FD);
 	assert(iter != Client_Buffer.end());
 	return iter->second->send_buff;
+//std::cout << "end 12\n";
 }
 
 void client_buffer::new_connection(const download_connection & DC)
 {
-	boost::mutex::scoped_lock lock(Mutex);
+//std::cout << "start 13\n";
+	boost::mutex::scoped_lock lock_1(Mutex);
 	Client_Buffer.insert(std::make_pair(DC.socket, new client_buffer(DC.socket, DC.IP)));
 
 	/*
@@ -202,48 +217,59 @@ void client_buffer::new_connection(const download_connection & DC)
 	ended before this function was called. When this happens there will be an
 	empty client_buffer that will get cleaned up by the client.
 	*/
-	std::set<download *>::iterator iter = Unique_Download.find(DC.Download);
+	std::set<locking_shared_ptr<download> >::iterator iter = Unique_Download.find(DC.Download);
 	if(iter != Unique_Download.end()){
 		Client_Buffer[DC.socket]->register_download(DC.Download);
 		DC.Download->register_connection(DC);
 	}
+//std::cout << "end 13\n";
 }
 
-void client_buffer::post_send(const int & socket_FD)
+void client_buffer::post_send(const int & socket_FD, const int & n_bytes)
 {
+//std::cout << "start 14\n";
 	boost::mutex::scoped_lock lock(Mutex);
-	std::map<int, client_buffer *>::iterator iter = Client_Buffer.find(socket_FD);
+	std::map<int, boost::shared_ptr<client_buffer> >::iterator iter = Client_Buffer.find(socket_FD);
 	assert(iter != Client_Buffer.end());
-	if(iter->second->send_buff.empty()){
+	iter->second->send_buff.erase(0, n_bytes);
+	if(n_bytes && iter->second->send_buff.empty()){
+		//buffer went from non-empty to empty
 		--send_pending;
 	}
+//std::cout << "end 14\n";
 }
 
 void client_buffer::recv_buff_append(const int & socket_FD, char * buff, const int & n_bytes)
 {
+//std::cout << "start 15\n";
 	boost::mutex::scoped_lock lock(Mutex);
-	std::map<int, client_buffer *>::iterator iter = Client_Buffer.find(socket_FD);
+	std::map<int, boost::shared_ptr<client_buffer> >::iterator iter = Client_Buffer.find(socket_FD);
 	assert(iter != Client_Buffer.end());
 	iter->second->recv_buff_append(buff, n_bytes);
+//std::cout << "end 15\n";
 }
 
-void client_buffer::remove_download(download * Download)
+void client_buffer::remove_download(locking_shared_ptr<download> Download)
 {
+//std::cout << "start 16\n";
 	boost::mutex::scoped_lock lock(Mutex);
 	Unique_Download.erase(Download);
-	std::map<int, client_buffer *>::iterator iter_cur, iter_end;
+
+	std::map<int, boost::shared_ptr<client_buffer> >::iterator iter_cur, iter_end;
 	iter_cur = Client_Buffer.begin();
 	iter_end = Client_Buffer.end();
 	while(iter_cur != iter_end){
 		iter_cur->second->terminate_download(Download);
 		++iter_cur;
 	}
+//std::cout << "end 16\n";
 }
 
 void client_buffer::stop_download(const std::string & hash)
 {
+//std::cout << "start 17\n";
 	boost::mutex::scoped_lock lock(Mutex);
-	std::set<download *>::iterator iter_cur, iter_end;
+	std::set<locking_shared_ptr<download> >::iterator iter_cur, iter_end;
 	iter_cur = Unique_Download.begin();
 	iter_end = Unique_Download.end();
 	while(iter_cur != iter_end){
@@ -253,6 +279,7 @@ void client_buffer::stop_download(const std::string & hash)
 		}
 		++iter_cur;
 	}
+//std::cout << "end 17\n";
 }
 //END STATIC
 
@@ -339,20 +366,20 @@ void client_buffer::post_recv()
 			}else{
 				if(recv_buff.size() < iter_cur->second){
 					//not enough bytes yet received to fulfill download's request
-					if(Pipeline.front().Download != NULL){
+					if(Pipeline.front().Download.get() != NULL){
 						Pipeline.front().Download->update_speed(socket, recv_buff.size() - bytes_seen);
 					}
 					bytes_seen = recv_buff.size();
 					break;
 				}
 
-				if(Pipeline.front().Download == NULL){
+				if(Pipeline.front().Download.get() == NULL){
 					//terminated download detected, discard response
 					recv_buff.erase(0, iter_cur->second);
 				}else{
 					//pass response to download
 					Pipeline.front().Download->response(socket, recv_buff.substr(0, iter_cur->second));
-					if(Pipeline.front().Download != NULL){
+					if(Pipeline.front().Download.get() != NULL){
 						Pipeline.front().Download->update_speed(socket, iter_cur->second - bytes_seen);
 					}
 					bytes_seen = 0;
@@ -410,7 +437,7 @@ void client_buffer::prepare_request()
 
 	//needed to stop infinite loop when all downloads waiting
 	bool buffer_change = true;
-	int initial_empty = send_buff.size() == 0;
+	int initial_empty = send_buff.empty();
 	while(Pipeline.size() < max_pipeline_size){
 		if(rotate_downloads()){
 			/*
@@ -457,12 +484,12 @@ void client_buffer::prepare_request()
 		}
 	}
 
-	if(initial_empty && send_buff.size() != 0){
+	if(initial_empty && !send_buff.empty()){
 		++send_pending;
 	}
 }
 
-void client_buffer::register_download(download * new_download)
+void client_buffer::register_download(locking_shared_ptr<download> new_download)
 {
 	if(Download.empty()){
 		Download.push_back(new_download);
@@ -484,7 +511,7 @@ bool client_buffer::rotate_downloads()
 	return false;
 }
 
-void client_buffer::terminate_download(download * term_DL)
+void client_buffer::terminate_download(locking_shared_ptr<download> term_DL)
 {
 	/*
 	If this download is in the Pipeline set the download pointer to NULL to
@@ -495,13 +522,13 @@ void client_buffer::terminate_download(download * term_DL)
 	P_iter_end = Pipeline.end();
 	while(P_iter_cur != P_iter_end){
 		if(P_iter_cur->Download == term_DL){
-			P_iter_cur->Download = NULL;
+			P_iter_cur->Download = locking_shared_ptr<download>();
 		}
 		++P_iter_cur;
 	}
 
 	//remove the download
-	std::list<download *>::iterator D_iter_cur, D_iter_end;
+	std::list<locking_shared_ptr<download> >::iterator D_iter_cur, D_iter_end;
 	D_iter_cur = Download.begin();
 	D_iter_end = Download.end();
 	while(D_iter_cur != D_iter_end){
@@ -518,7 +545,7 @@ void client_buffer::terminate_download(download * term_DL)
 
 void client_buffer::unregister_all()
 {
-	std::list<download *>::iterator iter_cur, iter_end;
+	std::list<locking_shared_ptr<download> >::iterator iter_cur, iter_end;
 	iter_cur = Download.begin();
 	iter_end = Download.end();
 	while(iter_cur != iter_end){

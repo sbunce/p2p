@@ -1,3 +1,5 @@
+//NOT-THREADSAFE
+
 #ifndef H_DOWNLOAD_HASH_TREE
 #define H_DOWNLOAD_HASH_TREE
 
@@ -27,37 +29,18 @@ public:
 
 	//documentation for virtual functions in abstract base class
 	virtual bool complete();
+	virtual download_info get_download_info();
 	virtual const std::string hash();
 	virtual const std::string name();
 	virtual unsigned percent_complete();
 	virtual download::mode request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected, int & slots_used);
 	virtual void response(const int & socket, std::string block);
-	virtual void stop();
 	virtual void register_connection(const download_connection & DC);
 	virtual const boost::uint64_t size();
+	virtual void stop();
 	virtual void unregister_connection(const int & socket);
-	virtual bool visible();
-
-	/*
-	canceled           - returns true if download canceled, stops download_file from being triggered
-	download_file_size - returns the size of the file the hash tree was generated for
-	download_file_name - returns the name of the file the hash tree was generated for
-	*/
-	const bool & canceled();
-	const download_info & get_download_info();
 
 private:
-	/*
-	If the hash tree download gets cancelled early by the user this will be set
-	to true which will make the completion of the hash tree not trigger a
-	download_file to start.
-
-	Downloads cancelled by a user immediately become invisible because they might
-	take a little while to clean up.
-	*/
-	bool _cancel;
-	bool _visible;
-
 	/*
 	After P_CLOSE_SLOT is sent to all servers and there are no pending responses
 	from any server this should be set to true.
