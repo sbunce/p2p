@@ -3,7 +3,7 @@ import boost
 import gtkmm
 import system
 
-#source files for objects to be linked in to p2p_gui
+#gui only
 src_gui = [
 	'gui.cpp',
 	'gui_about.cpp',
@@ -12,20 +12,18 @@ src_gui = [
 	'main_gui.cpp'
 ]
 
-#source files for objects to be linked in to p2p_nogui
+#nogui only
 src_nogui = [
 	'main_nogui.cpp'
 ]
 
-#source files for objects to be linked in to p2p_gui and p2p_nogui
+#command to all
 src_common = [
 	'CLI_args.cpp',
-	'client_buffer.cpp',
-	'client.cpp',
-	'client_new_connection.cpp',
 	'client_server_bridge.cpp',
 	'CMWC4096.cpp',
 	'database_connection.cpp',
+	'database_init.cpp',
 	'database_table_blacklist.cpp',
 	'database_table_download.cpp',
 	'database_table_hash.cpp',
@@ -33,43 +31,56 @@ src_common = [
 	'database_table_prime.cpp',
 	'database_table_search.cpp',
 	'database_table_share.cpp',
-	'download.cpp',
-	'download_factory.cpp',
-	'download_file.cpp',
-	'download_hash_tree.cpp',
 	'encryption.cpp',
 	'hash_tree.cpp',
-	'http.cpp',
 	'number_generator.cpp',
 	'rate_limit.cpp',
 	'request_generator.cpp',
-	'server_buffer.cpp',
-	'server.cpp',
-	'server_index.cpp',
 	'sha.cpp',
-	'slot.cpp',
-	'slot_file.cpp',
-	'slot_hash_tree.cpp',
 	'speed_calculator.cpp',
 	'thread_pool.cpp'
 ]
 
-#setup base environment
+#client only
+src_client = [
+	'client_buffer.cpp',
+	'client.cpp',
+	'client_new_connection.cpp',
+	'download.cpp',
+	'download_factory.cpp',
+	'download_file.cpp',
+	'download_hash_tree.cpp',
+]
+
+#server only
+src_server = [
+	'http.cpp',
+	'server_buffer.cpp',
+	'server.cpp',
+	'server_index.cpp',
+	'slot.cpp',
+	'slot_file.cpp',
+	'slot_hash_tree.cpp',
+]
+
+#base (needed by all)
 env = Environment()
 system.env_setup(env)
 boost.env_setup(env)
 
-#setup base environment with static linking
-env_static = env.Clone()
-system.env_setup_static(env_static)
+#nogui
+env_nogui = env.Clone()
 
-#setup gui environment
+#nogui_static
+env_nogui_static = env.Clone()
+system.env_setup_static(env_nogui_static)
+
+#gui
 env_gui = env.Clone()
 gtkmm.env_setup(env_gui)
 
-#export environments to sub scons files
+#exported environments for sub scons files
 Export('env')
-Export('env_gui')
 
 #sub scons files
 SConscript([
@@ -92,11 +103,13 @@ static_libs = [
 print 'building with',env.GetOption('num_jobs'),'threads'
 
 #compile different object groups
-src_gui_obj = env_gui.Object(src_gui)
-src_nogui_obj = env.Object(src_nogui)
-src_common_obj = env.Object(src_common)
+common_obj = env.Object(src_common)
+gui_obj = env_gui.Object(src_gui)
+nogui_obj = env.Object(src_nogui)
+client_obj = env.Object(src_client)
+server_obj = env.Object(src_server)
 
 #link
-env.Program('p2p_nogui', src_nogui_obj + src_common_obj + static_libs)
-env_static.Program('p2p_nogui_static', src_nogui_obj + src_common_obj + static_libs)
-env_gui.Program('p2p_gui', src_gui_obj + src_common_obj + static_libs)
+env_gui.Program('p2p_gui', gui_obj + common_obj + client_obj + server_obj + static_libs)
+env_nogui.Program('p2p_nogui', nogui_obj + common_obj + server_obj + static_libs)
+env_nogui_static.Program('p2p_nogui_static', nogui_obj + common_obj + server_obj + static_libs)

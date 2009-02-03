@@ -24,10 +24,9 @@ void create_test_file(const std::string & name, const unsigned & bytes)
 
 int main()
 {
-
 	boost::filesystem::create_directory(global::SHARE_DIRECTORY.c_str());
 	database::connection DB;
-	database::table::hash DB_Hash(DB);
+	database::table::hash DB_Hash;
 	hash_tree Hash_Tree;
 
 	create_test_file("1_block", 1 * global::FILE_BLOCK_SIZE);
@@ -42,11 +41,11 @@ int main()
 	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "1_block", root_hash)){
 		LOGGER; exit(1);
 	}
+
 	hash_tree::tree_info TE_1(root_hash, 1 * global::FILE_BLOCK_SIZE);
 	if(!Hash_Tree.check(TE_1, bad_block)){
 		LOGGER; exit(1);
 	}
-
 	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "2_block", root_hash)){
 		LOGGER; exit(1);
 	}

@@ -1,12 +1,11 @@
 #include "database_table_download.hpp"
 
-database::table::download::download()
-: DB_Hash(DB)
+void database::table::download::complete(const std::string & hash, const int & file_size)
 {
-	DB.query("CREATE TABLE IF NOT EXISTS download (hash TEXT, name TEXT, size TEXT, server TEXT)");
+	complete(hash, file_size, DB);
 }
 
-void database::table::download::complete(const std::string & hash, const int & file_size)
+void database::table::download::complete(const std::string & hash, const int & file_size, database::connection & DB)
 {
 	std::stringstream ss;
 	ss << "DELETE FROM download WHERE hash = '" << hash << "' AND size = " << file_size;
@@ -22,6 +21,11 @@ static int lookup_hash_0_call_back(bool & entry_exists, int columns_retrieved,
 }
 
 bool database::table::download::lookup_hash(const std::string & hash)
+{
+	return lookup_hash(hash, DB);
+}
+
+bool database::table::download::lookup_hash(const std::string & hash, database::connection & DB)
 {
 	bool entry_exists = false;
 	std::stringstream ss;
@@ -42,6 +46,11 @@ static int lookup_hash_1_call_back(std::pair<bool, std::string *> & info,
 
 bool database::table::download::lookup_hash(const std::string & hash, std::string & path)
 {
+	return lookup_hash(hash, path, DB);
+}
+
+bool database::table::download::lookup_hash(const std::string & hash, std::string & path, database::connection & DB)
+{
 	std::pair<bool, std::string *> info(false, &path);
 	std::stringstream ss;
 	ss << "SELECT name, size FROM download WHERE hash = '" << hash << "'";
@@ -59,9 +68,14 @@ static int lookup_hash_2_call_back(std::pair<bool, boost::uint64_t *> & info,
 	return 0;
 }
 
-bool database::table::download::lookup_hash(const std::string & hash, boost::uint64_t & file_size)
+bool database::table::download::lookup_hash(const std::string & hash, boost::uint64_t & size)
 {
-	std::pair<bool, boost::uint64_t *> info(false, &file_size);
+	return lookup_hash(hash, size, DB);
+}
+
+bool database::table::download::lookup_hash(const std::string & hash, boost::uint64_t & size, database::connection & DB)
+{
+	std::pair<bool, boost::uint64_t *> info(false, &size);
 	std::stringstream ss;
 	ss << "SELECT size FROM download WHERE hash = '" << hash << "' LIMIT 1";
 	DB.query(ss.str(), &lookup_hash_2_call_back, info);
@@ -81,6 +95,11 @@ static int lookup_hash_2_call_back(boost::tuple<bool, std::string *, boost::uint
 }
 
 bool database::table::download::lookup_hash(const std::string & hash, std::string & path, boost::uint64_t & file_size)
+{
+	return lookup_hash(hash, path, file_size, DB);
+}
+
+bool database::table::download::lookup_hash(const std::string & hash, std::string & path, boost::uint64_t & file_size, database::connection & DB)
 {
 	boost::tuple<bool, std::string *, boost::uint64_t *> info(false, &path, &file_size);
 	std::stringstream ss;
@@ -103,27 +122,31 @@ static void tokenize_servers(const std::string & servers, std::vector<std::strin
 	}
 }
 
-int database::table::download::resume_call_back(std::vector<download_info> & resume, int columns_retrieved,
+static int resume_call_back(std::vector<download_info> & resume_DL, int columns_retrieved,
 	char ** response, char ** column_name)
 {
 	assert(response[0] && response[1] && response[2] && response[3]);
 	boost::uint64_t size;
 	std::stringstream ss(response[2]);
 	ss >> size;
-	resume.push_back(download_info(
+	resume_DL.push_back(download_info(
 		response[0], //hash
 		response[1], //name
 		size         //size
 	));
 
-	tokenize_servers(response[3], resume.back().IP);
+	tokenize_servers(response[3], resume_DL.back().IP);
 	return 0;
 }
 
-void database::table::download::resume(std::vector<download_info> & resume)
+void database::table::download::resume(std::vector<download_info> & resume_DL)
 {
-	DB.query("SELECT hash, name, size, server FROM download",
-		this, &database::table::download::resume_call_back, resume);
+	resume(resume_DL, DB);
+}
+
+void database::table::download::resume(std::vector<download_info> & resume_DL, database::connection & DB)
+{
+	DB.query("SELECT hash, name, size, server FROM download", &resume_call_back, resume_DL);
 }
 
 static int is_downloading_call_back(bool & downloading, int columns_retrieved, char ** response, char ** column_name)
@@ -132,7 +155,7 @@ static int is_downloading_call_back(bool & downloading, int columns_retrieved, c
 	return 0;
 }
 
-bool database::table::download::is_downloading(const std::string & hash)
+bool database::table::download::is_downloading(const std::string & hash, database::connection & DB)
 {
 	bool downloading = false;
 	std::stringstream ss;
@@ -143,12 +166,17 @@ bool database::table::download::is_downloading(const std::string & hash)
 
 bool database::table::download::start(download_info & info)
 {
+	return start(info, DB);
+}
+
+bool database::table::download::start(download_info & info, database::connection & DB)
+{
 	boost::uint64_t tree_size = hash_tree::file_size_to_tree_size(info.size);
 	if(tree_size > std::numeric_limits<int>::max()){
 		LOGGER << "file \"" << info.name << "\" would generate hash tree beyond max SQLite3 blob size";
 		return false;
 	}
-	if(lookup_hash(info.hash)){
+	if(lookup_hash(info.hash, DB)){
 		/*
 		Entry already exists in download table. This is not an error, it means the
 		download is being resumed.
@@ -156,8 +184,8 @@ bool database::table::download::start(download_info & info)
 		return true;
 	}
 	DB.query("BEGIN TRANSACTION");
-	DB_Hash.tree_allocate(info.hash, tree_size);
-	DB_Hash.set_state(info.hash, tree_size, database::table::hash::DOWNLOADING);
+	database::table::hash::tree_allocate(info.hash, tree_size, DB);
+	database::table::hash::set_state(info.hash, tree_size, database::table::hash::DOWNLOADING, DB);
 	std::stringstream ss;
 	ss << "INSERT INTO download (hash, name, size, server) VALUES ('"
 		<< info.hash << "', '" << info.name << "', '" << info.size << "', '";
@@ -176,8 +204,13 @@ bool database::table::download::start(download_info & info)
 
 void database::table::download::terminate(const std::string & hash, const int & file_size)
 {
+	terminate(hash, file_size, DB);
+}
+
+void database::table::download::terminate(const std::string & hash, const int & file_size, database::connection & DB)
+{
 	DB.query("BEGIN TRANSACTION");
-	DB_Hash.delete_tree(hash, hash_tree::file_size_to_tree_size(file_size));
+	database::table::hash::delete_tree(hash, hash_tree::file_size_to_tree_size(file_size), DB);
 	std::stringstream ss;
 	ss << "DELETE FROM download WHERE hash = '" << hash << "' AND size = " << file_size;
 	DB.query(ss.str());

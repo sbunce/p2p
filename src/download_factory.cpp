@@ -1,7 +1,6 @@
 #include "download_factory.hpp"
 
 download_factory::download_factory()
-: DB_Hash(DB)
 {
 
 }

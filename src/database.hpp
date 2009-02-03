@@ -1,4 +1,5 @@
 //includes entire database::
+#include "database_blob.hpp"
 #include "database_connection.hpp"
 #include "database_table_blacklist.hpp"
 #include "database_table_download.hpp"

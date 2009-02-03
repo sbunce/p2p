@@ -1,6 +1,5 @@
 #include "database_connection.hpp"
 
-speed_calculator database::connection::Open;
 speed_calculator database::connection::Query;
 
 database::connection::connection():
@@ -26,15 +25,27 @@ database::connection::connection():
 		LOGGER << "sqlite error: " << sqlite3_errmsg(DB_handle);
 	}
 
-	Open.update(1);
+	database::init::run();
 }
 
-database::connection::connection(
-	const database::connection & DB
-):
-	DB_handle(DB.DB_handle),
-	ref_cnt(DB.ref_cnt)
+database::connection::connection(const database::connection & DB)
 {
+	boost::recursive_mutex::scoped_lock lock(*DB.Mutex);
+	copy(DB);
+}
+
+database::connection & database::connection::operator = (const database::connection & rval)
+{
+	boost::recursive_mutex::scoped_lock lock(*rval.Mutex);
+	copy(rval);
+	return *this;
+}
+
+void database::connection::copy(const database::connection & DB)
+{
+	DB_handle = DB.DB_handle;
+	ref_cnt = DB.ref_cnt;
+	Mutex = DB.Mutex;
 	++*ref_cnt;
 }
 
@@ -135,6 +146,12 @@ void database::connection::blob_write(blob & Blob, const char * const buff, cons
 	}
 	blob_close(blob_handle);
 	Query.update(1);
+}
+
+int database::connection::fun_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)
+{
+	int (*fun_ptr)(int, char **, char **) = (int (*)(int, char **, char **))obj_ptr;
+	return fun_ptr(columns, response, column_name);
 }
 
 int database::connection::query(const std::string & query)

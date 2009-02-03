@@ -1,3 +1,4 @@
+//THREADSAFE
 #ifndef H_DATABASE_TABLE_PREFERENCES
 #define H_DATABASE_TABLE_PREFERENCES
 
@@ -42,9 +43,6 @@ public:
 
 private:
 	database::connection DB;
-
-	//mutex for checking for, and creation of, the one row (look in ctor)
-	static boost::mutex Mutex;
 };
 }//end of table namespace
 }//end of database namespace

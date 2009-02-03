@@ -1,8 +1,11 @@
+//THREADSAFE
 #ifndef H_DATABASE_TABLE_PRIME
 #define H_DATABASE_TABLE_PRIME
 
+//boost
+#include <boost/tuple/tuple.hpp>
+
 //custom
-#include "atomic_int.hpp"
 #include "database_connection.hpp"
 #include "global.hpp"
 
@@ -18,7 +21,7 @@ namespace table{
 class prime
 {
 public:
-	prime();
+	prime(){}
 
 	/*
 	add      - add a prime to the DB
@@ -27,23 +30,35 @@ public:
 	           returns true if prime retrieved, false if prime table empty
 	*/
 	void add(mpint & prime);
-	unsigned count();
+	static void add(mpint & prime, database::connection & DB);
+	static unsigned count();
 	bool retrieve(mpint & prime);
+	static bool retrieve(mpint & prime, database::connection & DB);
 
 private:
 	database::connection DB;
 
-	//used at program start to retrieve prime_count (see ctor)
-	static boost::mutex program_start_mutex;
-	static bool program_start;
-
-	//how many primes are in the database
-	static atomic_int<unsigned> prime_count;
+	//mutex for all public static functions
+	static boost::mutex Mutex;
 
 	/*
-	retrieve_call_back - call back for retrieve()
+	Used by initialize_prime_count to determine if prime_count needs to be
+	retrieved from database.
 	*/
-	int retrieve_call_back(std::pair<bool, mpint *> & info, int columns_retrieved, char ** response, char ** column_name);
+	static bool prime_count_initialized;
+
+	//how many primes are in the database
+	static unsigned prime_count;
+
+	/*
+	initialize_prime_count - retrieves prime count from database if not already done
+	                         Note: must be called by all public member functions
+	                         WARNING: Mutex must be locked before calling this
+	retrieve_call_back     - call back for retrieve()
+	*/
+	static void initialize_prime_count();
+	static int retrieve_call_back(boost::tuple<bool, mpint *, database::connection *> & info,
+		int columns_retrieved, char ** response, char ** column_name);
 };
 }//end of table namespace
 }//end of database namespace

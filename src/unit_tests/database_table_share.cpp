@@ -5,7 +5,7 @@
 int main()
 {
 	database::connection DB;
-	DB.query("DROP TABLE IF EXISTS share");
+	DB.query("DELETE FROM share");
 	database::table::share DBS;
 
 	if(DBS.lookup_hash("ABC")){

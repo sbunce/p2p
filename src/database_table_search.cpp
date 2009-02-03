@@ -1,26 +1,5 @@
 #include "database_table_search.hpp"
 
-static int check_exists_call_back(bool & exists, int columns_retrieved,
-	char ** response, char ** column_name)
-{
-	exists = true;
-	return 0;
-}
-
-database::table::search::search()
-{
-	/*
-	There is no "CREATE VIRTUAL TABLE IF NOT EXISTS" in sqlite3 (although it may
-	be added eventually). This is needed to avoid trying to create the table
-	twice and causing errors.
-	*/
-	bool exists = false;
-	DB.query("SELECT 1 FROM sqlite_master WHERE name = 'search'", &check_exists_call_back, exists);
-	if(!exists){
-		DB.query("CREATE VIRTUAL TABLE search USING FTS3 (hash TEXT, name TEXT, size TEXT, server TEXT)");
-	}
-}
-
 static void tokenize_servers(const std::string & servers, std::vector<std::string> & tokens)
 {
 	typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
@@ -53,7 +32,14 @@ static int search_call_back(std::vector<download_info> & search_results, int col
 	return 0;
 }
 
-void database::table::search::run_search(std::string & search_term, std::vector<download_info> & search_results)
+void database::table::search::run_search(std::string & search_term,
+	std::vector<download_info> & search_results)
+{
+	run_search(search_term, search_results, DB);
+}
+
+void database::table::search::run_search(std::string & search_term,
+	std::vector<download_info> & search_results, database::connection & DB)
 {
 	search_results.clear();
 	LOGGER << "search: " << search_term;
@@ -75,7 +61,14 @@ static int get_servers_call_back(std::vector<std::string> & servers, int columns
 	return 0;
 }
 
-void database::table::search::get_servers(const std::string & hash, std::vector<std::string> & servers)
+void database::table::search::get_servers(const std::string & hash,
+	std::vector<std::string> & servers)
+{
+	get_servers(hash, servers, DB);
+}
+
+void database::table::search::get_servers(const std::string & hash,
+	std::vector<std::string> & servers, database::connection & DB)
 {
 	std::stringstream ss;
 	ss << "SELECT server FROM search WHERE hash = '" << hash << "'";

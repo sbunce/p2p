@@ -3,19 +3,20 @@ import sys
 Import('env')
 env_sqlite = env.Clone()
 
-#compile as multithreaded http://www.sqlite.org/compile.html#threadsafe
 if sys.platform == 'linux2':
-	env_sqlite['CCFLAGS'].append('-DSQLITE_THREADSAFE=2')
-	env_sqlite['CCFLAGS'].append('-DSQLITE_ENABLE_FTS3')             #enable full text search
-	env_sqlite['CCFLAGS'].append('-DSQLITE_ENABLE_FTS3_PARENTHESIS') #enable AND OR NOT stuff
-	#env_sqlite['CCFLAGS'].append('-DSQLITE_DEBUG')
-	#env_sqlite['CCFLAGS'].append('-DSQLITE_MEMDEBUG')
+	os_specific = '-'
 if sys.platform == 'win32':
-	env_sqlite['CCFLAGS'].append('/DSQLITE_THREADSAFE=2')
-	env_sqlite['CCFLAGS'].append('/DSQLITE_ENABLE_FTS3')             #enable full text search
-	env_sqlite['CCFLAGS'].append('/DSQLITE_ENABLE_FTS3_PARENTHESIS') #enable AND OR NOT stuff
-	#env_sqlite['CCFLAGS'].append('-DSQLITE_DEBUG')
-	#env_sqlite['CCFLAGS'].append('-DSQLITE_MEMDEBUG')
+	os_specific = '/'
+
+#compile as multithreaded http://www.sqlite.org/compile.html#threadsafe
+env_sqlite['CCFLAGS'].append(os_specific+'DSQLITE_THREADSAFE=2')
+
+#enable full text search
+env_sqlite['CCFLAGS'].append(os_specific+'DSQLITE_ENABLE_FTS3')
+env_sqlite['CCFLAGS'].append(os_specific+'DSQLITE_ENABLE_FTS3_PARENTHESIS')
+
+#remove libdl dependency by disabling dynamic module loading (not used anyways)
+env_sqlite['CCFLAGS'].append(os_specific+'DSQLITE_OMIT_LOAD_EXTENSION');
 
 env_sqlite.StaticLibrary('sqlite3.c')
 env_sqlite.Program('shell.c')

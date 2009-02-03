@@ -13,7 +13,7 @@
 class rate_limit
 {
 public:
-	rate_limit();
+	rate_limit(){}
 
 	/*
 	add_download_bytes    - add bytes to download speed average
@@ -27,25 +27,28 @@ public:
 	upload_rate_control   - given a maximum_possible_transfer size (in bytes),
 	                        returns how many bytes can be recv'd to maintain rate
 	*/
-	void add_download_bytes(const unsigned & n_bytes);
-	unsigned get_download_rate();
-	void set_download_rate(const unsigned & rate);
-	unsigned download_rate_control(const unsigned & max_possible_transfer);
-	void add_upload_bytes(const unsigned & n_bytes);
-	unsigned get_upload_rate();
-	void set_upload_rate(const unsigned & rate);
-	unsigned upload_rate_control(const unsigned & max_possible_transfer);
+	static void add_download_bytes(const unsigned & n_bytes);
+	static unsigned get_download_rate();
+	static void set_download_rate(const unsigned & rate);
+	static unsigned download_rate_control(const unsigned & max_possible_transfer);
+	static void add_upload_bytes(const unsigned & n_bytes);
+	static unsigned get_upload_rate();
+	static void set_upload_rate(const unsigned & rate);
+	static unsigned upload_rate_control(const unsigned & max_possible_transfer);
 
 	/*
 	download_speed - returns average download speed
 	upload_speed   - returns average upload speed
 	*/
-	unsigned download_speed();
-	unsigned upload_speed();
+	static unsigned download_speed();
+	static unsigned upload_speed();
 
 private:
-	static atomic_int<unsigned> download_rate;
-	static atomic_int<unsigned> upload_rate;
+	//mutex for all static public functions
+	static boost::recursive_mutex Recursive_Mutex;
+
+	static unsigned download_rate;
+	static unsigned upload_rate;
 
 	static speed_calculator Download;
 	static speed_calculator Upload;

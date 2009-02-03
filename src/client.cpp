@@ -9,7 +9,7 @@ client::client():
 	boost::filesystem::create_directory(global::DOWNLOAD_DIRECTORY);
 	max_connections = DB_Preferences.get_client_connections();
 	FD_ZERO(&master_FDS);
-	Rate_Limit.set_download_rate(DB_Preferences.get_download_rate());
+	rate_limit::set_download_rate(DB_Preferences.get_download_rate());
 
 	#ifdef WIN32
 	WORD wsock_ver = MAKEWORD(1,1);
@@ -58,7 +58,7 @@ void client::check_blacklist(int & blacklist_state)
 void client::check_timeouts()
 {
 	std::vector<int> timed_out;
-	client_buffer::find_timed_out(timed_out);
+	client_buffer::get_timed_out(timed_out);
 	std::vector<int>::iterator iter_cur, iter_end;
 	iter_cur = timed_out.begin();
 	iter_end = timed_out.end();
@@ -125,10 +125,10 @@ std::string client::get_download_directory()
 
 unsigned client::get_download_rate()
 {
-	if(Rate_Limit.get_download_rate() == std::numeric_limits<unsigned>::max()){
+	if(rate_limit::get_download_rate() == std::numeric_limits<unsigned>::max()){
 		return 0;
 	}else{
-		return Rate_Limit.get_download_rate();
+		return rate_limit::get_download_rate();
 	}
 }
 
@@ -141,6 +141,16 @@ void client::main_loop()
 
 	//see documentation in database_table_blacklist to see what this does
 	int blacklist_state = 0;
+
+	/*
+	Holds a copy of a chunk of the send buffer within the client_buffer.
+	This buffer is needed so that the client_buffer can be fully thread
+	safe. If we were reading from the send_buff within the client_buffer
+	and someone called client_buffer::erase on it then we'd have trouble.
+	*/
+	std::string send_buff;
+	int max_send_buff = global::S_MAX_SIZE * global::PIPELINE_SIZE;
+	send_buff.reserve(max_send_buff);
 
 	char recv_buff[global::C_MAX_SIZE*global::PIPELINE_SIZE];
 	int n_bytes;             //how many bytes sent or received by send()/recv()
@@ -158,7 +168,7 @@ void client::main_loop()
 			check_timeouts();          //check/disconnect timed out sockets
 			remove_complete();         //remove completed downloads
 			remove_empty();            //remove empty client_buffers (no downloads)
-			start_pending_downloads(); //start downloads queue'd by the GUI
+			start_pending_downloads(); //start queued downloads
 			Time = std::time(NULL);
 		}
 
@@ -218,7 +228,7 @@ void client::main_loop()
 			max_recv = 1;
 		}else{
 			/*
-			Rate_Limit.get_download_rate() returns unsigned int, the recv() function
+			rate_limit::get_download_rate() returns unsigned int, the recv() function
 			take a signed int. If max_recv is beyond the max size of an int then
 			the conversion can yield a negative number.
 
@@ -226,7 +236,7 @@ void client::main_loop()
 			else because rates cannot logically be negative.
 			*/
 			unsigned tmp;
-			if((tmp = Rate_Limit.get_download_rate() / connections) > std::numeric_limits<int>::max()){
+			if((tmp = rate_limit::get_download_rate() / connections) > std::numeric_limits<int>::max()){
 				max_recv = std::numeric_limits<int>::max();
 			}else{
 				max_recv = tmp;
@@ -237,9 +247,7 @@ void client::main_loop()
 		transfer = false;
 		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &read_FDS)){
-//std::cout << "RL 1\n";
-				if((transfer_limit = Rate_Limit.download_rate_control(global::C_MAX_SIZE*global::PIPELINE_SIZE)) != 0){
-//std::cout << "RL 2\n";
+				if((transfer_limit = rate_limit::download_rate_control(global::C_MAX_SIZE*global::PIPELINE_SIZE)) != 0){
 					if(transfer_limit > max_recv){
 						transfer_limit = max_recv;
 					}
@@ -254,18 +262,16 @@ void client::main_loop()
 						disconnect(socket_FD);
 						continue;
 					}else{
-						Rate_Limit.add_download_bytes(n_bytes);
-						client_buffer::recv_buff_append(socket_FD, recv_buff, n_bytes);
+						rate_limit::add_download_bytes(n_bytes);
+						client_buffer::post_recv(socket_FD, recv_buff, n_bytes);
 						transfer = true;
 					}
 				}
 			}
-//std::cout << "RL 3\n";
 
 			if(FD_ISSET(socket_FD, &write_FDS)){
-				std::string * buff = &client_buffer::get_send_buff(socket_FD);
-				if(!buff->empty()){
-					if((n_bytes = send(socket_FD, buff->c_str(), buff->size(), MSG_NOSIGNAL)) < 0){
+				if(client_buffer::get_send_buff(socket_FD, max_send_buff, send_buff)){
+					if((n_bytes = send(socket_FD, send_buff.c_str(), send_buff.size(), MSG_NOSIGNAL)) < 0){
 						if(n_bytes == -1){
 							#ifdef WIN32
 							LOGGER << "winsock error " << WSAGetLastError();
@@ -274,7 +280,7 @@ void client::main_loop()
 							#endif
 						}
 					}else{
-						Rate_Limit.add_upload_bytes(n_bytes);
+						rate_limit::add_upload_bytes(n_bytes);
 						client_buffer::post_send(socket_FD, n_bytes);
 						transfer = true;
 					}
@@ -305,7 +311,7 @@ void client::reconnect_unfinished()
 void client::remove_complete()
 {
 	std::vector<locking_shared_ptr<download> > complete;
-	client_buffer::find_complete(complete);
+	client_buffer::get_complete(complete);
 	if(complete.empty()){
 		return;
 	}
@@ -323,7 +329,7 @@ void client::remove_empty()
 {
 	//disconnect any empty client_buffers
 	std::vector<int> disconnect_sockets;
-	client_buffer::find_empty(disconnect_sockets);
+	client_buffer::get_empty(disconnect_sockets);
 	std::vector<int>::iterator iter_cur, iter_end;
 	iter_cur = disconnect_sockets.begin();
 	iter_end = disconnect_sockets.end();
@@ -363,7 +369,7 @@ void client::set_max_download_rate(unsigned download_rate)
 		download_rate = std::numeric_limits<unsigned>::max();
 	}
 	DB_Preferences.set_download_rate(download_rate);
-	Rate_Limit.set_download_rate(download_rate);
+	rate_limit::set_download_rate(download_rate);
 }
 
 void client::start_download(const download_info & info)
@@ -418,17 +424,11 @@ void client::start_pending_downloads()
 
 unsigned client::total_rate()
 {
-	/*
-	If there is no I/O the speed won't get updated. This will update the speed
-	as long as the client cares to check it.
-	*/
-	Rate_Limit.add_download_bytes(0);
-	return Rate_Limit.download_speed();
+	return rate_limit::download_speed();
 }
 
 void client::transition_download(locking_shared_ptr<download> Download_Stop)
 {
-	client_buffer::remove_download(Download_Stop);
 	/*
 	It is possible that terminating a download can trigger starting of
 	another download. If this happens the stop function will return that

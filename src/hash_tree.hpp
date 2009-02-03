@@ -409,7 +409,6 @@ private:
 		boost::uint64_t start_RRN, boost::uint64_t end_RRN, std::string & root_hash);
 
 	database::connection DB;
-	database::table::hash DB_Hash;
 	database::table::blacklist DB_Blacklist;
 	sha SHA;
 };

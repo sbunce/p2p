@@ -1,32 +1,18 @@
 #include "database_table_prime.hpp"
 
-boost::mutex database::table::prime::program_start_mutex;
-bool database::table::prime::program_start(true);
-atomic_int<unsigned> database::table::prime::prime_count(0);
-
-static int prime_count_call_back(atomic_int<unsigned> & prime_count, int columns_retrieved,
-	char ** response, char ** column_names)
-{
-	assert(response[0]);
-	std::stringstream ss(response[0]);
-	ss >> prime_count;
-	return 0;
-}
-
-database::table::prime::prime()
-{
-	DB.query("CREATE TABLE IF NOT EXISTS prime (key INTEGER PRIMARY KEY, number TEXT)");
-	{
-	boost::mutex::scoped_lock lock(program_start_mutex);
-	if(program_start){
-		program_start = false;
-		DB.query("SELECT count(1) FROM prime", &prime_count_call_back, prime_count);
-	}
-	}
-}
+boost::mutex database::table::prime::Mutex;
+bool database::table::prime::prime_count_initialized(false);
+unsigned database::table::prime::prime_count(0);
 
 void database::table::prime::add(mpint & prime)
 {
+	add(prime, DB);
+}
+
+void database::table::prime::add(mpint & prime, database::connection & DB)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	initialize_prime_count();
 	std::stringstream ss;
 	ss << "INSERT INTO prime VALUES (NULL,'" << prime.to_str(64) << "')";
 	DB.query(ss.str());
@@ -35,26 +21,54 @@ void database::table::prime::add(mpint & prime)
 
 unsigned database::table::prime::count()
 {
+	boost::mutex::scoped_lock lock(Mutex);
+	initialize_prime_count();
 	return prime_count;
 }
 
-//std::pair<true if found, prime>
-int database::table::prime::retrieve_call_back(std::pair<bool, mpint *> & info,
+static int prime_count_call_back(unsigned & prime_count, int columns_retrieved,
+	char ** response, char ** column_names)
+{
+	assert(response[0]);
+	std::stringstream ss(response[0]);
+	ss >> prime_count;
+	return 0;
+}
+
+void database::table::prime::initialize_prime_count()
+{
+	if(!prime_count_initialized){
+		prime_count_initialized = true;
+		static database::connection DB;
+		DB.query("SELECT count(1) FROM prime", &prime_count_call_back, prime_count);
+	}
+}
+
+//boost::tuple<true if found, prime, DB connection for delete>
+int database::table::prime::retrieve_call_back(
+	boost::tuple<bool, mpint *, database::connection *> & info,
 	int columns_retrieved, char ** response, char ** column_name)
 {
 	assert(response[0] && response[1]);
-	info.first = true;
-	*info.second = mpint(response[1], 64);
+	info.get<0>() = true;
+	*info.get<1>() = mpint(response[1], 64);
 	std::stringstream ss;
 	ss << "DELETE FROM prime WHERE key = " << response[0];
-	DB.query(ss.str());
+	info.get<2>()->query(ss.str());
 	--prime_count;
 	return 0;
 }
 
 bool database::table::prime::retrieve(mpint & prime)
 {
-	std::pair<bool, mpint *> info(false, &prime);
-	DB.query("SELECT key, number FROM prime LIMIT 1", this, &database::table::prime::retrieve_call_back, info);
-	return info.first;
+	return retrieve(prime, DB);
+}
+
+bool database::table::prime::retrieve(mpint & prime, database::connection & DB)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	initialize_prime_count();
+	boost::tuple<bool, mpint *, database::connection *> info(false, &prime, &DB);
+	DB.query("SELECT key, number FROM prime LIMIT 1", &retrieve_call_back, info);
+	return info.get<0>();
 }

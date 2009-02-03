@@ -70,6 +70,12 @@ public:
 		boost::shared_ptr<boost::recursive_mutex> pointee_mutex;
 	};
 
+	/*
+	DEBUG
+	Consider using boost::recursive_mutex ctor param to provide destruction function.
+	boost::shared_ptr<boost::recursive_mutex>
+		(&pointee_mutex, mem_fn(&boost::recursive_mutex::my_unlock))
+	*/
 	proxy operator -> () const { return proxy(pointee, pointee_mutex); }
 	proxy operator * () const { return proxy(pointee, pointee_mutex); }
 

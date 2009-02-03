@@ -1,31 +1,8 @@
 #include "database_table_preferences.hpp"
 
-boost::mutex database::table::preferences::Mutex;
-
-static int check_exists(bool & exists, int columns_retrieved, char ** query_response,
-	char ** column_name)
-{
-	exists = strcmp(query_response[0], "0") != 0;
-	return 0;
-}
-
 database::table::preferences::preferences()
 {
-	boost::mutex::scoped_lock lock(Mutex);
-	DB.query("CREATE TABLE IF NOT EXISTS preferences (client_connections INTEGER, \
-		download_directory TEXT, download_rate INTEGER, server_connections INTEGER, \
-		share_directory TEXT, upload_rate INTEGER)");
-	bool exists;
-	DB.query("SELECT count(1) FROM preferences", &check_exists, exists);
-	if(!exists){
-		//set defaults if no preferences yet exist
-		std::stringstream ss;
-		ss << "INSERT INTO preferences VALUES(" << global::CLIENT_CONNECTIONS
-			<< ", '" << global::DOWNLOAD_DIRECTORY << "', " << global::DOWNLOAD_RATE
-			<< ", " << global::SERVER_CONNECTIONS << ", '" << global::SHARE_DIRECTORY
-			<< "', " << global::UPLOAD_RATE << ")";
-		DB.query(ss.str());
-	}
+
 }
 
 static int get_client_connections_call_back(unsigned & client_connections,

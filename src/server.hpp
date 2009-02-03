@@ -98,6 +98,5 @@ private:
 
 	database::table::blacklist DB_Blacklist;
 	database::table::preferences DB_Preferences;
-	rate_limit Rate_Limit;
 };
 #endif

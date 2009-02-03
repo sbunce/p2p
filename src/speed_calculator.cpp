@@ -1,7 +1,9 @@
 #include "speed_calculator.hpp"
 
 speed_calculator::speed_calculator()
-: average(0)
+:
+	Recursive_Mutex(new boost::recursive_mutex()),
+	average(0)
 {
 	for(int x=0; x < global::SPEED_AVERAGE + 1; ++x){
 		Second_Bytes[x] = std::make_pair(time(NULL), 0);
@@ -10,18 +12,21 @@ speed_calculator::speed_calculator()
 
 unsigned speed_calculator::current_second_bytes()
 {
+	boost::recursive_mutex::scoped_lock lock(*Recursive_Mutex);
 	update(0);
 	return Second_Bytes[0].second;
 }
 
 unsigned speed_calculator::speed()
 {
+	boost::recursive_mutex::scoped_lock lock(*Recursive_Mutex);
 	update(0);
 	return average;
 }
 
 void speed_calculator::update(const unsigned & n_bytes)
 {
+	boost::recursive_mutex::scoped_lock lock(*Recursive_Mutex);
 	time_t current_time = time(NULL);
 
 	if(Second_Bytes[0].first == current_time){

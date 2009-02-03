@@ -1,3 +1,4 @@
+//THREADSAFE
 #ifndef H_DATABASE_TABLE_DOWNLOAD
 #define H_DATABASE_TABLE_DOWNLOAD
 
@@ -27,7 +28,7 @@ namespace table{
 class download
 {
 public:
-	download();
+	download(){}
 
 	/*
 	complete  - removes the download entry
@@ -36,8 +37,11 @@ public:
 	terminate - removes the download entry and tree
 	*/
 	void complete(const std::string & hash, const int & file_size);
+	static void complete(const std::string & hash, const int & file_size, database::connection & DB);
 	bool start(download_info & info);
+	static bool start(download_info & info, database::connection & DB);
 	void terminate(const std::string & hash, const int & file_size);
+	static void terminate(const std::string & hash, const int & file_size, database::connection & DB);
 
 	/*
 	Lookup functions:
@@ -45,10 +49,15 @@ public:
 	resume      - fill the vector with download information (used to resume downloads on program start)
 	*/
 	bool lookup_hash(const std::string & hash);
+	static bool lookup_hash(const std::string & hash, database::connection & DB);
 	bool lookup_hash(const std::string & hash, std::string & path);
+	static bool lookup_hash(const std::string & hash, std::string & path, database::connection & DB);
 	bool lookup_hash(const std::string & hash, boost::uint64_t & size);
+	static bool lookup_hash(const std::string & hash, boost::uint64_t & size, database::connection & DB);
 	bool lookup_hash(const std::string & hash, std::string & path, boost::uint64_t & file_size);
+	static bool lookup_hash(const std::string & hash, std::string & path, boost::uint64_t & file_size, database::connection & DB);
 	void resume(std::vector<download_info> & resume_DL);
+	static void resume(std::vector<download_info> & resume_DL, database::connection & DB);
 
 private:
 	database::connection DB;
@@ -57,10 +66,7 @@ private:
 	is_downloading   - returns true if hash is found in download table, else false
 	resume_call_back - call back for resume()
 	*/
-	bool is_downloading(const std::string & hash);
-	int resume_call_back(std::vector<download_info> & resume, int columns_retrieved, char ** response, char ** column_name);
-
-	database::table::hash DB_Hash;
+	static bool is_downloading(const std::string & hash, database::connection & DB);
 };
 }//end of table namespace
 }//end of database namespace

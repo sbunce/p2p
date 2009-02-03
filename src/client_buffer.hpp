@@ -1,11 +1,4 @@
-//NOT-THREADSAFE
-
-/*
-The NOT-THREADSAFE functions are annotated at the top of the class definition.
-
-The client_buffer was intentionally made NOT-THREADSAFE to avoid copying a
-buffer. However, it's simple to follow the imposed constrains due to this.
-*/
+//THREADSAFE
 
 #ifndef H_CLIENT_BUFFER
 #define H_CLIENT_BUFFER
@@ -34,148 +27,80 @@ buffer. However, it's simple to follow the imposed constrains due to this.
 class client_buffer : private boost::noncopyable
 {
 public:
-	/*
-	The client_buffer is used in a std::map. If std::map::[] is ever used to
-	locate a client_buffer that doesn't exist the default ctor will be called and
-	the program will be killed.
-	*/
-	client_buffer();
-
 	~client_buffer();
 
-
-	/****************************************************************************
-	BEGIN NOT-THREADSAFE
-	WARNING: These functions should only be called by main_thread in the client.
-	****************************************************************************/
 	/*
-	Causes all client_buffers to query their downloads to see if they need to make
-	new requests.
-	WARNING: This function touches send_buff which get_send_buff() returns.
-	*/
-	static void generate_requests();
-
-	/*
-	Returns the client_buffer send_buff that corresponds to socket_FD.
-	WARNING: Returns a reference to the buffer that generate_requests() modifies.
-	*/
-	static std::string & get_send_buff(const int & socket_FD);
-	/****************************************************************************
-	END NOT-THREADSAFE
-	****************************************************************************/
-
-
-	/*
-	Try to add download to an existing client_buffer. If client_buffer is found
-	then return true. If no client_buffer is found false will be returned and a
-	new connection should be made.
+	add_connection    - Adds connection to client_buffer, returns true if success.
+	add_download      - Adds download to unique download set. This is needed because
+	                    it's possible that a download can be started with no connected
+	                    servers.
+	current_downloads - Populates the info vector with download status information.
+	                    If hash is specified then only information from the download
+	                    which corresponds to hash is added to the vector.
+	                    Note: the info vector is cleared before it's populated
+	erase             - Erases client_buffer associated with socket_FD. This should
+	                    be called whenever a socket is disconnected.
+	generate_requests - Causes all client_buffers to get requests from their downloads.
+	                    Note: this is called by client::main_thread before socket
+	                    servicing loop in main_loop().
+	get_empty         - Removes all empty client_buffers and populates disconnect
+	                    vector with sockets which need to be disconnected.
+	get_complete      - Populates complete vector with complete downloads. Removes
+	                    complete downloads from all client_buffers and Unique_Download.
+	get_send_buff     - Copies max_bytes from the client_buffer send_buff in to the
+	                    destination buff. True is returned if destination is not
+	                    empty after function completes.
+	                    Note 1: max_bytes should be as low as possible to avoid
+	                            unnecessary copying.
+	                    Note 2: Once a send is done, call post_send to erase the
+	                            bytes sent from the client_buffer send_buff.
+	get_send_pending  - Returns counter that indicates how many sockets have bytes
+	                    to send. Used by client to check if write_FDS set should be
+	                    used.
+	get_timed_out     - Removes client_buffers that timed out and populates timed_out
+	                    vector with sockets which should be disconnected.
+	is_downloading    - Returns true if download specified by pointer or hash is running.
+	new_connection    - Adds download to client_buffer. Creates new client_buffer
+	                    if necessary. Silently fails if the download within
+	                    download_connection doesn't exist in Unique_Download.
+	post_send         - Should always be called after sending data obtained from
+	                    get_send_buff(). This function erases the send_buff data
+	                    in the client_buffer that was sent.
+	post_recv         - Should always be called after recv'ing data. Processes
+	                    recv'ed data.
+	stop_download     - Stops the download associated with hash.
 	*/
 	static bool add_connection(download_connection & DC);
-
-	/*
-	Add a download to the client_buffer. Doesn't associate the download with any
-	instantiation of client_buffer.
-	*/
-	static void add_download(locking_shared_ptr<download> Download);
-
-	/*
-	Populates the info vector with download information for all downloads running
-	in all client_buffers. The vector passed in is cleared before download info is
-	added.
-	*/
+	static void add_download(locking_shared_ptr<download> & Download);
 	static void current_downloads(std::vector<download_status> & info, std::string hash);
-
-	/*
-	Erases an element from Client_Buffer associated with socket_FD. This should be
-	called whenever a socket is disconnected.
-	*/
 	static void erase(const int & socket_FD);
-
-	/*
-	Returns the counter that indicates whether a send needs to be done. If it is
-	zero no send needs to be done. Every +1 above zero it is indicates a send_buff
-	has something in it.
-	*/
+	static void generate_requests();
+	static void get_complete(std::vector<locking_shared_ptr<download> > & complete);
+	static void get_empty(std::vector<int> & disconnect);
+	static bool get_send_buff(const int & socket_FD, const int & max_bytes, std::string & destination);
 	static int get_send_pending();
-
-	/*
-	Check if a download is running. Returns true if yes, else false.
-	*/
-	static bool is_downloading(locking_shared_ptr<download> Download);
-
-	/*
-	Check by hash if a download is running. Returns true if yes, else false.
-	*/
+	static void get_timed_out(std::vector<int> & timed_out);
+	static bool is_downloading(locking_shared_ptr<download> & Download);
 	static bool is_downloading(const std::string & hash);
-
-	/*
-	Populates the complete list with pointers to downloads which are completed.
-	WARNING: Do not do anything with these pointers but compare them by value. Any
-	         dereferencing of these pointers is NOT thread safe.
-	*/
-	static void find_complete(std::vector<locking_shared_ptr<download> > & complete);
-
-	/*
-	Removes all empty client_buffers and returns their socket numbers which need
-	to be disconnected.
-	*/
-	static void find_empty(std::vector<int> & disconnect_sockets);
-
-	/*
-	Removes client_buffers that have timed out. Puts sockets to disconnect in
-	timed_out vector.
-	*/
-	static void find_timed_out(std::vector<int> & timed_out);
-
-	/*
-	Creates new client_buffer. Registers the download with the client_buffer.
-	Registers the download_conn with the download.
-
-	Precondition: add_download must be called for the download contained within
-	the DC.
-
-	Returns true if the download associated with the DC was found, else false.
-	If the download is not found the connection can not be added.
-	*/
 	static void new_connection(const download_connection & DC);
-
-	/*
-	Should be called after sending data. This function erases the sent bytes and
-	evaluates whether or not the send_buff was emptied. If it was then it
-	decrements send_pending.
-	*/
 	static void post_send(const int & socket_FD, const int & n_bytes);
-
-	/*
-	Append bytes to a buffer for a specified socket.
-	*/
-	static void recv_buff_append(const int & socket_FD, char * buff, const int & n_bytes);
-
-	/*
-	Remove the download from the Unique_Download container and from any instantiation
-	of the client_buffer.
-	*/
-	static void remove_download(locking_shared_ptr<download> Download);
-
-	//stops the download associated with hash
+	static void post_recv(const int & socket_FD, char * buff, const int & n_bytes);
 	static void stop_download(const std::string & hash);
 
 private:
+	//this ctor terminates program because it should not be used
+	client_buffer();
+
 	//only the client_buffer can instantiate itself
 	client_buffer(const int & socket_in, const std::string & IP_in);
 
-	//used to protect all public static functions
+	//locks all public static functions
 	static boost::mutex Mutex;
 
-	/*
-	All currently running downloads. All use of Unique_Download should be locked with UD_mutex.
-	*/
+	//all currently running downloads
 	static std::set<locking_shared_ptr<download> > Unique_Download;
 
-	/*
-	Socket mapped to client_buffer. All use of Client_Buffer should be locked with CB_mutex.
-	This includes all calls to client_buffer member functions.
-	*/
+	//socket mapped to client_buffer
 	static std::map<int, boost::shared_ptr<client_buffer> > Client_Buffer;
 
 	/*
@@ -202,14 +127,29 @@ private:
 	The Download container is effectively a ring. The rotate_downloads() function will move
 	Download_iter through it in a circular fashion.
 	*/
-	std::list<locking_shared_ptr<download> > Download;                //all downloads that this client_buffer is serving
-	std::list<locking_shared_ptr<download> >::iterator Download_iter; //last download a request was gotten from
+	//all downloads that this client_buffer is serving
+	std::list<locking_shared_ptr<download> > Download;
+	//last download a request was gotten from
+	std::list<locking_shared_ptr<download> >::iterator Download_iter;
 
-	std::string IP;   //IP associated with this client_buffer
-	int socket;       //socket number of this element
-	time_t last_seen; //used for timeout
+	std::string IP;   //IP that corresponds to socket
+	int socket;
 
-	//this will be adjusted up or down depending on whether the server needs it
+	//used for timeout
+	time_t last_seen;
+
+	/*
+	This is the dynamic maximum pipeline size.
+	global::PIPELINE_SIZE
+
+	When generate_request() is called there are the following cases.
+	case: Pipeline.size() == 0 && max_pipeline_size != global::PIPELINE_SIZE
+		++max_pipeline_size
+	case: Pipeline.size() == 1
+		//just right!
+	case: Pipeline.size() > 1 && max_pipeline_size != 1
+		--max_pipeline_size;
+	*/
 	int max_pipeline_size;
 
 	class pending_response
@@ -250,9 +190,9 @@ private:
 	int slots_used;
 
 	/*
-	recv_buff_append   - appends bytes to recv_buff and calls post_recv
+	recv_buff_append   - appends bytes to recv_buff
 	empty              - return true if client_buffer contains no downloads
-	post_recv          - does actions which may need to be done after a recv
+	post_recv_actions  - does actions which may need to be done after a recv
 	post_send          - should be called after every send
 	prepare_request    - if another request it needed rotate downloads and get a request
 	register_download  - associate a download with this client_buffer
@@ -265,8 +205,8 @@ private:
 	*/
 	void recv_buff_append(char * buff, const int & n_bytes);
 	bool empty();
-	void post_recv();
 	void prepare_request();
+	void recv_buff_process();
 	void register_download(locking_shared_ptr<download> new_download);
 	bool rotate_downloads();
 	void terminate_download(locking_shared_ptr<download> term_DL);

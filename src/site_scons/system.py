@@ -12,32 +12,22 @@ import sys
 def env_setup(env):
 	environment.define_keys(env)
 
-	#start n build threads where n is the # of CPUs
+	#start minimum of 2 threads, more if > 2 CPUs
 	num_cpu = int(os.environ.get('NUM_CPU', 2))
 	env.SetOption('num_jobs', num_cpu)
 
 	#header search path
-	env['CPPPATH'] = [
-		'#/libtommath',
-		'#/libsqlite3'
-	]
+	env['CPPPATH'] = ['#/libtommath', '#/libsqlite3']
 
 	#library search path
-	env['LIBPATH'] = [
-		'#libtommath',
-		'#libsqlite3'
-	]
+	env['LIBPATH'] = ['#libtommath', '#libsqlite3']
 
 	#libraries to link in
-	env['LIBS'] = [
-		'tommath', 
-		'sqlite3'
-	]
+	env['LIBS'] = ['tommath', 'sqlite3']
 
 	#platform specific options
 	if sys.platform == 'linux2':
 		env['CCFLAGS'].append('-O3')   #max optimizations
-		env['LIBS'].append('dl')       #needed for sqlite3
 		env['LIBS'].append('pthread')  #needed for sqlite3
 	if sys.platform == 'win32':
 		env['LIBPATH'].append(__win32_lib_dir())

@@ -591,8 +591,6 @@ bool gui::update_status_bar()
 	ss << std::string(32 - ss.str().size(), ' ');
 	ss << " P: " << Client.prime_count();
 	ss << std::string(42 - ss.str().size(), ' ');
-	ss << " OPS: " << database::connection::open_speed();
-	ss << std::string(52 - ss.str().size(), ' ');
 	ss << " QPS: " << database::connection::query_speed();
 
 	if(Server.is_indexing()){

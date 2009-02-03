@@ -1,14 +1,14 @@
 #include "database_table_share.hpp"
 
-database::table::share::share()
-: DB_Hash(DB)
+void database::table::share::add_entry(const std::string & hash,
+	const boost::uint64_t & size, const std::string & path)
 {
-	DB.query("CREATE TABLE IF NOT EXISTS share (hash TEXT, size TEXT, path TEXT)");
-	DB.query("CREATE INDEX IF NOT EXISTS share_hash_index ON share (hash)");
-	DB.query("CREATE INDEX IF NOT EXISTS share_path_index ON share (path)");
+	add_entry(hash, size, path, DB);
 }
 
-void database::table::share::add_entry(const std::string & hash, const boost::uint64_t & size, const std::string & path)
+void database::table::share::add_entry(const std::string & hash,
+	const boost::uint64_t & size, const std::string & path,
+	database::connection & DB)
 {
 	char * path_sqlite = sqlite3_mprintf("%q", path.c_str());
 	std::stringstream ss;
@@ -19,12 +19,18 @@ void database::table::share::add_entry(const std::string & hash, const boost::ui
 
 void database::table::share::delete_entry(const std::string & path)
 {
+	delete_entry(path, DB);
+}
+
+void database::table::share::delete_entry(const std::string & path,
+	database::connection & DB)
+{
 	char * sqlite3_path = sqlite3_mprintf("%Q", path.c_str());
 	DB.query("BEGIN TRANSACTION");
 	std::string hash;
 	boost::uint64_t file_size;
-	if(lookup_path(path, hash, file_size)){
-		DB_Hash.delete_tree(hash, hash_tree::file_size_to_tree_size(file_size));
+	if(lookup_path(path, hash, file_size, DB)){
+		database::table::hash::delete_tree(hash, hash_tree::file_size_to_tree_size(file_size), DB);
 	}
 	std::stringstream ss;
 	ss << "DELETE FROM share WHERE hash = '" << hash << "' AND path = " << sqlite3_path;
@@ -42,6 +48,12 @@ static int lookup_hash_0_call_back(bool & entry_exists, int columns_retrieved,
 }
 
 bool database::table::share::lookup_hash(const std::string & hash)
+{
+	return lookup_hash(hash, DB);
+}
+
+bool database::table::share::lookup_hash(const std::string & hash,
+	database::connection & DB)
 {
 	bool entry_exists = false;
 	std::stringstream ss;
@@ -62,6 +74,12 @@ static int lookup_hash_1_call_back(std::pair<bool, std::string *> & info,
 
 bool database::table::share::lookup_hash(const std::string & hash, std::string & path)
 {
+	return lookup_hash(hash, path, DB);
+}
+
+bool database::table::share::lookup_hash(const std::string & hash,
+	std::string & path, database::connection & DB)
+{
 	std::pair<bool, std::string *> info(false, &path);
 	std::stringstream ss;
 	ss << "SELECT path FROM share WHERE hash = '" << hash << "' LIMIT 1";
@@ -79,7 +97,14 @@ static int lookup_hash_2_call_back(std::pair<bool, boost::uint64_t *> & info,
 	return 0;
 }
 
-bool database::table::share::lookup_hash(const std::string & hash, boost::uint64_t & file_size)
+bool database::table::share::lookup_hash(const std::string & hash,
+	boost::uint64_t & file_size)
+{
+	return lookup_hash(hash, file_size, DB);
+}
+
+bool database::table::share::lookup_hash(const std::string & hash,
+	boost::uint64_t & file_size, database::connection & DB)
 {
 	std::pair<bool, boost::uint64_t *> info(false, &file_size);
 	std::stringstream ss;
@@ -99,7 +124,14 @@ static int lookup_hash_3_call_back(boost::tuple<bool, boost::uint64_t *, std::st
 	return 0;
 }
 
-bool database::table::share::lookup_hash(const std::string & hash, std::string & path, boost::uint64_t & file_size)
+bool database::table::share::lookup_hash(const std::string & hash,
+	std::string & path, boost::uint64_t & file_size)
+{
+	return lookup_hash(hash, path, file_size, DB);
+}
+
+bool database::table::share::lookup_hash(const std::string & hash,
+	std::string & path, boost::uint64_t & file_size, database::connection & DB)
 {
 	boost::tuple<bool, boost::uint64_t *, std::string *> info(false, &file_size, &path);
 	std::stringstream ss;
@@ -120,9 +152,16 @@ static int lookup_path_call_back(boost::tuple<bool, std::string *, boost::uint64
 	return 0;
 }
 
-bool database::table::share::lookup_path(const std::string & path, std::string & hash, boost::uint64_t & size)
+bool database::table::share::lookup_path(const std::string & path,
+	std::string & hash, boost::uint64_t & file_size)
 {
-	boost::tuple<bool, std::string *, boost::uint64_t *> info(false, &hash, &size);
+	return lookup_path(path, hash, file_size, DB);
+}
+
+bool database::table::share::lookup_path(const std::string & path, std::string & hash,
+	boost::uint64_t & file_size, database::connection & DB)
+{
+	boost::tuple<bool, std::string *, boost::uint64_t *> info(false, &hash, &file_size);
 	char * query = sqlite3_mprintf("SELECT hash, size FROM share WHERE path = '%q' LIMIT 1", path.c_str());
 	DB.query(query, &lookup_path_call_back, info);
 	sqlite3_free(query);
@@ -137,7 +176,8 @@ static int unique_key_call_back(bool & unique, int columns_retrieved,
 	return 0;
 }
 
-bool database::table::share::unique_hash(const std::string & hash)
+bool database::table::share::unique_hash(const std::string & hash,
+	database::connection & DB)
 {
 	bool unique = false;
 	std::stringstream ss;

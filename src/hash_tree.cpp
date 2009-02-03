@@ -3,9 +3,7 @@
 boost::uint64_t hash_tree::throw_away;
 
 hash_tree::hash_tree()
-:
-	DB_Hash(DB),
-	stop_thread(false)
+: stop_thread(false)
 {
 
 }
@@ -208,9 +206,9 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 		hash already exists, if it does then return the key of that tree.
 		*/
 		assert(tree_size == rightside_up.tellp());
-		if(!DB_Hash.exists(root_hash, tree_size)){
-			DB_Hash.tree_allocate(root_hash, tree_size);
-			database::blob Blob = DB_Hash.tree_open(root_hash, tree_size);
+		if(!database::table::hash::exists(root_hash, tree_size, DB)){
+			database::table::hash::tree_allocate(root_hash, tree_size, DB);
+			database::blob Blob = database::table::hash::tree_open(root_hash, tree_size, DB);
 			rightside_up.seekg(0, std::ios::beg);
 			int offset = 0, bytes_remaining = tree_size, read_size;
 			DB.query("BEGIN TRANSACTION");
@@ -222,7 +220,7 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 				}
 				rightside_up.read(block_buff, read_size);
 				if(rightside_up.gcount() != read_size){
-					DB_Hash.delete_tree(root_hash, tree_size);
+					database::table::hash::delete_tree(root_hash, tree_size, DB);
 					LOGGER << "error reading rightside_up file";
 					return false;
 				}else{
@@ -231,7 +229,7 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 					bytes_remaining -= read_size;
 				}
 			}
-			DB_Hash.set_state(root_hash, tree_size, database::table::hash::COMPLETE);
+			database::table::hash::set_state(root_hash, tree_size, database::table::hash::COMPLETE, DB);
 			DB.query("END TRANSACTION");
 		}
 		return true;

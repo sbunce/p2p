@@ -2,18 +2,22 @@
 
 atomic_int<int> database::table::blacklist::blacklist_state(0);
 
-database::table::blacklist::blacklist()
+void database::table::blacklist::add(const std::string & IP)
 {
-	DB.query("CREATE TABLE IF NOT EXISTS blacklist (IP TEXT UNIQUE)");
-	DB.query("CREATE INDEX IF NOT EXISTS blacklist_index ON blacklist (IP)");
+	add(IP, DB);
 }
 
-void database::table::blacklist::add(const std::string & IP)
+void database::table::blacklist::add(const std::string & IP, database::connection & DB)
 {
 	std::stringstream ss;
 	ss << "INSERT INTO blacklist VALUES ('" << IP << "')";
 	DB.query(ss.str());
 	++blacklist_state;
+}
+
+bool database::table::blacklist::is_blacklisted(const std::string & IP)
+{
+	return is_blacklisted(IP, DB);
 }
 
 static int is_blacklisted_call_back(bool & found, int columns, char ** response, char ** column_name)
@@ -22,7 +26,7 @@ static int is_blacklisted_call_back(bool & found, int columns, char ** response,
 	return 0;
 }
 
-bool database::table::blacklist::is_blacklisted(const std::string & IP)
+bool database::table::blacklist::is_blacklisted(const std::string & IP, database::connection & DB)
 {
 	bool found = false;
 	std::stringstream ss;

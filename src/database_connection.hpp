@@ -61,6 +61,10 @@ Read blob:
 #ifndef H_DATABASE_CONNECTION
 #define H_DATABASE_CONNECTION
 
+//custom
+#include "database_blob.hpp"
+#include "database_init.hpp"
+
 //boost
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
@@ -74,31 +78,12 @@ Read blob:
 #include <sqlite3.h>
 
 namespace database{
-
-//object needed for reading/writing a blob
-class blob
-{
-public:
-	blob(
-		const std::string & table_in,
-		const std::string & column_in,
-		const boost::int64_t & rowid_in
-	):
-		table(table_in),
-		column(column_in),
-		rowid(rowid_in)
-	{}
-
-	const std::string table;
-	const std::string column;
-	const boost::int64_t rowid;
-};
-
 class connection
 {
 public:
 	connection();
 	connection(const connection & DB);
+	connection & operator = (const connection & rval);
 	~connection();
 
 	//allocate blob of specified size
@@ -108,150 +93,34 @@ public:
 
 	//query with no call back
 	int query(const std::string & query);
-
 	//query with function call back
 	int query(const std::string & query, int (*fun_ptr)(int, char **, char **));
-
 	//query with function call back and object
 	template <typename T>
-	int query(const std::string & query, int (*fun_ptr)(T, int, char **, char **), T t)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		//std::pair<func signature, object>
-		std::pair<int (*)(T, int, char **, char **), T*> call_back_info(fun_ptr, &t);
-		int code;
-		while((code = sqlite3_exec(DB_handle, query.c_str(), fun_with_object_call_back_wrapper<T>,
-			(void *)&call_back_info, NULL)) != SQLITE_OK)
-		{
-			Query.update(1);
-			if(code == SQLITE_BUSY){
-				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
-				boost::this_thread::yield();
-			}else{
-				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
-				break;
-			}
-		}
-		Query.update(1);
-		return code;
-	}
-
+	int query(const std::string & query, int (*fun_ptr)(T, int, char **, char **), T t);
 	//query with function call back and object by reference
 	template <typename T>
-	int query(const std::string & query, int (*fun_ptr)(T&, int, char **, char **), T & t)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		//std::pair<func signature, object>
-		std::pair<int (*)(T&, int, char **, char **), T*> call_back_info(fun_ptr, &t);
-		int code;
-		while((code = sqlite3_exec(DB_handle, query.c_str(), fun_with_object_reference_call_back_wrapper<T>,
-			(void *)&call_back_info, NULL)) != SQLITE_OK)
-		{
-			Query.update(1);
-			if(code == SQLITE_BUSY){
-				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
-				boost::this_thread::yield();
-			}else{
-				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
-				break;
-			}
-		}
-		Query.update(1);
-		return code;
-	}
-
+	int query(const std::string & query, int (*fun_ptr)(T&, int, char **, char **), T & t);
 	//query with member function call back
 	template <typename T>
-	int query(const std::string & query, T * t, int (T::*memfun_ptr)(int, char **, char **))
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		//std::pair<object with func, func signature>
-		std::pair<T*, int (T::*)(int, char **, char **)> call_back_info(t, memfun_ptr);
-		int code;
-		while((code = sqlite3_exec(DB_handle, query.c_str(), memfun_call_back_wrapper<T>,
-			(void *)&call_back_info, NULL)) != SQLITE_OK)
-		{
-			Query.update(1);
-			if(code == SQLITE_BUSY){
-				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
-				boost::this_thread::yield();
-			}else{
-				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
-				break;
-			}
-		}
-		Query.update(1);
-		return code;
-	}
-
+	int query(const std::string & query, T * t, int (T::*memfun_ptr)(int, char **, char **));
 	//query with member function call back and object
 	template <typename T, typename T_obj>
-	int query(const std::string & query, T * t, int (T::*memfun_ptr)(T_obj, int, char **, char **), T_obj T_Obj)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		/*
-		std::pair<std::pair<object with func, func signature>, object> >
-		A boost::tuple would be nice here but I want to leave this stdlib only.
-		*/
-		std::pair<std::pair<T*, int (T::*)(T_obj, int, char **, char **)>, T_obj*>
-			call_back_info(std::make_pair(t, memfun_ptr), &T_Obj);
-		int code;
-		while((code = sqlite3_exec(DB_handle, query.c_str(), memfun_with_object_call_back_wrapper<T, T_obj>,
-			(void *)&call_back_info, NULL)) != SQLITE_OK)
-		{
-			Query.update(1);
-			if(code == SQLITE_BUSY){
-				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
-				boost::this_thread::yield();
-			}else{
-				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
-				break;
-			}
-		}
-		Query.update(1);
-		return code;
-	}
-
+	int query(const std::string & query, T * t, int (T::*memfun_ptr)(T_obj, int, char **, char **), T_obj T_Obj);
 	//query with member function call back and object by reference
 	template <typename T, typename T_obj>
-	int query(const std::string & query, T * t, int (T::*memfun_ptr)(T_obj&, int, char **, char **), T_obj & T_Obj)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		/*
-		std::pair<std::pair<object with func, func signature>, object> >
-		A boost::tuple would be nice here but I want to leave this stdlib only.
-		*/
-		std::pair<std::pair<T*, int (T::*)(T_obj&, int, char **, char **)>, T_obj*>
-			call_back_info(std::make_pair(t, memfun_ptr), &T_Obj);
-		int code;
-		while((code = sqlite3_exec(DB_handle, query.c_str(), memfun_with_object_reference_call_back_wrapper<T, T_obj>,
-			(void *)&call_back_info, NULL)) != SQLITE_OK)
-		{
-			Query.update(1);
-			if(code == SQLITE_BUSY){
-				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
-				boost::this_thread::yield();
-			}else{
-				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
-				break;
-			}
-		}
-		Query.update(1);
-		return code;
-	}
+	int query(const std::string & query, T * t, int (T::*memfun_ptr)(T_obj&, int, char **, char **), T_obj & T_Obj);
 
-	//debug functions
-	static unsigned open_speed()
-	{
-		return Open.speed();
-	}
-	static unsigned query_speed()
-	{
-		return Query.speed();
-	}
-
+	//returns average queries/second
+	static unsigned query_speed(){ return Query.speed(); }
 
 private:
+	//called by copy ctor and operator =
+	void copy(const connection & DB);
+
+	//keeps track of how many queries per second are happening
+	static speed_calculator Query;
+
 	sqlite3 * DB_handle;
 	boost::shared_ptr<atomic_int<int> > ref_cnt;
 
@@ -261,64 +130,18 @@ private:
 	*/
 	boost::shared_ptr<boost::recursive_mutex> Mutex;
 
-	static speed_calculator Open;  //database open/second
-	static speed_calculator Query; //queries per second
-
-	//call back wrapper for functions
-	static int fun_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)
-	{
-		int (*fun_ptr)(int, char **, char **) = (int (*)(int, char **, char **))obj_ptr;
-		return fun_ptr(columns, response, column_name);
-	}
-
-	//call back wrapper for functions with an object
+	//call backs for query functions
+	static int fun_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name);
 	template <typename T>
-	static int fun_with_object_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)
-	{
-		std::pair<int (*)(T, int, char **, char **), T*> * call_back_info;
-		call_back_info = (std::pair<int (*)(T, int, char **, char **), T*> *)obj_ptr;
-		int (*fun_ptr)(T, int, char **, char **) = (int (*)(T, int, char **, char **))call_back_info->first;
-		return fun_ptr(*(call_back_info->second), columns, response, column_name);
-	}
-
-	//call back wrapper for functions with an object by reference
+	static int fun_with_object_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name);
 	template <typename T>
-	static int fun_with_object_reference_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)
-	{
-		std::pair<int (*)(T&, int, char **, char **), T*> * call_back_info;
-		call_back_info = (std::pair<int (*)(T&, int, char **, char **), T*> *)obj_ptr;
-		int (*fun_ptr)(T&, int, char **, char **) = (int (*)(T&, int, char **, char **))call_back_info->first;
-		return fun_ptr(*(call_back_info->second), columns, response, column_name);
-	}
-
-	//call back wrapper for member functions
+	static int fun_with_object_reference_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name);
 	template <typename T>
-	static int memfun_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)
-	{
-		std::pair<T*, int (T::*)(int, char **, char **)> * call_back_info;
-		call_back_info = (std::pair<T*, int (T::*)(int, char **, char **)> *)obj_ptr;
-		return ((*call_back_info->first).*(call_back_info->second))(columns, response, column_name);
-	}
-
-	//call back wrapper for member functions with an object
+	static int memfun_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name);
 	template <typename T, typename T_obj>
-	static int memfun_with_object_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)
-	{
-		std::pair<std::pair<T*, int (T::*)(T_obj, int, char **, char **)>, T_obj*> * call_back_info;
-		call_back_info = (std::pair<std::pair<T*, int (T::*)(T_obj, int, char **, char **)>, T_obj*> *)obj_ptr;
-		return ((*call_back_info->first.first).*(call_back_info->first.second))
-			(*(call_back_info->second), columns, response, column_name);
-	}
-
-	//call back wrapper for member functions with an object by reference
+	static int memfun_with_object_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name);
 	template <typename T, typename T_obj>
-	static int memfun_with_object_reference_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)
-	{
-		std::pair<std::pair<T*, int (T::*)(T_obj&, int, char **, char **)>, T_obj*> * call_back_info;
-		call_back_info = (std::pair<std::pair<T*, int (T::*)(T_obj&, int, char **, char **)>, T_obj*> *)obj_ptr;
-		return ((*call_back_info->first.first).*(call_back_info->first.second))
-			(*(call_back_info->second), columns, response, column_name);
-	}
+	static int memfun_with_object_reference_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name);
 
 	/*
 	blob_close - close a blob pointed to by blob handle
@@ -328,5 +151,173 @@ private:
 	void blob_close(sqlite3_blob * blob_handle);
 	sqlite3_blob * blob_open(blob & Blob, const bool & writeable);
 };
+
+template <typename T>
+int database::connection::query(const std::string & query, int (*fun_ptr)(T, int, char **, char **), T t)
+{
+	boost::recursive_mutex::scoped_lock lock(*Mutex);
+	//std::pair<func signature, object>
+	std::pair<int (*)(T, int, char **, char **), T*> call_back_info(fun_ptr, &t);
+	int code;
+	while((code = sqlite3_exec(DB_handle, query.c_str(), fun_with_object_call_back_wrapper<T>,
+		(void *)&call_back_info, NULL)) != SQLITE_OK)
+	{
+		Query.update(1);
+		if(code == SQLITE_BUSY){
+			LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
+			boost::this_thread::yield();
+		}else{
+			LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
+			break;
+		}
+	}
+	Query.update(1);
+	return code;
+}
+
+template <typename T>
+int database::connection::query(const std::string & query, int (*fun_ptr)(T&, int, char **, char **), T & t)
+{
+	boost::recursive_mutex::scoped_lock lock(*Mutex);
+	//std::pair<func signature, object>
+	std::pair<int (*)(T&, int, char **, char **), T*> call_back_info(fun_ptr, &t);
+	int code;
+	while((code = sqlite3_exec(DB_handle, query.c_str(), fun_with_object_reference_call_back_wrapper<T>,
+		(void *)&call_back_info, NULL)) != SQLITE_OK)
+	{
+		Query.update(1);
+		if(code == SQLITE_BUSY){
+			LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
+			boost::this_thread::yield();
+		}else{
+			LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
+			break;
+		}
+	}
+	Query.update(1);
+	return code;
+}
+
+template <typename T>
+int database::connection::query(const std::string & query, T * t, int (T::*memfun_ptr)(int, char **, char **))
+{
+	boost::recursive_mutex::scoped_lock lock(*Mutex);
+	//std::pair<object with func, func signature>
+	std::pair<T*, int (T::*)(int, char **, char **)> call_back_info(t, memfun_ptr);
+	int code;
+	while((code = sqlite3_exec(DB_handle, query.c_str(), memfun_call_back_wrapper<T>,
+		(void *)&call_back_info, NULL)) != SQLITE_OK)
+	{
+		Query.update(1);
+		if(code == SQLITE_BUSY){
+			LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
+			boost::this_thread::yield();
+		}else{
+			LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
+			break;
+		}
+	}
+	Query.update(1);
+	return code;
+}
+
+template <typename T, typename T_obj>
+int database::connection::query(const std::string & query, T * t, int (T::*memfun_ptr)(T_obj, int, char **, char **), T_obj T_Obj)
+{
+	boost::recursive_mutex::scoped_lock lock(*Mutex);
+	/*
+	std::pair<std::pair<object with func, func signature>, object> >
+	A boost::tuple would be nice here but I want to leave this stdlib only.
+	*/
+	std::pair<std::pair<T*, int (T::*)(T_obj, int, char **, char **)>, T_obj*>
+		call_back_info(std::make_pair(t, memfun_ptr), &T_Obj);
+	int code;
+	while((code = sqlite3_exec(DB_handle, query.c_str(), memfun_with_object_call_back_wrapper<T, T_obj>,
+		(void *)&call_back_info, NULL)) != SQLITE_OK)
+	{
+		Query.update(1);
+		if(code == SQLITE_BUSY){
+			LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
+			boost::this_thread::yield();
+		}else{
+			LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
+			break;
+		}
+	}
+	Query.update(1);
+	return code;
+}
+
+template <typename T, typename T_obj>
+int database::connection::query(const std::string & query, T * t, int (T::*memfun_ptr)(T_obj&, int, char **, char **), T_obj & T_Obj)
+{
+	boost::recursive_mutex::scoped_lock lock(*Mutex);
+	/*
+	std::pair<std::pair<object with func, func signature>, object> >
+	A boost::tuple would be nice here but I want to leave this stdlib only.
+	*/
+	std::pair<std::pair<T*, int (T::*)(T_obj&, int, char **, char **)>, T_obj*>
+		call_back_info(std::make_pair(t, memfun_ptr), &T_Obj);
+	int code;
+	while((code = sqlite3_exec(DB_handle, query.c_str(), memfun_with_object_reference_call_back_wrapper<T, T_obj>,
+		(void *)&call_back_info, NULL)) != SQLITE_OK)
+	{
+		Query.update(1);
+		if(code == SQLITE_BUSY){
+			LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
+			boost::this_thread::yield();
+		}else{
+			LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
+			break;
+		}
+	}
+	Query.update(1);
+	return code;
+}
+
+template <typename T>
+int database::connection::fun_with_object_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)
+{
+	std::pair<int (*)(T, int, char **, char **), T*> * call_back_info;
+	call_back_info = (std::pair<int (*)(T, int, char **, char **), T*> *)obj_ptr;
+	int (*fun_ptr)(T, int, char **, char **) = (int (*)(T, int, char **, char **))call_back_info->first;
+	return fun_ptr(*(call_back_info->second), columns, response, column_name);
+}
+
+template <typename T>
+int database::connection::fun_with_object_reference_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)
+{
+	std::pair<int (*)(T&, int, char **, char **), T*> * call_back_info;
+	call_back_info = (std::pair<int (*)(T&, int, char **, char **), T*> *)obj_ptr;
+	int (*fun_ptr)(T&, int, char **, char **) = (int (*)(T&, int, char **, char **))call_back_info->first;
+	return fun_ptr(*(call_back_info->second), columns, response, column_name);
+}
+
+template <typename T>
+int database::connection::memfun_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)
+{
+	std::pair<T*, int (T::*)(int, char **, char **)> * call_back_info;
+	call_back_info = (std::pair<T*, int (T::*)(int, char **, char **)> *)obj_ptr;
+	return ((*call_back_info->first).*(call_back_info->second))(columns, response, column_name);
+}
+
+template <typename T, typename T_obj>
+int database::connection::memfun_with_object_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)
+{
+	std::pair<std::pair<T*, int (T::*)(T_obj, int, char **, char **)>, T_obj*> * call_back_info;
+	call_back_info = (std::pair<std::pair<T*, int (T::*)(T_obj, int, char **, char **)>, T_obj*> *)obj_ptr;
+	return ((*call_back_info->first.first).*(call_back_info->first.second))
+		(*(call_back_info->second), columns, response, column_name);
+}
+
+template <typename T, typename T_obj>
+int database::connection::memfun_with_object_reference_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)
+{
+	std::pair<std::pair<T*, int (T::*)(T_obj&, int, char **, char **)>, T_obj*> * call_back_info;
+	call_back_info = (std::pair<std::pair<T*, int (T::*)(T_obj&, int, char **, char **)>, T_obj*> *)obj_ptr;
+	return ((*call_back_info->first.first).*(call_back_info->first.second))
+		(*(call_back_info->second), columns, response, column_name);
+}
+
 }//end of database namespace
 #endif

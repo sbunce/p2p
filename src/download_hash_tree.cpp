@@ -6,8 +6,7 @@ download_hash_tree::download_hash_tree(
 	Download_Info(Download_Info_in),
 	download_complete(false),
 	close_slots(false),
-	Tree_Info(Download_Info_in.hash, Download_Info_in.size),
-	DB_Hash(DB)
+	Tree_Info(Download_Info_in.hash, Download_Info_in.size)
 {
 	client_server_bridge::start_hash_tree(Download_Info.hash);
 

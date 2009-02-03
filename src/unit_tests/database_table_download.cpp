@@ -8,7 +8,7 @@
 int main()
 {
 	database::connection DB;
-	DB.query("DROP TABLE IF EXISTS download");
+	DB.query("DELETE FROM download");
 
 	database::table::download DBD;
 	download_info DI("ABC", "NAME", 123);

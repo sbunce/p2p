@@ -5,7 +5,7 @@
 int main()
 {
 	database::connection DB;
-	DB.query("DROP TABLE IF EXISTS prime");
+	DB.query("DELETE FROM prime");
 	database::table::prime DBP;
 
 	mpint input("123"); //not prime, only used to test store and fetch

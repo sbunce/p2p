@@ -1,7 +1,10 @@
+//THREADSAFE
+
 #ifndef H_SPEED_CALCULATOR
 #define H_SPEED_CALCULATOR
 
 //boost
+#include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 
 //custom
@@ -28,12 +31,16 @@ public:
 	void update(const unsigned & n_bytes);
 
 private:
-	atomic_int<unsigned> average;
+	//mutex for all public functions
+	boost::shared_ptr<boost::recursive_mutex> Recursive_Mutex;
+
+	//average speed over global::SPEED_AVERAGE seconds
+	unsigned average;
 
 	/*
 	pair<second, bytes in second>
 	The low elements are more current in time.
 	*/
-	std::pair<time_t, atomic_int<unsigned> > Second_Bytes[global::SPEED_AVERAGE + 1];
+	std::pair<time_t, unsigned> Second_Bytes[global::SPEED_AVERAGE + 1];
 };
 #endif

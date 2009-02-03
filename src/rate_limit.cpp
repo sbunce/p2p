@@ -1,22 +1,20 @@
 #include "rate_limit.hpp"
 
-atomic_int<unsigned> rate_limit::download_rate(global::DOWNLOAD_RATE);
-atomic_int<unsigned> rate_limit::upload_rate(global::UPLOAD_RATE);
+boost::recursive_mutex rate_limit::Recursive_Mutex;
+unsigned rate_limit::download_rate(global::DOWNLOAD_RATE);
+unsigned rate_limit::upload_rate(global::UPLOAD_RATE);
 speed_calculator rate_limit::Download;
 speed_calculator rate_limit::Upload;
 
-rate_limit::rate_limit()
-{
-
-}
-
 void rate_limit::add_download_bytes(const unsigned & n_bytes)
 {
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	Download.update(n_bytes);
 }
 
 void rate_limit::set_download_rate(const unsigned & rate)
 {
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	if(rate == 0){
 		download_rate = 1;
 	}else{
@@ -26,11 +24,13 @@ void rate_limit::set_download_rate(const unsigned & rate)
 
 unsigned rate_limit::get_download_rate()
 {
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	return download_rate;
 }
 
 unsigned rate_limit::download_rate_control(const unsigned & max_possible_transfer)
 {
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	unsigned transfer = 0;
 	if(Download.current_second_bytes() >= download_rate){
 		//limit reached, send no bytes
@@ -47,11 +47,13 @@ unsigned rate_limit::download_rate_control(const unsigned & max_possible_transfe
 
 void rate_limit::add_upload_bytes(const unsigned & n_bytes)
 {
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	Upload.update(n_bytes);
 }
 
 void rate_limit::set_upload_rate(const unsigned & rate)
 {
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	if(rate == 0){
 		upload_rate = 1;
 	}else{
@@ -61,11 +63,13 @@ void rate_limit::set_upload_rate(const unsigned & rate)
 
 unsigned rate_limit::get_upload_rate()
 {
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	return upload_rate;
 }
 
 unsigned rate_limit::upload_rate_control(const unsigned & max_possible_transfer)
 {
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	unsigned transfer = 0;
 	if(Upload.current_second_bytes() >= upload_rate){
 		//limit reached, send no bytes
@@ -82,10 +86,12 @@ unsigned rate_limit::upload_rate_control(const unsigned & max_possible_transfer)
 
 unsigned rate_limit::download_speed()
 {
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	return Download.speed();
 }
 
 unsigned rate_limit::upload_speed()
 {
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	return Upload.speed();
 }

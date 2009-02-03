@@ -1,3 +1,4 @@
+//THREADSAFE
 #ifndef H_DATABASE_TABLE_BLACKLIST
 #define H_DATABASE_TABLE_BLACKLIST
 
@@ -19,7 +20,7 @@ namespace table{
 class blacklist
 {
 public:
-	blacklist();
+	blacklist(){}
 
 	/*
 	add            - add IP to blacklist
@@ -28,8 +29,10 @@ public:
 	                 precondition: last_state_seen should be initialized to zero
 	*/
 	void add(const std::string & IP);
+	static void add(const std::string & IP, database::connection & DB);
 	bool is_blacklisted(const std::string & IP);
-	bool modified(int & last_state_seen);
+	static bool is_blacklisted(const std::string & IP, database::connection & DB);
+	static bool modified(int & last_state_seen);
 private:
 	database::connection DB;
 

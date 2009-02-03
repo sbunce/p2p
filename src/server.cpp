@@ -5,7 +5,7 @@ server::server()
 {
 	FD_ZERO(&master_FDS);
 	max_connections = DB_Preferences.get_server_connections();
-	Rate_Limit.set_upload_rate(DB_Preferences.get_upload_rate());
+	rate_limit::set_upload_rate(DB_Preferences.get_upload_rate());
 
 	#ifdef WIN32
 	//start winsock
@@ -91,10 +91,10 @@ std::string server::get_share_directory()
 
 unsigned server::get_upload_rate()
 {
-	if(Rate_Limit.get_upload_rate() == std::numeric_limits<unsigned>::max()){
+	if(rate_limit::get_upload_rate() == std::numeric_limits<unsigned>::max()){
 		return 0;
 	}else{
-		return Rate_Limit.get_upload_rate();
+		return rate_limit::get_upload_rate();
 	}
 }
 
@@ -294,7 +294,7 @@ void server::main_loop()
 			max_send = 1;
 		}else{
 			/*
-			Rate_Limit.get_upload_rate() returns unsigned int, the send() function
+			rate_limit::get_upload_rate() returns unsigned int, the send() function
 			take a signed int. If max_recv is beyond the max size of an int then
 			the conversion can yield a negative number.
 
@@ -302,7 +302,7 @@ void server::main_loop()
 			else because rates cannot logically be negative.
 			*/
 			unsigned tmp;
-			if((tmp = Rate_Limit.get_download_rate() / connections) > std::numeric_limits<int>::max()){
+			if((tmp = rate_limit::get_download_rate() / connections) > std::numeric_limits<int>::max()){
 				max_send = std::numeric_limits<int>::max();
 			}else{
 				max_send = tmp;
@@ -319,7 +319,7 @@ void server::main_loop()
 						disconnect(socket_FD);
 						continue;
 					}else{
-						Rate_Limit.add_download_bytes(n_bytes);
+						rate_limit::add_download_bytes(n_bytes);
 						server_buffer::process(socket_FD, recv_buff, n_bytes);
 						transfer = true;
 					}
@@ -329,14 +329,14 @@ void server::main_loop()
 			if(socket_FD != listener && FD_ISSET(socket_FD, &write_FDS)){
 				std::string * buff = &server_buffer::get_send_buff(socket_FD);
 				if(!buff->empty()){
-					if((transfer_limit = Rate_Limit.upload_rate_control(buff->size())) != 0){
+					if((transfer_limit = rate_limit::upload_rate_control(buff->size())) != 0){
 						if(transfer_limit > max_send){
 							transfer_limit = max_send;
 						}
 						if((n_bytes = send(socket_FD, buff->c_str(), transfer_limit, MSG_NOSIGNAL)) < 0){
 							disconnect(socket_FD);
 						}else{
-							Rate_Limit.add_upload_bytes(n_bytes);
+							rate_limit::add_upload_bytes(n_bytes);
 							buff->erase(0, n_bytes);
 							if(!server_buffer::post_send(socket_FD)){
 								//disconnect upon empty buffer (server buffer requested this)
@@ -381,11 +381,10 @@ void server::set_max_upload_rate(unsigned upload_rate)
 		upload_rate = std::numeric_limits<unsigned>::max();
 	}
 	DB_Preferences.set_upload_rate(upload_rate);
-	Rate_Limit.set_upload_rate(upload_rate);
+	rate_limit::set_upload_rate(upload_rate);
 }
 
 unsigned server::total_rate()
 {
-	Rate_Limit.add_upload_bytes(0);
-	return Rate_Limit.upload_speed();
+	return rate_limit::upload_speed();
 }

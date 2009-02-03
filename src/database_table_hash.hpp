@@ -1,3 +1,4 @@
+//THREADSAFE
 #ifndef H_DATABASE_TABLE_HASH
 #define H_DATABASE_TABLE_HASH
 
@@ -16,8 +17,7 @@ namespace table{
 class hash
 {
 public:
-	hash();
-	hash(database::connection & DB_in);
+	hash(){}
 
 	enum state{
 		DNE,         //indicates that no tree with key exists
@@ -35,32 +35,27 @@ public:
 	tree_use      - marks tree as used so it doesn't get deleted on startup
 	*/
 	void delete_tree(const std::string & hash, const int & tree_size);
+	static void delete_tree(const std::string & hash, const int & tree_size, database::connection & DB);
 	bool exists(const std::string & hash, const int & tree_size);
+	static bool exists(const std::string & hash, const int & tree_size, database::connection & DB);
 	state get_state(const std::string & hash, const int & tree_size);
+	static state get_state(const std::string & hash, const int & tree_size, database::connection & DB);
 	void set_state(const std::string & hash, const int & tree_size, const state & State);
+	static void set_state(const std::string & hash, const int & tree_size, const state & State, database::connection & DB);
 	void tree_allocate(const std::string & hash, const int & tree_size);
+	static void tree_allocate(const std::string & hash, const int & tree_size, database::connection & DB);
 
 	/*
-	Opens/returns a blob to the tree with the specified hash and size. The version
-	that doesn't have the database connection as the first parameter creates it's
-	own temporary database connection. It's preferable to use the one with the
-	database connection parameter but if that is not convenient the other is
-	provided.
+	Opens/returns a blob to the tree with the specified hash and size. The first
+	static version creates it's own database connection. This is used in contexts
+	where it's inconvenient to instantiate a DB connection or download::table::hash,
+	such as in hash_tree::tree_info.
 	*/
 	static database::blob tree_open(const std::string & hash, const int & tree_size);
-	static database::blob tree_open(database::connection & DB, const std::string & hash, const int & tree_size);
+	static database::blob tree_open(const std::string & hash, const int & tree_size, database::connection & DB);
 
 private:
-	database::connection * DB;
-
-	//used by ctor to run something upon first instantiation
-	static bool program_start;
-	static boost::mutex program_start_mutex;
-
-	/*
-	get_key - returns key of row with specified hash
-	*/
-	boost::int64_t get_key(const std::string & hash);
+	database::connection DB;
 };
 }//end of table namespace
 }//end of database namespace

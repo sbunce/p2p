@@ -140,7 +140,6 @@ private:
 	database::table::preferences DB_Preferences;
 	database::table::search DB_Search;
 	download_factory Download_Factory;
-	rate_limit Rate_Limit;
 	sha SHA;
 };
 #endif
