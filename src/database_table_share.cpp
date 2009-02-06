@@ -30,7 +30,7 @@ void database::table::share::delete_entry(const std::string & path,
 	std::string hash;
 	boost::uint64_t file_size;
 	if(lookup_path(path, hash, file_size, DB)){
-		database::table::hash::delete_tree(hash, hash_tree::file_size_to_tree_size(file_size), DB);
+		database::table::hash::delete_tree(hash, hash_tree::tree_info::file_size_to_tree_size(file_size), DB);
 	}
 	std::stringstream ss;
 	ss << "DELETE FROM share WHERE hash = '" << hash << "' AND path = " << sqlite3_path;

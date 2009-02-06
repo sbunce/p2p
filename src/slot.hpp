@@ -1,3 +1,7 @@
+//NOT-THREADSAFE
+/*
+This object is used within the server_buffer which is locked.
+*/
 #ifndef H_SLOT
 #define H_SLOT
 

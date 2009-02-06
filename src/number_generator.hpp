@@ -1,3 +1,4 @@
+//THREADSAFE, THREAD SPAWNING
 #ifndef H_NUMBER_GENERATOR
 #define H_NUMBER_GENERATOR
 
@@ -57,9 +58,9 @@ public:
 	}
 
 	//function to initialize the singleton
-	inline static void init()
+	static void init()
 	{
-		boost::mutex::scoped_lock lock(Mutex);
+		boost::mutex::scoped_lock lock(init_mutex);
 		if(Number_Generator == NULL){
 			Number_Generator = new number_generator;
 		}
@@ -69,8 +70,11 @@ private:
 	//only the number generator can initialize itself
 	number_generator();
 
-	static number_generator * Number_Generator; //the one possible instance
-	static boost::mutex Mutex;                  //mutex for checking if singleton was initialized
+	//mutex for all public static functions
+	static boost::mutex init_mutex;
+
+	//the one possible instance of number_generator
+	static number_generator * Number_Generator;
 
 	/*
 	PRNG function that mp_prime_random_ex needs
@@ -92,13 +96,13 @@ private:
 		exit(1);
 #else
 		char ch;
-		int n = length;
+		int length_start = length;
 		std::fstream fin("/dev/urandom", std::ios::in | std::ios::binary);
 		while(length--){
 			fin.get(ch);
 			*buff++ = (unsigned char)ch;
 		}
-		return n;
+		return length_start;
 #endif
 	}
 

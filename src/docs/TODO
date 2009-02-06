@@ -1,9 +1,6 @@
 TODO
 
--make hash_tree threadsafe, use a little more memory
-
--check every database call in the program to make sure changes do database
-classes have been considered.
+-vett gui code.. ugh
 
 -add stop/start functions to download, and rename cancel to remove
 

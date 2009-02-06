@@ -171,7 +171,7 @@ bool database::table::download::start(download_info & info)
 
 bool database::table::download::start(download_info & info, database::connection & DB)
 {
-	boost::uint64_t tree_size = hash_tree::file_size_to_tree_size(info.size);
+	boost::uint64_t tree_size = hash_tree::tree_info::file_size_to_tree_size(info.size);
 	if(tree_size > std::numeric_limits<int>::max()){
 		LOGGER << "file \"" << info.name << "\" would generate hash tree beyond max SQLite3 blob size";
 		return false;
@@ -210,7 +210,7 @@ void database::table::download::terminate(const std::string & hash, const int & 
 void database::table::download::terminate(const std::string & hash, const int & file_size, database::connection & DB)
 {
 	DB.query("BEGIN TRANSACTION");
-	database::table::hash::delete_tree(hash, hash_tree::file_size_to_tree_size(file_size), DB);
+	database::table::hash::delete_tree(hash, hash_tree::tree_info::file_size_to_tree_size(file_size), DB);
 	std::stringstream ss;
 	ss << "DELETE FROM download WHERE hash = '" << hash << "' AND size = " << file_size;
 	DB.query(ss.str());

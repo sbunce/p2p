@@ -7,8 +7,7 @@
 
 int main()
 {
-	request_generator RG;
-	RG.init(0,10,999);
+	request_generator RG(0,10,999);
 	std::deque<boost::uint64_t> prev;
 
 	for(int x=0; x<10; ++x){

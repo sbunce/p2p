@@ -36,6 +36,12 @@ public:
 	//normal iteration done with regular std::map iterator
 	typedef typename std::map<T_key, T_val>::iterator iterator;
 
+	//support erasing with normal iterator
+	void erase(const iterator & Iter)
+	{
+		range.erase(Iter);
+	}
+
 	//forward iterator to iterate through contiguous elements
 	class contiguous_iterator
 	{
@@ -94,6 +100,12 @@ public:
 
 		typename std::map<T_key, T_val>::iterator iter;
 	};
+
+	//support erasing with contiguous iterator
+	void erase(const contiguous_iterator & Iter)
+	{
+		range.erase(Iter.iter);
+	}
 
 	//forward iterator to iterate through incontinuous elements
 	class incontiguous_iterator
@@ -154,6 +166,12 @@ public:
 
 		typename std::map<T_key, T_val>::iterator iter;
 	};
+
+	//support erasing with incontiguous iterator
+	void erase(const incontiguous_iterator & Iter)
+	{
+		range.erase(Iter.iter);
+	}
 
 	//iterator to iterate through all elements
 	typename std::map<T_key, T_val>::iterator begin()

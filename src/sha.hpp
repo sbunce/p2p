@@ -1,5 +1,4 @@
 //NOT-THREADSAFE
-
 #ifndef H_SHA
 #define H_SHA
 
@@ -40,7 +39,6 @@ public:
 	Functions to retrieve hash for data.
 	hex_hash - returns hash in hex
 	raw_hash - returns hash in binary
-	           WARNING - VIOLATES ENCAPSULATION (for performance)
 	*/
 	std::string hex_hash();
 	char * raw_hash();

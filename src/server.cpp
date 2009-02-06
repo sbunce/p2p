@@ -26,7 +26,6 @@ server::~server()
 	main_thread.interrupt();
 	raise(SIGINT); //force select() to return
 	main_thread.join();
-	server_buffer::destroy();
 
 	#ifdef WIN32
 	WSACleanup();
@@ -171,7 +170,7 @@ void server::new_connection(const int & listener)
 void server::main_loop()
 {
 	//give GUI some time to start
-	portable_sleep::ms(1000);
+	portable_sleep::ms(2000);
 
 	//start server index if not already started
 	server_index::init();
@@ -237,6 +236,16 @@ void server::main_loop()
 
 	//see documentation in database_table_blacklist to see what this does
 	int blacklist_state = 0;
+
+	/*
+	Holds a copy of a chunk of the send buffer within the server_buffer.
+	This buffer is needed so that the client_buffer can be fully thread
+	safe. If we were reading from the send_buff within the client_buffer
+	and someone called server_buffer::erase on it then we'd have trouble.
+	*/
+	std::string send_buff;
+	int max_send_buff = global::C_MAX_SIZE * global::PIPELINE_SIZE;
+	send_buff.reserve(max_send_buff);
 
 	char recv_buff[global::S_MAX_SIZE*global::PIPELINE_SIZE];
 	int n_bytes;             //how many bytes sent or received by send()/recv()
@@ -320,25 +329,23 @@ void server::main_loop()
 						continue;
 					}else{
 						rate_limit::add_download_bytes(n_bytes);
-						server_buffer::process(socket_FD, recv_buff, n_bytes);
+						server_buffer::post_recv(socket_FD, recv_buff, n_bytes);
 						transfer = true;
 					}
 				}
 			}
 
 			if(socket_FD != listener && FD_ISSET(socket_FD, &write_FDS)){
-				std::string * buff = &server_buffer::get_send_buff(socket_FD);
-				if(!buff->empty()){
-					if((transfer_limit = rate_limit::upload_rate_control(buff->size())) != 0){
+				if(server_buffer::get_send_buff(socket_FD, max_send_buff, send_buff)){
+					if((transfer_limit = rate_limit::upload_rate_control(send_buff.size())) != 0){
 						if(transfer_limit > max_send){
 							transfer_limit = max_send;
 						}
-						if((n_bytes = send(socket_FD, buff->c_str(), transfer_limit, MSG_NOSIGNAL)) < 0){
+						if((n_bytes = send(socket_FD, send_buff.data(), send_buff.size(), MSG_NOSIGNAL)) < 0){
 							disconnect(socket_FD);
 						}else{
 							rate_limit::add_upload_bytes(n_bytes);
-							buff->erase(0, n_bytes);
-							if(!server_buffer::post_send(socket_FD)){
+							if(!server_buffer::post_send(socket_FD, n_bytes)){
 								//disconnect upon empty buffer (server buffer requested this)
 								disconnect(socket_FD);
 							}

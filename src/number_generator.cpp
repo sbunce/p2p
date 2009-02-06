@@ -1,7 +1,7 @@
 #include "number_generator.hpp"
 
+boost::mutex number_generator::init_mutex;
 number_generator * number_generator::Number_Generator = NULL;
-boost::mutex number_generator::Mutex;
 
 number_generator::number_generator()
 {
@@ -23,12 +23,12 @@ mpint number_generator::random_mpint_priv(const int & bytes)
 
 mpint number_generator::random_prime_mpint_priv()
 {
-	mpint m;
-	while(!DB_Prime.retrieve(m)){
+	mpint random;
+	while(!DB_Prime.retrieve(random)){
 		//no prime available, wait for one
 		portable_sleep::yield();
 	}
-	return m;
+	return random;
 }
 
 void number_generator::genprime_loop()
@@ -40,15 +40,15 @@ void number_generator::genprime_loop()
 			continue;
 		}
 
-		mpint m;
+		mpint random;
 		mp_prime_random_ex(
-			&m.c_struct(),
+			&random.c_struct(),
 			1,                     //Miller-Rabin tests
 			global::DH_KEY_SIZE*8, //size (bits) of prime to generate
 			0,                     //optional flags
 			&PRNG,
 			NULL                   //optional void* that can be passed to PRNG
 		);
-		DB_Prime.add(m);
+		DB_Prime.add(random);
 	}
 }

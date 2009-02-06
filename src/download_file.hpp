@@ -1,5 +1,4 @@
-//NOT-THREADSAFE
-
+//NOT-THREADSAFE, THREAD SPAWNING
 #ifndef H_DOWNLOAD_FILE
 #define H_DOWNLOAD_FILE
 
@@ -64,9 +63,6 @@ private:
 	*/
 	bool download_complete;
 
-	boost::uint64_t block_count; //number of file blocks (last block is block_count - 1)
-	unsigned last_block_size;    //holds the exact size of the last fileBlock(in bytes)
-
 	/*
 	The tree_info for the file downloading.
 	*/
@@ -91,9 +87,7 @@ private:
 			IP(IP_in),
 			wait_activated(false),
 			State(REQUEST_SLOT)
-		{
-
-		}
+		{}
 
 		enum state{
 			REQUEST_SLOT,   //need to request a slot
@@ -133,12 +127,13 @@ private:
 	hash_check  - checks partial download integrity (run in thread spawned in ctor)
 	write_block - writes a file block
 	*/
-	void hash_check(hash_tree::tree_info Tree_Info, std::string file_path);
+	void hash_check(hash_tree::tree_info & Tree_Info, std::string file_path);
 	void write_block(boost::uint64_t block_number, std::string & block);
 
+	boost::shared_ptr<request_generator> Request_Generator;
 	download_info Download_Info;
 	database::table::blacklist DB_Blacklist;
-	request_generator Request_Generator;
+	database::table::download DB_Download;
 	hash_tree Hash_Tree;
 };
 #endif

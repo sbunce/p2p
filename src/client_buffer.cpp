@@ -304,26 +304,6 @@ client_buffer::~client_buffer()
 	unregister_all();
 }
 
-void client_buffer::recv_buff_append(char * buff, const int & n_bytes)
-{
-	if(exchange_key){
-		remote_result.append(buff, n_bytes);
-		if(remote_result.size() == global::DH_KEY_SIZE){
-			Encryption.set_remote_result(remote_result);
-			recv_buff.clear();
-			exchange_key = false;
-		}
-		if(remote_result.size() > global::DH_KEY_SIZE){
-			LOGGER << " abusive, failed key negotation, too many bytes";
-			DB_Blacklist.add(IP);
-		}
-		return;
-	}
-
-	Encryption.crypt_recv(buff, n_bytes);
-	recv_buff.append(buff, n_bytes);
-}
-
 bool client_buffer::empty()
 {
 	return Download.empty();
@@ -395,6 +375,26 @@ void client_buffer::prepare_request()
 	if(initial_empty && !send_buff.empty()){
 		++send_pending;
 	}
+}
+
+void client_buffer::recv_buff_append(char * buff, const int & n_bytes)
+{
+	if(exchange_key){
+		remote_result.append(buff, n_bytes);
+		if(remote_result.size() == global::DH_KEY_SIZE){
+			Encryption.set_remote_result(remote_result);
+			recv_buff.clear();
+			exchange_key = false;
+		}
+		if(remote_result.size() > global::DH_KEY_SIZE){
+			LOGGER << " abusive, failed key negotation, too many bytes";
+			DB_Blacklist.add(IP);
+		}
+		return;
+	}
+
+	Encryption.crypt_recv(buff, n_bytes);
+	recv_buff.append(buff, n_bytes);
 }
 
 void client_buffer::recv_buff_process()

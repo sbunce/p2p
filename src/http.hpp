@@ -1,3 +1,4 @@
+//THREADSAFE
 #ifndef H_HTTP
 #define H_HTTP
 

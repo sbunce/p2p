@@ -1,3 +1,4 @@
+//NOT-THREADSAFE
 #ifndef H_ENCRYPTION
 #define H_ENCRYPTION
 

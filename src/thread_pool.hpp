@@ -1,3 +1,4 @@
+//THREADSAFE
 #ifndef H_THREAD_POOL
 #define H_THREAD_POOL
 

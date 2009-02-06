@@ -1,7 +1,5 @@
 #include "sha.hpp"
 
-static const char hex[] = "0123456789ABCDEF";
-
 sha::sha()
 {
 	load_buffer.reserve(64);
@@ -150,6 +148,7 @@ inline void sha::process(const int & chunk_start)
 
 std::string sha::hex_hash()
 {
+	static const char hex[] = "0123456789ABCDEF";
 	std::string hash;
 	for(int x=0; x<20; ++x){
 		hash += hex[(int)((raw[x] >> 4) & 15)];

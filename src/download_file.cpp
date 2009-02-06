@@ -11,7 +11,6 @@ download_file::download_file(
 	close_slots(false)
 {
 	client_server_bridge::start_file(Download_Info.hash, Tree_Info.get_file_block_count());
-
 	visible = true;
 
 	//create empty file for download if one doesn't already exist
@@ -23,7 +22,9 @@ download_file::download_file(
 		first_unreceived = 0;
 	}
 
-	Request_Generator.init((boost::uint64_t)first_unreceived, Tree_Info.get_file_block_count(), global::RE_REQUEST);
+	Request_Generator =
+		boost::shared_ptr<request_generator>(new request_generator((boost::uint64_t)first_unreceived,
+		Tree_Info.get_file_block_count(), global::RE_REQUEST));
 
 	//hash check for corrupt/missing blocks
 	if(first_unreceived == 0){
@@ -58,7 +59,7 @@ const std::string download_file::hash()
 	return Download_Info.hash;
 }
 
-void download_file::hash_check(hash_tree::tree_info Tree_Info, std::string file_path)
+void download_file::hash_check(hash_tree::tree_info & Tree_Info, std::string file_path)
 {
 	//only allow one hash_check job at a time for all downloads
 	static int job_cnt = 0;
@@ -75,7 +76,6 @@ void download_file::hash_check(hash_tree::tree_info Tree_Info, std::string file_
 	}
 
 	//thread local stuff
-	hash_tree Hash_Tree;
 	char block_buff[global::FILE_BLOCK_SIZE];
 
 	std::fstream fin(file_path.c_str(), std::ios::in | std::ios::binary);
@@ -92,10 +92,13 @@ void download_file::hash_check(hash_tree::tree_info Tree_Info, std::string file_
 			client_server_bridge::add_file_block(Tree_Info.get_root_hash(), check_block);
 		}else{
 			LOGGER << "found corrupt block " << check_block << " in resumed download";
-			Request_Generator.force_rerequest(check_block);
+			Request_Generator->force_rerequest(check_block);
 		}
 		++check_block;
 		hashing_percent = (int)(((double)check_block / first_unreceived) * 100);
+
+		//this thread is low priority, yield to others
+		boost::this_thread::yield();
 	}
 	hashing = false;
 
@@ -121,7 +124,7 @@ unsigned download_file::percent_complete()
 	if(Tree_Info.get_file_block_count() == 0){
 		return 0;
 	}else{
-		return (unsigned)(((float)Request_Generator.highest_requested()
+		return (unsigned)(((float)Request_Generator->highest_requested()
 			/ (float)Tree_Info.get_file_block_count())*100);
 	}
 }
@@ -204,7 +207,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 			}
 		}
 
-		if(!Request_Generator.complete() && Request_Generator.request(conn->latest_request)){
+		if(!Request_Generator->complete() && Request_Generator->request(conn->latest_request)){
 			//prepare request for needed block
 			request += global::P_BLOCK;
 			request += conn->slot_ID;
@@ -212,7 +215,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 			int size;
 			if(conn->latest_request.back() == Tree_Info.get_file_block_count() - 1){
 				size = Tree_Info.get_last_file_block_size() + 1; //+1 for command
-				Request_Generator.set_timeout(global::RE_REQUEST_FINISHING);
+				Request_Generator->set_timeout(global::RE_REQUEST_FINISHING);
 			}else{
 				size = global::P_BLOCK_TO_CLIENT_SIZE;
 			}
@@ -257,22 +260,22 @@ void download_file::response(const int & socket, std::string block)
 			if(Hash_Tree.check_file_block(Tree_Info, conn->latest_request.front(), block.c_str(), block.length())){
 				write_block(conn->latest_request.front(), block);
 				client_server_bridge::add_file_block(Download_Info.hash, conn->latest_request.front());
-				Request_Generator.fulfil(conn->latest_request.front());
+				Request_Generator->fulfil(conn->latest_request.front());
 			}else{
 				LOGGER << Download_Info.name << ":" << conn->latest_request.front() << " hash failure";
-				Request_Generator.force_rerequest(conn->latest_request.front());
+				Request_Generator->force_rerequest(conn->latest_request.front());
 				#ifndef CORRUPT_FILE_BLOCK_TEST
 				DB_Blacklist.add(conn->IP);
 				#endif
 			}
 			conn->latest_request.pop_front();
-			if(Request_Generator.complete() && !hashing){
+			if(Request_Generator->complete() && !hashing){
 				//download is complete, start closing slots
 				close_slots = true;
 			}
 		}else if(block[0] == global::P_WAIT){
 			//server doesn't yet have the requested block, immediately re_request block
-			Request_Generator.force_rerequest(conn->latest_request.front());
+			Request_Generator->force_rerequest(conn->latest_request.front());
 			conn->latest_request.pop_front();
 			conn->wait_activated = true;
 			conn->wait_start = time(NULL);
@@ -310,6 +313,8 @@ void download_file::stop()
 
 	//make invisible, cancelling download may take a while
 	visible = false;
+
+	DB_Download.terminate(Download_Info.hash, Download_Info.size);
 }
 
 void download_file::write_block(boost::uint64_t block_number, std::string & block)
@@ -337,7 +342,7 @@ void download_file::unregister_connection(const int & socket)
 		RB_iter_cur = iter->second.latest_request.begin();
 		RB_iter_end = iter->second.latest_request.end();
 		while(RB_iter_cur != RB_iter_end){
-			Request_Generator.force_rerequest(*RB_iter_cur);
+			Request_Generator->force_rerequest(*RB_iter_cur);
 			++RB_iter_cur;
 		}
 	}

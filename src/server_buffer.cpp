@@ -1,16 +1,108 @@
 #include "server_buffer.hpp"
 
-std::map<int, server_buffer *> server_buffer::Server_Buffer;
+//BEGIN STATIC
 boost::mutex server_buffer::Mutex;
+std::map<int, boost::shared_ptr<server_buffer> > server_buffer::Server_Buffer;
 int server_buffer::send_pending(0);
+
+void server_buffer::current_uploads(std::vector<upload_info> & info)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	std::map<int, boost::shared_ptr<server_buffer> >::iterator iter_cur, iter_end;
+	iter_cur = Server_Buffer.begin();
+	iter_end = Server_Buffer.end();
+	while(iter_cur != iter_end){
+		iter_cur->second->uploads(info);
+		++iter_cur;
+	}
+}
+
+void server_buffer::erase(const int & socket_FD)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	std::map<int, boost::shared_ptr<server_buffer> >::iterator iter = Server_Buffer.find(socket_FD);
+	if(iter != Server_Buffer.end()){
+		if(!iter->second->send_buff.empty()){
+			//send_buff contains data, decrement send_pending
+			--send_pending;
+		}
+		Server_Buffer.erase(iter);
+	}
+}
+
+bool server_buffer::get_send_buff(const int & socket_FD, const int & max_bytes, std::string & destination)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	destination.clear();
+	std::map<int, boost::shared_ptr<server_buffer> >::iterator iter = Server_Buffer.find(socket_FD);
+	if(iter == Server_Buffer.end()){
+		return false;
+	}else{
+		int size;
+		if(max_bytes > iter->second->send_buff.size()){
+			size = iter->second->send_buff.size();
+		}else{
+			size = max_bytes;
+		}
+		destination.assign(iter->second->send_buff.data(), size);
+		return !destination.empty();
+	}
+}
+
+int server_buffer::get_send_pending()
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	return send_pending;
+}
+
+void server_buffer::new_connection(const int & socket_FD, const std::string & IP)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	std::map<int, boost::shared_ptr<server_buffer> >::iterator iter = Server_Buffer.find(socket_FD);
+	if(iter == Server_Buffer.end()){
+		Server_Buffer.insert(std::make_pair(socket_FD, new server_buffer(socket_FD, IP)));
+	}
+}
+
+bool server_buffer::post_send(const int & socket_FD, const int & n_bytes)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	std::map<int, boost::shared_ptr<server_buffer> >::iterator iter = Server_Buffer.find(socket_FD);
+	if(iter != Server_Buffer.end()){
+		iter->second->send_buff.erase(0, n_bytes);
+		if(n_bytes && iter->second->send_buff.empty()){
+			//buffer went from empty to non-empty
+			--send_pending;
+		}
+
+		if(iter->second->disconnect_on_empty && iter->second->send_buff.empty()){
+			return false;
+		}else{
+			return true;
+		}
+	}else{
+		//disconnect if server_buffer no longer exists
+		return false;
+	}
+}
+
+void server_buffer::post_recv(const int & socket_FD, char * recv_buff, const int & n_bytes)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	std::map<int, boost::shared_ptr<server_buffer> >::iterator iter = Server_Buffer.find(socket_FD);
+	if(iter != Server_Buffer.end()){
+		bool initial_empty = iter->second->send_buff.size() == 0;
+		iter->second->recv_buff_process(recv_buff, n_bytes);
+		if(initial_empty && iter->second->send_buff.size() != 0){
+			//buffer went from empty to non-empty, signal that a send needs to be done
+			++send_pending;
+		}
+	}
+}
+//END STATIC
 
 server_buffer::server_buffer()
 {
-	/*
-	The server_buffer is used in a std::map. If std::map::[] is ever used to
-	locate a client_buffer that doesn't exist the default ctor will be called and
-	the program will be killed.
-	*/
 	LOGGER << "improperly constructed server_buffer";
 	exit(1);
 }
@@ -83,7 +175,7 @@ bool server_buffer::find_empty_slot(const std::string & root_hash, int & slot_nu
 	return false;
 }
 
-void server_buffer::process(char * buff, const int & n_bytes)
+void server_buffer::recv_buff_process(char * buff, const int & n_bytes)
 {
 	if(IP.find("127.") != std::string::npos){
 		//localhost obeys entirely different protocol
@@ -106,7 +198,6 @@ void server_buffer::process(char * buff, const int & n_bytes)
 			//very generous sanity check for local recv buff
 			recv_buff.clear();
 		}
-
 		return;
 	}
 

@@ -18,14 +18,15 @@ download_hash_tree::download_hash_tree(
 		download_complete = true;
 	}else{
 		//bad hash block detected
-		Request_Generator.init(bad_block, Tree_Info.get_block_count(), global::RE_REQUEST);
+		Request_Generator =
+			boost::shared_ptr<request_generator>(new request_generator(bad_block,
+			Tree_Info.get_block_count(), global::RE_REQUEST));
 	}
 }
 
 download_hash_tree::~download_hash_tree()
 {
 	if(cancel){
-		DB_Download.terminate(Download_Info.hash, Download_Info.size);
 		client_server_bridge::finish_download(Download_Info.hash);
 		std::remove((global::DOWNLOAD_DIRECTORY + Download_Info.name).c_str());
 	}else{
@@ -58,7 +59,7 @@ unsigned download_hash_tree::percent_complete()
 	if(Tree_Info.get_block_count() == 0){
 		return 0;
 	}else{
-		return (unsigned)(((float)Request_Generator.highest_requested() / (float)Tree_Info.get_block_count())*100);
+		return (unsigned)(((float)Request_Generator->highest_requested() / (float)Tree_Info.get_block_count())*100);
 	}
 }
 
@@ -132,12 +133,12 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 			}
 		}
 
-		if(Request_Generator.request(conn->latest_request)){
+		if(Request_Generator->request(conn->latest_request)){
 			//no request to be made at the moment
 			request += global::P_BLOCK;
 			request += conn->slot_ID;
 			request += convert::encode<boost::uint64_t>(conn->latest_request.back());
-			expected.push_back(std::make_pair(global::P_BLOCK, hash_tree::block_size(Tree_Info, conn->latest_request.back()) + 1));
+			expected.push_back(std::make_pair(global::P_BLOCK, Tree_Info.block_size(conn->latest_request.back()) + 1));
 			expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
 			expected.push_back(std::make_pair(global::P_WAIT, global::P_WAIT_SIZE));
 			return download::BINARY_MODE;
@@ -194,19 +195,19 @@ void download_hash_tree::response(const int & socket, std::string block)
 				client_server_bridge::update_hash_tree_highest(Download_Info.hash, highest_good);
 			}
 
-			Request_Generator.fulfil(conn->latest_request.front());
+			Request_Generator->fulfil(conn->latest_request.front());
 			conn->latest_request.pop_front();
 
 			//see if hash tree has any blocks to rerequest
-			Tree_Info.rerequest_bad_blocks(Request_Generator);
+			Tree_Info.rerequest_bad_blocks(*Request_Generator);
 
-			if(Request_Generator.complete()){
+			if(Request_Generator->complete()){
 				//hash tree complete, close slots
 				close_slots = true;
 			}
 		}else if(block[0] == global::P_WAIT){
 			//server doesn't yet have the requested block, immediately re_request block
-			Request_Generator.force_rerequest(conn->latest_request.front());
+			Request_Generator->force_rerequest(conn->latest_request.front());
 			conn->latest_request.pop_front();
 			conn->wait_activated = true;
 			conn->wait_start = time(NULL);
@@ -233,13 +234,19 @@ const boost::uint64_t download_hash_tree::size()
 
 void download_hash_tree::stop()
 {
-	cancel = true;
-	visible = false;
 	if(download::connection_count() == 0){
 		download_complete = true;
 	}else{
 		close_slots = true;
 	}
+
+	//cancelled downloads don't get added to share upon completion
+	cancel = true;
+
+	//make invisible, cancelling download may take a while
+	visible = false;
+
+	DB_Download.terminate(Download_Info.hash, Download_Info.size);
 }
 
 void download_hash_tree::unregister_connection(const int & socket)
@@ -251,7 +258,7 @@ void download_hash_tree::unregister_connection(const int & socket)
 		iter_cur = iter->second.latest_request.begin();
 		iter_end = iter->second.latest_request.end();
 		while(iter_cur != iter_end){
-			Request_Generator.force_rerequest(*iter_cur);
+			Request_Generator->force_rerequest(*iter_cur);
 			++iter_cur;
 		}
 	}

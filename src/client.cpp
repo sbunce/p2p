@@ -101,7 +101,7 @@ void client::disconnect(const int & socket_FD)
 bool client::file_info(const std::string & hash, std::string & path, boost::uint64_t & tree_size, boost::uint64_t & file_size)
 {
 	if(DB_Download.lookup_hash(hash, path, file_size)){
-		tree_size = hash_tree::file_size_to_tree_size(file_size);
+		tree_size = hash_tree::tree_info::file_size_to_tree_size(file_size);
 		return true;
 	}else{
 		return false;
@@ -135,7 +135,7 @@ unsigned client::get_download_rate()
 void client::main_loop()
 {
 	//give GUI some time to start
-	portable_sleep::ms(1000);
+	portable_sleep::ms(2000);
 
 	reconnect_unfinished();
 
@@ -271,7 +271,7 @@ void client::main_loop()
 
 			if(FD_ISSET(socket_FD, &write_FDS)){
 				if(client_buffer::get_send_buff(socket_FD, max_send_buff, send_buff)){
-					if((n_bytes = send(socket_FD, send_buff.c_str(), send_buff.size(), MSG_NOSIGNAL)) < 0){
+					if((n_bytes = send(socket_FD, send_buff.data(), send_buff.size(), MSG_NOSIGNAL)) < 0){
 						if(n_bytes == -1){
 							#ifdef WIN32
 							LOGGER << "winsock error " << WSAGetLastError();

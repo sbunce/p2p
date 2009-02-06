@@ -1,3 +1,4 @@
+//THREADSAFE
 #ifndef H_DATABASE_BLOB
 #define H_DATABASE_BLOB
 

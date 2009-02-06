@@ -1,3 +1,4 @@
+//THREADSAFE, SINGLETON
 #ifndef H_CLIENT_SERVER_BRIDGE
 #define H_CLIENT_SERVER_BRIDGE
 
@@ -18,75 +19,6 @@
 class client_server_bridge : private boost::noncopyable
 {
 public:
-	/*
-	Client calls this to indicate a download_hash_tree has started. All file
-	downloads always start by downloading the hash_tree. This is called in the
-	ctor of the download_hash_tree class.
-
-	block_num: highest hash_block available for upload
-	*/
-	static void start_hash_tree(const std::string & hash)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		init();
-		Client_Server_Bridge->start_hash_tree_priv(hash);
-	}
-
-	/*
-	This is called when a file starts downloading.
-	*/
-	static void start_file(const std::string & hash, const boost::uint64_t & file_block_count)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		init();
-		Client_Server_Bridge->start_file_priv(hash, file_block_count);
-	}
-
-	/*
-	Client calls this to indicate that either a download was cancelled, or that
-	a download finished normally. This function gets rid of all information
-	pertaining to the download_hash_tree or download_file contained in the
-	client_server_buffer.
-	*/
-	static void finish_download(const std::string & hash)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		init();
-		Client_Server_Bridge->finish_download_priv(hash);
-	}
-
-	/*
-	The hash tree keeps track of what blocks are available to send. Available hash
-	blocks are always contiguous starting at beginning of file. The
-	download_hash_tree calls this function to update the highest hash block
-	available.
-	*/
-	static void update_hash_tree_highest(const std::string & hash, const boost::uint64_t & block_num)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		init();
-		Client_Server_Bridge->update_hash_tree_highest_priv(hash, block_num);
-	}
-
-	/*
-	Every time the client receives a block for a file it will call this function
-	to update what blocks are available for downloading.
-	*/
-	static void add_file_block(const std::string & hash, const boost::uint64_t & block_num)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		init();
-		Client_Server_Bridge->add_file_block_priv(hash, block_num);
-	}
-
-	//returns true if hash tree or file is downloading
-	static bool is_downloading(const std::string & hash)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		init();
-		return Client_Server_Bridge->is_downloading_priv(hash);
-	}
-
 	enum download_state{
 		NOT_DOWNLOADING,           //file is not downloading, but it may be complete and in share
 		DOWNLOADING_NOT_AVAILABLE, //file is downloading but block not available
@@ -94,55 +26,45 @@ public:
 	};
 
 	/*
-	The server uses this function to determine if a hash block from a downloading
-	hash tree is available to send.
+	start_hash_tree - Called when a hash tree download starts to make the
+	                  downloading hash tree available for upload.
+	start_file      - Called when a file download starts to make the downloading
+	                  file available for upload.
+	finish_download - Called when a download cancelled, or a download finished
+	                  normally.
+	update_hash_tree_highest - A downloading hash tree uses this to set the
+	                           highest available hash block.
+	add_file_block  - A downloading file uses this to add an available file block.
+	is_downloading  - Returns true if a hash tree or file that corresponds to hash
+	                  is downloading.
+	hash_block_available    - Returns the state of a hash block.
+	file_block_available    - Returns the state of a file block.
+	server_index_is_blocked - Allows the server_index start indexing when returns true.
+	unblock_server_index    - Tells the server_index that it may start indexing.
+	                          The client must resume all downloads before calling this.
 	*/
-	static download_state hash_block_available(const std::string & hash, const boost::uint64_t & block_num)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		init();
-		return Client_Server_Bridge->hash_block_available_priv(hash, block_num);
-	}
-
-	/*
-	The server uses this function to determine if a file block from a downloading
-	file is available to send.
-	*/
-	static download_state file_block_available(const std::string & hash, const boost::uint64_t & block_num)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		init();
-		return Client_Server_Bridge->file_block_available_priv(hash, block_num);
-	}
-
-	/*
-	The client must resume all downloads before server indexing starts. Otherwise
-	if the server index hits a downloading file not yet resumed it will remove the
-	hash tree for it.
-	*/
-	static void unblock_server_index()
-	{
-		server_index_blocked = false;
-	}
-	static bool server_index_is_blocked()
-	{
-		return server_index_blocked;
-	}
+	static void start_hash_tree(const std::string & hash);
+	static void start_file(const std::string & hash, const boost::uint64_t & file_block_count);
+	static void finish_download(const std::string & hash);
+	static void update_hash_tree_highest(const std::string & hash, const boost::uint64_t & block_num);
+	static void add_file_block(const std::string & hash, const boost::uint64_t & block_num);
+	static bool is_downloading(const std::string & hash);
+	static download_state hash_block_available(const std::string & hash, const boost::uint64_t & block_num);
+	static download_state file_block_available(const std::string & hash, const boost::uint64_t & block_num);
+	static bool server_index_is_blocked();
+	static void unblock_server_index();
 
 private:
-	client_server_bridge();
+	client_server_bridge(){}
 
-	//init() must be called at the top of every public function
-	static void init()
-	{
-		if(Client_Server_Bridge == NULL){
-			Client_Server_Bridge = new client_server_bridge();
-		}
-	}
+	//mutex for all static public functions
+	static boost::mutex Mutex;
+
+	//must be called at the top of every public function to initialize singleton
+	static void init();
 
 	//the one possible instance of DB_blacklist
 	static client_server_bridge * Client_Server_Bridge;
-	static boost::mutex Mutex; //mutex for all static public functions
 
 	//used by server_index_is_blocked() to indicate whether indexing can start
 	static atomic_bool server_index_blocked;

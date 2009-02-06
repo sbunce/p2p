@@ -1,3 +1,4 @@
+//THREADSAFE
 #ifndef H_SERVER_BUFFER
 #define H_SERVER_BUFFER
 
@@ -25,133 +26,41 @@
 class server_buffer : private boost::noncopyable
 {
 public:
-	/*
-	WARNING: do not use this ctor, it will terminate the program.
-	*/
-	server_buffer();
-
 	~server_buffer();
 
 	/*
-	Populates the info vector with download information for all downloads running
-	in all client_buffers. The vector passed in is cleared before download info is
-	added.
+	current_uploads  - Populates info vector with current upload info.
+	                   Note: info cleared before it's populated
+	erase            - Removes the server buffer associated socket_FD.
+	                   Note: This is called whenever a socket disconnected.
+	get_send_buff    - DO DOCUMENTATION
+	get_send_pending - Returns counter that indicates how many sockets have bytes
+	                   to send. Used by server to check if write_FDS set should be
+	                   used.
+	new_connection   - creates new server_buffer for socket_FD
+	post_send        - DO DOCUMENTATION
+	process          - DO DOCUMENTATION
 	*/
-	static void current_uploads(std::vector<upload_info> & info)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, server_buffer *>::iterator iter_cur, iter_end;
-		iter_cur = Server_Buffer.begin();
-		iter_end = Server_Buffer.end();
-		while(iter_cur != iter_end){
-			iter_cur->second->uploads(info);
-			++iter_cur;
-		}
-	}
-
-	/*
-	Deletes all downloads in server_buffer and deletes all server_buffer instantiations.
-	This is used when server is being destroyed.
-	*/
-	static void destroy()
-	{
-		while(!Server_Buffer.empty()){
-			delete Server_Buffer.begin()->second;
-			Server_Buffer.erase(Server_Buffer.begin());
-		}
-	}
-
-	/*
-	Erases an element from Server_Buffer associated with socket_FD. This should be
-	called whenever a socket is disconnected.
-	*/
-	static void erase(const int & socket_FD)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, server_buffer *>::iterator iter = Server_Buffer.find(socket_FD);
-		if(iter != Server_Buffer.end()){
-			if(!iter->second->send_buff.empty()){
-				//send_buff contains data, decrement send_pending
-				--send_pending;
-			}
-			delete iter->second;
-			Server_Buffer.erase(iter);
-		}
-	}
-
-	/*
-	Returns the server_buffer send_buff that corresponds to socket_FD.
-	WARNING: violates encapsulation, NOT thread safe to call this from multiple threads
-	*/
-	static std::string & get_send_buff(const int & socket_FD)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, server_buffer *>::iterator iter = Server_Buffer.find(socket_FD);
-		assert(iter != Server_Buffer.end());
-		return iter->second->send_buff;
-	}
-
-	/*
-	Returns the counter that indicates whether a send needs to be done. If it is
-	zero no send needs to be done. Every +1 above zero it is indicates a send_buff
-	has something in it.
-	*/
-	static int get_send_pending()
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		return send_pending;
-	}
-
-	static void new_connection(const int & socket_FD, const std::string & IP)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		Server_Buffer.insert(std::make_pair(socket_FD, new server_buffer(socket_FD, IP)));
-	}
-
-	/*
-	Should be called after sending data. This function evaluates whether or not the
-	send_buff was emptied. If it was then it decrements send_pending. Returns false
-	to indicate the server should be disconnected.
-	*/
-	static bool post_send(const int & socket_FD)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, server_buffer *>::iterator iter = Server_Buffer.find(socket_FD);
-		assert(iter != Server_Buffer.end());
-		if(iter->second->send_buff.empty()){
-			--send_pending;
-		}
-
-		if(iter->second->disconnect_on_empty && iter->second->send_buff.empty()){
-			return false;
-		}else{
-			return true;
-		}
-	}
-
-	/*
-	Stores recv'd bytes in the appropriate server_buffer and processes the buffer.
-	*/
-	static void process(const int & socket_FD, char * recv_buff, const int & n_bytes)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		std::map<int, server_buffer *>::iterator iter = Server_Buffer.find(socket_FD);
-		assert(iter != Server_Buffer.end());
-		server_buffer * SB = iter->second;
-		bool initial_empty = SB->send_buff.size() == 0;
-		SB->process(recv_buff, n_bytes);
-		if(initial_empty && SB->send_buff.size() != 0){
-			//buffer went from empty to non-empty, signal that a send needs to be done
-			++send_pending;
-		}
-	}
+	static void current_uploads(std::vector<upload_info> & info);
+	static void erase(const int & socket_FD);
+	static bool get_send_buff(const int & socket_FD, const int & max_bytes, std::string & destination);
+	static int get_send_pending();
+	static void new_connection(const int & socket_FD, const std::string & IP);
+	static bool post_send(const int & socket_FD, const int & n_bytes);
+	static void post_recv(const int & socket_FD, char * recv_buff, const int & n_bytes);
 
 private:
+	//this ctor terminates program because it should not be used
+	server_buffer();
+
 	//only the server_buffer can instantiate itself
 	server_buffer(const int & socket_FD_in, const std::string & IP_in);
 
-	static boost::mutex Mutex;                           //mutex for any access to a download
-	static std::map<int, server_buffer *> Server_Buffer; //socket mapped to server_buffer
+	//mutex for all static public functions
+	static boost::mutex Mutex;
+
+	//socket mapped to server_buffer
+	static std::map<int, boost::shared_ptr<server_buffer> > Server_Buffer;
 
 	/*
 	When this is zero there are no pending requests to send. This exists for the
@@ -191,7 +100,7 @@ private:
 	find_empty_slot   - locates and empty slot
 	                    returns true and sets slot_num if empty slot found
 	                    returns false if all slots full (this should trigger blacklist)
-	process           - decrypt incoming bytes, break apart individual messages, send
+	recv_buff_process - decrypt incoming bytes, break apart individual messages, send
 	                    messages to processing functions
 	request_slot_hash - prepares response to a request for a hash tree slot
 	request_slot_file - prepares response to a request for a file slot
@@ -200,7 +109,7 @@ private:
 	*/
 	void close_slot(const std::string & request);
 	bool find_empty_slot(const std::string & root_hash, int & slot_num);
-	void process(char * buff, const int & n_bytes);
+	void recv_buff_process(char * buff, const int & n_bytes);
 	void request_slot_hash(const std::string & request, std::string & send);
 	void request_slot_file(const std::string & request, std::string & send);
 	void send_block(const std::string & request, std::string & send);

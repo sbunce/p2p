@@ -19,7 +19,7 @@ locking_shared_ptr<download> download_factory::start(download_info info, std::ve
 	locking_shared_ptr<download> Download;
 	if(DB_Download.lookup_hash(info.hash)){
 		//download being resumed
-		database::table::hash::state State = DB_Hash.get_state(info.hash, hash_tree::file_size_to_tree_size(info.size));
+		database::table::hash::state State = DB_Hash.get_state(info.hash, hash_tree::tree_info::file_size_to_tree_size(info.size));
 		if(State == database::table::hash::DOWNLOADING){
 			Download = start_hash_tree(info, servers);
 		}else if(State == database::table::hash::COMPLETE){
@@ -64,9 +64,7 @@ locking_shared_ptr<download> download_factory::stop(locking_shared_ptr<download>
 		}
 	}else if(typeid(**Download_Stop) == typeid(download_file)){
 		download_info Download_Info = Download_Stop->get_download_info();
-		if(Download_Stop->is_cancelled()){
-			DB_Download.terminate(Download_Info.hash, Download_Info.size);
-		}else{
+		if(!Download_Stop->is_cancelled()){
 			DB_Share.add_entry(Download_Info.hash, Download_Info.size, Download_Info.file_path);
 			DB_Download.complete(Download_Info.hash, Download_Info.size);
 			server_index::add_path(Download_Info.file_path);

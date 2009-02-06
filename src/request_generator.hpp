@@ -1,3 +1,4 @@
+//THREADSAFE
 #ifndef H_REQUEST_GENERATOR
 #define H_REQUEST_GENERATOR
 
@@ -17,17 +18,17 @@
 class request_generator
 {
 public:
-	request_generator();
+	request_generator(
+		const boost::uint64_t & begin_in, //start of range to request
+		const boost::uint64_t & end_in,   //end of range to request
+		const int & timeout_in            //timeout before rerequest
+	);
 
 	/*
 	complete          - returns true when requests are complete
 	force_rerequest   - rerequest a number immediately
 	fulfil            - must be called whenever a request is fulfilled (otherwise rerequest will happen upon timeout)
 	highest_requested - returns the highest request yet made
-	init              - must be called before calling any other function
-	                    begin_in: the first request number to be generated
-	                    end_in: one past the last request number
-	                    timeout_in: how many seconds before an unfulfilled request is rerequested
 	request           - push a request number on the back of pre_request
 	                    returns true if request pushed, else false if no request needed
 	set_timeout       - set rerequest timeout
@@ -36,21 +37,12 @@ public:
 	void force_rerequest(const boost::uint64_t & number);
 	void fulfil(const boost::uint64_t & fulfilled_request);
 	boost::uint64_t highest_requested();
-	void init(const boost::uint64_t & begin_in, const boost::uint64_t & end_in, const int & timeout_in);
 	bool request(std::deque<boost::uint64_t> & prev_request);
 	void set_timeout(const unsigned & timeout_in);
 
 private:
-	/*
-	This mutex is needed for the download_file which will request blocks as it is
-	hash checking.
-
-	This mutex should be used on all public functions except init().
-	*/
+	//mutex for all public functions
 	boost::mutex Mutex;
-
-	//if false, and a public member function called, program will terminate
-	bool initialized;
 
 	/*
 	This is the highest request yet made. This will not be changed when
@@ -60,7 +52,7 @@ private:
 
 	//min and max request number
 	boost::uint64_t begin;
-	boost::uint64_t end;
+	boost::uint64_t end;   //request generator unitialized if this is zero
 
 	//max age of a request (in seconds) before a re_request is made
 	unsigned timeout;
@@ -80,7 +72,6 @@ private:
 			time(time_in),
 			pipeline_size(pipeline_size_in)
 		{}
-
 		time_t time;       //time which the request was made
 		int pipeline_size; //how large pipeline was when request made
 	};

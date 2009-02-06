@@ -111,11 +111,10 @@ private:
 	//socket number mapped to connection special pointer
 	std::map<int, connection_special> Connection_Special;
 
-	database::connection DB;
+	boost::shared_ptr<request_generator> Request_Generator;
 	database::table::hash DB_Hash;
 	database::table::download DB_Download;
 	download_info Download_Info;
-	request_generator Request_Generator;
 	hash_tree Hash_Tree;
 };
 #endif

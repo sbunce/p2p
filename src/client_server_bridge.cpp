@@ -1,13 +1,83 @@
 #include "client_server_bridge.hpp"
 
+//BEGIN STATIC
 client_server_bridge * client_server_bridge::Client_Server_Bridge = NULL;
 boost::mutex client_server_bridge::Mutex;
 atomic_bool client_server_bridge::server_index_blocked(true);
 
-client_server_bridge::client_server_bridge()
+void client_server_bridge::start_hash_tree(const std::string & hash)
 {
-
+	boost::mutex::scoped_lock lock(Mutex);
+	init();
+	Client_Server_Bridge->start_hash_tree_priv(hash);
 }
+
+void client_server_bridge::start_file(const std::string & hash, const boost::uint64_t & file_block_count)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	init();
+	Client_Server_Bridge->start_file_priv(hash, file_block_count);
+}
+
+void client_server_bridge::finish_download(const std::string & hash)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	init();
+	Client_Server_Bridge->finish_download_priv(hash);
+}
+
+void client_server_bridge::update_hash_tree_highest(const std::string & hash, const boost::uint64_t & block_num)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	init();
+	Client_Server_Bridge->update_hash_tree_highest_priv(hash, block_num);
+}
+
+void client_server_bridge::add_file_block(const std::string & hash, const boost::uint64_t & block_num)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	init();
+	Client_Server_Bridge->add_file_block_priv(hash, block_num);
+}
+
+bool client_server_bridge::is_downloading(const std::string & hash)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	init();
+	return Client_Server_Bridge->is_downloading_priv(hash);
+}
+
+client_server_bridge::download_state client_server_bridge::hash_block_available(const std::string & hash, const boost::uint64_t & block_num)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	init();
+	return Client_Server_Bridge->hash_block_available_priv(hash, block_num);
+}
+
+client_server_bridge::download_state client_server_bridge::file_block_available(const std::string & hash, const boost::uint64_t & block_num)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	init();
+	return Client_Server_Bridge->file_block_available_priv(hash, block_num);
+}
+
+void client_server_bridge::init()
+{
+	if(Client_Server_Bridge == NULL){
+		Client_Server_Bridge = new client_server_bridge();
+	}
+}
+
+bool client_server_bridge::server_index_is_blocked()
+{
+	return server_index_blocked;
+}
+
+void client_server_bridge::unblock_server_index()
+{
+	server_index_blocked = false;
+}
+//END STATIC
 
 void client_server_bridge::start_hash_tree_priv(const std::string & hash)
 {

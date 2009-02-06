@@ -1,11 +1,17 @@
 #include "request_generator.hpp"
 
 request_generator::request_generator(
+	const boost::uint64_t & begin_in,
+	const boost::uint64_t & end_in,
+	const int & timeout_in
 ):
-	current(0),
-	initialized(false)
+	current(begin_in),
+	begin(begin_in),
+	end(end_in),
+	timeout(timeout_in)
 {
-
+	assert(end_in - begin_in > 0);
+	assert(timeout_in != 0);
 }
 
 void request_generator::check_timeouts()
@@ -25,21 +31,18 @@ void request_generator::check_timeouts()
 bool request_generator::complete()
 {
 	boost::mutex::scoped_lock lock(Mutex);
-	assert(initialized);
 	return current == end && unfulfilled_request.empty() && re_request.empty() && re_requested.empty();
 }
 
 void request_generator::force_rerequest(const boost::uint64_t & number)
 {
 	boost::mutex::scoped_lock lock(Mutex);
-	assert(initialized);
 	re_request.insert(number);
 }
 
 void request_generator::fulfil(const boost::uint64_t & fulfilled_request)
 {
 	boost::mutex::scoped_lock lock(Mutex);
-	assert(initialized);
 	unfulfilled_request.erase(fulfilled_request);
 	re_request.erase(fulfilled_request);
 	re_requested.erase(fulfilled_request);
@@ -51,26 +54,9 @@ boost::uint64_t request_generator::highest_requested()
 	return current;
 }
 
-void request_generator::init(const boost::uint64_t & begin_in, const boost::uint64_t & end_in, const int & timeout_in)
-{
-	//assert that there is at least 1 request to be made
-	assert(end_in - begin_in > 0);
-	assert(timeout_in != 0);
-
-	initialized = true;
-	unfulfilled_request.clear();
-	re_request.clear();
-	re_requested.clear();
-	current = begin_in;
-	begin = begin_in;
-	end = end_in;
-	timeout = timeout_in;
-}
-
 bool request_generator::request(std::deque<boost::uint64_t> & prev_request)
 {
 	boost::mutex::scoped_lock lock(Mutex);
-	assert(initialized);
 	check_timeouts();
 	if(re_request.empty()){
 		//no re_requests to be made
@@ -119,5 +105,6 @@ bool request_generator::request(std::deque<boost::uint64_t> & prev_request)
 
 void request_generator::set_timeout(const unsigned & timeout_in)
 {
+	boost::mutex::scoped_lock lock(Mutex);
 	timeout = timeout_in;
 }

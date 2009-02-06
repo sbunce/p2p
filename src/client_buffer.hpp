@@ -1,5 +1,4 @@
 //THREADSAFE
-
 #ifndef H_CLIENT_BUFFER
 #define H_CLIENT_BUFFER
 
@@ -203,10 +202,10 @@ private:
 	                     called from destructor to unregister from all downloads
 	                     when the client_buffer is destroyed
 	*/
-	void recv_buff_append(char * buff, const int & n_bytes);
 	bool empty();
 	void prepare_request();
 	void recv_buff_process();
+	void recv_buff_append(char * buff, const int & n_bytes);
 	void register_download(locking_shared_ptr<download> new_download);
 	bool rotate_downloads();
 	void terminate_download(locking_shared_ptr<download> term_DL);

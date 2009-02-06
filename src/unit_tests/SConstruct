@@ -16,9 +16,23 @@ env.unit_test([
 	boost.static_lib('thread')
 ])
 
-env.unit_test('convert.cpp')
-env.unit_test('contiguous_map.cpp')
-env.unit_test('contiguous_set.cpp')
+env.unit_test([
+	'convert.cpp',
+	boost.static_lib('system'),
+	boost.static_lib('thread')
+])
+
+env.unit_test([
+	'contiguous_map.cpp',
+	boost.static_lib('system'),
+	boost.static_lib('thread')
+])
+
+env.unit_test([
+	'contiguous_set.cpp',
+	boost.static_lib('system'),
+	boost.static_lib('thread')
+])
 
 env.unit_test([
 	'database_connection.cpp',
@@ -44,9 +58,13 @@ env.unit_test([
 env.unit_test([
 	'database_table_download.cpp',
 	'../database_table_download.cpp',
+	'../database_table_blacklist.cpp',
 	'../database_connection.cpp',
 	'../database_init.cpp',
 	'../database_table_hash.cpp',
+	'../hash_tree.cpp',
+	'../request_generator.cpp',
+	'../sha.cpp',
 	'../speed_calculator.cpp',
 	boost.static_lib('date_time'),
 	boost.static_lib('filesystem'),
@@ -70,6 +88,7 @@ env.unit_test([
 	'../database_table_prime.cpp',
 	'../database_connection.cpp',
 	'../database_init.cpp',
+	'../request_generator.cpp',
 	'../speed_calculator.cpp',
 	boost.static_lib('date_time'),
 	boost.static_lib('system'),
@@ -79,6 +98,7 @@ env.unit_test([
 env.unit_test([
 	'database_table_search.cpp',
 	'../database_table_search.cpp',
+	'../database_table_blacklist.cpp',
 	'../database_connection.cpp',
 	'../database_init.cpp',
 	'../speed_calculator.cpp',
@@ -91,9 +111,13 @@ env.unit_test([
 env.unit_test([
 	'database_table_share.cpp',
 	'../database_table_share.cpp',
+	'../database_table_blacklist.cpp',
 	'../database_connection.cpp',
 	'../database_init.cpp',
 	'../database_table_hash.cpp',
+	'../hash_tree.cpp',
+	'../request_generator.cpp',
+	'../sha.cpp',
 	'../speed_calculator.cpp',
 	boost.static_lib('date_time'),
 	boost.static_lib('system'),
@@ -121,6 +145,7 @@ env.unit_test([
 	'../database_init.cpp',
 	'../database_table_blacklist.cpp',
 	'../database_table_hash.cpp',
+	'../request_generator.cpp',
 	'../sha.cpp',
 	'../speed_calculator.cpp',
 	boost.static_lib('date_time'),
@@ -144,7 +169,9 @@ env.unit_test([
 
 env.unit_test([
 	'sha.cpp',
-	'../sha.cpp'
+	'../sha.cpp',
+	boost.static_lib('system'),
+	boost.static_lib('thread')
 ])
 
 Clean('DB','DB')

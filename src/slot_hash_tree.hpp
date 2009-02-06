@@ -27,7 +27,6 @@ public:
 	virtual void info(std::vector<upload_info> & UI);
 
 private:
-
 	//percent complete uploading (0-100)
 	unsigned percent;
 	boost::uint64_t highest_block_seen;
