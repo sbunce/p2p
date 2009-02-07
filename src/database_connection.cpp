@@ -117,7 +117,7 @@ sqlite3_blob * database::connection::blob_open(blob & Blob, const bool & writeab
 			boost::this_thread::yield();
 		}else{
 			LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle);
-			break;
+			exit(1);
 		}
 	}
 	Query.update(1);

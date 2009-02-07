@@ -1,22 +1,20 @@
+Kademelia network.
 
-XOR key distance metric
+Each node maintains a list for each bit in a GUID.
 
-Having the GUIDS and the root hashes be the same length and then
-storing root hashes on hosts which are "close" to the root hashes (by XOR'ing
-their GUID against the root hash) a la Kademlia.
+The lists are for commonality.
 
-There needs to be a way to order the network by real distance (possibly measured
-by a trace route).
+Example:
+My GUID
+1 0 1 0 1 1
 
-Skip list is an idea that permeates all the overlay schemes I've seen.
+GUID to insert
+1 0 1 1 1 1
 
-Could a chord network be setup where you locate a ring in your geographical area
-and only query that?
+The first 3 bits are the same so the host would go in the third list.
 
-Ring of rings.
+The GUIDS should be chosen geographically so that nodes nearer to eachother in
+the overlay are nearer to eachother in the world. Can longitude be used?
 
-Overlay needs to factor in distance/latency.
-
-If other types of data are to be searchable over the network could the protocol
-be set up to support different kinds of search "objects". Like file name, size,
-bitrate, etc?
+GUID
+<longitude 1-byte><time 4-byte><MAC 6-byte>

@@ -69,7 +69,7 @@ namespace global
 	const unsigned RE_REQUEST_FINISHING = 4;  //seconds before a file block is re-requested when download is in finishing phase (last block requested)
 	const unsigned P2P_PORT = 6969;           //port client connects to and server receives on
 	const unsigned GUI_TICK = 100;            //time(in milliseconds) between gui updates
-	const unsigned SPEED_AVERAGE = 4;         //how many seconds to average speed over
+	const unsigned SPEED_AVERAGE = 8;         //how many seconds to average speed over
 	const unsigned TIMEOUT = 16;              //how long before an unresponsive socket times out
 	const unsigned UNRESPONSIVE_TIMEOUT = 60; //if connection to server fails, new connection attempts to it are stopped for this time (seconds)
 

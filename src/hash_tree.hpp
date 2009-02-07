@@ -48,7 +48,6 @@ public:
 		get_file_block_count     - returns number of file blocks in file the tree is for
 		get_file_size            - returns size of file the tree is for
 		get_last_file_block_size - returns size of the last file block
-		file_size_to_tree_size   - given the file size, returns the tree size
 		*/
 		const std::string & get_root_hash();
 		const boost::uint64_t & get_block_count();
@@ -57,15 +56,17 @@ public:
 		const boost::uint64_t & get_file_size();
 		const boost::uint64_t & get_last_file_block_size();
 		const std::deque<boost::uint64_t> & get_row();
-		unsigned block_size(const boost::uint64_t & block_num);
-		static boost::uint64_t file_size_to_tree_size(const boost::uint64_t & file_size);
 
 		/*
-		higest_good          - sets HG to highest good hash block in tree
-		                       returns false if no good blocks exist in tree
-		rerequest_bad_blocks - force_rerequests bad blocks, used by download_hash_tree
-		block_info           - returns the size of the specified hash block
+		block_size             - returns the size of a hash block
+		file_size_to_tree_size - given the file size, returns the tree size
+		higest_good            - sets HG to highest good hash block in tree
+		                         returns false if no good blocks exist in tree
+		rerequest_bad_blocks   - force_rerequests bad blocks, used by download_hash_tree
+		block_info             - returns the size of the specified hash block
 		*/
+		unsigned block_size(const boost::uint64_t & block_num);
+		static boost::uint64_t file_size_to_tree_size(const boost::uint64_t & file_size);
 		bool highest_good(boost::uint64_t & HG);
 		void rerequest_bad_blocks(request_generator & Request_Generator);
 
@@ -134,11 +135,11 @@ public:
 	                   returns true if tree good, else false and sets bad_block to first bad block
 	                   Note: must call this with the hash_tree_info before calling write_block
 	check_file_block - checks a file block against a hash in the hash tree
-	                   returns true if block good, else false
+	                   returns GOOD if block good or BAD if block bad
+	                   returns BLOB_IO_ERROR
 	create           - create hash tree
 	                   returns true and sets root_hash if creation suceeded
 	                   returns false if creation failed, or if stop called
-
 	read_block       - get block from hash tree
 	                   returns true if suceeded, else false if error opening file
 	stop             - triggers early termination of create()

@@ -39,7 +39,7 @@ public:
 private:
 	Gtk::Window * window;
 	Gtk::MenuBar * menubar;
-	Gtk::Notebook * notebook; //main tabs, holds Gtk::Label
+	Gtk::Notebook * notebook;
 
 	//file menu
 	Gtk::Menu * file_menu;
@@ -66,10 +66,6 @@ private:
 	Gtk::Entry * search_entry;   //input box for searches
 	Gtk::Button * search_button; //search button
 
-	//tracker add
-	Gtk::Entry * tracker_entry;   //input box for trackers
-	Gtk::Button * tracker_button; //tracker button
-
 	//treeviews for different tabs
 	Gtk::TreeView * search_view;
 	Gtk::ScrolledWindow * search_scrolled_window;
@@ -77,8 +73,6 @@ private:
 	Gtk::ScrolledWindow * download_scrolled_window;
 	Gtk::TreeView * upload_view;
 	Gtk::ScrolledWindow * upload_scrolled_window;
-	Gtk::TreeView * tracker_view;
-	Gtk::ScrolledWindow * tracker_scrolled_window;
 
 	//boxes (divides the window)
 	Gtk::VBox * main_VBox;    //VBox for the main window (separates top from bottom)
@@ -98,11 +92,11 @@ private:
 	Glib::RefPtr<Gtk::ListStore> search_list;
 	Glib::RefPtr<Gtk::ListStore> download_list;
 	Glib::RefPtr<Gtk::ListStore> upload_list;
-	Glib::RefPtr<Gtk::ListStore> tracker_list;
 
 	/*functions associated with Gtk signals
 	help_about              - user clicked Help/About
 	cancel_download         - when user clicks Cancel on a download in download_view
+	compare_file_size       - custom compare function for file sizes
 	download_click          - interprets download_view input, can pop up a menu on right click
 	download_file           - when user clicks Download on a entry in search_view
 	download_info_tab       - opens a tab for detailed download information
@@ -115,6 +109,7 @@ private:
 	*/
 	void help_about();
 	void cancel_download();
+	int compare_file_size(const Gtk::TreeModel::iterator & lval, const Gtk::TreeModel::iterator & rval);
 	bool download_click(GdkEventButton * event);
 	void download_file();
 	void download_info_tab();

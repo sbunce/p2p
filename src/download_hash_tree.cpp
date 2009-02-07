@@ -9,9 +9,7 @@ download_hash_tree::download_hash_tree(
 	Tree_Info(Download_Info_in.hash, Download_Info_in.size)
 {
 	client_server_bridge::start_hash_tree(Download_Info.hash);
-
 	visible = true;
-
 	boost::uint64_t bad_block;
 	if(Hash_Tree.check(Tree_Info, bad_block)){
 		//hash tree good, signal download_complete
@@ -21,6 +19,10 @@ download_hash_tree::download_hash_tree(
 		Request_Generator =
 			boost::shared_ptr<request_generator>(new request_generator(bad_block,
 			Tree_Info.get_block_count(), global::RE_REQUEST));
+
+		for(boost::uint64_t x=0; x<bad_block; ++x){
+			bytes_received += Tree_Info.block_size(x);
+		}
 	}
 }
 
@@ -59,7 +61,7 @@ unsigned download_hash_tree::percent_complete()
 	if(Tree_Info.get_block_count() == 0){
 		return 0;
 	}else{
-		return (unsigned)(((float)Request_Generator->highest_requested() / (float)Tree_Info.get_block_count())*100);
+		return (unsigned)(((float)get_bytes_received() / (float)Tree_Info.get_tree_size())*100);
 	}
 }
 

@@ -26,6 +26,8 @@ download_file::download_file(
 		boost::shared_ptr<request_generator>(new request_generator((boost::uint64_t)first_unreceived,
 		Tree_Info.get_file_block_count(), global::RE_REQUEST));
 
+	bytes_received += first_unreceived * global::FILE_BLOCK_SIZE;
+
 	//hash check for corrupt/missing blocks
 	if(first_unreceived == 0){
 		hashing = false;
@@ -124,8 +126,7 @@ unsigned download_file::percent_complete()
 	if(Tree_Info.get_file_block_count() == 0){
 		return 0;
 	}else{
-		return (unsigned)(((float)Request_Generator->highest_requested()
-			/ (float)Tree_Info.get_file_block_count())*100);
+		return (unsigned)(((float)get_bytes_received() / (float)Tree_Info.get_file_size())*100);
 	}
 }
 
@@ -135,7 +136,8 @@ void download_file::register_connection(const download_connection & DC)
 	Connection_Special.insert(std::make_pair(DC.socket, connection_special(DC.IP)));
 }
 
-download::mode download_file::request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected, int & slots_used)
+download::mode download_file::request(const int & socket, std::string & request,
+	std::vector<std::pair<char, int> > & expected, int & slots_used)
 {
 	std::map<int, connection_special>::iterator iter = Connection_Special.find(socket);
 	assert(iter != Connection_Special.end());
@@ -257,7 +259,7 @@ void download_file::response(const int & socket, std::string block)
 	}else if(conn->State == connection_special::REQUEST_BLOCKS){
 		if(block[0] == global::P_BLOCK){
 			block.erase(0, 1); //trim command
-			if(Hash_Tree.check_file_block(Tree_Info, conn->latest_request.front(), block.c_str(), block.length())){
+			if(!cancel && Hash_Tree.check_file_block(Tree_Info, conn->latest_request.front(), block.c_str(), block.length())){
 				write_block(conn->latest_request.front(), block);
 				client_server_bridge::add_file_block(Download_Info.hash, conn->latest_request.front());
 				Request_Generator->fulfil(conn->latest_request.front());

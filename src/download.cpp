@@ -1,7 +1,10 @@
 #include "download.hpp"
 
 download::download()
-: cancel(false), visible(false)
+:
+	bytes_received(0),
+	cancel(false),
+	visible(false)
 {
 
 }
@@ -16,9 +19,9 @@ int download::connection_count()
 	return Connection.size();
 }
 
-bool download::is_cancelled()
+const boost::uint64_t & download::get_bytes_received()
 {
-	return cancel;
+	return bytes_received;
 }
 
 download_info download::get_download_info()
@@ -30,6 +33,11 @@ const std::string download::hash()
 {
 	//if download visible this should be defined in derived
 	return "FUNCTION NOT SET IN DERIVED";
+}
+
+bool download::is_cancelled()
+{
+	return cancel;
 }
 
 bool download::is_visible()
@@ -90,4 +98,5 @@ void download::update_speed(const int & socket, const int & n_bytes)
 	assert(iter != Connection.end());
 	iter->second.Speed_Calculator.update(n_bytes);
 	Speed_Calculator.update(n_bytes);
+	bytes_received += n_bytes;
 }

@@ -1,5 +1,7 @@
 TODO
 
+-replace instances of messageDigest in gui code
+
 -vett gui code.. ugh
 
 -add stop/start functions to download, and rename cancel to remove
@@ -22,6 +24,12 @@ B. I haven't seen his host key before, I trigger key exchange.
 
 Get this all fleshed out and make detailed html page describing procedure. Maybe
 do flow chart.
+
+A-TAG IDEA
+-Have file information stored in a 48 byte file name. This file would not be
+shared because it would contain zero bytes. HTTP servers could serve this in
+an A-TAG that the p2p frontend could interpret.
+<a href="/path/ABCHEX48BYTES">Name of File</a>
 
 
 THINK ABOUT

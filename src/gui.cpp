@@ -15,15 +15,10 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	Gtk::Image * search_label = Gtk::manage(new Gtk::Image(Gtk::Stock::FIND, Gtk::ICON_SIZE_LARGE_TOOLBAR));
 	Gtk::Image * download_label = Gtk::manage(new Gtk::Image(Gtk::Stock::GO_DOWN, Gtk::ICON_SIZE_LARGE_TOOLBAR));
 	Gtk::Image * upload_label = Gtk::manage(new Gtk::Image(Gtk::Stock::GO_UP, Gtk::ICON_SIZE_LARGE_TOOLBAR));
-	Gtk::Image * tracker_label = Gtk::manage(new Gtk::Image(Gtk::Stock::NETWORK, Gtk::ICON_SIZE_LARGE_TOOLBAR));
 
 	//search related
 	search_entry = Gtk::manage(new Gtk::Entry);
 	search_button = Gtk::manage(new Gtk::Button(Gtk::Stock::FIND));
-
-	//tracker related
-	tracker_entry = Gtk::manage(new Gtk::Entry);
-	tracker_button = Gtk::manage(new Gtk::Button(Gtk::Stock::ADD));
 
 	//treeviews for different tabs
 	search_view = Gtk::manage(new Gtk::TreeView);
@@ -32,15 +27,11 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	download_scrolled_window = Gtk::manage(new Gtk::ScrolledWindow);
 	upload_view = Gtk::manage(new Gtk::TreeView);
 	upload_scrolled_window = Gtk::manage(new Gtk::ScrolledWindow);
-	tracker_view = Gtk::manage(new Gtk::TreeView);
-	tracker_scrolled_window = Gtk::manage(new Gtk::ScrolledWindow);
 
 	//boxes (divides the window)
 	main_VBox = Gtk::manage(new Gtk::VBox(false, 0));
 	search_HBox = Gtk::manage(new Gtk::HBox(false, 0));
-	tracker_HBox = Gtk::manage(new Gtk::HBox(false, 0));
 	search_VBox = Gtk::manage(new Gtk::VBox(false, 0));
-	tracker_VBox = Gtk::manage(new Gtk::VBox(false, 0));
 
 	//bottom bar that displays status etc
 	statusbar = Gtk::manage(new Gtk::Statusbar);
@@ -69,25 +60,16 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	search_entry->set_max_length(255);
 	search_entry->set_text((""));
 
-	//tracker entry box properties
-	tracker_entry->set_visibility(true);
-	tracker_entry->set_editable(true);
-	tracker_entry->set_max_length(0);
-	tracker_entry->set_text((""));
-
 	//add search input/button to horizontal box
 	search_HBox->pack_start(*search_entry);
 	search_HBox->pack_start(*search_button, Gtk::PACK_SHRINK, 5);
-
-	//add tracker input/button to horizontal box
-	tracker_HBox->pack_start(*tracker_entry);
-	tracker_HBox->pack_start(*tracker_button, Gtk::PACK_SHRINK, 5);
 
 	//TreeView and ScrolledWindow properties
 	//search
 	search_view->set_headers_visible(true); //true enables column labels
 	search_view->set_rules_hint(true);      //true sets alternating row background color
 	search_view->set_enable_search(false);  //allow searching of TreeView contents
+	search_view->set_headers_clickable(true);
 	search_scrolled_window->add(*search_view);
 	//download
 	download_view->set_headers_visible(true);
@@ -99,19 +81,10 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	upload_view->set_rules_hint(true);
 	upload_view->set_enable_search(false);
 	upload_scrolled_window->add(*upload_view);
-	//tracker
-	tracker_view->set_headers_visible(true);
-	tracker_view->set_rules_hint(true);
-	tracker_view->set_enable_search(false);
-	tracker_scrolled_window->add(*tracker_view);
 
 	//add search input/button/TreeView to the window for searching
 	search_VBox->pack_start(*search_HBox, Gtk::PACK_SHRINK, 0);
 	search_VBox->pack_start(*search_scrolled_window);
-
-	//add tracker input/button/TreeView to the window for adding trackers
-	tracker_VBox->pack_start(*tracker_HBox, Gtk::PACK_SHRINK, 0);
-	tracker_VBox->pack_start(*tracker_scrolled_window);
 
 	//set notebook properties
 	notebook->set_flags(Gtk::CAN_FOCUS);
@@ -123,10 +96,6 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	//add elements to the notebook
 	notebook->append_page(*search_VBox, *search_label);
 	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
-/*
-	notebook->append_page(*tracker_VBox, *tracker_label);
-	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
-*/
 	notebook->append_page(*download_scrolled_window, *download_label);
 	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
 	notebook->append_page(*upload_scrolled_window, *upload_label);
@@ -482,16 +451,35 @@ bool gui::search_click(GdkEventButton * event)
 	return false;
 }
 
-void gui::search_info_setup()
+int gui::compare_file_size(const Gtk::TreeModel::iterator & lval, const Gtk::TreeModel::iterator & rval)
 {
-	//set up column
 	Gtk::TreeModel::ColumnRecord column;
-	Gtk::TreeModelColumn<Glib::ustring> messageDigest;
+	Gtk::TreeModelColumn<Glib::ustring> hash_t;
 	Gtk::TreeModelColumn<Glib::ustring> name_t;
 	Gtk::TreeModelColumn<Glib::ustring> size_t;
 	Gtk::TreeModelColumn<Glib::ustring> IP_t;
+	column.add(hash_t);
+	column.add(name_t);
+	column.add(size_t);
+	column.add(IP_t);
 
-	column.add(messageDigest);
+	Gtk::TreeModel::Row row_lval = *lval;
+	Gtk::TreeModel::Row row_rval = *rval;
+
+	std::cout << "lval: " << row_lval[size_t] << " rval: " << row_rval[size_t] << "\n";
+	return -1;
+}
+
+void gui::search_info_setup()
+{
+	//set up column
+//DEBUG, this should be moved to header
+	Gtk::TreeModel::ColumnRecord column;
+	Gtk::TreeModelColumn<Glib::ustring> hash_t;
+	Gtk::TreeModelColumn<Glib::ustring> name_t;
+	Gtk::TreeModelColumn<Glib::ustring> size_t;
+	Gtk::TreeModelColumn<Glib::ustring> IP_t;
+	column.add(hash_t);
 	column.add(name_t);
 	column.add(size_t);
 	column.add(IP_t);
@@ -501,7 +489,10 @@ void gui::search_info_setup()
 
 	//add columns
 	search_view->append_column("  Name  ", name_t);
+	search_view->get_column(0)->set_sort_column(1);
 	search_view->append_column("  Size  ", size_t);
+	search_view->get_column(1)->set_sort_column(2);
+	search_list->set_sort_func(2, sigc::mem_fun(*this, &gui::compare_file_size));
 	search_view->append_column("  IP  ", IP_t);
 
 	//signal for clicks on download_view
@@ -559,8 +550,8 @@ void gui::search_info_refresh()
 void gui::search_input()
 {
 	std::string input_text = search_entry->get_text();
+	std::vector<download_info> Search_Info;
 	Client.search(input_text, Search_Info);
-	search_info_refresh();
 }
 
 void gui::settings_preferences()

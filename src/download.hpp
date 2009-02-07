@@ -95,6 +95,14 @@ protected:
 	bool cancel;
 	bool visible;
 
+	const boost::uint64_t & get_bytes_received();
+
+	/*
+	When update_speed is called the byte count is added to this total. This can
+	be used by derived downloads to calculate percentage complete.
+	*/
+	boost::uint64_t bytes_received;
+
 private:
 	class server_info
 	{

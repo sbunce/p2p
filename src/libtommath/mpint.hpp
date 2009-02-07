@@ -80,7 +80,7 @@ public:
 		}
 	}
 
-	//return binary string of number, call to_bin_size for length
+	//return binary string of number (big-endian), call to_bin_size for length
    unsigned char * to_bin()
 	{
 		int n, err;
