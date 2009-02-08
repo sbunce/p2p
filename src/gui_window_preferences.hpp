@@ -1,5 +1,5 @@
-#ifndef H_GUI_PREFERENCES
-#define H_GUI_PREFERENCES
+#ifndef H_GUI_WINDOW_PREFERENCES
+#define H_GUI_WINDOW_PREFERENCES
 
 //boost
 #include <boost/utility.hpp>
@@ -15,10 +15,10 @@
 //std
 #include <sstream>
 
-class gui_preferences : public Gtk::Window, private boost::noncopyable
+class gui_window_preferences : public Gtk::Window, private boost::noncopyable
 {  
 public:
-	gui_preferences(client * Client_in, server * Server_in);
+	gui_window_preferences(client * Client_in, server * Server_in);
 
 private:
 	Gtk::Window * window;

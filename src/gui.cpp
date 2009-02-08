@@ -2,7 +2,9 @@
 
 gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 {
+//DEBUG, remove this
 	window = this;
+
 	menubar = Gtk::manage(new Gtk::MenuBar);
 	notebook = Gtk::manage(new Gtk::Notebook);
 
@@ -16,13 +18,10 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	Gtk::Image * download_label = Gtk::manage(new Gtk::Image(Gtk::Stock::GO_DOWN, Gtk::ICON_SIZE_LARGE_TOOLBAR));
 	Gtk::Image * upload_label = Gtk::manage(new Gtk::Image(Gtk::Stock::GO_UP, Gtk::ICON_SIZE_LARGE_TOOLBAR));
 
-	//search related
-	search_entry = Gtk::manage(new Gtk::Entry);
-	search_button = Gtk::manage(new Gtk::Button(Gtk::Stock::FIND));
+//DEUBG, add documentation
+	GUI_VBox_Search = Gtk::manage(new gui_vbox_search(&Client));
 
 	//treeviews for different tabs
-	search_view = Gtk::manage(new Gtk::TreeView);
-	search_scrolled_window = Gtk::manage(new Gtk::ScrolledWindow);
 	download_view = Gtk::manage(new Gtk::TreeView);
 	download_scrolled_window = Gtk::manage(new Gtk::ScrolledWindow);
 	upload_view = Gtk::manage(new Gtk::TreeView);
@@ -30,8 +29,6 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 
 	//boxes (divides the window)
 	main_VBox = Gtk::manage(new Gtk::VBox(false, 0));
-	search_HBox = Gtk::manage(new Gtk::HBox(false, 0));
-	search_VBox = Gtk::manage(new Gtk::VBox(false, 0));
 
 	//bottom bar that displays status etc
 	statusbar = Gtk::manage(new Gtk::Statusbar);
@@ -54,23 +51,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	help_menu->items().push_back(Gtk::Menu_Helpers::StockMenuElem(Gtk::StockID(Gtk::Stock::ABOUT)));
 	about = (Gtk::MenuItem *)&help_menu->items().back();
 
-	//search entry box properties
-	search_entry->set_visibility(true);
-	search_entry->set_editable(true);
-	search_entry->set_max_length(255);
-	search_entry->set_text((""));
-
-	//add search input/button to horizontal box
-	search_HBox->pack_start(*search_entry);
-	search_HBox->pack_start(*search_button, Gtk::PACK_SHRINK, 5);
-
 	//TreeView and ScrolledWindow properties
-	//search
-	search_view->set_headers_visible(true); //true enables column labels
-	search_view->set_rules_hint(true);      //true sets alternating row background color
-	search_view->set_enable_search(false);  //allow searching of TreeView contents
-	search_view->set_headers_clickable(true);
-	search_scrolled_window->add(*search_view);
 	//download
 	download_view->set_headers_visible(true);
 	download_view->set_rules_hint(true);
@@ -82,10 +63,6 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	upload_view->set_enable_search(false);
 	upload_scrolled_window->add(*upload_view);
 
-	//add search input/button/TreeView to the window for searching
-	search_VBox->pack_start(*search_HBox, Gtk::PACK_SHRINK, 0);
-	search_VBox->pack_start(*search_scrolled_window);
-
 	//set notebook properties
 	notebook->set_flags(Gtk::CAN_FOCUS);
 	notebook->set_show_tabs(true);
@@ -94,13 +71,12 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	notebook->set_scrollable(true);
 
 	//add elements to the notebook
-	notebook->append_page(*search_VBox, *search_label);
+	notebook->append_page(*GUI_VBox_Search, *search_label);
 	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
 	notebook->append_page(*download_scrolled_window, *download_label);
 	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
 	notebook->append_page(*upload_scrolled_window, *upload_label);
 	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
-
 
 	//add items to the main VBox
 	main_VBox->pack_start(*menubar, Gtk::PACK_SHRINK, 0);
@@ -123,13 +99,10 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	quit->signal_activate().connect(sigc::mem_fun(*this, &gui::on_quit), false);
 	preferences->signal_activate().connect(sigc::mem_fun(*this, &gui::settings_preferences), false);
 	about->signal_activate().connect(sigc::mem_fun(*this, &gui::help_about), false);
-	search_entry->signal_activate().connect(sigc::mem_fun(*this, &gui::search_input), false);
-	search_button->signal_clicked().connect(sigc::mem_fun(*this, &gui::search_input), false);
 
 	//set up Gtk::TreeView for each tab
 	download_info_setup();
 	upload_info_setup();
-	search_info_setup();
 
 	//timed functions
 	Glib::signal_timeout().connect(sigc::mem_fun(*this, &gui::download_info_refresh), global::GUI_TICK);
@@ -196,30 +169,6 @@ bool gui::download_click(GdkEventButton * event)
 	return true;
 }
 
-void gui::download_file()
-{
-	Glib::RefPtr<Gtk::TreeView::Selection> refSelection = search_view->get_selection();
-	if(refSelection){
-		Gtk::TreeModel::iterator selected_row_iter = refSelection->get_selected();
-		if(selected_row_iter){
-			Gtk::TreeModel::Row row = *selected_row_iter;
-			Glib::ustring hash_retrieved;
-			row.get_value(0, hash_retrieved);
-
-			std::vector<download_info>::iterator iter_cur, iter_end;
-			iter_cur = Search_Info.begin();
-			iter_end = Search_Info.end();
-			while(iter_cur != iter_end){
-				if(iter_cur->hash == hash_retrieved){
-					Client.start_download(*iter_cur);
-					break;
-				}
-				++iter_cur;
-			}
-		}
-	}
-}
-
 void gui::download_info_tab()
 {
 	std::string root_hash, file_name;
@@ -245,7 +194,7 @@ void gui::download_info_tab()
 	Gtk::Label * tab_label = Gtk::manage(new Gtk::Label);
 	Gtk::Button * close_button = Gtk::manage(new Gtk::Button);
 	Gtk::Image * close_image = Gtk::manage(new Gtk::Image(Gtk::Stock::CLOSE, Gtk::ICON_SIZE_MENU));
-	gui_download_status * status_window = Gtk::manage(new gui_download_status(root_hash, tab_label, &Client));
+	gui_window_download_status * status_window = Gtk::manage(new gui_window_download_status(root_hash, tab_label, &Client));
 
 	hbox->pack_start(*tab_label);
 	close_button->add(*close_image);
@@ -259,20 +208,20 @@ void gui::download_info_tab()
 
 	//set tab window to refresh
 	sigc::connection tab_conn = Glib::signal_timeout().connect(
-		sigc::mem_fun(status_window, &gui_download_status::refresh),
+		sigc::mem_fun(status_window, &gui_window_download_status::refresh),
 		global::GUI_TICK
 	);
 
 	//signal to close tab, function pointer bound to window pointer associated with a tab
 	close_button->signal_clicked().connect(
-		sigc::bind<gui_download_status *, sigc::connection>(
+		sigc::bind<gui_window_download_status *, sigc::connection>(
 			sigc::mem_fun(*this, &gui::download_info_tab_close),
 			status_window, tab_conn
 		)
 	);
 }
 
-void gui::download_info_tab_close(gui_download_status * status_window, sigc::connection tab_conn)
+void gui::download_info_tab_close(gui_window_download_status * status_window, sigc::connection tab_conn)
 {
 	//stop window from refreshing
 	tab_conn.disconnect();
@@ -433,132 +382,13 @@ void gui::help_about()
 	delete GUI_About;
 }
 
-bool gui::search_click(GdkEventButton * event)
-{
-	if(event->type == GDK_BUTTON_PRESS && event->button == 3){
-		search_popup_menu.popup(event->button, event->time);
 
-		//select the row when the user right clicks on it
-		int x, y;
-		Gtk::TreeModel::Path path;
-		Gtk::TreeViewColumn columnObject;
-		Gtk::TreeViewColumn * column = &columnObject;
-		if(search_view->get_path_at_pos((int)event->x, (int)event->y, path, column, x, y)){
-			search_view->set_cursor(path);
-		}
-		return true;
-	}
-	return false;
-}
-
-int gui::compare_file_size(const Gtk::TreeModel::iterator & lval, const Gtk::TreeModel::iterator & rval)
-{
-	Gtk::TreeModel::ColumnRecord column;
-	Gtk::TreeModelColumn<Glib::ustring> hash_t;
-	Gtk::TreeModelColumn<Glib::ustring> name_t;
-	Gtk::TreeModelColumn<Glib::ustring> size_t;
-	Gtk::TreeModelColumn<Glib::ustring> IP_t;
-	column.add(hash_t);
-	column.add(name_t);
-	column.add(size_t);
-	column.add(IP_t);
-
-	Gtk::TreeModel::Row row_lval = *lval;
-	Gtk::TreeModel::Row row_rval = *rval;
-
-	std::cout << "lval: " << row_lval[size_t] << " rval: " << row_rval[size_t] << "\n";
-	return -1;
-}
-
-void gui::search_info_setup()
-{
-	//set up column
-//DEBUG, this should be moved to header
-	Gtk::TreeModel::ColumnRecord column;
-	Gtk::TreeModelColumn<Glib::ustring> hash_t;
-	Gtk::TreeModelColumn<Glib::ustring> name_t;
-	Gtk::TreeModelColumn<Glib::ustring> size_t;
-	Gtk::TreeModelColumn<Glib::ustring> IP_t;
-	column.add(hash_t);
-	column.add(name_t);
-	column.add(size_t);
-	column.add(IP_t);
-
-	search_list = Gtk::ListStore::create(column);
-	search_view->set_model(search_list);
-
-	//add columns
-	search_view->append_column("  Name  ", name_t);
-	search_view->get_column(0)->set_sort_column(1);
-	search_view->append_column("  Size  ", size_t);
-	search_view->get_column(1)->set_sort_column(2);
-	search_list->set_sort_func(2, sigc::mem_fun(*this, &gui::compare_file_size));
-	search_view->append_column("  IP  ", IP_t);
-
-	//signal for clicks on download_view
-	search_view->signal_button_press_event().connect(sigc::mem_fun(*this, &gui::search_click), false);
-
-	//menu that pops up when right click happens
-	Gtk::Menu::MenuList & menuList = search_popup_menu.items();
-	menuList.push_back(Gtk::Menu_Helpers::MenuElem("_Download",
-		sigc::mem_fun(*this, &gui::download_file)));
-}
-
-void gui::search_info_refresh()
-{
-	//clear all results
-	search_list->clear();
-
-	std::vector<download_info>::iterator info_iter_cur, info_iter_end;
-	info_iter_cur = Search_Info.begin();
-	info_iter_end = Search_Info.end();
-	while(info_iter_cur != info_iter_end){
-
-		std::vector<std::string>::iterator IP_iter_cur, IP_iter_end;
-		IP_iter_cur = info_iter_cur->IP.begin();
-		IP_iter_end = info_iter_cur->IP.end();
-		std::string IP;
-		while(IP_iter_cur != IP_iter_end){
-			IP += *IP_iter_cur + ";";
-			++IP_iter_cur;
-		}
-
-		//set up columns
-		Gtk::TreeModel::ColumnRecord column;
-		Gtk::TreeModelColumn<Glib::ustring> hash_t;
-		Gtk::TreeModelColumn<Glib::ustring> name_t;
-		Gtk::TreeModelColumn<Glib::ustring> size_t;
-		Gtk::TreeModelColumn<Glib::ustring> IP_t;
-		column.add(hash_t);
-		column.add(name_t);
-		column.add(size_t);
-		column.add(IP_t);
-
-		std::string size = convert::size_unit_select(info_iter_cur->size);
-
-		//add row
-		Gtk::TreeModel::Row row = *(search_list->append());
-		row[hash_t] = info_iter_cur->hash;
-		row[name_t] = info_iter_cur->name;
-		row[size_t] = size;
-		row[IP_t] = IP;
-
-		++info_iter_cur;
-	}
-}
-
-void gui::search_input()
-{
-	std::string input_text = search_entry->get_text();
-	std::vector<download_info> Search_Info;
-	Client.search(input_text, Search_Info);
-}
 
 void gui::settings_preferences()
 {
-	gui_preferences * GUI_Preferences = new gui_preferences(&Client, &Server);
-	Gtk::Main::run(*GUI_Preferences);
-	delete GUI_Preferences;
+	gui_window_preferences * prefs = new gui_window_preferences(&Client, &Server);
+	Gtk::Main::run(*prefs);
+	delete prefs;
 }
 
 bool gui::update_status_bar()

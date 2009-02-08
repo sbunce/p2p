@@ -7,8 +7,9 @@ import system
 src_gui = [
 	'gui.cpp',
 	'gui_about.cpp',
-	'gui_download_status.cpp',
-	'gui_preferences.cpp',
+	'gui_vbox_search.cpp',
+	'gui_window_download_status.cpp',
+	'gui_window_preferences.cpp',
 	'main_gui.cpp'
 ]
 

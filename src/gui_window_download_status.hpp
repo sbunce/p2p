@@ -1,5 +1,5 @@
-#ifndef H_GUI_DOWNLOAD_STATUS
-#define H_GUI_DOWNLOAD_STATUS
+#ifndef H_GUI_WINDOW_DOWNLOAD_STATUS
+#define H_GUI_WINDOW_DOWNLOAD_STATUS
 
 //boost
 #include <boost/shared_ptr.hpp>
@@ -17,18 +17,15 @@
 //std
 #include <string>
 
-class gui_download_status : public Gtk::ScrolledWindow, private boost::noncopyable
+class gui_window_download_status : public Gtk::ScrolledWindow, private boost::noncopyable
 {
 public:
-	gui_download_status(
+	gui_window_download_status(
 		const std::string root_hash_in,
 		Gtk::Label * tab_label,         //needs to be set to name of file
 		client * Client_in
 	);
 
-	/*
-	refresh - update all values, stops refreshing when refresh set to false
-	*/
 	bool refresh();
 
 private:
@@ -39,8 +36,8 @@ private:
 	boost::uint64_t tree_size_bytes;
 	boost::uint64_t file_size_bytes;
 
-	class Gtk::ScrolledWindow * window; //ptr to this
-	Gtk::VBox * vbox;                   //divides top/bottom
+	Gtk::ScrolledWindow * window;
+	Gtk::VBox * vbox;
 
 	//top stuff
 	Gtk::Fixed * info_fixed;

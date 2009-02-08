@@ -13,7 +13,3 @@ VALUES ('19E86CF99ABA74775A0C3CD5D298CCF9C104D86C', 'Super Mario 2 (Jap).avi', '
 INSERT INTO search (hash, name, size, server)
 VALUES ('8F54550390EBF50112BAF90F8A48BABFD1743B99', 'Kings of Power 4 Billion %.avi', '337080320',
 'topaz;emerald;ruby;192.168.1.128;192.168.1.129;192.168.1.130;192.168.1.131;192.168.1.132;192.168.1.133;192.168.1.134;192.168.1.135');
-
-INSERT INTO search (hash, name, size, server)
-VALUES ('ABCD', 'TEST.avi', '1047552',
-'bla');

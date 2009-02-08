@@ -1,6 +1,6 @@
-#include "gui_download_status.hpp"
+#include "gui_window_download_status.hpp"
 
-gui_download_status::gui_download_status(
+gui_window_download_status::gui_window_download_status(
 	const std::string root_hash_in,
 	Gtk::Label * tab_label,
 	client * Client_in
@@ -99,7 +99,7 @@ gui_download_status::gui_download_status(
 	show_all_children();
 }
 
-bool gui_download_status::refresh()
+bool gui_window_download_status::refresh()
 {
 	std::vector<download_status> info;
 	Client->current_downloads(info, root_hash);

@@ -1,5 +1,8 @@
 TODO
 
+-attempting to start a download, that is currently in the process of cancelling results in blacklisting
+of server sometimes.
+
 -replace instances of messageDigest in gui code
 
 -vett gui code.. ugh

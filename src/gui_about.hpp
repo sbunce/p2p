@@ -16,7 +16,7 @@ public:
 	gui_about();
 
 private:
-	class Gtk::Window * window;
+	Gtk::Window * window;
 	Gtk::VBox * vbox;
 	Gtk::ScrolledWindow * scrolled_window;
 	Gtk::TextView * text_view;

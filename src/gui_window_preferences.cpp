@@ -1,6 +1,6 @@
-#include "gui_preferences.hpp"
+#include "gui_window_preferences.hpp"
 
-gui_preferences::gui_preferences(client * Client_in, server * Server_in)
+gui_window_preferences::gui_window_preferences(client * Client_in, server * Server_in)
 {
 	Client = Client_in;
 	Server = Server_in;
@@ -130,19 +130,19 @@ gui_preferences::gui_preferences(client * Client_in, server * Server_in)
 	show_all_children();
 
 	//signaled functions
-	apply_button->signal_clicked().connect(sigc::mem_fun(*this, &gui_preferences::apply_click), false);
-	cancel_button->signal_clicked().connect(sigc::mem_fun(*this, &gui_preferences::cancel_click), false);
-	ok_button->signal_clicked().connect(sigc::mem_fun(*this, &gui_preferences::ok_click), false);
-	client_connections_hscale->signal_value_changed().connect(sigc::mem_fun(*this, &gui_preferences::client_connections_changed), false);
-	server_connections_hscale->signal_value_changed().connect(sigc::mem_fun(*this, &gui_preferences::server_connections_changed), false);
+	apply_button->signal_clicked().connect(sigc::mem_fun(*this, &gui_window_preferences::apply_click), false);
+	cancel_button->signal_clicked().connect(sigc::mem_fun(*this, &gui_window_preferences::cancel_click), false);
+	ok_button->signal_clicked().connect(sigc::mem_fun(*this, &gui_window_preferences::ok_click), false);
+	client_connections_hscale->signal_value_changed().connect(sigc::mem_fun(*this, &gui_window_preferences::client_connections_changed), false);
+	server_connections_hscale->signal_value_changed().connect(sigc::mem_fun(*this, &gui_window_preferences::server_connections_changed), false);
 }
 
-void gui_preferences::apply_click()
+void gui_window_preferences::apply_click()
 {
 	apply_settings();
 }
 
-void gui_preferences::apply_settings()
+void gui_window_preferences::apply_settings()
 {
 	int download_rate, upload_rate;
 	std::stringstream ss;
@@ -176,12 +176,12 @@ void gui_preferences::apply_settings()
 	Server->set_max_connections((int)server_connections_hscale->get_value());
 }
 
-void gui_preferences::cancel_click()
+void gui_window_preferences::cancel_click()
 {
 	hide();
 }
 
-void gui_preferences::client_connections_changed()
+void gui_window_preferences::client_connections_changed()
 {
 	int client = (int)client_connections_hscale->get_value();
 	int server = (int)server_connections_hscale->get_value();
@@ -190,7 +190,7 @@ void gui_preferences::client_connections_changed()
 	}
 }
 
-void gui_preferences::server_connections_changed()
+void gui_window_preferences::server_connections_changed()
 {
 	int client = (int)client_connections_hscale->get_value();
 	int server = (int)server_connections_hscale->get_value();
@@ -199,7 +199,7 @@ void gui_preferences::server_connections_changed()
 	}
 }
 
-void gui_preferences::ok_click()
+void gui_window_preferences::ok_click()
 {
 	apply_settings();
 	hide();

@@ -12,8 +12,9 @@
 #include "download_info.hpp"
 #include "global.hpp"
 #include "gui_about.hpp"
-#include "gui_download_status.hpp"
-#include "gui_preferences.hpp"
+#include "gui_vbox_search.hpp"
+#include "gui_window_download_status.hpp"
+#include "gui_window_preferences.hpp"
 #include "server.hpp"
 #include "upload_info.hpp"
 
@@ -61,14 +62,8 @@ private:
 	Gtk::Image * download_label;
 	Gtk::Image * upload_label;
 	Gtk::Image * tracker_label;
-	
-	//search
-	Gtk::Entry * search_entry;   //input box for searches
-	Gtk::Button * search_button; //search button
 
 	//treeviews for different tabs
-	Gtk::TreeView * search_view;
-	Gtk::ScrolledWindow * search_scrolled_window;
 	Gtk::TreeView * download_view;
 	Gtk::ScrolledWindow * download_scrolled_window;
 	Gtk::TreeView * upload_view;
@@ -76,22 +71,21 @@ private:
 
 	//boxes (divides the window)
 	Gtk::VBox * main_VBox;    //VBox for the main window (separates top from bottom)
-	Gtk::HBox * search_HBox;  //separates the search input and search button
-	Gtk::HBox * tracker_HBox; //separates the tracker input and add button
-	Gtk::VBox * search_VBox;  //VBox which goes inside search_scrolled_window
-	Gtk::VBox * tracker_VBox; //VBox which goes inside the tracker_scrolled_window
 
 	//bottom bar that displays status etc
 	Gtk::Statusbar * statusbar;
 
 	//popup menus for when user right clicks on treeviews
 	Gtk::Menu downloads_popup_menu;
-	Gtk::Menu search_popup_menu;
 
 	//the lists which the treeviews display
-	Glib::RefPtr<Gtk::ListStore> search_list;
 	Glib::RefPtr<Gtk::ListStore> download_list;
 	Glib::RefPtr<Gtk::ListStore> upload_list;
+
+	/*
+	Custom classes derived from gtkmm objects.
+	*/
+	gui_vbox_search * GUI_VBox_Search;
 
 	/*functions associated with Gtk signals
 	help_about              - user clicked Help/About
@@ -111,9 +105,8 @@ private:
 	void cancel_download();
 	int compare_file_size(const Gtk::TreeModel::iterator & lval, const Gtk::TreeModel::iterator & rval);
 	bool download_click(GdkEventButton * event);
-	void download_file();
 	void download_info_tab();
-	void download_info_tab_close(gui_download_status * status_window, sigc::connection tab_conn);
+	void download_info_tab_close(gui_window_download_status * status_window, sigc::connection tab_conn);
 	void on_quit();
 	bool on_delete_event(GdkEventAny * event);
 	void search_input();
@@ -140,7 +133,7 @@ private:
 	client Client;
 	server Server;
 
-	//holds the information from the last search
+	//information from the last search
 	std::vector<download_info> Search_Info;
 };
 #endif

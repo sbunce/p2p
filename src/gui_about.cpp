@@ -10,7 +10,7 @@ gui_about::gui_about()
 	button_box = Gtk::manage(new Gtk::HButtonBox);
 	close_button = Gtk::manage(new Gtk::Button(Gtk::Stock::CLOSE));
 
-	window->set_title(("About "+global::NAME));
+	window->set_title(("About " + global::NAME));
 	window->resize(500, 350);
 	window->set_modal(true);
 	window->set_keep_above(true);
@@ -22,7 +22,7 @@ gui_about::gui_about()
 	vbox->pack_start(*scrolled_window);
 
 	text_buff = Gtk::TextBuffer::create();
-	text_buff->set_text(global::NAME+" version: "+ global::VERSION+" © Seth Bunce 2006");
+	text_buff->set_text(global::NAME + " version: " + global::VERSION + " © Seth Bunce 2006");
 	text_view->set_buffer(text_buff);
 
 	vbox->pack_start(*button_box, Gtk::PACK_SHRINK);
