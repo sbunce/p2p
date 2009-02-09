@@ -2,7 +2,6 @@
 
 gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 {
-//DEBUG, remove this
 	window = this;
 
 	menubar = Gtk::manage(new Gtk::MenuBar);
@@ -18,7 +17,6 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	Gtk::Image * download_label = Gtk::manage(new Gtk::Image(Gtk::Stock::GO_DOWN, Gtk::ICON_SIZE_LARGE_TOOLBAR));
 	Gtk::Image * upload_label = Gtk::manage(new Gtk::Image(Gtk::Stock::GO_UP, Gtk::ICON_SIZE_LARGE_TOOLBAR));
 
-//DEUBG, add documentation
 	GUI_VBox_Search = Gtk::manage(new gui_vbox_search(&Client));
 
 	//treeviews for different tabs
@@ -301,8 +299,8 @@ bool gui::download_info_refresh()
 
 		std::stringstream ss;
 		ss << info_iter_cur->IP.size();
-		std::string speed = convert::size_unit_select(info_iter_cur->total_speed) + "/s";
-		std::string size = convert::size_unit_select(info_iter_cur->size);
+		std::string speed = convert::size_SI(info_iter_cur->total_speed) + "/s";
+		std::string size = convert::size_SI(info_iter_cur->size);
 
 		//update rows
 		bool entry_found = false;
@@ -398,12 +396,12 @@ bool gui::update_status_bar()
 	//get the total client download speed
 	int client_rate = Client.total_rate();
 	std::stringstream client_rate_s;
-	client_rate_s << convert::size_unit_select(client_rate) << "/s";
+	client_rate_s << convert::size_SI(client_rate) << "/s";
 
 	//get the total server upload speed
 	int server_rate = Server.total_rate();
 	std::stringstream server_rate_s;
-	server_rate_s << convert::size_unit_select(server_rate) << "/s";
+	server_rate_s << convert::size_SI(server_rate) << "/s";
 
 	std::stringstream ss;
 	ss << " D: " << client_rate_s.str();
@@ -484,8 +482,8 @@ bool gui::upload_info_refresh()
 		column.add(speed_t);
 		column.add(percent_complete_t);
 
-		std::string speed = convert::size_unit_select(info_iter_cur->speed) + "/s";
-		std::string size = convert::size_unit_select(info_iter_cur->size);
+		std::string speed = convert::size_SI(info_iter_cur->speed) + "/s";
+		std::string size = convert::size_SI(info_iter_cur->size);
 
 		//update rows
 		bool entry_found = false;

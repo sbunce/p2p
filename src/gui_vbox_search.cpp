@@ -5,6 +5,8 @@ gui_vbox_search::gui_vbox_search(
 ):
 	Client(Client_in)
 {
+	vbox = this;
+
 	search_scrolled_window = Gtk::manage(new Gtk::ScrolledWindow);
 	search_entry = Gtk::manage(new Gtk::Entry);
 	search_button = Gtk::manage(new Gtk::Button(Gtk::Stock::FIND));
@@ -16,34 +18,48 @@ gui_vbox_search::gui_vbox_search(
 	search_HBox->pack_start(*search_button, Gtk::PACK_SHRINK, 5);
 	search_view->set_headers_visible(true);
 	search_view->set_rules_hint(true); //enable alternating row background color
-	pack_start(*search_HBox, Gtk::PACK_SHRINK, 0);
+	vbox->pack_start(*search_HBox, Gtk::PACK_SHRINK, 0);
 	search_scrolled_window->add(*search_view);
-	pack_start(*search_scrolled_window);
+	vbox->pack_start(*search_scrolled_window);
+
+	//setup colums for treeview
+	column.add(column_hash);
+	column.add(column_name);
+	column.add(column_size);
+	column.add(column_IP);
+	search_list = Gtk::ListStore::create(column);
+	search_view->set_model(search_list);
+	search_view->append_column("  Name  ", column_name);
+	search_view->get_column(0)->set_sort_column(1);
+	search_view->append_column("  Size  ", column_size);
+	search_view->get_column(1)->set_sort_column(2);
+	search_list->set_sort_func(2, sigc::mem_fun(*this, &gui_vbox_search::compare_file_size));
+	search_view->append_column("  IP  ", column_IP);
+
+	//menu that pops up when right click happens
+	Gtk::Menu::MenuList & menu_list = search_popup_menu.items();
+	menu_list.push_back(Gtk::Menu_Helpers::MenuElem("_Download", sigc::mem_fun(*this, &gui_vbox_search::download_file)));
 
 	//signaled functions
+	search_view->signal_button_press_event().connect(sigc::mem_fun(*this, &gui_vbox_search::search_click), false);
 	search_entry->signal_activate().connect(sigc::mem_fun(*this, &gui_vbox_search::search_input), false);
 	search_button->signal_clicked().connect(sigc::mem_fun(*this, &gui_vbox_search::search_input), false);
-
-	search_info_setup();
 }
 
 int gui_vbox_search::compare_file_size(const Gtk::TreeModel::iterator & lval, const Gtk::TreeModel::iterator & rval)
 {
-	Gtk::TreeModel::ColumnRecord column;
-	Gtk::TreeModelColumn<Glib::ustring> hash_t;
-	Gtk::TreeModelColumn<Glib::ustring> name_t;
-	Gtk::TreeModelColumn<Glib::ustring> size_t;
-	Gtk::TreeModelColumn<Glib::ustring> IP_t;
-	column.add(hash_t);
-	column.add(name_t);
-	column.add(size_t);
-	column.add(IP_t);
-
 	Gtk::TreeModel::Row row_lval = *lval;
 	Gtk::TreeModel::Row row_rval = *rval;
 
-	std::cout << "lval: " << row_lval[size_t] << " rval: " << row_rval[size_t] << "\n";
-	return -1;
+	//convert to std::string, involves a lot of copying but no known alternative
+	std::stringstream ss;
+	ss << row_lval[column_size];
+	std::string left = ss.str();
+	ss.str(""); ss.clear();
+	ss << row_rval[column_size];
+	std::string right = ss.str();
+
+	return convert::size_SI_cmp(left, right);
 }
 
 void gui_vbox_search::download_file()
@@ -95,43 +111,9 @@ void gui_vbox_search::search_input()
 	search_info_refresh();
 }
 
-void gui_vbox_search::search_info_setup()
-{
-	//set up column
-//DEBUG, this should be moved to header
-	Gtk::TreeModel::ColumnRecord column;
-	Gtk::TreeModelColumn<Glib::ustring> hash_t;
-	Gtk::TreeModelColumn<Glib::ustring> name_t;
-	Gtk::TreeModelColumn<Glib::ustring> size_t;
-	Gtk::TreeModelColumn<Glib::ustring> IP_t;
-	column.add(hash_t);
-	column.add(name_t);
-	column.add(size_t);
-	column.add(IP_t);
-
-	search_list = Gtk::ListStore::create(column);
-	search_view->set_model(search_list);
-
-	//add columns
-	search_view->append_column("  Name  ", name_t);
-	search_view->get_column(0)->set_sort_column(1);
-	search_view->append_column("  Size  ", size_t);
-	search_view->get_column(1)->set_sort_column(2);
-	search_list->set_sort_func(2, sigc::mem_fun(*this, &gui_vbox_search::compare_file_size));
-	search_view->append_column("  IP  ", IP_t);
-
-	//signal for clicks on download_view
-	search_view->signal_button_press_event().connect(sigc::mem_fun(*this, &gui_vbox_search::search_click), false);
-
-	//menu that pops up when right click happens
-	Gtk::Menu::MenuList & menuList = search_popup_menu.items();
-	menuList.push_back(Gtk::Menu_Helpers::MenuElem("_Download",
-		sigc::mem_fun(*this, &gui_vbox_search::download_file)));
-}
-
 void gui_vbox_search::search_info_refresh()
 {
-	//clear all results
+	//clear all previous results
 	search_list->clear();
 
 	std::vector<download_info>::iterator info_iter_cur, info_iter_end;
@@ -148,25 +130,14 @@ void gui_vbox_search::search_info_refresh()
 			++IP_iter_cur;
 		}
 
-		//set up columns
-		Gtk::TreeModel::ColumnRecord column;
-		Gtk::TreeModelColumn<Glib::ustring> hash_t;
-		Gtk::TreeModelColumn<Glib::ustring> name_t;
-		Gtk::TreeModelColumn<Glib::ustring> size_t;
-		Gtk::TreeModelColumn<Glib::ustring> IP_t;
-		column.add(hash_t);
-		column.add(name_t);
-		column.add(size_t);
-		column.add(IP_t);
-
-		std::string size = convert::size_unit_select(info_iter_cur->size);
+		std::string size = convert::size_SI(info_iter_cur->size);
 
 		//add row
 		Gtk::TreeModel::Row row = *(search_list->append());
-		row[hash_t] = info_iter_cur->hash;
-		row[name_t] = info_iter_cur->name;
-		row[size_t] = size;
-		row[IP_t] = IP;
+		row[column_hash] = info_iter_cur->hash;
+		row[column_name] = info_iter_cur->name;
+		row[column_size] = size;
+		row[column_IP] = IP;
 
 		++info_iter_cur;
 	}

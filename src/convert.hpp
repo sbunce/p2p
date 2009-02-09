@@ -28,7 +28,7 @@ namespace convert
 		}
 	}
 
-	//encode - number -> bytes (encoded in big-endian)
+	//encode, number -> bytes (encoded in big-endian)
 	template<class T>
 	static std::string encode(const T & number)
 	{
@@ -50,7 +50,7 @@ namespace convert
 		return encoded;
 	}
 
-	//decode - bytes -> number
+	//decode, bytes -> number
 	template<class T>
 	static T decode(const std::string & encoded)
 	{
@@ -129,15 +129,14 @@ namespace convert
 		return hash;
 	}
 
-	/*
-	Convert bytes to reasonable SI unit.
-	Example 1024 -> 1kB
-	*/
-	static std::string size_unit_select(boost::uint64_t bytes)
+	//convert bytes to reasonable SI unit, example 1024 -> 1kB
+	static std::string size_SI(boost::uint64_t bytes)
 	{
 		std::ostringstream oss;
 		if(bytes < 1024){
 			oss << bytes << "B";
+		}else if(bytes >= 1024ull*1024*1024*1024){
+			oss << std::fixed << std::setprecision(2) << bytes / (double)(1024ull*1024*1024*1024) << "tB";
 		}else if(bytes >= 1024*1024*1024){
 			oss << std::fixed << std::setprecision(2) << bytes / (double)(1024*1024*1024) << "gB";
 		}else if(bytes >= 1024*1024){
@@ -146,6 +145,105 @@ namespace convert
 			oss << std::fixed << std::setprecision(1) << bytes / (double)1024 << "kB";
 		}
 		return oss.str();
+	}
+
+	/*
+	Given two strings obtained from size_unit_select, returns less than (-1),
+	equal to (0), or greater than (1). Just like strcmp.
+	*/
+	static int size_SI_cmp(const std::string & left, const std::string & right)
+	{
+		if(left == right){
+			return 0;
+		}else if(left.find("tB") != std::string::npos){
+			if(right.find("tB") != std::string::npos){
+				//both are gB, compare
+				std::string left_temp(left, 0, left.find("tB"));
+				std::string right_temp(right, 0, right.find("tB"));
+				left_temp.erase(std::remove(left_temp.begin(), left_temp.end(), '.'), left_temp.end());
+				right_temp.erase(std::remove(right_temp.begin(), right_temp.end(), '.'), right_temp.end());
+				return strcmp(left_temp.c_str(), right_temp.c_str());		
+			}else if(right.find("gB") != std::string::npos){
+				return 1;
+			}else if(right.find("mB") != std::string::npos){
+				return 1;
+			}else if(right.find("kB") != std::string::npos){
+				return 1;
+			}else{ //bytes
+				return 1;
+			}
+		}else if(left.find("gB") != std::string::npos){
+			if(right.find("tB") != std::string::npos){
+				return -1;
+			}else if(right.find("gB") != std::string::npos){
+				//both are gB, compare
+				std::string left_temp(left, 0, left.find("gB"));
+				std::string right_temp(right, 0, right.find("gB"));
+				left_temp.erase(std::remove(left_temp.begin(), left_temp.end(), '.'), left_temp.end());
+				right_temp.erase(std::remove(right_temp.begin(), right_temp.end(), '.'), right_temp.end());
+				return strcmp(left_temp.c_str(), right_temp.c_str());		
+			}else if(right.find("mB") != std::string::npos){
+				return 1;
+			}else if(right.find("kB") != std::string::npos){
+				return 1;
+			}else{ //bytes
+				return 1;
+			}
+		}else if(left.find("mB") != std::string::npos){
+			if(right.find("tB") != std::string::npos){
+				return -1;
+			}else if(right.find("gB") != std::string::npos){
+				return -1;
+			}else if(right.find("mB") != std::string::npos){
+				//both are mB, compare
+				std::string left_temp(left, 0, left.find("mB"));
+				std::string right_temp(right, 0, right.find("mB"));
+				left_temp.erase(std::remove(left_temp.begin(), left_temp.end(), '.'), left_temp.end());
+				right_temp.erase(std::remove(right_temp.begin(), right_temp.end(), '.'), right_temp.end());
+				return strcmp(left_temp.c_str(), right_temp.c_str());		
+			}else if(right.find("kB") != std::string::npos){
+				return 1;
+			}else{ //bytes
+				return 1;
+			}
+		}else if(left.find("kB") != std::string::npos){
+			if(right.find("tB") != std::string::npos){
+				return -1;
+			}else if(right.find("gB") != std::string::npos){
+				return -1;
+			}else if(right.find("mB") != std::string::npos){
+				return -1;
+			}else if(right.find("kB") != std::string::npos){
+				//both are kB, compare
+				std::string left_temp(left, 0, left.find("kB"));
+				std::string right_temp(right, 0, right.find("kB"));
+				left_temp.erase(std::remove(left_temp.begin(), left_temp.end(), '.'), left_temp.end());
+				right_temp.erase(std::remove(right_temp.begin(), right_temp.end(), '.'), right_temp.end());
+				return strcmp(left_temp.c_str(), right_temp.c_str());		
+			}else{ //bytes
+				return 1;
+			}
+		}else if(left.find("B") != std::string::npos){
+			if(right.find("tB") != std::string::npos){
+				return -1;
+			}else if(right.find("gB") != std::string::npos){
+				return -1;
+			}else if(right.find("mB") != std::string::npos){
+				return -1;
+			}else if(right.find("kB") != std::string::npos){
+				return -1;
+			}else{ //bytes
+				//both are B, compare
+				std::string left_temp(left, 0, left.find("B"));
+				std::string right_temp(right, 0, right.find("B"));
+				left_temp.erase(std::remove(left_temp.begin(), left_temp.end(), '.'), left_temp.end());
+				right_temp.erase(std::remove(right_temp.begin(), right_temp.end(), '.'), right_temp.end());
+				return strcmp(left_temp.c_str(), right_temp.c_str());		
+			}
+		}else{
+			LOGGER << "error reading size\n";
+			exit(1);
+		}
 	}
 }
 #endif

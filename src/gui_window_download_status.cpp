@@ -30,8 +30,8 @@ gui_window_download_status::gui_window_download_status(
 		tab_label->set_text("error: no download");
 	}
 
-	std::string tree_size_str = convert::size_unit_select(tree_size_bytes);
-	std::string file_size_str = convert::size_unit_select(file_size_bytes);
+	std::string tree_size_str = convert::size_SI(tree_size_bytes);
+	std::string file_size_str = convert::size_SI(file_size_bytes);
 
 	window = this;
 	window->set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_NEVER);
@@ -131,7 +131,7 @@ bool gui_window_download_status::refresh()
 	}
 
 	std::stringstream total_speed_oss;
-	total_speed_oss << convert::size_unit_select(info.begin()->total_speed) << "/s";
+	total_speed_oss << convert::size_SI(info.begin()->total_speed) << "/s";
 	total_speed_value->set_text(total_speed_oss.str());
 
 	std::stringstream servers_connected_oss;
@@ -163,7 +163,7 @@ bool gui_window_download_status::refresh()
 			Glib::ustring IP_retrieved;
 			row.get_value(0, IP_retrieved);
 			if(IP_retrieved == IP){
-				row[speed_t] = convert::size_unit_select(speed) + "/s";
+				row[speed_t] = convert::size_SI(speed) + "/s";
 				entry_found = true;
 				break;
 			}
@@ -173,7 +173,7 @@ bool gui_window_download_status::refresh()
 		if(!entry_found){
 			Gtk::TreeModel::Row row = *(servers_list->append());
 			row[servers_t] = IP;
-			row[speed_t] = convert::size_unit_select(speed) + "/s";
+			row[speed_t] = convert::size_SI(speed) + "/s";
 		}
 	}
 
