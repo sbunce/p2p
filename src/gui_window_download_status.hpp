@@ -21,9 +21,14 @@ class gui_window_download_status : public Gtk::ScrolledWindow, private boost::no
 {
 public:
 	gui_window_download_status(
-		const std::string root_hash_in,
-		Gtk::Label * tab_label,         //needs to be set to name of file
-		client * Client_in
+		const std::string & root_hash_in,
+		const std::string & path,
+		const boost::uint64_t & tree_size_in,
+		const boost::uint64_t & file_size_in,
+		Gtk::HBox *& hbox,           //set in ctor
+		Gtk::Label *& tab_label,     //set in ctor
+		Gtk::Button *& close_button, //set in ctor
+		client & Client_in
 	);
 
 	bool refresh();
@@ -33,11 +38,11 @@ private:
 	client * Client;
 
 	std::string root_hash;
-	boost::uint64_t tree_size_bytes;
-	boost::uint64_t file_size_bytes;
+	boost::uint64_t tree_size;
 
 	Gtk::ScrolledWindow * window;
 	Gtk::VBox * vbox;
+	Gtk::Image * close_image;
 
 	//top stuff
 	Gtk::Fixed * info_fixed;
@@ -57,6 +62,11 @@ private:
 	Gtk::Label * total_speed_value;
 	Gtk::Label * servers_connected_label;
 	Gtk::Label * servers_connected_value;
+
+	//columns for treeview
+	Gtk::TreeModel::ColumnRecord column;
+	Gtk::TreeModelColumn<Glib::ustring> column_server;
+	Gtk::TreeModelColumn<Glib::ustring> column_speed;
 
 	//bottom server stuff
 	Gtk::ScrolledWindow * servers_scrolled_window;

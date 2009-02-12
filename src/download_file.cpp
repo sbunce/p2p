@@ -258,17 +258,19 @@ void download_file::response(const int & socket, std::string block)
 		return;
 	}else if(conn->State == connection_special::REQUEST_BLOCKS){
 		if(block[0] == global::P_BLOCK){
-			block.erase(0, 1); //trim command
-			if(!cancel && Hash_Tree.check_file_block(Tree_Info, conn->latest_request.front(), block.c_str(), block.length())){
-				write_block(conn->latest_request.front(), block);
-				client_server_bridge::add_file_block(Download_Info.hash, conn->latest_request.front());
-				Request_Generator->fulfil(conn->latest_request.front());
-			}else{
-				LOGGER << Download_Info.name << ":" << conn->latest_request.front() << " hash failure";
-				Request_Generator->force_rerequest(conn->latest_request.front());
-				#ifndef CORRUPT_FILE_BLOCK_TEST
-				DB_Blacklist.add(conn->IP);
-				#endif
+			if(!cancel){
+				block.erase(0, 1); //trim command
+				if(Hash_Tree.check_file_block(Tree_Info, conn->latest_request.front(), block.c_str(), block.length())){
+					write_block(conn->latest_request.front(), block);
+					client_server_bridge::add_file_block(Download_Info.hash, conn->latest_request.front());
+					Request_Generator->fulfil(conn->latest_request.front());
+				}else{
+					LOGGER << Download_Info.name << ":" << conn->latest_request.front() << " hash failure";
+					Request_Generator->force_rerequest(conn->latest_request.front());
+					#ifndef CORRUPT_FILE_BLOCK_TEST
+					DB_Blacklist.add(conn->IP);
+					#endif
+				}
 			}
 			conn->latest_request.pop_front();
 			if(Request_Generator->complete() && !hashing){

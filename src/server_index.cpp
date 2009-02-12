@@ -103,7 +103,12 @@ void server_index::check_path_recurse(const bool & is_file, const boost::uint64_
 
 void server_index::check_missing()
 {
+	#ifdef WIN32
+	//windows might have multiple roots, ie C:, D:
+	check_missing_recurse_1(Root, "");
+	#else
 	check_missing_recurse_1(Root, "/");
+	#endif
 }
 
 /*

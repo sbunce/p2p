@@ -3,13 +3,19 @@ import boost
 import gtkmm
 import system
 
+#std
+import sys
+
 #gui only
 src_gui = [
 	'gui.cpp',
 	'gui_about.cpp',
+	'gui_statusbar_main.cpp',
 	'gui_vbox_search.cpp',
+	'gui_window_download.cpp',
 	'gui_window_download_status.cpp',
 	'gui_window_preferences.cpp',
+	'gui_window_upload.cpp',
 	'main_gui.cpp'
 ]
 
@@ -113,4 +119,5 @@ server_obj = env.Object(src_server)
 #link
 env_gui.Program('p2p_gui', gui_obj + common_obj + client_obj + server_obj + static_libs)
 env_nogui.Program('p2p_nogui', nogui_obj + common_obj + server_obj + static_libs)
-env_nogui_static.Program('p2p_nogui_static', nogui_obj + common_obj + server_obj + static_libs)
+if sys.platform == 'linux2':
+	env_nogui_static.Program('p2p_nogui_static', nogui_obj + common_obj + server_obj + static_libs)

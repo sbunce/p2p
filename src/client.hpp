@@ -30,7 +30,7 @@
 #ifdef WIN32
 	#define FD_SETSIZE 1024 //max number of connections in FD_SET
 	#define MSG_NOSIGNAL 0  //do not signal SIGPIPE on send() error
-	#define socklen_t int   //hack for little API difference on windows
+	#define socklen_t int   //hack for API difference
 	#include <winsock.h>
 #else
 	#include <arpa/inet.h>

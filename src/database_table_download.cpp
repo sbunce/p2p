@@ -104,7 +104,8 @@ bool database::table::download::lookup_hash(const std::string & hash, std::strin
 	boost::tuple<bool, std::string *, boost::uint64_t *> info(false, &path, &file_size);
 	std::stringstream ss;
 	ss << "SELECT name, size FROM download WHERE hash = '" << hash << "'";
-	DB.query(ss.str(), &lookup_hash_2_call_back, info);
+	//Visual C++ 2008 bug, template type manually specified for workaround
+	DB.query<boost::tuple<bool, std::string *, boost::uint64_t *> >(ss.str(), &lookup_hash_2_call_back, info);
 	return info.get<0>();
 }
 

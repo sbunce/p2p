@@ -6,30 +6,35 @@ Import('env')
 
 env.unit_test([
 	'atomic_bool.cpp',
+	boost.static_lib('date_time'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
 	'atomic_int.cpp',
+	boost.static_lib('date_time'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
 	'convert.cpp',
+	boost.static_lib('date_time'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
 	'contiguous_map.cpp',
+	boost.static_lib('date_time'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
 	'contiguous_set.cpp',
+	boost.static_lib('date_time'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])
@@ -40,6 +45,7 @@ env.unit_test([
 	'../database_init.cpp',
 	'../speed_calculator.cpp',
 	boost.static_lib('date_time'),
+	boost.static_lib('filesystem'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])
@@ -51,6 +57,7 @@ env.unit_test([
 	'../database_init.cpp',
 	'../speed_calculator.cpp',
 	boost.static_lib('date_time'),
+	boost.static_lib('filesystem'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])
@@ -79,6 +86,7 @@ env.unit_test([
 	'../database_init.cpp',
 	'../speed_calculator.cpp',
 	boost.static_lib('date_time'),
+	boost.static_lib('filesystem'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])
@@ -91,6 +99,7 @@ env.unit_test([
 	'../request_generator.cpp',
 	'../speed_calculator.cpp',
 	boost.static_lib('date_time'),
+	boost.static_lib('filesystem'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])
@@ -120,6 +129,7 @@ env.unit_test([
 	'../sha.cpp',
 	'../speed_calculator.cpp',
 	boost.static_lib('date_time'),
+	boost.static_lib('filesystem'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])
@@ -134,6 +144,7 @@ env.unit_test([
 	'../number_generator.cpp',
 	'../speed_calculator.cpp',
 	boost.static_lib('date_time'),
+	boost.static_lib('filesystem'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])
@@ -156,6 +167,7 @@ env.unit_test([
 
 env.unit_test([
 	'locking_shared_ptr.cpp',
+	boost.static_lib('date_time'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])
@@ -164,12 +176,14 @@ env.unit_test([
 	'request_generator.cpp',
 	'../request_generator.cpp',
 	boost.static_lib('date_time'),
+	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])
 
 env.unit_test([
 	'sha.cpp',
 	'../sha.cpp',
+	boost.static_lib('date_time'),
 	boost.static_lib('system'),
 	boost.static_lib('thread')
 ])

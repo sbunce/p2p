@@ -39,7 +39,7 @@ bool hash_tree::check_block(tree_info & Tree_Info, const boost::uint64_t & block
 
 	std::pair<boost::uint64_t, unsigned> info;
 	boost::uint64_t parent;
-	if(!tree_info::tree_info::block_info(block_num, Tree_Info.row, info, parent)){
+	if(!tree_info::block_info(block_num, Tree_Info.row, info, parent)){
 		//invalid block sent to block_info
 		LOGGER << "programmer error\n";
 		exit(1);

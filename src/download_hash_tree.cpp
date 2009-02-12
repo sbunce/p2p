@@ -183,10 +183,7 @@ void download_hash_tree::response(const int & socket, std::string block)
 		return;
 	}else if(conn->State == connection_special::REQUEST_BLOCKS){
 		if(block[0] == global::P_BLOCK){
-			//a block was received
 			block.erase(0, 1); //trim command
-
-			//write hash only if not cancelled
 			if(!cancel && !Hash_Tree.write_block(Tree_Info, conn->latest_request.front(), block, conn->IP)){
 				//hash file removed or download cancelled, stop download
 				stop();

@@ -1,36 +1,87 @@
 <html>
 <head>
-<title>P2P Protocol Documentation</title>
+<title>&#60;name&#62; Documentation</title>
 </head>
 <body>
 <table>
 <tr><td width="800">
 
-<h3>Table of Contents</h3>
+<h1>Documentation</h1>
+<h4>
 <ul>
-<li><a href="#general">General</a>
-<ul>
-<li><a href="#pipelining">Pipelining</a>
-<li><a href="#rerequests">Rerequests</a>
-<li><a href="#blacklist">Blacklist</a>
+	<li><a href="#about">About</a>
+	<ul>
+		<li><a href="#about_goals">Goals</a>
+	</ul>
+	<li><a href="#protocol">Protocol</a>
+	<ul>
+		<li><a href="#pipelining">Pipelining</a>
+		<li><a href="#rerequests">Rerequests</a>
+		<li><a href="#blacklist">Blacklist</a>
+		<li><a href="#commands">Commands</a>
+		<ul>
+			<li><a href="#commands_client_to_server">Client -&#62 Server</a>
+			<li><a href="#commands_server_to_client">Server -&#62 Client</a>
+		</ul>
+	</ul>
+	<li><a href="#building">Building</a>
+	<ul>
+		<li><a href="#building_gnu_linux">GNU/Linux</a>
+		<li><a href="#building_windows">Windows</a>
+	</ul>
 </ul>
-
-<li><a href="#commands">Commands</a>
-<ul>
-<li><a href="#client_to_server">Client -&#62 Server</a>
-<li><a href="#server_to_client">Server -&#62 Client</a>
-</ul>
-</ul>
+</h4>
 
 <hr>
 
-<a name="general">
-<h2>General</h2>
+<h2>About</h2>
 <p>
-P2P is a typical client/server protocol. The client sends requests to the
+&#60;name&#62; is a P2P(peer-to-peer) multi-source file sharing program with
+it's own protocol. P2P means that the program contains both a client and a
+server which allows you to share your files and download files from others at
+the same time. Multi-source means that you can download one file from multiple
+peers at the same time.
+</p>
+
+<br><hr width="100" align="left">
+
+<a name="about_goals">
+<h3>Goals</h3>
+<h4>Low System Requirements</h4>
+<blockquote>
+CPU and memory usage should be as low as possible.
+</blockquote>
+
+<h4>Protocol Efficiency</h4>
+<blockquote>
+Ratio of control and error detection data to file data should be as low as
+possible.
+</blockquote>
+
+<h4>Obfuscation</h4>
+<blockquote>
+The protocol should be obfuscated to make detecting the protocol difficult.
+This should not take precedence over other goals, such as Low System
+Requirements and Protocol Efficiency.
+</blockquote>
+
+<h4>Location Aware</h4>
+<blockquote>
+Closer servers should be favored when downloading files.
+</blockquote>
+
+<br><hr>
+
+<a name="protocol">
+<h2>Protocol</h2>
+<p>
+&#60;name&#62; is a client/server protocol. The client sends requests to the
 server and the server responds. Each request sent to the server begins with a 1
 byte command. There are two types of requests, text and binary. 
 </p>
+
+<br>
+
 <p><b>Binary:</b></p>
 <p>
 Binary requests are fixed length. The server determines the length of a binary
@@ -50,7 +101,9 @@ example:
  request                  response
 </pre>
 </blockquote>
+
 <br>
+
 <p><b>Text:</b></p>
 <p>
 Text requests are fixed length. The server determines the length of a text
@@ -69,10 +122,10 @@ for a \0 terminator. There is no command in a text response.
 </pre>
 </blockquote>
 
-<hr>
+<br><hr width="100" align="left">
 
 <a name="pipelining">
-<h2>Pipelining</h2>
+<h3>Pipelining</h3>
 <p>
 The maximum pipeline size is 8 requests.
 </p>
@@ -83,10 +136,10 @@ request whenever a response is received such that there are always requests
 waiting for a request.
 </p>
 
-<hr>
+<br><hr width="100" align="left">
 
 <a name="rerequests">
-<h2>Rerequests</h2>
+<h3>Rerequests</h3>
 <p>
 The following trigger rerequesting of file blocks:
 <br><br>
@@ -98,10 +151,10 @@ The following trigger rerequesting of file blocks:
 pipline.
 </p>
 
-<hr>
+<br><hr width="100" align="left">
 
 <a name="blacklist">
-<h2>Blacklist</h2>
+<h3>Blacklist</h3>
 <p>
 When a client or server disobeys the protocol it will be blacklisted. Any established
 connections to the server are immediately severed. The following trigger blacklisting:
@@ -116,17 +169,17 @@ able to delimit commands which leads to buffer overruns.
 - Server sending a block which fails a hash check.
 </p>
 
-<hr>
+<br><hr width="100" align="left">
 
 <a name="commands">
-<h2>Commands</h2>
+<h3>Commands</h3>
 <pre>
 C: command name
 B: base 10 value of command byte
 D: direction
 </pre>
 
-<a name="server_to_client">
+<a name="commands_server_to_client">
 <h3>Server -> Client</h3>
 <blockquote>
 <a name="ERROR">
@@ -220,10 +273,9 @@ any new blocks.
 </blockquote>
 </blockquote>
 
+<br><hr width="100" align="left">
 
-<br>
-
-<a name="client_to_server">
+<a name="commands_client_to_server">
 <h3>Client -> Server</h3>
 <blockquote>
 <fieldset>
@@ -332,7 +384,62 @@ Possible Responses:
 </fieldset>
 </blockquote>
 
-<hr>
+<br><hr>
+
+<a name="building">
+<h2>Building</h2>
+
+<br><hr width="100" align="left">
+
+<a name="building_gnu_linux">
+<h3>GNU/Linux</h3>
+<p>
+There are many different flavors of GNU/Linux. Most likely you can use your package
+manager to install these packages.
+</p>
+<p>
+FINISH THIS SECTION
+</p>
+
+<br><hr width="100" align="left">
+
+<a name="building_windows">
+<h3>Windows</h3>
+
+<a href="http://www.microsoft.com/express/vc/">Visual C++ Express 2008</a>
+<blockquote>
+	The command line compiler will be used.
+</blockquote>
+
+<p>
+<a href="http://www.boostpro.com/products/free">Boost</a>
+Version &#62;= 1.36
+</p>
+<blockquote>
+Precompiled libraries available from Boost Consulting. When installing select
+multithreaded static.
+</blockquote>
+
+<p>
+<a href="http://ftp.gnome.org/pub/GNOME/binaries/win32/gtkmm/">gtkmm</a>
+</p>
+<blockquote>
+Install to "C:\gtkmm" or pkg-config won't work properly. Latest version
+known to work is 2.12.7-3. The 2.14 versions are known to have problems building.
+</blockquote>
+
+<p>
+<a href="http://python.org/download/">Python</a>
+</p>
+<blockquote>
+This is used to run the build system (scons), which is included with the source
+code.
+</blockquote>
+
+<p>
+After downloading and installing these dependencies open cmd.exe and navigate
+to the source directory and run scons.
+</p>
 
 </td></tr>
 </table>

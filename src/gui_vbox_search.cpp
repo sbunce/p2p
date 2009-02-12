@@ -1,18 +1,20 @@
 #include "gui_vbox_search.hpp"
 
 gui_vbox_search::gui_vbox_search(
-	client * Client_in
+	client & Client_in
 ):
-	Client(Client_in)
+	Client(&Client_in)
 {
 	vbox = this;
 
+	//instantiation
 	search_scrolled_window = Gtk::manage(new Gtk::ScrolledWindow);
 	search_entry = Gtk::manage(new Gtk::Entry);
 	search_button = Gtk::manage(new Gtk::Button(Gtk::Stock::FIND));
 	search_view = Gtk::manage(new Gtk::TreeView);
 	search_HBox = Gtk::manage(new Gtk::HBox(false, 0));
 
+	//options and ownership
 	search_entry->set_max_length(255);
 	search_HBox->pack_start(*search_entry);
 	search_HBox->pack_start(*search_button, Gtk::PACK_SHRINK, 5);
@@ -30,6 +32,7 @@ gui_vbox_search::gui_vbox_search(
 	search_list = Gtk::ListStore::create(column);
 	search_view->set_model(search_list);
 	search_view->append_column("  Name  ", column_name);
+	//0 is the visible column, 1 is the actual column
 	search_view->get_column(0)->set_sort_column(1);
 	search_view->append_column("  Size  ", column_size);
 	search_view->get_column(1)->set_sort_column(2);

@@ -1,7 +1,5 @@
 #include "database_connection.hpp"
 
-speed_calculator database::connection::Query;
-
 database::connection::connection():
 	ref_cnt(new atomic_int<int>(0)),
 	Mutex(new boost::recursive_mutex())
@@ -23,6 +21,7 @@ database::connection::connection():
 	//move free pages to EOF and truncate at every commit
 	if(sqlite3_exec(DB_handle, "PRAGMA auto_vacuum = full;" , NULL, NULL, NULL) != SQLITE_OK){
 		LOGGER << "sqlite error: " << sqlite3_errmsg(DB_handle);
+		exit(1);
 	}
 
 	database::init::run();
@@ -85,7 +84,6 @@ boost::int64_t database::connection::blob_allocate(const std::string & query, co
 		LOGGER << sqlite3_errmsg(DB_handle);
 		exit(1);
 	}
-	Query.update(1);
 	return sqlite3_last_insert_rowid(DB_handle);
 }
 
@@ -111,7 +109,6 @@ sqlite3_blob * database::connection::blob_open(blob & Blob, const bool & writeab
 		(int)writeable,      //0 = read only, non-zero = read/write
 		&blob_handle
 	)) != SQLITE_OK){
-		Query.update(1);
 		if(code == SQLITE_BUSY){
 			LOGGER << "sqlite yield on SQLITE_BUSY";
 			boost::this_thread::yield();
@@ -120,7 +117,6 @@ sqlite3_blob * database::connection::blob_open(blob & Blob, const bool & writeab
 			exit(1);
 		}
 	}
-	Query.update(1);
 	return blob_handle;
 }
 
@@ -133,7 +129,6 @@ void database::connection::blob_read(blob & Blob, char * const buff, const int &
 		exit(1);
 	}
 	blob_close(blob_handle);
-	Query.update(1);
 }
 
 void database::connection::blob_write(blob & Blob, const char * const buff, const int & size, const int & offset)
@@ -145,7 +140,6 @@ void database::connection::blob_write(blob & Blob, const char * const buff, cons
 		exit(1);
 	}
 	blob_close(blob_handle);
-	Query.update(1);
 }
 
 int database::connection::fun_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)
@@ -159,7 +153,6 @@ int database::connection::query(const std::string & query)
 	boost::recursive_mutex::scoped_lock lock(*Mutex);
 	int code;
 	while((code = sqlite3_exec(DB_handle, query.c_str(), NULL, NULL, NULL)) != SQLITE_OK){
-		Query.update(1);
 		if(code == SQLITE_BUSY){
 			LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 			boost::this_thread::yield();
@@ -168,7 +161,6 @@ int database::connection::query(const std::string & query)
 			break;
 		}
 	}
-	Query.update(1);
 	return code;
 }
 
@@ -177,7 +169,6 @@ int database::connection::query(const std::string & query, int (*fun_ptr)(int, c
 	boost::recursive_mutex::scoped_lock lock(*Mutex);
 	int code;
 	while((code = sqlite3_exec(DB_handle, query.c_str(), fun_call_back_wrapper, (void *)fun_ptr, NULL)) != SQLITE_OK){
-		Query.update(1);
 		if(code == SQLITE_BUSY){
 			LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 			boost::this_thread::yield();
@@ -186,6 +177,5 @@ int database::connection::query(const std::string & query, int (*fun_ptr)(int, c
 			break;
 		}
 	}
-	Query.update(1);
 	return code;
 }

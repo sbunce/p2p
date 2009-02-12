@@ -28,6 +28,7 @@ gui_about::gui_about()
 	vbox->pack_start(*button_box, Gtk::PACK_SHRINK);
 	button_box->pack_start(*close_button, Gtk::PACK_SHRINK);
 
+	//signaled functions
 	close_button->signal_clicked().connect(sigc::mem_fun(*this, &gui_about::close_click));
 
 	show_all_children();

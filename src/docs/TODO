@@ -1,12 +1,5 @@
 TODO
 
--attempting to start a download, that is currently in the process of cancelling results in blacklisting
-of server sometimes.
-
--replace instances of messageDigest in gui code
-
--vett gui code.. ugh
-
 -add stop/start functions to download, and rename cancel to remove
 
 
@@ -17,16 +10,6 @@ NON-THREADSAFE  - object not threadsafe
 THREAD SPAWNING - instantiating or calling member functions of this object may spawn threads
 SINGLETON       - class implements singleton design pattern
 
-
-KEY EXCHANGE ALGORITHM
--Client connects and sends his host key.
-A. I've seen his host key before and send a "tell me what I said" packet.
-	1. he sends incorrect response, I disconnect
-	2. he sends correct response, session is open
-B. I haven't seen his host key before, I trigger key exchange.
-
-Get this all fleshed out and make detailed html page describing procedure. Maybe
-do flow chart.
 
 A-TAG IDEA
 -Have file information stored in a 48 byte file name. This file would not be

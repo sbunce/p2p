@@ -111,15 +111,9 @@ public:
 	template <typename T, typename T_obj>
 	int query(const std::string & query, T * t, int (T::*memfun_ptr)(T_obj&, int, char **, char **), T_obj & T_Obj);
 
-	//returns average queries/second
-	static unsigned query_speed(){ return Query.speed(); }
-
 private:
 	//called by copy ctor and operator =
 	void copy(const connection & DB);
-
-	//keeps track of how many queries per second are happening
-	static speed_calculator Query;
 
 	sqlite3 * DB_handle;
 	boost::shared_ptr<atomic_int<int> > ref_cnt;
@@ -162,7 +156,6 @@ int database::connection::query(const std::string & query, int (*fun_ptr)(T, int
 	while((code = sqlite3_exec(DB_handle, query.c_str(), fun_with_object_call_back_wrapper<T>,
 		(void *)&call_back_info, NULL)) != SQLITE_OK)
 	{
-		Query.update(1);
 		if(code == SQLITE_BUSY){
 			LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 			boost::this_thread::yield();
@@ -171,7 +164,6 @@ int database::connection::query(const std::string & query, int (*fun_ptr)(T, int
 			break;
 		}
 	}
-	Query.update(1);
 	return code;
 }
 
@@ -185,7 +177,6 @@ int database::connection::query(const std::string & query, int (*fun_ptr)(T&, in
 	while((code = sqlite3_exec(DB_handle, query.c_str(), fun_with_object_reference_call_back_wrapper<T>,
 		(void *)&call_back_info, NULL)) != SQLITE_OK)
 	{
-		Query.update(1);
 		if(code == SQLITE_BUSY){
 			LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 			boost::this_thread::yield();
@@ -194,7 +185,6 @@ int database::connection::query(const std::string & query, int (*fun_ptr)(T&, in
 			break;
 		}
 	}
-	Query.update(1);
 	return code;
 }
 
@@ -208,7 +198,6 @@ int database::connection::query(const std::string & query, T * t, int (T::*memfu
 	while((code = sqlite3_exec(DB_handle, query.c_str(), memfun_call_back_wrapper<T>,
 		(void *)&call_back_info, NULL)) != SQLITE_OK)
 	{
-		Query.update(1);
 		if(code == SQLITE_BUSY){
 			LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 			boost::this_thread::yield();
@@ -217,7 +206,6 @@ int database::connection::query(const std::string & query, T * t, int (T::*memfu
 			break;
 		}
 	}
-	Query.update(1);
 	return code;
 }
 
@@ -235,7 +223,6 @@ int database::connection::query(const std::string & query, T * t, int (T::*memfu
 	while((code = sqlite3_exec(DB_handle, query.c_str(), memfun_with_object_call_back_wrapper<T, T_obj>,
 		(void *)&call_back_info, NULL)) != SQLITE_OK)
 	{
-		Query.update(1);
 		if(code == SQLITE_BUSY){
 			LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 			boost::this_thread::yield();
@@ -244,7 +231,6 @@ int database::connection::query(const std::string & query, T * t, int (T::*memfu
 			break;
 		}
 	}
-	Query.update(1);
 	return code;
 }
 
@@ -262,7 +248,6 @@ int database::connection::query(const std::string & query, T * t, int (T::*memfu
 	while((code = sqlite3_exec(DB_handle, query.c_str(), memfun_with_object_reference_call_back_wrapper<T, T_obj>,
 		(void *)&call_back_info, NULL)) != SQLITE_OK)
 	{
-		Query.update(1);
 		if(code == SQLITE_BUSY){
 			LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 			boost::this_thread::yield();
@@ -271,7 +256,6 @@ int database::connection::query(const std::string & query, T * t, int (T::*memfu
 			break;
 		}
 	}
-	Query.update(1);
 	return code;
 }
 

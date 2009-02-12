@@ -1,41 +1,48 @@
 #include "gui_window_download_status.hpp"
 
 gui_window_download_status::gui_window_download_status(
-	const std::string root_hash_in,
-	Gtk::Label * tab_label,
-	client * Client_in
+	const std::string & root_hash_in,
+	const std::string & path,
+	const boost::uint64_t & tree_size_in,
+	const boost::uint64_t & file_size_in,
+	Gtk::HBox *& hbox,
+	Gtk::Label *& tab_label,
+	Gtk::Button *& close_button,
+	client & Client_in
 ):
 	root_hash(root_hash_in),
-	tree_size_bytes(0),
-	file_size_bytes(0)
+	tree_size(tree_size_in),
+	Client(&Client_in)
 {
-	Client = Client_in;
-
-	std::string name;             //starts as path
-	std::string untruncated_name; //full name for display within tab
-	if(Client->file_info(root_hash, name, tree_size_bytes, file_size_bytes)){
-		std::string label_name = name;
-		if(!label_name.empty()){
-			//isolate file name
-			label_name = label_name.substr(label_name.find_last_of('/') + 1);
-		}
-		untruncated_name = label_name;
-		int max_tab_label_size = 24;
-		if(label_name.size() > max_tab_label_size){
-			label_name = label_name.substr(0, max_tab_label_size);
-			label_name += "..";
-		}
-		tab_label->set_text(" " + label_name + " ");
-	}else{
-		tab_label->set_text("error: no download");
-	}
-
-	std::string tree_size_str = convert::size_SI(tree_size_bytes);
-	std::string file_size_str = convert::size_SI(file_size_bytes);
-
 	window = this;
 	window->set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_NEVER);
 
+	std::string tab_label_text, full_name;
+	if(path.find_last_of('/') == std::string::npos){
+		full_name = path;
+		tab_label_text = path;
+	}else{
+		full_name = path.substr(path.find_last_of('/')+1);
+		tab_label_text = full_name;
+	}
+
+	//shorten long names to make tabs reasonable max width
+	if(tab_label_text.size() > 24){
+		tab_label_text = "  " + tab_label_text.substr(0, 24) + "..  ";
+	}
+
+	//instantiation of tab label related
+	hbox = Gtk::manage(new Gtk::HBox(false, 0));
+	tab_label = Gtk::manage(new Gtk::Label(tab_label_text));
+	close_button = Gtk::manage(new Gtk::Button);
+	close_image = Gtk::manage(new Gtk::Image(Gtk::Stock::CLOSE, Gtk::ICON_SIZE_MENU));
+
+	hbox->pack_start(*tab_label);
+	close_button->add(*close_image);
+	hbox->pack_start(*close_button);
+	hbox->show_all_children();
+
+	//instantiation of the rest
 	vbox = Gtk::manage(new Gtk::VBox(false, 0));
 	info_fixed = Gtk::manage(new Gtk::Fixed);
 	servers_scrolled_window = Gtk::manage(new Gtk::ScrolledWindow);
@@ -43,13 +50,13 @@ gui_window_download_status::gui_window_download_status(
 	root_hash_label = Gtk::manage(new Gtk::Label("Root Hash: "));
 	root_hash_value = Gtk::manage(new Gtk::Label(root_hash_in));
 	hash_tree_size_label = Gtk::manage(new Gtk::Label("Tree Size: "));
-	hash_tree_size_value = Gtk::manage(new Gtk::Label(tree_size_str));
+	hash_tree_size_value = Gtk::manage(new Gtk::Label(convert::size_SI(tree_size)));
 	hash_tree_percent_label = Gtk::manage(new Gtk::Label("Complete: "));
 	hash_tree_percent_value = Gtk::manage(new Gtk::Label("0%"));
 	file_name_label = Gtk::manage(new Gtk::Label("File Name: "));
-	file_name_value = Gtk::manage(new Gtk::Label(untruncated_name));
+	file_name_value = Gtk::manage(new Gtk::Label(full_name));
 	file_size_label = Gtk::manage(new Gtk::Label("File Size: "));
-	file_size_value = Gtk::manage(new Gtk::Label(file_size_str));
+	file_size_value = Gtk::manage(new Gtk::Label(convert::size_SI(file_size_in)));
 	file_percent_label = Gtk::manage(new Gtk::Label("Complete: "));
 	file_percent_value = Gtk::manage(new Gtk::Label("0%"));
 	total_speed_label = Gtk::manage(new Gtk::Label("Speed: "));
@@ -57,10 +64,9 @@ gui_window_download_status::gui_window_download_status(
 	servers_connected_label = Gtk::manage(new Gtk::Label("Servers: "));
 	servers_connected_value = Gtk::manage(new Gtk::Label);
 
-	add(*vbox);
+	window->add(*vbox);
 	vbox->pack_start(*info_fixed, Gtk::PACK_SHRINK, 8);
 	vbox->pack_start(*servers_scrolled_window);
-
 	servers_scrolled_window->add(*servers_view);
 	servers_scrolled_window->set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
 
@@ -81,22 +87,13 @@ gui_window_download_status::gui_window_download_status(
 	info_fixed->put(*servers_connected_label, 8, 144);
 	info_fixed->put(*servers_connected_value, 90, 144);
 
-	//server info setup
-	Gtk::TreeModel::ColumnRecord column;
-	Gtk::TreeModelColumn<Glib::ustring> servers_t;
-	Gtk::TreeModelColumn<Glib::ustring> speed_t;
-
-	column.add(servers_t);
-	column.add(speed_t);
-
+	//setup servers_view
+	column.add(column_server);
+	column.add(column_speed);
 	servers_list = Gtk::ListStore::create(column);
 	servers_view->set_model(servers_list);
-
-	//add columns
-	servers_view->append_column(" IP ", servers_t);
-	servers_view->append_column(" Speed ", speed_t);
-
-	show_all_children();
+	servers_view->append_column(" IP ", column_server);
+	servers_view->append_column(" Speed ", column_speed);
 }
 
 bool gui_window_download_status::refresh()
@@ -121,7 +118,7 @@ bool gui_window_download_status::refresh()
 	std::stringstream percent_complete_ss;
 	percent_complete_ss << info.begin()->percent_complete << "%";
 
-	if(info.begin()->size == tree_size_bytes){
+	if(info.begin()->size == tree_size){
 		//download in download_hash_tree stage
 		hash_tree_percent_value->set_text(percent_complete_ss.str());
 	}else{
@@ -130,27 +127,19 @@ bool gui_window_download_status::refresh()
 		file_percent_value->set_text(percent_complete_ss.str());
 	}
 
-	std::stringstream total_speed_oss;
-	total_speed_oss << convert::size_SI(info.begin()->total_speed) << "/s";
-	total_speed_value->set_text(total_speed_oss.str());
+	std::stringstream ss;
+	ss << convert::size_SI(info.begin()->total_speed) << "/s";
+	total_speed_value->set_text(ss.str());
 
-	std::stringstream servers_connected_oss;
-	servers_connected_oss << info.begin()->IP.size();
-	servers_connected_value->set_text(servers_connected_oss.str());
+	ss.str(""); ss.clear();
+	ss << info.begin()->IP.size();
+	servers_connected_value->set_text(ss.str());
 
 	//update bottom pane info
 	assert(info.begin()->IP.size() == info.begin()->speed.size());
 	for(int x=0; x<info.begin()->IP.size(); ++x){
 		std::string IP = info.begin()->IP[x];
-		unsigned int speed = info.begin()->speed[x];
-
-		//set up column
-		Gtk::TreeModel::ColumnRecord column;
-		Gtk::TreeModelColumn<Glib::ustring> servers_t;
-		Gtk::TreeModelColumn<Glib::ustring> speed_t;
-
-		column.add(servers_t);
-		column.add(speed_t);
+		unsigned speed = info.begin()->speed[x];
 
 		//attempt to locate existing entry in treeview
 		bool entry_found = false;
@@ -163,17 +152,16 @@ bool gui_window_download_status::refresh()
 			Glib::ustring IP_retrieved;
 			row.get_value(0, IP_retrieved);
 			if(IP_retrieved == IP){
-				row[speed_t] = convert::size_SI(speed) + "/s";
+				row[column_speed] = convert::size_SI(speed) + "/s";
 				entry_found = true;
 				break;
 			}
 			++iter_cur;
 		}
-
 		if(!entry_found){
 			Gtk::TreeModel::Row row = *(servers_list->append());
-			row[servers_t] = IP;
-			row[speed_t] = convert::size_SI(speed) + "/s";
+			row[column_server] = IP;
+			row[column_speed] = convert::size_SI(speed) + "/s";
 		}
 	}
 
@@ -186,7 +174,6 @@ bool gui_window_download_status::refresh()
 	 	Gtk::TreeModel::Row row = *iter_cur;
 		Glib::ustring IP_retrieved;
 		row.get_value(0, IP_retrieved);
-
 		bool entry_found(false);
 		for(int x=0; x<info.begin()->IP.size(); ++x){
 			std::string IP = info.begin()->IP[x];
@@ -195,7 +182,6 @@ bool gui_window_download_status::refresh()
 				break;
 			}
 		}
-
 		if(!entry_found){
 			iter_cur = servers_list->erase(iter_cur);
 		}else{

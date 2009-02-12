@@ -7,7 +7,7 @@ download_factory::download_factory()
 
 locking_shared_ptr<download> download_factory::start(download_info info, std::vector<download_connection> & servers)
 {
-	if(client_buffer::is_downloading(info.hash)){
+	if(client_server_bridge::is_downloading(info.hash)){
 		LOGGER << "file '" << info.name << "' already downloading";
 		return locking_shared_ptr<download>();
 	}

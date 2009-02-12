@@ -21,7 +21,7 @@
 class gui_vbox_search : public Gtk::VBox, private boost::noncopyable
 {
 public:
-	gui_vbox_search(client * Client_in);
+	gui_vbox_search(client & Client_in);
 
 private:
 	//convenience pointer to this
