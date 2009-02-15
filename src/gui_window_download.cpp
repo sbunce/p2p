@@ -1,10 +1,10 @@
 #include "gui_window_download.hpp"
 
 gui_window_download::gui_window_download(
-	client & Client_in,
+	p2p & P2P_in,
 	Gtk::Notebook * notebook_in
 ):
-	Client(&Client_in),
+	P2P(&P2P_in),
 	notebook(notebook_in)
 {
 	window = this;
@@ -56,7 +56,7 @@ void gui_window_download::cancel_download()
 			Gtk::TreeModel::Row row = *iter0;
 			Glib::ustring hash_retrieved;
 			row.get_value(0, hash_retrieved);
-			Client->stop_download(hash_retrieved);
+			P2P->stop_download(hash_retrieved);
 		}
 	}
 }
@@ -106,7 +106,7 @@ void gui_window_download::download_info_tab()
 	//make sure download exists (user could have requested information on nothing)
 	std::string path;
 	boost::uint64_t tree_size, file_size;
-	if(!Client->file_info(root_hash, path, tree_size, file_size)){
+	if(!P2P->file_info(root_hash, path, tree_size, file_size)){
 		LOGGER << "clicked download doesn't exist";
 		return;
 	}
@@ -131,7 +131,7 @@ void gui_window_download::download_info_tab()
 		hbox,         //set in ctor
 		tab_label,    //set in ctor
 		close_button, //set in ctor
-		*Client
+		*P2P
 	));
 
 	notebook->append_page(*status_window, *hbox, *tab_label);
@@ -163,7 +163,7 @@ bool gui_window_download::download_info_refresh()
 {
 	//update download info
 	std::vector<download_status> info;
-	Client->current_downloads(info);
+	P2P->current_downloads(info);
 
 	std::vector<download_status>::iterator info_iter_cur, info_iter_end;
 	info_iter_cur = info.begin();

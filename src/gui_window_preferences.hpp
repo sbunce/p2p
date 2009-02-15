@@ -5,9 +5,8 @@
 #include <boost/utility.hpp>
 
 //custom
-#include "client.hpp"
 #include "global.hpp"
-#include "server.hpp"
+#include "p2p.hpp"
 
 //gui
 #include <gtkmm.h>
@@ -18,7 +17,7 @@
 class gui_window_preferences : public Gtk::Window, private boost::noncopyable
 {  
 public:
-	gui_window_preferences(client * Client_in, server * Server_in);
+	gui_window_preferences(p2p & P2P_in);
 
 private:
 	Gtk::Window * window;
@@ -36,13 +35,11 @@ private:
 	Gtk::Button * cancel_button;
 	Gtk::Button * apply_button;
 	Gtk::HButtonBox * button_box;
-	Gtk::HScale * client_connections_hscale;
-	Gtk::HScale * server_connections_hscale;
+	Gtk::HScale * connections_hscale;
 	Gtk::Fixed * fixed;
 
 	//holds pointers to the client/server the GUI has while preferences are open
-	client * Client;
-	server * Server;
+	p2p * P2P;
 
 	/*
 	apply_click                - apply button clicked

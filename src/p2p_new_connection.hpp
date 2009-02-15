@@ -1,6 +1,6 @@
 //THREADSAFE, THREAD SPAWNING
-#ifndef H_CLIENT_NEW_CONNECTION
-#define H_CLIENT_NEW_CONNECTION
+#ifndef H_P2P_NEW_CONNECTION
+#define H_P2P_NEW_CONNECTION
 
 //boost
 #include <boost/bind.hpp>
@@ -12,10 +12,10 @@
 
 //custom
 #include "atomic_int.hpp"
-#include "client_buffer.hpp"
 #include "database.hpp"
 #include "download_connection.hpp"
 #include "global.hpp"
+#include "p2p_buffer.hpp"
 #include "resolve.hpp"
 #include "thread_pool.hpp"
 
@@ -34,16 +34,16 @@
 #include <map>
 #include <string>
 
-class client_new_connection : private boost::noncopyable
+class p2p_new_connection : private boost::noncopyable
 {
 public:
-	client_new_connection(
+	p2p_new_connection(
 		fd_set & master_FDS_in,
 		atomic_int<int> & FD_max_in,
 		atomic_int<int> & max_connections_in,
 		atomic_int<int> & connections_in
 	);
-	~client_new_connection();
+	~p2p_new_connection();
 
 	/*
 	queue - queue download_connection

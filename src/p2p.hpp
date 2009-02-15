@@ -1,19 +1,16 @@
 //THREADSAFE, CTOR THREAD SPAWNING
-
-#ifndef H_CLIENT
-#define H_CLIENT
+#ifndef H_P2P
+#define H_P2P
 
 //boost
 #include <boost/bind.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
 
 //custom
 #include "atomic_int.hpp"
-#include "client_buffer.hpp"
-#include "client_new_connection.hpp"
-#include "client_server_bridge.hpp"
 #include "database.hpp"
 #include "download.hpp"
 #include "download_connection.hpp"
@@ -21,9 +18,11 @@
 #include "download_status.hpp"
 #include "download_factory.hpp"
 #include "global.hpp"
-#include "locking_shared_ptr.hpp"
+#include "p2p_buffer.hpp"
+#include "p2p_new_connection.hpp"
 #include "number_generator.hpp"
 #include "rate_limit.hpp"
+#include "share_index.hpp"
 #include "speed_calculator.hpp"
 
 //networking
@@ -50,21 +49,21 @@
 #include <string>
 #include <vector>
 
-class client : private boost::noncopyable
+class p2p : private boost::noncopyable
 {
 public:
-	client();
-	~client();
+	p2p();
+	~p2p();
 	/*
 	current_downloads      - returns download info for all downloads or
 	                         if hash set info only retrieved for download that corresponds to hash
 	                         WARNING: if no hash found info will be empty
+	current_uploads        - populates info with upload_info for all uploads
 	file_info              - returns specific information about file that corresponds to hash (for currently running downloads)
 	                         WARNING: Expensive call that includes database access, do not poll this.
-	                                  A good possible use of this is to get info when opening download info tabs.
 	get_max_connections    - returns maximum connections client will make
 	get_download_directory - returns the location where downloads are saved to
-	get_download_rate        - returns the download speed limit (bytes/second)
+	get_download_rate      - returns the download speed limit (bytes/second)
 	prime_count            - returns the number of primes cached for Diffie-Hellman
 	search                 - populates info with download_status that match the search_word
 	set_max_connections    - sets maximum connections client will make
@@ -75,18 +74,25 @@ public:
 	total_rate             - returns the total download rate(B/s)
 	*/
 	void current_downloads(std::vector<download_status> & info, std::string hash = "");
+	void current_uploads(std::vector<upload_info> & info);
 	bool file_info(const std::string & hash, std::string & path, boost::uint64_t & tree_size, boost::uint64_t & file_size);
 	unsigned get_max_connections();
 	std::string get_download_directory();
-	unsigned get_download_rate();
+	std::string get_share_directory();
+	unsigned get_max_download_rate();
+	unsigned get_max_upload_rate();
 	unsigned prime_count();
+	bool is_indexing();
 	void search(std::string search_word, std::vector<download_info> & Search_Info);
 	void set_max_connections(const unsigned & max_connections_in);
 	void set_download_directory(const std::string & download_directory);
+	void set_share_directory(const std::string & share_directory);
 	void set_max_download_rate(unsigned download_rate);
+	void set_max_upload_rate(unsigned upload_rate);
 	void start_download(const download_info & info);
 	void stop_download(std::string hash);
-	unsigned total_rate();
+	unsigned download_rate();
+	unsigned upload_rate();
 
 private:
 	//thread for main_loop
@@ -101,7 +107,8 @@ private:
 	because the logic which starts the download takes long enough to where the
 	GUI function which calls it blocks for an unacceptible amount of time.
 	*/
-	locking_shared_ptr<std::list<download_info> > Pending_Download;
+	boost::mutex PD_mutex; //for all access to Pending_Download
+	std::list<download_info> Pending_Download;
 
 	//networking related
 	fd_set master_FDS;      //master file descriptor set
@@ -127,14 +134,15 @@ private:
 	void check_timeouts();
 	inline void disconnect(const int & socket_FD);
 	void main_loop();
+	void new_connection(const int & listener);
 	void reconnect_unfinished();
 	void remove_complete();
-	void remove_empty();
+	int setup_listener();
 	void start_download_process(const download_info & info);
 	void start_pending_downloads();
-	void transition_download(locking_shared_ptr<download> Download_Stop);
+	void transition_download(boost::shared_ptr<download> Download_Stop);
 
-	client_new_connection Client_New_Connection;
+	p2p_new_connection P2P_New_Connection;
 	database::table::blacklist DB_Blacklist;
 	database::table::download DB_Download;
 	database::table::preferences DB_Preferences;

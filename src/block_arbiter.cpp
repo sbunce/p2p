@@ -1,104 +1,98 @@
-#include "client_server_bridge.hpp"
+#include "block_arbiter.hpp"
 
 //BEGIN STATIC
-client_server_bridge * client_server_bridge::Client_Server_Bridge = NULL;
-boost::mutex client_server_bridge::Mutex;
-atomic_bool client_server_bridge::server_index_blocked(true);
+block_arbiter * block_arbiter::Block_Arbiter = NULL;
 
-void client_server_bridge::start_hash_tree(const std::string & hash)
+void block_arbiter::start_hash_tree(const std::string & hash)
 {
-	boost::mutex::scoped_lock lock(Mutex);
+	boost::mutex::scoped_lock lock(Mutex());
 	init();
-	Client_Server_Bridge->start_hash_tree_priv(hash);
+	Block_Arbiter->start_hash_tree_priv(hash);
 }
 
-void client_server_bridge::start_file(const std::string & hash, const boost::uint64_t & file_block_count)
+void block_arbiter::start_file(const std::string & hash, const boost::uint64_t & file_block_count)
 {
-	boost::mutex::scoped_lock lock(Mutex);
+	boost::mutex::scoped_lock lock(Mutex());
 	init();
-	Client_Server_Bridge->start_file_priv(hash, file_block_count);
+	Block_Arbiter->start_file_priv(hash, file_block_count);
 }
 
-void client_server_bridge::finish_download(const std::string & hash)
+void block_arbiter::finish_download(const std::string & hash)
 {
-	boost::mutex::scoped_lock lock(Mutex);
+	boost::mutex::scoped_lock lock(Mutex());
 	init();
-	Client_Server_Bridge->finish_download_priv(hash);
+	Block_Arbiter->finish_download_priv(hash);
 }
 
-void client_server_bridge::update_hash_tree_highest(const std::string & hash, const boost::uint64_t & block_num)
+void block_arbiter::update_hash_tree_highest(const std::string & hash, const boost::uint64_t & block_num)
 {
-	boost::mutex::scoped_lock lock(Mutex);
+	boost::mutex::scoped_lock lock(Mutex());
 	init();
-	Client_Server_Bridge->update_hash_tree_highest_priv(hash, block_num);
+	Block_Arbiter->update_hash_tree_highest_priv(hash, block_num);
 }
 
-void client_server_bridge::add_file_block(const std::string & hash, const boost::uint64_t & block_num)
+void block_arbiter::add_file_block(const std::string & hash, const boost::uint64_t & block_num)
 {
-	boost::mutex::scoped_lock lock(Mutex);
+	boost::mutex::scoped_lock lock(Mutex());
 	init();
-	Client_Server_Bridge->add_file_block_priv(hash, block_num);
+	Block_Arbiter->add_file_block_priv(hash, block_num);
 }
 
-bool client_server_bridge::is_downloading(const std::string & hash)
+bool block_arbiter::is_downloading(const std::string & hash)
 {
-	boost::mutex::scoped_lock lock(Mutex);
+	boost::mutex::scoped_lock lock(Mutex());
 	init();
-	return Client_Server_Bridge->is_downloading_priv(hash);
+	return Block_Arbiter->is_downloading_priv(hash);
 }
 
-client_server_bridge::download_state client_server_bridge::hash_block_available(const std::string & hash, const boost::uint64_t & block_num)
+block_arbiter::download_state block_arbiter::hash_block_available(const std::string & hash, const boost::uint64_t & block_num)
 {
-	boost::mutex::scoped_lock lock(Mutex);
+	boost::mutex::scoped_lock lock(Mutex());
 	init();
-	return Client_Server_Bridge->hash_block_available_priv(hash, block_num);
+	return Block_Arbiter->hash_block_available_priv(hash, block_num);
 }
 
-client_server_bridge::download_state client_server_bridge::file_block_available(const std::string & hash, const boost::uint64_t & block_num)
+block_arbiter::download_state block_arbiter::file_block_available(const std::string & hash, const boost::uint64_t & block_num)
 {
-	boost::mutex::scoped_lock lock(Mutex);
+	boost::mutex::scoped_lock lock(Mutex());
 	init();
-	return Client_Server_Bridge->file_block_available_priv(hash, block_num);
+	return Block_Arbiter->file_block_available_priv(hash, block_num);
 }
 
-void client_server_bridge::init()
+boost::mutex & block_arbiter::Mutex()
 {
-	if(Client_Server_Bridge == NULL){
-		Client_Server_Bridge = new client_server_bridge();
+	static boost::mutex * M = new boost::mutex();
+	return *M;
+}
+
+void block_arbiter::init()
+{
+	if(Block_Arbiter == NULL){
+		Block_Arbiter = new block_arbiter();
 	}
-}
-
-bool client_server_bridge::server_index_is_blocked()
-{
-	return server_index_blocked;
-}
-
-void client_server_bridge::unblock_server_index()
-{
-	server_index_blocked = false;
 }
 //END STATIC
 
-void client_server_bridge::start_hash_tree_priv(const std::string & hash)
+void block_arbiter::start_hash_tree_priv(const std::string & hash)
 {
 	//assert file is not started, hash tree must download before file
 	assert(File_State.find(hash) == File_State.end());
 	Hash_Tree_State.insert(std::make_pair(hash, hash_tree_state()));
 }
 
-void client_server_bridge::start_file_priv(const std::string & hash, const boost::uint64_t & file_block_count)
+void block_arbiter::start_file_priv(const std::string & hash, const boost::uint64_t & file_block_count)
 {
 	Hash_Tree_State.erase(hash);
 	File_State.insert(std::make_pair(hash, file_state(file_block_count)));
 }
 
-void client_server_bridge::finish_download_priv(const std::string & hash)
+void block_arbiter::finish_download_priv(const std::string & hash)
 {
 	Hash_Tree_State.erase(hash);
 	File_State.erase(hash);
 }
 
-void client_server_bridge::update_hash_tree_highest_priv(const std::string & hash, const boost::uint64_t & block_num)
+void block_arbiter::update_hash_tree_highest_priv(const std::string & hash, const boost::uint64_t & block_num)
 {
 	std::map<std::string, hash_tree_state>::iterator iter;
 	iter = Hash_Tree_State.find(hash);
@@ -107,7 +101,7 @@ void client_server_bridge::update_hash_tree_highest_priv(const std::string & has
 	iter->second.highest_available = block_num;
 }
 
-void client_server_bridge::add_file_block_priv(const std::string & hash, const boost::uint64_t & block_num)
+void block_arbiter::add_file_block_priv(const std::string & hash, const boost::uint64_t & block_num)
 {
 	std::map<std::string, file_state>::iterator iter;
 	iter = File_State.find(hash);
@@ -117,7 +111,7 @@ void client_server_bridge::add_file_block_priv(const std::string & hash, const b
 	iter->second.Contiguous.trim_contiguous();
 }
 
-bool client_server_bridge::is_downloading_priv(const std::string & hash)
+bool block_arbiter::is_downloading_priv(const std::string & hash)
 {
 	std::map<std::string, hash_tree_state>::iterator h_iter;
 	h_iter = Hash_Tree_State.find(hash);
@@ -126,7 +120,7 @@ bool client_server_bridge::is_downloading_priv(const std::string & hash)
 	return h_iter != Hash_Tree_State.end() || f_iter != File_State.end();
 }
 
-client_server_bridge::download_state client_server_bridge::hash_block_available_priv(const std::string & hash, const boost::uint64_t & block_number)
+block_arbiter::download_state block_arbiter::hash_block_available_priv(const std::string & hash, const boost::uint64_t & block_number)
 {
 	std::map<std::string, file_state>::iterator iter;
 	iter = File_State.find(hash);
@@ -151,7 +145,7 @@ client_server_bridge::download_state client_server_bridge::hash_block_available_
 	}
 }
 
-client_server_bridge::download_state client_server_bridge::file_block_available_priv(const std::string & hash, const boost::uint64_t & block_num)
+block_arbiter::download_state block_arbiter::file_block_available_priv(const std::string & hash, const boost::uint64_t & block_num)
 {
 	std::map<std::string, file_state>::iterator iter;
 	iter = File_State.find(hash);

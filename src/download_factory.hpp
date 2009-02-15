@@ -7,7 +7,7 @@
 #include <boost/utility.hpp>
 
 //custom
-#include "client_buffer.hpp"
+#include "block_arbiter.hpp"
 #include "database.hpp"
 #include "download.hpp"
 #include "download_connection.hpp"
@@ -15,8 +15,8 @@
 #include "download_hash_tree.hpp"
 #include "download_info.hpp"
 #include "hash_tree.hpp"
-#include "locking_shared_ptr.hpp"
-#include "server_index.hpp"
+#include "p2p_buffer.hpp"
+#include "share_index.hpp"
 
 //std
 #include <fstream>
@@ -30,16 +30,16 @@ public:
 
 	/*
 	start - starts download with specified download_info
-	        returns empty locking_smart_ptr if could not start
+	        returns empty boost::smart_ptr if could not start
 	stop  - stops the download, and possibly starts another one
-	        returns empty locking_smart_ptr if no new download needs to be started
+	        returns empty boost::smart_ptr if no new download needs to be started
 	*/
-	locking_shared_ptr<download> start(download_info info, std::vector<download_connection> & servers);
-	locking_shared_ptr<download> stop(locking_shared_ptr<download> Download_Stop, std::vector<download_connection> & servers);
+	boost::shared_ptr<download> start(download_info info, std::vector<download_connection> & servers);
+	boost::shared_ptr<download> stop(boost::shared_ptr<download> Download_Stop, std::vector<download_connection> & servers);
 
 private:
-	locking_shared_ptr<download> start_file(const download_info & info, std::vector<download_connection> & servers);
-	locking_shared_ptr<download> start_hash_tree(const download_info & info, std::vector<download_connection> & servers);
+	boost::shared_ptr<download> start_file(const download_info & info, std::vector<download_connection> & servers);
+	boost::shared_ptr<download> start_hash_tree(const download_info & info, std::vector<download_connection> & servers);
 
 	database::connection DB;
 	database::table::hash DB_Hash;

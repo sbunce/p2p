@@ -8,11 +8,11 @@ gui_window_download_status::gui_window_download_status(
 	Gtk::HBox *& hbox,
 	Gtk::Label *& tab_label,
 	Gtk::Button *& close_button,
-	client & Client_in
+	p2p & P2P_in
 ):
 	root_hash(root_hash_in),
 	tree_size(tree_size_in),
-	Client(&Client_in)
+	P2P(&P2P_in)
 {
 	window = this;
 	window->set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_NEVER);
@@ -99,7 +99,7 @@ gui_window_download_status::gui_window_download_status(
 bool gui_window_download_status::refresh()
 {
 	std::vector<download_status> info;
-	Client->current_downloads(info, root_hash);
+	P2P->current_downloads(info, root_hash);
 
 	if(info.empty()){
 		//download finished

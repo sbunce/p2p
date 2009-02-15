@@ -26,8 +26,7 @@ src_nogui = [
 
 #command to all
 src_common = [
-	'CLI_args.cpp',
-	'client_server_bridge.cpp',
+	'block_arbiter.cpp',
 	'CMWC4096.cpp',
 	'database_connection.cpp',
 	'database_init.cpp',
@@ -38,36 +37,26 @@ src_common = [
 	'database_table_prime.cpp',
 	'database_table_search.cpp',
 	'database_table_share.cpp',
-	'encryption.cpp',
-	'hash_tree.cpp',
-	'number_generator.cpp',
-	'rate_limit.cpp',
-	'request_generator.cpp',
-	'sha.cpp',
-	'speed_calculator.cpp',
-	'thread_pool.cpp'
-]
-
-#client only
-src_client = [
-	'client_buffer.cpp',
-	'client.cpp',
-	'client_new_connection.cpp',
 	'download.cpp',
 	'download_factory.cpp',
 	'download_file.cpp',
 	'download_hash_tree.cpp',
-]
-
-#server only
-src_server = [
+	'encryption.cpp',
+	'hash_tree.cpp',
 	'http.cpp',
-	'server_buffer.cpp',
-	'server.cpp',
-	'server_index.cpp',
+	'number_generator.cpp',
+	'p2p.cpp',
+	'p2p_buffer.cpp',
+	'p2p_new_connection.cpp',
+	'rate_limit.cpp',
+	'request_generator.cpp',
+	'sha.cpp',
+	'share_index.cpp',
 	'slot.cpp',
 	'slot_file.cpp',
 	'slot_hash_tree.cpp',
+	'speed_calculator.cpp',
+	'thread_pool.cpp'
 ]
 
 #base (needed by all)
@@ -113,11 +102,9 @@ print 'building with',env.GetOption('num_jobs'),'threads'
 common_obj = env.Object(src_common)
 gui_obj = env_gui.Object(src_gui)
 nogui_obj = env.Object(src_nogui)
-client_obj = env.Object(src_client)
-server_obj = env.Object(src_server)
 
 #link
-env_gui.Program('p2p_gui', gui_obj + common_obj + client_obj + server_obj + static_libs)
-env_nogui.Program('p2p_nogui', nogui_obj + common_obj + server_obj + static_libs)
+env_gui.Program('p2p_gui', gui_obj + common_obj + static_libs)
+env_nogui.Program('p2p_nogui', nogui_obj + common_obj + static_libs)
 if sys.platform == 'linux2':
-	env_nogui_static.Program('p2p_nogui_static', nogui_obj + common_obj + server_obj + static_libs)
+	env_nogui_static.Program('p2p_nogui_static', nogui_obj + common_obj + static_libs)

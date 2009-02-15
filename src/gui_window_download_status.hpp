@@ -6,10 +6,10 @@
 #include <boost/utility.hpp>
 
 //custom
-#include "client.hpp"
 #include "convert.hpp"
 #include "download_info.hpp"
 #include "global.hpp"
+#include "p2p.hpp"
 
 //gui
 #include <gtkmm.h>
@@ -28,14 +28,14 @@ public:
 		Gtk::HBox *& hbox,           //set in ctor
 		Gtk::Label *& tab_label,     //set in ctor
 		Gtk::Button *& close_button, //set in ctor
-		client & Client_in
+		p2p & P2P_in
 	);
 
 	bool refresh();
 
 private:
 	//pointer to client that exists in GUI class
-	client * Client;
+	p2p * P2P;
 
 	std::string root_hash;
 	boost::uint64_t tree_size;

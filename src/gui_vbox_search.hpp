@@ -6,10 +6,10 @@
 #include <boost/utility.hpp>
 
 //custom
-#include "client.hpp"
 #include "convert.hpp"
 #include "download_info.hpp"
 #include "global.hpp"
+#include "p2p.hpp"
 
 //gui
 #include <gtkmm.h>
@@ -21,7 +21,7 @@
 class gui_vbox_search : public Gtk::VBox, private boost::noncopyable
 {
 public:
-	gui_vbox_search(client & Client_in);
+	gui_vbox_search(p2p & P2P_in);
 
 private:
 	//convenience pointer to this
@@ -46,7 +46,7 @@ private:
 	Gtk::TreeModelColumn<Glib::ustring> column_IP;
 
 	//pointer to client that exists in gui class
-	client * Client;
+	p2p * P2P;
 
 	/*
 	Signaled Functions:

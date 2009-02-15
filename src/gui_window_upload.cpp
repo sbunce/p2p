@@ -1,9 +1,9 @@
 #include "gui_window_upload.hpp"
 
 gui_window_upload::gui_window_upload(
-	server & Server_in
+	p2p & P2P_in
 ):
-	Server(&Server_in)
+	P2P(&P2P_in)
 {
 	window = this;
 
@@ -42,7 +42,7 @@ bool gui_window_upload::upload_info_refresh()
 {
 	//update upload info
 	std::vector<upload_info> info;
-	Server->current_uploads(info);
+	P2P->current_uploads(info);
 
 	std::vector<upload_info>::iterator info_iter_cur, info_iter_end;
 	info_iter_cur = info.begin();

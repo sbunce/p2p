@@ -54,10 +54,9 @@ namespace global
 	const std::string VERSION = "0.00 pre-alpha";
 
 	//default settings, may be changed at run time
-	const unsigned CLIENT_CONNECTIONS = 1024; //default max connections by client
-	const unsigned SERVER_CONNECTIONS = 1024; //default max connections to server
-	const unsigned DOWNLOAD_RATE = std::numeric_limits<unsigned>::max(); //default max download rate (B/s)
-	const unsigned UPLOAD_RATE = std::numeric_limits<unsigned>::max();   //default max upload rate (B/s)
+	const unsigned MAX_CONNECTIONS = 1024;
+	const unsigned DOWNLOAD_RATE = std::numeric_limits<unsigned>::max(); //B/s
+	const unsigned UPLOAD_RATE = std::numeric_limits<unsigned>::max();   //B/s
 
 	//hard settings, not changed at runtime
 	const unsigned SHARE_SCAN_RATE = 8;       //share scan rate (files/second)
@@ -90,40 +89,26 @@ namespace global
 	const unsigned HASH_BLOCK_SIZE = 256; //number of hashes in hash block
 	const unsigned FILE_BLOCK_SIZE = HASH_BLOCK_SIZE * HASH_SIZE;
 
-	//protocol commands client <-> server
-	const char P_ERROR = (char)0;
-	const unsigned P_ERROR_SIZE = 1;
-	const char P_BLOCK = (char)5;
-	const unsigned P_BLOCK_TO_CLIENT_SIZE = FILE_BLOCK_SIZE + 1;
-	const unsigned P_BLOCK_TO_SERVER_SIZE = 10;
-
-	//protocol commands client -> server
-	const char P_REQUEST_SLOT_HASH = (char)1;
-	const unsigned P_REQUEST_SLOT_HASH_SIZE = 21;
-	const char P_REQUEST_SLOT_FILE = (char)2;
+	//see documentation
+	const char P_REQUEST_SLOT_HASH_TREE = (char)0;
+	const unsigned P_REQUEST_SLOT_HASH_TREE_SIZE = 21;
+	const char P_REQUEST_SLOT_FILE = (char)1;
 	const unsigned P_REQUEST_SLOT_FILE_SIZE = 21;
-	const char P_CLOSE_SLOT = (char)4;
+	const char P_SLOT = (char)2;
+	const unsigned P_SLOT_SIZE = 2;
+	const char P_CLOSE_SLOT = (char)3;
 	const unsigned P_CLOSE_SLOT_SIZE = 2;
-
-	//protocol commands server -> client
-	const char P_SLOT_ID = (char)3;
-	const unsigned P_SLOT_ID_SIZE = 2;
+	const char P_REQUEST_BLOCK = (char)4;
+	const unsigned P_REQUEST_BLOCK_SIZE = 10;
+	const char P_BLOCK = (char)5;
+	const int P_BLOCK_SIZE = FILE_BLOCK_SIZE + 1;
 	const char P_WAIT = (char)6;
 	const unsigned P_WAIT_SIZE = 1;
+	const char P_ERROR = (char)7;
+	const unsigned P_ERROR_SIZE = 1;
 
-	/*
-	Special command. This is meant to be sent by a web browser. The response is
-	an HTML page with debug info. This is restricted to localhost.
-
-	Note: The full command is variable size and terminated by \n\r but it will
-	      always start with 'G' (ascii dec 71) because that's how a GET request
-	      starts.
-	*/
-	const char P_INFO = 'G';
-
-	//largest possible packet (used to determine buffer sizes)
-	const unsigned S_MAX_SIZE = P_REQUEST_SLOT_FILE_SIZE;
-	const unsigned C_MAX_SIZE = P_BLOCK_TO_CLIENT_SIZE;
+	//largest possible message
+	const unsigned MAX_MESSAGE_SIZE = P_BLOCK_SIZE;
 }
 
 //replacement for system specific sleep functions

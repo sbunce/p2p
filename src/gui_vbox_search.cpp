@@ -1,9 +1,9 @@
 #include "gui_vbox_search.hpp"
 
 gui_vbox_search::gui_vbox_search(
-	client & Client_in
+	p2p & P2P_in
 ):
-	Client(&Client_in)
+	P2P(&P2P_in)
 {
 	vbox = this;
 
@@ -80,7 +80,7 @@ void gui_vbox_search::download_file()
 			iter_end = Search_Info.end();
 			while(iter_cur != iter_end){
 				if(iter_cur->hash == hash_retrieved){
-					Client->start_download(*iter_cur);
+					P2P->start_download(*iter_cur);
 					break;
 				}
 				++iter_cur;
@@ -110,7 +110,7 @@ bool gui_vbox_search::search_click(GdkEventButton * event)
 void gui_vbox_search::search_input()
 {
 	std::string input_text = search_entry->get_text();
-	Client->search(input_text, Search_Info);
+	P2P->search(input_text, Search_Info);
 	search_info_refresh();
 }
 

@@ -1,6 +1,6 @@
 //THREADSAFE, SINGLETON
-#ifndef H_CLIENT_SERVER_BRIDGE
-#define H_CLIENT_SERVER_BRIDGE
+#ifndef H_BLOCK_ARBITER
+#define H_BLOCK_ARBITER
 
 //boost
 #include <boost/thread.hpp>
@@ -16,7 +16,7 @@
 #include <set>
 #include <string>
 
-class client_server_bridge : private boost::noncopyable
+class block_arbiter : private boost::noncopyable
 {
 public:
 	enum download_state{
@@ -51,23 +51,22 @@ public:
 	static bool is_downloading(const std::string & hash);
 	static download_state hash_block_available(const std::string & hash, const boost::uint64_t & block_num);
 	static download_state file_block_available(const std::string & hash, const boost::uint64_t & block_num);
-	static bool server_index_is_blocked();
-	static void unblock_server_index();
 
 private:
-	client_server_bridge(){}
+	block_arbiter(){}
 
-	//mutex for all static public functions
-	static boost::mutex Mutex;
+	/*
+	Returns reference to mutex to lock all public static functions. A function
+	is needed instead of a regular static object to avoid static initialization
+	problems.
+	*/
+	static boost::mutex & Mutex();
 
 	//must be called at the top of every public function to initialize singleton
 	static void init();
 
 	//the one possible instance of DB_blacklist
-	static client_server_bridge * Client_Server_Bridge;
-
-	//used by server_index_is_blocked() to indicate whether indexing can start
-	static atomic_bool server_index_blocked;
+	static block_arbiter * Block_Arbiter;
 
 	//used to keep track of progress of downloading hash tree
 	class hash_tree_state

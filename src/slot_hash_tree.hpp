@@ -2,7 +2,6 @@
 #define H_SLOT_HASH_TREE
 
 //custom
-#include "client_server_bridge.hpp"
 #include "database.hpp"
 #include "global.hpp"
 #include "hash_tree.hpp"

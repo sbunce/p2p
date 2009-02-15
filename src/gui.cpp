@@ -17,10 +17,10 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	Gtk::Image * download_label = Gtk::manage(new Gtk::Image(Gtk::Stock::GO_DOWN, Gtk::ICON_SIZE_LARGE_TOOLBAR));
 	Gtk::Image * upload_label = Gtk::manage(new Gtk::Image(Gtk::Stock::GO_UP, Gtk::ICON_SIZE_LARGE_TOOLBAR));
 
-	GUI_VBox_Search = Gtk::manage(new gui_vbox_search(Client));
-	GUI_Window_Download = Gtk::manage(new gui_window_download(Client, notebook));
-	GUI_Window_Upload = Gtk::manage(new gui_window_upload(Server));
-	statusbar = Gtk::manage(new gui_statusbar_main(Client, Server));
+	GUI_VBox_Search = Gtk::manage(new gui_vbox_search(P2P));
+	GUI_Window_Download = Gtk::manage(new gui_window_download(P2P, notebook));
+	GUI_Window_Upload = Gtk::manage(new gui_window_upload(P2P));
+	statusbar = Gtk::manage(new gui_statusbar_main(P2P));
 
 	//boxes (divides the window)
 	main_VBox = Gtk::manage(new Gtk::VBox(false, 0));
@@ -105,6 +105,6 @@ void gui::help_about()
 
 void gui::settings_preferences()
 {
-	boost::shared_ptr<gui_window_preferences> prefs(new gui_window_preferences(&Client, &Server));
+	boost::shared_ptr<gui_window_preferences> prefs(new gui_window_preferences(P2P));
 	Gtk::Main::run(*prefs);
 }

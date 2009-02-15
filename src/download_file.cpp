@@ -10,7 +10,7 @@ download_file::download_file(
 	download_complete(false),
 	close_slots(false)
 {
-	client_server_bridge::start_file(Download_Info.hash, Tree_Info.get_file_block_count());
+	block_arbiter::start_file(Download_Info.hash, Tree_Info.get_file_block_count());
 	visible = true;
 
 	//create empty file for download if one doesn't already exist
@@ -43,7 +43,7 @@ download_file::~download_file()
 	if(cancel){
 		std::remove(Download_Info.file_path.c_str());
 	}
-	client_server_bridge::finish_download(Download_Info.hash);
+	block_arbiter::finish_download(Download_Info.hash);
 }
 
 bool download_file::complete()
@@ -91,7 +91,7 @@ void download_file::hash_check(hash_tree::tree_info & Tree_Info, std::string fil
 		fin.read(block_buff, global::FILE_BLOCK_SIZE);
 		assert(fin.good());
 		if(Hash_Tree.check_file_block(Tree_Info, check_block, block_buff, fin.gcount())){
-			client_server_bridge::add_file_block(Tree_Info.get_root_hash(), check_block);
+			block_arbiter::add_file_block(Tree_Info.get_root_hash(), check_block);
 		}else{
 			LOGGER << "found corrupt block " << check_block << " in resumed download";
 			Request_Generator->force_rerequest(check_block);
@@ -159,7 +159,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 		request = global::P_REQUEST_SLOT_FILE + convert::hex_to_bin(Download_Info.hash);
 		conn->State = connection_special::AWAITING_SLOT;
 		++slots_used;
-		expected.push_back(std::make_pair(global::P_SLOT_ID, global::P_SLOT_ID_SIZE));
+		expected.push_back(std::make_pair(global::P_SLOT, global::P_SLOT_SIZE));
 		expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
 		return download::BINARY_MODE;
 	}else if(conn->State == connection_special::AWAITING_SLOT){
@@ -211,7 +211,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 
 		if(!Request_Generator->complete() && Request_Generator->request(conn->latest_request)){
 			//prepare request for needed block
-			request += global::P_BLOCK;
+			request += global::P_REQUEST_BLOCK;
 			request += conn->slot_ID;
 			request += convert::encode<boost::uint64_t>(conn->latest_request.back());
 			int size;
@@ -219,7 +219,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 				size = Tree_Info.get_last_file_block_size() + 1; //+1 for command
 				Request_Generator->set_timeout(global::RE_REQUEST_FINISHING);
 			}else{
-				size = global::P_BLOCK_TO_CLIENT_SIZE;
+				size = global::P_BLOCK_SIZE;
 			}
 			expected.push_back(std::make_pair(global::P_BLOCK, size));
 			expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
@@ -245,7 +245,7 @@ void download_file::response(const int & socket, std::string block)
 	connection_special * conn = &iter->second;
 
 	if(conn->State == connection_special::AWAITING_SLOT){
-		if(block[0] == global::P_SLOT_ID){
+		if(block[0] == global::P_SLOT){
 			//received slot, ready to request blocks
 			conn->slot_ID = block[1];
 			conn->State = connection_special::REQUEST_BLOCKS;
@@ -262,7 +262,7 @@ void download_file::response(const int & socket, std::string block)
 				block.erase(0, 1); //trim command
 				if(Hash_Tree.check_file_block(Tree_Info, conn->latest_request.front(), block.c_str(), block.length())){
 					write_block(conn->latest_request.front(), block);
-					client_server_bridge::add_file_block(Download_Info.hash, conn->latest_request.front());
+					block_arbiter::add_file_block(Download_Info.hash, conn->latest_request.front());
 					Request_Generator->fulfil(conn->latest_request.front());
 				}else{
 					LOGGER << Download_Info.name << ":" << conn->latest_request.front() << " hash failure";

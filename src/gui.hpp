@@ -6,7 +6,6 @@
 #include <boost/utility.hpp>
 
 //custom
-#include "client.hpp"
 #include "convert.hpp"
 #include "database.hpp"
 #include "download_info.hpp"
@@ -17,7 +16,7 @@
 #include "gui_window_download.hpp"
 #include "gui_window_preferences.hpp"
 #include "gui_window_upload.hpp"
-#include "server.hpp"
+#include "p2p.hpp"
 #include "upload_info.hpp"
 
 //gui
@@ -90,7 +89,6 @@ private:
 	bool on_delete_event(GdkEventAny * event);
 	void settings_preferences();
 
-	client Client;
-	server Server;
+	p2p P2P;
 };
 #endif

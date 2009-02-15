@@ -37,7 +37,7 @@ private:
 	database::connection DB;
 
 	//starts at zero and increments every time a host is added to blacklist
-	static atomic_int<int> blacklist_state;
+	static atomic_int<int> & blacklist_state();
 };
 
 }//end of table namespace

@@ -1,11 +1,6 @@
 //SINGLETON, THREADSAFE, THREAD SPAWNING
-
-/*
-this must be shared between client and server, make it a singleton?
-*/
-
-#ifndef H_SERVERINDEX
-#define H_SERVERINDEX
+#ifndef H_SHARE_INDEX
+#define H_SHARE_INDEX
 
 //boost
 #include <boost/bind.hpp>
@@ -15,7 +10,6 @@ this must be shared between client and server, make it a singleton?
 #include <boost/utility.hpp>
 
 //custom
-#include "client_server_bridge.hpp"
 #include "database.hpp"
 #include "global.hpp"
 #include "hash_tree.hpp"
@@ -31,10 +25,10 @@ this must be shared between client and server, make it a singleton?
 #include <sstream>
 #include <string>
 
-class server_index : private boost::noncopyable
+class share_index : private boost::noncopyable
 {
 public:
-	~server_index();
+	~share_index();
 
 	/*
 	Adds a path to the directory tree if one doesn't already exist. The files
@@ -52,10 +46,9 @@ public:
 	static bool is_indexing();
 
 private:
-	server_index();
+	share_index();
 
-	static boost::mutex init_mutex;     //mutex specifically for init()
-	static server_index * Server_Index; //one possible instance of server_index
+	static share_index * Share_Index; //one possible instance of server_index
 
 	//indexing thread (runs in main_loop)
 	boost::thread indexing_thread;

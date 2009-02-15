@@ -2,9 +2,9 @@
 #define H_GUI_WINDOW_DOWNLOAD
 
 //custom
-#include "client.hpp"
 #include "global.hpp"
 #include "gui_window_download_status.hpp"
+#include "p2p.hpp"
 
 //gui
 #include <gtkmm.h>
@@ -17,7 +17,7 @@ class gui_window_download : public Gtk::ScrolledWindow, private boost::noncopyab
 {
 public:
 	gui_window_download(
-		client & Client_in,
+		p2p & P2P_in,
 		Gtk::Notebook * notebook_in
 	);
 
@@ -50,7 +50,7 @@ private:
 	std::set<std::string> open_info_tabs;
 
 	//pointer to client that exists in gui class
-	client * Client;
+	p2p * P2P;
 
 	/*
 	Signaled Functions

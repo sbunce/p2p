@@ -40,9 +40,9 @@ void slot_hash_tree::send_block(const std::string & request, std::string & send)
 		return;
 	}
 
-	client_server_bridge::download_state DS;
-	DS = client_server_bridge::hash_block_available(root_hash, block_num);
-	if(DS == client_server_bridge::DOWNLOADING_NOT_AVAILABLE){
+	block_arbiter::download_state DS;
+	DS = block_arbiter::hash_block_available(root_hash, block_num);
+	if(DS == block_arbiter::DOWNLOADING_NOT_AVAILABLE){
 		//hash tree downloading but it client doesn't yet have requested block
 		LOGGER << "sending P_WAIT to " << *IP;
 		send += global::P_WAIT;

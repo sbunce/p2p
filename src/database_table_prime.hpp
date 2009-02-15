@@ -39,16 +39,10 @@ private:
 	database::connection DB;
 
 	//mutex for all public static functions
-	static boost::mutex Mutex;
-
-	/*
-	Used by initialize_prime_count to determine if prime_count needs to be
-	retrieved from database.
-	*/
-	static bool prime_count_initialized;
+	static boost::mutex & Mutex();
 
 	//how many primes are in the database
-	static unsigned prime_count;
+	static unsigned & prime_count();
 
 	/*
 	initialize_prime_count - retrieves prime count from database if not already done

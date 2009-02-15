@@ -1,8 +1,16 @@
 #include "database_table_prime.hpp"
 
-boost::mutex database::table::prime::Mutex;
-bool database::table::prime::prime_count_initialized(false);
-unsigned database::table::prime::prime_count(0);
+boost::mutex & database::table::prime::Mutex()
+{
+	static boost::mutex * M = new boost::mutex();
+	return *M;
+}
+
+unsigned & database::table::prime::prime_count()
+{
+	static unsigned * PC = new unsigned(0);
+	return *PC;
+}
 
 void database::table::prime::add(mpint & prime)
 {
@@ -11,19 +19,19 @@ void database::table::prime::add(mpint & prime)
 
 void database::table::prime::add(mpint & prime, database::connection & DB)
 {
-	boost::mutex::scoped_lock lock(Mutex);
+	boost::mutex::scoped_lock lock(Mutex());
 	initialize_prime_count();
 	std::stringstream ss;
 	ss << "INSERT INTO prime VALUES (NULL,'" << prime.to_str(64) << "')";
 	DB.query(ss.str());
-	++prime_count;
+	++prime_count();
 }
 
 unsigned database::table::prime::count()
 {
-	boost::mutex::scoped_lock lock(Mutex);
+	boost::mutex::scoped_lock lock(Mutex());
 	initialize_prime_count();
-	return prime_count;
+	return prime_count();
 }
 
 static int prime_count_call_back(unsigned & prime_count, int columns_retrieved,
@@ -37,10 +45,11 @@ static int prime_count_call_back(unsigned & prime_count, int columns_retrieved,
 
 void database::table::prime::initialize_prime_count()
 {
+	static bool prime_count_initialized(false);
 	if(!prime_count_initialized){
 		prime_count_initialized = true;
 		static database::connection DB;
-		DB.query("SELECT count(1) FROM prime", &prime_count_call_back, prime_count);
+		DB.query("SELECT count(1) FROM prime", &prime_count_call_back, prime_count());
 	}
 }
 
@@ -55,7 +64,7 @@ int database::table::prime::retrieve_call_back(
 	std::stringstream ss;
 	ss << "DELETE FROM prime WHERE key = " << response[0];
 	info.get<2>()->query(ss.str());
-	--prime_count;
+	--prime_count();
 	return 0;
 }
 
@@ -66,7 +75,7 @@ bool database::table::prime::retrieve(mpint & prime)
 
 bool database::table::prime::retrieve(mpint & prime, database::connection & DB)
 {
-	boost::mutex::scoped_lock lock(Mutex);
+	boost::mutex::scoped_lock lock(Mutex());
 	initialize_prime_count();
 	boost::tuple<bool, mpint *, database::connection *> info(false, &prime, &DB);
 	DB.query("SELECT key, number FROM prime LIMIT 1", &retrieve_call_back, info);

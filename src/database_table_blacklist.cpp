@@ -1,6 +1,10 @@
 #include "database_table_blacklist.hpp"
 
-atomic_int<int> database::table::blacklist::blacklist_state(0);
+atomic_int<int> & database::table::blacklist::blacklist_state()
+{
+	static atomic_int<int> * bs = new atomic_int<int>(0);
+	return *bs;
+}
 
 void database::table::blacklist::add(const std::string & IP)
 {
@@ -12,7 +16,7 @@ void database::table::blacklist::add(const std::string & IP, database::connectio
 	std::stringstream ss;
 	ss << "INSERT INTO blacklist VALUES ('" << IP << "')";
 	DB.query(ss.str());
-	++blacklist_state;
+	++blacklist_state();
 }
 
 bool database::table::blacklist::is_blacklisted(const std::string & IP)
@@ -37,12 +41,12 @@ bool database::table::blacklist::is_blacklisted(const std::string & IP, database
 
 bool database::table::blacklist::modified(int & last_state_seen)
 {
-	if(last_state_seen == blacklist_state){
+	if(last_state_seen == blacklist_state()){
 		//blacklist has not been updated
 		return false;
 	}else{
 		//blacklist updated
-		last_state_seen = blacklist_state;
+		last_state_seen = blacklist_state();
 		return true;
 	}
 }

@@ -73,8 +73,8 @@ void slot_file::send_block(const std::string & request, std::string & send)
 		return;
 	}
 
-	client_server_bridge::download_state DS = client_server_bridge::file_block_available(root_hash, block_num);
-	if(DS == client_server_bridge::DOWNLOADING_NOT_AVAILABLE){
+	block_arbiter::download_state DS = block_arbiter::file_block_available(root_hash, block_num);
+	if(DS == block_arbiter::DOWNLOADING_NOT_AVAILABLE){
 		LOGGER << "sending P_WAIT to " << *IP;
 		send += global::P_WAIT;
 		Speed_Calculator.update(global::P_WAIT_SIZE);

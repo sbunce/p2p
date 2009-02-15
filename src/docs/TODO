@@ -1,6 +1,10 @@
 TODO
 
+-make virtual in download pure virtual
+
 -add stop/start functions to download, and rename cancel to remove
+
+-clean up the p2p_buffer slicing code. Break it up in to request/response.
 
 
 HEADER ANNOTATIONS
@@ -20,8 +24,6 @@ an A-TAG that the p2p frontend could interpret.
 
 THINK ABOUT
 
--Think about having a link on a webpage you could click to run the p2p program.
-The paramter could be all the info needed to dl the file.
 -Think about CMWC4096 PRNG seed issue. After key exchange, each client/server
 sends 1/2 the size of the PRNG seed encrypted to the other.
 -Think about how ISP might detect protocol via knowing handshake size/port.

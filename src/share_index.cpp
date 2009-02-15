@@ -1,47 +1,47 @@
-#include "server_index.hpp"
+#include "share_index.hpp"
 
 //BEGIN STATIC
-boost::mutex server_index::init_mutex;
-server_index * server_index::Server_Index(NULL);
+share_index * share_index::Share_Index(NULL);
 
-void server_index::add_path(const std::string & path)
+void share_index::add_path(const std::string & path)
 {
 	init();
-	boost::mutex::scoped_lock lock(Server_Index->PAD_mutex);
-	Server_Index->Pending_Add_Path.push_back(path);
+	boost::mutex::scoped_lock lock(Share_Index->PAD_mutex);
+	Share_Index->Pending_Add_Path.push_back(path);
 }
 
-bool server_index::is_indexing()
+bool share_index::is_indexing()
 {
 	init();
-	return Server_Index->indexing;
+	return Share_Index->indexing;
 }
 
-void server_index::init()
+void share_index::init()
 {
-	boost::mutex::scoped_lock lock(init_mutex);
-	if(Server_Index == NULL){
-		Server_Index = new server_index();
+	static boost::mutex Mutex;
+	boost::mutex::scoped_lock lock(Mutex);
+	if(Share_Index == NULL){
+		Share_Index = new share_index();
 	}
 }
 //END STATIC
 
-server_index::server_index()
+share_index::share_index()
 :
 	indexing(false),
 	generate_hash_tree_disabled(true)
 {
 	boost::filesystem::create_directory(global::SHARE_DIRECTORY);
-	indexing_thread = boost::thread(boost::bind(&server_index::main_loop, this));
+	indexing_thread = boost::thread(boost::bind(&share_index::main_loop, this));
 }
 
-server_index::~server_index()
+share_index::~share_index()
 {
 	indexing_thread.interrupt();
 	indexing_thread.join();
 }
 
-void server_index::add_pending()
+void share_index::add_pending()
 {
 	boost::mutex::scoped_lock lock(PAD_mutex);
 	generate_hash_tree_disabled = true;
@@ -56,7 +56,7 @@ void server_index::add_pending()
 	generate_hash_tree_disabled = false;
 }
 
-void server_index::check_path(const std::string & path)
+void share_index::check_path(const std::string & path)
 {
 	namespace fs = boost::filesystem;
 	std::deque<std::string> tokens;
@@ -77,7 +77,7 @@ void server_index::check_path(const std::string & path)
 	check_path_recurse(is_file, file_size, Root, tokens, path);
 }
 
-void server_index::check_path_recurse(const bool & is_file, const boost::uint64_t & file_size,
+void share_index::check_path_recurse(const bool & is_file, const boost::uint64_t & file_size,
 	std::map<std::string, directory_contents> & Directory, std::deque<std::string> & tokens, const std::string & path)
 {
 	if(tokens.size() == 0){
@@ -101,7 +101,7 @@ void server_index::check_path_recurse(const bool & is_file, const boost::uint64_
 	}
 }
 
-void server_index::check_missing()
+void share_index::check_missing()
 {
 	#ifdef WIN32
 	//windows might have multiple roots, ie C:, D:
@@ -117,7 +117,7 @@ calls remove_missing_recurse_2 on all directory_contents elements,
 remove_missing_recurse_2 processes all files in the directory, and calls
 remove_missing_recurse_1 on all directories within the directory.
 */
-void server_index::check_missing_recurse_1(
+void share_index::check_missing_recurse_1(
 	std::map<std::string, directory_contents> & Directory, std::string current_directory)
 {
 	std::map<std::string, directory_contents>::iterator iter_cur, iter_end;
@@ -135,7 +135,7 @@ void server_index::check_missing_recurse_1(
 	}	
 }
 
-bool server_index::check_missing_recurse_2(directory_contents & DC, std::string current_directory)
+bool share_index::check_missing_recurse_2(directory_contents & DC, std::string current_directory)
 {
 	namespace fs = boost::filesystem;
 	std::map<std::string, boost::uint64_t>::iterator iter_cur, iter_end;
@@ -171,7 +171,7 @@ bool server_index::check_missing_recurse_2(directory_contents & DC, std::string 
 	return DC.Directory.empty() && DC.File.empty();
 }
 
-void server_index::generate_hash_tree(const std::string & file_path)
+void share_index::generate_hash_tree(const std::string & file_path)
 {
 	namespace fs = boost::filesystem;
 
@@ -194,21 +194,17 @@ void server_index::generate_hash_tree(const std::string & file_path)
 	}
 }
 
-int server_index::path_call_back(int columns_retrieved, char ** response, char ** column_name)
+int share_index::path_call_back(int columns_retrieved, char ** response, char ** column_name)
 {
 	assert(response[0]);
 	check_path(response[0]);
 	return 0;
 }
 
-void server_index::main_loop()
+void share_index::main_loop()
 {
-	while(client_server_bridge::server_index_is_blocked()){
-		portable_sleep::ms(1000);
-	}
-
 	//populate directory tree
-	DB.query("SELECT path FROM share", this, &server_index::path_call_back);
+	DB.query("SELECT path FROM share", this, &share_index::path_call_back);
 	generate_hash_tree_disabled = false;
 
 	while(true){
@@ -223,7 +219,7 @@ void server_index::main_loop()
 	}
 }
 
-void server_index::scan_share(std::string directory_name)
+void share_index::scan_share(std::string directory_name)
 {
 	namespace fs = boost::filesystem;
 	fs::path path = fs::system_complete(fs::path(directory_name, fs::native));
@@ -246,7 +242,7 @@ void server_index::scan_share(std::string directory_name)
 	}
 }
 
-void server_index::tokenize_path(const std::string & path, std::deque<std::string> & tokens)
+void share_index::tokenize_path(const std::string & path, std::deque<std::string> & tokens)
 {
 	typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
 	boost::char_separator<char> char_sep("/");

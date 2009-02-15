@@ -6,7 +6,7 @@ This object is used within the server_buffer which is locked.
 #define H_SLOT
 
 //custom
-#include "client_server_bridge.hpp"
+#include "block_arbiter.hpp"
 #include "database.hpp"
 #include "global.hpp"
 #include "speed_calculator.hpp"

@@ -8,7 +8,7 @@ download_hash_tree::download_hash_tree(
 	close_slots(false),
 	Tree_Info(Download_Info_in.hash, Download_Info_in.size)
 {
-	client_server_bridge::start_hash_tree(Download_Info.hash);
+	block_arbiter::start_hash_tree(Download_Info.hash);
 	visible = true;
 	boost::uint64_t bad_block;
 	if(Hash_Tree.check(Tree_Info, bad_block)){
@@ -29,7 +29,7 @@ download_hash_tree::download_hash_tree(
 download_hash_tree::~download_hash_tree()
 {
 	if(cancel){
-		client_server_bridge::finish_download(Download_Info.hash);
+		block_arbiter::finish_download(Download_Info.hash);
 		std::remove((global::DOWNLOAD_DIRECTORY + Download_Info.name).c_str());
 	}else{
 		DB_Hash.set_state(Download_Info.hash, Tree_Info.get_tree_size(), database::table::hash::COMPLETE);
@@ -82,9 +82,9 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 			//no free slots left, wait for one to free up
 			return download::NO_REQUEST;
 		}else{
-			request = global::P_REQUEST_SLOT_HASH + convert::hex_to_bin(Download_Info.hash);
+			request = global::P_REQUEST_SLOT_HASH_TREE + convert::hex_to_bin(Download_Info.hash);
 			++slots_used;
-			expected.push_back(std::make_pair(global::P_SLOT_ID, global::P_SLOT_ID_SIZE));
+			expected.push_back(std::make_pair(global::P_SLOT, global::P_SLOT_SIZE));
 			expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
 			conn->State = connection_special::AWAITING_SLOT;
 			return download::BINARY_MODE;
@@ -136,8 +136,7 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 		}
 
 		if(Request_Generator->request(conn->latest_request)){
-			//no request to be made at the moment
-			request += global::P_BLOCK;
+			request += global::P_REQUEST_BLOCK;
 			request += conn->slot_ID;
 			request += convert::encode<boost::uint64_t>(conn->latest_request.back());
 			expected.push_back(std::make_pair(global::P_BLOCK, Tree_Info.block_size(conn->latest_request.back()) + 1));
@@ -170,7 +169,7 @@ void download_hash_tree::response(const int & socket, std::string block)
 	connection_special * conn = &iter->second;
 
 	if(conn->State == connection_special::AWAITING_SLOT){
-		if(block[0] == global::P_SLOT_ID){
+		if(block[0] == global::P_SLOT){
 			//received slot, ready to request blocks
 			conn->slot_ID = block[1];
 			conn->State = connection_special::REQUEST_BLOCKS;
@@ -191,7 +190,7 @@ void download_hash_tree::response(const int & socket, std::string block)
 
 			boost::uint64_t highest_good;
 			if(Tree_Info.highest_good(highest_good)){
-				client_server_bridge::update_hash_tree_highest(Download_Info.hash, highest_good);
+				block_arbiter::update_hash_tree_highest(Download_Info.hash, highest_good);
 			}
 
 			Request_Generator->fulfil(conn->latest_request.front());

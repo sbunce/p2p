@@ -10,7 +10,7 @@
 //custom
 #include "atomic_int.hpp"
 #include "convert.hpp"
-#include "client_server_bridge.hpp"
+#include "block_arbiter.hpp"
 #include "database.hpp"
 #include "download.hpp"
 #include "download_info.hpp"

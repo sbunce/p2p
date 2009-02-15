@@ -1,5 +1,4 @@
 //NOT-THREADSAFE
-
 #ifndef H_DOWNLOAD
 #define H_DOWNLOAD
 

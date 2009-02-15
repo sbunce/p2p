@@ -27,8 +27,9 @@ def env_setup(env):
 
 	#platform specific options
 	if sys.platform == 'linux2':
-		env['CCFLAGS'].append('-O3')   #max optimizations
-		env['LIBS'].append('pthread')  #needed for sqlite3
+		env['CCFLAGS'].append('-O0')
+		env['CCFLAGS'].append('-fno-inline')
+		env['LIBS'].append('pthread')
 	if sys.platform == 'win32':
 		env['LIBPATH'].append(__win32_lib_dir())
 		env['CPPPATH'].append(__win32_include_dir())
@@ -37,7 +38,7 @@ def env_setup(env):
 		env['CCFLAGS'].append('/Ox')     #max optimizations
 		env['CCFLAGS'].append('/DWIN32') #make sure this is defined
 		env['LIBS'].append('ws2_32')     #winsock
-		env['LIBS'].append('advapi32')   #random number gen
+		env['LIBS'].append('advapi32')   #random number generator
 
 def env_setup_static(env):
 	environment.define_keys(env)

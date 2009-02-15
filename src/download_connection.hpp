@@ -1,9 +1,8 @@
 #ifndef H_DOWNLOAD_CONNECTION
 #define H_DOWNLOAD_CONNECTION
 
-//custom
-#include "download.hpp"
-#include "locking_shared_ptr.hpp"
+//boost
+#include <boost/shared_ptr.hpp>
 
 //std
 #include <string>
@@ -15,7 +14,7 @@ class download_connection
 {
 public:
 	download_connection(
-		locking_shared_ptr<download> Download_in,
+		boost::shared_ptr<download> Download_in,
 		const std::string & IP_in
 	):
 		Download(Download_in),
@@ -25,6 +24,6 @@ public:
 
 	int socket;
 	std::string IP;
-	locking_shared_ptr<download> Download;
+	boost::shared_ptr<download> Download;
 };
 #endif

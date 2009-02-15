@@ -1,6 +1,6 @@
-#include "client_new_connection.hpp"
+#include "p2p_new_connection.hpp"
 
-client_new_connection::client_new_connection(
+p2p_new_connection::p2p_new_connection(
 	fd_set & master_FDS_in,
 	atomic_int<int> & FD_max_in,
 	atomic_int<int> & max_connections_in,
@@ -24,20 +24,20 @@ client_new_connection::client_new_connection(
 	#endif
 }
 
-client_new_connection::~client_new_connection()
+p2p_new_connection::~p2p_new_connection()
 {
 	#ifdef WIN32
 	WSACleanup();
 	#endif
 }
 
-void client_new_connection::add_unresponsive(const std::string & IP)
+void p2p_new_connection::add_unresponsive(const std::string & IP)
 {
 	boost::mutex::scoped_lock lock(KU_mutex);
 	Known_Unresponsive.insert(std::make_pair(time(NULL), IP));
 }
 
-bool client_new_connection::check_unresponsive(const std::string & IP)
+bool p2p_new_connection::check_unresponsive(const std::string & IP)
 {
 	boost::mutex::scoped_lock lock(KU_mutex);
 
@@ -59,7 +59,7 @@ bool client_new_connection::check_unresponsive(const std::string & IP)
 	return false;
 }
 
-void client_new_connection::block_concurrent(const download_connection & DC)
+void p2p_new_connection::block_concurrent(const download_connection & DC)
 {
 	/*
 	If two more DC's with the same IP reach here only one will be let past and
@@ -90,7 +90,7 @@ void client_new_connection::block_concurrent(const download_connection & DC)
 	}
 }
 
-void client_new_connection::new_connection(download_connection DC)
+void p2p_new_connection::new_connection(download_connection DC)
 {
 	/*
 	Do not initiate new connections if at connection limit.
@@ -119,7 +119,7 @@ void client_new_connection::new_connection(download_connection DC)
 	It's possible the download was stopped while the DC was in the thread pool.
 	If it was stopped abort connection attempt.
 	*/
-	if(!client_buffer::is_downloading(DC.Download)){
+	if(!p2p_buffer::is_downloading(DC.Download)){
 		return;
 	}
 
@@ -140,7 +140,8 @@ void client_new_connection::new_connection(download_connection DC)
 	Before making new connection check to see if a connection was already
 	created to this server.
 	*/
-	if(client_buffer::add_connection(DC)){
+	if(p2p_buffer::is_connected(DC.IP)){
+		p2p_buffer::add_download_connection(DC);
 		return;
 	}
 
@@ -152,20 +153,21 @@ void client_new_connection::new_connection(download_connection DC)
 		if(DC.socket > *FD_max){
 			*FD_max = DC.socket;
 		}
-		client_buffer::new_connection(DC);
+		p2p_buffer::add_connection(DC.socket, DC.IP);
+		p2p_buffer::add_download_connection(DC);
 		FD_SET(DC.socket, master_FDS);
 		++*connections;
 	}
 }
 
-void client_new_connection::process_DC(download_connection DC)
+void p2p_new_connection::process_DC(download_connection DC)
 {
 	block_concurrent(DC);
 	new_connection(DC);
 	unblock(DC);
 }
 
-void client_new_connection::queue(download_connection DC)
+void p2p_new_connection::queue(download_connection DC)
 {
 	//resolve hostname
 	if(!resolve::hostname(DC.IP)){
@@ -185,14 +187,15 @@ void client_new_connection::queue(download_connection DC)
 	Before using a thread, check to see if a connection to this server already
 	exists. If it does add the download connection to it.
 	*/
-	if(client_buffer::add_connection(DC)){
+	if(p2p_buffer::is_connected(DC.IP)){
+		p2p_buffer::add_download_connection(DC);
 		return;
 	}
 
-	Thread_Pool.queue(boost::bind(&client_new_connection::process_DC, this, DC));
+	Thread_Pool.queue(boost::bind(&p2p_new_connection::process_DC, this, DC));
 }
 
-void client_new_connection::unblock(const download_connection & DC)
+void p2p_new_connection::unblock(const download_connection & DC)
 {
 	/*
 	Remove this server from the current connection attempts to let DC_block_concurrent

@@ -2,9 +2,9 @@
 #define H_GUI_WINDOW_UPLOAD
 
 //custom
-#include "server.hpp"
 #include "global.hpp"
 #include "gui_window_download_status.hpp"
+#include "p2p.hpp"
 
 //gui
 #include <gtkmm.h>
@@ -12,7 +12,7 @@
 class gui_window_upload : public Gtk::ScrolledWindow, private boost::noncopyable
 {
 public:
-	gui_window_upload(server & Server_in);
+	gui_window_upload(p2p & P2P_in);
 
 private:
 	//convenience pointer
@@ -33,7 +33,7 @@ private:
 	Gtk::CellRendererProgress * cell;
 
 	//pointer to server that exists in gui class
-	server * Server;
+	p2p * P2P;
 
 	/*
 	Signaled Functions

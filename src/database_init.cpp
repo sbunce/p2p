@@ -30,18 +30,17 @@ static void setup_hash(database::connection & DB)
 
 static void setup_preferences(database::connection & DB)
 {
-	DB.query("CREATE TABLE IF NOT EXISTS preferences (client_connections INTEGER, \
-		download_directory TEXT, download_rate INTEGER, server_connections INTEGER, \
-		share_directory TEXT, upload_rate INTEGER)");
+	DB.query("CREATE TABLE IF NOT EXISTS preferences (download_directory TEXT, \
+		share_directory TEXT, max_connections INTEGER, download_rate INTEGER, \
+		upload_rate INTEGER)");
 	bool exists = false;
 	DB.query("SELECT count(1) FROM preferences", &check_exists_call_back, exists);
 	if(!exists){
 		//set defaults if no preferences yet exist
 		std::stringstream ss;
-		ss << "INSERT INTO preferences VALUES(" << global::CLIENT_CONNECTIONS
-			<< ", '" << global::DOWNLOAD_DIRECTORY << "', " << global::DOWNLOAD_RATE
-			<< ", " << global::SERVER_CONNECTIONS << ", '" << global::SHARE_DIRECTORY
-			<< "', " << global::UPLOAD_RATE << ")";
+		ss << "INSERT INTO preferences VALUES('" << global::DOWNLOAD_DIRECTORY
+		<< "', '" << global::SHARE_DIRECTORY << "', " << global::MAX_CONNECTIONS 
+		<< ", " << global::DOWNLOAD_RATE << ", " << global::UPLOAD_RATE << ")";
 		DB.query(ss.str());
 	}
 }

@@ -166,13 +166,6 @@ env.unit_test([
 ])
 
 env.unit_test([
-	'locking_shared_ptr.cpp',
-	boost.static_lib('date_time'),
-	boost.static_lib('system'),
-	boost.static_lib('thread')
-])
-
-env.unit_test([
 	'request_generator.cpp',
 	'../request_generator.cpp',
 	boost.static_lib('date_time'),

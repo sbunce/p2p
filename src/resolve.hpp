@@ -17,9 +17,6 @@
 
 namespace resolve
 {
-	//do not use this mutex outside the resolve namespace for any reason
-	static boost::mutex gethostbyname_mutex;
-
 	/*
 	Resolve a hostname to an IP address. If an IP passed to this function nothing
 	will be done.
@@ -28,7 +25,8 @@ namespace resolve
 	*/
 	static bool hostname(std::string & hostname_IP)
 	{
-		boost::mutex::scoped_lock lock(gethostbyname_mutex);
+		static boost::mutex Mutex;
+		boost::mutex::scoped_lock lock(Mutex);
 		hostent * he = gethostbyname(hostname_IP.c_str());
 		if(he == NULL){
 			LOGGER << "error resolving " << hostname_IP;

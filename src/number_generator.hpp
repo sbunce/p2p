@@ -1,4 +1,4 @@
-//THREADSAFE, THREAD SPAWNING
+//THREADSAFE, SINGLETON, THREAD SPAWNING
 #ifndef H_NUMBER_GENERATOR
 #define H_NUMBER_GENERATOR
 
@@ -29,49 +29,20 @@ class number_generator : private boost::noncopyable
 public:
 
 	/*
-	Returns the amount of primes that are waiting in cache to be returned by the
-	random_prime_mpint() function.
+	prime_count        - returns number of primes in prime cache
+	random_mpint       - returns random mpint of specified size
+	random_prime_mpint - returns random mpint global::DH_KEY_SIZE long
+	                     Blocks if cache empty, until new primes generated.
+	init               - initializes singleton, starts prime generate thread
 	*/
-	static unsigned prime_count()
-	{
-		init();
-		return ((number_generator *)Number_Generator)->prime_count_priv();
-	}
-
-	/*
-	Returns a random mpint that is bytes long.
-	*/
-	static mpint random_mpint(const int & bytes)
-	{
-		init();
-		return ((number_generator *)Number_Generator)->random_mpint_priv(bytes);
-	}
-
-	/*
-	Returns a random prime mpint that is 128 bytes long. This is used for the
-	Diffie_Hellman in encryption class.
-	*/
-	static mpint random_prime_mpint()
-	{
-		init();
-		return ((number_generator *)Number_Generator)->random_prime_mpint_priv();
-	}
-
-	//function to initialize the singleton
-	static void init()
-	{
-		boost::mutex::scoped_lock lock(init_mutex);
-		if(Number_Generator == NULL){
-			Number_Generator = new number_generator;
-		}
-	}
+	static unsigned prime_count();
+	static mpint random_mpint(const int & bytes);
+	static mpint random_prime_mpint();
+	static void init();
 
 private:
 	//only the number generator can initialize itself
 	number_generator();
-
-	//mutex for all public static functions
-	static boost::mutex init_mutex;
 
 	//the one possible instance of number_generator
 	static number_generator * Number_Generator;
@@ -82,29 +53,7 @@ private:
 		length is how many random bytes desired
 		data is an optional pointer to an object that can be passed to PRNG
 	*/
-	static int PRNG(unsigned char * buff, int length, void * data)
-	{
-#ifdef WIN32
-		HCRYPTPROV hProvider = 0;
-		if(CryptAcquireContextW(&hProvider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)){
-			if(CryptGenRandom(hProvider, sizeof(buff), buff)){
-				CryptReleaseContext(hProvider, 0); 
-				return length;
-			}
-		}
-		LOGGER << "error generating random number";
-		exit(1);
-#else
-		char ch;
-		int length_start = length;
-		std::fstream fin("/dev/urandom", std::ios::in | std::ios::binary);
-		while(length--){
-			fin.get(ch);
-			*buff++ = (unsigned char)ch;
-		}
-		return length_start;
-#endif
-	}
+	static int PRNG(unsigned char * buff, int length, void * data);
 
 	/*
 	All of these functions are associated with public static member functions.

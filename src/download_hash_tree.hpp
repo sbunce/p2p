@@ -7,8 +7,8 @@
 #include <boost/filesystem.hpp>
 
 //custom
+#include "block_arbiter.hpp"
 #include "convert.hpp"
-#include "client_server_bridge.hpp"
 #include "database.hpp"
 #include "download.hpp"
 #include "download_connection.hpp"
