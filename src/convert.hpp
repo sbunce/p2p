@@ -241,8 +241,8 @@ namespace convert
 				return strcmp(left_temp.c_str(), right_temp.c_str());		
 			}
 		}else{
-			LOGGER << "error reading size\n";
-			exit(1);
+			//unrecognized size
+			return 0;
 		}
 	}
 }

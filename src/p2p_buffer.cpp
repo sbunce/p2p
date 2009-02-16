@@ -9,9 +9,11 @@ boost::mutex & p2p_buffer::Mutex()
 
 std::map<int, boost::shared_ptr<p2p_buffer> > & p2p_buffer::P2P_Buffer()
 {
-	static std::map<int, boost::shared_ptr<p2p_buffer> > * B =
-		new std::map<int, boost::shared_ptr<p2p_buffer> >();
-	return *B;
+	/*
+	Destructor must be called upon program close. Order does not matter.
+	*/
+	static std::map<int, boost::shared_ptr<p2p_buffer> > B;
+	return B;
 }
 
 int & p2p_buffer::send_pending()
@@ -22,19 +24,21 @@ int & p2p_buffer::send_pending()
 
 std::set<boost::shared_ptr<download> > & p2p_buffer::Unique_Download()
 {
-	static std::set<boost::shared_ptr<download> > * UD =
-		new std::set<boost::shared_ptr<download> >();
-	return *UD;
+	/*
+	Destructor must be called upon program close. Order does not matter.
+	*/
+	static std::set<boost::shared_ptr<download> > UD;
+	return UD;
 }
 
-void p2p_buffer::add_connection(const int & socket_FD, const std::string & IP)
+void p2p_buffer::add_connection(const int & socket_FD, const std::string & IP, const bool & initiator)
 {
 	boost::mutex::scoped_lock lock(Mutex());
 	std::map<int, boost::shared_ptr<p2p_buffer> >::iterator CB_iter;
 	CB_iter = P2P_Buffer().find(socket_FD);
 	if(CB_iter == P2P_Buffer().end()){
 		std::pair<std::map<int, boost::shared_ptr<p2p_buffer> >::iterator, bool> ret;
-		ret = P2P_Buffer().insert(std::make_pair(socket_FD, new p2p_buffer(socket_FD, IP)));
+		ret = P2P_Buffer().insert(std::make_pair(socket_FD, new p2p_buffer(socket_FD, IP, initiator)));
 		assert(ret.second);
 		CB_iter = ret.first;
 	}
@@ -136,6 +140,7 @@ void p2p_buffer::erase(const int & socket_FD)
 
 bool p2p_buffer::is_connected(const std::string & IP)
 {
+	boost::mutex::scoped_lock lock(Mutex());
 	std::map<int, boost::shared_ptr<p2p_buffer> >::iterator iter_cur, iter_end;
 	iter_cur = P2P_Buffer().begin();
 	iter_end = P2P_Buffer().end();
@@ -301,27 +306,30 @@ p2p_buffer::p2p_buffer()
 
 p2p_buffer::p2p_buffer(
 	const int & socket_in,
-	const std::string & IP_in
+	const std::string & IP_in,
+	const bool & initiator_in
 ):
 	socket(socket_in),
 	IP(IP_in),
+	initiator(initiator_in),
 	bytes_seen(0),
 	last_seen(time(NULL)),
 	download_slots_used(0),
 	max_pipeline_size(1),
-	exchange_key(true),
+	key_exchange(true),
 	http_response_sent(false)
 {
 	recv_buff.reserve(global::MAX_MESSAGE_SIZE * global::PIPELINE_SIZE);
 	send_buff.reserve(global::MAX_MESSAGE_SIZE * global::PIPELINE_SIZE);
 
 	//look at encryption.h for key exchange protocol
-/*
-	send_buff += Encryption.get_prime();
-	Encryption.set_prime(send_buff);
-	send_buff += Encryption.get_local_result();
-	++send_pending();
-*/
+	if(initiator_in){
+		send_buff += Encryption.get_prime();
+		Encryption.set_prime(send_buff);
+		send_buff += Encryption.get_local_result();
+		++send_pending();
+	}
+
 	for(int x=0; x<256; ++x){
 		Upload_Slot[x] = NULL;
 	}
@@ -383,11 +391,11 @@ bool p2p_buffer::find_empty_slot(const std::string & root_hash, int & slot_num)
 
 void p2p_buffer::prepare_download_requests()
 {
-/*
-	if(exchange_key){
+	if(key_exchange){
+		//no requests until key exchange complete
 		return;
 	}
-*/
+
 	if(Download.empty()){
 		return;
 	}
@@ -425,7 +433,7 @@ void p2p_buffer::prepare_download_requests()
 		PR.Mode = (*Download_iter)->request(socket, request, PR.expected, download_slots_used);
 		assert(download_slots_used >= 0 && download_slots_used <= 255);
 
-		//Encryption.crypt_send(request);
+		Encryption.crypt_send(request);
 
 		if(PR.Mode == download::NO_REQUEST){
 			//no request to be made from the download
@@ -450,107 +458,69 @@ void p2p_buffer::prepare_download_requests()
 	}
 }
 
-void p2p_buffer::recv_buff_process(char * buff, const int & n_bytes)
+void p2p_buffer::protocol_localhost(char * buff, const int & n_bytes)
 {
-	last_seen = time(NULL);
-	bool initial_empty = send_buff.empty();
-	if(IP.find("127") == 0){
-		//localhost obeys entirely different protocol
-		if(http_response_sent){
-			return;
-		}
-
-		recv_buff.append(buff, n_bytes);
-		if(recv_buff.size() > 1024*1024){
-			//very generous sanity check for local recv buff
-			recv_buff.clear();
-		}
-		if(recv_buff.find("\n\r") != std::string::npos){
-			//http request ends with \n\r
-			HTTP.process(recv_buff, send_buff);
-			http_response_sent = true;
-		}
-		if(initial_empty && !send_buff.empty()){
-			++send_pending();
-		}
+	if(http_response_sent){
+		/*
+		Localhost only allowed one HTTP request. It sends the request and then as
+		soon as the response is sent it is disconnected. This is normal web server
+		behavior.
+		*/
 		return;
 	}
 
-/*
-	if(exchange_key){
-		remote_result.append(buff, n_bytes);
-		if(remote_result.size() == global::DH_KEY_SIZE){
-			Encryption.set_remote_result(remote_result);
-			recv_buff.clear();
-			exchange_key = false;
-		}
-		if(remote_result.size() > global::DH_KEY_SIZE){
-			LOGGER << " abusive, failed key negotation, too many bytes";
-			DB_Blacklist.add(IP);
-		}
-		return;
-	}
-
-	Encryption.crypt_recv(buff, n_bytes);
-*/
 	recv_buff.append(buff, n_bytes);
-	if(recv_buff.size() > global::MAX_MESSAGE_SIZE * global::PIPELINE_SIZE){
-		//server sent more than the maximum possible
-		LOGGER << "remote host overpipelined (exceeded maximum buffer size) " << IP;
-		DB_Blacklist.add(IP);
+	if(recv_buff.size() > 1024*1024){
+		//very generous sanity check for local recv buff
+		recv_buff.clear();
 	}
-
-//DEBUG, break this up in to requests and responses
-
-	//slice off one command at a time and process
-	std::string process_send, process_request;
-	while(recv_buff.size()){
-		process_send.clear();
-		process_request.clear();
-
-		if(recv_buff[0] == global:: P_SLOT || recv_buff[0] == global::P_BLOCK
-			|| recv_buff[0] == global::P_WAIT || recv_buff[0] == global::P_ERROR)
-		{
-			if(!recv_buff_read_block()){
-				break;
-			}
-		}else if(recv_buff[0] == global::P_CLOSE_SLOT && recv_buff.size() >= global::P_CLOSE_SLOT_SIZE){
-			process_request = recv_buff.substr(0, global::P_CLOSE_SLOT_SIZE);
-			recv_buff.erase(0, global::P_CLOSE_SLOT_SIZE);
-			close_slot(process_request);
-		}else if(recv_buff[0] == global::P_REQUEST_SLOT_HASH_TREE && recv_buff.size() >= global::P_REQUEST_SLOT_HASH_TREE_SIZE){
-			process_request = recv_buff.substr(0, global::P_REQUEST_SLOT_HASH_TREE_SIZE);
-			recv_buff.erase(0, global::P_REQUEST_SLOT_HASH_TREE_SIZE);
-			request_slot_hash(process_request, process_send);
-		}else if(recv_buff[0] == global::P_REQUEST_SLOT_FILE && recv_buff.size() >= global::P_REQUEST_SLOT_FILE_SIZE){
-			process_request = recv_buff.substr(0, global::P_REQUEST_SLOT_FILE_SIZE);
-			recv_buff.erase(0, global::P_REQUEST_SLOT_FILE_SIZE);
-			request_slot_file(process_request, process_send);
-		}else if(recv_buff[0] == global::P_REQUEST_BLOCK && recv_buff.size() >= global::P_REQUEST_BLOCK_SIZE){
-			process_request = recv_buff.substr(0, global::P_REQUEST_BLOCK_SIZE);
-			recv_buff.erase(0, global::P_REQUEST_BLOCK_SIZE);
-			send_block(process_request, process_send);
-		}else{
-			//no full command left to slice off
-			break;
-		}
-
-		//encrypt bytes to send
-		//Encryption.crypt_send(process_send);
-		send_buff += process_send;
-	}
-
-	if(initial_empty && !send_buff.empty()){
-		++send_pending();
+	if(recv_buff.find("\n\r") != std::string::npos){
+		//http request ends with \n\r
+		HTTP.process(recv_buff, send_buff);
+		http_response_sent = true;
 	}
 }
 
-bool p2p_buffer::recv_buff_read_block()
+void p2p_buffer::protocol_key_exchange(char * buff, const int & n_bytes)
 {
-	//preconditions
-	assert(recv_buff.size() != 0);
-	assert(recv_buff[0] == global::P_SLOT || recv_buff[0] == global::P_BLOCK
-		|| recv_buff[0] == global::P_WAIT || recv_buff[0] == global::P_ERROR);
+	if(initiator){
+		//we initiated the connection so we will wait for servers g^x % p
+		recv_buff.append(buff, n_bytes);
+		if(recv_buff.size() == global::DH_KEY_SIZE){
+			Encryption.set_remote_result(recv_buff);
+			recv_buff.clear();
+			key_exchange = false;
+		}
+		if(recv_buff.size() > global::DH_KEY_SIZE){
+			LOGGER << " abusive, failed key negotation, too many bytes";
+			DB_Blacklist.add(IP);
+		}
+	}else{
+		//someone connecting to us. We will await their p, and their g^x % p
+		recv_buff.append(buff, n_bytes);
+		if(recv_buff.size() == global::DH_KEY_SIZE*2){
+			if(!Encryption.set_prime(recv_buff.substr(0,global::DH_KEY_SIZE))){
+				LOGGER << IP << " sent non-prime for key-exchange";
+				DB_Blacklist.add(IP);
+				return;
+			}
+			Encryption.set_remote_result(recv_buff.substr(global::DH_KEY_SIZE,global::DH_KEY_SIZE));
+			recv_buff.clear();
+			send_buff += Encryption.get_local_result();
+			key_exchange = false;
+		}
+		if(recv_buff.size() > global::DH_KEY_SIZE*2){
+			LOGGER << "abusive client " << IP << " failed key negotation, too many bytes";
+			DB_Blacklist.add(IP);
+		}
+	}
+}
+
+bool p2p_buffer::protocol_response()
+{
+	if(recv_buff.empty()){
+		return false;
+	}
 
 	if(Pipeline.empty()){
 		LOGGER << "remote host made hash/file request when pipeline empty";
@@ -616,6 +586,81 @@ bool p2p_buffer::recv_buff_read_block()
 
 	LOGGER << "invalid mode";
 	exit(1);
+}
+
+bool p2p_buffer::protocol_request(std::string & response)
+{
+	if(recv_buff.empty()){
+		return false;
+	}
+
+	if(recv_buff[0] == global::P_CLOSE_SLOT && recv_buff.size() >= global::P_CLOSE_SLOT_SIZE){
+		std::string request = recv_buff.substr(0, global::P_CLOSE_SLOT_SIZE);
+		recv_buff.erase(0, global::P_CLOSE_SLOT_SIZE);
+		close_slot(request);
+	}else if(recv_buff[0] == global::P_REQUEST_SLOT_HASH_TREE && recv_buff.size() >= global::P_REQUEST_SLOT_HASH_TREE_SIZE){
+		std::string request = recv_buff.substr(0, global::P_REQUEST_SLOT_HASH_TREE_SIZE);
+		recv_buff.erase(0, global::P_REQUEST_SLOT_HASH_TREE_SIZE);
+		request_slot_hash(request, response);
+	}else if(recv_buff[0] == global::P_REQUEST_SLOT_FILE && recv_buff.size() >= global::P_REQUEST_SLOT_FILE_SIZE){
+		std::string request = recv_buff.substr(0, global::P_REQUEST_SLOT_FILE_SIZE);
+		recv_buff.erase(0, global::P_REQUEST_SLOT_FILE_SIZE);
+		request_slot_file(request, response);
+	}else if(recv_buff[0] == global::P_REQUEST_BLOCK && recv_buff.size() >= global::P_REQUEST_BLOCK_SIZE){
+		std::string request = recv_buff.substr(0, global::P_REQUEST_BLOCK_SIZE);
+		recv_buff.erase(0, global::P_REQUEST_BLOCK_SIZE);
+		send_block(request, response);
+	}else{
+		return false;
+	}
+	return true;
+}
+
+void p2p_buffer::recv_buff_process(char * buff, const int & n_bytes)
+{
+	last_seen = time(NULL);
+	bool initial_empty = send_buff.empty();
+	if(IP.find("127") == 0){
+		protocol_localhost(buff, n_bytes);
+	}else if(key_exchange){
+		protocol_key_exchange(buff, n_bytes);
+	}else{
+		Encryption.crypt_recv(buff, n_bytes);
+		recv_buff.append(buff, n_bytes);
+
+		//response to a request that will be encrypted
+		std::string response;
+
+		//processes recv_buff one message per iteration
+		while(true){
+			response.clear();
+			if(global::command_type(recv_buff[0]) == global::COMMAND_RESPONSE){
+				if(!protocol_response()){
+					break;
+				}
+			}else if(global::command_type(recv_buff[0]) == global::COMMAND_REQUEST){
+				if(protocol_request(response)){
+					Encryption.crypt_send(response);
+					send_buff += response;
+				}else{
+					break;
+				}
+			}else{
+				LOGGER << "server " << IP << " send unrecognized command " << (int)(unsigned char)recv_buff[0];
+				DB_Blacklist.add(IP);
+				return;
+			}
+		}
+	}
+
+	if(send_buff.size() > global::MAX_MESSAGE_SIZE * global::PIPELINE_SIZE){
+		LOGGER << "remote host overpipelined " << IP;
+		DB_Blacklist.add(IP);
+	}
+
+	if(initial_empty && !send_buff.empty()){
+		++send_pending();
+	}
 }
 
 void p2p_buffer::request_slot_hash(const std::string & request, std::string & send)
@@ -690,7 +735,6 @@ void p2p_buffer::send_block(const std::string & request, std::string & send)
 {
 	int slot_num = (int)(unsigned char)request[1];
 	if(Upload_Slot[slot_num] != NULL){
-		//valid slot
 		Upload_Slot[slot_num]->send_block(request, send);
 	}else{
 		LOGGER << IP << " sent invalid slot ID " << slot_num;

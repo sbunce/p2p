@@ -86,10 +86,17 @@ public:
 	connection & operator = (const connection & rval);
 	~connection();
 
-	//allocate blob of specified size
-	boost::int64_t blob_allocate(const std::string & query, const int & size);
-	void blob_read(blob & Blob, char * const buff, const int & size, const int & offset);
-	void blob_write(blob & Blob, const char * const buff, const int & size, const int & offset);
+	/* Blob Functions: All of these return true on success, and false on failure.
+	blob_allocate:
+		Pre-allocate space for blob so that incremental read/write may happen.
+	blob_read:
+		Reads a blob.
+	blob_write:
+		Writes a blob.
+	*/
+	bool blob_allocate(const std::string & query, const int & size);
+	bool blob_read(blob & Blob, char * const buff, const int & size, const int & offset);
+	bool blob_write(blob & Blob, const char * const buff, const int & size, const int & offset);
 
 	//query with no call back
 	int query(const std::string & query);
@@ -142,8 +149,8 @@ private:
 	blob_open  - opens a blob with the info contained in Blob
 	             if writeable = true blob is opened read/write, else blob is read only
 	*/
-	void blob_close(sqlite3_blob * blob_handle);
-	sqlite3_blob * blob_open(blob & Blob, const bool & writeable);
+	bool blob_close(sqlite3_blob * blob_handle);
+	bool blob_open(blob & Blob, const bool & writeable, sqlite3_blob *& blob_handle);
 };
 
 template <typename T>

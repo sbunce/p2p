@@ -42,8 +42,8 @@ public:
 	static state get_state(const std::string & hash, const int & tree_size, database::connection & DB);
 	void set_state(const std::string & hash, const int & tree_size, const state & State);
 	static void set_state(const std::string & hash, const int & tree_size, const state & State, database::connection & DB);
-	void tree_allocate(const std::string & hash, const int & tree_size);
-	static void tree_allocate(const std::string & hash, const int & tree_size, database::connection & DB);
+	bool tree_allocate(const std::string & hash, const int & tree_size);
+	static bool tree_allocate(const std::string & hash, const int & tree_size, database::connection & DB);
 
 	/*
 	Opens/returns a blob to the tree with the specified hash and size. The first

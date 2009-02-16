@@ -19,22 +19,6 @@ int download::connection_count()
 	return Connection.size();
 }
 
-const boost::uint64_t & download::get_bytes_received()
-{
-	return bytes_received;
-}
-
-download_info download::get_download_info()
-{
-	return download_info("FUNCTION NOT SET IN DERIVED", "FUNCTION NOT SET IN DERIVED", 0);
-}
-
-const std::string download::hash()
-{
-	//if download visible this should be defined in derived
-	return "FUNCTION NOT SET IN DERIVED";
-}
-
 bool download::is_cancelled()
 {
 	return cancel;
@@ -43,22 +27,6 @@ bool download::is_cancelled()
 bool download::is_visible()
 {
 	return visible;
-}
-
-const std::string download::name()
-{
-	//if download visible this should be defined in derived
-	return "FUNCTION NOT SET IN DERIVED";
-}
-
-unsigned download::percent_complete()
-{
-	return 0;
-}
-
-const boost::uint64_t download::size()
-{
-	return 0;
 }
 
 unsigned download::speed()

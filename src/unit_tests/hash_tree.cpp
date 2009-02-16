@@ -41,17 +41,16 @@ int main()
 	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "1_block", root_hash)){
 		LOGGER; exit(1);
 	}
-
 	hash_tree::tree_info TE_1(root_hash, 1 * global::FILE_BLOCK_SIZE);
-	if(!Hash_Tree.check(TE_1, bad_block)){
+	if(Hash_Tree.check(TE_1, bad_block) != hash_tree::GOOD){
 		LOGGER; exit(1);
 	}
+
 	if(!Hash_Tree.create(global::SHARE_DIRECTORY + "2_block", root_hash)){
 		LOGGER; exit(1);
 	}
-
 	hash_tree::tree_info TE_2(root_hash, 2 * global::FILE_BLOCK_SIZE);
-	if(!Hash_Tree.check(TE_2, bad_block)){
+	if(Hash_Tree.check(TE_2, bad_block) != hash_tree::GOOD){
 		LOGGER; exit(1);
 	}
 
@@ -59,7 +58,7 @@ int main()
 		LOGGER; exit(1);
 	}
 	hash_tree::tree_info TE_3(root_hash, 3 * global::FILE_BLOCK_SIZE);
-	if(!Hash_Tree.check(TE_3, bad_block)){
+	if(Hash_Tree.check(TE_3, bad_block) != hash_tree::GOOD){
 		LOGGER; exit(1);
 	}
 
@@ -67,7 +66,7 @@ int main()
 		LOGGER; exit(1);
 	}
 	hash_tree::tree_info TE_4(root_hash, 4 * global::FILE_BLOCK_SIZE);
-	if(!Hash_Tree.check(TE_4, bad_block)){
+	if(Hash_Tree.check(TE_4, bad_block) != hash_tree::GOOD){
 		LOGGER; exit(1);
 	}
 
@@ -75,7 +74,7 @@ int main()
 		LOGGER; exit(1);
 	}
 	hash_tree::tree_info TE_256(root_hash, 256 * global::FILE_BLOCK_SIZE);
-	if(!Hash_Tree.check(TE_256, bad_block)){
+	if(Hash_Tree.check(TE_256, bad_block) != hash_tree::GOOD){
 		LOGGER; exit(1);
 	}
 
@@ -83,7 +82,7 @@ int main()
 		LOGGER; exit(1);
 	}
 	hash_tree::tree_info TE_257(root_hash, 257 * global::FILE_BLOCK_SIZE);
-	if(!Hash_Tree.check(TE_257, bad_block)){
+	if(Hash_Tree.check(TE_257, bad_block) != hash_tree::GOOD){
 		LOGGER; exit(1);
 	}
 

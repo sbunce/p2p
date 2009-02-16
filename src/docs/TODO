@@ -1,10 +1,11 @@
 TODO
 
--make virtual in download pure virtual
+-requests should be sent before file blocks, when two hosts download from
+eachother the file blocks hog upload that should be used to get requests out.
 
--add stop/start functions to download, and rename cancel to remove
-
--clean up the p2p_buffer slicing code. Break it up in to request/response.
+-add stop/start functions to download, and rename cancel to remove. Once this
+is done properly handle the blob return codes in the download_hash_tree and
+download_file.
 
 
 HEADER ANNOTATIONS
@@ -24,6 +25,10 @@ an A-TAG that the p2p frontend could interpret.
 
 THINK ABOUT
 
+-There could be an urgent response that bypasses the pipeline. To do this each
+message in the send buffer would have to be kept track of separately. This way
+a urgent message could be inserted.
+-Using new primes must be forced. To do this old primes must be kept track of.
 -Think about CMWC4096 PRNG seed issue. After key exchange, each client/server
 sends 1/2 the size of the PRNG seed encrypted to the other.
 -Think about how ISP might detect protocol via knowing handshake size/port.

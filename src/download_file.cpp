@@ -90,11 +90,19 @@ void download_file::hash_check(hash_tree::tree_info & Tree_Info, std::string fil
 		}
 		fin.read(block_buff, global::FILE_BLOCK_SIZE);
 		assert(fin.good());
-		if(Hash_Tree.check_file_block(Tree_Info, check_block, block_buff, fin.gcount())){
+		hash_tree::status status = Hash_Tree.check_file_block(Tree_Info, check_block, block_buff, fin.gcount());
+		if(status == hash_tree::GOOD){
 			block_arbiter::add_file_block(Tree_Info.get_root_hash(), check_block);
-		}else{
+		}else if(status == hash_tree::BAD){
 			LOGGER << "found corrupt block " << check_block << " in resumed download";
 			Request_Generator->force_rerequest(check_block);
+		}else if(status == hash_tree::IO_ERROR){
+//DEBUG, the download should be paused if this happens
+			LOGGER << "IO_ERROR";
+			exit(1);
+		}else{
+			LOGGER << "programmer error";
+			exit(1);
 		}
 		++check_block;
 		hashing_percent = (int)(((double)check_block / first_unreceived) * 100);
@@ -126,7 +134,11 @@ unsigned download_file::percent_complete()
 	if(Tree_Info.get_file_block_count() == 0){
 		return 0;
 	}else{
-		return (unsigned)(((float)get_bytes_received() / (float)Tree_Info.get_file_size())*100);
+		unsigned percent = (unsigned)(((float)bytes_received / (float)Tree_Info.get_file_size())*100);
+		if(percent > 100){
+			percent = 100;
+		}
+		return percent;
 	}
 }
 
@@ -250,7 +262,7 @@ void download_file::response(const int & socket, std::string block)
 			conn->slot_ID = block[1];
 			conn->State = connection_special::REQUEST_BLOCKS;
 		}else if(block[0] == global::P_ERROR){
-			LOGGER << "server " << conn->IP << " does not have file, REMOVAL FROM DB NOT IMPLEMENTED";
+			LOGGER << conn->IP << " does not have file, REMOVAL FROM DB NOT IMPLEMENTED";
 		}else{
 			LOGGER << "logic error: unhandled case";
 			exit(1);
@@ -260,16 +272,25 @@ void download_file::response(const int & socket, std::string block)
 		if(block[0] == global::P_BLOCK){
 			if(!cancel){
 				block.erase(0, 1); //trim command
-				if(Hash_Tree.check_file_block(Tree_Info, conn->latest_request.front(), block.c_str(), block.length())){
+				hash_tree::status status = Hash_Tree.check_file_block(Tree_Info, conn->latest_request.front(), block.c_str(), block.size());
+				if(status == hash_tree::GOOD){
 					write_block(conn->latest_request.front(), block);
 					block_arbiter::add_file_block(Download_Info.hash, conn->latest_request.front());
 					Request_Generator->fulfil(conn->latest_request.front());
-				}else{
+				}else if(status == hash_tree::BAD){
 					LOGGER << Download_Info.name << ":" << conn->latest_request.front() << " hash failure";
+					bytes_received -= block.size() + 1; //correct bytes_recieved for percent calculation
 					Request_Generator->force_rerequest(conn->latest_request.front());
 					#ifndef CORRUPT_FILE_BLOCK_TEST
 					DB_Blacklist.add(conn->IP);
 					#endif
+				}else if(status == hash_tree::IO_ERROR){
+//DEBUG, the download should be paused if this happens
+					LOGGER << "IO_ERROR";
+					exit(1);
+				}else{
+					LOGGER << "programmer error";
+					exit(1);
 				}
 			}
 			conn->latest_request.pop_front();

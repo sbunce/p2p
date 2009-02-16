@@ -3,6 +3,7 @@
 p2p::p2p():
 	connections(0),
 	FD_max(0),
+	localhost_socket(-1),
 	P2P_New_Connection(master_FDS, FD_max, max_connections, connections)
 {
 	boost::filesystem::create_directory(global::DOWNLOAD_DIRECTORY);
@@ -19,9 +20,6 @@ p2p::p2p():
 		exit(1);
 	}
 	#endif
-
-	number_generator::init();
-	share_index::init();
 
 	main_thread = boost::thread(boost::bind(&p2p::main_loop, this));
 }
@@ -80,6 +78,10 @@ void p2p::current_uploads(std::vector<upload_info> & info)
 void p2p::disconnect(const int & socket_FD)
 {
 	LOGGER << "disconnecting socket " << socket_FD;
+
+	if(socket_FD == localhost_socket){
+		localhost_socket = -1;
+	}
 
 	#ifdef WIN32
 	closesocket(socket_FD);
@@ -177,12 +179,9 @@ void p2p::new_connection(const int & listener)
 		return;
 	}
 
-	#ifndef ALLOW_LOCALHOST_CONNECTION
-	if(new_IP.find("127.") != std::string::npos){
-		LOGGER << "stopping connection to localhost";
-		return;
+	if(new_IP.find("127") == 0){
+		localhost_socket = new_FD;
 	}
-	#endif
 
 	//make sure the p2p isn't already connected
 	sockaddr_in temp_addr;
@@ -203,7 +202,7 @@ void p2p::new_connection(const int & listener)
 
 	if(connections < max_connections){
 		++connections;
-		p2p_buffer::add_connection(new_FD, new_IP);
+		p2p_buffer::add_connection(new_FD, new_IP, false);
 		FD_SET(new_FD, &master_FDS);
 		if(new_FD > FD_max){
 			FD_max = new_FD;
@@ -285,7 +284,16 @@ int p2p::setup_listener()
 
 void p2p::main_loop()
 {
+	/*
+	Resuming downloads, hash checking, generating primes, and indexing the share
+	are all very heavy CPU tasks which get started by the main_loop thread. Delay
+	them by 1 second to make GUI startup quicker.
+	*/
+	portable_sleep::ms(1000);
+
 	reconnect_unfinished();
+	number_generator::init();
+	share_index::init();
 
 	int listener = setup_listener();
 
@@ -409,7 +417,9 @@ void p2p::main_loop()
 					new_connection(listener);
 				}else{
 					if((transfer_limit = rate_limit::download_rate_control(max_buff)) != 0){
-						if(transfer_limit > max_recv){
+						if(socket_FD == localhost_socket){
+							transfer_limit = max_buff;
+						}else if(transfer_limit > max_recv){
 							transfer_limit = max_recv;
 						}
 						if((n_bytes = recv(socket_FD, recv_buff, transfer_limit, MSG_NOSIGNAL)) <= 0){
@@ -423,7 +433,9 @@ void p2p::main_loop()
 							disconnect(socket_FD);
 							continue;
 						}else{
-							rate_limit::add_download_bytes(n_bytes);
+							if(socket_FD != localhost_socket){
+								rate_limit::add_download_bytes(n_bytes);
+							}
 							p2p_buffer::post_recv(socket_FD, recv_buff, n_bytes);
 							transfer = true;
 						}
@@ -434,7 +446,9 @@ void p2p::main_loop()
 			if(FD_ISSET(socket_FD, &write_FDS)){
 				if(p2p_buffer::get_send_buff(socket_FD, max_buff, send_buff)){
 					if((transfer_limit = rate_limit::upload_rate_control(send_buff.size())) != 0){
-						if(transfer_limit > max_send){
+						if(socket_FD == localhost_socket){
+							transfer_limit = send_buff.size();
+						}else if(transfer_limit > max_send){
 							transfer_limit = max_send;
 						}
 						if((n_bytes = send(socket_FD, send_buff.data(), transfer_limit, MSG_NOSIGNAL)) < 0){
@@ -446,7 +460,9 @@ void p2p::main_loop()
 								#endif
 							}
 						}else{
-							rate_limit::add_upload_bytes(n_bytes);
+							if(socket_FD != localhost_socket){
+								rate_limit::add_upload_bytes(n_bytes);
+							}
 							if(p2p_buffer::post_send(socket_FD, n_bytes)){
 								disconnect(socket_FD);
 							}

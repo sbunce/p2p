@@ -117,6 +117,13 @@ private:
 	atomic_int<int> FD_max; //number of the highest socket
 
 	/*
+	If localhost connects this is set to the localhost socket. If localhost is
+	not connected this is set to -1. This is used to bypass rate limiting for
+	localhost.
+	*/
+	int localhost_socket;
+
+	/*
 	check_blacklist         - checks if blacklist was updated, if so checks connected IP's to see if any are blacklisted
 	check_timeouts          - checks all servers to see if they've timed out and removes/disconnects if they have
 	disconnect              - disconnects a socket, modifies Client_Buffer

@@ -7,34 +7,39 @@ hash_tree::hash_tree()
 
 }
 
-bool hash_tree::check(tree_info & Tree_Info, boost::uint64_t & bad_block)
+hash_tree::status hash_tree::check(tree_info & Tree_Info, boost::uint64_t & bad_block)
 {
+	boost::recursive_mutex::scoped_lock lock(*Tree_Info.Recursive_Mutex);
 	if(Tree_Info.block_count == 0){
-		return true;
+		return GOOD;
 	}else{
 
 		sha SHA;
 		SHA.reserve(global::HASH_BLOCK_SIZE * global::HASH_SIZE);
 		char block_buff[global::FILE_BLOCK_SIZE];
 
+		status TS;
 		for(boost::uint64_t x=0; x<Tree_Info.block_count; ++x){
-			if(!check_block(Tree_Info, x, SHA, block_buff)){
-				boost::recursive_mutex::scoped_lock lock(*Tree_Info.Recursive_Mutex);
+			TS = check_block(Tree_Info, x, SHA, block_buff);
+			if(TS == BAD){
 				Tree_Info.Contiguous->trim(x);
 				bad_block = x;
 				LOGGER << "bad block " << x << " in tree " << Tree_Info.root_hash;
-				return false;
+				return BAD;
+			}else if(TS == IO_ERROR){
+				return IO_ERROR;
 			}
 		}
 	}
-	return true;
+	return GOOD;
 }
 
-bool hash_tree::check_block(tree_info & Tree_Info, const boost::uint64_t & block_num, sha & SHA, char * block_buff)
+hash_tree::status hash_tree::check_block(tree_info & Tree_Info, const boost::uint64_t & block_num, sha & SHA, char * block_buff)
 {
+	boost::recursive_mutex::scoped_lock lock(*Tree_Info.Recursive_Mutex);
 	if(Tree_Info.block_count == 0){
 		//only one hash, it's the root hash and the file hash
-		return true;
+		return GOOD;
 	}
 
 	std::pair<boost::uint64_t, unsigned> info;
@@ -45,7 +50,9 @@ bool hash_tree::check_block(tree_info & Tree_Info, const boost::uint64_t & block
 		exit(1);
 	}
 
-	DB.blob_read(Tree_Info.Blob, block_buff, info.second, info.first);
+	if(!DB.blob_read(Tree_Info.Blob, block_buff, info.second, info.first)){
+		return IO_ERROR;
+	}
 
 	//create hash for children
 	SHA.init();
@@ -55,10 +62,39 @@ bool hash_tree::check_block(tree_info & Tree_Info, const boost::uint64_t & block
 	//check child hash
 	if(block_num == 0){
 		//first row has to be checked against root hash
-		return strncmp(convert::hex_to_bin(Tree_Info.root_hash).data(), SHA.raw_hash(), global::HASH_SIZE) == 0;
+		if(strncmp(convert::hex_to_bin(Tree_Info.root_hash).data(), SHA.raw_hash(), global::HASH_SIZE) == 0){
+			return GOOD;
+		}else{
+			return BAD;
+		}
 	}else{
-		DB.blob_read(Tree_Info.Blob, block_buff, global::HASH_SIZE, parent);
-		return strncmp(block_buff, SHA.raw_hash(), global::HASH_SIZE) == 0;
+		if(!DB.blob_read(Tree_Info.Blob, block_buff, global::HASH_SIZE, parent)){
+			return IO_ERROR;
+		}
+
+		if(strncmp(block_buff, SHA.raw_hash(), global::HASH_SIZE) == 0){
+			return GOOD;
+		}else{
+			return BAD;
+		}
+	}
+}
+
+hash_tree::status hash_tree::check_file_block(tree_info & Tree_Info, const boost::uint64_t & file_block_num, const char * block, const int & size)
+{
+	boost::recursive_mutex::scoped_lock lock(*Tree_Info.Recursive_Mutex);
+	sha SHA;
+	char parent_buff[global::HASH_SIZE];
+	if(!DB.blob_read(Tree_Info.Blob, parent_buff, global::HASH_SIZE, Tree_Info.file_hash_offset + file_block_num * global::HASH_SIZE)){
+		return IO_ERROR;
+	}
+	SHA.init();
+	SHA.load(block, size);
+	SHA.end();
+	if(strncmp(parent_buff, SHA.raw_hash(), global::HASH_SIZE) == 0){
+		return GOOD;
+	}else{
+		return BAD;
 	}
 }
 
@@ -203,7 +239,9 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 		*/
 		assert(tree_size == rightside_up.tellp());
 		if(!database::table::hash::exists(root_hash, tree_size, DB)){
-			database::table::hash::tree_allocate(root_hash, tree_size, DB);
+			if(!database::table::hash::tree_allocate(root_hash, tree_size, DB)){
+				return false;
+			}
 			database::blob Blob = database::table::hash::tree_open(root_hash, tree_size, DB);
 			rightside_up.seekg(0, std::ios::beg);
 			int offset = 0, bytes_remaining = tree_size, read_size;
@@ -220,7 +258,9 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 					LOGGER << "error reading rightside_up file";
 					return false;
 				}else{
-					DB.blob_write(Blob, block_buff, read_size, offset);
+					if(!DB.blob_write(Blob, block_buff, read_size, offset)){
+						return false;
+					}
 					offset += read_size;
 					bytes_remaining -= read_size;
 				}
@@ -319,39 +359,32 @@ bool hash_tree::create_recurse(std::fstream & upside_down, std::fstream & rights
 	return true; 
 }
 
-bool hash_tree::check_file_block(tree_info & Tree_Info, const boost::uint64_t & file_block_num, const char * block, const int & size)
-{
-	sha SHA;
-	char parent_buff[global::HASH_SIZE];
-	DB.blob_read(Tree_Info.Blob, parent_buff, global::HASH_SIZE, Tree_Info.file_hash_offset + file_block_num * global::HASH_SIZE);
-	SHA.init();
-	SHA.load(block, size);
-	SHA.end();
-	return strncmp(parent_buff, SHA.raw_hash(), global::HASH_SIZE) == 0;
-}
-
 void hash_tree::stop()
 {
 	stop_thread = true;
 }
 
-bool hash_tree::read_block(tree_info & Tree_Info, const boost::uint64_t & block_num, std::string & block)
+hash_tree::status hash_tree::read_block(tree_info & Tree_Info, const boost::uint64_t & block_num, std::string & block)
 {
+	boost::recursive_mutex::scoped_lock lock(*Tree_Info.Recursive_Mutex);
 	char block_buff[global::FILE_BLOCK_SIZE];
 	std::pair<boost::uint64_t, unsigned> info;
 	if(tree_info::block_info(block_num, Tree_Info.row, info)){
-		DB.blob_read(Tree_Info.Blob, block_buff, info.second, info.first);
+		if(!DB.blob_read(Tree_Info.Blob, block_buff, info.second, info.first)){
+			return IO_ERROR;
+		}
 		block.clear();
 		block.assign(block_buff, info.second);
-		return true;
+		return GOOD;
 	}else{
 		LOGGER << "invalid block number, programming error";
 		exit(1);
 	}
 }
 
-bool hash_tree::write_block(tree_info & Tree_Info, const boost::uint64_t & block_num, const std::string & block, const std::string & IP)
+hash_tree::status hash_tree::write_block(tree_info & Tree_Info, const boost::uint64_t & block_num, const std::string & block, const std::string & IP)
 {
+	boost::recursive_mutex::scoped_lock lock(*Tree_Info.Recursive_Mutex);
 	std::pair<boost::uint64_t, unsigned> info;
 	if(tree_info::block_info(block_num, Tree_Info.row, info)){
 		if(info.second != block.size()){
@@ -359,16 +392,15 @@ bool hash_tree::write_block(tree_info & Tree_Info, const boost::uint64_t & block
 			LOGGER << "incorrect block size, programming error";
 			exit(1);
 		}
-		DB.blob_write(Tree_Info.Blob, block.data(), block.size(), info.first);
-		Tree_Info.Recursive_Mutex->lock();
+		if(!DB.blob_write(Tree_Info.Blob, block.data(), block.size(), info.first)){
+			return IO_ERROR;
+		}
 		Tree_Info.Contiguous->insert(std::make_pair(block_num, IP));
-		Tree_Info.Recursive_Mutex->unlock();
 		check_contiguous(Tree_Info);
-		return true;
+		return GOOD;
 	}else{
-		LOGGER << "client requested invalid block number";
-		DB_Blacklist.add(IP);
-		return false;
+		LOGGER << "programmer error";
+		exit(1);
 	}
 }
 //END hash_tree IMPLEMENTATION
@@ -463,6 +495,7 @@ bool hash_tree::tree_info::block_info(const boost::uint64_t & block, const std::
 
 unsigned hash_tree::tree_info::block_size(const boost::uint64_t & block_num)
 {
+	boost::recursive_mutex::scoped_lock lock(*Recursive_Mutex);
 	std::pair<boost::uint64_t, unsigned> info;
 	if(block_info(block_num, row, info)){
 		return info.second;
@@ -516,44 +549,46 @@ boost::uint64_t hash_tree::tree_info::file_size_to_tree_hash(const boost::uint64
 	return file_hash_to_tree_hash(file_size_to_file_hash(file_size), row);
 }
 
+//static, doesn't need to be locked
 boost::uint64_t hash_tree::tree_info::file_size_to_tree_size(const boost::uint64_t & file_size)
 {
 	return global::HASH_SIZE * file_hash_to_tree_hash(file_size_to_file_hash(file_size));
 }
 
-const std::string & hash_tree::tree_info::get_root_hash()
+std::string hash_tree::tree_info::get_root_hash()
 {
+	boost::recursive_mutex::scoped_lock lock(*Recursive_Mutex);
 	return root_hash;
 }
 
-const boost::uint64_t & hash_tree::tree_info::get_block_count()
+boost::uint64_t hash_tree::tree_info::get_block_count()
 {
+	boost::recursive_mutex::scoped_lock lock(*Recursive_Mutex);
 	return block_count;
 }
 
-const boost::uint64_t & hash_tree::tree_info::get_tree_size()
+boost::uint64_t hash_tree::tree_info::get_tree_size()
 {
+	boost::recursive_mutex::scoped_lock lock(*Recursive_Mutex);
 	return tree_size;
 }
 
-const boost::uint64_t & hash_tree::tree_info::get_file_block_count()
+boost::uint64_t hash_tree::tree_info::get_file_block_count()
 {
+	boost::recursive_mutex::scoped_lock lock(*Recursive_Mutex);
 	return file_block_count;
 }
 
-const boost::uint64_t & hash_tree::tree_info::get_file_size()
+boost::uint64_t hash_tree::tree_info::get_file_size()
 {
+	boost::recursive_mutex::scoped_lock lock(*Recursive_Mutex);
 	return file_size;
 }
 
-const boost::uint64_t & hash_tree::tree_info::get_last_file_block_size()
+boost::uint64_t hash_tree::tree_info::get_last_file_block_size()
 {
+	boost::recursive_mutex::scoped_lock lock(*Recursive_Mutex);
 	return last_file_block_size;
-}
-
-const std::deque<boost::uint64_t> & hash_tree::tree_info::get_row()
-{
-	return row;
 }
 
 bool hash_tree::tree_info::highest_good(boost::uint64_t & HG)
@@ -568,17 +603,20 @@ bool hash_tree::tree_info::highest_good(boost::uint64_t & HG)
 	}
 }
 
-void hash_tree::tree_info::rerequest_bad_blocks(request_generator & Request_Generator)
+boost::uint64_t hash_tree::tree_info::rerequest_bad_blocks(request_generator & Request_Generator)
 {
 	boost::recursive_mutex::scoped_lock lock(*Recursive_Mutex);
+	boost::uint64_t size = 0;
 	std::vector<boost::uint64_t>::iterator iter_cur, iter_end;
 	iter_cur = bad_block.begin();
 	iter_end = bad_block.end();
 	while(iter_cur != iter_end){
+		size += block_size(*iter_cur);
 		Request_Generator.force_rerequest(*iter_cur);
 		++iter_cur;
 	}
 	bad_block.clear();
+	return size;
 }
 
 boost::uint64_t hash_tree::tree_info::row_to_block_count(const std::deque<boost::uint64_t> & row)

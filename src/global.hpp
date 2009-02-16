@@ -6,14 +6,12 @@
 
 //testing features, uncomment to enable
 //#define DISABLE_ENCRYPTION
-//#define CORRUPT_HASH_BLOCK_TEST
-//#define CORRUPT_FILE_BLOCK_TEST
-#define ALLOW_LOCALHOST_CONNECTION
+#define CORRUPT_HASH_BLOCK_TEST
+#define CORRUPT_FILE_BLOCK_TEST
 
 /*
 This stops compilation when boost is too old. The MIN_MAJOR_VERSION and
 MIN_MINOR_VERSION need to be set to the minimum allowed version of boost.
-
 example: 1.36 would have major 1 and minor 36
 */
 #include <boost/version.hpp>
@@ -89,17 +87,19 @@ namespace global
 	const unsigned HASH_BLOCK_SIZE = 256; //number of hashes in hash block
 	const unsigned FILE_BLOCK_SIZE = HASH_BLOCK_SIZE * HASH_SIZE;
 
-	//see documentation
+	//request commands
 	const char P_REQUEST_SLOT_HASH_TREE = (char)0;
 	const unsigned P_REQUEST_SLOT_HASH_TREE_SIZE = 21;
 	const char P_REQUEST_SLOT_FILE = (char)1;
 	const unsigned P_REQUEST_SLOT_FILE_SIZE = 21;
-	const char P_SLOT = (char)2;
-	const unsigned P_SLOT_SIZE = 2;
+	const char P_REQUEST_BLOCK = (char)2;
+	const unsigned P_REQUEST_BLOCK_SIZE = 10;
 	const char P_CLOSE_SLOT = (char)3;
 	const unsigned P_CLOSE_SLOT_SIZE = 2;
-	const char P_REQUEST_BLOCK = (char)4;
-	const unsigned P_REQUEST_BLOCK_SIZE = 10;
+
+	//response commands
+	const char P_SLOT = (char)4;
+	const unsigned P_SLOT_SIZE = 2;
 	const char P_BLOCK = (char)5;
 	const int P_BLOCK_SIZE = FILE_BLOCK_SIZE + 1;
 	const char P_WAIT = (char)6;
@@ -109,6 +109,24 @@ namespace global
 
 	//largest possible message
 	const unsigned MAX_MESSAGE_SIZE = P_BLOCK_SIZE;
+
+	//function to determine the type of a command
+	enum{
+		COMMAND_REQUEST,
+		COMMAND_RESPONSE,
+		COMMAND_INVALID
+	};
+	static int command_type(const char & command)
+	{
+		int c_val = (int)(unsigned char)command;
+		if(c_val >= 0 && c_val <= 3){
+			return COMMAND_REQUEST;
+		}else if(c_val >= 4 && c_val <= 7){
+			return COMMAND_RESPONSE;
+		}else{
+			return COMMAND_INVALID;
+		}
+	}
 }
 
 //replacement for system specific sleep functions

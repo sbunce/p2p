@@ -110,31 +110,9 @@ void test_call_backs()
 	}
 }
 
-void test_blob_funcs()
-{
-	DB.query("DROP TABLE IF EXISTS sqlite3_wrapper");
-	if(DB.query("CREATE TABLE sqlite3_wrapper(test_blob BLOB)") != 0){
-		LOGGER; exit(1);
-	}
-
-	boost::int64_t rowid;
-	rowid = DB.blob_allocate("INSERT INTO sqlite3_wrapper(test_blob) VALUES(?)", 1);
-	rowid = DB.blob_allocate("UPDATE sqlite3_wrapper SET test_blob = ?", 4);
-	database::blob Blob("sqlite3_wrapper", "test_blob", rowid);
-	const char * write_buff = "ABC";
-	DB.blob_write(Blob, write_buff, 4, 0);
-	char read_buff[4];
-	DB.blob_read(Blob, read_buff, 4, 0);
-
-	if(strcmp(write_buff, read_buff) != 0){
-		LOGGER; exit(1);
-	}
-}
-
 int main()
 {
 	test_call_backs();
-	test_blob_funcs();
-
+	//blob functions are tested in hash_tree unit test
 	return 0;
 }

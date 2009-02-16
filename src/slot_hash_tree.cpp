@@ -48,8 +48,13 @@ void slot_hash_tree::send_block(const std::string & request, std::string & send)
 		send += global::P_WAIT;
 		Speed_Calculator.update(global::P_WAIT_SIZE);
 	}else{
-		//hash block available
-		if(Hash_Tree.read_block(Tree_Info, block_num, send)){
+		/*
+		Hash Block available.
+		Note: hash_tree::BAD is not checked for here because it should get picked
+			up by the maximum block check at the top of this function.
+		*/
+		hash_tree::status status = Hash_Tree.read_block(Tree_Info, block_num, send);
+		if(status == hash_tree::GOOD){
 			#ifdef CORRUPT_HASH_BLOCK_TEST
 			if(std::rand() % 5 == 0){
 				LOGGER << "CORRUPT HASH BLOCK TEST, block " << block_num << " -> " << *IP;
@@ -59,10 +64,13 @@ void slot_hash_tree::send_block(const std::string & request, std::string & send)
 			send = global::P_BLOCK + send;
 			Speed_Calculator.update(send.size());
 			update_percent(block_num);
-		}else{
-			//hash block no longer available, or the client was blacklisted for sending invalid request
+		}else if(status == hash_tree::IO_ERROR){
+			//cannot open hash tree, or it was deleted, either way send error
 			send += global::P_ERROR;
 			Speed_Calculator.update(global::P_ERROR_SIZE);
+		}else{
+			LOGGER << "programmer error";
+			exit(1);
 		}
 	}
 }

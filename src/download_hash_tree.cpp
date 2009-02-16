@@ -11,10 +11,11 @@ download_hash_tree::download_hash_tree(
 	block_arbiter::start_hash_tree(Download_Info.hash);
 	visible = true;
 	boost::uint64_t bad_block;
-	if(Hash_Tree.check(Tree_Info, bad_block)){
+	hash_tree::status status = Hash_Tree.check(Tree_Info, bad_block);
+	if(status == hash_tree::GOOD){
 		//hash tree good, signal download_complete
 		download_complete = true;
-	}else{
+	}else if(status == hash_tree::BAD){
 		//bad hash block detected
 		Request_Generator =
 			boost::shared_ptr<request_generator>(new request_generator(bad_block,
@@ -23,6 +24,13 @@ download_hash_tree::download_hash_tree(
 		for(boost::uint64_t x=0; x<bad_block; ++x){
 			bytes_received += Tree_Info.block_size(x);
 		}
+	}else if(status == hash_tree::IO_ERROR){
+//DEBUG, the download should be paused if this happens
+		LOGGER << "IO_ERROR";
+		exit(1);
+	}else{
+		LOGGER << "programmer error";
+		exit(1);
 	}
 }
 
@@ -61,7 +69,11 @@ unsigned download_hash_tree::percent_complete()
 	if(Tree_Info.get_block_count() == 0){
 		return 0;
 	}else{
-		return (unsigned)(((float)get_bytes_received() / (float)Tree_Info.get_tree_size())*100);
+		unsigned percent = (unsigned)(((float)bytes_received / (float)Tree_Info.get_tree_size())*100);
+		if(percent > 100){
+			percent = 100;
+		}
+		return percent;
 	}
 }
 
@@ -183,9 +195,14 @@ void download_hash_tree::response(const int & socket, std::string block)
 	}else if(conn->State == connection_special::REQUEST_BLOCKS){
 		if(block[0] == global::P_BLOCK){
 			block.erase(0, 1); //trim command
-			if(!cancel && !Hash_Tree.write_block(Tree_Info, conn->latest_request.front(), block, conn->IP)){
-				//hash file removed or download cancelled, stop download
-				stop();
+			if(!cancel){
+				hash_tree::status status = Hash_Tree.write_block(Tree_Info, conn->latest_request.front(), block, conn->IP);
+				if(status == hash_tree::IO_ERROR){
+//DEBUG, the download should be paused if this happens
+					LOGGER << "IO_ERROR writing hash block";
+					stop();
+					exit(1);
+				}
 			}
 
 			boost::uint64_t highest_good;
@@ -196,8 +213,12 @@ void download_hash_tree::response(const int & socket, std::string block)
 			Request_Generator->fulfil(conn->latest_request.front());
 			conn->latest_request.pop_front();
 
-			//see if hash tree has any blocks to rerequest
-			Tree_Info.rerequest_bad_blocks(*Request_Generator);
+			/*
+			See if hash tree has any blocks to rerequest. If it does subtract the
+			size of the blocks from bytes_received for the purpose of accurate
+			percentage calculation.
+			*/
+			bytes_received -= Tree_Info.rerequest_bad_blocks(*Request_Generator);
 
 			if(Request_Generator->complete()){
 				//hash tree complete, close slots

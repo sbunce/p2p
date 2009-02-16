@@ -53,11 +53,11 @@ void encryption::crypt_send(std::string & bytes)
 {
 	#ifndef DISABLE_ENCRYPTION
 	assert(ready_to_encrypt);
-	PRNG_send.extract_bytes(stream_send, bytes.length());
-	for(int x=0; x<bytes.length(); ++x){
+	PRNG_send.extract_bytes(stream_send, bytes.size());
+	for(int x=0; x<bytes.size(); ++x){
 		bytes[x] = (unsigned char)bytes[x] ^ (unsigned char)stream_send[x];
 	}
-	stream_send.erase(0, bytes.length());
+	stream_send.erase(0, bytes.size());
 	#endif
 }
 
@@ -77,11 +77,11 @@ void encryption::crypt_recv(std::string & bytes)
 {
 	#ifndef DISABLE_ENCRYPTION
 	assert(ready_to_encrypt);
-	PRNG_recv.extract_bytes(stream_recv, bytes.length());
-	for(int x=0; x<bytes.length(); ++x){
+	PRNG_recv.extract_bytes(stream_recv, bytes.size());
+	for(int x=0; x<bytes.size(); ++x){
 		bytes[x] = (unsigned char)bytes[x] ^ (unsigned char)stream_recv[x];
 	}
-	stream_recv.erase(0, bytes.length());
+	stream_recv.erase(0, bytes.size());
 	#endif
 }
 

@@ -117,19 +117,19 @@ void database::table::hash::set_state(const std::string & hash,
 	DB.query(ss.str());
 }
 
-void database::table::hash::tree_allocate(const std::string & hash,
+bool database::table::hash::tree_allocate(const std::string & hash,
 	const int & tree_size)
 {
-	tree_allocate(hash, tree_size, DB);
+	return tree_allocate(hash, tree_size, DB);
 }
 
-void database::table::hash::tree_allocate(const std::string & hash,
+bool database::table::hash::tree_allocate(const std::string & hash,
 	const int & tree_size, database::connection & DB)
 {
 	std::stringstream ss;
 	ss << "INSERT INTO hash(key, hash, state, size, tree) VALUES(NULL, '"
 		<< hash << "', 0, " << tree_size << ", ?)";
-	DB.blob_allocate(ss.str(), tree_size);
+	return DB.blob_allocate(ss.str(), tree_size);
 }
 
 database::blob database::table::hash::tree_open(const std::string & hash,

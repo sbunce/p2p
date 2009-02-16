@@ -19,9 +19,15 @@ database::connection::connection():
 	}
 
 	//move free pages to EOF and truncate at every commit
-	if(sqlite3_exec(DB_handle, "PRAGMA auto_vacuum = full;" , NULL, NULL, NULL) != SQLITE_OK){
-		LOGGER << "sqlite error: " << sqlite3_errmsg(DB_handle);
-		exit(1);
+	int code;
+	while((code = sqlite3_exec(DB_handle, "PRAGMA auto_vacuum = full;" , NULL, NULL, NULL)) != SQLITE_OK){
+		if(code == SQLITE_BUSY){
+			LOGGER << "sqlite yield on SQLITE_BUSY";
+			boost::this_thread::yield();
+		}else{
+			LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle);
+			exit(1);
+		}
 	}
 
 	database::init::run();
@@ -59,7 +65,7 @@ database::connection::~connection()
 	}
 }
 
-boost::int64_t database::connection::blob_allocate(const std::string & query, const int & size)
+bool database::connection::blob_allocate(const std::string & query, const int & size)
 {
 	boost::recursive_mutex::scoped_lock lock(*Mutex);
 	sqlite3_stmt * prepared_statement;
@@ -74,7 +80,7 @@ boost::int64_t database::connection::blob_allocate(const std::string & query, co
 	}
 	if(sqlite3_bind_zeroblob(prepared_statement, 1, size) != SQLITE_OK){
 		LOGGER << sqlite3_errmsg(DB_handle);
-		exit(1);
+		return false;
 	}
 	int code;
 	while((code = sqlite3_step(prepared_statement)) != SQLITE_DONE){
@@ -82,23 +88,23 @@ boost::int64_t database::connection::blob_allocate(const std::string & query, co
 	}
 	if(sqlite3_finalize(prepared_statement) != SQLITE_OK){
 		LOGGER << sqlite3_errmsg(DB_handle);
-		exit(1);
+		return false;
 	}
-	return sqlite3_last_insert_rowid(DB_handle);
+	return true;
 }
 
-void database::connection::blob_close(sqlite3_blob * blob_handle)
+bool database::connection::blob_close(sqlite3_blob * blob_handle)
 {
 	if(sqlite3_blob_close(blob_handle) != SQLITE_OK){
 		LOGGER << "sqlite error: " << sqlite3_errmsg(DB_handle);
-		exit(1);
+		return false;
 	}
+	return true;
 }
 
-sqlite3_blob * database::connection::blob_open(blob & Blob, const bool & writeable)
+bool database::connection::blob_open(blob & Blob, const bool & writeable, sqlite3_blob *& blob_handle)
 {
 	assert(Blob.rowid != 0);
-	sqlite3_blob * blob_handle;
 	int code;
 	while((code = sqlite3_blob_open(
 		DB_handle,
@@ -114,32 +120,38 @@ sqlite3_blob * database::connection::blob_open(blob & Blob, const bool & writeab
 			boost::this_thread::yield();
 		}else{
 			LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle);
-			exit(1);
+			return false;
 		}
 	}
-	return blob_handle;
+	return true;
 }
 
-void database::connection::blob_read(blob & Blob, char * const buff, const int & size, const int & offset)
+bool database::connection::blob_read(blob & Blob, char * const buff, const int & size, const int & offset)
 {
 	boost::recursive_mutex::scoped_lock lock(*Mutex);
-	sqlite3_blob * blob_handle = blob_open(Blob, false);
+	sqlite3_blob * blob_handle;
+	if(!blob_open(Blob, false, blob_handle)){
+		return false;
+	}
 	if(sqlite3_blob_read(blob_handle, (void *)buff, size, offset) != SQLITE_OK){
 		LOGGER << sqlite3_errmsg(DB_handle);
-		exit(1);
+		return false;
 	}
-	blob_close(blob_handle);
+	return blob_close(blob_handle);
 }
 
-void database::connection::blob_write(blob & Blob, const char * const buff, const int & size, const int & offset)
+bool database::connection::blob_write(blob & Blob, const char * const buff, const int & size, const int & offset)
 {
 	boost::recursive_mutex::scoped_lock lock(*Mutex);
-	sqlite3_blob * blob_handle = blob_open(Blob, true);
+	sqlite3_blob * blob_handle;
+	if(!blob_open(Blob, true, blob_handle)){
+		return false;
+	}
 	if(sqlite3_blob_write(blob_handle, (const void *)buff, size, offset) != SQLITE_OK){
 		LOGGER << sqlite3_errmsg(DB_handle);
-		exit(1);
+		return false;
 	}
-	blob_close(blob_handle);
+	return blob_close(blob_handle);
 }
 
 int database::connection::fun_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)

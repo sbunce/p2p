@@ -35,7 +35,9 @@ public:
 	add_connection:
 		Adds a p2p_buffer for a specified socket. Should be called whenever a
 		socket is created. This may be called multiple times for the same socket
-		and a p2p_buffer will only be created on the first call.
+		and a p2p_buffer will only be created on the first call. The initiator
+		parameter controls whether or not we start the key negotiation. If we
+		initiate the connection then initiator should equal true.
 	erase:
 		Erases p2p_buffer associated with socket_FD. This should be called
 		whenever a socket is disconnected.
@@ -70,7 +72,7 @@ public:
 		Gives the p2p_buffer time to do necessary processing. Should be called
 		before the socket servicing loop.
 	*/
-	static void add_connection(const int & socket_FD, const std::string & IP);
+	static void add_connection(const int & socket_FD, const std::string & IP, const bool & initiator);
 	static void erase(const int & socket_FD);
 	static bool get_send_buff(const int & socket_FD, const int & max_bytes, std::string & destination);
 	static int get_send_pending();
@@ -115,7 +117,16 @@ public:
 
 private:
 	p2p_buffer(); //this ctor terminates the program, don't use it
-	p2p_buffer(const int & socket_in, const std::string & IP_in);
+
+	/*
+	The initiator parameter controls whether we start key negotiation or not. If
+	we initiate the connection we need to send the prime and our g^x % p.
+	*/
+	p2p_buffer(
+		const int & socket_in,
+		const std::string & IP_in,
+		const bool & initiator_in
+	);
 
 	/************************* BEGIN GENERAL ***********************************/
 	//locks all public static functions
@@ -130,6 +141,9 @@ private:
 	//what socket/IP this p2p_buffer is for
 	int socket;
 	std::string IP;
+
+	//true if we initiated the connection, used for key exchange
+	bool initiator;
 
 	//used for timeout
 	time_t last_seen;
@@ -149,8 +163,8 @@ private:
 	This is set to true when key exchange happening. While true the p2p_buffer
 	will not get requests from downloads.
 	*/
-	bool exchange_key;
-	std::string remote_result; //holds remote result for key exchange
+	bool key_exchange;
+
 	encryption Encryption;
 	/************************* END GENERAL *************************************/
 
@@ -252,14 +266,31 @@ private:
 	bool http_response_sent;
 
 	/*General Functions
+	protocol_localhost:
+		Does all processing of recv_buff for localhost.
+	protocl_key_exchange:
+		Handles key exchange for both the host connected to and the host that is
+		connecting.
+	protocol_response:
+		Handles responses to requests. Returns true if a response was parsed, false
+		if not enough bytes in buffer for a full response. This function processes
+		only one response when called so it should be called until it returns false,
+		or until the recv_buffer is empty.
+	protocol_request:
+		Handles requests. Returns true if a request was parsed (and response contains
+		data that needs to be sent). Returns false if not enough bytes in buffer for
+		a full request.
 	recv_buff_process:
 		Appends data to recv_buff and processes it.
 	recv_buff_read_block:
 		Reads one block from recv_buff. Returns true if block read, or false if
 		block incomplete.
 	*/
+	void protocol_localhost(char * buff, const int & n_bytes);
+	void protocol_key_exchange(char * buff, const int & n_bytes);
+	bool protocol_response();
+	bool protocol_request(std::string & response);
 	void recv_buff_process(char * buff, const int & n_bytes);
-	bool recv_buff_read_block();
 
 	database::table::blacklist DB_Blacklist;
 	database::table::download DB_Download;

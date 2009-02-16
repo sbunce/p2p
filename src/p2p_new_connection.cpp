@@ -153,7 +153,7 @@ void p2p_new_connection::new_connection(download_connection DC)
 		if(DC.socket > *FD_max){
 			*FD_max = DC.socket;
 		}
-		p2p_buffer::add_connection(DC.socket, DC.IP);
+		p2p_buffer::add_connection(DC.socket, DC.IP, true);
 		p2p_buffer::add_download_connection(DC);
 		FD_SET(DC.socket, master_FDS);
 		++*connections;
