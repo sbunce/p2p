@@ -1,14 +1,16 @@
 #!/usr/bin/perl
 
 $VM_count = 4;
+$IP_begin = '192.168.254.';
+$IP_range_start = '2';
 
 if(not defined(@ARGV[0])){
 	print "usage: $0 <mode>\n";
 	print "modes: off, push, start\n";
 }
 
-if(@ARGV[0] eq "off"){
-	off();
+if(@ARGV[0] eq "shutdown"){
+	shutdown_vm();
 }
 if(@ARGV[0] eq "push"){
 	push_servers();
@@ -17,20 +19,22 @@ if(@ARGV[0] eq "start"){
 	start();
 }
 
-sub off
+sub shutdown_vm
 {
-	for($x=128; $x<128+$VM_count; ++$x){
-		print "sending shut down command to 192.168.1.$x\n";
-		system("ssh root\@192.168.1.$x shutdown now -h");
+	for($x=$IP_range_start; $x < $IP_range_start + $VM_count; ++$x){
+		print "sending shut down command to $IP_begin$x\n";
+		system("ssh -i ~/.ssh/vm root\@$IP_begin$x shutdown now -h");
 	}
 }
 
 sub push_servers
 {
-	for($x=128; $x<128+$VM_count; ++$x){
-		print "pushing to 192.168.1.$x\n";
-		system("ssh 192.168.1.$x killall screen");
-		system("scp p2p_nogui 192.168.1.$x:/home/smack");
+	for($x=$IP_range_start; $x < $IP_range_start + $VM_count; ++$x){
+		print "pushing to $IP_begin$x\n";
+		system("ssh -i ~/.ssh/vm $IP_begin$x killall screen");
+		#system("ssh -i ~/.ssh/vm $IP_begin$x rm DB");
+		system("scp -i ~/.ssh/vm p2p_nogui $IP_begin$x:/home/smack");
+		system("ssh -i ~/.ssh/vm $IP_begin$x screen -d -m ./p2p_nogui");
 	}
 }
 
@@ -43,12 +47,10 @@ sub start
 			#this is child process
 			if($x<10){
 				$port = "330$x";
-				$machine = "0$x";
 			}else{
 				$port = "33$x";
-				$machine = "$x";
 			}
-			system("/usr/bin/VBoxHeadless -vrdpport $port -startvm \"Debian CLI $machine\"");
+			system("/usr/bin/VBoxHeadless -vrdpport $port -startvm \"Debian CLI $x\"");
 			exit();
 		}else{
 			#error if too many VMs starting concurrently

@@ -4,7 +4,8 @@ download::download()
 :
 	bytes_received(0),
 	cancel(false),
-	visible(false)
+	visible(false),
+	paused(false)
 {
 
 }

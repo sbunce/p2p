@@ -41,7 +41,7 @@ gui_vbox_search::gui_vbox_search(
 
 	//menu that pops up when right click happens
 	Gtk::Menu::MenuList & menu_list = search_popup_menu.items();
-	menu_list.push_back(Gtk::Menu_Helpers::MenuElem("_Download", sigc::mem_fun(*this, &gui_vbox_search::download_file)));
+	menu_list.push_back(Gtk::Menu_Helpers::StockMenuElem(Gtk::StockID(Gtk::Stock::ADD), sigc::mem_fun(*this, &gui_vbox_search::download_file)));
 
 	//signaled functions
 	search_view->signal_button_press_event().connect(sigc::mem_fun(*this, &gui_vbox_search::search_click), false);

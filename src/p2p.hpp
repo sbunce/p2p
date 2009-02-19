@@ -55,23 +55,43 @@ public:
 	p2p();
 	~p2p();
 	/*
-	current_downloads      - returns download info for all downloads or
-	                         if hash set info only retrieved for download that corresponds to hash
-	                         WARNING: if no hash found info will be empty
-	current_uploads        - populates info with upload_info for all uploads
-	file_info              - returns specific information about file that corresponds to hash (for currently running downloads)
-	                         WARNING: Expensive call that includes database access, do not poll this.
-	get_max_connections    - returns maximum connections client will make
-	get_download_directory - returns the location where downloads are saved to
-	get_download_rate      - returns the download speed limit (bytes/second)
-	prime_count            - returns the number of primes cached for Diffie-Hellman
-	search                 - populates info with download_status that match the search_word
-	set_max_connections    - sets maximum connections client will make
-	set_download_directory - sets the download directory
-	set_max_download_rate  - sets a new download rate limit (B/s)
-	start_download         - schedules a download_file to be started
-	stop_download          - marks a download as completed so it will be stopped
-	total_rate             - returns the total download rate(B/s)
+	current_downloads:
+		Returns download info for all downloads or if hash set info is only
+		retrieved for one download.
+		WARNING: If no hash found info will be empty.
+	current_uploads:
+		Populates info with upload_info for all uploads.
+	file_info:
+		Returns specific information about file that corresponds to hash (for
+		currently running downloads).
+		WARNING: Expensive call that includes database access, do not poll this.
+	get_max_connections:
+		Returns connection limit.
+	get_download_directory:
+		Returns the location where downloads are saved to.
+	get_max_download_rate:
+		Returns the download rate limit.
+	pause_download:
+		Pause a download.
+	prime_count:
+		Returns size of prime cache used for key-exchanges.
+	remove_download:
+		Stops/Removes a running download.
+	search:
+		Populates the info vector with results to search.
+	set_max_connections:
+		Sets connection limit. Disconnects servers at random if over the limit.
+	set_download_directory:
+		Set location where downloads are to be saved to. Does not change location
+		existing downloads are to be saved to.
+	set_max_download_rate:
+		Sets the upload rate limit.
+	start_download:
+		Starts a download.
+	download_rate:
+		Returns average download rate for everything (excluding localhost).
+	upload_rate:
+		Returns average upload rate for everything (excluding localhost).
 	*/
 	void current_downloads(std::vector<download_status> & info, std::string hash = "");
 	void current_uploads(std::vector<upload_info> & info);
@@ -81,8 +101,10 @@ public:
 	std::string get_share_directory();
 	unsigned get_max_download_rate();
 	unsigned get_max_upload_rate();
+	void pause_download(const std::string & hash);
 	unsigned prime_count();
 	bool is_indexing();
+	void remove_download(const std::string & hash);
 	void search(std::string search_word, std::vector<download_info> & Search_Info);
 	void set_max_connections(const unsigned & max_connections_in);
 	void set_download_directory(const std::string & download_directory);
@@ -90,7 +112,6 @@ public:
 	void set_max_download_rate(unsigned download_rate);
 	void set_max_upload_rate(unsigned upload_rate);
 	void start_download(const download_info & info);
-	void stop_download(std::string hash);
 	unsigned download_rate();
 	unsigned upload_rate();
 

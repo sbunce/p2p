@@ -16,7 +16,7 @@
 #include "download_connection.hpp"
 #include "global.hpp"
 #include "p2p_buffer.hpp"
-#include "resolve.hpp"
+//#include "resolve.hpp"
 #include "thread_pool.hpp"
 
 //networking

@@ -1,5 +1,4 @@
 //NOT-THREADSAFE
-
 #ifndef H_DOWNLOAD_HASH_TREE
 #define H_DOWNLOAD_HASH_TREE
 
@@ -32,12 +31,13 @@ public:
 	virtual download_info get_download_info();
 	virtual const std::string hash();
 	virtual const std::string name();
+	virtual void pause();
 	virtual unsigned percent_complete();
+	virtual void remove();
 	virtual download::mode request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected, int & slots_used);
-	virtual void response(const int & socket, std::string block);
+	virtual bool response(const int & socket, std::string block);
 	virtual void register_connection(const download_connection & DC);
 	virtual const boost::uint64_t size();
-	virtual void stop();
 	virtual void unregister_connection(const int & socket);
 
 private:
@@ -70,21 +70,22 @@ private:
 		):
 			IP(IP_in),
 			wait_activated(false),
-			State(REQUEST_SLOT)
-		{
-
-		}
+			State(REQUEST_SLOT),
+			slot_requested(false),
+			slot_open(false)
+		{}
 
 		enum state{
 			REQUEST_SLOT,   //need to request a slot
-			AWAITING_SLOT,  //slot requested, awaiting slot
 			REQUEST_BLOCKS, //slot received, requesting blocks
-			CLOSED_SLOT     //already sent a P_CLOSE
+			PAUSED
 		};
 		state State;
 
-		std::string IP; //IP of server
-		char slot_ID;   //slot ID the server gave for the file
+		std::string IP;      //IP of server
+		bool slot_requested; //true if slot has been requested
+		bool slot_open;      //true if slot has been received
+		char slot_ID;        //slot ID (set if slot_open = true)
 
 		/*
 		What file blocks have been requested from the server in order of when they
@@ -94,7 +95,7 @@ private:
 		When new requests are made they should are pushed on to the back of
 		latest_request.
 
-		This is basically the pipeline for the server.
+		This is basically the pipeline.
 		*/
 		std::deque<boost::uint64_t> latest_request;
 
@@ -111,9 +112,21 @@ private:
 	//socket number mapped to connection special pointer
 	std::map<int, connection_special> Connection_Special;
 
+	/*
+	protocol_block:
+		Handles an incoming hash block (message with P_BLOCK command).
+	protocl_wait:
+		Handles an incoming wait command that was sent in response to a block
+		request.
+	protocol_slot:
+		Handles receiving response to slot request.
+	*/
+	void protocol_block(std::string & message, connection_special * conn);
+	void protocol_wait(std::string & message, connection_special * conn);
+	void protocol_slot(std::string & message, connection_special * conn);
+
 	boost::shared_ptr<request_generator> Request_Generator;
-	database::table::hash DB_Hash;
-	database::table::download DB_Download;
+	database::connection DB;
 	download_info Download_Info;
 	hash_tree Hash_Tree;
 };

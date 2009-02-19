@@ -1,11 +1,12 @@
 TODO
 
+-Add column to download_view that displays the stock_ID red/yellow/green
+circle to indicate no_servers/paused/downloading
+
+-replace main window icon with Gtk::Stock::NETWORK
+
 -requests should be sent before file blocks, when two hosts download from
 eachother the file blocks hog upload that should be used to get requests out.
-
--add stop/start functions to download, and rename cancel to remove. Once this
-is done properly handle the blob return codes in the download_hash_tree and
-download_file.
 
 
 HEADER ANNOTATIONS

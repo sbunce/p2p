@@ -61,12 +61,18 @@ private:
 	void download_info_tab_close(gui_window_download_status * status_window, std::string root_hash, sigc::connection tab_conn);
 
 	/*
-	cancel_download       - stop download under mouse cursor
-	download_info_tab     - sets up a download_window_download_status tab
-	download_info_refresh - refreshes download_view tab
+	delete_download:
+		Removes selected download.
+	download_info_tab:
+		Sets up a download_window_download_status tab for the selected download.
+	download_info_refresh:
+		Refreshes the tree view.
+	pause_download:
+		Pauses the selected download.
 	*/
-	void cancel_download();
+	void delete_download();
 	void download_info_tab();
 	bool download_info_refresh();
+	void pause_download();
 };
 #endif

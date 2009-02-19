@@ -98,8 +98,13 @@ public:
 		downloads from all p2p_buffers and Unique_Download.
 	is_downloading:
 		Returns true if download specified by pointer or hash is running.
-	stop_download:
-		Stops the download associated with hash.
+	pause_download:
+		Stops download from making further requests. Does not disconnect servers,
+		but servers may be disconnected if no other downloads are active with them.
+	remove_download:
+		Removes the download associated with hash.
+	remove_download_connection:
+		Disassociate a server with a download.
 	*/
 	static void add_download(boost::shared_ptr<download> & Download);
 	static void add_download_connection(download_connection & DC);
@@ -107,7 +112,9 @@ public:
 	static void get_complete_downloads(std::vector<boost::shared_ptr<download> > & complete);
 	static bool is_downloading(boost::shared_ptr<download> & Download);
 	static bool is_downloading(const std::string & hash);
-	static void stop_download(const std::string & hash);
+	static void pause_download(const std::string & hash);
+	static void remove_download(const std::string & hash);
+	static void remove_download_connection(const std::string & hash, const std::string & IP);
 
 	/*Functions for managing uploads.
 	current_uploads:
@@ -237,13 +244,13 @@ private:
 		Moves Download_iter through Download in a circular fashion. Returns true
 		if looped back to beginning
 	terminate_download:
-		Removes the download from this p2p_buffer which corresponds to hash.
-	unregister_all:
-		Unregisters the connection with all available downloads.
+		Removes the download from this p2p_buffer which corresponds to hash. Or
+		removal is also possible by supplying boost::shared_ptr to download.
 	*/
 	void prepare_download_requests();
 	void register_download(boost::shared_ptr<download> new_download);
 	bool rotate_downloads();
+	void terminate_download(const std::string & hash);
 	void terminate_download(boost::shared_ptr<download> term_DL);
 	/************************* END DOWNLOAD RELATED ****************************/
 

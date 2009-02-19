@@ -1,28 +1,28 @@
 #include "share_index.hpp"
 
 //BEGIN STATIC
-share_index * share_index::Share_Index(NULL);
-
 void share_index::add_path(const std::string & path)
 {
-	init();
-	boost::mutex::scoped_lock lock(Share_Index->PAD_mutex);
-	Share_Index->Pending_Add_Path.push_back(path);
-}
-
-bool share_index::is_indexing()
-{
-	init();
-	return Share_Index->indexing;
+	boost::mutex::scoped_lock lock(Share_Index().PAD_mutex);
+	Share_Index().Pending_Add_Path.push_back(path);
 }
 
 void share_index::init()
 {
+	Share_Index();
+}
+
+bool share_index::is_indexing()
+{
+	return Share_Index().indexing;
+}
+
+share_index & share_index::Share_Index()
+{
 	static boost::mutex Mutex;
 	boost::mutex::scoped_lock lock(Mutex);
-	if(Share_Index == NULL){
-		Share_Index = new share_index();
-	}
+	static share_index S;
+	return S;
 }
 //END STATIC
 

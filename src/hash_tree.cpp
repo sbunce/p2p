@@ -9,24 +9,23 @@ hash_tree::hash_tree()
 
 hash_tree::status hash_tree::check(tree_info & Tree_Info, boost::uint64_t & bad_block)
 {
-	boost::recursive_mutex::scoped_lock lock(*Tree_Info.Recursive_Mutex);
-	if(Tree_Info.block_count == 0){
+	if(Tree_Info.get_block_count() == 0){
 		return GOOD;
 	}else{
-
 		sha SHA;
 		SHA.reserve(global::HASH_BLOCK_SIZE * global::HASH_SIZE);
 		char block_buff[global::FILE_BLOCK_SIZE];
 
-		status TS;
-		for(boost::uint64_t x=0; x<Tree_Info.block_count; ++x){
-			TS = check_block(Tree_Info, x, SHA, block_buff);
-			if(TS == BAD){
+		status Status;
+		for(boost::uint64_t x=0; x<Tree_Info.get_block_count(); ++x){
+			Status = check_block(Tree_Info, x, SHA, block_buff);
+			if(Status == BAD){
+				boost::recursive_mutex::scoped_lock lock(*Tree_Info.Recursive_Mutex);
 				Tree_Info.Contiguous->trim(x);
 				bad_block = x;
 				LOGGER << "bad block " << x << " in tree " << Tree_Info.root_hash;
 				return BAD;
-			}else if(TS == IO_ERROR){
+			}else if(Status == IO_ERROR){
 				return IO_ERROR;
 			}
 		}
@@ -110,8 +109,8 @@ void hash_tree::check_contiguous(tree_info & Tree_Info)
 	c_iter_cur = Tree_Info.Contiguous->begin_contiguous();
 	c_iter_end = Tree_Info.Contiguous->end_contiguous();
 	while(c_iter_cur != c_iter_end){
-		if(!check_block(Tree_Info, c_iter_cur->first, SHA, block_buff)){
-
+		status Status = check_block(Tree_Info, c_iter_cur->first, SHA, block_buff);
+		if(Status == BAD){
 			#ifdef CORRUPT_HASH_BLOCK_TEST
 			//rerequest only the bad block and don't blacklist
 			Tree_Info.bad_block.push_back(c_iter_cur->first);
@@ -136,6 +135,13 @@ void hash_tree::check_contiguous(tree_info & Tree_Info)
 				}
 			}
 			#endif
+			break;
+		}else if(Status == IO_ERROR){
+			/*
+			IO_ERROR can't be communicated back to download_hash_tree from here.
+			However, we can wait until download_hash_tree tries to write and it
+			should error out then.
+			*/
 			break;
 		}
 		++c_iter_cur;

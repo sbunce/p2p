@@ -42,11 +42,12 @@ public:
 	virtual download_info get_download_info();
 	virtual const std::string hash();
 	virtual const std::string name();
+	virtual void pause();
 	virtual unsigned percent_complete();
 	virtual void register_connection(const download_connection & DC);
+	virtual void remove();
 	virtual download::mode request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected, int & slots_used);
-	virtual void response(const int & socket, std::string block);
-	virtual void stop();
+	virtual bool response(const int & socket, std::string message);
 	virtual const boost::uint64_t size();
 	virtual void unregister_connection(const int & socket);
 
@@ -86,19 +87,22 @@ private:
 		):
 			IP(IP_in),
 			wait_activated(false),
-			State(REQUEST_SLOT)
+			State(REQUEST_SLOT),
+			slot_requested(false),
+			slot_open(false)
 		{}
 
 		enum state{
 			REQUEST_SLOT,   //need to request a slot
-			AWAITING_SLOT,  //slot requested, awaiting slot
 			REQUEST_BLOCKS, //slot received, requesting blocks
-			CLOSED_SLOT     //already sent a P_CLOSE
+			PAUSED
 		};
 		state State;
 
-		std::string IP;         //IP of server
-		char slot_ID;           //slot ID the server gave for the file
+		std::string IP;      //IP of server
+		bool slot_requested; //true if slot has been requested
+		bool slot_open;      //true if slot has been received
+		char slot_ID;        //slot ID the server gave for the file
 
 		/*
 		What file blocks have been requested from the server in order of when they
@@ -124,16 +128,27 @@ private:
 	std::map<int, connection_special> Connection_Special;
 
 	/*
-	hash_check  - checks partial download integrity (run in thread spawned in ctor)
-	write_block - writes a file block
+	hash_check:
+		Checks partial download integrity (run in thread spawned in ctor).
+	protocol_block:
+		Handles an incoming hash block (message with P_BLOCK command).
+	protocl_wait:
+		Handles an incoming wait command that was sent in response to a block
+		request.
+	protocol_slot:
+		Handles receiving response to slot request.
+	write_block:
+		Writes a file block.
 	*/
 	void hash_check(hash_tree::tree_info & Tree_Info, std::string file_path);
+	void protocol_block(std::string & message, connection_special * conn);
+	void protocol_wait(std::string & message, connection_special * conn);
+	void protocol_slot(std::string & message, connection_special * conn);
 	void write_block(boost::uint64_t block_number, std::string & block);
 
 	boost::shared_ptr<request_generator> Request_Generator;
+	database::connection DB;
 	download_info Download_Info;
-	database::table::blacklist DB_Blacklist;
-	database::table::download DB_Download;
 	hash_tree Hash_Tree;
 };
 #endif

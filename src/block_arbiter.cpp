@@ -1,62 +1,52 @@
 #include "block_arbiter.hpp"
 
 //BEGIN STATIC
-block_arbiter * block_arbiter::Block_Arbiter = NULL;
-
 void block_arbiter::start_hash_tree(const std::string & hash)
 {
 	boost::mutex::scoped_lock lock(Mutex());
-	init();
-	Block_Arbiter->start_hash_tree_priv(hash);
+	Block_Arbiter().start_hash_tree_priv(hash);
 }
 
 void block_arbiter::start_file(const std::string & hash, const boost::uint64_t & file_block_count)
 {
 	boost::mutex::scoped_lock lock(Mutex());
-	init();
-	Block_Arbiter->start_file_priv(hash, file_block_count);
+	Block_Arbiter().start_file_priv(hash, file_block_count);
 }
 
 void block_arbiter::finish_download(const std::string & hash)
 {
 	boost::mutex::scoped_lock lock(Mutex());
-	init();
-	Block_Arbiter->finish_download_priv(hash);
+	Block_Arbiter().finish_download_priv(hash);
 }
 
 void block_arbiter::update_hash_tree_highest(const std::string & hash, const boost::uint64_t & block_num)
 {
 	boost::mutex::scoped_lock lock(Mutex());
-	init();
-	Block_Arbiter->update_hash_tree_highest_priv(hash, block_num);
+	Block_Arbiter().update_hash_tree_highest_priv(hash, block_num);
 }
 
 void block_arbiter::add_file_block(const std::string & hash, const boost::uint64_t & block_num)
 {
 	boost::mutex::scoped_lock lock(Mutex());
-	init();
-	Block_Arbiter->add_file_block_priv(hash, block_num);
+	Block_Arbiter().add_file_block_priv(hash, block_num);
 }
 
 bool block_arbiter::is_downloading(const std::string & hash)
 {
 	boost::mutex::scoped_lock lock(Mutex());
-	init();
-	return Block_Arbiter->is_downloading_priv(hash);
+	return Block_Arbiter().is_downloading_priv(hash);
 }
 
 block_arbiter::download_state block_arbiter::hash_block_available(const std::string & hash, const boost::uint64_t & block_num)
 {
 	boost::mutex::scoped_lock lock(Mutex());
-	init();
-	return Block_Arbiter->hash_block_available_priv(hash, block_num);
+	return Block_Arbiter().hash_block_available_priv(hash, block_num);
 }
 
 block_arbiter::download_state block_arbiter::file_block_available(const std::string & hash, const boost::uint64_t & block_num)
 {
 	boost::mutex::scoped_lock lock(Mutex());
-	init();
-	return Block_Arbiter->file_block_available_priv(hash, block_num);
+	return Block_Arbiter().file_block_available_priv(hash, block_num);
 }
 
 boost::mutex & block_arbiter::Mutex()
@@ -65,13 +55,33 @@ boost::mutex & block_arbiter::Mutex()
 	return *M;
 }
 
-void block_arbiter::init()
+block_arbiter & block_arbiter::Block_Arbiter()
 {
-	if(Block_Arbiter == NULL){
-		Block_Arbiter = new block_arbiter();
-	}
+	/*
+	The block arbiter singleton is called by the download_hash_tree and
+	download_file dtors when the static containers within p2p_buffer delete the
+	last boost::share_ptr references from themselves upon destruction. Because
+	it's undefined whether or not the block arbiter will be destructed before
+	the static containers within the p2p buffer, the block_arbiter is new'd so
+	it is never destructed. But that's OK because nothing needs to be done upon
+	destruction in the block_arbiter anyways.
+
+	Holy hell static initialization order is complicated..
+	*/
+	static block_arbiter * B = new block_arbiter();
+	return *B;
 }
 //END STATIC
+
+block_arbiter::block_arbiter()
+{
+
+}
+
+block_arbiter::~block_arbiter()
+{
+	//WARNING: THIS IS NEVER CALLED, see Block_Arbiter() documentation
+}
 
 void block_arbiter::start_hash_tree_priv(const std::string & hash)
 {

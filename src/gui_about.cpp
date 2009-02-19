@@ -24,6 +24,7 @@ gui_about::gui_about()
 	text_buff = Gtk::TextBuffer::create();
 	text_buff->set_text(global::NAME + " version: " + global::VERSION + " © Seth Bunce 2006");
 	text_view->set_buffer(text_buff);
+	text_view->set_editable(false);
 
 	vbox->pack_start(*button_box, Gtk::PACK_SHRINK);
 	button_box->pack_start(*close_button, Gtk::PACK_SHRINK);

@@ -39,15 +39,17 @@ gui_window_download::gui_window_download(
 	pColumn->add_attribute(cell->property_value(), column_percent_complete);
 
 	//menu that pops up when right click happens on download
-	downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::StockMenuElem(Gtk::StockID(Gtk::Stock::CANCEL), sigc::mem_fun(*this, &gui_window_download::cancel_download)));
 	downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::StockMenuElem(Gtk::StockID(Gtk::Stock::INFO), sigc::mem_fun(*this, &gui_window_download::download_info_tab)));
+	downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::StockMenuElem(Gtk::StockID(Gtk::Stock::MEDIA_PAUSE), sigc::mem_fun(*this, &gui_window_download::pause_download)));
+	//downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::MenuElem(""));//spacer
+	downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::StockMenuElem(Gtk::StockID(Gtk::Stock::DELETE), sigc::mem_fun(*this, &gui_window_download::delete_download)));
 
 	//signaled functions
 	Glib::signal_timeout().connect(sigc::mem_fun(*this, &gui_window_download::download_info_refresh), global::GUI_TICK);
 	download_view->signal_button_press_event().connect(sigc::mem_fun(*this, &gui_window_download::download_click), false);
 }
 
-void gui_window_download::cancel_download()
+void gui_window_download::delete_download()
 {
 	Glib::RefPtr<Gtk::TreeView::Selection> refSelection = download_view->get_selection();
 	if(refSelection){
@@ -56,7 +58,7 @@ void gui_window_download::cancel_download()
 			Gtk::TreeModel::Row row = *iter0;
 			Glib::ustring hash_retrieved;
 			row.get_value(0, hash_retrieved);
-			P2P->stop_download(hash_retrieved);
+			P2P->remove_download(hash_retrieved);
 		}
 	}
 }
@@ -244,4 +246,18 @@ bool gui_window_download::download_info_refresh()
 	}
 
 	return true;
+}
+
+void gui_window_download::pause_download()
+{
+	Glib::RefPtr<Gtk::TreeView::Selection> refSelection = download_view->get_selection();
+	if(refSelection){
+		Gtk::TreeModel::iterator iter0 = refSelection->get_selected();
+		if(iter0){
+			Gtk::TreeModel::Row row = *iter0;
+			Glib::ustring hash_retrieved;
+			row.get_value(0, hash_retrieved);
+			P2P->pause_download(hash_retrieved);
+		}
+	}
 }

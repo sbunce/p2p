@@ -47,29 +47,34 @@ public:
 		Returns the root hash for the download.
 	name:
 		Returns the name of the download to be displayed in GUI.
+	pause:
+		Stops download from making any more requests to the server. This will
+		close open slots with the server.
 	percent_complete:
 		Returns the percentage (0-100) complete.
 	request:
 		Make a request of a server, expected vector is possible response commands
 		paired with length of responses
 	response:
-		Responses to requests are sent to this function once the entire response
-		is gotten.
+		Responses to requests are sent to this function once the entire expected
+		response is received. True is returned if all is normal. False is returned
+		if the p2p_buffer should disassociate the server with the download.
 	size:
 		Returns the size (bytes) of the download.
-	stop:
-		This must prepare the download for early termination and make complete()
-		return true A.S.A.P
+	remove:
+		User wants the download removed. This should trigger cleanup and removal
+		of download.
 	*/
 	virtual bool complete() = 0;
 	virtual download_info get_download_info() = 0;
 	virtual const std::string hash() = 0;
 	virtual const std::string name() = 0;
+	virtual void pause() = 0;
 	virtual unsigned percent_complete() = 0;
+	virtual void remove() = 0;
 	virtual mode request(const int & socket, std::string & request, std::vector<std::pair<char, int> > & expected, int & slots_used) = 0;
-	virtual void response(const int & socket, std::string block) = 0;
+	virtual bool response(const int & socket, std::string message) = 0;
 	virtual const boost::uint64_t size() = 0;
-	virtual void stop() = 0;
 
 	/* Functions that p2p_buffer interacts with.
 	connection_count:
@@ -94,6 +99,8 @@ protected:
 	//returned by is_cancelled and is_visible
 	bool cancel;
 	bool visible;
+
+	bool paused;
 
 	/*
 	When update_speed is called the byte count is added to this total. This can

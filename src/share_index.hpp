@@ -31,24 +31,24 @@ public:
 	~share_index();
 
 	/*
-	Adds a path to the directory tree if one doesn't already exist. The files
-	pointed to by the path isn't hashed. It is only added to the tree.
-
-	This function is commonly used when a download finishes and the downloaded
-	file needs to be added to the tree.
+	add_path:
+		Adds path to the in memory directory tree. This is used when a
+		download_file finishes to add the downloaded file.
+	init:
+		May be used to initialize the singletone if it hasn't been done
+		already.
+	is_indexing:
+		Returns true if the server_index is hashing a file.
 	*/
 	static void add_path(const std::string & path);
-
-	//instantiates the singleton
 	static void init();
-
-	//returns true if indexing
 	static bool is_indexing();
 
 private:
 	share_index();
 
-	static share_index * Share_Index; //one possible instance of server_index
+	//returns the share_index singleton
+	static share_index & Share_Index();
 
 	//indexing thread (runs in main_loop)
 	boost::thread indexing_thread;

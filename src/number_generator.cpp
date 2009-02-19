@@ -1,33 +1,32 @@
 #include "number_generator.hpp"
 
 //BEGIN STATIC
-number_generator * number_generator::Number_Generator = NULL;
+void number_generator::init()
+{
+	Number_Generator();
+}
 
 unsigned number_generator::prime_count()
 {
-	init();
-	return ((number_generator *)Number_Generator)->prime_count_priv();
+	return Number_Generator().prime_count_priv();
 }
 
 mpint number_generator::random_mpint(const int & bytes)
 {
-	init();
-	return ((number_generator *)Number_Generator)->random_mpint_priv(bytes);
+	return Number_Generator().random_mpint_priv(bytes);
 }
 
 mpint number_generator::random_prime_mpint()
 {
-	init();
-	return ((number_generator *)Number_Generator)->random_prime_mpint_priv();
+	return Number_Generator().random_prime_mpint_priv();
 }
 
-void number_generator::init()
+number_generator & number_generator::Number_Generator()
 {
-	static boost::mutex init_mutex;
-	boost::mutex::scoped_lock lock(init_mutex);
-	if(Number_Generator == NULL){
-		Number_Generator = new number_generator;
-	}
+	static boost::mutex Mutex;
+	boost::mutex::scoped_lock lock(Mutex);
+	static number_generator N;
+	return N;
 }
 
 int number_generator::PRNG(unsigned char * buff, int length, void * data)
@@ -60,6 +59,12 @@ number_generator::number_generator()
 	genprime_thread = boost::thread(boost::bind(&number_generator::genprime_loop, this));
 }
 
+number_generator::~number_generator()
+{
+	genprime_thread.interrupt();
+	genprime_thread.join();
+}
+
 unsigned number_generator::prime_count_priv()
 {
 	return DB_Prime.count();
@@ -86,6 +91,7 @@ mpint number_generator::random_prime_mpint_priv()
 void number_generator::genprime_loop()
 {
 	while(true){
+		boost::this_thread::interruption_point();
 		if(DB_Prime.count() >= global::PRIME_CACHE){
 			//enough primes generated, sleep for a while
 			portable_sleep::ms(1000);

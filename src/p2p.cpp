@@ -114,6 +114,11 @@ bool p2p::file_info(const std::string & hash, std::string & path, boost::uint64_
 	}
 }
 
+void p2p::pause_download(const std::string & hash)
+{
+	p2p_buffer::pause_download(hash);
+}
+
 unsigned p2p::prime_count()
 {
 	return number_generator::prime_count();
@@ -183,7 +188,7 @@ void p2p::new_connection(const int & listener)
 		localhost_socket = new_FD;
 	}
 
-	//make sure the p2p isn't already connected
+	//make sure not already connected
 	sockaddr_in temp_addr;
 	for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 		if(FD_ISSET(socket_FD, &master_FDS)){
@@ -563,9 +568,9 @@ void p2p::start_download(const download_info & info)
 	Pending_Download.push_back(info);
 }
 
-void p2p::stop_download(std::string hash)
+void p2p::remove_download(const std::string & hash)
 {
-	p2p_buffer::stop_download(hash);
+	p2p_buffer::remove_download(hash);
 }
 
 void p2p::start_download_process(const download_info & info)

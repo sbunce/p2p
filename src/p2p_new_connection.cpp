@@ -169,19 +169,18 @@ void p2p_new_connection::process_DC(download_connection DC)
 
 void p2p_new_connection::queue(download_connection DC)
 {
+/*
 	//resolve hostname
 	if(!resolve::hostname(DC.IP)){
 		LOGGER << "failed to resolve " << DC.IP;
 		return;
 	}
-
-	#ifndef ALLOW_LOCALHOST_CONNECTION
+*/
 	//stop connections to localhost
-	if(DC.IP.find("127.") != std::string::npos){
+	if(DC.IP.find("127") == 0){
 		LOGGER << "stopping connection to localhost";
 		return;
 	}
-	#endif
 
 	/*
 	Before using a thread, check to see if a connection to this server already

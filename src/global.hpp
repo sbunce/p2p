@@ -57,18 +57,18 @@ namespace global
 	const unsigned UPLOAD_RATE = std::numeric_limits<unsigned>::max();   //B/s
 
 	//hard settings, not changed at runtime
-	const unsigned SHARE_SCAN_RATE = 8;       //share scan rate (files/second)
-	const unsigned PRIME_CACHE = 32;          //number of primes to keep in prime cache for diffie-hellman
-	const unsigned DH_KEY_SIZE = 64;          //size of key exchanged with diffie-hellman (bytes)
-	const unsigned PIPELINE_SIZE = 16;        //max pre-requests that can be done (must be >= 2)
-	const unsigned RE_REQUEST = 16;           //seconds before a file block is re-requested
-	const unsigned P_WAIT_TIMEOUT = 8;        //when a client download_file/download_hash_tree receives a P_WAIT it will not make any requests for this long
-	const unsigned RE_REQUEST_FINISHING = 4;  //seconds before a file block is re-requested when download is in finishing phase (last block requested)
-	const unsigned P2P_PORT = 6969;           //port client connects to and server receives on
-	const unsigned GUI_TICK = 100;            //time(in milliseconds) between gui updates
-	const unsigned SPEED_AVERAGE = 8;         //how many seconds to average speed over
-	const unsigned TIMEOUT = 16;              //how long before an unresponsive socket times out
-	const unsigned UNRESPONSIVE_TIMEOUT = 60; //if connection to server fails, new connection attempts to it are stopped for this time (seconds)
+	const unsigned SHARE_SCAN_RATE = 2;        //share scan rate (files/second)
+	const unsigned PRIME_CACHE = 32;           //number of primes to keep in prime cache for diffie-hellman
+	const unsigned DH_KEY_SIZE = 64;           //size of key exchanged with diffie-hellman (bytes)
+	const unsigned PIPELINE_SIZE = 16;         //max pre-requests that can be done (must be >= 2)
+	const unsigned P_WAIT_TIMEOUT = 8;         //when a client download_file/download_hash_tree receives a P_WAIT it will not make any requests for this long
+	const unsigned P2P_PORT = 6969;            //port client connects to and server receives on
+	const unsigned GUI_TICK = 100;             //time(in milliseconds) between gui updates
+	const unsigned SPEED_AVERAGE = 8;          //how many seconds to average speed over
+	const unsigned RE_REQUEST = 16;            //seconds before a file block is re-requested
+	const unsigned RE_REQUEST_FINISHING = 16;  //seconds before a file block is re-requested when download is in finishing phase (last block requested)
+	const unsigned TIMEOUT = 64;               //how long before an unresponsive socket times out
+	const unsigned UNRESPONSIVE_TIMEOUT = 480; //if connection to server fails, new connection attempts to it are stopped for this time (seconds)
 
 	//default locations
 	const std::string DOWNLOAD_DIRECTORY = "download/";

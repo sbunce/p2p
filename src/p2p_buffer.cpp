@@ -24,9 +24,7 @@ int & p2p_buffer::send_pending()
 
 std::set<boost::shared_ptr<download> > & p2p_buffer::Unique_Download()
 {
-	/*
-	Destructor must be called upon program close. Order does not matter.
-	*/
+	//destructor must be called upon program close, order does not matter
 	static std::set<boost::shared_ptr<download> > UD;
 	return UD;
 }
@@ -40,7 +38,6 @@ void p2p_buffer::add_connection(const int & socket_FD, const std::string & IP, c
 		std::pair<std::map<int, boost::shared_ptr<p2p_buffer> >::iterator, bool> ret;
 		ret = P2P_Buffer().insert(std::make_pair(socket_FD, new p2p_buffer(socket_FD, IP, initiator)));
 		assert(ret.second);
-		CB_iter = ret.first;
 	}
 }
 
@@ -131,7 +128,6 @@ void p2p_buffer::erase(const int & socket_FD)
 	std::map<int, boost::shared_ptr<p2p_buffer> >::iterator iter = P2P_Buffer().find(socket_FD);
 	if(iter != P2P_Buffer().end()){
 		if(!iter->second->send_buff.empty()){
-			//send_buff contains data, decrement send_pending()
 			--send_pending();
 		}
 		P2P_Buffer().erase(iter);
@@ -217,6 +213,7 @@ bool p2p_buffer::get_send_buff(const int & socket_FD, const int & max_bytes, std
 	if(iter == P2P_Buffer().end()){
 		return false;
 	}else{
+		iter->second->last_seen = time(NULL);
 		int size;
 		if(max_bytes > iter->second->send_buff.size()){
 			size = iter->second->send_buff.size();
@@ -282,7 +279,7 @@ void p2p_buffer::process()
 	}
 }
 
-void p2p_buffer::stop_download(const std::string & hash)
+void p2p_buffer::pause_download(const std::string & hash)
 {
 	boost::mutex::scoped_lock lock(Mutex());
 	std::set<boost::shared_ptr<download> >::iterator iter_cur, iter_end;
@@ -290,8 +287,38 @@ void p2p_buffer::stop_download(const std::string & hash)
 	iter_end = Unique_Download().end();
 	while(iter_cur != iter_end){
 		if(hash == (*iter_cur)->hash()){
-			(*iter_cur)->stop();
+			(*iter_cur)->pause();
 			return;
+		}
+		++iter_cur;
+	}
+}
+
+void p2p_buffer::remove_download(const std::string & hash)
+{
+	boost::mutex::scoped_lock lock(Mutex());
+	std::set<boost::shared_ptr<download> >::iterator iter_cur, iter_end;
+	iter_cur = Unique_Download().begin();
+	iter_end = Unique_Download().end();
+	while(iter_cur != iter_end){
+		if(hash == (*iter_cur)->hash()){
+			(*iter_cur)->remove();
+			return;
+		}
+		++iter_cur;
+	}
+}
+
+void p2p_buffer::remove_download_connection(const std::string & hash, const std::string & IP)
+{
+	boost::mutex::scoped_lock lock(Mutex());
+	std::map<int, boost::shared_ptr<p2p_buffer> >::iterator iter_cur, iter_end;
+	iter_cur = P2P_Buffer().begin();
+	iter_end = P2P_Buffer().end();
+	while(iter_cur != iter_end){
+		if(IP == iter_cur->second->IP){
+			iter_cur->second->terminate_download(hash);
+			break;
 		}
 		++iter_cur;
 	}
@@ -337,7 +364,7 @@ p2p_buffer::p2p_buffer(
 
 p2p_buffer::~p2p_buffer()
 {
-	//unregister connection with all downloads
+	//unregister connections with all downloads
 	std::list<boost::shared_ptr<download> >::iterator iter_cur, iter_end;
 	iter_cur = Download.begin();
 	iter_end = Download.end();
@@ -520,9 +547,7 @@ bool p2p_buffer::protocol_response()
 {
 	if(recv_buff.empty()){
 		return false;
-	}
-
-	if(Pipeline.empty()){
+	}else if(Pipeline.empty()){
 		LOGGER << "remote host made hash/file request when pipeline empty";
 		DB_Blacklist.add(IP);
 		return false;
@@ -539,27 +564,25 @@ bool p2p_buffer::protocol_response()
 			}
 			++iter_cur;
 		}
+		//command should be found in expected otherwise programmer error
+		assert(iter_cur != iter_end);
 
-		if(iter_cur == iter_end){
-			//download didn't specify command listed in preconditions
-			LOGGER << "download didn't specify a command";
-			exit(1);
-		}else{
-			if(recv_buff.size() < iter_cur->second){
-				//not enough bytes yet received to fulfill download's request
-				if(Pipeline.front().Download.get() != NULL){
-					Pipeline.front().Download->update_speed(socket, recv_buff.size() - bytes_seen);
-				}
-				bytes_seen = recv_buff.size();
-				return false;
+		if(recv_buff.size() < iter_cur->second){
+			//not enough bytes yet received to fulfill download's request
+			if(Pipeline.front().Download.get() != NULL){
+				Pipeline.front().Download->update_speed(socket, recv_buff.size() - bytes_seen);
 			}
-
+			bytes_seen = recv_buff.size();
+			return false;
+		}else{
 			if(Pipeline.front().Download.get() == NULL){
 				//terminated download detected, discard response
 				recv_buff.erase(0, iter_cur->second);
 			}else{
 				//pass response to download
-				Pipeline.front().Download->response(socket, recv_buff.substr(0, iter_cur->second));
+				if(!Pipeline.front().Download->response(socket, recv_buff.substr(0, iter_cur->second))){
+					terminate_download(Pipeline.front().Download);
+				}
 				if(Pipeline.front().Download.get() != NULL){
 					Pipeline.front().Download->update_speed(socket, iter_cur->second - bytes_seen);
 				}
@@ -567,13 +590,15 @@ bool p2p_buffer::protocol_response()
 				recv_buff.erase(0, iter_cur->second);
 			}
 			Pipeline.pop_front();
+			return true;
 		}
-		return true;
 	}else if(Pipeline.front().Mode == download::TEXT_MODE){
 		int loc;
 		if((loc = recv_buff.find_first_of('\0',0)) != std::string::npos){
 			//pass response to download
-			Pipeline.front().Download->response(socket, recv_buff.substr(0, loc));
+			if(!Pipeline.front().Download->response(socket, recv_buff.substr(0, loc))){
+				terminate_download(Pipeline.front().Download);
+			}
 			recv_buff.erase(0, loc+1);
 			Pipeline.front().Download->update_speed(socket, loc);
 			Pipeline.pop_front();
@@ -584,7 +609,7 @@ bool p2p_buffer::protocol_response()
 		}
 	}
 
-	LOGGER << "invalid mode";
+	LOGGER << "programmer error";
 	exit(1);
 }
 
@@ -773,6 +798,21 @@ bool p2p_buffer::rotate_downloads()
 	return false;
 }
 
+void p2p_buffer::terminate_download(const std::string & hash)
+{
+	//locate download to call the other terminate_download on
+	std::list<boost::shared_ptr<download> >::iterator D_iter_cur, D_iter_end;
+	D_iter_cur = Download.begin();
+	D_iter_end = Download.end();
+	while(D_iter_cur != D_iter_end){
+		if(hash == (*D_iter_cur)->hash()){
+			terminate_download(*D_iter_cur);
+			break;
+		}
+		++D_iter_cur;
+	}
+}
+
 void p2p_buffer::terminate_download(boost::shared_ptr<download> term_DL)
 {
 	/*
@@ -795,11 +835,15 @@ void p2p_buffer::terminate_download(boost::shared_ptr<download> term_DL)
 	D_iter_end = Download.end();
 	while(D_iter_cur != D_iter_end){
 		if(*D_iter_cur == term_DL){
+			
 			D_iter_cur = Download.erase(D_iter_cur);
 		}else{
 			++D_iter_cur;
 		}
 	}
+
+	//unregister this p2p_buffer with the download
+	term_DL->unregister_connection(socket);
 
 	//reset Download_iter because it may have been invalidated
 	Download_iter = Download.begin();

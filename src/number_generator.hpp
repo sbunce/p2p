@@ -29,23 +29,28 @@ class number_generator : private boost::noncopyable
 public:
 
 	/*
-	prime_count        - returns number of primes in prime cache
-	random_mpint       - returns random mpint of specified size
-	random_prime_mpint - returns random mpint global::DH_KEY_SIZE long
-	                     Blocks if cache empty, until new primes generated.
-	init               - initializes singleton, starts prime generate thread
+	init:
+		Initialize singleton. Not necessary to call but can be called to
+		make sure prime generation thread is running.
+	prime_count:
+		Return number of primes in prime cache.
+	random_mpint:
+		Return random mpint of specified size.
+	random_prime_mpint:
+		Return random mpint global::DH_KEY_SIZE long.Blocks if cache empty, until
+		new primes generated.
 	*/
+	static void init();
 	static unsigned prime_count();
 	static mpint random_mpint(const int & bytes);
 	static mpint random_prime_mpint();
-	static void init();
 
 private:
-	//only the number generator can initialize itself
 	number_generator();
+	~number_generator();
 
-	//the one possible instance of number_generator
-	static number_generator * Number_Generator;
+	//returns the singleton
+	static number_generator & Number_Generator();
 
 	/*
 	PRNG function that mp_prime_random_ex needs

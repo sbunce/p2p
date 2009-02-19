@@ -53,7 +53,8 @@ public:
 	static download_state file_block_available(const std::string & hash, const boost::uint64_t & block_num);
 
 private:
-	block_arbiter(){}
+	block_arbiter();
+	~block_arbiter();
 
 	/*
 	Returns reference to mutex to lock all public static functions. A function
@@ -62,11 +63,8 @@ private:
 	*/
 	static boost::mutex & Mutex();
 
-	//must be called at the top of every public function to initialize singleton
-	static void init();
-
 	//the one possible instance of DB_blacklist
-	static block_arbiter * Block_Arbiter;
+	static block_arbiter & Block_Arbiter();
 
 	//used to keep track of progress of downloading hash tree
 	class hash_tree_state
