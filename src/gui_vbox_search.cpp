@@ -31,13 +31,18 @@ gui_vbox_search::gui_vbox_search(
 	column.add(column_IP);
 	search_list = Gtk::ListStore::create(column);
 	search_view->set_model(search_list);
+
 	search_view->append_column("  Name  ", column_name);
-	//0 is the visible column, 1 is the actual column
-	search_view->get_column(0)->set_sort_column(1);
 	search_view->append_column("  Size  ", column_size);
-	search_view->get_column(1)->set_sort_column(2);
-	search_list->set_sort_func(2, sigc::mem_fun(*this, &gui_vbox_search::compare_file_size));
 	search_view->append_column("  IP  ", column_IP);
+
+	//setup sorting on columns
+	Gtk::TreeViewColumn * C;
+	C = search_view->get_column(0); assert(C);
+	C->set_sort_column(1);
+	C = search_view->get_column(1); assert(C);
+	C->set_sort_column(2);
+	search_list->set_sort_func(2, sigc::mem_fun(*this, &gui_vbox_search::compare_file_size));
 
 	//menu that pops up when right click happens
 	Gtk::Menu::MenuList & menu_list = search_popup_menu.items();

@@ -60,6 +60,7 @@ void p2p::check_timeouts()
 	iter_cur = timed_out.begin();
 	iter_end = timed_out.end();
 	while(iter_cur != iter_end){
+		LOGGER << "disconnecting timed out socket " << *iter_cur;
 		disconnect(*iter_cur);
 		++iter_cur;
 	}
@@ -435,6 +436,7 @@ void p2p::main_loop()
 								perror("p2p recv");
 								#endif
 							}
+							LOGGER << "remote " << socket_FD << " requested disconnect";
 							disconnect(socket_FD);
 							continue;
 						}else{
@@ -449,7 +451,7 @@ void p2p::main_loop()
 			}
 
 			if(FD_ISSET(socket_FD, &write_FDS)){
-				if(p2p_buffer::get_send_buff(socket_FD, max_buff, send_buff)){
+				if(p2p_buffer::get_send_buff(socket_FD, max_send, send_buff)){
 					if((transfer_limit = rate_limit::upload_rate_control(send_buff.size())) != 0){
 						if(socket_FD == localhost_socket){
 							transfer_limit = send_buff.size();
@@ -469,6 +471,7 @@ void p2p::main_loop()
 								rate_limit::add_upload_bytes(n_bytes);
 							}
 							if(p2p_buffer::post_send(socket_FD, n_bytes)){
+								LOGGER << "post send disconnect of socket " << socket_FD;
 								disconnect(socket_FD);
 							}
 							transfer = true;

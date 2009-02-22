@@ -54,9 +54,11 @@ private:
 
 	/*
 	Signaled Functions
+	compare_file_size       - signaled when user clicks size column to sort
 	download_click          - called when download_view clicked
 	download_info_tab_close - called when download info tab button clicked
 	*/
+	int compare_file_size(const Gtk::TreeModel::iterator & lval, const Gtk::TreeModel::iterator & rval);
 	bool download_click(GdkEventButton * event);
 	void download_info_tab_close(gui_window_download_status * status_window, std::string root_hash, sigc::connection tab_conn);
 

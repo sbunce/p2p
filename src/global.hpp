@@ -1,7 +1,7 @@
 #ifndef H_GLOBAL
 #define H_GLOBAL
 
-//uncomment to disable all asserts
+//uncomment to disable all asserts, and special debug code
 //#define NDEBUG
 
 //testing features, uncomment to enable

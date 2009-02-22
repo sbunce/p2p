@@ -25,6 +25,11 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	//boxes (divides the window)
 	main_VBox = Gtk::manage(new Gtk::VBox(false, 0));
 
+	//icon for top left of window
+	window->set_icon(
+		Gtk::Widget::render_icon(Gtk::Stock::NETWORK, Gtk::ICON_SIZE_LARGE_TOOLBAR)
+	);
+
 	//add items to File menu
 	file_menu->items().push_back(Gtk::Menu_Helpers::StockMenuElem(Gtk::StockID(Gtk::Stock::QUIT)));
 	quit = (Gtk::ImageMenuItem *)&file_menu->items().back();

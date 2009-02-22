@@ -27,10 +27,19 @@ gui_window_download::gui_window_download(
 	column.add(column_percent_complete);
 	download_list = Gtk::ListStore::create(column);
 	download_view->set_model(download_list);
+
 	download_view->append_column(" Name ", column_name);
 	download_view->append_column(" Size ", column_size);
 	download_view->append_column(" Peers ", column_servers);
 	download_view->append_column(" Speed ", column_speed);
+
+	//setup sorting on columns
+	Gtk::TreeViewColumn * C;
+	C = download_view->get_column(0); assert(C);
+	C->set_sort_column(1);
+	C = download_view->get_column(1); assert(C);
+	C->set_sort_column(2);
+	download_list->set_sort_func(2, sigc::mem_fun(*this, &gui_window_download::compare_file_size));
 
 	//display percentage progress bar
 	cell = Gtk::manage(new Gtk::CellRendererProgress);
@@ -47,6 +56,22 @@ gui_window_download::gui_window_download(
 	//signaled functions
 	Glib::signal_timeout().connect(sigc::mem_fun(*this, &gui_window_download::download_info_refresh), global::GUI_TICK);
 	download_view->signal_button_press_event().connect(sigc::mem_fun(*this, &gui_window_download::download_click), false);
+}
+
+int gui_window_download::compare_file_size(const Gtk::TreeModel::iterator & lval, const Gtk::TreeModel::iterator & rval)
+{
+	Gtk::TreeModel::Row row_lval = *lval;
+	Gtk::TreeModel::Row row_rval = *rval;
+
+	//convert to std::string, involves a lot of copying but no known alternative
+	std::stringstream ss;
+	ss << row_lval[column_size];
+	std::string left = ss.str();
+	ss.str(""); ss.clear();
+	ss << row_rval[column_size];
+	std::string right = ss.str();
+
+	return convert::size_SI_cmp(left, right);
 }
 
 void gui_window_download::delete_download()

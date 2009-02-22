@@ -10,6 +10,10 @@ gui_about::gui_about()
 	button_box = Gtk::manage(new Gtk::HButtonBox);
 	close_button = Gtk::manage(new Gtk::Button(Gtk::Stock::CLOSE));
 
+	window->set_icon(
+		Gtk::Widget::render_icon(Gtk::Stock::ABOUT, Gtk::ICON_SIZE_LARGE_TOOLBAR)
+	);
+
 	window->set_title(("About " + global::NAME));
 	window->resize(500, 350);
 	window->set_modal(true);

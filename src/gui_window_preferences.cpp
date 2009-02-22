@@ -23,6 +23,11 @@ gui_window_preferences::gui_window_preferences(
 	connections_hscale = Gtk::manage(new Gtk::HScale(0,global::MAX_CONNECTIONS,1));
 	fixed = Gtk::manage(new Gtk::Fixed());
 
+	//icon for top left of window
+	window->set_icon(
+		Gtk::Widget::render_icon(Gtk::Stock::PREFERENCES, Gtk::ICON_SIZE_LARGE_TOOLBAR)
+	);
+
 	window->set_resizable(false);
 	window->set_title("Preferences");
 	window->set_modal(true);

@@ -50,6 +50,7 @@ src_common = [
 	'p2p_new_connection.cpp',
 	'rate_limit.cpp',
 	'request_generator.cpp',
+	'send_buffer.cpp',
 	'sha.cpp',
 	'share_index.cpp',
 	'slot.cpp',
