@@ -7,7 +7,6 @@
 #include <boost/thread.hpp>
 
 //custom
-#include "atomic_int.hpp"
 #include "global.hpp"
 
 //std

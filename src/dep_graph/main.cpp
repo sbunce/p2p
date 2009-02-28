@@ -13,6 +13,5 @@ int main(int argc, char * argv[])
 	}else{
 		std::cout << "usage: ./" << argv[0] << " main.cc\n";
 	}
-
 	return 0;
 }

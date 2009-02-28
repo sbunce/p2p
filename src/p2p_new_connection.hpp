@@ -11,13 +11,15 @@
 #include <errno.h>
 
 //custom
-#include "atomic_int.hpp"
 #include "database.hpp"
 #include "download_connection.hpp"
 #include "global.hpp"
 #include "p2p_buffer.hpp"
 //#include "resolve.hpp"
 #include "thread_pool.hpp"
+
+//include
+#include <atomic_int.hpp>
 
 //networking
 #ifdef WIN32

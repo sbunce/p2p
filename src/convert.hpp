@@ -1,11 +1,13 @@
 #ifndef H_CONVERT
 #define H_CONVERT
 
-//custom
-#include "global.hpp"
+//boost
+#include <boost/cstdint.hpp>
 
 //std
+#include <algorithm>
 #include <cassert>
+#include <cstring>
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -71,62 +73,39 @@ namespace convert
 		return NB.num;
 	}
 
-	static std::string hex_to_bin(const std::string & hex_str)
+	static bool hex_to_bin(const std::string & hex, std::string & bin)
 	{
-		assert(hex_str.size() % 2 == 0);
-		std::string binary;
-		boost::uint8_t byte;
-		for(int x=0; x<hex_str.size(); ++x){
-			if(x % 2 == 0){
-				byte = 0;
-				if(hex_str[x] == '0'){byte += 0;}
-				else if(hex_str[x] == '1'){byte += 16;}
-				else if(hex_str[x] == '2'){byte += 32;}
-				else if(hex_str[x] == '3'){byte += 48;}
-				else if(hex_str[x] == '4'){byte += 64;}
-				else if(hex_str[x] == '5'){byte += 80;}
-				else if(hex_str[x] == '6'){byte += 96;}
-				else if(hex_str[x] == '7'){byte += 112;}
-				else if(hex_str[x] == '8'){byte += 128;}
-				else if(hex_str[x] == '9'){byte += 144;}
-				else if(hex_str[x] == 'A'){byte += 160;}
-				else if(hex_str[x] == 'B'){byte += 176;}
-				else if(hex_str[x] == 'C'){byte += 192;}
-				else if(hex_str[x] == 'D'){byte += 208;}
-				else if(hex_str[x] == 'E'){byte += 224;}
-				else if(hex_str[x] == 'F'){byte += 240;}
-			}else{
-				if(hex_str[x] == '0'){byte += 0;}
-				else if(hex_str[x] == '1'){byte += 1;}
-				else if(hex_str[x] == '2'){byte += 2;}
-				else if(hex_str[x] == '3'){byte += 3;}
-				else if(hex_str[x] == '4'){byte += 4;}
-				else if(hex_str[x] == '5'){byte += 5;}
-				else if(hex_str[x] == '6'){byte += 6;}
-				else if(hex_str[x] == '7'){byte += 7;}
-				else if(hex_str[x] == '8'){byte += 8;}
-				else if(hex_str[x] == '9'){byte += 9;}
-				else if(hex_str[x] == 'A'){byte += 10;}
-				else if(hex_str[x] == 'B'){byte += 11;}
-				else if(hex_str[x] == 'C'){byte += 12;}
-				else if(hex_str[x] == 'D'){byte += 13;}
-				else if(hex_str[x] == 'E'){byte += 14;}
-				else if(hex_str[x] == 'F'){byte += 15;}
-				binary += (char)byte;
-			}
+		//verify size requirements
+		if(hex.empty() || hex.size() < 2 || hex.size() % 2 == 1){
+			return false;
 		}
-		return binary;
+
+		int index = 0;
+		while(index != hex.size()){
+			if((hex[index] < 48 || hex[index] > 57) && (hex[index] < 65 || hex[index] > 70)){
+				return false;
+			}
+			char ch = ((hex[index] >= 'A') ? (hex[index] - 'A' + 10) : (hex[index] - '0')) << 4;
+			++index;
+			if((hex[index] < 48 || hex[index] > 57) && (hex[index] < 65 || hex[index] > 70)){
+				return false;
+			}
+			bin += ch + ((hex[index] >= 'A') ? (hex[index] - 'A' + 10) : (hex[index] - '0'));
+			++index;
+		}
+		return true;
 	}
 
-	static std::string bin_to_hex(const std::string & binary)
+	static std::string bin_to_hex(const std::string & bin)
 	{
-		static const char hex[] = "0123456789ABCDEF";
-		std::string hash;
-		for(int x=0; x<binary.size(); ++x){
-			hash += hex[(int)((binary[x] >> 4) & 15)]; //left side of byte
-			hash += hex[(int)(binary[x] & 15)];        //right side of byte
+		static const char HEX[] = "0123456789ABCDEF";
+		std::string hex;
+		int size = bin.size();
+		for(int x=0; x<size; ++x){
+			hex += HEX[(int)((bin[x] >> 4) & 15)];
+			hex += HEX[(int)(bin[x] & 15)];
 		}
-		return hash;
+		return hex;
 	}
 
 	//convert bytes to reasonable SI unit, example 1024 -> 1kB
@@ -150,6 +129,9 @@ namespace convert
 	/*
 	Given two strings obtained from size_unit_select, returns less than (-1),
 	equal to (0), or greater than (1). Just like strcmp.
+
+	This function doesn't do any converting but it's related to size_SI so it
+	can go in the convert namespace.
 	*/
 	static int size_SI_cmp(const std::string & left, const std::string & right)
 	{
@@ -157,12 +139,12 @@ namespace convert
 			return 0;
 		}else if(left.find("tB") != std::string::npos){
 			if(right.find("tB") != std::string::npos){
-				//both are gB, compare
+				//both are tB, compare
 				std::string left_temp(left, 0, left.find("tB"));
 				std::string right_temp(right, 0, right.find("tB"));
 				left_temp.erase(std::remove(left_temp.begin(), left_temp.end(), '.'), left_temp.end());
 				right_temp.erase(std::remove(right_temp.begin(), right_temp.end(), '.'), right_temp.end());
-				return strcmp(left_temp.c_str(), right_temp.c_str());		
+				return std::strcmp(left_temp.c_str(), right_temp.c_str());		
 			}else if(right.find("gB") != std::string::npos){
 				return 1;
 			}else if(right.find("mB") != std::string::npos){
@@ -181,7 +163,7 @@ namespace convert
 				std::string right_temp(right, 0, right.find("gB"));
 				left_temp.erase(std::remove(left_temp.begin(), left_temp.end(), '.'), left_temp.end());
 				right_temp.erase(std::remove(right_temp.begin(), right_temp.end(), '.'), right_temp.end());
-				return strcmp(left_temp.c_str(), right_temp.c_str());		
+				return std::strcmp(left_temp.c_str(), right_temp.c_str());		
 			}else if(right.find("mB") != std::string::npos){
 				return 1;
 			}else if(right.find("kB") != std::string::npos){
@@ -200,7 +182,7 @@ namespace convert
 				std::string right_temp(right, 0, right.find("mB"));
 				left_temp.erase(std::remove(left_temp.begin(), left_temp.end(), '.'), left_temp.end());
 				right_temp.erase(std::remove(right_temp.begin(), right_temp.end(), '.'), right_temp.end());
-				return strcmp(left_temp.c_str(), right_temp.c_str());		
+				return std::strcmp(left_temp.c_str(), right_temp.c_str());		
 			}else if(right.find("kB") != std::string::npos){
 				return 1;
 			}else{ //bytes
@@ -219,7 +201,7 @@ namespace convert
 				std::string right_temp(right, 0, right.find("kB"));
 				left_temp.erase(std::remove(left_temp.begin(), left_temp.end(), '.'), left_temp.end());
 				right_temp.erase(std::remove(right_temp.begin(), right_temp.end(), '.'), right_temp.end());
-				return strcmp(left_temp.c_str(), right_temp.c_str());		
+				return std::strcmp(left_temp.c_str(), right_temp.c_str());		
 			}else{ //bytes
 				return 1;
 			}
@@ -238,7 +220,7 @@ namespace convert
 				std::string right_temp(right, 0, right.find("B"));
 				left_temp.erase(std::remove(left_temp.begin(), left_temp.end(), '.'), left_temp.end());
 				right_temp.erase(std::remove(right_temp.begin(), right_temp.end(), '.'), right_temp.end());
-				return strcmp(left_temp.c_str(), right_temp.c_str());		
+				return std::strcmp(left_temp.c_str(), right_temp.c_str());		
 			}
 		}else{
 			//unrecognized size

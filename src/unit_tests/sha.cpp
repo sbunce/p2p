@@ -2,6 +2,9 @@
 #include "../global.hpp"
 #include "../sha.hpp"
 
+//include
+#include <logger.hpp>
+
 sha SHA;
 
 void test_text()

@@ -1,68 +1,44 @@
 #site_scons
 import boost
+import sqlite3
+import tommath
 import unit_test
 
-Import('env')
+Import('env_base')
 
-env.unit_test([
-	'atomic_bool.cpp',
-	boost.static_lib('date_time'),
-	boost.static_lib('system'),
-	boost.static_lib('thread')
-])
-
-env.unit_test([
-	'atomic_int.cpp',
-	boost.static_lib('date_time'),
-	boost.static_lib('system'),
-	boost.static_lib('thread')
-])
-
-env.unit_test([
+env_base.unit_test([
 	'convert.cpp',
-	boost.static_lib('date_time'),
-	boost.static_lib('system'),
-	boost.static_lib('thread')
+	boost.static_library('date_time'),
+	boost.static_library('system'),
+	boost.static_library('thread')
 ])
 
-env.unit_test([
-	'contiguous_map.cpp',
-	boost.static_lib('date_time'),
-	boost.static_lib('system'),
-	boost.static_lib('thread')
-])
-
-env.unit_test([
-	'contiguous_set.cpp',
-	boost.static_lib('date_time'),
-	boost.static_lib('system'),
-	boost.static_lib('thread')
-])
-
-env.unit_test([
+env_base.unit_test([
 	'database_connection.cpp',
 	'../database_connection.cpp',
 	'../database_init.cpp',
 	'../speed_calculator.cpp',
-	boost.static_lib('date_time'),
-	boost.static_lib('filesystem'),
-	boost.static_lib('system'),
-	boost.static_lib('thread')
+	boost.static_library('date_time'),
+	boost.static_library('filesystem'),
+	boost.static_library('system'),
+	boost.static_library('thread'),
+	sqlite3.static_library()
 ])
 
-env.unit_test([
+env_base.unit_test([
 	'database_table_blacklist.cpp',
 	'../database_table_blacklist.cpp',
 	'../database_connection.cpp',
 	'../database_init.cpp',
 	'../speed_calculator.cpp',
-	boost.static_lib('date_time'),
-	boost.static_lib('filesystem'),
-	boost.static_lib('system'),
-	boost.static_lib('thread')
+	boost.static_library('date_time'),
+	boost.static_library('filesystem'),
+	boost.static_library('system'),
+	boost.static_library('thread'),
+	sqlite3.static_library()
 ])
 
-env.unit_test([
+env_base.unit_test([
 	'database_table_download.cpp',
 	'../database_table_download.cpp',
 	'../database_table_blacklist.cpp',
@@ -73,51 +49,56 @@ env.unit_test([
 	'../request_generator.cpp',
 	'../sha.cpp',
 	'../speed_calculator.cpp',
-	boost.static_lib('date_time'),
-	boost.static_lib('filesystem'),
-	boost.static_lib('system'),
-	boost.static_lib('thread')
+	boost.static_library('date_time'),
+	boost.static_library('filesystem'),
+	boost.static_library('system'),
+	boost.static_library('thread'),
+	sqlite3.static_library()
 ])
 
-env.unit_test([
+env_base.unit_test([
 	'database_table_preferences.cpp',
 	'../database_table_preferences.cpp',
 	'../database_connection.cpp',
 	'../database_init.cpp',
 	'../speed_calculator.cpp',
-	boost.static_lib('date_time'),
-	boost.static_lib('filesystem'),
-	boost.static_lib('system'),
-	boost.static_lib('thread')
+	boost.static_library('date_time'),
+	boost.static_library('filesystem'),
+	boost.static_library('system'),
+	boost.static_library('thread'),
+	sqlite3.static_library()
 ])
 
-env.unit_test([
+env_base.unit_test([
 	'database_table_prime.cpp',
 	'../database_table_prime.cpp',
 	'../database_connection.cpp',
 	'../database_init.cpp',
 	'../request_generator.cpp',
 	'../speed_calculator.cpp',
-	boost.static_lib('date_time'),
-	boost.static_lib('filesystem'),
-	boost.static_lib('system'),
-	boost.static_lib('thread')
+	boost.static_library('date_time'),
+	boost.static_library('filesystem'),
+	boost.static_library('system'),
+	boost.static_library('thread'),
+	sqlite3.static_library(),
+	tommath.static_library()
 ])
 
-env.unit_test([
+env_base.unit_test([
 	'database_table_search.cpp',
 	'../database_table_search.cpp',
 	'../database_table_blacklist.cpp',
 	'../database_connection.cpp',
 	'../database_init.cpp',
 	'../speed_calculator.cpp',
-	boost.static_lib('date_time'),
-	boost.static_lib('filesystem'),
-	boost.static_lib('system'),
-	boost.static_lib('thread')
+	boost.static_library('date_time'),
+	boost.static_library('filesystem'),
+	boost.static_library('system'),
+	boost.static_library('thread'),
+	sqlite3.static_library()
 ])
 
-env.unit_test([
+env_base.unit_test([
 	'database_table_share.cpp',
 	'../database_table_share.cpp',
 	'../database_table_blacklist.cpp',
@@ -128,13 +109,14 @@ env.unit_test([
 	'../request_generator.cpp',
 	'../sha.cpp',
 	'../speed_calculator.cpp',
-	boost.static_lib('date_time'),
-	boost.static_lib('filesystem'),
-	boost.static_lib('system'),
-	boost.static_lib('thread')
+	boost.static_library('date_time'),
+	boost.static_library('filesystem'),
+	boost.static_library('system'),
+	boost.static_library('thread'),
+	sqlite3.static_library()
 ])
 
-env.unit_test([
+env_base.unit_test([
 	'encryption.cpp',
 	'../encryption.cpp',
 	'../CMWC4096.cpp',
@@ -143,13 +125,15 @@ env.unit_test([
 	'../database_table_prime.cpp',
 	'../number_generator.cpp',
 	'../speed_calculator.cpp',
-	boost.static_lib('date_time'),
-	boost.static_lib('filesystem'),
-	boost.static_lib('system'),
-	boost.static_lib('thread')
+	boost.static_library('date_time'),
+	boost.static_library('filesystem'),
+	boost.static_library('system'),
+	boost.static_library('thread'),
+	sqlite3.static_library(),
+	tommath.static_library()
 ])
 
-env.unit_test([
+env_base.unit_test([
 	'hash_tree.cpp',
 	'../hash_tree.cpp',
 	'../database_connection.cpp',
@@ -159,26 +143,27 @@ env.unit_test([
 	'../request_generator.cpp',
 	'../sha.cpp',
 	'../speed_calculator.cpp',
-	boost.static_lib('date_time'),
-	boost.static_lib('filesystem'),
-	boost.static_lib('system'),
-	boost.static_lib('thread')
+	boost.static_library('date_time'),
+	boost.static_library('filesystem'),
+	boost.static_library('system'),
+	boost.static_library('thread'),
+	sqlite3.static_library()
 ])
 
-env.unit_test([
+env_base.unit_test([
 	'request_generator.cpp',
 	'../request_generator.cpp',
-	boost.static_lib('date_time'),
-	boost.static_lib('system'),
-	boost.static_lib('thread')
+	boost.static_library('date_time'),
+	boost.static_library('system'),
+	boost.static_library('thread')
 ])
 
-env.unit_test([
+env_base.unit_test([
 	'sha.cpp',
 	'../sha.cpp',
-	boost.static_lib('date_time'),
-	boost.static_lib('system'),
-	boost.static_lib('thread')
+	boost.static_library('date_time'),
+	boost.static_library('system'),
+	boost.static_library('thread')
 ])
 
 Clean('DB','DB')

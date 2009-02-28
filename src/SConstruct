@@ -1,7 +1,9 @@
 #site_scons
 import boost
 import gtkmm
+import sqlite3
 import system
+import tommath
 
 #std
 import sys
@@ -61,51 +63,58 @@ src_common = [
 ]
 
 #base (needed by all)
-env = Environment()
-system.env_setup(env)
-boost.env_setup(env)
+env_base = Environment()
+system.setup(env_base)
 
-#nogui
-env_nogui = env.Clone()
-
-#nogui_static
-env_nogui_static = env.Clone()
-system.env_setup_static(env_nogui_static)
+#export base environment that all targets use
+Export('env_base')
 
 #gui
-env_gui = env.Clone()
-gtkmm.env_setup(env_gui)
+env_gui = env_base.Clone()
+gtkmm.setup(env_gui)
+sqlite3.include(env_gui)
+system.random_number(env_gui)
+system.networking(env_gui)
+tommath.include(env_gui)
 
-#exported environments for sub scons files
-Export('env')
+#nogui
+env_nogui = env_base.Clone()
+sqlite3.include(env_nogui)
+system.random_number(env_nogui)
+system.networking(env_nogui)
+tommath.include(env_nogui)
+
+#nogui_static
+env_nogui_static = env_nogui.Clone()
+system.setup_static(env_nogui_static)
 
 #sub scons files
 SConscript([
-	'dep_graph/SConstruct',
+	#'dep_graph/SConstruct',
+	'include/SConstruct',
 	'libsqlite3/SConstruct',
 	'libtommath/SConstruct',
-	'overlay_sim/SConstruct',
 	'site_scons/SConstruct',
-	'test_manager/SConstruct',
 	'unit_tests/SConstruct'
 ])
 
 static_libs = [
-	boost.static_lib('date_time'),
-	boost.static_lib('filesystem'),
-	boost.static_lib('system'),
-	boost.static_lib('thread')
+	boost.static_library('date_time'),
+	boost.static_library('filesystem'),
+	boost.static_library('system'),
+	boost.static_library('thread'),
+	sqlite3.static_library(),
+	tommath.static_library()
 ]
 
-print 'building with',env.GetOption('num_jobs'),'threads'
+print 'building with',env_base.GetOption('num_jobs'),'threads'
 
 #compile different object groups
-common_obj = env.Object(src_common)
 gui_obj = env_gui.Object(src_gui)
-nogui_obj = env.Object(src_nogui)
+nogui_obj = env_nogui.Object(src_nogui)
+common_obj = env_base.Object(src_common)
 
 #link
 env_gui.Program('p2p_gui', gui_obj + common_obj + static_libs)
 env_nogui.Program('p2p_nogui', nogui_obj + common_obj + static_libs)
-if sys.platform == 'linux2':
-	env_nogui_static.Program('p2p_nogui_static', nogui_obj + common_obj + static_libs)
+env_nogui_static.Program('p2p_nogui_static', nogui_obj + common_obj + static_libs)

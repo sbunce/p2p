@@ -6,10 +6,12 @@
 #include <boost/tuple/tuple.hpp>
 
 //custom
-#include "atomic_bool.hpp"
 #include "database_connection.hpp"
 #include "global.hpp"
 #include "hash_tree.hpp"
+
+//include
+#include <atomic_bool.hpp>
 
 //std
 #include <fstream>

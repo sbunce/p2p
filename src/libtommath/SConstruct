@@ -1,5 +1,5 @@
 #std
 import glob
 
-Import('env')
-env.StaticLibrary('tommath', glob.glob('*.c'))
+Import('env_base')
+env_base.StaticLibrary('tommath', glob.glob('*.c'))

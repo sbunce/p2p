@@ -3,22 +3,30 @@
 #define H_BLOCK_ARBITER
 
 //boost
+#include <boost/scoped_ptr.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
 
 //custom
-#include "atomic_bool.hpp"
-#include "contiguous_set.hpp"
 #include "global.hpp"
+
+//include
+#include <atomic_bool.hpp>
+#include <contiguous_set.hpp>
+#include <singleton.hpp>
 
 //std
 #include <map>
 #include <set>
 #include <string>
 
-class block_arbiter : private boost::noncopyable
+class block_arbiter : public singleton<block_arbiter>
 {
+	//needed so the singleton can instantiate this class
+	friend class singleton<block_arbiter>;
 public:
+	~block_arbiter(){}
+
 	enum download_state{
 		NOT_DOWNLOADING,           //file is not downloading, but it may be complete and in share
 		DOWNLOADING_NOT_AVAILABLE, //file is downloading but block not available
@@ -43,28 +51,19 @@ public:
 	unblock_server_index    - Tells the server_index that it may start indexing.
 	                          The client must resume all downloads before calling this.
 	*/
-	static void start_hash_tree(const std::string & hash);
-	static void start_file(const std::string & hash, const boost::uint64_t & file_block_count);
-	static void finish_download(const std::string & hash);
-	static void update_hash_tree_highest(const std::string & hash, const boost::uint64_t & block_num);
-	static void add_file_block(const std::string & hash, const boost::uint64_t & block_num);
-	static bool is_downloading(const std::string & hash);
-	static download_state hash_block_available(const std::string & hash, const boost::uint64_t & block_num);
-	static download_state file_block_available(const std::string & hash, const boost::uint64_t & block_num);
+	void start_hash_tree(const std::string & hash);
+	void start_file(const std::string & hash, const boost::uint64_t & file_block_count);
+	void finish_download(const std::string & hash);
+	void update_hash_tree_highest(const std::string & hash, const boost::uint64_t & block_num);
+	void add_file_block(const std::string & hash, const boost::uint64_t & block_num);
+	bool is_downloading(const std::string & hash);
+	download_state hash_block_available(const std::string & hash, const boost::uint64_t & block_num);
+	download_state file_block_available(const std::string & hash, const boost::uint64_t & block_num);
 
 private:
-	block_arbiter();
-	~block_arbiter();
+	block_arbiter(){}
 
-	/*
-	Returns reference to mutex to lock all public static functions. A function
-	is needed instead of a regular static object to avoid static initialization
-	problems.
-	*/
-	static boost::mutex & Mutex();
-
-	//the one possible instance of DB_blacklist
-	static block_arbiter & Block_Arbiter();
+	boost::mutex Mutex;
 
 	//used to keep track of progress of downloading hash tree
 	class hash_tree_state
@@ -94,17 +93,5 @@ private:
 	};
 	//std::map<root hash, info>
 	std::map<std::string, file_state> File_State;
-
-	/*
-	These functions all correspond to public member functions.
-	*/
-	void start_hash_tree_priv(const std::string & hash);
-	void start_file_priv(const std::string & hash, const boost::uint64_t & file_block_count);
-	void finish_download_priv(const std::string & hash);
-	void update_hash_tree_highest_priv(const std::string & hash, const boost::uint64_t & block_num);
-	void add_file_block_priv(const std::string & hash, const boost::uint64_t & block_num);
-	bool is_downloading_priv(const std::string & hash);
-	download_state file_block_available_priv(const std::string & hash, const boost::uint64_t & block_num);
-	download_state hash_block_available_priv(const std::string & hash, const boost::uint64_t & block_number);
 };
 #endif

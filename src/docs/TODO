@@ -1,17 +1,27 @@
 TODO
 
+-all singletons need to never be deleted, clean up should happen by classes
+calling singleton clean up functions
+
+-some downloads not getting removed from in memory file tree.
+
+-need case for downloads for when download started and file finished. currently
+this causes the download to never complete even though it's done.
+
+-rename global.hpp to settings.hpp and make appropriate namespace change.
+
+-replace send/recv buffers with custom string container which guarantee's it
+doesn't do copy on write (to be threadsafe).
+
+-break off response and request stuff from send_buffer in to send_buffer_request
+and send_buffer_response.
+
 -grep for all exit(1) instances. If it is debug code surround it with #ifndef NDEBUG
 
 -requests should be sent before file blocks, when two hosts download from
 eachother the file blocks hog upload that should be used to get requests out.
 
-
-HEADER ANNOTATIONS
-
-THREADSAFE      - object is internally locked and threadsafe
-NON-THREADSAFE  - object not threadsafe
-THREAD SPAWNING - instantiating or calling member functions of this object may spawn threads
-SINGLETON       - class implements singleton design pattern
+-mess with hash tree locking a bit more.
 
 
 A-TAG IDEA

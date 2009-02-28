@@ -7,7 +7,7 @@ download_factory::download_factory()
 
 boost::shared_ptr<download> download_factory::start(download_info info, std::vector<download_connection> & servers)
 {
-	if(block_arbiter::is_downloading(info.hash)){
+	if(block_arbiter::instance().is_downloading(info.hash)){
 		LOGGER << "file '" << info.name << "' already downloading";
 		return boost::shared_ptr<download>();
 	}

@@ -16,6 +16,9 @@ example atomic_int<int>, atomic_int<unsigned>, etc..
 //boost
 #include <boost/thread.hpp>
 
+//include
+#include <logger.hpp>
+
 //std
 #include <iostream>
 

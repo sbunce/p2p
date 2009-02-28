@@ -1,7 +1,9 @@
 //custom
 #include "../database.hpp"
 #include "../global.hpp"
-#include "../logger.hpp"
+
+//include
+#include <logger.hpp>
 
 //std
 #include <string>

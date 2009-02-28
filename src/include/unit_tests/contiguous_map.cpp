@@ -1,6 +1,6 @@
-//custom
-#include "../contiguous_map.hpp"
-#include "../global.hpp"
+//include
+#include <contiguous_map.hpp>
+#include <logger.hpp>
 
 bool test_iterator()
 {

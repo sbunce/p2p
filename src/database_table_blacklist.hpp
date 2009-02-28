@@ -6,9 +6,11 @@
 #include <boost/thread.hpp>
 
 //custom
-#include "atomic_int.hpp"
 #include "database_connection.hpp"
 #include "global.hpp"
+
+//include
+#include <atomic_int.hpp>
 
 //std
 #include <iostream>

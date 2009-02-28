@@ -1,5 +1,3 @@
-#Add gtkmm libraries to a scons environment.
-
 #site_scons
 import environment
 import search
@@ -7,7 +5,7 @@ import search
 #std
 import sys
 
-def env_setup(env):
+def setup(env):
 	environment.define_keys(env)
 	if sys.platform == 'linux2':
 		env.ParseConfig('pkg-config gtkmm-2.4 --cflags --libs')

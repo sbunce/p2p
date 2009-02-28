@@ -10,7 +10,6 @@
 #include <boost/utility.hpp>
 
 //custom
-#include "atomic_int.hpp"
 #include "database.hpp"
 #include "download.hpp"
 #include "download_connection.hpp"
@@ -24,6 +23,9 @@
 #include "rate_limit.hpp"
 #include "share_index.hpp"
 #include "speed_calculator.hpp"
+
+//include
+#include <atomic_int.hpp>
 
 //networking
 #ifdef WIN32

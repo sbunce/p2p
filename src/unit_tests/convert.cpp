@@ -1,5 +1,9 @@
-//custom
+//include
+#include <logger.hpp>
+
+//libcustom
 #include "../convert.hpp"
+#include "../global.hpp"
 
 //std
 #include <string>
@@ -12,8 +16,11 @@ bool test_encode_decode()
 bool test_hex_conversion()
 {
 	std::string hex = "0123456789ABCDEF";
-	std::string binary = convert::hex_to_bin(hex);
-	std::string hex_conv = convert::bin_to_hex(binary);
+	std::string bin;
+	if(!convert::hex_to_bin(hex, bin)){
+		LOGGER; exit(1);
+	}
+	std::string hex_conv = convert::bin_to_hex(bin);
 	return hex == hex_conv;
 }
 

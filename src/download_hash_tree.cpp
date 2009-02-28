@@ -8,7 +8,8 @@ download_hash_tree::download_hash_tree(
 	close_slots(false),
 	Tree_Info(Download_Info_in.hash, Download_Info_in.size)
 {
-	block_arbiter::start_hash_tree(Download_Info.hash);
+	LOGGER << "ctor download_hash_tree: " << Download_Info.name;
+	block_arbiter::instance().start_hash_tree(Download_Info.hash);
 	visible = true;
 	boost::uint64_t bad_block;
 	hash_tree::status status = Hash_Tree.check(Tree_Info, bad_block);
@@ -34,8 +35,9 @@ download_hash_tree::download_hash_tree(
 
 download_hash_tree::~download_hash_tree()
 {
+	LOGGER << "dtor download_hash_tree: " << Download_Info.name;
 	if(cancel){
-		block_arbiter::finish_download(Download_Info.hash);
+		block_arbiter::instance().finish_download(Download_Info.hash);
 		std::remove((global::DOWNLOAD_DIRECTORY + Download_Info.name).c_str());
 	}else{
 		if(download_complete){
@@ -124,7 +126,7 @@ void download_hash_tree::protocol_block(std::string & message, connection_specia
 
 	boost::uint64_t highest_good;
 	if(Tree_Info.highest_good(highest_good)){
-		block_arbiter::update_hash_tree_highest(Download_Info.hash, highest_good);
+		block_arbiter::instance().update_hash_tree_highest(Download_Info.hash, highest_good);
 	}
 
 	Request_Generator->fulfil(conn->latest_request.front());
@@ -173,7 +175,12 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 		}else{
 			conn->slot_requested = true;
 			++slots_used;
-			request = global::P_REQUEST_SLOT_HASH_TREE + convert::hex_to_bin(Download_Info.hash);
+			std::string hash_bin;
+			if(!convert::hex_to_bin(Download_Info.hash, hash_bin)){
+				LOGGER << "invalid hex";
+				exit(1);
+			}
+			request = global::P_REQUEST_SLOT_HASH_TREE + hash_bin;
 			expected.push_back(std::make_pair(global::P_SLOT, global::P_SLOT_SIZE));
 			expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
 			return download::BINARY_MODE;

@@ -1,0 +1,6 @@
+HEADER ANNOTATIONS
+
+THREADSAFE      - object is internally locked and threadsafe
+NON-THREADSAFE  - object not threadsafe
+THREAD SPAWNING - instantiating or calling member functions of this object may spawn threads
+SINGLETON       - class implements singleton design pattern

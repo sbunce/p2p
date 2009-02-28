@@ -13,6 +13,7 @@
 
 //libtommath
 #include <mpint.hpp>
+#include <portable_sleep.hpp>
 
 //std
 #include <fstream>

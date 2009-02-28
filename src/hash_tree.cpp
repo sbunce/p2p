@@ -13,7 +13,6 @@ hash_tree::status hash_tree::check(tree_info & Tree_Info, boost::uint64_t & bad_
 		return GOOD;
 	}else{
 		sha SHA;
-		SHA.reserve(global::HASH_BLOCK_SIZE * global::HASH_SIZE);
 		char block_buff[global::FILE_BLOCK_SIZE];
 
 		status Status;
@@ -61,7 +60,12 @@ hash_tree::status hash_tree::check_block(tree_info & Tree_Info, const boost::uin
 	//check child hash
 	if(block_num == 0){
 		//first row has to be checked against root hash
-		if(strncmp(convert::hex_to_bin(Tree_Info.root_hash).data(), SHA.raw_hash(), global::HASH_SIZE) == 0){
+		std::string hash_bin;
+		if(!convert::hex_to_bin(Tree_Info.root_hash, hash_bin)){
+			LOGGER << "invalid hex";
+			exit(1);
+		}
+		if(strncmp(hash_bin.data(), SHA.raw_hash(), global::HASH_SIZE) == 0){
 			return GOOD;
 		}else{
 			return BAD;
@@ -102,7 +106,6 @@ void hash_tree::check_contiguous(tree_info & Tree_Info)
 	boost::recursive_mutex::scoped_lock lock(*Tree_Info.Recursive_Mutex);
 
 	sha SHA;
-	SHA.reserve(global::HASH_BLOCK_SIZE * global::HASH_SIZE);
 	char block_buff[global::FILE_BLOCK_SIZE];
 
 	contiguous_map<boost::uint64_t, std::string>::contiguous_iterator c_iter_cur, c_iter_end;
@@ -154,7 +157,6 @@ void hash_tree::check_contiguous(tree_info & Tree_Info)
 bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 {
 	sha SHA;
-	SHA.reserve(global::HASH_BLOCK_SIZE * global::HASH_SIZE);
 	char block_buff[global::FILE_BLOCK_SIZE];
 
 	std::fstream fin(file_path.c_str(), std::ios::in | std::ios::binary);

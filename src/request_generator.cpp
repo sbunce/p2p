@@ -98,7 +98,6 @@ bool request_generator::request(std::deque<boost::uint64_t> & prev_request)
 		unfulfilled_request.insert(std::make_pair(*(re_request.begin()), request_info(time(NULL), prev_request.size())));
 		re_requested.insert(*(re_request.begin()));
 		re_request.erase(re_request.begin());
-		LOGGER << "re_requesting " << *(prev_request.begin());
 		return true;
 	}
 }

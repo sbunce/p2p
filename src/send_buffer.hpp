@@ -16,6 +16,9 @@ are prioritized to get files downloading as soon as possible.
 //custom
 #include "global.hpp"
 
+//include
+#include <logger.hpp>
+
 //std
 #include <deque>
 #include <string>
@@ -30,6 +33,8 @@ public:
 		Adds a message to be sent. This should be ONE message only. This function
 		returns true if message was added, false if overpipelined. If returns
 		false then server should be blacklisted.
+	empty:
+		Returns true if all buffers empty.
 	get_send_buff:
 		Clears destination and fills it with up to max_bytes of data to be sent.
 		Returns true if destination is not empty upon completion.
@@ -37,6 +42,7 @@ public:
 		Erases sent data from the send_buffer.
 	*/
 	bool add(const std::string & buff);
+	bool empty();
 	bool get_send_buff(const int & max_bytes, std::string & destination);
 	void post_send(const int & n_bytes);
 

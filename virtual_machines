@@ -32,7 +32,7 @@ sub push_servers
 	for($x=$IP_range_start; $x < $IP_range_start + $VM_count; ++$x){
 		print "pushing to $IP_begin$x\n";
 		system("ssh -i ~/.ssh/vm $IP_begin$x killall screen");
-		#system("ssh -i ~/.ssh/vm $IP_begin$x rm DB");
+		system("ssh -i ~/.ssh/vm $IP_begin$x rm DB");
 		system("scp -i ~/.ssh/vm p2p_nogui $IP_begin$x:/home/smack");
 		system("ssh -i ~/.ssh/vm $IP_begin$x screen -d -m ./p2p_nogui");
 	}

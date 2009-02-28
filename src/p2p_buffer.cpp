@@ -346,9 +346,6 @@ p2p_buffer::p2p_buffer(
 	key_exchange(true),
 	http_response_sent(false)
 {
-	recv_buff.reserve(global::MAX_MESSAGE_SIZE * global::PIPELINE_SIZE);
-	send_buff.reserve(global::MAX_MESSAGE_SIZE * global::PIPELINE_SIZE);
-
 	//look at encryption.h for key exchange protocol
 	if(initiator_in){
 		send_buff += Encryption.get_prime();

@@ -16,6 +16,10 @@
 #include "sha.hpp"
 #include "thread_pool.hpp"
 
+//include
+#include <atomic_bool.hpp>
+#include <portable_sleep.hpp>
+
 //std
 #include <ctime>
 #include <deque>

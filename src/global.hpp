@@ -6,8 +6,8 @@
 
 //testing features, uncomment to enable
 //#define DISABLE_ENCRYPTION
-#define CORRUPT_HASH_BLOCK_TEST
-#define CORRUPT_FILE_BLOCK_TEST
+//#define CORRUPT_HASH_BLOCK_TEST
+//#define CORRUPT_FILE_BLOCK_TEST
 
 /*
 This stops compilation when boost is too old. The MIN_MAJOR_VERSION and
@@ -31,9 +31,6 @@ example: 1.36 would have major 1 and minor 36
 
 //boost
 #include <boost/cstdint.hpp>
-
-//custom, nothing included here can include global.h
-#include "logger.hpp"
 
 //std
 #include <cassert>
@@ -126,32 +123,6 @@ namespace global
 		}else{
 			return COMMAND_INVALID;
 		}
-	}
-}
-
-//replacement for system specific sleep functions
-namespace portable_sleep
-{
-	//sleep for specified number of milliseconds
-	inline void ms(const unsigned & milliseconds)
-	{
-		//if milliseconds = 0 then yield should be used
-		assert(milliseconds != 0);
-		#ifdef WIN32
-		Sleep(milliseconds);
-		#else
-		usleep(milliseconds * 1000);
-		#endif
-	}
-
-	//yield time slice
-	inline void yield()
-	{
-		#ifdef WIN32
-		Sleep(0);
-		#else
-		usleep(1);
-		#endif
 	}
 }
 #endif

@@ -1,5 +1,3 @@
-#Add boost libraries to a scons environment.
-
 #site_scons
 import environment
 import search
@@ -10,19 +8,28 @@ import os
 import sys
 
 #Add required include paths to environment.
-def env_setup(env):
+def include(env):
 	environment.define_keys(env)
-	env['CPPPATH'].append(__include_dir())
 
-#Returns a full path to the static lib. Only used for boost libraries that
-#need to have a library linked in.
-#
-#The library_name parameter should be the name of the library that appears in
-#the boost documentation.
-#
+	#possible directories where the boost header directory resides
+	if sys.platform == 'linux2':
+		search_dir = '/usr/local/include'
+		pattern = 'boost-[0-9]{1}_[0-9]{2}'
+	if sys.platform == 'win32':
+		search_dir = '/Program Files/boost'
+		pattern = 'boost_[0-9]{1}_[0-9]{2}.*'
+
+	found_dir = search.locate_dir(search_dir, pattern)
+	if found_dir == '':
+		print 'boost error: could not locate include directory'
+		exit(1)
+	else:
+		env['CPPPATH'].append(found_dir)
+
+#Returns a full path to the static lib given the library name.
 #Example: thread, filesystem, system, etc
-def static_lib(library_name):
-	pattern = 'libboost_' + library_name + '.*'
+def static_library(library_name):
+	pattern = 'libboost_'+library_name+'.*'
 
 	#set up suffix to append to pattern
 	if sys.platform == 'linux2':
@@ -45,20 +52,3 @@ def static_lib(library_name):
 		exit(1)
 	else:
 		return library_path
-
-#returns a path to the include directory needed for boost
-def __include_dir():
-	#possible directories where the boost header directory resides
-	if sys.platform == 'linux2':
-		search_dir = '/usr/local/include'
-		pattern = 'boost-[0-9]{1}_[0-9]{2}'
-	if sys.platform == 'win32':
-		search_dir = '/Program Files/boost'
-		pattern = 'boost_[0-9]{1}_[0-9]{2}.*'
-
-	found_dir = search.locate_dir(search_dir, pattern)
-	if found_dir == '':
-		print 'boost error: could not locate include directory'
-		exit(1)
-	else:
-		return found_dir

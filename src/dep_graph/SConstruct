@@ -1,17 +1,14 @@
 import glob
 import sys
 
+Import('env_base')
+
 if sys.platform == 'linux2':
-	Program('dot_gen', glob.glob('*.cpp'))
+	env_base.Program('dot_gen', glob.glob('*.cpp'))
 	Command(
 		'p2p_gui.ps',
 		'dot_gen',
 		'./dep_graph/dot_gen main_gui.cpp |dot -Tps -o dep_graph/p2p_gui.ps'
-	)
-	Command(
-		'p2p_nogui.ps',
-		'dot_gen',
-		'./dep_graph/dot_gen main_nogui.cpp |dot -Tps -o dep_graph/p2p_nogui.ps'
 	)
 
 Clean('dot_gen',['p2p_gui.ps','p2p_nogui.ps'])

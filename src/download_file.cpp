@@ -10,7 +10,8 @@ download_file::download_file(
 	download_complete(false),
 	close_slots(false)
 {
-	block_arbiter::start_file(Download_Info.hash, Tree_Info.get_file_block_count());
+	LOGGER << "ctor download_file: " << Download_Info.name;
+	block_arbiter::instance().start_file(Download_Info.hash, Tree_Info.get_file_block_count());
 	visible = true;
 
 	//create empty file for download if one doesn't already exist
@@ -26,10 +27,9 @@ download_file::download_file(
 		boost::shared_ptr<request_generator>(new request_generator((boost::uint64_t)first_unreceived,
 		Tree_Info.get_file_block_count(), global::RE_REQUEST));
 
-	bytes_received += first_unreceived * global::FILE_BLOCK_SIZE;
+	bytes_received += (boost::uint64_t)first_unreceived * global::FILE_BLOCK_SIZE;
 
-	//hash check for corrupt/missing blocks
-	if(first_unreceived == 0){
+	if(first_unreceived == (boost::uint64_t)0){
 		hashing = false;
 	}else{
 		hashing_thread = boost::thread(boost::bind(&download_file::hash_check, this, Tree_Info, Download_Info.file_path));
@@ -38,12 +38,13 @@ download_file::download_file(
 
 download_file::~download_file()
 {
+	LOGGER << "dtor download_file: " << Download_Info.name;
 	hashing_thread.interrupt();
 	hashing_thread.join();
 	if(cancel){
 		std::remove(Download_Info.file_path.c_str());
 	}
-	block_arbiter::finish_download(Download_Info.hash);
+	block_arbiter::instance().finish_download(Download_Info.hash);
 }
 
 bool download_file::complete()
@@ -63,19 +64,7 @@ const std::string download_file::hash()
 
 void download_file::hash_check(hash_tree::tree_info & Tree_Info, std::string file_path)
 {
-	//only allow one hash_check job at a time for all downloads
-	static int job_cnt = 0;
-	static boost::mutex job_cnt_mutex;
-	while(true){
-		{
-		boost::mutex::scoped_lock lock(job_cnt_mutex);
-		if(job_cnt == 0){
-			++job_cnt;
-			break;
-		}
-		}
-		portable_sleep::ms(1000);
-	}
+	boost::mutex::scoped_lock lock(hashing_mutex::instance().Mutex());
 
 	//thread local buffer
 	char block_buff[global::FILE_BLOCK_SIZE];
@@ -92,7 +81,7 @@ void download_file::hash_check(hash_tree::tree_info & Tree_Info, std::string fil
 		assert(fin.good());
 		hash_tree::status status = Hash_Tree.check_file_block(Tree_Info, check_block, block_buff, fin.gcount());
 		if(status == hash_tree::GOOD){
-			block_arbiter::add_file_block(Tree_Info.get_root_hash(), check_block);
+			block_arbiter::instance().add_file_block(Tree_Info.get_root_hash(), check_block);
 		}else if(status == hash_tree::BAD){
 			LOGGER << "found corrupt block " << check_block << " in resumed download";
 			Request_Generator->force_rerequest(check_block);
@@ -105,16 +94,8 @@ void download_file::hash_check(hash_tree::tree_info & Tree_Info, std::string fil
 		}
 		++check_block;
 		hashing_percent = (int)(((double)check_block / first_unreceived) * 100);
-
-		//this thread is low priority, yield to others
-		boost::this_thread::yield();
 	}
 	hashing = false;
-
-	{
-	boost::mutex::scoped_lock lock(job_cnt_mutex);
-	--job_cnt;
-	}
 }
 
 const std::string download_file::name()
@@ -180,14 +161,14 @@ void download_file::protocol_block(std::string & message, connection_special * c
 			conn->latest_request.front(), message.c_str(), message.size());
 		if(status == hash_tree::GOOD){
 			write_block(conn->latest_request.front(), message);
-			block_arbiter::add_file_block(Download_Info.hash, conn->latest_request.front());
+			block_arbiter::instance().add_file_block(Download_Info.hash, conn->latest_request.front());
 			Request_Generator->fulfil(conn->latest_request.front());
 		}else if(status == hash_tree::BAD){
 			LOGGER << Download_Info.name << ":" << conn->latest_request.front() << " hash failure";
 			bytes_received -= message.size() + 1; //correct bytes_recieved for percent calculation
 			Request_Generator->force_rerequest(conn->latest_request.front());
 			#ifndef CORRUPT_FILE_BLOCK_TEST
-			DB_Blacklist.add(conn->IP);
+			database::table::blacklist::add(conn->IP, DB);
 			#endif
 		}else if(status == hash_tree::IO_ERROR){
 			LOGGER << "IO_ERROR";
@@ -242,7 +223,12 @@ download::mode download_file::request(const int & socket, std::string & request,
 		}else{
 			conn->slot_requested = true;
 			++slots_used;
-			request = global::P_REQUEST_SLOT_FILE + convert::hex_to_bin(Download_Info.hash);
+			std::string hash_bin;
+			if(!convert::hex_to_bin(Download_Info.hash, hash_bin)){
+				LOGGER << "invalid hex";
+				exit(1);
+			}
+			request = global::P_REQUEST_SLOT_FILE + hash_bin;
 			expected.push_back(std::make_pair(global::P_SLOT, global::P_SLOT_SIZE));
 			expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
 			return download::BINARY_MODE;
@@ -254,6 +240,8 @@ download::mode download_file::request(const int & socket, std::string & request,
 			if(!conn->slot_open){
 				 return download::NO_REQUEST;
 			}else{
+				conn->slot_requested = false;
+				conn->slot_open = false;
 				request += global::P_CLOSE_SLOT;
 				request += conn->slot_ID;
 				--slots_used;

@@ -8,7 +8,6 @@
 #include <boost/thread.hpp>
 
 //custom
-#include "atomic_int.hpp"
 #include "convert.hpp"
 #include "block_arbiter.hpp"
 #include "database.hpp"
@@ -17,6 +16,11 @@
 #include "global.hpp"
 #include "hash_tree.hpp"
 #include "request_generator.hpp"
+
+//include
+#include <atomic_bool.hpp>
+#include <atomic_int.hpp>
+#include <singleton.hpp>
 
 //std
 #include <ctime>
@@ -53,10 +57,23 @@ public:
 
 private:
 
-	boost::thread hashing_thread;     //thread to check file
-	bool hashing;                     //true if hashing
-	atomic_int<int> hashing_percent;  //percent done hashing
-	boost::uint64_t first_unreceived; //block at end of file upon download start + 1
+	//used by the hashing thread
+	boost::thread hashing_thread;                 //thread to check file
+	atomic_bool hashing;                          //true if hashing
+	atomic_int<int> hashing_percent;              //percent done hashing
+	atomic_int<boost::uint64_t> first_unreceived; //block at end of file upon download start + 1
+
+	//used to let only one file hash at a time
+	class hashing_mutex: public singleton<hashing_mutex>
+	{
+		friend class singleton<hashing_mutex>;
+	public:
+		~hashing_mutex(){}
+		boost::mutex & Mutex(){ return *_Mutex; }
+	private:
+		hashing_mutex(): _Mutex(new boost::mutex()){}
+		boost::mutex * _Mutex;
+	};
 
 	/*
 	After P_CLOSE_SLOT is sent to all servers and there are no pending responses

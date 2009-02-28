@@ -1,0 +1,33 @@
+src/database_init.cpp:	static boost::recursive_mutex Mutex;
+src/database_init.cpp:	static bool program_start(true);
+
+src/database_table_blacklist.cpp:	static atomic_int<int> * bs = new atomic_int<int>(0);
+
+src/database_table_prime.cpp:	static boost::mutex * M = new boost::mutex();
+src/database_table_prime.cpp:	static unsigned * PC = new unsigned(0);
+
+src/database_table_prime.cpp:	static bool prime_count_initialized(false);
+src/database_table_prime.cpp:		static database::connection DB;
+
+src/download_file.cpp:static boost::mutex & hash_check_mutex()
+src/hash_tree.cpp:	static boost::uint64_t throw_away;
+
+src/number_generator.cpp:	static boost::mutex Mutex;
+src/number_generator.cpp:	static number_generator N;
+
+src/p2p_buffer.cpp:	static boost::mutex * M = new boost::mutex();
+src/p2p_buffer.cpp:	static std::map<int, boost::shared_ptr<p2p_buffer> > B;
+src/p2p_buffer.cpp:	static int * SP = new int(0);
+src/p2p_buffer.cpp:	static std::set<boost::shared_ptr<download> > UD;
+
+src/rate_limit.cpp:	static boost::recursive_mutex * RM = new boost::recursive_mutex();
+src/rate_limit.cpp:	static unsigned * DR = new unsigned(global::DOWNLOAD_RATE);
+src/rate_limit.cpp:	static unsigned * UR = new unsigned(global::UPLOAD_RATE);
+src/rate_limit.cpp:	static speed_calculator * SC = new speed_calculator();
+src/rate_limit.cpp:	static speed_calculator * SC = new speed_calculator();
+
+src/sha.cpp:	static const char hex[] = "0123456789ABCDEF";
+
+src/share_index.cpp:	static boost::mutex Mutex;
+src/share_index.cpp:	static share_index S;
+

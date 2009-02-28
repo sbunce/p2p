@@ -1,7 +1,9 @@
 //custom
 #include "../global.hpp"
 #include "../hash_tree.hpp"
-#include "../logger.hpp"
+
+//include
+#include <logger.hpp>
 
 void create_test_file(const std::string & name, const unsigned & bytes)
 {

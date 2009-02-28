@@ -8,13 +8,15 @@
 #include <boost/thread.hpp>
 
 //custom
-#include "atomic_bool.hpp"
 #include "convert.hpp"
 #include "contiguous_map.hpp"
 #include "database.hpp"
 #include "global.hpp"
 #include "request_generator.hpp"
 #include "sha.hpp"
+
+//include
+#include <atomic_bool.hpp>
 
 //std
 #include <deque>

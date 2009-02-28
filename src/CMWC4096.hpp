@@ -1,6 +1,4 @@
 /*
-Thanks to Dr. George Marsaglia of Washington State University for the PRNG.
-
 The period is 10^39460.877333. This PRNG is not cryptographically secure.
 
 Proof:
@@ -47,10 +45,8 @@ http://www.cs.hku.hk/~diehard/
 #define H_CMWC4096
 
 //boost
+#include <boost/cstdint.hpp>
 #include <boost/utility.hpp>
-
-//custom
-#include "global.hpp"
 
 //std
 #include <cassert>
@@ -66,7 +62,7 @@ public:
 	get_num       - return a random unsigned integer
 	seed          - seed the PRNG, must be called before anything else
 	*/
-	void extract_bytes(std::string & bytes, const int num);
+	void extract_bytes(std::string & bytes, const int & num);
 	boost::uint32_t get_num();
 	void seed(const std::string & bytes);
 

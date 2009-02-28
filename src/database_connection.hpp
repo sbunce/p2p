@@ -64,15 +64,19 @@ Read blob:
 //custom
 #include "database_blob.hpp"
 #include "database_init.hpp"
+#include "global.hpp"
 
 //boost
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
 
 //custom
-#include "atomic_int.hpp"
 #include "global.hpp"
 #include "speed_calculator.hpp"
+
+//include
+#include <atomic_int.hpp>
+#include <logger.hpp>
 
 //sqlite
 #include <sqlite3.h>

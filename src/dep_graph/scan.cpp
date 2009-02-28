@@ -97,7 +97,7 @@ void scan::run(std::string root_file)
 	std::fstream fin(root_file.c_str(), std::ios::in);
 	if(!fin.is_open()){
 		std::cout << "can not open root_file " << root_file << "\n";
-		exit(1);
+		return;
 	}
 
 	//holds files that need to be scanned

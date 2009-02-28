@@ -45,10 +45,6 @@ private:
 		line(line_in)
 	{}
 
-	/*
-	Most likely not used, but possible if temporary not optimized away in
-	logger::make()?
-	*/
 	logger(
 		const logger & Logger
 	):

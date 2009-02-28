@@ -2,6 +2,9 @@
 #include "../global.hpp"
 #include "../request_generator.hpp"
 
+//include
+#include <logger.hpp>
+
 //std
 #include <deque>
 

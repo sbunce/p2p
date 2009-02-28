@@ -1,7 +1,11 @@
+#site_scons
+import sqlite3
+
+#std
 import sys
 
-Import('env')
-env_sqlite = env.Clone()
+Import('env_base')
+env_sqlite = env_base.Clone()
 
 if sys.platform == 'linux2':
 	os_specific = '-'
@@ -19,4 +23,4 @@ env_sqlite['CCFLAGS'].append(os_specific+'DSQLITE_ENABLE_FTS3_PARENTHESIS')
 env_sqlite['CCFLAGS'].append(os_specific+'DSQLITE_OMIT_LOAD_EXTENSION');
 
 env_sqlite.StaticLibrary('sqlite3.c')
-env_sqlite.Program('shell.c')
+env_sqlite.Program('sqlite3', ['shell.c', sqlite3.static_library()])

@@ -5,6 +5,10 @@ send_buffer::send_buffer()
 
 }
 
+/*
+Think about having functions add_request, add_response instead of figuring it
+out here.
+*/
 bool send_buffer::add(const std::string & buff)
 {
 	int command_type = global::command_type(buff[0]);
@@ -30,6 +34,20 @@ bool send_buffer::add(const std::string & buff)
 	}else{
 		return true;
 	}
+}
+
+void add_committed(const std::string & buff)
+{
+/*
+This won't work because the post send function will try to add it back to an
+uncommitted buffer.
+*/
+	//buffer_committed.push_back(boost::shared_ptr<std::string>(new std::string(buff));
+}
+
+bool send_buffer::empty()
+{
+	return buffer_committed.empty() && buffer_response_uncommitted.empty() && buffer_request_uncommitted.empty();
 }
 
 bool send_buffer::get_send_buff(const int & max_bytes, std::string & destination)

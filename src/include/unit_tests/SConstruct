@@ -1,0 +1,33 @@
+#site_scons
+import boost
+import unit_test
+
+Import('env_base')
+
+env_base.unit_test([
+	'atomic_bool.cpp',
+	boost.static_library('date_time'),
+	boost.static_library('system'),
+	boost.static_library('thread')
+])
+
+env_base.unit_test([
+	'atomic_int.cpp',
+	boost.static_library('date_time'),
+	boost.static_library('system'),
+	boost.static_library('thread')
+])
+
+env_base.unit_test([
+	'contiguous_map.cpp',
+	boost.static_library('date_time'),
+	boost.static_library('system'),
+	boost.static_library('thread')
+])
+
+env_base.unit_test([
+	'contiguous_set.cpp',
+	boost.static_library('date_time'),
+	boost.static_library('system'),
+	boost.static_library('thread')
+])

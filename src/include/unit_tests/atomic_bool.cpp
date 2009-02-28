@@ -1,4 +1,7 @@
-//custom
+//include
+#include <logger.hpp>
+
+//libcustom
 #include "../atomic_bool.hpp"
 #include "../global.hpp"
 

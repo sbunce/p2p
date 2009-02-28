@@ -7,7 +7,7 @@ CMWC4096::CMWC4096():
 
 }
 
-void CMWC4096::extract_bytes(std::string & bytes, const int num)
+void CMWC4096::extract_bytes(std::string & bytes, const int & num)
 {
 	uint_byte UB;
 	while(bytes.size() < num){
