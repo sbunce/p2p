@@ -41,7 +41,7 @@ void slot_hash_tree::send_block(const std::string & request, std::string & send)
 	}
 
 	block_arbiter::download_state DS;
-	DS = block_arbiter::instance().hash_block_available(root_hash, block_num);
+	DS = block_arbiter::singleton().hash_block_available(root_hash, block_num);
 	if(DS == block_arbiter::DOWNLOADING_NOT_AVAILABLE){
 		//hash tree downloading but it client doesn't yet have requested block
 		LOGGER << "sending P_WAIT to " << *IP;

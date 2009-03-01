@@ -7,7 +7,7 @@ download_factory::download_factory()
 
 boost::shared_ptr<download> download_factory::start(download_info info, std::vector<download_connection> & servers)
 {
-	if(block_arbiter::instance().is_downloading(info.hash)){
+	if(block_arbiter::singleton().is_downloading(info.hash)){
 		LOGGER << "file '" << info.name << "' already downloading";
 		return boost::shared_ptr<download>();
 	}
@@ -67,7 +67,7 @@ boost::shared_ptr<download> download_factory::stop(boost::shared_ptr<download> D
 		if(!Download_Stop->is_cancelled()){
 			DB_Share.add_entry(Download_Info.hash, Download_Info.size, Download_Info.file_path);
 			DB_Download.complete(Download_Info.hash, Download_Info.size);
-			share_index::add_path(Download_Info.file_path);
+			share_index::singleton().add_path(Download_Info.file_path);
 		}
 	}else{
 		LOGGER << "unrecognized download type";

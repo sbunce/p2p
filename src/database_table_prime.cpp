@@ -1,16 +1,8 @@
 #include "database_table_prime.hpp"
 
-boost::mutex & database::table::prime::Mutex()
-{
-	static boost::mutex * M = new boost::mutex();
-	return *M;
-}
-
-unsigned & database::table::prime::prime_count()
-{
-	static unsigned * PC = new unsigned(0);
-	return *PC;
-}
+boost::once_flag database::table::prime::once_flag = BOOST_ONCE_INIT;
+boost::mutex * database::table::prime::_Mutex;
+unsigned * database::table::prime::_prime_count;
 
 void database::table::prime::add(mpint & prime)
 {

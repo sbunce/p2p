@@ -25,8 +25,9 @@
 #include <wincrypt.h>
 #endif
 
-class number_generator : private boost::noncopyable
+class number_generator : public singleton_base<number_generator>
 {
+	friend class singleton_base<number_generator>;
 public:
 
 	/*
@@ -41,17 +42,13 @@ public:
 		Return random mpint global::DH_KEY_SIZE long.Blocks if cache empty, until
 		new primes generated.
 	*/
-	static void init();
-	static unsigned prime_count();
-	static mpint random_mpint(const int & bytes);
-	static mpint random_prime_mpint();
+	unsigned prime_count();
+	mpint random_mpint(const int & bytes);
+	mpint random_prime_mpint();
 
 private:
 	number_generator();
 	~number_generator();
-
-	//returns the singleton
-	static number_generator & Number_Generator();
 
 	/*
 	PRNG function that mp_prime_random_ex needs
@@ -67,7 +64,6 @@ private:
 
 	Do not request more than global::DH_KEY_SIZE + 1 from random_mpint_priv().
 	*/
-	unsigned prime_count_priv();
 	mpint random_mpint_priv(const int & bytes);
 	mpint random_prime_mpint_priv();
 

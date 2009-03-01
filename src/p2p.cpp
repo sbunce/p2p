@@ -9,7 +9,8 @@ p2p::p2p():
 	boost::filesystem::create_directory(global::DOWNLOAD_DIRECTORY);
 	max_connections = DB_Preferences.get_max_connections();
 	FD_ZERO(&master_FDS);
-	rate_limit::set_max_download_rate(DB_Preferences.get_max_download_rate());
+	rate_limit::singleton().set_max_download_rate(DB_Preferences.get_max_download_rate());
+	rate_limit::singleton().set_max_upload_rate(DB_Preferences.get_max_upload_rate());
 
 	#ifdef WIN32
 	WORD wsock_ver = MAKEWORD(1,1);
@@ -28,10 +29,10 @@ p2p::~p2p()
 {
 	main_thread.interrupt();
 	main_thread.join();
-
 	#ifdef WIN32
 	WSACleanup();
 	#endif
+	p2p_buffer::destroy_all();
 }
 
 void p2p::check_blacklist(int & blacklist_state)
@@ -54,16 +55,7 @@ void p2p::check_blacklist(int & blacklist_state)
 
 void p2p::check_timeouts()
 {
-	std::vector<int> timed_out;
-	p2p_buffer::get_timed_out(timed_out);
-	std::vector<int>::iterator iter_cur, iter_end;
-	iter_cur = timed_out.begin();
-	iter_end = timed_out.end();
-	while(iter_cur != iter_end){
-		LOGGER << "disconnecting timed out socket " << *iter_cur;
-		disconnect(*iter_cur);
-		++iter_cur;
-	}
+
 }
 
 void p2p::current_downloads(std::vector<download_status> & info, std::string hash)
@@ -122,7 +114,7 @@ void p2p::pause_download(const std::string & hash)
 
 unsigned p2p::prime_count()
 {
-	return number_generator::prime_count();
+	return number_generator::singleton().prime_count();
 }
 
 unsigned p2p::get_max_connections()
@@ -142,25 +134,25 @@ std::string p2p::get_share_directory()
 
 unsigned p2p::get_max_download_rate()
 {
-	if(rate_limit::get_max_download_rate() == std::numeric_limits<unsigned>::max()){
+	if(rate_limit::singleton().get_max_download_rate() == std::numeric_limits<unsigned>::max()){
 		return 0;
 	}else{
-		return rate_limit::get_max_download_rate();
+		return rate_limit::singleton().get_max_download_rate();
 	}
 }
 
 unsigned p2p::get_max_upload_rate()
 {
-	if(rate_limit::get_max_upload_rate() == std::numeric_limits<unsigned>::max()){
+	if(rate_limit::singleton().get_max_upload_rate() == std::numeric_limits<unsigned>::max()){
 		return 0;
 	}else{
-		return rate_limit::get_max_upload_rate();
+		return rate_limit::singleton().get_max_upload_rate();
 	}
 }
 
 bool p2p::is_indexing()
 {
-	return share_index::is_indexing();
+	return share_index::singleton().is_indexing();
 }
 
 void p2p::new_connection(const int & listener)
@@ -290,12 +282,8 @@ int p2p::setup_listener()
 
 void p2p::main_loop()
 {
-	/*
-	Resuming downloads, hash checking, generating primes, and indexing the share
-	are all very heavy CPU tasks which get started by the main_loop thread. Delay
-	them by 1 second to make GUI startup quicker.
-	*/
-	portable_sleep::ms(1000);
+	//heavy processing to bring this thread up, sleep to give GUI time to start
+	portable_sleep::ms(2000);
 
 	reconnect_unfinished();
 	number_generator::init();
@@ -403,12 +391,12 @@ void p2p::main_loop()
 			else because rates cannot logically be negative.
 			*/
 			unsigned tmp;
-			if((tmp = rate_limit::get_max_upload_rate() / connections) > std::numeric_limits<int>::max()){
+			if((tmp = rate_limit::singleton().get_max_upload_rate() / connections) > std::numeric_limits<int>::max()){
 				max_send = std::numeric_limits<int>::max();
 			}else{
 				max_send = tmp;
 			}
-			if((tmp = rate_limit::get_max_download_rate() / connections) > std::numeric_limits<int>::max()){
+			if((tmp = rate_limit::singleton().get_max_download_rate() / connections) > std::numeric_limits<int>::max()){
 				max_recv = std::numeric_limits<int>::max();
 			}else{
 				max_recv = tmp;
@@ -419,10 +407,11 @@ void p2p::main_loop()
 		transfer = false;
 		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			if(FD_ISSET(socket_FD, &read_FDS)){
+//add seen function here
 				if(socket_FD == listener){
 					new_connection(listener);
 				}else{
-					if((transfer_limit = rate_limit::download_rate_control(max_buff)) != 0){
+					if((transfer_limit = rate_limit::singleton().download_rate_control(max_buff)) != 0){
 						if(socket_FD == localhost_socket){
 							transfer_limit = max_buff;
 						}else if(transfer_limit > max_recv){
@@ -441,7 +430,7 @@ void p2p::main_loop()
 							continue;
 						}else{
 							if(socket_FD != localhost_socket){
-								rate_limit::add_download_bytes(n_bytes);
+								rate_limit::singleton().add_download_bytes(n_bytes);
 							}
 							p2p_buffer::post_recv(socket_FD, recv_buff, n_bytes);
 							transfer = true;
@@ -451,8 +440,10 @@ void p2p::main_loop()
 			}
 
 			if(FD_ISSET(socket_FD, &write_FDS)){
+//add seen function here
 				if(p2p_buffer::get_send_buff(socket_FD, max_send, send_buff)){
-					if((transfer_limit = rate_limit::upload_rate_control(send_buff.size())) != 0){
+					assert(!send_buff.empty());
+					if((transfer_limit = rate_limit::singleton().upload_rate_control(send_buff.size())) != 0){
 						if(socket_FD == localhost_socket){
 							transfer_limit = send_buff.size();
 						}else if(transfer_limit > max_send){
@@ -468,7 +459,7 @@ void p2p::main_loop()
 							}
 						}else{
 							if(socket_FD != localhost_socket){
-								rate_limit::add_upload_bytes(n_bytes);
+								rate_limit::singleton().add_upload_bytes(n_bytes);
 							}
 							if(p2p_buffer::post_send(socket_FD, n_bytes)){
 								LOGGER << "post send disconnect of socket " << socket_FD;
@@ -495,7 +486,7 @@ void p2p::reconnect_unfinished()
 	iter_cur = resume.begin();
 	iter_end = resume.end();
 	while(iter_cur != iter_end){
-		start_download(*iter_cur);
+		start_download_process(*iter_cur);
 		++iter_cur;
 	}
 }
@@ -553,7 +544,7 @@ void p2p::set_max_download_rate(unsigned download_rate)
 		download_rate = std::numeric_limits<unsigned>::max();
 	}
 	DB_Preferences.set_max_download_rate(download_rate);
-	rate_limit::set_max_download_rate(download_rate);
+	rate_limit::singleton().set_max_download_rate(download_rate);
 }
 
 void p2p::set_max_upload_rate(unsigned upload_rate)
@@ -562,7 +553,7 @@ void p2p::set_max_upload_rate(unsigned upload_rate)
 		upload_rate = std::numeric_limits<unsigned>::max();
 	}
 	DB_Preferences.set_max_upload_rate(upload_rate);
-	rate_limit::set_max_upload_rate(upload_rate);
+	rate_limit::singleton().set_max_upload_rate(upload_rate);
 }
 
 void p2p::start_download(const download_info & info)
@@ -619,12 +610,12 @@ void p2p::start_pending_downloads()
 
 unsigned p2p::download_rate()
 {
-	return rate_limit::current_download_rate();
+	return rate_limit::singleton().current_download_rate();
 }
 
 unsigned p2p::upload_rate()
 {
-	return rate_limit::current_upload_rate();
+	return rate_limit::singleton().current_upload_rate();
 }
 
 void p2p::transition_download(boost::shared_ptr<download> Download_Stop)

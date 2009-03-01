@@ -1,5 +1,8 @@
 #include "download_file.hpp"
 
+boost::once_flag download_file::once_flag = BOOST_ONCE_INIT;
+boost::mutex * download_file::_hashing_mutex;
+
 download_file::download_file(
 	const download_info & Download_Info_in
 ):
@@ -11,7 +14,7 @@ download_file::download_file(
 	close_slots(false)
 {
 	LOGGER << "ctor download_file: " << Download_Info.name;
-	block_arbiter::instance().start_file(Download_Info.hash, Tree_Info.get_file_block_count());
+	block_arbiter::singleton().start_file(Download_Info.hash, Tree_Info.get_file_block_count());
 	visible = true;
 
 	//create empty file for download if one doesn't already exist
@@ -44,7 +47,7 @@ download_file::~download_file()
 	if(cancel){
 		std::remove(Download_Info.file_path.c_str());
 	}
-	block_arbiter::instance().finish_download(Download_Info.hash);
+	block_arbiter::singleton().finish_download(Download_Info.hash);
 }
 
 bool download_file::complete()
@@ -64,7 +67,7 @@ const std::string download_file::hash()
 
 void download_file::hash_check(hash_tree::tree_info & Tree_Info, std::string file_path)
 {
-	boost::mutex::scoped_lock lock(hashing_mutex::instance().Mutex());
+	boost::mutex::scoped_lock lock(hashing_mutex());
 
 	//thread local buffer
 	char block_buff[global::FILE_BLOCK_SIZE];
@@ -81,7 +84,7 @@ void download_file::hash_check(hash_tree::tree_info & Tree_Info, std::string fil
 		assert(fin.good());
 		hash_tree::status status = Hash_Tree.check_file_block(Tree_Info, check_block, block_buff, fin.gcount());
 		if(status == hash_tree::GOOD){
-			block_arbiter::instance().add_file_block(Tree_Info.get_root_hash(), check_block);
+			block_arbiter::singleton().add_file_block(Tree_Info.get_root_hash(), check_block);
 		}else if(status == hash_tree::BAD){
 			LOGGER << "found corrupt block " << check_block << " in resumed download";
 			Request_Generator->force_rerequest(check_block);
@@ -95,6 +98,11 @@ void download_file::hash_check(hash_tree::tree_info & Tree_Info, std::string fil
 		++check_block;
 		hashing_percent = (int)(((double)check_block / first_unreceived) * 100);
 	}
+
+	if(check_block == Tree_Info.get_file_block_count() && Request_Generator->complete()){
+		close_slots = true;
+	}
+
 	hashing = false;
 }
 
@@ -161,7 +169,7 @@ void download_file::protocol_block(std::string & message, connection_special * c
 			conn->latest_request.front(), message.c_str(), message.size());
 		if(status == hash_tree::GOOD){
 			write_block(conn->latest_request.front(), message);
-			block_arbiter::instance().add_file_block(Download_Info.hash, conn->latest_request.front());
+			block_arbiter::singleton().add_file_block(Download_Info.hash, conn->latest_request.front());
 			Request_Generator->fulfil(conn->latest_request.front());
 		}else if(status == hash_tree::BAD){
 			LOGGER << Download_Info.name << ":" << conn->latest_request.front() << " hash failure";

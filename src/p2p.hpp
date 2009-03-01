@@ -147,6 +147,11 @@ private:
 	int localhost_socket;
 
 	/*
+	Socket mapped to last time socket was seen. Used for timeouts.
+	*/
+	std::map<int, time_t> Last_Seen;
+
+	/*
 	check_blacklist         - checks if blacklist was updated, if so checks connected IP's to see if any are blacklisted
 	check_timeouts          - checks all servers to see if they've timed out and removes/disconnects if they have
 	disconnect              - disconnects a socket, modifies Client_Buffer

@@ -9,7 +9,7 @@ download_hash_tree::download_hash_tree(
 	Tree_Info(Download_Info_in.hash, Download_Info_in.size)
 {
 	LOGGER << "ctor download_hash_tree: " << Download_Info.name;
-	block_arbiter::instance().start_hash_tree(Download_Info.hash);
+	block_arbiter::singleton().start_hash_tree(Download_Info.hash);
 	visible = true;
 	boost::uint64_t bad_block;
 	hash_tree::status status = Hash_Tree.check(Tree_Info, bad_block);
@@ -37,7 +37,7 @@ download_hash_tree::~download_hash_tree()
 {
 	LOGGER << "dtor download_hash_tree: " << Download_Info.name;
 	if(cancel){
-		block_arbiter::instance().finish_download(Download_Info.hash);
+		block_arbiter::singleton().finish_download(Download_Info.hash);
 		std::remove((global::DOWNLOAD_DIRECTORY + Download_Info.name).c_str());
 	}else{
 		if(download_complete){
@@ -126,7 +126,7 @@ void download_hash_tree::protocol_block(std::string & message, connection_specia
 
 	boost::uint64_t highest_good;
 	if(Tree_Info.highest_good(highest_good)){
-		block_arbiter::instance().update_hash_tree_highest(Download_Info.hash, highest_good);
+		block_arbiter::singleton().update_hash_tree_highest(Download_Info.hash, highest_good);
 	}
 
 	Request_Generator->fulfil(conn->latest_request.front());

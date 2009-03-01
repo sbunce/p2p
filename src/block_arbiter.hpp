@@ -20,10 +20,10 @@
 #include <set>
 #include <string>
 
-class block_arbiter : public singleton<block_arbiter>
+class block_arbiter : public singleton_base<block_arbiter>
 {
 	//needed so the singleton can instantiate this class
-	friend class singleton<block_arbiter>;
+	friend class singleton_base<block_arbiter>;
 public:
 	~block_arbiter(){}
 

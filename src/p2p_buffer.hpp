@@ -31,6 +31,9 @@ class p2p_buffer : private boost::noncopyable
 public:
 	~p2p_buffer();
 
+	//this is called in p2p dtor to clean up this singleton
+	static void destroy_all();
+
 	/* Functions for managing connections.
 	add_connection:
 		Adds a p2p_buffer for a specified socket. Should be called whenever a
@@ -76,7 +79,6 @@ public:
 	static void erase(const int & socket_FD);
 	static bool get_send_buff(const int & socket_FD, const int & max_bytes, std::string & destination);
 	static int get_send_pending();
-	static void get_timed_out(std::vector<int> & timed_out);
 	static bool is_connected(const std::string & IP);
 	static bool post_send(const int & socket_FD, const int & n_bytes);
 	static void post_recv(const int & socket_FD, char * buff, const int & n_bytes);
@@ -123,7 +125,48 @@ public:
 	static void current_uploads(std::vector<upload_info> & info);
 
 private:
-	p2p_buffer(); //this ctor terminates the program, don't use it
+	//initializer for static members
+	static boost::once_flag once_flag;
+	static void init()
+	{
+		_Mutex = new boost::mutex();
+		_P2P_Buffer = new std::map<int, boost::shared_ptr<p2p_buffer> >();
+		_send_pending = new int(0);
+		_Unique_Download = new std::set<boost::shared_ptr<download> >();
+	}
+	//do not use these directly, use the accessor functions
+	static boost::mutex * _Mutex;
+	static std::map<int, boost::shared_ptr<p2p_buffer> > * _P2P_Buffer;
+	static std::set<boost::shared_ptr<download> > * _Unique_Download;
+	static int * _send_pending;
+
+	//accessor functions
+	static boost::mutex & Mutex()
+	{
+		boost::call_once(init, once_flag);
+		return *_Mutex;
+	}
+	static std::map<int, boost::shared_ptr<p2p_buffer> > & P2P_Buffer()
+	{
+		boost::call_once(init, once_flag);
+		return *_P2P_Buffer;
+	}
+	static int & send_pending()
+	{
+		boost::call_once(init, once_flag);
+		return *_send_pending;
+	}
+	static std::set<boost::shared_ptr<download> > & Unique_Download()
+	{
+		boost::call_once(init, once_flag);
+		return *_Unique_Download;
+	}
+
+	p2p_buffer()
+	{
+		LOGGER << "improperly constructed p2p_buffer";
+		exit(1);
+	}
 
 	/*
 	The initiator parameter controls whether we start key negotiation or not. If
@@ -136,14 +179,6 @@ private:
 	);
 
 	/************************* BEGIN GENERAL ***********************************/
-	//locks all public static functions
-	static boost::mutex & Mutex();
-
-	//socket mapped to p2p_buffer
-	static std::map<int, boost::shared_ptr<p2p_buffer> > & P2P_Buffer();
-
-	//how many p2p_buffers have non-empty send_buff
-	static int & send_pending();
 
 	//what socket/IP this p2p_buffer is for
 	int socket;
@@ -151,9 +186,6 @@ private:
 
 	//true if we initiated the connection, used for key exchange
 	bool initiator;
-
-	//used for timeout
-	time_t last_seen;
 
 	//main send/recv buffers
 	std::string recv_buff;
@@ -176,9 +208,6 @@ private:
 	/************************* END GENERAL *************************************/
 
 	/************************* BEGIN DOWNLOAD RELATED **************************/
-	//all currently running downloads
-	static std::set<boost::shared_ptr<download> > & Unique_Download();
-
 	/*
 	The number of slots in use by the downloads contained within this p2p_buffer.
 	This is passed to downloads by reference so they may modify it. Checks exist

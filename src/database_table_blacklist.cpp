@@ -1,10 +1,7 @@
 #include "database_table_blacklist.hpp"
 
-atomic_int<int> & database::table::blacklist::blacklist_state()
-{
-	static atomic_int<int> * bs = new atomic_int<int>(0);
-	return *bs;
-}
+boost::once_flag database::table::blacklist::once_flag = BOOST_ONCE_INIT;
+atomic_int<int> * database::table::blacklist::_blacklist_state;
 
 void database::table::blacklist::add(const std::string & IP)
 {

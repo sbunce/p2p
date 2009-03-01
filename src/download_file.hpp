@@ -20,7 +20,7 @@
 //include
 #include <atomic_bool.hpp>
 #include <atomic_int.hpp>
-#include <singleton.hpp>
+#include <portable_sleep.hpp>
 
 //std
 #include <ctime>
@@ -56,24 +56,33 @@ public:
 	virtual void unregister_connection(const int & socket);
 
 private:
-
 	//used by the hashing thread
 	boost::thread hashing_thread;                 //thread to check file
 	atomic_bool hashing;                          //true if hashing
 	atomic_int<int> hashing_percent;              //percent done hashing
 	atomic_int<boost::uint64_t> first_unreceived; //block at end of file upon download start + 1
 
-	//used to let only one file hash at a time
-	class hashing_mutex: public singleton<hashing_mutex>
+	/*
+	When the file has finished downloading this will be set to true to indicate
+	that P_CLOSE_SLOT commands need to be sent to all servers. It is possible
+	that this will be used by the hashing thread if the file is totally complete.
+	*/
+	atomic_bool close_slots;
+
+	static boost::once_flag once_flag;
+	static void init()
 	{
-		friend class singleton<hashing_mutex>;
-	public:
-		~hashing_mutex(){}
-		boost::mutex & Mutex(){ return *_Mutex; }
-	private:
-		hashing_mutex(): _Mutex(new boost::mutex()){}
-		boost::mutex * _Mutex;
-	};
+		_hashing_mutex = new boost::mutex();
+	}
+	//do not use this directly, use the accessor function
+	static boost::mutex * _hashing_mutex; //used for limiting concurrent hashing
+
+	//accessor function
+	static boost::mutex & hashing_mutex()
+	{
+		boost::call_once(init, once_flag);
+		return *_hashing_mutex;
+	}
 
 	/*
 	After P_CLOSE_SLOT is sent to all servers and there are no pending responses
@@ -85,12 +94,6 @@ private:
 	The tree_info for the file downloading.
 	*/
 	hash_tree::tree_info Tree_Info;
-
-	/*
-	When the file has finished downloading this will be set to true to indicate
-	that P_CLOSE_SLOT commands need to be sent to all servers.
-	*/
-	bool close_slots;
 
 	/*
 	Class for storing information specific to servers. Each server is identified

@@ -9,20 +9,23 @@ hash_tree::hash_tree()
 
 hash_tree::status hash_tree::check(tree_info & Tree_Info, boost::uint64_t & bad_block)
 {
-	if(Tree_Info.get_block_count() == 0){
+	boost::uint64_t block_count = Tree_Info.get_block_count();
+	if(block_count == 0){
 		return GOOD;
 	}else{
 		sha SHA;
 		char block_buff[global::FILE_BLOCK_SIZE];
 
 		status Status;
-		for(boost::uint64_t x=0; x<Tree_Info.get_block_count(); ++x){
+		for(boost::uint64_t x=0; x<block_count; ++x){
 			Status = check_block(Tree_Info, x, SHA, block_buff);
 			if(Status == BAD){
 				boost::recursive_mutex::scoped_lock lock(*Tree_Info.Recursive_Mutex);
 				Tree_Info.Contiguous->trim(x);
 				bad_block = x;
-				LOGGER << "bad block " << x << " in tree " << Tree_Info.root_hash;
+				if(bad_block != 0){
+					LOGGER << "bad block " << x << " in tree " << Tree_Info.root_hash;
+				}
 				return BAD;
 			}else if(Status == IO_ERROR){
 				return IO_ERROR;
@@ -497,7 +500,7 @@ bool hash_tree::tree_info::block_info(const boost::uint64_t & block, const std::
 bool hash_tree::tree_info::block_info(const boost::uint64_t & block, const std::deque<boost::uint64_t> & row,
 	std::pair<boost::uint64_t, unsigned> & info)
 {
-	static boost::uint64_t throw_away;
+	boost::uint64_t throw_away;
 	return block_info(block, row, info, throw_away);
 }
 

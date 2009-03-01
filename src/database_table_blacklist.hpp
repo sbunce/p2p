@@ -35,11 +35,24 @@ public:
 	bool is_blacklisted(const std::string & IP);
 	static bool is_blacklisted(const std::string & IP, database::connection & DB);
 	static bool modified(int & last_state_seen);
+
 private:
 	database::connection DB;
 
-	//starts at zero and increments every time a host is added to blacklist
-	static atomic_int<int> & blacklist_state();
+	static boost::once_flag once_flag;
+	static void init()
+	{
+		_blacklist_state = new atomic_int<int>(0);
+	}
+	//do not use this directly, use the accessor function
+	static atomic_int<int> * _blacklist_state;
+
+	//accessor function
+	static atomic_int<int> & blacklist_state()
+	{
+		boost::call_once(init, once_flag);
+		return *_blacklist_state;
+	}
 };
 
 }//end of table namespace

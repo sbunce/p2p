@@ -7,14 +7,16 @@
 //custom
 #include "speed_calculator.hpp"
 
+//include
+#include <singleton.hpp>
+
 //std
 #include <limits>
 
-class rate_limit
+class rate_limit: public singleton_base<rate_limit>
 {
+	friend class singleton_base<rate_limit>;
 public:
-	rate_limit(){}
-
 	/*
 	add_download_bytes     - add bytes to download speed average
 	add_upload_bytes       - add bytes to upload speed average
@@ -29,25 +31,27 @@ public:
 	upload_rate_control    - given a maximum_possible_transfer size (in bytes),
 	                         returns how many bytes can be recv'd to maintain rate
 	*/
-	static void add_download_bytes(const unsigned & n_bytes);
-	static void add_upload_bytes(const unsigned & n_bytes);
-	static unsigned current_download_rate();
-	static unsigned current_upload_rate();
-	static unsigned download_rate_control(const unsigned & max_possible_transfer);
-	static unsigned get_max_download_rate();
-	static unsigned get_max_upload_rate();
-	static void set_max_download_rate(const unsigned & rate);
-	static void set_max_upload_rate(const unsigned & rate);
-	static unsigned upload_rate_control(const unsigned & max_possible_transfer);
+	void add_download_bytes(const unsigned & n_bytes);
+	void add_upload_bytes(const unsigned & n_bytes);
+	unsigned current_download_rate();
+	unsigned current_upload_rate();
+	unsigned download_rate_control(const unsigned & max_possible_transfer);
+	unsigned get_max_download_rate();
+	unsigned get_max_upload_rate();
+	void set_max_download_rate(const unsigned & rate);
+	void set_max_upload_rate(const unsigned & rate);
+	unsigned upload_rate_control(const unsigned & max_possible_transfer);
 
 private:
+	rate_limit();
+
 	//mutex for all static public functions
-	static boost::recursive_mutex & Recursive_Mutex();
+	boost::recursive_mutex Recursive_Mutex;
 
-	static unsigned & max_download_rate();
-	static unsigned & max_upload_rate();
+	unsigned max_download_rate;
+	unsigned max_upload_rate;
 
-	static speed_calculator & Download();
-	static speed_calculator & Upload();
+	speed_calculator Download;
+	speed_calculator Upload;
 };
 #endif

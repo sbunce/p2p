@@ -38,11 +38,27 @@ public:
 private:
 	database::connection DB;
 
-	//mutex for all public static functions
-	static boost::mutex & Mutex();
+	static boost::once_flag once_flag;
+	static void init()
+	{
+		_Mutex = new boost::mutex();
+		_prime_count = new unsigned(0);
+	}
+	//do not use this directly, use the accessor function
+	static boost::mutex * _Mutex;
+	static unsigned * _prime_count;
 
-	//how many primes are in the database
-	static unsigned & prime_count();
+	//accessor functions
+	static boost::mutex & Mutex()
+	{
+		boost::call_once(init, once_flag);
+		return *_Mutex;
+	}
+	static unsigned & prime_count()
+	{
+		boost::call_once(init, once_flag);
+		return *_prime_count;
+	}
 
 	/*
 	initialize_prime_count - retrieves prime count from database if not already done

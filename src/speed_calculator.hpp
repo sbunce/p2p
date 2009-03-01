@@ -20,9 +20,12 @@ public:
 	speed_calculator();
 
 	/*
-	current_second_bytes - returns how many bytes have been received in the current second
-	speed                - returns average speed
-	update               - add n_bytes to the average
+	current_second_bytes:
+		Returns how many bytes have been received in the current second.
+	speed:
+		Returns average speed.
+	update:
+		Add n_bytes to the average.
 	*/
 	unsigned current_second_bytes();
 	unsigned speed();

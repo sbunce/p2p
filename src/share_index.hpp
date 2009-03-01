@@ -19,6 +19,7 @@
 //include
 #include <atomic_bool.hpp>
 #include <portable_sleep.hpp>
+#include <singleton.hpp>
 
 //std
 #include <ctime>
@@ -29,8 +30,9 @@
 #include <sstream>
 #include <string>
 
-class share_index : private boost::noncopyable
+class share_index : public singleton_base<share_index>
 {
+	friend class singleton_base<share_index>;
 public:
 	~share_index();
 
@@ -44,15 +46,11 @@ public:
 	is_indexing:
 		Returns true if the server_index is hashing a file.
 	*/
-	static void add_path(const std::string & path);
-	static void init();
-	static bool is_indexing();
+	void add_path(const std::string & path);
+	bool is_indexing();
 
 private:
 	share_index();
-
-	//returns the share_index singleton
-	static share_index & Share_Index();
 
 	//indexing thread (runs in main_loop)
 	boost::thread indexing_thread;

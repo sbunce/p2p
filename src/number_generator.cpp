@@ -1,32 +1,36 @@
 #include "number_generator.hpp"
 
-//BEGIN STATIC
-void number_generator::init()
+number_generator::number_generator()
 {
-	Number_Generator();
+	genprime_thread = boost::thread(boost::bind(&number_generator::genprime_loop, this));
+}
+
+number_generator::~number_generator()
+{
+	genprime_thread.interrupt();
+	genprime_thread.join();
 }
 
 unsigned number_generator::prime_count()
 {
-	return Number_Generator().prime_count_priv();
+	return DB_Prime.count();
 }
 
 mpint number_generator::random_mpint(const int & bytes)
 {
-	return Number_Generator().random_mpint_priv(bytes);
+	unsigned char buff[global::DH_KEY_SIZE];
+	PRNG(buff, bytes, NULL);
+	return mpint(buff, bytes);
 }
 
 mpint number_generator::random_prime_mpint()
 {
-	return Number_Generator().random_prime_mpint_priv();
-}
-
-number_generator & number_generator::Number_Generator()
-{
-	static boost::mutex Mutex;
-	boost::mutex::scoped_lock lock(Mutex);
-	static number_generator N;
-	return N;
+	mpint random;
+	while(!DB_Prime.retrieve(random)){
+		//no prime available, wait for one
+		portable_sleep::yield();
+	}
+	return random;
 }
 
 int number_generator::PRNG(unsigned char * buff, int length, void * data)
@@ -51,41 +55,6 @@ int number_generator::PRNG(unsigned char * buff, int length, void * data)
 	}
 	return length_start;
 #endif
-}
-//END STATIC
-
-number_generator::number_generator()
-{
-	genprime_thread = boost::thread(boost::bind(&number_generator::genprime_loop, this));
-}
-
-number_generator::~number_generator()
-{
-	genprime_thread.interrupt();
-	genprime_thread.join();
-}
-
-unsigned number_generator::prime_count_priv()
-{
-	return DB_Prime.count();
-}
-
-mpint number_generator::random_mpint_priv(const int & bytes)
-{
-	assert(bytes <= global::DH_KEY_SIZE);
-	unsigned char buff[global::DH_KEY_SIZE];
-	PRNG(buff, bytes, NULL);
-	return mpint(buff, bytes);
-}
-
-mpint number_generator::random_prime_mpint_priv()
-{
-	mpint random;
-	while(!DB_Prime.retrieve(random)){
-		//no prime available, wait for one
-		portable_sleep::yield();
-	}
-	return random;
 }
 
 void number_generator::genprime_loop()

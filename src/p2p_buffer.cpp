@@ -1,33 +1,11 @@
 #include "p2p_buffer.hpp"
 
 //BEGIN STATIC
-boost::mutex & p2p_buffer::Mutex()
-{
-	static boost::mutex * M = new boost::mutex();
-	return *M;
-}
-
-std::map<int, boost::shared_ptr<p2p_buffer> > & p2p_buffer::P2P_Buffer()
-{
-	/*
-	Destructor must be called upon program close. Order does not matter.
-	*/
-	static std::map<int, boost::shared_ptr<p2p_buffer> > B;
-	return B;
-}
-
-int & p2p_buffer::send_pending()
-{
-	static int * SP = new int(0);
-	return *SP;
-}
-
-std::set<boost::shared_ptr<download> > & p2p_buffer::Unique_Download()
-{
-	//destructor must be called upon program close, order does not matter
-	static std::set<boost::shared_ptr<download> > UD;
-	return UD;
-}
+boost::once_flag p2p_buffer::once_flag = BOOST_ONCE_INIT;
+boost::mutex * p2p_buffer::_Mutex;
+std::map<int, boost::shared_ptr<p2p_buffer> > * p2p_buffer::_P2P_Buffer;
+std::set<boost::shared_ptr<download> > * p2p_buffer::_Unique_Download;
+int * p2p_buffer::_send_pending;
 
 void p2p_buffer::add_connection(const int & socket_FD, const std::string & IP, const bool & initiator)
 {
@@ -122,6 +100,13 @@ void p2p_buffer::current_uploads(std::vector<upload_info> & info)
 	}
 }
 
+void p2p_buffer::destroy_all()
+{
+	boost::mutex::scoped_lock lock(Mutex());
+	P2P_Buffer().clear();
+	Unique_Download().clear();
+}
+
 void p2p_buffer::erase(const int & socket_FD)
 {
 	boost::mutex::scoped_lock lock(Mutex());
@@ -213,7 +198,6 @@ bool p2p_buffer::get_send_buff(const int & socket_FD, const int & max_bytes, std
 	if(iter == P2P_Buffer().end()){
 		return false;
 	}else{
-		iter->second->last_seen = time(NULL);
 		int size;
 		if(max_bytes > iter->second->send_buff.size()){
 			size = iter->second->send_buff.size();
@@ -222,22 +206,6 @@ bool p2p_buffer::get_send_buff(const int & socket_FD, const int & max_bytes, std
 		}
 		destination.assign(iter->second->send_buff.data(), size);
 		return !destination.empty();
-	}
-}
-
-void p2p_buffer::get_timed_out(std::vector<int> & timed_out)
-{
-	boost::mutex::scoped_lock lock(Mutex());
-	std::map<int, boost::shared_ptr<p2p_buffer> >::iterator iter_cur, iter_end;
-	iter_cur = P2P_Buffer().begin();
-	iter_end = P2P_Buffer().end();
-	while(iter_cur != iter_end){
-		if(time(NULL) - iter_cur->second->last_seen >= global::TIMEOUT){
-			timed_out.push_back(iter_cur->first);
-			P2P_Buffer().erase(iter_cur++);
-		}else{
-			++iter_cur;
-		}
 	}
 }
 
@@ -325,12 +293,6 @@ void p2p_buffer::remove_download_connection(const std::string & hash, const std:
 }
 //END STATIC
 
-p2p_buffer::p2p_buffer()
-{
-	LOGGER << "improperly constructed p2p_buffer";
-	exit(1);
-}
-
 p2p_buffer::p2p_buffer(
 	const int & socket_in,
 	const std::string & IP_in,
@@ -340,7 +302,6 @@ p2p_buffer::p2p_buffer(
 	IP(IP_in),
 	initiator(initiator_in),
 	bytes_seen(0),
-	last_seen(time(NULL)),
 	download_slots_used(0),
 	max_pipeline_size(1),
 	key_exchange(true),
@@ -640,7 +601,6 @@ bool p2p_buffer::protocol_request(std::string & response)
 
 void p2p_buffer::recv_buff_process(char * buff, const int & n_bytes)
 {
-	last_seen = time(NULL);
 	bool initial_empty = send_buff.empty();
 	if(IP.find("127") == 0){
 		protocol_localhost(buff, n_bytes);

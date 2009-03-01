@@ -1,12 +1,9 @@
 #include "database_init.hpp"
 #include "database_connection.hpp"
 
-static int check_exists_call_back(bool & exists, int columns_retrieved, char ** query_response,
-	char ** column_name)
-{
-	exists = strcmp(query_response[0], "0") != 0;
-	return 0;
-}
+boost::once_flag database::init::once_flag = BOOST_ONCE_INIT;
+boost::recursive_mutex * database::init::_Recursive_Mutex;
+bool * database::init::_program_start;
 
 static void setup_blacklist(database::connection & DB)
 {
@@ -26,6 +23,13 @@ static void setup_hash(database::connection & DB)
 	DB.query("CREATE INDEX IF NOT EXISTS hash_state_index ON hash(state)");
 	DB.query("CREATE INDEX IF NOT EXISTS hash_size_index ON hash(size)");
 	DB.query("DELETE FROM hash WHERE state = 0");
+}
+
+static int check_exists_call_back(bool & exists, int columns_retrieved, char ** query_response,
+	char ** column_name)
+{
+	exists = strcmp(query_response[0], "0") != 0;
+	return 0;
 }
 
 static void setup_preferences(database::connection & DB)
@@ -74,11 +78,9 @@ static void setup_share(database::connection & DB)
 void database::init::run()
 {
 	//need recursive mutex because instantiating database::connection calls this
-	static boost::recursive_mutex Mutex;
-	static bool program_start(true);
-	boost::recursive_mutex::scoped_lock lock(Mutex);
-	if(program_start){
-		program_start = false;
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex());
+	if(program_start()){
+		program_start() = false;
 
 		database::connection DB;
 		setup_blacklist(DB);

@@ -1,31 +1,5 @@
 #include "share_index.hpp"
 
-//BEGIN STATIC
-void share_index::add_path(const std::string & path)
-{
-	boost::mutex::scoped_lock lock(Share_Index().PAD_mutex);
-	Share_Index().Pending_Add_Path.push_back(path);
-}
-
-void share_index::init()
-{
-	Share_Index();
-}
-
-bool share_index::is_indexing()
-{
-	return Share_Index().indexing;
-}
-
-share_index & share_index::Share_Index()
-{
-	static boost::mutex Mutex;
-	boost::mutex::scoped_lock lock(Mutex);
-	static share_index S;
-	return S;
-}
-//END STATIC
-
 share_index::share_index()
 :
 	indexing(false),
@@ -39,6 +13,17 @@ share_index::~share_index()
 {
 	indexing_thread.interrupt();
 	indexing_thread.join();
+}
+
+void share_index::add_path(const std::string & path)
+{
+	boost::mutex::scoped_lock lock(PAD_mutex);
+	Pending_Add_Path.push_back(path);
+}
+
+bool share_index::is_indexing()
+{
+	return indexing;
 }
 
 void share_index::add_pending()
