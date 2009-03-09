@@ -6,7 +6,7 @@ gui_statusbar_main::gui_statusbar_main(
 	P2P(&P2P_in)
 {
 	statusbar = this;
-	Glib::signal_timeout().connect(sigc::mem_fun(*this, &gui_statusbar_main::update_status_bar), global::GUI_TICK);
+	Glib::signal_timeout().connect(sigc::mem_fun(*this, &gui_statusbar_main::update_status_bar), settings::GUI_TICK);
 }
 
 bool gui_statusbar_main::update_status_bar()

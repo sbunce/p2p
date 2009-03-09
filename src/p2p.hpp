@@ -16,12 +16,13 @@
 #include "download_info.hpp"
 #include "download_status.hpp"
 #include "download_factory.hpp"
-#include "global.hpp"
 #include "p2p_buffer.hpp"
 #include "p2p_new_connection.hpp"
 #include "number_generator.hpp"
 #include "rate_limit.hpp"
+#include "settings.hpp"
 #include "share_index.hpp"
+#include "sockets.hpp"
 #include "speed_calculator.hpp"
 
 //include
@@ -121,9 +122,6 @@ private:
 	//thread for main_loop
 	boost::thread main_thread;
 
-	atomic_int<int> connections;     //currently established connections
-	atomic_int<int> max_connections; //connection limit
-
 	/*
 	Holds download_info for downloads that need to be started. The download_info
 	is put in this container and later processed by main_thread(). This is done
@@ -132,24 +130,6 @@ private:
 	*/
 	boost::mutex PD_mutex; //for all access to Pending_Download
 	std::list<download_info> Pending_Download;
-
-	//networking related
-	fd_set master_FDS;      //master file descriptor set
-	fd_set read_FDS;        //holds what sockets are ready to be read
-	fd_set write_FDS;       //holds what sockets can be written to without blocking
-	atomic_int<int> FD_max; //number of the highest socket
-
-	/*
-	If localhost connects this is set to the localhost socket. If localhost is
-	not connected this is set to -1. This is used to bypass rate limiting for
-	localhost.
-	*/
-	int localhost_socket;
-
-	/*
-	Socket mapped to last time socket was seen. Used for timeouts.
-	*/
-	std::map<int, time_t> Last_Seen;
 
 	/*
 	check_blacklist         - checks if blacklist was updated, if so checks connected IP's to see if any are blacklisted
@@ -177,7 +157,6 @@ private:
 	void start_pending_downloads();
 	void transition_download(boost::shared_ptr<download> Download_Stop);
 
-	p2p_new_connection P2P_New_Connection;
 	database::table::blacklist DB_Blacklist;
 	database::table::download DB_Download;
 	database::table::preferences DB_Preferences;

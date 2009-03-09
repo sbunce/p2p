@@ -8,7 +8,7 @@ This object is used within the server_buffer which is locked.
 //custom
 #include "block_arbiter.hpp"
 #include "database.hpp"
-#include "global.hpp"
+#include "settings.hpp"
 #include "speed_calculator.hpp"
 #include "upload_info.hpp"
 

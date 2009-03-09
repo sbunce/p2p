@@ -54,7 +54,7 @@ gui_window_download::gui_window_download(
 	downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::StockMenuElem(Gtk::StockID(Gtk::Stock::DELETE), sigc::mem_fun(*this, &gui_window_download::delete_download)));
 
 	//signaled functions
-	Glib::signal_timeout().connect(sigc::mem_fun(*this, &gui_window_download::download_info_refresh), global::GUI_TICK);
+	Glib::signal_timeout().connect(sigc::mem_fun(*this, &gui_window_download::download_info_refresh), settings::GUI_TICK);
 	download_view->signal_button_press_event().connect(sigc::mem_fun(*this, &gui_window_download::download_click), false);
 }
 
@@ -167,7 +167,7 @@ void gui_window_download::download_info_tab()
 	//set tab window to refresh
 	sigc::connection tab_conn = Glib::signal_timeout().connect(
 		sigc::mem_fun(status_window, &gui_window_download_status::refresh),
-		global::GUI_TICK
+		settings::GUI_TICK
 	);
 
 	//signal to close tab, function pointer bound to window pointer associated with a tab

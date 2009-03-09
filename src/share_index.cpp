@@ -5,7 +5,7 @@ share_index::share_index()
 	indexing(false),
 	generate_hash_tree_disabled(true)
 {
-	boost::filesystem::create_directory(global::SHARE_DIRECTORY);
+	boost::filesystem::create_directory(settings::SHARE_DIRECTORY);
 	indexing_thread = boost::thread(boost::bind(&share_index::main_loop, this));
 }
 
@@ -110,7 +110,7 @@ void share_index::check_missing_recurse_1(
 	iter_end = Directory.end();
 	std::vector<std::string> remove;
 	while(iter_cur != iter_end){
-		portable_sleep::ms(1000 / global::SHARE_SCAN_RATE);
+		portable_sleep::ms(1000 / settings::SHARE_SCAN_RATE);
 		if(check_missing_recurse_2(iter_cur->second, current_directory + iter_cur->first + "/")){
 			//directory passed to check_missing_recurse_2 is empty, remove it
 			Directory.erase(iter_cur++);
@@ -127,7 +127,7 @@ bool share_index::check_missing_recurse_2(directory_contents & DC, std::string c
 	iter_cur = DC.File.begin();
 	iter_end = DC.File.end();
 	while(iter_cur != iter_end){
-		portable_sleep::ms(1000 / global::SHARE_SCAN_RATE);
+		portable_sleep::ms(1000 / settings::SHARE_SCAN_RATE);
 		std::string path = current_directory + iter_cur->first;
 		if(!fs::exists(path)){
 			//file is missing, remove it from DB
@@ -194,7 +194,7 @@ void share_index::main_loop()
 
 	while(true){
 		boost::this_thread::interruption_point();
-		scan_share(global::SHARE_DIRECTORY);
+		scan_share(settings::SHARE_DIRECTORY);
 		indexing = false;
 		check_missing();
 		add_pending();
@@ -217,7 +217,7 @@ void share_index::scan_share(std::string directory_name)
 		fs::recursive_directory_iterator iter_cur(path), iter_end;
 		while(iter_cur != iter_end){
 			boost::this_thread::interruption_point();
-			portable_sleep::ms(1000 / global::SHARE_SCAN_RATE);
+			portable_sleep::ms(1000 / settings::SHARE_SCAN_RATE);
 			check_path(iter_cur->path().string());
 			++iter_cur;
 		}

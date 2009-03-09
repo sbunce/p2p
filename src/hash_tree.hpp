@@ -11,8 +11,9 @@
 #include "convert.hpp"
 #include "contiguous_map.hpp"
 #include "database.hpp"
-#include "global.hpp"
 #include "request_generator.hpp"
+#include "protocol.hpp"
+#include "settings.hpp"
 #include "sha.hpp"
 
 //include

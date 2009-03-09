@@ -13,13 +13,14 @@
 //custom
 #include "database.hpp"
 #include "download_connection.hpp"
-#include "global.hpp"
 #include "p2p_buffer.hpp"
 //#include "resolve.hpp"
-#include "thread_pool.hpp"
+#include "settings.hpp"
+#include "sockets.hpp"
 
 //include
 #include <atomic_int.hpp>
+#include <thread_pool.hpp>
 
 //networking
 #ifdef WIN32
@@ -36,27 +37,17 @@
 #include <map>
 #include <string>
 
-class p2p_new_connection : private boost::noncopyable
+class p2p_new_connection : public singleton_base<p2p_new_connection>
 {
+	friend class singleton_base<p2p_new_connection>;
 public:
-	p2p_new_connection(
-		fd_set & master_FDS_in,
-		atomic_int<int> & FD_max_in,
-		atomic_int<int> & max_connections_in,
-		atomic_int<int> & connections_in
-	);
-	~p2p_new_connection();
-
 	/*
 	queue - queue download_connection
 	*/
 	void queue(download_connection DC);
 
 private:
-	fd_set * master_FDS;               //pointer to master_FDS in client
-	atomic_int<int> * FD_max;          //pointer to FD_max which exists in client
-	atomic_int<int> * max_connections; //maximum number of connections allowed
-	atomic_int<int> * connections;     //number of connections currently established
+	p2p_new_connection();
 
 	/*
 	Used by the known_unresponsive function to check for servers that have

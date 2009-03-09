@@ -5,8 +5,9 @@ speed_calculator::speed_calculator()
 	Recursive_Mutex(new boost::recursive_mutex()),
 	average(0)
 {
-	for(int x=0; x < global::SPEED_AVERAGE + 1; ++x){
-		Second_Bytes[x] = std::make_pair(time(NULL), 0);
+	Second_Bytes[0] = std::make_pair(std::time(NULL), 0);
+	for(int x=1; x < settings::SPEED_AVERAGE + 1; ++x){
+		Second_Bytes[x] = std::make_pair(0, 0);
 	}
 }
 
@@ -38,22 +39,25 @@ void speed_calculator::update(const unsigned & n_bytes)
 		shifts and inject new seconds on the left.
 		*/
 		while(Second_Bytes[0].first != current_time){
-			//right shift
-			for(int x=global::SPEED_AVERAGE; x > 0; --x){
+			for(int x=settings::SPEED_AVERAGE; x > 0; --x){
 				Second_Bytes[x] = Second_Bytes[x-1];
 			}
-			//inject
 			Second_Bytes[0] = std::make_pair(Second_Bytes[1].first + 1, 0);
 		}
-
-		//add bytes to new second
 		Second_Bytes[0].second += n_bytes;
 	}
 
 	//calculate average, don't include first incomplete second
-	unsigned count = 0;
-	for(int x=1; x < global::SPEED_AVERAGE + 1; ++x){
-		count += Second_Bytes[x].second;
+	unsigned total_bytes = 0, average_seconds = 0;
+	for(int x=1; x < settings::SPEED_AVERAGE + 1; ++x){
+		if(Second_Bytes[x].first != 0){
+			total_bytes += Second_Bytes[x].second;
+			++average_seconds;
+		}
 	}
-	average = count / global::SPEED_AVERAGE;
+	if(average_seconds != 0){
+		average = total_bytes / average_seconds;
+	}else{
+		average = 0;
+	}
 }

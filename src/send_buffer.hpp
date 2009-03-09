@@ -14,7 +14,8 @@ are prioritized to get files downloading as soon as possible.
 #include <boost/shared_ptr.hpp>
 
 //custom
-#include "global.hpp"
+#include "protocol.hpp"
+#include "settings.hpp"
 
 //include
 #include <logger.hpp>

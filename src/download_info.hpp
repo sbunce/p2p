@@ -5,7 +5,7 @@
 #include <boost/filesystem.hpp>
 
 //custom
-#include "global.hpp"
+#include "settings.hpp"
 
 //std
 #include <vector>
@@ -23,7 +23,7 @@ public:
 		size(size_in)
 	{
 		namespace fs = boost::filesystem;
-		fs::path path = fs::system_complete(fs::path(global::DOWNLOAD_DIRECTORY + name, fs::native));
+		fs::path path = fs::system_complete(fs::path(settings::DOWNLOAD_DIRECTORY + name, fs::native));
 		file_path = path.string();
 	}
 

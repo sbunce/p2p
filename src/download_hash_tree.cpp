@@ -20,7 +20,7 @@ download_hash_tree::download_hash_tree(
 		//bad hash block detected
 		Request_Generator =
 			boost::shared_ptr<request_generator>(new request_generator(bad_block,
-			Tree_Info.get_block_count(), global::RE_REQUEST));
+			Tree_Info.get_block_count(), settings::RE_REQUEST));
 
 		for(boost::uint64_t x=0; x<bad_block; ++x){
 			bytes_received += Tree_Info.block_size(x);
@@ -38,7 +38,7 @@ download_hash_tree::~download_hash_tree()
 	LOGGER << "dtor download_hash_tree: " << Download_Info.name;
 	if(cancel){
 		block_arbiter::singleton().finish_download(Download_Info.hash);
-		std::remove((global::DOWNLOAD_DIRECTORY + Download_Info.name).c_str());
+		std::remove((settings::DOWNLOAD_DIRECTORY + Download_Info.name).c_str());
 	}else{
 		if(download_complete){
 			database::table::hash::set_state(Download_Info.hash, Tree_Info.get_tree_size(), database::table::hash::COMPLETE, DB);
@@ -180,9 +180,10 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 				LOGGER << "invalid hex";
 				exit(1);
 			}
-			request = global::P_REQUEST_SLOT_HASH_TREE + hash_bin;
-			expected.push_back(std::make_pair(global::P_SLOT, global::P_SLOT_SIZE));
-			expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
+			request += protocol::P_REQUEST_SLOT_HASH_TREE;
+			request += hash_bin;
+			expected.push_back(std::make_pair(protocol::P_SLOT, protocol::P_SLOT_SIZE));
+			expected.push_back(std::make_pair(protocol::P_ERROR, protocol::P_ERROR_SIZE));
 			return download::BINARY_MODE;
 		}
 	}else if(conn->State == connection_special::REQUEST_BLOCKS){
@@ -195,7 +196,7 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 				conn->slot_requested = false;
 				conn->slot_open = false;
 				--slots_used;
-				request += global::P_CLOSE_SLOT;
+				request += protocol::P_CLOSE_SLOT;
 				request += conn->slot_ID;
 
 				//download complete unless slot open with a server
@@ -214,7 +215,7 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 			}
 		}else{
 			if(conn->wait_activated){
-				if(conn->wait_start + global::P_WAIT_TIMEOUT <= time(NULL)){
+				if(conn->wait_start + settings::P_WAIT_TIMEOUT <= time(NULL)){
 					conn->wait_activated = false;
 				}else{
 					return download::NO_REQUEST;
@@ -222,12 +223,12 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 			}
 
 			if(Request_Generator->request(conn->latest_request)){
-				request += global::P_REQUEST_BLOCK;
+				request += protocol::P_REQUEST_BLOCK;
 				request += conn->slot_ID;
 				request += convert::encode<boost::uint64_t>(conn->latest_request.back());
-				expected.push_back(std::make_pair(global::P_BLOCK, Tree_Info.block_size(conn->latest_request.back()) + 1));
-				expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
-				expected.push_back(std::make_pair(global::P_WAIT, global::P_WAIT_SIZE));
+				expected.push_back(std::make_pair(protocol::P_BLOCK, Tree_Info.block_size(conn->latest_request.back()) + 1));
+				expected.push_back(std::make_pair(protocol::P_ERROR, protocol::P_ERROR_SIZE));
+				expected.push_back(std::make_pair(protocol::P_WAIT, protocol::P_WAIT_SIZE));
 				return download::BINARY_MODE;
 			}else{
 				return download::NO_REQUEST;
@@ -238,7 +239,7 @@ download::mode download_hash_tree::request(const int & socket, std::string & req
 			conn->slot_requested = false;
 			conn->slot_open = false;
 			--slots_used;
-			request += global::P_CLOSE_SLOT;
+			request += protocol::P_CLOSE_SLOT;
 			request += conn->slot_ID;
 			return download::BINARY_MODE;
 		}else{
@@ -262,14 +263,14 @@ bool download_hash_tree::response(const int & socket, std::string message)
 	assert(iter != Connection_Special.end());
 	connection_special * conn = &iter->second;
 
-	if(message[0] == global::P_SLOT){
+	if(message[0] == protocol::P_SLOT){
 		protocol_slot(message, conn);
-	}else if(message[0] == global::P_ERROR){
+	}else if(message[0] == protocol::P_ERROR){
 		LOGGER << conn->IP << " doesn't have hash tree, REMOVAL FROM DB NOT IMPLEMENTED";
 		return false;
-	}else if(message[0] == global::P_BLOCK){
+	}else if(message[0] == protocol::P_BLOCK){
 		protocol_block(message, conn);
-	}else if(message[0] == global::P_WAIT){
+	}else if(message[0] == protocol::P_WAIT){
 		protocol_wait(message, conn);
 	}else{
 		LOGGER << "programmer error";

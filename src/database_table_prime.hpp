@@ -7,7 +7,7 @@
 
 //custom
 #include "database_connection.hpp"
-#include "global.hpp"
+#include "settings.hpp"
 
 //libtommath
 #include <mpint.hpp>

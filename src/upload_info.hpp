@@ -2,7 +2,7 @@
 #define H_UPLOAD_INFO
 
 //custom
-#include "global.hpp"
+#include "settings.hpp"
 
 class upload_info
 {

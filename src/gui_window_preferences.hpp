@@ -5,8 +5,8 @@
 #include <boost/utility.hpp>
 
 //custom
-#include "global.hpp"
 #include "p2p.hpp"
+#include "settings.hpp"
 
 //gui
 #include <gtkmm.h>

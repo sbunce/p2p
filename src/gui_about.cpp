@@ -14,7 +14,7 @@ gui_about::gui_about()
 		Gtk::Widget::render_icon(Gtk::Stock::ABOUT, Gtk::ICON_SIZE_LARGE_TOOLBAR)
 	);
 
-	window->set_title(("About " + global::NAME));
+	window->set_title(("About " + settings::NAME));
 	window->resize(500, 350);
 	window->set_modal(true);
 	window->set_keep_above(true);
@@ -26,7 +26,7 @@ gui_about::gui_about()
 	vbox->pack_start(*scrolled_window);
 
 	text_buff = Gtk::TextBuffer::create();
-	text_buff->set_text(global::NAME + " version: " + global::VERSION + " © Seth Bunce 2006");
+	text_buff->set_text(settings::NAME + " version: " + settings::VERSION + " © Seth Bunce 2006");
 	text_view->set_buffer(text_buff);
 	text_view->set_editable(false);
 

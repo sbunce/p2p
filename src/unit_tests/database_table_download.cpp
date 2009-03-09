@@ -1,6 +1,6 @@
 //custom
 #include "../database.hpp"
-#include "../global.hpp"
+#include "../settings.hpp"
 
 //std
 #include <vector>
@@ -28,7 +28,7 @@ int main()
 
 	std::string path;
 	if(DBD.lookup_hash("ABC", path)){
-		if(path != global::DOWNLOAD_DIRECTORY+"NAME"){
+		if(path != settings::DOWNLOAD_DIRECTORY+"NAME"){
 			LOGGER; exit(1);
 		}
 	}else{
@@ -41,7 +41,7 @@ int main()
 		if(file_size != 123){
 			LOGGER; exit(1);
 		}
-		if(path != global::DOWNLOAD_DIRECTORY+"NAME"){
+		if(path != settings::DOWNLOAD_DIRECTORY+"NAME"){
 			LOGGER; exit(1);
 		}
 	}else{

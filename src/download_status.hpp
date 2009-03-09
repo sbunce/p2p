@@ -5,7 +5,7 @@ Status for a running download.
 #define H_DOWNLOAD_STATUS
 
 //custom
-#include "global.hpp"
+#include "settings.hpp"
 
 //std
 #include <vector>

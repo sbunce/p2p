@@ -20,7 +20,7 @@ download_file::download_file(
 	//create empty file for download if one doesn't already exist
 	std::fstream fs(Download_Info.file_path.c_str(), std::ios::in | std::ios::ate);
 	if(fs.is_open()){
-		first_unreceived = fs.tellg() / global::FILE_BLOCK_SIZE;
+		first_unreceived = fs.tellg() / protocol::FILE_BLOCK_SIZE;
 	}else{
 		fs.open(Download_Info.file_path.c_str(), std::ios::out);
 		first_unreceived = 0;
@@ -28,9 +28,9 @@ download_file::download_file(
 
 	Request_Generator =
 		boost::shared_ptr<request_generator>(new request_generator((boost::uint64_t)first_unreceived,
-		Tree_Info.get_file_block_count(), global::RE_REQUEST));
+		Tree_Info.get_file_block_count(), settings::RE_REQUEST));
 
-	bytes_received += (boost::uint64_t)first_unreceived * global::FILE_BLOCK_SIZE;
+	bytes_received += (boost::uint64_t)first_unreceived * protocol::FILE_BLOCK_SIZE;
 
 	if(first_unreceived == (boost::uint64_t)0){
 		hashing = false;
@@ -70,7 +70,7 @@ void download_file::hash_check(hash_tree::tree_info & Tree_Info, std::string fil
 	boost::mutex::scoped_lock lock(hashing_mutex());
 
 	//thread local buffer
-	char block_buff[global::FILE_BLOCK_SIZE];
+	char block_buff[protocol::FILE_BLOCK_SIZE];
 
 	std::fstream fin(file_path.c_str(), std::ios::in | std::ios::binary);
 	assert(fin.good());
@@ -80,7 +80,7 @@ void download_file::hash_check(hash_tree::tree_info & Tree_Info, std::string fil
 		if(check_block == first_unreceived){
 			break;
 		}
-		fin.read(block_buff, global::FILE_BLOCK_SIZE);
+		fin.read(block_buff, protocol::FILE_BLOCK_SIZE);
 		assert(fin.good());
 		hash_tree::status status = Hash_Tree.check_file_block(Tree_Info, check_block, block_buff, fin.gcount());
 		if(status == hash_tree::GOOD){
@@ -236,9 +236,9 @@ download::mode download_file::request(const int & socket, std::string & request,
 				LOGGER << "invalid hex";
 				exit(1);
 			}
-			request = global::P_REQUEST_SLOT_FILE + hash_bin;
-			expected.push_back(std::make_pair(global::P_SLOT, global::P_SLOT_SIZE));
-			expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
+			request = protocol::P_REQUEST_SLOT_FILE + hash_bin;
+			expected.push_back(std::make_pair(protocol::P_SLOT, protocol::P_SLOT_SIZE));
+			expected.push_back(std::make_pair(protocol::P_ERROR, protocol::P_ERROR_SIZE));
 			return download::BINARY_MODE;
 		}
 	}else if(conn->State == connection_special::REQUEST_BLOCKS){
@@ -250,7 +250,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 			}else{
 				conn->slot_requested = false;
 				conn->slot_open = false;
-				request += global::P_CLOSE_SLOT;
+				request += protocol::P_CLOSE_SLOT;
 				request += conn->slot_ID;
 				--slots_used;
 
@@ -271,7 +271,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 			}
 		}else{
 			if(conn->wait_activated){
-				if(conn->wait_start + global::P_WAIT_TIMEOUT <= time(NULL)){
+				if(conn->wait_start + settings::P_WAIT_TIMEOUT <= time(NULL)){
 					conn->wait_activated = false;
 				}else{
 					return download::NO_REQUEST;
@@ -279,19 +279,19 @@ download::mode download_file::request(const int & socket, std::string & request,
 			}
 
 			if(!Request_Generator->complete() && Request_Generator->request(conn->latest_request)){
-				request += global::P_REQUEST_BLOCK;
+				request += protocol::P_REQUEST_BLOCK;
 				request += conn->slot_ID;
 				request += convert::encode<boost::uint64_t>(conn->latest_request.back());
 				int size;
 				if(conn->latest_request.back() == Tree_Info.get_file_block_count() - 1){
 					size = Tree_Info.get_last_file_block_size() + 1; //+1 for command size
-					Request_Generator->set_timeout(global::RE_REQUEST_FINISHING);
+					Request_Generator->set_timeout(settings::RE_REQUEST_FINISHING);
 				}else{
-					size = global::P_BLOCK_SIZE;
+					size = protocol::P_BLOCK_SIZE;
 				}
-				expected.push_back(std::make_pair(global::P_BLOCK, size));
-				expected.push_back(std::make_pair(global::P_ERROR, global::P_ERROR_SIZE));
-				expected.push_back(std::make_pair(global::P_WAIT, global::P_WAIT_SIZE));
+				expected.push_back(std::make_pair(protocol::P_BLOCK, size));
+				expected.push_back(std::make_pair(protocol::P_ERROR, protocol::P_ERROR_SIZE));
+				expected.push_back(std::make_pair(protocol::P_WAIT, protocol::P_WAIT_SIZE));
 				return download::BINARY_MODE;
 			}else{
 				return download::NO_REQUEST;
@@ -302,7 +302,7 @@ download::mode download_file::request(const int & socket, std::string & request,
 			conn->slot_requested = false;
 			conn->slot_open = false;
 			--slots_used;
-			request += global::P_CLOSE_SLOT;
+			request += protocol::P_CLOSE_SLOT;
 			request += conn->slot_ID;
 			return download::BINARY_MODE;
 		}else{
@@ -320,14 +320,14 @@ bool download_file::response(const int & socket, std::string message)
 	assert(iter != Connection_Special.end());
 	connection_special * conn = &iter->second;
 
-	if(message[0] == global::P_SLOT){
+	if(message[0] == protocol::P_SLOT){
 		protocol_slot(message, conn);
-	}else if(message[0] == global::P_ERROR){
+	}else if(message[0] == protocol::P_ERROR){
 		LOGGER << conn->IP << " doesn't have hash tree, REMOVAL FROM DB NOT IMPLEMENTED";
 		return false;
-	}else if(message[0] == global::P_BLOCK){
+	}else if(message[0] == protocol::P_BLOCK){
 		protocol_block(message, conn);
-	}else if(message[0] == global::P_WAIT){
+	}else if(message[0] == protocol::P_WAIT){
 		protocol_wait(message, conn);
 	}else{
 		LOGGER << "programmer error";
@@ -366,7 +366,7 @@ void download_file::write_block(boost::uint64_t block_number, std::string & bloc
 
 	std::fstream fout(Download_Info.file_path.c_str(), std::ios::in | std::ios::out | std::ios::binary);
 	if(fout.is_open()){
-		fout.seekp(block_number * global::FILE_BLOCK_SIZE, std::ios::beg);
+		fout.seekp(block_number * protocol::FILE_BLOCK_SIZE, std::ios::beg);
 		fout.write(block.c_str(), block.size());
 	}else{
 		LOGGER << "error opening file " << Download_Info.file_path;

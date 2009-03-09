@@ -8,7 +8,7 @@
 #include <boost/utility.hpp>
 
 //custom
-#include "global.hpp"
+#include "settings.hpp"
 
 //include
 #include <atomic_bool.hpp>

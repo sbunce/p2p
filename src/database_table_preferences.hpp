@@ -7,7 +7,7 @@
 
 //custom
 #include "database_connection.hpp"
-#include "global.hpp"
+#include "settings.hpp"
 
 //std
 #include <string>
@@ -27,16 +27,26 @@ public:
 	"get"|"set"_max_connections - how many incoming connections server allows
 	*/
 	std::string get_download_directory();
+	static std::string get_download_directory(database::connection & DB);
 	unsigned get_max_download_rate();
+	static unsigned get_max_download_rate(database::connection & DB);
 	unsigned get_max_connections();
+	static unsigned get_max_connections(database::connection & DB);
 	std::string get_share_directory();
+	static std::string get_share_directory(database::connection & DB);
 	unsigned get_max_upload_rate();
+	static unsigned get_max_upload_rate(database::connection & DB);
 
 	void set_download_directory(const std::string & download_directory);
+	static void set_download_directory(const std::string & download_directory, database::connection & DB);
 	void set_max_download_rate(const unsigned & rate);
+	static void set_max_download_rate(const unsigned & rate, database::connection & DB);
 	void set_max_connections(const unsigned & connections);
+	static void set_max_connections(const unsigned & connections, database::connection & DB);
 	void set_share_directory(const std::string & share_directory);
+	static void set_share_directory(const std::string & share_directory, database::connection & DB);
 	void set_max_upload_rate(const unsigned & rate);
+	static void set_max_upload_rate(const unsigned & rate, database::connection & DB);
 
 private:
 	database::connection DB;

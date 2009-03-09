@@ -9,7 +9,7 @@
 
 //custom
 #include "database.hpp"
-#include "global.hpp"
+#include "settings.hpp"
 
 //libtommath
 #include <mpint.hpp>
@@ -39,7 +39,7 @@ public:
 	random_mpint:
 		Return random mpint of specified size.
 	random_prime_mpint:
-		Return random mpint global::DH_KEY_SIZE long.Blocks if cache empty, until
+		Return random mpint settings::DH_KEY_SIZE long.Blocks if cache empty, until
 		new primes generated.
 	*/
 	unsigned prime_count();
@@ -62,7 +62,7 @@ private:
 	All of these functions are associated with public static member functions.
 	Look at documentation for static member functions to find out what these do.
 
-	Do not request more than global::DH_KEY_SIZE + 1 from random_mpint_priv().
+	Do not request more than settings::DH_KEY_SIZE + 1 from random_mpint_priv().
 	*/
 	mpint random_mpint_priv(const int & bytes);
 	mpint random_prime_mpint_priv();

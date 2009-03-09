@@ -3,7 +3,7 @@
 
 //libcustom
 #include "../convert.hpp"
-#include "../global.hpp"
+#include "../settings.hpp"
 
 //std
 #include <string>

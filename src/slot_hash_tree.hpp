@@ -3,8 +3,8 @@
 
 //custom
 #include "database.hpp"
-#include "global.hpp"
 #include "hash_tree.hpp"
+#include "settings.hpp"
 #include "slot.hpp"
 
 //std

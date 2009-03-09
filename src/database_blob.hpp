@@ -2,8 +2,11 @@
 #ifndef H_DATABASE_BLOB
 #define H_DATABASE_BLOB
 
+//boost
+#include <boost/cstdint.hpp>
+
 //custom
-#include "global.hpp"
+#include "settings.hpp"
 
 //std
 #include <string>

@@ -5,7 +5,7 @@
 #include <boost/utility.hpp>
 
 //custom
-#include "global.hpp"
+#include "settings.hpp"
 
 //gui
 #include <gtkmm.h>

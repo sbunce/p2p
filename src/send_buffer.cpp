@@ -11,10 +11,10 @@ out here.
 */
 bool send_buffer::add(const std::string & buff)
 {
-	int command_type = global::command_type(buff[0]);
-	if(command_type == global::COMMAND_REQUEST){
+	int command_type = protocol::command_type(buff[0]);
+	if(command_type == protocol::COMMAND_REQUEST){
 		buffer_request_uncommitted.push_back(boost::shared_ptr<std::string>(new std::string(buff)));
-	}else if(command_type == global::COMMAND_RESPONSE){
+	}else if(command_type == protocol::COMMAND_RESPONSE){
 		buffer_response_uncommitted.push_back(boost::shared_ptr<std::string>(new std::string(buff)));
 	}else{
 		LOGGER << "remote host sent invalid command";
@@ -22,13 +22,13 @@ bool send_buffer::add(const std::string & buff)
 	}
 
 	#ifndef NDEBUG
-	if(buffer_request_uncommitted.size() > global::PIPELINE_SIZE){
+	if(buffer_request_uncommitted.size() > protocol::PIPELINE_SIZE){
 		LOGGER << "programmer error, we over pipelined";
 		exit(1);
 	}
 	#endif
 
-	if(buffer_response_uncommitted.size() > global::PIPELINE_SIZE){
+	if(buffer_response_uncommitted.size() > protocol::PIPELINE_SIZE){
 		LOGGER << "remote host over pipelined";
 		return false;
 	}else{
@@ -111,10 +111,10 @@ void send_buffer::post_send(const int & n_bytes)
 		iter_cur = buffer_committed.rbegin();
 		iter_end = buffer_committed.rend();
 		while(iter_cur != iter_end){
-			command_type = global::command_type((**iter_cur)[0]);
-			if(command_type == global::COMMAND_REQUEST){
+			command_type = protocol::command_type((**iter_cur)[0]);
+			if(command_type == protocol::COMMAND_REQUEST){
 				buffer_request_uncommitted.push_back(*iter_cur);
-			}else if(command_type == global::COMMAND_RESPONSE){
+			}else if(command_type == protocol::COMMAND_RESPONSE){
 				buffer_response_uncommitted.push_back(*iter_cur);
 			}
 			#ifndef NDEBUG

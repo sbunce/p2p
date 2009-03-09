@@ -1,6 +1,6 @@
 //custom
 #include "../database.hpp"
-#include "../global.hpp"
+#include "../settings.hpp"
 
 //include
 #include <logger.hpp>

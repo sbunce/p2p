@@ -1,5 +1,4 @@
 //custom
-#include "global.hpp"
 #include "p2p.hpp"
 
 //include

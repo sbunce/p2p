@@ -69,7 +69,7 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	main_VBox->pack_start(*statusbar, Gtk::PACK_SHRINK, 0);
 
 	//window properties
-	window->set_title(global::NAME);
+	window->set_title(settings::NAME);
 	window->resize(640, 480);
 	window->set_modal(false);
 	window->property_window_position().set_value(Gtk::WIN_POS_CENTER_ON_PARENT);

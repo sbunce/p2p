@@ -64,15 +64,12 @@ Read blob:
 //custom
 #include "database_blob.hpp"
 #include "database_init.hpp"
-#include "global.hpp"
+#include "settings.hpp"
+#include "speed_calculator.hpp"
 
 //boost
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
-
-//custom
-#include "global.hpp"
-#include "speed_calculator.hpp"
 
 //include
 #include <atomic_int.hpp>

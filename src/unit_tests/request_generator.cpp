@@ -1,6 +1,6 @@
 //custom
-#include "../global.hpp"
 #include "../request_generator.hpp"
+#include "../settings.hpp"
 
 //include
 #include <logger.hpp>

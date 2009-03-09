@@ -58,8 +58,7 @@ src_common = [
 	'slot.cpp',
 	'slot_file.cpp',
 	'slot_hash_tree.cpp',
-	'speed_calculator.cpp',
-	'thread_pool.cpp'
+	'speed_calculator.cpp'
 ]
 
 #base (needed by all)

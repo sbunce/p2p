@@ -40,7 +40,7 @@ static int lookup_hash_1_call_back(std::pair<bool, std::string *> & info,
 {
 	assert(response[0]);
 	info.first = true;
-	*info.second = global::DOWNLOAD_DIRECTORY + response[0];
+	*info.second = settings::DOWNLOAD_DIRECTORY + response[0];
 	return 0;
 }
 
@@ -88,7 +88,7 @@ static int lookup_hash_2_call_back(boost::tuple<bool, std::string *, boost::uint
 {
 	assert(response[0] && response[1]);
 	info.get<0>() = true;
-	*info.get<1>() = global::DOWNLOAD_DIRECTORY + response[0];
+	*info.get<1>() = settings::DOWNLOAD_DIRECTORY + response[0];
 	std::stringstream ss(response[1]);
 	ss >> *info.get<2>();
 	return 0;

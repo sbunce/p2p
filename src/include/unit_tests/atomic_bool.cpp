@@ -3,7 +3,6 @@
 
 //libcustom
 #include "../atomic_bool.hpp"
-#include "../global.hpp"
 
 //std
 #include <sstream>

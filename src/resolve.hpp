@@ -5,7 +5,7 @@
 #include <boost/thread.hpp>
 
 //custom
-#include "global.hpp"
+#include "settings.hpp"
 
 //networking
 #ifdef WIN32

@@ -7,8 +7,9 @@
 
 //custom
 #include "CMWC4096.hpp"
-#include "global.hpp"
 #include "number_generator.hpp"
+#include "protocol.hpp"
+#include "settings.hpp"
 
 //libtommath
 #include <mpint.hpp>

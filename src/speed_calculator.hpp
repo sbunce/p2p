@@ -7,7 +7,7 @@
 #include <boost/thread.hpp>
 
 //custom
-#include "global.hpp"
+#include "settings.hpp"
 
 //std
 #include <cmath>
@@ -35,13 +35,13 @@ private:
 	//mutex for all public functions
 	boost::shared_ptr<boost::recursive_mutex> Recursive_Mutex;
 
-	//average speed over global::SPEED_AVERAGE seconds
+	//average speed over settings::SPEED_AVERAGE seconds
 	unsigned average;
 
 	/*
 	pair<second, bytes in second>
 	The low elements are more current in time.
 	*/
-	std::pair<time_t, unsigned> Second_Bytes[global::SPEED_AVERAGE + 1];
+	std::pair<time_t, unsigned> Second_Bytes[settings::SPEED_AVERAGE + 1];
 };
 #endif

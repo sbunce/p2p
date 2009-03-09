@@ -7,8 +7,8 @@
 
 //custom
 #include "database_connection.hpp"
-#include "global.hpp"
 #include "hash_tree.hpp"
+#include "settings.hpp"
 
 //include
 #include <atomic_bool.hpp>

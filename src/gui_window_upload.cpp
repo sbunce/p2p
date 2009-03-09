@@ -35,7 +35,7 @@ gui_window_upload::gui_window_upload(
 	pColumn->add_attribute(cell->property_value(), column_percent_complete);
 
 	//timed functions
-	Glib::signal_timeout().connect(sigc::mem_fun(*this, &gui_window_upload::upload_info_refresh), global::GUI_TICK);
+	Glib::signal_timeout().connect(sigc::mem_fun(*this, &gui_window_upload::upload_info_refresh), settings::GUI_TICK);
 }
 
 bool gui_window_upload::upload_info_refresh()

@@ -1,18 +1,11 @@
 TODO
 
--move the following in p2p in to a threadsafe singleton called "sockets"
-	atomic_int<int> connections;     //currently established connections
-	atomic_int<int> max_connections; //connection limit
-	fd_set master_FDS;      //master file descriptor set
-	fd_set read_FDS;        //holds what sockets are ready to be read
-	fd_set write_FDS;       //holds what sockets can be written to without blocking
-	atomic_int<int> FD_max; //number of the highest socket
-	int localhost_socket;
-	std::map<int, time_t> Last_Seen;
-turn the p2p_new_connection class in to a singleton
+-try forcing slot over 127 to make sure int to char conversion works
 
--there is a burst of speed upon program start, a result of averaging over
-multiple seconds, and no second_bytes being set.
+-make classes separate request and response stuff in p2p_buffer. Put these in
+and then convert the p2p_buffer to a singleton.
+
+-connections with no running downloads not getting terminated
 
 -change iteration like this
 std::container::iterator iter_cur, iter_end
@@ -23,17 +16,9 @@ std::container::itertator
 iter_cur = my_container.begin();
 iter_end = my_container.end();
 
--last seen should be set in socket service loop, not in p2p_buffer
-
--rename global.hpp to settings.hpp and make appropriate namespace change.
-
 -replace send/recv buffers with custom string container which guarantee's it
-doesn't do copy on write (to be threadsafe).
-
--break off response and request stuff from send_buffer in to send_buffer_request
-and send_buffer_response.
-
--grep for all exit(1) instances. If it is debug code surround it with #ifndef NDEBUG
+doesn't do copy on write (to be threadsafe). Add functions which do conversions
+for all types wrapped up in buffer::append.
 
 -requests should be sent before file blocks, when two hosts download from
 eachother the file blocks hog upload that should be used to get requests out.

@@ -13,9 +13,10 @@
 #include "database.hpp"
 #include "download.hpp"
 #include "download_info.hpp"
-#include "global.hpp"
 #include "hash_tree.hpp"
+#include "protocol.hpp"
 #include "request_generator.hpp"
+#include "settings.hpp"
 
 //include
 #include <atomic_bool.hpp>
@@ -138,7 +139,7 @@ private:
 		If wait_activated is true then the server has sent a P_WAIT to indicate it
 		doesn't yet have the block requested. The wait_start variable indicates
 		when the server sent the P_WAIT. New requests of this server should not be
-		made until global::P_WAIT_TIMEOUT seconds have passed.
+		made until settings::P_WAIT_TIMEOUT seconds have passed.
 		*/
 		bool wait_activated;
 		time_t wait_start;

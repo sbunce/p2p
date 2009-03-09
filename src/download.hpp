@@ -5,7 +5,7 @@
 //custom
 #include "download_connection.hpp"
 #include "download_info.hpp"
-#include "global.hpp"
+#include "settings.hpp"
 #include "speed_calculator.hpp"
 
 //std

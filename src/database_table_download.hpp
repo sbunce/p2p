@@ -12,8 +12,8 @@
 #include "database_connection.hpp"
 #include "database_table_hash.hpp"
 #include "download_info.hpp"
-#include "global.hpp"
 #include "hash_tree.hpp"
+#include "settings.hpp"
 #include "sha.hpp"
 
 //std

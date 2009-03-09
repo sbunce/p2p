@@ -2,9 +2,9 @@
 #define H_GUI_WINDOW_DOWNLOAD
 
 //custom
-#include "global.hpp"
 #include "gui_window_download_status.hpp"
 #include "p2p.hpp"
+#include "settings.hpp"
 
 //gui
 #include <gtkmm.h>

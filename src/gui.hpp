@@ -9,7 +9,6 @@
 #include "convert.hpp"
 #include "database.hpp"
 #include "download_info.hpp"
-#include "global.hpp"
 #include "gui_about.hpp"
 #include "gui_statusbar_main.hpp"
 #include "gui_vbox_search.hpp"
@@ -17,6 +16,7 @@
 #include "gui_window_preferences.hpp"
 #include "gui_window_upload.hpp"
 #include "p2p.hpp"
+#include "settings.hpp"
 #include "upload_info.hpp"
 
 //gui

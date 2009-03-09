@@ -6,7 +6,7 @@
 #include <boost/thread.hpp>
 
 //custom
-#include "global.hpp"
+#include "settings.hpp"
 
 //include
 #include <singleton.hpp>

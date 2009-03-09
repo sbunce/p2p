@@ -12,8 +12,9 @@
 #include "download.hpp"
 #include "download_status.hpp"
 #include "encryption.hpp"
-#include "global.hpp"
 #include "http.hpp"
+#include "protocol.hpp"
+#include "settings.hpp"
 #include "slot.hpp"
 #include "slot_file.hpp"
 #include "slot_hash_tree.hpp"
@@ -227,10 +228,10 @@ private:
 
 	/*
 	This is the dynamic maximum pipeline size.
-	global::PIPELINE_SIZE
+	settings::PIPELINE_SIZE
 
 	When generate_request() is called there are the following cases.
-	case: Pipeline.size() == 0 && max_pipeline_size != global::PIPELINE_SIZE
+	case: Pipeline.size() == 0 && max_pipeline_size != settings::PIPELINE_SIZE
 		++max_pipeline_size
 	case: Pipeline.size() == 1
 		//just right!

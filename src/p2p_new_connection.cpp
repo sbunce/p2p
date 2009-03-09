@@ -1,34 +1,9 @@
 #include "p2p_new_connection.hpp"
 
-p2p_new_connection::p2p_new_connection(
-	fd_set & master_FDS_in,
-	atomic_int<int> & FD_max_in,
-	atomic_int<int> & max_connections_in,
-	atomic_int<int> & connections_in
-):
-	Thread_Pool(8),
-	max_connections(&max_connections_in),
-	connections(&connections_in)
+p2p_new_connection::p2p_new_connection():
+	Thread_Pool(8)
 {
-	master_FDS = &master_FDS_in;
-	FD_max = &FD_max_in;
 
-	#ifdef WIN32
-	WORD wsock_ver = MAKEWORD(1,1);
-	WSADATA wsock_data;
-	int startup;
-	if((startup = WSAStartup(wsock_ver, &wsock_data)) != 0){
-		LOGGER << "winsock startup error " << startup;
-		exit(1);
-	}
-	#endif
-}
-
-p2p_new_connection::~p2p_new_connection()
-{
-	#ifdef WIN32
-	WSACleanup();
-	#endif
 }
 
 void p2p_new_connection::add_unresponsive(const std::string & IP)
@@ -43,7 +18,7 @@ bool p2p_new_connection::check_unresponsive(const std::string & IP)
 
 	//remove elements that are too old
 	Known_Unresponsive.erase(Known_Unresponsive.begin(),
-		Known_Unresponsive.upper_bound(time(NULL) - global::UNRESPONSIVE_TIMEOUT));
+		Known_Unresponsive.upper_bound(time(NULL) - settings::UNRESPONSIVE_TIMEOUT));
 
 	//see if IP is in the list
 	std::map<time_t,std::string>::iterator iter_cur, iter_end;
@@ -95,7 +70,7 @@ void p2p_new_connection::new_connection(download_connection DC)
 	/*
 	Do not initiate new connections if at connection limit.
 	*/
-	if(*connections >= *max_connections){
+	if(sockets::singleton().connections >= sockets::singleton().max_connections){
 		return;
 	}
 
@@ -126,7 +101,7 @@ void p2p_new_connection::new_connection(download_connection DC)
 	sockaddr_in dest_addr;
 	DC.socket = socket(PF_INET, SOCK_STREAM, 0);
 	dest_addr.sin_family = AF_INET;
-	dest_addr.sin_port = htons(global::P2P_PORT);
+	dest_addr.sin_port = htons(settings::P2P_PORT);
 
 	#ifdef WIN32
 	dest_addr.sin_addr.s_addr = inet_addr(DC.IP.c_str());
@@ -150,13 +125,14 @@ void p2p_new_connection::new_connection(download_connection DC)
 		add_unresponsive(DC.IP);
 	}else{
 		LOGGER << "created socket " << DC.socket << " for " << DC.IP;
-		if(DC.socket > *FD_max){
-			*FD_max = DC.socket;
+		if(DC.socket > sockets::singleton().FD_max){
+			sockets::singleton().FD_max = DC.socket;
 		}
 		p2p_buffer::add_connection(DC.socket, DC.IP, true);
 		p2p_buffer::add_download_connection(DC);
-		FD_SET(DC.socket, master_FDS);
-		++*connections;
+		FD_SET(DC.socket, &sockets::singleton().master_FDS);
+		++sockets::singleton().connections;
+		sockets::singleton().update_active(DC.socket);
 	}
 }
 
@@ -191,7 +167,7 @@ void p2p_new_connection::queue(download_connection DC)
 		return;
 	}
 
-	Thread_Pool.queue(boost::bind(&p2p_new_connection::process_DC, this, DC));
+	Thread_Pool.queue_job(boost::bind(&p2p_new_connection::process_DC, this, DC));
 }
 
 void p2p_new_connection::unblock(const download_connection & DC)

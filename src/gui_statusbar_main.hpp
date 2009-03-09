@@ -2,8 +2,8 @@
 #define H_GUI_STATUSBAR_MAIN
 
 //custom
-#include "global.hpp"
 #include "p2p.hpp"
+#include "settings.hpp"
 
 //gui
 #include <gtkmm.h>

@@ -3,12 +3,15 @@
 <title>&#60;name&#62; Documentation</title>
 </head>
 <body>
-<table>
-<tr><td width="800">
 
-<h1>Documentation</h1>
-<h4>
+<table>
+<tr><td width="640">
+
+have definitions under about, and under protocol
+
+<h2>&#60;name&#62; Documentation</h2>
 <ul>
+	<li><a href="#definitions">Definitions</a>
 	<li><a href="#about">About</a>
 	<ul>
 		<li><a href="#about_goals">Goals</a>
@@ -24,121 +27,171 @@
 			<li><a href="#commands_server_to_client">Server -&#62 Client</a>
 		</ul>
 	</ul>
+	<li><a href="#coding_standards">Coding Standards</a>
+	<ul>
+		<li><a href="#building_gnu_linux">Test</a>
+	</ul>
 	<li><a href="#building">Building</a>
 	<ul>
 		<li><a href="#building_gnu_linux">GNU/Linux</a>
 		<li><a href="#building_windows">Windows</a>
 	</ul>
 </ul>
-</h4>
 
 <hr>
 
-<h2>About</h2>
+<a name="definitions">
+<h2>Definitions</h2>
 <p>
-&#60;name&#62; is a P2P(peer-to-peer) multi-source file sharing program with
-it's own protocol. P2P means that the program contains both a client and a
-server which allows you to share your files and download files from others at
-the same time. Multi-source means that you can download one file from multiple
-peers at the same time.
+&nbsp&nbsp&nbsp&nbsp&nbsp
+These are definitions of terms used throughout this document. These definitions
+are specific to this document. It is possible definitions listed here are not
+general (ie applicable outside this document).
 </p>
 
-<br><hr width="100" align="left">
-
-<a name="about_goals">
-<h3>Goals</h3>
-<h4>Low System Requirements</h4>
 <blockquote>
-CPU and memory usage should be as low as possible.
+	<p>
+	<b>Command:</b> The first byte of every message. This indicates what the
+	sender wants the receiver to do.
+	</p>
+
+	<p>
+	<b>Message:</b> A command, optionally followed by a payload.
+	</p>
+
+	<p>
+	<b>Multi-Source:</b> Downloading one file from multiple peers at the same
+	time to increase download speed.
+	</p>
+
+	<p>
+	<b>Payload:</b> A message minus the command. Information possibly needed to
+	make a request or issue a response.
+	</p>
+
+	<p>
+	<b>P2P:</b> Acronym for "peer to peer". A term used to describe a program
+	which is both client and server that lets you download and share files.
+	</p>
+
+	<p>
+	<b>Request:</b> A message which is requesting that a peer do something.
+	</p>
+
+	<p>
+	<b>Response:</b> A response to a request.
+	</p>
+
+	<p>
+	<b>Segmented Downloading:</b> Dividing up a file in to segments so that
+	individual pieces of a file can be requested.
+	</p>
 </blockquote>
 
-<h4>Protocol Efficiency</h4>
+<hr>
+
+<a name="about">
+<h2>About</h2>
+<p>
+&nbsp&nbsp&nbsp&nbsp&nbsp
+&#60;name&#62; is a P2P file sharing program with it's own protocol. It uses
+multi-source segmented downloading meaning that one file may be downloaded from
+multiple hosts at the same time to increase speeds.
+</p>
+
 <blockquote>
-Ratio of control and error detection data to file data should be as low as
-possible.
+	<a name="about_goals">
+	<h3>Goals</h3>
+	<p>
+	&nbsp&nbsp&nbsp&nbsp&nbsp
+	These goals are meant to express the direction of development for the
+	protocol and implementation. They are meant to be rough guidelines, not exact
+	requirements.
+	</p>
+
+	<h4>Protocol</h4>
+	<blockquote>
+		<p>
+		<b>Efficiency:</b> The ratio of control and error detection data to file
+		data should be as low as possible.
+		</p>
+
+		<p>
+		<b>Perfect Copies:</b> The integrity of files should be checked via hash
+		functions to insure downloaded files are perfect copies.
+		</p>
+
+		<p>
+		<b>Unpoisonable:</b> The presence of malicious peers should have minimal
+		impact on file downloads.
+		</p>
+
+		<p>
+		<b>Obfuscation:</b> The protocol should be obfuscated to make detecting
+		the protocol difficult. This should not take precedence over any other
+		goal.
+		</p>
+	</blockquote>
+
+	<h4>Implementation</h4>
+	<blockquote>
+		<p>
+		<b>Efficiency:</b> CPU and memory usage should be as low as possible.
+		</p>
+
+		<p>
+		<b>Location Awareness:</b> Closer servers should be favored when
+		downloading files.
+		</p>
+	</blockquote>
 </blockquote>
 
-<h4>Perfect Copies</h4>
-<blockquote>
-The integrity of files should be checked via hash functions to insure downloaded
-files are perfect copies.
-</blockquote>
-
-<h4>Unpoisonable</h4>
-<blockquote>
-The presence of malicious peers should have minimal impact on file downloads.
-</blockquote>
-
-<h4>Obfuscation</h4>
-<blockquote>
-The protocol should be obfuscated to make detecting the protocol difficult.
-This should not take precedence over other goals, such as Low System
-Requirements and Protocol Efficiency.
-</blockquote>
-
-<h4>Location Awareness</h4>
-<blockquote>
-Closer servers should be favored when downloading files.
-</blockquote>
-
-<h4>Implementation Portability</h4>
-<blockquote>
-Implementations should be made to work on POSIX compliant and Windows systems.
-</blockquote>
-
-<br><hr>
+<hr>
 
 <a name="protocol">
 <h2>Protocol</h2>
 <p>
-&#60;name&#62; is a client/server protocol. The client sends requests to the
-server and the server responds. Each request sent to the server begins with a 1
-byte command. There are two types of requests, text and binary. 
+&nbsp&nbsp&nbsp&nbsp&nbsp
+&#60;name&#62; is a totally symmetric protocol. After key-exchange, messages may
+be sent in either direction. There are two types of messages, binary and text.
 </p>
 
-<br>
-
-<p><b>Binary:</b></p>
-<p>
-Binary requests are fixed length. The server determines the length of a binary
-request by looking at the command. Responses to binary requests are binary and
-fixed length. The client determines the length of a binary response by looking
-at the command.
-</p>
-<p>
-example:
-</p>
 <blockquote>
-<pre>
+	<b>Binary:</b> Binary messages are fixed length. Each binary command has an
+	associated message length.
+
+	<p>
+	Example:
+	</p>
+	<blockquote>
+		<pre>
   0   1                0   1   2   3   4   5
 +---+---+            +---+---+---+---+---+---+
 | C |   |            | C |                   |
 +---+---+            +---+---+---+---+---+---+
  request                  response
-</pre>
-</blockquote>
+		</pre>
+	</blockquote>
 
-<br>
+	<b>Text:</b> Text requests and responses are variable length and terminated
+	by a NULL byte. Text message are only used for development because of their
+	poor byte efficieny.
 
-<p><b>Text:</b></p>
-<p>
-Text requests are fixed length. The server determines the length of a text
-request by looking at the command. Responses to text requests are text and are
-variable length. The client determines the end end of a text response by looking
-for a \0 terminator. There is no command in a text response.
-</p>
-<p>example:</p>
-<blockquote>
-<pre>
+	<p>
+	Example:
+	</p>
+	<blockquote>
+		<pre>
   0   1                0   1   .........   n
 +---+---+            +---+---+---+---+---+---+
 | C |   |            |                    \0 |
 +---+---+            +---+---+---+---+---+---+
  request                  response
-</pre>
+		</pre>
+	</blockquote>
 </blockquote>
 
-<br><hr width="100" align="left">
+<hr width="100" align="left">
 
 <a name="pipelining">
 <h3>Pipelining</h3>
@@ -457,7 +510,8 @@ After downloading and installing these dependencies open cmd.exe and navigate
 to the source directory and run scons.
 </p>
 
-</td></tr>
+
+</tr></td>
 </table>
 
 </body>

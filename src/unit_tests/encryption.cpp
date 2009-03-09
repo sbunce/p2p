@@ -1,6 +1,6 @@
 //custom
 #include "../encryption.hpp"
-#include "../global.hpp"
+#include "../settings.hpp"
 
 int main()
 {

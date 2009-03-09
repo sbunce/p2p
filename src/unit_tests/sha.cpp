@@ -1,5 +1,5 @@
 //custom
-#include "../global.hpp"
+#include "../settings.hpp"
 #include "../sha.hpp"
 
 //include

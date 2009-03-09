@@ -45,8 +45,8 @@ void slot_hash_tree::send_block(const std::string & request, std::string & send)
 	if(DS == block_arbiter::DOWNLOADING_NOT_AVAILABLE){
 		//hash tree downloading but it client doesn't yet have requested block
 		LOGGER << "sending P_WAIT to " << *IP;
-		send += global::P_WAIT;
-		Speed_Calculator.update(global::P_WAIT_SIZE);
+		send += protocol::P_WAIT;
+		Speed_Calculator.update(protocol::P_WAIT_SIZE);
 	}else{
 		/*
 		Hash Block available.
@@ -61,13 +61,13 @@ void slot_hash_tree::send_block(const std::string & request, std::string & send)
 				send[0] = ~send[0];
 			}
 			#endif
-			send = global::P_BLOCK + send;
+			send = protocol::P_BLOCK + send;
 			Speed_Calculator.update(send.size());
 			update_percent(block_num);
 		}else if(status == hash_tree::IO_ERROR){
 			//cannot open hash tree, or it was deleted, either way send error
-			send += global::P_ERROR;
-			Speed_Calculator.update(global::P_ERROR_SIZE);
+			send += protocol::P_ERROR;
+			Speed_Calculator.update(protocol::P_ERROR_SIZE);
 		}else{
 			LOGGER << "programmer error";
 			exit(1);

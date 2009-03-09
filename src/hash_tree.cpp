@@ -14,7 +14,7 @@ hash_tree::status hash_tree::check(tree_info & Tree_Info, boost::uint64_t & bad_
 		return GOOD;
 	}else{
 		sha SHA;
-		char block_buff[global::FILE_BLOCK_SIZE];
+		char block_buff[protocol::FILE_BLOCK_SIZE];
 
 		status Status;
 		for(boost::uint64_t x=0; x<block_count; ++x){
@@ -68,17 +68,17 @@ hash_tree::status hash_tree::check_block(tree_info & Tree_Info, const boost::uin
 			LOGGER << "invalid hex";
 			exit(1);
 		}
-		if(strncmp(hash_bin.data(), SHA.raw_hash(), global::HASH_SIZE) == 0){
+		if(strncmp(hash_bin.data(), SHA.raw_hash(), protocol::HASH_SIZE) == 0){
 			return GOOD;
 		}else{
 			return BAD;
 		}
 	}else{
-		if(!DB.blob_read(Tree_Info.Blob, block_buff, global::HASH_SIZE, parent)){
+		if(!DB.blob_read(Tree_Info.Blob, block_buff, protocol::HASH_SIZE, parent)){
 			return IO_ERROR;
 		}
 
-		if(strncmp(block_buff, SHA.raw_hash(), global::HASH_SIZE) == 0){
+		if(strncmp(block_buff, SHA.raw_hash(), protocol::HASH_SIZE) == 0){
 			return GOOD;
 		}else{
 			return BAD;
@@ -90,14 +90,14 @@ hash_tree::status hash_tree::check_file_block(tree_info & Tree_Info, const boost
 {
 	boost::recursive_mutex::scoped_lock lock(*Tree_Info.Recursive_Mutex);
 	sha SHA;
-	char parent_buff[global::HASH_SIZE];
-	if(!DB.blob_read(Tree_Info.Blob, parent_buff, global::HASH_SIZE, Tree_Info.file_hash_offset + file_block_num * global::HASH_SIZE)){
+	char parent_buff[protocol::HASH_SIZE];
+	if(!DB.blob_read(Tree_Info.Blob, parent_buff, protocol::HASH_SIZE, Tree_Info.file_hash_offset + file_block_num * protocol::HASH_SIZE)){
 		return IO_ERROR;
 	}
 	SHA.init();
 	SHA.load(block, size);
 	SHA.end();
-	if(strncmp(parent_buff, SHA.raw_hash(), global::HASH_SIZE) == 0){
+	if(strncmp(parent_buff, SHA.raw_hash(), protocol::HASH_SIZE) == 0){
 		return GOOD;
 	}else{
 		return BAD;
@@ -109,7 +109,7 @@ void hash_tree::check_contiguous(tree_info & Tree_Info)
 	boost::recursive_mutex::scoped_lock lock(*Tree_Info.Recursive_Mutex);
 
 	sha SHA;
-	char block_buff[global::FILE_BLOCK_SIZE];
+	char block_buff[protocol::FILE_BLOCK_SIZE];
 
 	contiguous_map<boost::uint64_t, std::string>::contiguous_iterator c_iter_cur, c_iter_end;
 	c_iter_cur = Tree_Info.Contiguous->begin_contiguous();
@@ -160,7 +160,7 @@ void hash_tree::check_contiguous(tree_info & Tree_Info)
 bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 {
 	sha SHA;
-	char block_buff[global::FILE_BLOCK_SIZE];
+	char block_buff[protocol::FILE_BLOCK_SIZE];
 
 	std::fstream fin(file_path.c_str(), std::ios::in | std::ios::binary);
 	if(!fin.good()){
@@ -195,7 +195,7 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 	boost::uint64_t blocks_read = 0;
 	boost::uint64_t file_size = 0;
 	while(true){
-		fin.read(block_buff, global::FILE_BLOCK_SIZE);
+		fin.read(block_buff, protocol::FILE_BLOCK_SIZE);
 		if(fin.gcount() == 0){
 			break;
 		}
@@ -203,7 +203,7 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 		SHA.init();
 		SHA.load(block_buff, fin.gcount());
 		SHA.end();
-		upside_down.write(SHA.raw_hash(), global::HASH_SIZE);
+		upside_down.write(SHA.raw_hash(), protocol::HASH_SIZE);
 		if(!upside_down.good()){
 			LOGGER << "error writing to upside_down file";
 			return false;
@@ -258,8 +258,8 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 			int offset = 0, bytes_remaining = tree_size, read_size;
 			DB.query("BEGIN TRANSACTION");
 			while(bytes_remaining){
-				if(bytes_remaining > global::FILE_BLOCK_SIZE){
-					read_size = global::FILE_BLOCK_SIZE;
+				if(bytes_remaining > protocol::FILE_BLOCK_SIZE){
+					read_size = protocol::FILE_BLOCK_SIZE;
 				}else{
 					read_size = bytes_remaining;
 				}
@@ -299,42 +299,42 @@ bool hash_tree::create_recurse(std::fstream & upside_down, std::fstream & rights
 	while(scratch_read_RRN < end_RRN){
 		//hash child nodes
 		int block_buff_size = 0;
-		if(end_RRN - scratch_read_RRN < global::HASH_BLOCK_SIZE){
+		if(end_RRN - scratch_read_RRN < protocol::HASH_BLOCK_SIZE){
 			//not enough hashes for full hash block
-			upside_down.seekg(scratch_read_RRN * global::HASH_SIZE, std::ios::beg);
-			upside_down.read(block_buff, (end_RRN - scratch_read_RRN) * global::HASH_SIZE);
+			upside_down.seekg(scratch_read_RRN * protocol::HASH_SIZE, std::ios::beg);
+			upside_down.read(block_buff, (end_RRN - scratch_read_RRN) * protocol::HASH_SIZE);
 			if(!upside_down.good()){
 				LOGGER << "error reading scratch file";
 				return false;
 			}
-			block_buff_size = (end_RRN - scratch_read_RRN) * global::HASH_SIZE;
+			block_buff_size = (end_RRN - scratch_read_RRN) * protocol::HASH_SIZE;
 		}else{
 			//enough hashes for full hash block
-			upside_down.seekg(scratch_read_RRN * global::HASH_SIZE, std::ios::beg);
-			upside_down.read(block_buff, global::HASH_BLOCK_SIZE * global::HASH_SIZE);
+			upside_down.seekg(scratch_read_RRN * protocol::HASH_SIZE, std::ios::beg);
+			upside_down.read(block_buff, protocol::HASH_BLOCK_SIZE * protocol::HASH_SIZE);
 			if(!upside_down.good()){
 				LOGGER << "error reading scratch file";
 				return false;
 			}
-			block_buff_size = global::HASH_BLOCK_SIZE * global::HASH_SIZE;
+			block_buff_size = protocol::HASH_BLOCK_SIZE * protocol::HASH_SIZE;
 		}
 
 		//create hash
 		SHA.init();
 		SHA.load(block_buff, block_buff_size);
 		SHA.end();
-		scratch_read_RRN += block_buff_size / global::HASH_SIZE;
+		scratch_read_RRN += block_buff_size / protocol::HASH_SIZE;
 
 		//write resulting hash
-		upside_down.seekp(scratch_write_RRN * global::HASH_SIZE, std::ios::beg);
-		upside_down.write(SHA.raw_hash(), global::HASH_SIZE);
+		upside_down.seekp(scratch_write_RRN * protocol::HASH_SIZE, std::ios::beg);
+		upside_down.write(SHA.raw_hash(), protocol::HASH_SIZE);
 		if(!upside_down.good()){
 			LOGGER << "error writing scratch file";
 			return false;
 		}
 		++scratch_write_RRN;
 
-		if(block_buff_size < global::HASH_BLOCK_SIZE * global::HASH_SIZE){
+		if(block_buff_size < protocol::HASH_BLOCK_SIZE * protocol::HASH_SIZE){
 			//last child node read incomplete, row finished
 			break;
 		}
@@ -359,13 +359,13 @@ bool hash_tree::create_recurse(std::fstream & upside_down, std::fstream & rights
 
 	//write hashes that were passed to this function
 	for(int x=start_RRN; x<end_RRN; ++x){
-		upside_down.seekg(x * global::HASH_SIZE, std::ios::beg);
-		upside_down.read(block_buff, global::HASH_SIZE);
+		upside_down.seekg(x * protocol::HASH_SIZE, std::ios::beg);
+		upside_down.read(block_buff, protocol::HASH_SIZE);
 		if(!upside_down.good()){
 			LOGGER << "error reading scratch file";
 			return false;
 		}
-		rightside_up.write(block_buff, global::HASH_SIZE);
+		rightside_up.write(block_buff, protocol::HASH_SIZE);
 	}
 	return true; 
 }
@@ -378,7 +378,7 @@ void hash_tree::stop()
 hash_tree::status hash_tree::read_block(tree_info & Tree_Info, const boost::uint64_t & block_num, std::string & block)
 {
 	boost::recursive_mutex::scoped_lock lock(*Tree_Info.Recursive_Mutex);
-	char block_buff[global::FILE_BLOCK_SIZE];
+	char block_buff[protocol::FILE_BLOCK_SIZE];
 	std::pair<boost::uint64_t, unsigned> info;
 	if(tree_info::block_info(block_num, Tree_Info.row, info)){
 		if(!DB.blob_read(Tree_Info.Blob, block_buff, info.second, info.first)){
@@ -434,16 +434,16 @@ hash_tree::tree_info::tree_info(
 	Contiguous = boost::shared_ptr<contiguous_map<boost::uint64_t,
 		std::string> >(new contiguous_map<boost::uint64_t, std::string>(0, block_count));
 
-	if(file_size % global::FILE_BLOCK_SIZE == 0){
-		file_block_count = file_size / global::FILE_BLOCK_SIZE;
+	if(file_size % protocol::FILE_BLOCK_SIZE == 0){
+		file_block_count = file_size / protocol::FILE_BLOCK_SIZE;
 	}else{
-		file_block_count = file_size / global::FILE_BLOCK_SIZE + 1;
+		file_block_count = file_size / protocol::FILE_BLOCK_SIZE + 1;
 	}
 
-	if(file_size % global::FILE_BLOCK_SIZE == 0){
-		last_file_block_size = global::FILE_BLOCK_SIZE;
+	if(file_size % protocol::FILE_BLOCK_SIZE == 0){
+		last_file_block_size = protocol::FILE_BLOCK_SIZE;
 	}else{
-		last_file_block_size = file_size % global::FILE_BLOCK_SIZE;
+		last_file_block_size = file_size % protocol::FILE_BLOCK_SIZE;
 	}
 }
 
@@ -454,23 +454,23 @@ bool hash_tree::tree_info::block_info(const boost::uint64_t & block, const std::
 	boost::uint64_t block_count = 0;     //total block count in all previous rows
 	boost::uint64_t row_block_count = 0; //total block count in current row
 	for(unsigned x=0; x<row.size(); ++x){
-		if(row[x] % global::HASH_BLOCK_SIZE == 0){
-			row_block_count = row[x] / global::HASH_BLOCK_SIZE;
+		if(row[x] % protocol::HASH_BLOCK_SIZE == 0){
+			row_block_count = row[x] / protocol::HASH_BLOCK_SIZE;
 		}else{
-			row_block_count = row[x] / global::HASH_BLOCK_SIZE + 1;
+			row_block_count = row[x] / protocol::HASH_BLOCK_SIZE + 1;
 		}
 
 		if(block_count + row_block_count > block){
 			//end of row greater than block we're looking for, block exists in row
-			info.first = offset + (block - block_count) * global::HASH_BLOCK_SIZE;
+			info.first = offset + (block - block_count) * protocol::HASH_BLOCK_SIZE;
 
 			//hashes between offset and end of current row
 			boost::uint64_t delta = offset + row[x] - info.first;
 
 			//determine size of block
-			if(delta > global::HASH_BLOCK_SIZE){
+			if(delta > protocol::HASH_BLOCK_SIZE){
 				//full hash block
-				info.second = global::HASH_BLOCK_SIZE;
+				info.second = protocol::HASH_BLOCK_SIZE;
 			}else{
 				//partial hash block
 				info.second = delta;
@@ -484,9 +484,9 @@ bool hash_tree::tree_info::block_info(const boost::uint64_t & block, const std::
 			}
 
 			//convert to bytes
-			info.first = info.first * global::HASH_SIZE;
-			info.second = info.second * global::HASH_SIZE;
-			parent = parent * global::HASH_SIZE;
+			info.first = info.first * protocol::HASH_SIZE;
+			info.second = info.second * protocol::HASH_SIZE;
+			parent = parent * protocol::HASH_SIZE;
 
 			return true;
 		}
@@ -522,10 +522,10 @@ boost::uint64_t hash_tree::tree_info::file_hash_to_tree_hash(boost::uint64_t row
 	if(row_hash_count == 1){
 		//root hash not included in hash tree
 		return 0;
-	}else if(row_hash_count % global::HASH_BLOCK_SIZE == 0){
-		row_hash_count = start_hash / global::HASH_BLOCK_SIZE;
+	}else if(row_hash_count % protocol::HASH_BLOCK_SIZE == 0){
+		row_hash_count = start_hash / protocol::HASH_BLOCK_SIZE;
 	}else{
-		row_hash_count = start_hash / global::HASH_BLOCK_SIZE + 1;
+		row_hash_count = start_hash / protocol::HASH_BLOCK_SIZE + 1;
 	}
 	return start_hash + file_hash_to_tree_hash(row_hash_count);
 }
@@ -536,10 +536,10 @@ boost::uint64_t hash_tree::tree_info::file_hash_to_tree_hash(boost::uint64_t row
 	if(row_hash == 1){
 		//root hash not included in hash tree
 		return 0;
-	}else if(row_hash % global::HASH_BLOCK_SIZE == 0){
-		row_hash = start_hash / global::HASH_BLOCK_SIZE;
+	}else if(row_hash % protocol::HASH_BLOCK_SIZE == 0){
+		row_hash = start_hash / protocol::HASH_BLOCK_SIZE;
 	}else{
-		row_hash = start_hash / global::HASH_BLOCK_SIZE + 1;
+		row_hash = start_hash / protocol::HASH_BLOCK_SIZE + 1;
 	}
 	row.push_front(start_hash);
 	return start_hash + file_hash_to_tree_hash(row_hash, row);
@@ -547,8 +547,8 @@ boost::uint64_t hash_tree::tree_info::file_hash_to_tree_hash(boost::uint64_t row
 
 boost::uint64_t hash_tree::tree_info::file_size_to_file_hash(boost::uint64_t file_size)
 {
-	boost::uint64_t hash_count = file_size / global::FILE_BLOCK_SIZE;
-	if(file_size % global::FILE_BLOCK_SIZE != 0){
+	boost::uint64_t hash_count = file_size / protocol::FILE_BLOCK_SIZE;
+	if(file_size % protocol::FILE_BLOCK_SIZE != 0){
 		//add one for partial last block
 		++hash_count;
 	}
@@ -563,7 +563,7 @@ boost::uint64_t hash_tree::tree_info::file_size_to_tree_hash(const boost::uint64
 //static, doesn't need to be locked
 boost::uint64_t hash_tree::tree_info::file_size_to_tree_size(const boost::uint64_t & file_size)
 {
-	return global::HASH_SIZE * file_hash_to_tree_hash(file_size_to_file_hash(file_size));
+	return protocol::HASH_SIZE * file_hash_to_tree_hash(file_size_to_file_hash(file_size));
 }
 
 std::string hash_tree::tree_info::get_root_hash()
@@ -634,10 +634,10 @@ boost::uint64_t hash_tree::tree_info::row_to_block_count(const std::deque<boost:
 {
 	boost::uint64_t block_count = 0;
 	for(int x=0; x<row.size(); ++x){
-		if(row[x] % global::HASH_BLOCK_SIZE == 0){
-			block_count += row[x] / global::HASH_BLOCK_SIZE;
+		if(row[x] % protocol::HASH_BLOCK_SIZE == 0){
+			block_count += row[x] / protocol::HASH_BLOCK_SIZE;
 		}else{
-			block_count += row[x] / global::HASH_BLOCK_SIZE + 1;
+			block_count += row[x] / protocol::HASH_BLOCK_SIZE + 1;
 		}
 	}
 	return block_count;
@@ -653,7 +653,7 @@ boost::uint64_t hash_tree::tree_info::row_to_file_hash_offset(const std::deque<b
 
 	//add up the size (bytes) of all rows until reaching the beginning of the last row
 	for(int x=0; x<row.size()-1; ++x){
-		file_hash_offset += row[x] * global::HASH_SIZE;
+		file_hash_offset += row[x] * protocol::HASH_SIZE;
 	}
 	return file_hash_offset;
 }

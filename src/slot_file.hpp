@@ -4,6 +4,7 @@
 //custom
 #include "convert.hpp"
 #include "database.hpp"
+#include "protocol.hpp"
 #include "slot.hpp"
 
 //std
@@ -31,7 +32,7 @@ private:
 	std::string path;
 
 	//buffer for reading file blocks
-	char send_block_buff[global::FILE_BLOCK_SIZE];
+	char send_block_buff[protocol::FILE_BLOCK_SIZE];
 
 	//total number of blocks in file (used for percent calculation)
 	boost::uint64_t block_count;

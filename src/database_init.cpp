@@ -42,9 +42,9 @@ static void setup_preferences(database::connection & DB)
 	if(!exists){
 		//set defaults if no preferences yet exist
 		std::stringstream ss;
-		ss << "INSERT INTO preferences VALUES('" << global::DOWNLOAD_DIRECTORY
-		<< "', '" << global::SHARE_DIRECTORY << "', " << global::MAX_CONNECTIONS 
-		<< ", " << global::DOWNLOAD_RATE << ", " << global::UPLOAD_RATE << ")";
+		ss << "INSERT INTO preferences VALUES('" << settings::DOWNLOAD_DIRECTORY
+		<< "', '" << settings::SHARE_DIRECTORY << "', " << settings::MAX_CONNECTIONS 
+		<< ", " << settings::DOWNLOAD_RATE << ", " << settings::UPLOAD_RATE << ")";
 		DB.query(ss.str());
 	}
 }

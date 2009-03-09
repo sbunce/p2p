@@ -2,8 +2,11 @@
 #ifndef H_SHA
 #define H_SHA
 
+//boost
+#include <boost/cstdint.hpp>
+
 //custom
-#include "global.hpp"
+#include "settings.hpp"
 
 //std
 #include <algorithm>

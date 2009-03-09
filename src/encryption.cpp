@@ -3,7 +3,7 @@
 encryption::encryption()
 {
 	g = "2"; //fast generater (must be prime), it's normal for 2 or 5 to be used
-	s = number_generator::singleton().random_mpint(global::DH_KEY_SIZE);
+	s = number_generator::singleton().random_mpint(protocol::DH_KEY_SIZE);
 	State = waiting_for_prime;
 }
 

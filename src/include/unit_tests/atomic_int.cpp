@@ -1,6 +1,5 @@
 //custom
 #include "../atomic_int.hpp"
-#include "../global.hpp"
 
 //std
 #include <limits>

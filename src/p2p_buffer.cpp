@@ -386,7 +386,7 @@ void p2p_buffer::prepare_download_requests()
 	}
 
 	//see header documentation for max_pipeline_size
-	if(Pipeline.size() == 0 && max_pipeline_size < global::PIPELINE_SIZE){
+	if(Pipeline.size() == 0 && max_pipeline_size < protocol::PIPELINE_SIZE){
 		++max_pipeline_size;
 	}else if(Pipeline.size() > 1 && max_pipeline_size > 1){
 		--max_pipeline_size;
@@ -471,30 +471,30 @@ void p2p_buffer::protocol_key_exchange(char * buff, const int & n_bytes)
 	if(initiator){
 		//we initiated the connection so we will wait for servers g^x % p
 		recv_buff.append(buff, n_bytes);
-		if(recv_buff.size() == global::DH_KEY_SIZE){
+		if(recv_buff.size() == protocol::DH_KEY_SIZE){
 			Encryption.set_remote_result(recv_buff);
 			recv_buff.clear();
 			key_exchange = false;
 		}
-		if(recv_buff.size() > global::DH_KEY_SIZE){
+		if(recv_buff.size() > protocol::DH_KEY_SIZE){
 			LOGGER << " abusive, failed key negotation, too many bytes";
 			DB_Blacklist.add(IP);
 		}
 	}else{
 		//someone connecting to us. We will await their p, and their g^x % p
 		recv_buff.append(buff, n_bytes);
-		if(recv_buff.size() == global::DH_KEY_SIZE*2){
-			if(!Encryption.set_prime(recv_buff.substr(0,global::DH_KEY_SIZE))){
+		if(recv_buff.size() == protocol::DH_KEY_SIZE*2){
+			if(!Encryption.set_prime(recv_buff.substr(0,protocol::DH_KEY_SIZE))){
 				LOGGER << IP << " sent non-prime for key-exchange";
 				DB_Blacklist.add(IP);
 				return;
 			}
-			Encryption.set_remote_result(recv_buff.substr(global::DH_KEY_SIZE,global::DH_KEY_SIZE));
+			Encryption.set_remote_result(recv_buff.substr(protocol::DH_KEY_SIZE, protocol::DH_KEY_SIZE));
 			recv_buff.clear();
 			send_buff += Encryption.get_local_result();
 			key_exchange = false;
 		}
-		if(recv_buff.size() > global::DH_KEY_SIZE*2){
+		if(recv_buff.size() > protocol::DH_KEY_SIZE * 2){
 			LOGGER << "abusive client " << IP << " failed key negotation, too many bytes";
 			DB_Blacklist.add(IP);
 		}
@@ -577,21 +577,21 @@ bool p2p_buffer::protocol_request(std::string & response)
 		return false;
 	}
 
-	if(recv_buff[0] == global::P_CLOSE_SLOT && recv_buff.size() >= global::P_CLOSE_SLOT_SIZE){
-		std::string request = recv_buff.substr(0, global::P_CLOSE_SLOT_SIZE);
-		recv_buff.erase(0, global::P_CLOSE_SLOT_SIZE);
+	if(recv_buff[0] == protocol::P_CLOSE_SLOT && recv_buff.size() >= protocol::P_CLOSE_SLOT_SIZE){
+		std::string request = recv_buff.substr(0, protocol::P_CLOSE_SLOT_SIZE);
+		recv_buff.erase(0, protocol::P_CLOSE_SLOT_SIZE);
 		close_slot(request);
-	}else if(recv_buff[0] == global::P_REQUEST_SLOT_HASH_TREE && recv_buff.size() >= global::P_REQUEST_SLOT_HASH_TREE_SIZE){
-		std::string request = recv_buff.substr(0, global::P_REQUEST_SLOT_HASH_TREE_SIZE);
-		recv_buff.erase(0, global::P_REQUEST_SLOT_HASH_TREE_SIZE);
+	}else if(recv_buff[0] == protocol::P_REQUEST_SLOT_HASH_TREE && recv_buff.size() >= protocol::P_REQUEST_SLOT_HASH_TREE_SIZE){
+		std::string request = recv_buff.substr(0, protocol::P_REQUEST_SLOT_HASH_TREE_SIZE);
+		recv_buff.erase(0, protocol::P_REQUEST_SLOT_HASH_TREE_SIZE);
 		request_slot_hash(request, response);
-	}else if(recv_buff[0] == global::P_REQUEST_SLOT_FILE && recv_buff.size() >= global::P_REQUEST_SLOT_FILE_SIZE){
-		std::string request = recv_buff.substr(0, global::P_REQUEST_SLOT_FILE_SIZE);
-		recv_buff.erase(0, global::P_REQUEST_SLOT_FILE_SIZE);
+	}else if(recv_buff[0] == protocol::P_REQUEST_SLOT_FILE && recv_buff.size() >= protocol::P_REQUEST_SLOT_FILE_SIZE){
+		std::string request = recv_buff.substr(0, protocol::P_REQUEST_SLOT_FILE_SIZE);
+		recv_buff.erase(0, protocol::P_REQUEST_SLOT_FILE_SIZE);
 		request_slot_file(request, response);
-	}else if(recv_buff[0] == global::P_REQUEST_BLOCK && recv_buff.size() >= global::P_REQUEST_BLOCK_SIZE){
-		std::string request = recv_buff.substr(0, global::P_REQUEST_BLOCK_SIZE);
-		recv_buff.erase(0, global::P_REQUEST_BLOCK_SIZE);
+	}else if(recv_buff[0] == protocol::P_REQUEST_BLOCK && recv_buff.size() >= protocol::P_REQUEST_BLOCK_SIZE){
+		std::string request = recv_buff.substr(0, protocol::P_REQUEST_BLOCK_SIZE);
+		recv_buff.erase(0, protocol::P_REQUEST_BLOCK_SIZE);
 		send_block(request, response);
 	}else{
 		return false;
@@ -616,11 +616,11 @@ void p2p_buffer::recv_buff_process(char * buff, const int & n_bytes)
 		//processes recv_buff one message per iteration
 		while(true){
 			response.clear();
-			if(global::command_type(recv_buff[0]) == global::COMMAND_RESPONSE){
+			if(protocol::command_type(recv_buff[0]) == protocol::COMMAND_RESPONSE){
 				if(!protocol_response()){
 					break;
 				}
-			}else if(global::command_type(recv_buff[0]) == global::COMMAND_REQUEST){
+			}else if(protocol::command_type(recv_buff[0]) == protocol::COMMAND_REQUEST){
 				if(protocol_request(response)){
 					Encryption.crypt_send(response);
 					send_buff += response;
@@ -635,7 +635,7 @@ void p2p_buffer::recv_buff_process(char * buff, const int & n_bytes)
 		}
 	}
 
-	if(send_buff.size() > global::MAX_MESSAGE_SIZE * global::PIPELINE_SIZE){
+	if(send_buff.size() > protocol::MAX_MESSAGE_SIZE * protocol::PIPELINE_SIZE){
 		LOGGER << "remote host overpipelined " << IP;
 		DB_Blacklist.add(IP);
 	}
@@ -652,30 +652,30 @@ void p2p_buffer::request_slot_hash(const std::string & request, std::string & se
 	//check if hash tree currently downloading
 	boost::uint64_t file_size;
 	if(DB_Download.lookup_hash(root_hash, file_size)){
-		int slot_num;
-		if(find_empty_slot(root_hash, slot_num)){
-			LOGGER << "granting hash slot " << slot_num << " to " << IP;
-			Upload_Slot[slot_num] = new slot_hash_tree(&IP, root_hash, file_size);
-			send += global::P_SLOT;
-			send += (char)slot_num;
+		int slot_number;
+		if(find_empty_slot(root_hash, slot_number)){
+			LOGGER << "granting hash slot " << slot_number << " to " << IP;
+			Upload_Slot[slot_number] = new slot_hash_tree(&IP, root_hash, file_size);
+			send += protocol::P_SLOT;
+			send += (char)slot_number;
 		}
 		return;
 	}
 
 	//check if hash tree exists in share
 	if(DB_Share.lookup_hash(root_hash, file_size)){
-		int slot_num;
-		if(find_empty_slot(root_hash, slot_num)){
-			LOGGER << "granting hash slot " << slot_num << " to " << IP;
-			Upload_Slot[slot_num] = new slot_hash_tree(&IP, root_hash, file_size);
-			send += global::P_SLOT;
-			send += (char)slot_num;
+		int slot_number;
+		if(find_empty_slot(root_hash, slot_number)){
+			LOGGER << "granting hash slot " << slot_number << " to " << IP;
+			Upload_Slot[slot_number] = new slot_hash_tree(&IP, root_hash, file_size);
+			send += protocol::P_SLOT;
+			send += (char)slot_number;
 		}
 		return;
 	}
 
 	LOGGER << IP << " requested unavailable hash tree " << root_hash;
-	send += global::P_ERROR;
+	send += protocol::P_ERROR;
 }
 
 void p2p_buffer::request_slot_file(const std::string & request, std::string & send)
@@ -686,31 +686,31 @@ void p2p_buffer::request_slot_file(const std::string & request, std::string & se
 	boost::uint64_t file_size;
 	std::string file_path;
 	if(DB_Download.lookup_hash(root_hash, file_path, file_size)){
-		int slot_num;
-		if(find_empty_slot(root_hash, slot_num)){
+		int slot_number;
+		if(find_empty_slot(root_hash, slot_number)){
 			//slot available
-			LOGGER << "granting file slot " << slot_num << " to " << IP;
-			Upload_Slot[slot_num] = new slot_file(&IP, root_hash, file_path, file_size);
-			send += global::P_SLOT;
-			send += (char)slot_num;
+			LOGGER << "granting file slot " << slot_number << " to " << IP;
+			Upload_Slot[slot_number] = new slot_file(&IP, root_hash, file_path, file_size);
+			send += protocol::P_SLOT;
+			send += (char)slot_number;
 		}
 		return;
 	}
 
 	if(DB_Share.lookup_hash(root_hash, file_path, file_size)){
-		int slot_num;
-		if(find_empty_slot(root_hash, slot_num)){
+		int slot_number;
+		if(find_empty_slot(root_hash, slot_number)){
 			//slot available
-			LOGGER << "granting file slot " << slot_num << " to " << IP;
-			Upload_Slot[slot_num] = new slot_file(&IP, root_hash, file_path, file_size);
-			send += global::P_SLOT;
-			send += (char)slot_num;
+			LOGGER << "granting file slot " << slot_number << " to " << IP;
+			Upload_Slot[slot_number] = new slot_file(&IP, root_hash, file_path, file_size);
+			send += protocol::P_SLOT;
+			send += (char)slot_number;
 		}
 		return;
 	}
 
 	LOGGER << IP << " requested unavailable hash tree " << root_hash;
-	send += global::P_ERROR;
+	send += protocol::P_ERROR;
 }
 
 void p2p_buffer::send_block(const std::string & request, std::string & send)
