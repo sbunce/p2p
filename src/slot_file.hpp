@@ -2,10 +2,12 @@
 #define H_SLOT_FILE
 
 //custom
-#include "convert.hpp"
 #include "database.hpp"
 #include "protocol.hpp"
 #include "slot.hpp"
+
+//include
+#include <convert.hpp>
 
 //std
 #include <fstream>

@@ -8,7 +8,6 @@
 #include <boost/thread.hpp>
 
 //custom
-#include "convert.hpp"
 #include "contiguous_map.hpp"
 #include "database.hpp"
 #include "request_generator.hpp"
@@ -18,6 +17,7 @@
 
 //include
 #include <atomic_bool.hpp>
+#include <convert.hpp>
 
 //std
 #include <deque>

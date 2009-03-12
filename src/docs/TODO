@@ -1,9 +1,19 @@
 TODO
 
--try forcing slot over 127 to make sure int to char conversion works
+-move speed_calculator to include, make more general. remove "bytes", etc..
 
 -make classes separate request and response stuff in p2p_buffer. Put these in
 and then convert the p2p_buffer to a singleton.
+
+-think about breaking off p2p in to static lib
+
+-should database wrapper be moved somewhere? libsqlite or include?
+
+-think about having state transitions for everything, not just download_hash_tree
+to download_file, state which would need to be passed could be done with some
+class and a shared_ptr.
+
+-try forcing slot over 127 to make sure int to char conversion works
 
 -connections with no running downloads not getting terminated
 
@@ -18,7 +28,8 @@ iter_end = my_container.end();
 
 -replace send/recv buffers with custom string container which guarantee's it
 doesn't do copy on write (to be threadsafe). Add functions which do conversions
-for all types wrapped up in buffer::append.
+for all types wrapped up in buffer::append. get rid of two diff types of encrypt
+functions after doing this.
 
 -requests should be sent before file blocks, when two hosts download from
 eachother the file blocks hog upload that should be used to get requests out.

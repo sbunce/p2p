@@ -1,3 +1,9 @@
+/*
+Buffer is very similar to a std::string. However it is guaranteed to be thread
+safe for copy-by-value because there is no copy-on-write optimization.
+
+There are also handy functions for encoding various things.
+*/
 #ifndef H_BUFFER
 #define H_BUFFER
 

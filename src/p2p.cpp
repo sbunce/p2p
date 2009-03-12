@@ -105,16 +105,6 @@ bool p2p::file_info(const std::string & hash, std::string & path, boost::uint64_
 	}
 }
 
-void p2p::pause_download(const std::string & hash)
-{
-	p2p_buffer::pause_download(hash);
-}
-
-unsigned p2p::prime_count()
-{
-	return number_generator::singleton().prime_count();
-}
-
 unsigned p2p::get_max_connections()
 {
 	return sockets::singleton().max_connections;
@@ -216,6 +206,16 @@ void p2p::new_connection(const int & listener)
 	return;
 }
 
+void p2p::pause_download(const std::string & hash)
+{
+	p2p_buffer::pause_download(hash);
+}
+
+unsigned p2p::prime_count()
+{
+	return number_generator::singleton().prime_count();
+}
+
 int p2p::setup_listener()
 {
 	//set listening socket
@@ -285,8 +285,8 @@ void p2p::main_loop()
 	portable_sleep::ms(2000);
 
 	reconnect_unfinished();
-	number_generator::init();
-	share_index::init();
+	number_generator::singleton();
+	share_index::singleton();
 
 	int listener = setup_listener();
 

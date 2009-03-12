@@ -25,12 +25,20 @@ mpint number_generator::random_mpint(const int & bytes)
 
 mpint number_generator::random_prime_mpint()
 {
-	mpint random;
-	while(!DB_Prime.retrieve(random)){
-		//no prime available, wait for one
-		portable_sleep::yield();
+	try{
+		mpint random;
+		random_prime_mpint_mutex.lock();
+		while(!DB_Prime.retrieve(random)){
+			random_prime_mpint_cond.wait(random_prime_mpint_mutex);
+		}
+		random_prime_mpint_mutex.unlock();
+		genprime_loop_cond.notify_one();
+		return random;
+	}catch(const boost::thread_interrupted & ex){
+		random_prime_mpint_mutex.unlock();
+		LOGGER << "thread should not be interrupted";
+		exit(1);
 	}
-	return random;
 }
 
 int number_generator::PRNG(unsigned char * buff, int length, void * data)
@@ -59,23 +67,27 @@ int number_generator::PRNG(unsigned char * buff, int length, void * data)
 
 void number_generator::genprime_loop()
 {
-	while(true){
-		boost::this_thread::interruption_point();
-		if(DB_Prime.count() >= settings::PRIME_CACHE){
-			//enough primes generated, sleep for a while
-			portable_sleep::ms(1000);
-			continue;
+	try{
+		while(true){
+			boost::this_thread::interruption_point();
+			genprime_loop_mutex.lock();
+			while(DB_Prime.count() >= settings::PRIME_CACHE){
+				genprime_loop_cond.wait(genprime_loop_mutex);
+			}
+			genprime_loop_mutex.unlock();
+			mpint random;
+			mp_prime_random_ex(
+				&random.c_struct(),
+				1,                       //Miller-Rabin tests
+				protocol::DH_KEY_SIZE*8, //size (bits) of prime to generate
+				0,                       //optional flags
+				&PRNG,
+				NULL                     //optional void* that can be passed to PRNG
+			);
+			DB_Prime.add(random);
+			random_prime_mpint_cond.notify_one();
 		}
-
-		mpint random;
-		mp_prime_random_ex(
-			&random.c_struct(),
-			1,                       //Miller-Rabin tests
-			protocol::DH_KEY_SIZE*8, //size (bits) of prime to generate
-			0,                       //optional flags
-			&PRNG,
-			NULL                     //optional void* that can be passed to PRNG
-		);
-		DB_Prime.add(random);
+	}catch(const boost::thread_interrupted & ex){
+		genprime_loop_mutex.unlock();
 	}
 }

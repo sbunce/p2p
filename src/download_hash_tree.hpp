@@ -7,7 +7,6 @@
 
 //custom
 #include "block_arbiter.hpp"
-#include "convert.hpp"
 #include "database.hpp"
 #include "download.hpp"
 #include "download_connection.hpp"
@@ -17,6 +16,9 @@
 #include "request_generator.hpp"
 #include "settings.hpp"
 #include "sha.hpp"
+
+//include
+#include <convert.hpp>
 
 //std
 #include <vector>

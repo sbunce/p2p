@@ -33,6 +33,24 @@ env_base.unit_test([
 ])
 
 env_base.unit_test([
+	'convert.cpp',
+	boost.static_library('date_time'),
+	boost.static_library('system'),
+	boost.static_library('thread')
+])
+
+env_base.unit_test([
+	'RC4.cpp'
+])
+
+env_base.unit_test([
+	'sha.cpp',
+	boost.static_library('date_time'),
+	boost.static_library('system'),
+	boost.static_library('thread')
+])
+
+env_base.unit_test([
 	'thread_pool.cpp',
 	boost.static_library('date_time'),
 	boost.static_library('system'),

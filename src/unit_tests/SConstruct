@@ -7,13 +7,6 @@ import unit_test
 Import('env_base')
 
 env_base.unit_test([
-	'convert.cpp',
-	boost.static_library('date_time'),
-	boost.static_library('system'),
-	boost.static_library('thread')
-])
-
-env_base.unit_test([
 	'database_connection.cpp',
 	'../database_connection.cpp',
 	'../database_init.cpp',
@@ -47,7 +40,6 @@ env_base.unit_test([
 	'../database_table_hash.cpp',
 	'../hash_tree.cpp',
 	'../request_generator.cpp',
-	'../sha.cpp',
 	'../speed_calculator.cpp',
 	boost.static_library('date_time'),
 	boost.static_library('filesystem'),
@@ -107,7 +99,6 @@ env_base.unit_test([
 	'../database_table_hash.cpp',
 	'../hash_tree.cpp',
 	'../request_generator.cpp',
-	'../sha.cpp',
 	'../speed_calculator.cpp',
 	boost.static_library('date_time'),
 	boost.static_library('filesystem'),
@@ -119,7 +110,6 @@ env_base.unit_test([
 env_base.unit_test([
 	'encryption.cpp',
 	'../encryption.cpp',
-	'../CMWC4096.cpp',
 	'../database_connection.cpp',
 	'../database_init.cpp',
 	'../database_table_prime.cpp',
@@ -141,7 +131,6 @@ env_base.unit_test([
 	'../database_table_blacklist.cpp',
 	'../database_table_hash.cpp',
 	'../request_generator.cpp',
-	'../sha.cpp',
 	'../speed_calculator.cpp',
 	boost.static_library('date_time'),
 	boost.static_library('filesystem'),
@@ -153,14 +142,6 @@ env_base.unit_test([
 env_base.unit_test([
 	'request_generator.cpp',
 	'../request_generator.cpp',
-	boost.static_library('date_time'),
-	boost.static_library('system'),
-	boost.static_library('thread')
-])
-
-env_base.unit_test([
-	'sha.cpp',
-	'../sha.cpp',
 	boost.static_library('date_time'),
 	boost.static_library('system'),
 	boost.static_library('thread')

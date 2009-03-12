@@ -29,7 +29,6 @@ src_nogui = [
 #command to all
 src_common = [
 	'block_arbiter.cpp',
-	'CMWC4096.cpp',
 	'database_connection.cpp',
 	'database_init.cpp',
 	'database_table_blacklist.cpp',
@@ -53,7 +52,6 @@ src_common = [
 	'rate_limit.cpp',
 	'request_generator.cpp',
 	'send_buffer.cpp',
-	'sha.cpp',
 	'share_index.cpp',
 	'slot.cpp',
 	'slot_file.cpp',

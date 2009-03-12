@@ -42,9 +42,8 @@ void encryption::set_remote_result(std::string result)
 	shared_key = remote_result.exptmod(s, p);
 
 	//get PRNG ready to create stream
-	std::string seed((char *)shared_key.to_bin(), shared_key.to_bin_size());
-	PRNG_send.seed(seed);
-	PRNG_recv.seed(seed);
+	PRNG_send.seed(shared_key.to_bin(), shared_key.to_bin_size());
+	PRNG_recv.seed(shared_key.to_bin(), shared_key.to_bin_size());
 
 	State = ready_to_encrypt;
 }
@@ -53,11 +52,9 @@ void encryption::crypt_send(std::string & bytes)
 {
 	#ifndef DISABLE_ENCRYPTION
 	assert(ready_to_encrypt);
-	PRNG_send.extract_bytes(stream_send, bytes.size());
 	for(int x=0; x<bytes.size(); ++x){
-		bytes[x] = (unsigned char)bytes[x] ^ (unsigned char)stream_send[x];
+		bytes[x] = (unsigned char)bytes[x] ^ PRNG_send.get_byte();
 	}
-	stream_send.erase(0, bytes.size());
 	#endif
 }
 
@@ -65,11 +62,9 @@ void encryption::crypt_send(char * bytes, const int & length)
 {
 	#ifndef DISABLE_ENCRYPTION
 	assert(ready_to_encrypt);
-	PRNG_send.extract_bytes(stream_send, length);
 	for(int x=0; x<length; ++x){
-		bytes[x] = (unsigned char)bytes[x] ^ (unsigned char)stream_send[x];
+		bytes[x] = (unsigned char)bytes[x] ^ PRNG_send.get_byte();
 	}
-	stream_send.erase(0, length);
 	#endif
 }
 
@@ -77,11 +72,9 @@ void encryption::crypt_recv(std::string & bytes)
 {
 	#ifndef DISABLE_ENCRYPTION
 	assert(ready_to_encrypt);
-	PRNG_recv.extract_bytes(stream_recv, bytes.size());
 	for(int x=0; x<bytes.size(); ++x){
-		bytes[x] = (unsigned char)bytes[x] ^ (unsigned char)stream_recv[x];
+		bytes[x] = (unsigned char)bytes[x] ^ PRNG_recv.get_byte();
 	}
-	stream_recv.erase(0, bytes.size());
 	#endif
 }
 
@@ -89,10 +82,8 @@ void encryption::crypt_recv(char * bytes, const int & length)
 {
 	#ifndef DISABLE_ENCRYPTION
 	assert(ready_to_encrypt);
-	PRNG_recv.extract_bytes(stream_recv, length);
 	for(int x=0; x<length; ++x){
-		bytes[x] = (unsigned char)bytes[x] ^ (unsigned char)stream_recv[x];
+		bytes[x] = (unsigned char)bytes[x] ^ PRNG_recv.get_byte();
 	}
-	stream_recv.erase(0, length);
 	#endif
 }

@@ -8,7 +8,6 @@
 #include <boost/thread.hpp>
 
 //custom
-#include "convert.hpp"
 #include "block_arbiter.hpp"
 #include "database.hpp"
 #include "download.hpp"
@@ -21,6 +20,7 @@
 //include
 #include <atomic_bool.hpp>
 #include <atomic_int.hpp>
+#include <convert.hpp>
 #include <portable_sleep.hpp>
 
 //std

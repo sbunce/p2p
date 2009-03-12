@@ -50,6 +50,14 @@ private:
 	number_generator();
 	~number_generator();
 
+	//used to block genprime_loop if enough primes generated
+	boost::condition_variable_any genprime_loop_cond;
+	boost::mutex genprime_loop_mutex;
+
+	//used to block random_prime_mpint if no prime available
+	boost::condition_variable_any random_prime_mpint_cond;
+	boost::mutex random_prime_mpint_mutex;
+
 	/*
 	PRNG function that mp_prime_random_ex needs
 		buff will be filled with random bytes

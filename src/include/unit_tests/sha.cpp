@@ -1,9 +1,6 @@
-//custom
-#include "../settings.hpp"
-#include "../sha.hpp"
-
 //include
 #include <logger.hpp>
+#include <sha.hpp>
 
 sha SHA;
 

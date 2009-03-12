@@ -6,13 +6,13 @@
 #include <boost/utility.hpp>
 
 //custom
-#include "CMWC4096.hpp"
 #include "number_generator.hpp"
 #include "protocol.hpp"
 #include "settings.hpp"
 
 //libtommath
 #include <mpint.hpp>
+#include <RC4.hpp>
 
 //std
 #include <cassert>
@@ -72,9 +72,7 @@ private:
 	mpint shared_key;    //agreed upon key
 
 	//stuff for stream cypher
-	CMWC4096 PRNG_send;
-	CMWC4096 PRNG_recv;
-	std::string stream_send; //bytes to use for stream cypher
-	std::string stream_recv; //bytes to use for stream cypher
+	RC4 PRNG_send;
+	RC4 PRNG_recv;
 };
 #endif

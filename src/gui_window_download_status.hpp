@@ -6,13 +6,15 @@
 #include <boost/utility.hpp>
 
 //custom
-#include "convert.hpp"
 #include "download_info.hpp"
 #include "p2p.hpp"
 #include "settings.hpp"
 
 //gui
 #include <gtkmm.h>
+
+//include
+#include <convert.hpp>
 
 //std
 #include <string>

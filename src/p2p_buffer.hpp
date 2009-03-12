@@ -7,7 +7,6 @@
 #include <boost/utility.hpp>
 
 //custom
-#include "convert.hpp"
 #include "database.hpp"
 #include "download.hpp"
 #include "download_status.hpp"
@@ -18,6 +17,9 @@
 #include "slot.hpp"
 #include "slot_file.hpp"
 #include "slot_hash_tree.hpp"
+
+//include
+#include <convert.hpp>
 
 //std
 #include <ctime>
