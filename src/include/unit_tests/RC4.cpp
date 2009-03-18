@@ -14,5 +14,5 @@ int main()
 	for(int x=0; x<data.size(); ++x){
 		data[x] = data[x] ^ PRNG.get_byte();
 	}
-	assert(convert::bin_to_hex(data) == "BBF316E8D940AF0AD3");
+	assert(convert::bin_to_hex(data) == "857047028B192029FD");
 }

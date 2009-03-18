@@ -17,16 +17,15 @@
 #include "download_status.hpp"
 #include "download_factory.hpp"
 #include "p2p_buffer.hpp"
-#include "p2p_new_connection.hpp"
+#include "new_connection.hpp"
 #include "number_generator.hpp"
 #include "rate_limit.hpp"
 #include "settings.hpp"
 #include "share_index.hpp"
-#include "sockets.hpp"
-#include "speed_calculator.hpp"
 
 //include
 #include <atomic_int.hpp>
+#include <speed_calculator.hpp>
 
 //networking
 #ifdef WIN32
@@ -122,6 +121,17 @@ private:
 	//thread for main_loop
 	boost::thread main_thread;
 
+	fd_set master_FDS;                //master file descriptor set
+	fd_set read_FDS;                  //what sockets can read non-blocking
+	fd_set write_FDS;                 //what sockets can write non-blocking
+	atomic_int<int> connections;      //currently established connections
+	atomic_int<int> max_connections;  //connection limit
+	atomic_int<int> FD_max;           //number of the highest socket
+	atomic_int<int> localhost_socket; //socket of localhost, or -1 if not connected
+
+	//socket mapped to time at which the socket last had activity
+	std::map<int, time_t> Active;
+
 	/*
 	Holds download_info for downloads that need to be started. The download_info
 	is put in this container and later processed by main_thread(). This is done
@@ -132,36 +142,51 @@ private:
 	std::list<download_info> Pending_Download;
 
 	/*
-	check_blacklist         - checks if blacklist was updated, if so checks connected IP's to see if any are blacklisted
-	check_timeouts          - checks all servers to see if they've timed out and removes/disconnects if they have
-	disconnect              - disconnects a socket, modifies Client_Buffer
-	main_thread             - main client thread that sends/receives data and triggers events
-	prepare_requests        - touches each Client_Buffer element to trigger new requests(if needed)
-	reconnect_unfinished    - called by main_thread() to resume unfinished downloads
-	                          called before main_thread accesses shared objects so no mutex needed
-	remove_complete         - removes downloads that are complete(or stopped)
-	remove_empty            - remove any empty client_buffers as they are no longer needed
-	start_download_process  - starts a download added by start_download()
-	start_pending_downloads - called by main_thread() to start downloads added by start_download()
-	transition_download     - passes terminating download to download_factory, starts downloads download_factory may return
+	check_blacklist:
+		Disconnects IP's that were blacklisted.
+	check_timeouts:
+		Check for timed out sockets.
+	disconnect:
+		Disconnect a socket.
+	establish_incoming_connection:
+		Sets up a incoming connection.
+	main_thread:
+		Main client thread that sends/receives data and triggers events.
+	prepare_requests:
+		Generates new requests. Called before checking socket sets.
+	reconnect_unfinished:
+		Resumes downloads upon program start.
+	remove_complete:
+		Removes downloads that are complete(or stopped).
+	start_download_process:
+		Starts download added by start_download().
+	start_pending_downloads:
+		Called by main_thread() to start downloads added by start_download()
+	transition_download:
+		Passes terminating download to download_factory, starts downloads download_factory may return
+	update_active:
+		Updates the time at which the socket last had activity. Do not call this
+		function on the listener socket.
 	*/
 	void check_blacklist(int & blacklist_state);
 	void check_timeouts();
-	inline void disconnect(const int & socket_FD);
+	void disconnect(const int & socket_FD);
+	void establish_incoming_connection(const int & listener);
 	void main_loop();
-	void new_connection(const int & listener);
 	void reconnect_unfinished();
 	void remove_complete();
 	int setup_listener();
 	void start_download_process(const download_info & info);
 	void start_pending_downloads();
 	void transition_download(boost::shared_ptr<download> Download_Stop);
+	void update_active(const int & socket_FD);
 
 	database::table::blacklist DB_Blacklist;
 	database::table::download DB_Download;
 	database::table::preferences DB_Preferences;
 	database::table::search DB_Search;
 	download_factory Download_Factory;
+	new_connection New_Connection;
 	sha SHA;
 };
 #endif

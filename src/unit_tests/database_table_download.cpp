@@ -7,6 +7,7 @@
 
 int main()
 {
+	database::init::run();
 	database::connection DB;
 	DB.query("DELETE FROM download");
 

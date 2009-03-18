@@ -14,7 +14,9 @@
 #include "download_info.hpp"
 #include "hash_tree.hpp"
 #include "settings.hpp"
-#include "sha.hpp"
+
+//include
+#include <sha.hpp>
 
 //std
 #include <fstream>

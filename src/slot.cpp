@@ -1,6 +1,7 @@
 #include "slot.hpp"
 
-slot::slot()
+slot::slot():
+	Speed_Calculator(settings::SPEED_AVERAGE)
 {
 
 }

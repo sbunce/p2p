@@ -8,16 +8,17 @@
 #include <boost/thread.hpp>
 
 //custom
+
 #include "contiguous_map.hpp"
 #include "database.hpp"
 #include "request_generator.hpp"
 #include "protocol.hpp"
 #include "settings.hpp"
-#include "sha.hpp"
 
 //include
 #include <atomic_bool.hpp>
 #include <convert.hpp>
+#include <sha.hpp>
 
 //std
 #include <deque>

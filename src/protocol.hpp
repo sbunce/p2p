@@ -4,12 +4,10 @@ This header contains functions to encode all requests and responses.
 #ifndef H_PROTOCOL
 #define H_PROTOCOL
 
-#include "buffer.hpp"
-
 namespace protocol
 {
 //protocol dependent settings
-const unsigned DH_KEY_SIZE = 64;   //size of key exchanged with diffie-hellman (bytes)
+const unsigned DH_KEY_SIZE = 16;   //size of key exchanged with diffie-hellman (bytes)
 const unsigned PIPELINE_SIZE = 16; //max pre-requests that can be done (must be >= 2)
 
 /*

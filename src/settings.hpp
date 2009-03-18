@@ -30,7 +30,7 @@ const unsigned UPLOAD_RATE = std::numeric_limits<unsigned>::max();   //B/s
 
 //hard settings, not changable at runtime
 const unsigned SHARE_SCAN_RATE = 2;        //share scan rate (files/second)
-const unsigned PRIME_CACHE = 32;           //number of primes to keep in prime cache for diffie-hellman
+const unsigned PRIME_CACHE = 128;          //number of primes to keep in prime cache for diffie-hellman
 const unsigned P_WAIT_TIMEOUT = 8;         //when a client download_file/download_hash_tree receives a P_WAIT it will not make any requests for this long
 const unsigned P2P_PORT = 6969;            //port client connects to and server receives on
 const unsigned GUI_TICK = 100;             //time(in milliseconds) between gui updates

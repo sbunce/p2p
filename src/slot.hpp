@@ -9,8 +9,10 @@ This object is used within the server_buffer which is locked.
 #include "block_arbiter.hpp"
 #include "database.hpp"
 #include "settings.hpp"
-#include "speed_calculator.hpp"
 #include "upload_info.hpp"
+
+//include
+#include <speed_calculator.hpp>
 
 class slot
 {

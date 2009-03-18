@@ -10,8 +10,7 @@
 #include "protocol.hpp"
 #include "settings.hpp"
 
-//libtommath
-#include <mpint.hpp>
+//include
 #include <RC4.hpp>
 
 //std
@@ -19,6 +18,9 @@
 #include <ctime>
 #include <fstream>
 #include <iostream>
+
+//tommath
+#include <mpint.hpp>
 
 class encryption : private boost::noncopyable
 {

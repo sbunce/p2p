@@ -5,7 +5,8 @@ download::download()
 	bytes_received(0),
 	cancel(false),
 	visible(false),
-	paused(false)
+	paused(false),
+	Speed_Calculator(settings::SPEED_AVERAGE)
 {
 
 }

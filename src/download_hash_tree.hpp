@@ -15,10 +15,10 @@
 #include "protocol.hpp"
 #include "request_generator.hpp"
 #include "settings.hpp"
-#include "sha.hpp"
 
 //include
 #include <convert.hpp>
+#include <sha.hpp>
 
 //std
 #include <vector>

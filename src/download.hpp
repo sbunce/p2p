@@ -6,7 +6,9 @@
 #include "download_connection.hpp"
 #include "download_info.hpp"
 #include "settings.hpp"
-#include "speed_calculator.hpp"
+
+//include
+#include <speed_calculator.hpp>
 
 //std
 #include <list>
@@ -112,7 +114,10 @@ private:
 	class server_info
 	{
 	public:
-		server_info(const std::string & IP_in): IP(IP_in){}
+		server_info(const std::string & IP_in):
+			IP(IP_in),
+			Speed_Calculator(settings::SPEED_AVERAGE)
+		{}
 		std::string IP;
 		speed_calculator Speed_Calculator;
 	};

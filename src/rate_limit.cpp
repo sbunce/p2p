@@ -2,7 +2,9 @@
 
 rate_limit::rate_limit():
 	max_download_rate(0),
-	max_upload_rate(0)
+	max_upload_rate(0),
+	Upload(settings::SPEED_AVERAGE),
+	Download(settings::SPEED_AVERAGE)
 {
 
 }
@@ -35,12 +37,12 @@ unsigned rate_limit::download_rate_control(const unsigned & max_possible_transfe
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	unsigned transfer = 0;
-	if(Download.current_second_bytes() >= max_download_rate){
+	if(Download.current_second() >= max_download_rate){
 		//limit reached, send no bytes
 		return transfer;
 	}else{
 		//limit not yet reached, determine how many bytes to send
-		transfer = max_download_rate - Download.current_second_bytes();
+		transfer = max_download_rate - Download.current_second();
 		if(transfer > max_possible_transfer){
 			transfer = max_possible_transfer;
 		}
@@ -84,12 +86,12 @@ unsigned rate_limit::upload_rate_control(const unsigned & max_possible_transfer)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	unsigned transfer = 0;
-	if(Upload.current_second_bytes() >= max_upload_rate){
+	if(Upload.current_second() >= max_upload_rate){
 		//limit reached, send no bytes
 		return transfer;
 	}else{
 		//limit not yet reached, determine how many bytes to send
-		transfer = max_upload_rate - Upload.current_second_bytes();
+		transfer = max_upload_rate - Upload.current_second();
 		if(transfer > max_possible_transfer){
 			transfer = max_possible_transfer;
 		}

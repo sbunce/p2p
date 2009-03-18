@@ -1,18 +1,29 @@
-#include "p2p_new_connection.hpp"
+#include "new_connection.hpp"
 
-p2p_new_connection::p2p_new_connection():
+new_connection::new_connection(
+	fd_set & master_FDS_in,
+	atomic_int<int> & connections_in,
+	atomic_int<int> & max_connections_in,
+	atomic_int<int> & FD_max_in,
+	atomic_int<int> & localhost_socket_in
+):
+	master_FDS(master_FDS_in),
+	connections(connections_in),
+	max_connections(max_connections_in),
+	FD_max(FD_max_in),
+	localhost_socket(localhost_socket_in),
 	Thread_Pool(8)
 {
 
 }
 
-void p2p_new_connection::add_unresponsive(const std::string & IP)
+void new_connection::add_unresponsive(const std::string & IP)
 {
 	boost::mutex::scoped_lock lock(KU_mutex);
 	Known_Unresponsive.insert(std::make_pair(time(NULL), IP));
 }
 
-bool p2p_new_connection::check_unresponsive(const std::string & IP)
+bool new_connection::check_unresponsive(const std::string & IP)
 {
 	boost::mutex::scoped_lock lock(KU_mutex);
 
@@ -34,7 +45,7 @@ bool p2p_new_connection::check_unresponsive(const std::string & IP)
 	return false;
 }
 
-void p2p_new_connection::block_concurrent(const download_connection & DC)
+void new_connection::block_concurrent(const download_connection & DC)
 {
 	/*
 	If two more DC's with the same IP reach here only one will be let past and
@@ -65,12 +76,12 @@ void p2p_new_connection::block_concurrent(const download_connection & DC)
 	}
 }
 
-void p2p_new_connection::new_connection(download_connection DC)
+void new_connection::establish_outgoing_connection(download_connection DC)
 {
 	/*
 	Do not initiate new connections if at connection limit.
 	*/
-	if(sockets::singleton().connections >= sockets::singleton().max_connections){
+	if(connections >= max_connections){
 		return;
 	}
 
@@ -125,33 +136,25 @@ void p2p_new_connection::new_connection(download_connection DC)
 		add_unresponsive(DC.IP);
 	}else{
 		LOGGER << "created socket " << DC.socket << " for " << DC.IP;
-		if(DC.socket > sockets::singleton().FD_max){
-			sockets::singleton().FD_max = DC.socket;
+		if(DC.socket > FD_max){
+			FD_max = DC.socket;
 		}
 		p2p_buffer::add_connection(DC.socket, DC.IP, true);
 		p2p_buffer::add_download_connection(DC);
-		FD_SET(DC.socket, &sockets::singleton().master_FDS);
-		++sockets::singleton().connections;
-		sockets::singleton().update_active(DC.socket);
+		FD_SET(DC.socket, &master_FDS);
+		++connections;
 	}
 }
 
-void p2p_new_connection::process_DC(download_connection DC)
+void new_connection::process_DC(download_connection DC)
 {
 	block_concurrent(DC);
-	new_connection(DC);
+	establish_outgoing_connection(DC);
 	unblock(DC);
 }
 
-void p2p_new_connection::queue(download_connection DC)
+void new_connection::queue(download_connection DC)
 {
-/*
-	//resolve hostname
-	if(!resolve::hostname(DC.IP)){
-		LOGGER << "failed to resolve " << DC.IP;
-		return;
-	}
-*/
 	//stop connections to localhost
 	if(DC.IP.find("127") == 0){
 		LOGGER << "stopping connection to localhost";
@@ -167,10 +170,10 @@ void p2p_new_connection::queue(download_connection DC)
 		return;
 	}
 
-	Thread_Pool.queue_job(boost::bind(&p2p_new_connection::process_DC, this, DC));
+	Thread_Pool.queue_job(boost::bind(&new_connection::process_DC, this, DC));
 }
 
-void p2p_new_connection::unblock(const download_connection & DC)
+void new_connection::unblock(const download_connection & DC)
 {
 	/*
 	Remove this server from the current connection attempts to let DC_block_concurrent

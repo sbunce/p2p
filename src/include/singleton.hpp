@@ -1,7 +1,3 @@
-/*
-Singleton dtor is never called because we can't guarantee destruction order. A
-cleanup function will need to be called on singletons.
-*/
 #ifndef H_SINGLETON
 #define H_SINGLETON
 
@@ -19,9 +15,11 @@ public:
 		boost::call_once(init, once_flag);
 		return *t;
 	}
+
 protected:
 	singleton_base(){}
 	virtual ~singleton_base(){}
+
 private:
 	static void init()
 	{

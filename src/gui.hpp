@@ -6,7 +6,6 @@
 #include <boost/utility.hpp>
 
 //custom
-#include "convert.hpp"
 #include "database.hpp"
 #include "download_info.hpp"
 #include "gui_about.hpp"
@@ -21,6 +20,9 @@
 
 //gui
 #include <gtkmm.h>
+
+//include
+#include <convert.hpp>
 
 //std
 #include <algorithm>

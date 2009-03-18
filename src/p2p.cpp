@@ -1,10 +1,17 @@
 #include "p2p.hpp"
 
-p2p::p2p()
+p2p::p2p():
+	connections(0),
+	FD_max(0),
+	localhost_socket(-1),
+	New_Connection(master_FDS, connections, max_connections, FD_max, localhost_socket)
 {
 	boost::filesystem::create_directory(settings::DOWNLOAD_DIRECTORY);
+	database::init::run();
+
 	rate_limit::singleton().set_max_download_rate(DB_Preferences.get_max_download_rate());
 	rate_limit::singleton().set_max_upload_rate(DB_Preferences.get_max_upload_rate());
+	max_connections = DB_Preferences.get_max_connections();
 
 	#ifdef WIN32
 	WORD wsock_ver = MAKEWORD(1,1);
@@ -15,6 +22,9 @@ p2p::p2p()
 		exit(1);
 	}
 	#endif
+	FD_ZERO(&master_FDS);
+	FD_ZERO(&read_FDS);
+	FD_ZERO(&write_FDS);
 
 	main_thread = boost::thread(boost::bind(&p2p::main_loop, this));
 }
@@ -34,8 +44,8 @@ void p2p::check_blacklist(int & blacklist_state)
 	if(DB_Blacklist.modified(blacklist_state)){
 		sockaddr_in temp_addr;
 		socklen_t len = sizeof(temp_addr);
-		for(int socket_FD = 0; socket_FD <= sockets::singleton().FD_max; ++socket_FD){
-			if(FD_ISSET(socket_FD, &sockets::singleton().master_FDS)){
+		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
+			if(FD_ISSET(socket_FD, &master_FDS)){
 				getpeername(socket_FD, (sockaddr*)&temp_addr, &len);
 				std::string IP(inet_ntoa(temp_addr.sin_addr));
 				if(DB_Blacklist.is_blacklisted(IP)){
@@ -49,10 +59,25 @@ void p2p::check_blacklist(int & blacklist_state)
 
 void p2p::check_timeouts()
 {
-	int tmp;
-	while((tmp = sockets::singleton().timed_out()) != -1){
-		LOGGER << "socket " << tmp << " timed out";
-		disconnect(tmp);
+	std::map<int, time_t>::iterator
+	iter_cur = Active.begin(),
+	iter_end = Active.end();
+	while(iter_cur != iter_end){
+		if(FD_ISSET(iter_cur->first, &master_FDS)){
+			/*
+			By checking if settings::FILE_BLOCK_SIZE seconds have passed we
+			effectively set the minimum rate to 1B/s.
+			*/
+			if(std::time(NULL) - iter_cur->second > protocol::FILE_BLOCK_SIZE){
+				LOGGER << "socket " << iter_cur->first << " timed out";
+				disconnect(iter_cur->first);
+				Active.erase(iter_cur++);
+			}else{
+				++iter_cur;
+			}
+		}else{
+			Active.erase(iter_cur++);
+		}
 	}
 }
 
@@ -70,8 +95,8 @@ void p2p::disconnect(const int & socket_FD)
 {
 	LOGGER << "disconnecting socket " << socket_FD;
 
-	if(socket_FD == sockets::singleton().localhost_socket){
-		sockets::singleton().localhost_socket = -1;
+	if(socket_FD == localhost_socket){
+		localhost_socket = -1;
 	}
 
 	#ifdef WIN32
@@ -80,18 +105,80 @@ void p2p::disconnect(const int & socket_FD)
 	close(socket_FD);
 	#endif
 
-	--sockets::singleton().connections;
-	FD_CLR(socket_FD, &sockets::singleton().master_FDS);
-	FD_CLR(socket_FD, &sockets::singleton().read_FDS);
-	FD_CLR(socket_FD, &sockets::singleton().write_FDS);
+	--connections;
+	FD_CLR(socket_FD, &master_FDS);
+	FD_CLR(socket_FD, &read_FDS);
+	FD_CLR(socket_FD, &write_FDS);
 	p2p_buffer::erase(socket_FD);
 
 	//reduce FD_max if possible
-	for(int x=sockets::singleton().FD_max; x>0; --x){
-		if(FD_ISSET(x, &sockets::singleton().master_FDS)){
-			sockets::singleton().FD_max = x;
+	for(int x=FD_max; x>0; --x){
+		if(FD_ISSET(x, &master_FDS)){
+			FD_max = x;
 			break;
 		}
+	}
+}
+
+void p2p::establish_incoming_connection(const int & listener)
+{
+	sockaddr_in remoteaddr;
+	socklen_t len = sizeof(remoteaddr);
+	int new_FD = accept(listener, (sockaddr *)&remoteaddr, &len);
+	if(new_FD == -1){
+		#ifdef WIN32
+		LOGGER << "winsock error " << WSAGetLastError();
+		#else
+		perror("accept");
+		#endif
+		return;
+	}
+
+	std::string new_IP(inet_ntoa(remoteaddr.sin_addr));
+
+	//do not allow clients to connect that are blacklisted
+	if(DB_Blacklist.is_blacklisted(new_IP)){
+		LOGGER << "stopping connection from blacklisted IP " << new_IP;
+		return;
+	}
+
+	if(new_IP.find("127") == 0){
+		localhost_socket = new_FD;
+	}
+
+	//make sure not already connected
+	sockaddr_in temp_addr;
+	for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
+		if(FD_ISSET(socket_FD, &master_FDS)){
+			getpeername(socket_FD, (sockaddr*)&temp_addr, &len);
+			if(strcmp(new_IP.c_str(), inet_ntoa(temp_addr.sin_addr)) == 0){
+				LOGGER << "server " << new_IP << " attempted multiple connections";
+				#ifdef WIN32
+				closesocket(new_FD);
+				#else
+				close(new_FD);
+				#endif
+				return;
+			}
+		}
+	}
+
+	if(connections < max_connections){
+		++connections;
+		p2p_buffer::add_connection(new_FD, new_IP, false);
+		FD_SET(new_FD, &master_FDS);
+		if(new_FD > FD_max){
+			FD_max = new_FD;
+		}
+		update_active(new_FD);
+		LOGGER << "p2p " << inet_ntoa(remoteaddr.sin_addr) << " socket " << new_FD << " connected";
+	}else{
+		LOGGER << "max connections reached";
+		#ifdef WIN32
+		closesocket(new_FD);
+		#else
+		close(new_FD);
+		#endif
 	}
 }
 
@@ -107,7 +194,7 @@ bool p2p::file_info(const std::string & hash, std::string & path, boost::uint64_
 
 unsigned p2p::get_max_connections()
 {
-	return sockets::singleton().max_connections;
+	return max_connections;
 }
 
 std::string p2p::get_download_directory()
@@ -141,79 +228,6 @@ unsigned p2p::get_max_upload_rate()
 bool p2p::is_indexing()
 {
 	return share_index::singleton().is_indexing();
-}
-
-void p2p::new_connection(const int & listener)
-{
-	sockaddr_in remoteaddr;
-	socklen_t len = sizeof(remoteaddr);
-	int new_FD = accept(listener, (sockaddr *)&remoteaddr, &len);
-	if(new_FD == -1){
-		#ifdef WIN32
-		LOGGER << "winsock error " << WSAGetLastError();
-		#else
-		perror("accept");
-		#endif
-		return;
-	}
-
-	std::string new_IP(inet_ntoa(remoteaddr.sin_addr));
-
-	//do not allow clients to connect that are blacklisted
-	if(DB_Blacklist.is_blacklisted(new_IP)){
-		LOGGER << "stopping connection from blacklisted IP " << new_IP;
-		return;
-	}
-
-	if(new_IP.find("127") == 0){
-		sockets::singleton().localhost_socket = new_FD;
-	}
-
-	//make sure not already connected
-	sockaddr_in temp_addr;
-	for(int socket_FD = 0; socket_FD <= sockets::singleton().FD_max; ++socket_FD){
-		if(FD_ISSET(socket_FD, &sockets::singleton().master_FDS)){
-			getpeername(socket_FD, (sockaddr*)&temp_addr, &len);
-			if(strcmp(new_IP.c_str(), inet_ntoa(temp_addr.sin_addr)) == 0){
-				LOGGER << "server " << new_IP << " attempted multiple connections";
-				#ifdef WIN32
-				closesocket(new_FD);
-				#else
-				close(new_FD);
-				#endif
-				return;
-			}
-		}
-	}
-
-	if(sockets::singleton().connections < sockets::singleton().max_connections){
-		++sockets::singleton().connections;
-		p2p_buffer::add_connection(new_FD, new_IP, false);
-		FD_SET(new_FD, &sockets::singleton().master_FDS);
-		if(new_FD > sockets::singleton().FD_max){
-			sockets::singleton().FD_max = new_FD;
-		}
-		sockets::singleton().update_active(new_FD);
-		LOGGER << "p2p " << inet_ntoa(remoteaddr.sin_addr) << " socket " << new_FD << " connected";
-	}else{
-		#ifdef WIN32
-		closesocket(new_FD);
-		#else
-		close(new_FD);
-		#endif
-	}
-
-	return;
-}
-
-void p2p::pause_download(const std::string & hash)
-{
-	p2p_buffer::pause_download(hash);
-}
-
-unsigned p2p::prime_count()
-{
-	return number_generator::singleton().prime_count();
 }
 
 int p2p::setup_listener()
@@ -274,8 +288,8 @@ int p2p::setup_listener()
 	}
 	LOGGER << "created listening socket " << listener;
 
-	FD_SET(listener, &sockets::singleton().master_FDS);
-	sockets::singleton().FD_max = listener;
+	FD_SET(listener, &master_FDS);
+	FD_max = listener;
 	return listener;
 }
 
@@ -285,9 +299,12 @@ void p2p::main_loop()
 	portable_sleep::ms(2000);
 
 	reconnect_unfinished();
+
+	//make sure singletons initialized
 	number_generator::singleton();
 	share_index::singleton();
 
+	//socket to accept incoming connections
 	int listener = setup_listener();
 
 	//see documentation in database_table_blacklist to see what this does
@@ -335,19 +352,17 @@ void p2p::main_loop()
 
 		#ifdef WIN32
 		//winsock doesn't allow calling select() with empty socket set
-		if(sockets::singleton().master_FDS.fd_count == 0){
+		if(master_FDS.fd_count == 0){
 			portable_sleep::ms(1000);
 			continue;
 		}
 		#endif
 
 		if(p2p_buffer::get_send_pending() != 0){
-			sockets::singleton().read_FDS = sockets::singleton().master_FDS;
-			sockets::singleton().write_FDS = sockets::singleton().master_FDS;
-			if(select(sockets::singleton().FD_max+1, &sockets::singleton().read_FDS,
-				&sockets::singleton().write_FDS, NULL, &tv) == -1)
-			{
-				if(errno != EINTR){ //EINTR is caused by gprof
+			read_FDS = master_FDS;
+			write_FDS = master_FDS;
+			if(select(FD_max+1, &read_FDS, &write_FDS, NULL, &tv) == -1){
+				if(errno != EINTR){
 					#ifdef WIN32
 					LOGGER << "winsock error " << WSAGetLastError();
 					#else
@@ -357,9 +372,9 @@ void p2p::main_loop()
 				}
 			}
 		}else{
-			FD_ZERO(&sockets::singleton().write_FDS);
-			sockets::singleton().read_FDS = sockets::singleton().master_FDS;
-			if(select(sockets::singleton().FD_max+1, &sockets::singleton().read_FDS, NULL, NULL, &tv) == -1){
+			FD_ZERO(&write_FDS);
+			read_FDS = master_FDS;
+			if(select(FD_max+1, &read_FDS, NULL, NULL, &tv) == -1){
 				if(errno != EINTR){ //EINTR is caused by gprof
 					#ifdef WIN32
 					LOGGER << "winsock error " << WSAGetLastError();
@@ -377,9 +392,9 @@ void p2p::main_loop()
 		then the higher socket numbers will get starved. To compensate for this
 		we set a max_read = rate_limit / connections. This way, in the most demanding
 		scenario each sockets gets to be read at least once. A lower limit on
-		max_read is set at 1 of course.
+		max_read is set at 1.
 		*/
-		if(sockets::singleton().connections == 0){
+		if(connections == 0){
 			max_send = 1;
 			max_recv = 1;
 		}else{
@@ -392,12 +407,12 @@ void p2p::main_loop()
 			else because rates cannot logically be negative.
 			*/
 			unsigned tmp;
-			if((tmp = rate_limit::singleton().get_max_upload_rate() / sockets::singleton().connections) > std::numeric_limits<int>::max()){
+			if((tmp = rate_limit::singleton().get_max_upload_rate() / connections) > std::numeric_limits<int>::max()){
 				max_send = std::numeric_limits<int>::max();
 			}else{
 				max_send = tmp;
 			}
-			if((tmp = rate_limit::singleton().get_max_download_rate() / sockets::singleton().connections) > std::numeric_limits<int>::max()){
+			if((tmp = rate_limit::singleton().get_max_download_rate() / connections) > std::numeric_limits<int>::max()){
 				max_recv = std::numeric_limits<int>::max();
 			}else{
 				max_recv = tmp;
@@ -406,14 +421,14 @@ void p2p::main_loop()
 
 		//process reads/writes
 		transfer = false;
-		for(int socket_FD = 0; socket_FD <= sockets::singleton().FD_max; ++socket_FD){
+		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
 			boost::this_thread::interruption_point();
-			if(FD_ISSET(socket_FD, &sockets::singleton().read_FDS)){
+			if(FD_ISSET(socket_FD, &read_FDS)){
 				if(socket_FD == listener){
-					new_connection(listener);
+					establish_incoming_connection(listener);
 				}else{
 					if((transfer_limit = rate_limit::singleton().download_rate_control(max_buff)) != 0){
-						if(socket_FD == sockets::singleton().localhost_socket){
+						if(socket_FD == localhost_socket){
 							transfer_limit = max_buff;
 						}else if(transfer_limit > max_recv){
 							transfer_limit = max_recv;
@@ -430,8 +445,8 @@ void p2p::main_loop()
 							disconnect(socket_FD);
 							continue;
 						}else{
-							sockets::singleton().update_active(socket_FD);
-							if(socket_FD != sockets::singleton().localhost_socket){
+							update_active(socket_FD);
+							if(socket_FD != localhost_socket){
 								rate_limit::singleton().add_download_bytes(n_bytes);
 							}
 							p2p_buffer::post_recv(socket_FD, recv_buff, n_bytes);
@@ -441,10 +456,10 @@ void p2p::main_loop()
 				}
 			}
 
-			if(FD_ISSET(socket_FD, &sockets::singleton().write_FDS)){
+			if(FD_ISSET(socket_FD, &write_FDS)){
 				if(p2p_buffer::get_send_buff(socket_FD, max_send, send_buff)){
 					if((transfer_limit = rate_limit::singleton().upload_rate_control(send_buff.size())) != 0){
-						if(socket_FD == sockets::singleton().localhost_socket){
+						if(socket_FD == localhost_socket){
 							transfer_limit = send_buff.size();
 						}else if(transfer_limit > max_send){
 							transfer_limit = max_send;
@@ -460,8 +475,8 @@ void p2p::main_loop()
 							LOGGER << "remote " << socket_FD << " requested disconnect";
 							disconnect(socket_FD);
 						}else{
-							sockets::singleton().update_active(socket_FD);
-							if(socket_FD != sockets::singleton().localhost_socket){
+							update_active(socket_FD);
+							if(socket_FD != localhost_socket){
 								rate_limit::singleton().add_upload_bytes(n_bytes);
 							}
 							if(p2p_buffer::post_send(socket_FD, n_bytes)){
@@ -479,6 +494,16 @@ void p2p::main_loop()
 			portable_sleep::ms(1);
 		}
 	}
+}
+
+void p2p::pause_download(const std::string & hash)
+{
+	p2p_buffer::pause_download(hash);
+}
+
+unsigned p2p::prime_count()
+{
+	return number_generator::singleton().prime_count();
 }
 
 void p2p::reconnect_unfinished()
@@ -518,11 +543,11 @@ void p2p::search(std::string search_word, std::vector<download_info> & Search_In
 
 void p2p::set_max_connections(const unsigned & max_connections_in)
 {
-	sockets::singleton().max_connections = max_connections_in;
-	DB_Preferences.set_max_connections(sockets::singleton().max_connections);
-	while(sockets::singleton().connections > sockets::singleton().max_connections){
-		for(int socket_FD = 0; socket_FD <= sockets::singleton().FD_max; ++socket_FD){
-			if(FD_ISSET(socket_FD, &sockets::singleton().master_FDS)){
+	max_connections = max_connections_in;
+	DB_Preferences.set_max_connections(max_connections);
+	while(connections > max_connections){
+		for(int socket_FD = 0; socket_FD <= FD_max; ++socket_FD){
+			if(FD_ISSET(socket_FD, &master_FDS)){
 				disconnect(socket_FD);
 				break;
 			}
@@ -581,7 +606,7 @@ void p2p::start_download_process(const download_info & info)
 		iter_cur = servers.begin();
 		iter_end = servers.end();
 		while(iter_cur != iter_end){
-			p2p_new_connection::singleton().queue(*iter_cur);
+			New_Connection.queue(*iter_cur);
 			++iter_cur;
 		}
 	}
@@ -640,9 +665,20 @@ void p2p::transition_download(boost::shared_ptr<download> Download_Stop)
 		iter_cur = servers.begin();
 		iter_end = servers.end();
 		while(iter_cur != iter_end){
-			p2p_new_connection::singleton().queue(*iter_cur);
+			New_Connection.queue(*iter_cur);
 			++iter_cur;
 		}
 	}
 }
-	
+
+void p2p::update_active(const int & socket_FD)
+{
+	if(FD_ISSET(socket_FD, &master_FDS)){
+		std::map<int, time_t>::iterator iter = Active.find(socket_FD);
+		if(iter == Active.end()){
+			Active.insert(std::make_pair(socket_FD, std::time(NULL)));
+		}else{
+			iter->second = std::time(NULL);
+		}
+	}
+}

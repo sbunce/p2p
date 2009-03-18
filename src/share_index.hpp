@@ -13,13 +13,13 @@
 #include "database.hpp"
 #include "hash_tree.hpp"
 #include "settings.hpp"
-#include "sha.hpp"
-#include "thread_pool.hpp"
 
 //include
 #include <atomic_bool.hpp>
 #include <portable_sleep.hpp>
+#include <sha.hpp>
 #include <singleton.hpp>
+#include <thread_pool.hpp>
 
 //std
 #include <ctime>

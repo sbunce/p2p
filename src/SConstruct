@@ -29,7 +29,6 @@ src_nogui = [
 #command to all
 src_common = [
 	'block_arbiter.cpp',
-	'database_connection.cpp',
 	'database_init.cpp',
 	'database_table_blacklist.cpp',
 	'database_table_download.cpp',
@@ -48,15 +47,14 @@ src_common = [
 	'number_generator.cpp',
 	'p2p.cpp',
 	'p2p_buffer.cpp',
-	'p2p_new_connection.cpp',
+	'new_connection.cpp',
 	'rate_limit.cpp',
 	'request_generator.cpp',
 	'send_buffer.cpp',
 	'share_index.cpp',
 	'slot.cpp',
 	'slot_file.cpp',
-	'slot_hash_tree.cpp',
-	'speed_calculator.cpp'
+	'slot_hash_tree.cpp'
 ]
 
 #base (needed by all)

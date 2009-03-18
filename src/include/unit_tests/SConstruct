@@ -1,5 +1,6 @@
 #site_scons
 import boost
+import sqlite3
 import unit_test
 
 Import('env_base')
@@ -37,6 +38,15 @@ env_base.unit_test([
 	boost.static_library('date_time'),
 	boost.static_library('system'),
 	boost.static_library('thread')
+])
+
+env_base.unit_test([
+	'database_connection.cpp',
+	boost.static_library('date_time'),
+	boost.static_library('filesystem'),
+	boost.static_library('system'),
+	boost.static_library('thread'),
+	sqlite3.static_library()
 ])
 
 env_base.unit_test([

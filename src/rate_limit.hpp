@@ -5,10 +5,11 @@
 #include <boost/thread.hpp>
 
 //custom
-#include "speed_calculator.hpp"
+#include "settings.hpp"
 
 //include
 #include <singleton.hpp>
+#include <speed_calculator.hpp>
 
 //std
 #include <limits>

@@ -41,7 +41,8 @@ example: 1.35 would have major 1 and minor 35
 class thread_pool : private boost::noncopyable
 {
 public:
-	thread_pool(const unsigned & threads)
+	thread_pool(const unsigned & threads):
+		active_jobs(0)
 	{
 		for(int x=0; x<threads; ++x){
 			Pool.create_thread(boost::bind(&thread_pool::consumer, this));
@@ -66,16 +67,18 @@ public:
 	*/
 	void queue_job(const boost::function0<void> & job)
 	{
-		queue_mutex.lock();
+		boost::mutex::scoped_lock lock(queue_mutex);
 		queue.push_back(job);
-		queue_mutex.unlock();
 		queue_cond.notify_one();
 	}
 
 	//wait for threads to finish all jobs
 	void join()
 	{
-		queue_empty_cond.wait(queue_empty_mutex);
+		boost::mutex::scoped_lock lock(queue_mutex);
+		while(active_jobs != 0 || !queue.empty()){
+			queue_empty_cond.wait(queue_mutex);
+		}
 	}
 
 private:
@@ -86,33 +89,33 @@ private:
 	boost::condition_variable_any queue_cond;
 	boost::mutex queue_mutex;
 
-	//used for consumer() to let join() know when all jobs done
+	//number of consumer threads processing jobs, must be locked with queue_mutex
+	unsigned active_jobs;
+
+	//notified when
 	boost::condition_variable_any queue_empty_cond;
-	boost::mutex queue_empty_mutex;
 
 	void consumer()
 	{
 		boost::function0<void> job;
-		try{
-			while(true){
-				queue_mutex.lock();
-				while(queue.empty()){
-					queue_cond.wait(queue_mutex);
-				}
-				boost::this_thread::interruption_point();
-				job = queue.front();
-				queue.pop_front();
-				queue_mutex.unlock();
-				job();
-
-				queue_mutex.lock();
-				if(queue.empty()){
-					queue_empty_cond.notify_all();
-				}
-				queue_mutex.unlock();
+		while(true){
+			{//begin lock scope
+			boost::mutex::scoped_lock lock(queue_mutex);
+			while(queue.empty()){
+				queue_cond.wait(queue_mutex);
 			}
-		}catch(const boost::thread_interrupted & ex){
-			queue_mutex.unlock();
+			++active_jobs;
+			boost::this_thread::interruption_point();
+			job = queue.front();
+			queue.pop_front();
+			}//end lock scope
+			job();
+
+			{//begin lock scope
+			boost::mutex::scoped_lock lock(queue_mutex);
+			--active_jobs;
+			queue_empty_cond.notify_all();
+			}//end lock scope
 		}
 	}
 };

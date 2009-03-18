@@ -4,6 +4,7 @@
 
 int main()
 {
+	database::init::run();
 	database::connection DB;
 	DB.query("DROP TABLE IF EXISTS search");
 

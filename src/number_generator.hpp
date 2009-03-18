@@ -11,14 +11,16 @@
 #include "database.hpp"
 #include "settings.hpp"
 
-//libtommath
-#include <mpint.hpp>
+//include
 #include <portable_sleep.hpp>
 
 //std
 #include <fstream>
 #include <iostream>
 #include <vector>
+
+//tommath
+#include <mpint.hpp>
 
 //windows PRNG
 #ifdef WIN32

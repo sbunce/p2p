@@ -4,6 +4,7 @@
 
 int main()
 {
+	database::init::run();
 	database::connection DB;
 	database::table::preferences DBP;
 

@@ -4,6 +4,7 @@
 
 int main()
 {
+	database::init::run();
 	database::connection DB;
 	DB.query("DELETE FROM prime");
 	database::table::prime DBP;

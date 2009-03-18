@@ -9,12 +9,12 @@
 #include "database_connection.hpp"
 #include "settings.hpp"
 
-//libtommath
-#include <mpint.hpp>
-
 //std
 #include <iostream>
 #include <sstream>
+
+//tommath
+#include <mpint.hpp>
 
 namespace database{
 namespace table{
