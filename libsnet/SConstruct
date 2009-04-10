@@ -1,0 +1,15 @@
+#site_scons
+import boost
+import unit_test
+
+Import('env_base')
+
+static_libs = [
+	boost.static_library('date_time'),
+	boost.static_library('system'),
+	boost.static_library('thread')
+]
+
+env_base.Program('net', 
+	['main.cpp', 'network.cpp'] + static_libs
+)
