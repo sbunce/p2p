@@ -5,7 +5,7 @@ hash_tree::hash_tree(const std::string & database_path):
 	DB(database_path),
 	stop_thread(false)
 {
-	SHA.reserve(protocol::FILE_BLOCK_SIZE);
+
 }
 
 hash_tree::status hash_tree::check(tree_info & Tree_Info, boost::uint64_t & bad_block)
@@ -17,7 +17,7 @@ hash_tree::status hash_tree::check(tree_info & Tree_Info, boost::uint64_t & bad_
 		for(boost::uint64_t x=0; x<Tree_Info.tree_block_count; ++x){
 			Status = check_block(Tree_Info, x);
 			if(Status == BAD){
-				Tree_Info.Contiguous->trim(x);
+				Tree_Info.Contiguous.trim(x);
 				bad_block = x;
 				if(bad_block != 0){
 					LOGGER << "bad block " << x << " in tree " << Tree_Info.root_hash;
@@ -100,8 +100,8 @@ hash_tree::status hash_tree::check_file_block(tree_info & Tree_Info, const boost
 void hash_tree::check_contiguous(tree_info & Tree_Info)
 {
 	contiguous_map<boost::uint64_t, std::string>::contiguous_iterator c_iter_cur, c_iter_end;
-	c_iter_cur = Tree_Info.Contiguous->begin_contiguous();
-	c_iter_end = Tree_Info.Contiguous->end_contiguous();
+	c_iter_cur = Tree_Info.Contiguous.begin_contiguous();
+	c_iter_end = Tree_Info.Contiguous.end_contiguous();
 	while(c_iter_cur != c_iter_end){
 		status Status = check_block(Tree_Info, c_iter_cur->first);
 		if(Status == BAD){
@@ -117,13 +117,13 @@ void hash_tree::check_contiguous(tree_info & Tree_Info)
 
 			//bad block, add all blocks this server sent to bad_block
 			contiguous_map<boost::uint64_t, std::string>::iterator iter_cur, iter_end;
-			iter_cur = Tree_Info.Contiguous->begin();
-			iter_end = Tree_Info.Contiguous->end();
+			iter_cur = Tree_Info.Contiguous.begin();
+			iter_end = Tree_Info.Contiguous.end();
 			while(iter_cur != iter_end){
 				if(c_iter_cur->second == iter_cur->second){
 					//found block that same server sent
 					Tree_Info.bad_block.push_back(iter_cur->first);
-					Tree_Info.Contiguous->erase(iter_cur++);
+					Tree_Info.Contiguous.erase(iter_cur++);
 				}else{
 					++iter_cur;
 				}
@@ -142,7 +142,7 @@ void hash_tree::check_contiguous(tree_info & Tree_Info)
 	}
 
 	//any contiguous blocks left were checked and can now be removed
-	Tree_Info.Contiguous->trim_contiguous();
+	Tree_Info.Contiguous.trim_contiguous();
 }
 
 bool hash_tree::create(const std::string & file_path, std::string & root_hash)
@@ -389,7 +389,7 @@ hash_tree::status hash_tree::write_block(tree_info & Tree_Info, const boost::uin
 		if(!DB.blob_write(Tree_Info.Blob, block.data(), block.size(), info.first)){
 			return IO_ERROR;
 		}
-		Tree_Info.Contiguous->insert(std::make_pair(block_num, IP));
+		Tree_Info.Contiguous.insert(std::make_pair(block_num, IP));
 		check_contiguous(Tree_Info);
 		return GOOD;
 	}else{
@@ -402,19 +402,18 @@ hash_tree::status hash_tree::write_block(tree_info & Tree_Info, const boost::uin
 //BEGIN hash_tree::tree_info IMPLEMENTATION
 hash_tree::tree_info::tree_info(
 	const std::string & root_hash_in,
-	const boost::uint64_t & file_size_in
+	const boost::uint64_t & file_size_in,
+	database::connection & DB
 ):
 	root_hash(root_hash_in),
 	file_size(file_size_in),
-	Blob(database::table::hash::tree_open(root_hash_in, file_size_to_tree_size(file_size_in)))
+	Blob(database::table::hash::tree_open(root_hash_in, file_size_to_tree_size(file_size_in), DB))
 {
 	file_size_to_tree_hash(file_size, row);
 	tree_block_count = row_to_tree_block_count(row);
 	file_hash_offset = row_to_file_hash_offset(row);
 	tree_size = file_size_to_tree_size(file_size);
-
-	Contiguous = boost::shared_ptr<contiguous_map<boost::uint64_t,
-		std::string> >(new contiguous_map<boost::uint64_t, std::string>(0, tree_block_count));
+	Contiguous.set_range(0, tree_block_count);
 
 	if(file_size % protocol::FILE_BLOCK_SIZE == 0){
 		file_block_count = file_size / protocol::FILE_BLOCK_SIZE;
@@ -578,7 +577,7 @@ const boost::uint64_t & hash_tree::tree_info::get_last_file_block_size()
 
 bool hash_tree::tree_info::highest_good(boost::uint64_t & HG)
 {
-	HG = Contiguous->start_range();
+	HG = Contiguous.start_range();
 	if(HG != 0){
 		--HG;
 		return true;

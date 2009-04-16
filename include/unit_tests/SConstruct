@@ -20,6 +20,11 @@ env_base.unit_test([
 ])
 
 env_base.unit_test([
+	'buffer.cpp'
+])
+
+
+env_base.unit_test([
 	'contiguous_map.cpp',
 	boost.static_library('date_time'),
 	boost.static_library('system'),
@@ -47,6 +52,13 @@ env_base.unit_test([
 	boost.static_library('system'),
 	boost.static_library('thread'),
 	sqlite3.static_library()
+])
+
+env_base.unit_test([
+	'locking_shared_ptr.cpp',
+	boost.static_library('date_time'),
+	boost.static_library('system'),
+	boost.static_library('thread')
 ])
 
 env_base.unit_test([

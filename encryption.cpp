@@ -3,13 +3,13 @@
 encryption::encryption()
 {
 	g = "2"; //fast generater, it's normal for 2 or 5 to be used
-	s = number_generator::singleton().random_mpint(protocol::DH_KEY_SIZE);
+	s = number_generator::singleton().random(protocol::DH_KEY_SIZE);
 	State = waiting_for_prime;
 }
 
 std::string encryption::get_prime()
 {
-	p = number_generator::singleton().random_prime_mpint();
+	p = number_generator::singleton().random_prime();
 	return std::string((char *)p.to_bin(), p.to_bin_size());
 }
 

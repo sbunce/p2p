@@ -34,24 +34,22 @@ static int check_exists_call_back(bool & exists, int columns_retrieved, char ** 
 
 void database::init::preferences(database::connection & DB)
 {
-	DB.query("CREATE TABLE IF NOT EXISTS preferences (download_directory TEXT, \
-		share_directory TEXT, max_connections INTEGER, download_rate INTEGER, \
-		upload_rate INTEGER)");
+	DB.query("CREATE TABLE IF NOT EXISTS preferences (max_connections INTEGER, \
+		max_download_rate INTEGER, max_upload_rate INTEGER)");
 	bool exists = false;
 	DB.query("SELECT count(1) FROM preferences", &check_exists_call_back, exists);
 	if(!exists){
 		//set defaults if no preferences yet exist
 		std::stringstream ss;
-		ss << "INSERT INTO preferences VALUES('" << settings::DOWNLOAD_DIRECTORY
-		<< "', '" << settings::SHARE_DIRECTORY << "', " << settings::MAX_CONNECTIONS 
-		<< ", " << settings::DOWNLOAD_RATE << ", " << settings::UPLOAD_RATE << ")";
+		ss << "INSERT INTO preferences VALUES(" << settings::MAX_CONNECTIONS 
+		<< ", " << settings::MAX_DOWNLOAD_RATE << ", " << settings::MAX_UPLOAD_RATE << ")";
 		DB.query(ss.str());
 	}
 }
 
 void database::init::prime(database::connection & DB)
 {
-	DB.query("CREATE TABLE IF NOT EXISTS prime (key INTEGER PRIMARY KEY, number TEXT)");
+	DB.query("CREATE TABLE IF NOT EXISTS prime (number TEXT)");
 }
 
 void database::init::run(const std::string & database_path)

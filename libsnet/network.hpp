@@ -45,6 +45,10 @@ public:
 	};
 
 	/* ctor parameters
+	boost::bind is the nicest way to do a callback to the member function of a
+	specific object. ex:
+		boost::bind(&http::connect_call_back, &HTTP, _1, _2, _3, _4)
+
 	connect_call_back:
 		Called when server connected to. The direction indicates whether we
 		established connection (direction OUTGOING), or if someone established a
@@ -116,8 +120,9 @@ private:
 	select() will monitor. We can asynchronously signal select() to return by
 	writing a byte to the read FD of the pipe.
 	*/
-	int selfpipe_read;  //put in master_FDS
-	int selfpipe_write; //written to get select to return
+	int selfpipe_read;        //put in master_FDS
+	int selfpipe_write;       //written to get select to return
+	char selfpipe_discard[8]; //used to discard selfpipe bytes
 
 	//call backs
 	boost::function<void (int, buffer &, buffer &, direction)> connect_call_back;
@@ -229,6 +234,7 @@ private:
 	socket_data * create_socket_data(const int socket_FD);
 	void establish_incoming_connections();
 	void establish_outgoing_connection(const std::string & IP, const int port);
+	void process_connection_queue();
 	void remove_socket(const int socket_FD);
 	void select_loop();
 	void start_listener(const int port);

@@ -8,7 +8,7 @@
 //std
 #include <string>
 
-database::connection DB;
+database::connection DB("DB");
 
 class test
 {

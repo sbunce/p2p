@@ -12,29 +12,28 @@ p2p::p2p():
 	//setup database tables
 	database::init::run(path::database());
 
-	//DB_Preferences.get_max_download_rate();
-	//DB_Preferences.get_max_upload_rate();
-	//max_connections = DB_Preferences.get_max_connections();
+	//trigger initialization of singletons
+	number_generator::singleton();
 }
 
 p2p::~p2p()
 {
-
+	number_generator::singleton().stop();
 }
 
 bool p2p::current_download(const std::string & hash, download_status & status)
 {
-	//P2P_Buffer.current_download(hash, status);
+
 }
 
 void p2p::current_downloads(std::vector<download_status> & status)
 {
-	//P2P_Buffer.current_downloads(status);
+
 }
 
 void p2p::current_uploads(std::vector<upload_status> & info)
 {
-	//P2P_Buffer.current_uploads(info);
+
 }
 
 bool p2p::file_info(const std::string & hash, std::string & path, boost::uint64_t & tree_size, boost::uint64_t & file_size)

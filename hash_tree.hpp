@@ -36,9 +36,11 @@ public:
 	{
 		friend class hash_tree;
 	public:
+		//only hash_tree can instantiate this
 		tree_info(
 			const std::string & root_hash_in,
-			const boost::uint64_t & file_size_in
+			const boost::uint64_t & file_size_in,
+			database::connection & DB
 		);
 
 		//see documentation for private variables returned
@@ -83,7 +85,7 @@ public:
 		bad block is detected all blocks from the server are removed from
 		contiguous and added to bad_block.
 		*/
-		boost::shared_ptr<contiguous_map<boost::uint64_t, std::string> > Contiguous;
+		contiguous_map<boost::uint64_t, std::string> Contiguous;
 		std::vector<boost::uint64_t> bad_block;
 
 		/* All pure functions, none require locking.
@@ -129,31 +131,30 @@ public:
 
 	/*
 	check:
-		Checks the entire hash tree.
-		Returns GOOD if whole tree good.
-		Returns BAD and sets bad_block to first bad block if tree bad.
-		Returns IO_ERROR if error reading tree.
+		Checks the entire hash tree. Returns GOOD if whole tree good. Returns BAD
+		and sets bad_block to first bad block if tree bad. Returns IO_ERROR if
+		error reading tree.
 		Note: must call this with the hash_tree_info before calling write_block
 	check_file_block:
-		Checks a file block against a hash in the hash tree.
-		Returns GOOD if file block good.
-		Returns BAD if file block bad.
-		Returns IO_ERROR if cannot read hash tree.
+		Checks a file block against a hash in the hash tree. Returns GOOD if file
+		block good. Returns BAD if file block bad. Returns IO_ERROR if cannot read
+		hash tree.
 	create:
-		Create hash tree.
-		Returns true and sets root_hash if creation suceeded.
+		Create hash tree. Returns true and sets root_hash if creation suceeded.
 		Returns false if creation failed, error reading tree, or if stop called.
+	get_tree_info:
+		Returns tree info needed to read and write hash tree.
+		Note: This is an expensive function to call. The returned hash tree should
+		      be saved and reused.
 	read_block:
-		Get block from hash tree.
-		Returns GOOD if suceeded.
-		Returns IO_ERROR if cannot read hash tree.
+		Get block from hash tree. Returns GOOD if suceeded. Returns IO_ERROR if
+		cannot read hash tree.
 	stop:
 		Triggers early termination of create().
 	write_block:
-		Add block to hash tree, or replace block in hash tree.
+		Add block to hash tree, or replace block in hash tree. Returns GOOD if
+		block written sucessfully. Returns IO_ERROR if could not write block.
 		Precondition: Must have called check() to make sure the block is good.
-		Returns GOOD if block written sucessfully.
-		Returns IO_ERROR if could not write block.
 	*/
 	status check(tree_info & Tree_Info, boost::uint64_t & bad_block);
 	status check_file_block(tree_info & Tree_Info, const boost::uint64_t & file_block_num, const char * block, const int & size);

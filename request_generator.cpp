@@ -11,12 +11,10 @@ void request_generator::init(const boost::uint64_t & begin_in, const boost::uint
 {
 	assert(end_in - begin_in > 0);
 	assert(timeout_in != 0);
-
 	current = begin_in;
 	begin = begin_in;
 	end = end_in;
 	timeout = timeout_in;
-
 	initialized = true;
 }
 

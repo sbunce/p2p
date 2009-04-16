@@ -194,13 +194,6 @@ unsigned network::get_max_upload_rate()
 
 void network::establish_incoming_connections()
 {
-	/*
-	Listener is set to non-blocking for the duration of this function. All
-	incoming connections are thrown in master_FDS. The select_loop will pick up
-	sockets when they connect, or they'll time out.
-	*/
-	fcntl(listener, F_SETFL, O_NONBLOCK);
-
 	int new_FD = 0;
 	while(new_FD != -1){
 		sockaddr_in remoteaddr;
@@ -220,9 +213,6 @@ void network::establish_incoming_connections()
 			}
 		}
 	}
-
-	//set listener back to blocking so it may once again be used with select()
-	fcntl(listener, F_SETFL, 0);
 }
 
 void network::establish_outgoing_connection(const std::string & IP, const int port)
@@ -274,11 +264,26 @@ void network::establish_outgoing_connection(const std::string & IP, const int po
 		LOGGER << "connection " << IP << ":" << port << " socket " << new_FD;
 	}
 
-	//set socket back to blocking
-	fcntl(new_FD, F_SETFL, 0);
-
 	Connecting_Socket_Data.insert(std::make_pair(new_FD, new socket_data(writes_pending, outgoing_connections)));
 	add_socket(new_FD);
+}
+
+void network::process_connection_queue()
+{
+	//establish connections queued by add_connection()
+	std::pair<std::string, int> new_connect_info;
+	while(true){
+		{//begin lock scope
+		boost::recursive_mutex::scoped_lock lock(connection_queue_mutex);
+		if(connection_queue.empty()){
+			break;
+		}else{
+			new_connect_info = connection_queue.front();
+			connection_queue.pop();
+		}
+		}//end lock scope
+		establish_outgoing_connection(new_connect_info.first, new_connect_info.second);
+	}
 }
 
 void network::remove_socket(const int socket_FD)
@@ -335,6 +340,11 @@ void network::start_listener(const int port)
 		exit(1);
 	}
 
+	/*
+	Listener set to non-blocking. Also all incoming connections will inherit this.
+	*/
+	fcntl(listener, F_SETFL, O_NONBLOCK);
+
 	//prepare listener info
 	sockaddr_in myaddr;                  //server address
 	myaddr.sin_family = AF_INET;         //ipv4
@@ -382,8 +392,7 @@ void network::select_loop()
 	bool send_buff_empty;        //used for pre/post-call_back empty comparison
 	int service;                 //set by select to how many sockets need to be serviced
 	socket_data * SD;            //holder for create_socket_data return value
-	std::pair<std::string, int> new_connect_info; //used to make outgoing connections
-	std::time_t last_time(std::time(NULL));       //time during last iteration (used to run stuff once per second)
+	std::time_t last_time(std::time(NULL)); //used to run stuff once per second
 
 	//main loop
 	while(true){
@@ -394,22 +403,10 @@ void network::select_loop()
 			check_timeouts();
 		}
 
-		//establish connections queued by add_connection()
-		while(true){
-			{//begin lock scope
-			boost::recursive_mutex::scoped_lock lock(connection_queue_mutex);
-			if(connection_queue.empty()){
-				break;
-			}else{
-				new_connect_info = connection_queue.front();
-				connection_queue.pop();
-			}
-			}//end lock scope
-			establish_outgoing_connection(new_connect_info.first, new_connect_info.second);
-		}
+		process_connection_queue();
 
 		//timeout before select returns with no results
-		tv.tv_sec = 0; tv.tv_usec = 10000;
+		tv.tv_sec = 0; tv.tv_usec = 10000; // 1/100 second
 
 		//determine what sockets select should monitor
 		max_upload = Rate_Limit.upload_rate_control();
@@ -418,11 +415,11 @@ void network::select_loop()
 			write_FDS = master_FDS;
 		}else{
 			/*
-			When no writes pending we only check for writability on sockets in
+			When no buffers non-empty we only check for writability on sockets in
 			progress of connecting. Writeability on a socket in progress of
 			connecting means the socket has connected. This will NOT have the same
 			effect as checking for writeability on a connected socket which causes
-			100% CPU usage.
+			100% CPU usage when all buffers are non-empty.
 			*/
 			write_FDS = connect_FDS;
 		}
@@ -455,8 +452,8 @@ void network::select_loop()
 
 			Because of this we set the maximum send such that in the worst case
 			each socket (that needs to be serviced) gets to send/recv and equal
-			amount of data. This will cause more iterations in the main loop but
-			it is necessary.
+			amount of data. It's possible some higher numbered sockets will get
+			excluded if there are more sockets than bytes to send()/recv().
 			*/
 			max_upload_per_socket = max_upload / service;
 			max_download_per_socket = max_download / service;
@@ -477,7 +474,7 @@ void network::select_loop()
 				if(x == selfpipe_read){
 					if(FD_ISSET(x, &read_FDS)){
 						//discard recv'd bytes
-						read(x, recv_buff, sizeof(recv_buff));
+						read(x, selfpipe_discard, sizeof(selfpipe_discard));
 						socket_serviced = true;
 					}
 					if(FD_ISSET(x, &write_FDS)){

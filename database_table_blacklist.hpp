@@ -23,8 +23,6 @@ namespace table{
 class blacklist : private boost::noncopyable
 {
 public:
-	blacklist(const std::string & database_path);
-
 	/*
 	add:
 		Add IP to blacklist.
@@ -35,14 +33,12 @@ public:
 		Note: For first call last_state_seen == 0.
 		Postcondition: last_state_seen == blacklist_state.
 	*/
-	void add(const std::string & IP);
 	static void add(const std::string & IP, database::connection & DB);
-	bool is_blacklisted(const std::string & IP);
 	static bool is_blacklisted(const std::string & IP, database::connection & DB);
 	static bool modified(int & last_state_seen);
 
 private:
-	database::connection DB;
+	blacklist(){}
 
 	/*
 	Static variables and means to initialize them. Do not use these variables

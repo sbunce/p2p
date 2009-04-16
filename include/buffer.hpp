@@ -1,3 +1,15 @@
+/*
+This container is modeled after a std::string.
+
+The purpose of this container is to be used for a network buffer. It doesn't do
+copy-on-write optimization which is not thread safe. It also allows it's
+underlying buffer to be exposed in a non-const way so it can be directly
+written to.
+
+This container has a size and a reserve size. The size is memory used and the
+reserve size is the memory allocated for the buffer (the same as the reserve
+size on a std::string).
+*/
 #ifndef H_BUFFER
 #define H_BUFFER
 
@@ -33,8 +45,112 @@ public:
 		}
 	}
 
+	//bidirectional iterator
+	class iterator
+	{
+		friend class buffer;
+	public:
+		iterator(){}
+		const iterator & operator = (const iterator & rval)
+		{
+			pos = rval.pos;
+			buff = rval.buff;
+			return *this;
+		}
+		bool operator == (const iterator & rval)
+		{
+			return pos == rval.pos;
+		}
+		bool operator != (const iterator & rval)
+		{
+			return pos != rval.pos;
+		}
+		iterator & operator ++ ()
+		{
+			++pos;
+			return *this;
+		}
+		iterator operator ++ (int)
+		{
+			int pos_tmp = pos;
+			++pos;
+			return iterator(pos_tmp, buff);
+		}
+		iterator & operator -- ()
+		{
+			--pos;
+			return *this;
+		}
+		iterator operator -- (int)
+		{
+			int pos_tmp = pos;
+			--pos;
+			return iterator(pos_tmp, buff);
+		}
+		unsigned char & operator * ()
+		{
+			return buff[pos];
+		}
+		iterator operator + (const int rval)
+		{
+			return iterator(pos + rval, buff);
+		}
+		iterator operator + (const iterator & rval)
+		{
+			return iterator(pos + rval.pos, buff);
+		}
+		iterator operator - (const int rval)
+		{
+			return iterator(pos - rval, buff);
+		}
+		iterator operator - (const iterator & rval)
+		{
+			return iterator(pos - rval.pos, buff);
+		}
+		iterator & operator += (const int rval)
+		{
+			pos += rval;
+			return *this;
+		}
+		iterator & operator += (const iterator & rval)
+		{
+			pos += rval.pos;
+			return *this;
+		}
+		iterator & operator -= (const int rval)
+		{
+			pos -= rval;
+			return *this;
+		}
+		iterator & operator -= (const iterator & rval)
+		{
+			pos -= rval.pos;
+			return *this;
+		}
+		unsigned char & operator [] (const int idx)
+		{
+			return buff[pos + idx];
+		}
+		bool operator < (const iterator & rval)
+		{
+			return pos < rval.pos;
+		}
+
+	private:
+		iterator(
+			const int pos_in,
+			unsigned char * buff_in
+		):
+			pos(pos_in),
+			buff(buff_in)
+		{}
+
+		int pos;              //offset from start of buffer iterator is at
+		unsigned char * buff; //buff that exists in buffer which spawned this iterator
+	};
+
 	//appends 1 byte to buffer
-	buffer & append(const unsigned char & char_append)
+	buffer & append(const unsigned char char_append)
 	{
 		allocate(bytes, bytes + 1);
 		buff[bytes - 1] = char_append;
@@ -42,11 +158,17 @@ public:
 	}
 
 	//appends specified number of bytes from buff_append
-	buffer & append(const unsigned char * buff_append, const size_t & size)
+	buffer & append(const unsigned char * buff_append, const size_t size)
 	{
 		allocate(bytes, bytes + size);
 		std::memcpy(buff + bytes - size, buff_append, size);
 		return *this;
+	}
+
+	//returns iterator to first unsigned char of buffer
+	iterator begin()
+	{
+		return iterator(0, buff);
 	}
 
 	//clears contents of buffer
@@ -56,9 +178,9 @@ public:
 	}
 
 	//returns non NULL terminated string
-	const char * data()
+	unsigned char * data()
 	{
-		return (const char *)buff;
+		return buff;
 	}
 
 	//returns true if no data in buffer
@@ -67,50 +189,66 @@ public:
 		return bytes == 0;
 	}
 
-	//erase bytes starting at index, ending at index + length
-	void erase(const size_t & index, const size_t & length)
+	//returns iterator to one past last unsigned char of buffer
+	iterator end()
 	{
-		assert(index + length <= bytes);
-		std::memmove(buff + index, buff + index + length, bytes - index - length);
-		allocate(bytes, bytes - length);
+		return iterator(bytes, buff);
 	}
 
-	//returns location of start of first str if it exists in buffer
-	size_t find(const char * str)
+	/*
+	Erase bytes starting at index, ending at index + length. If no length
+	specified bytes erased starting at index to end of buffer.
+	*/
+	void erase(const size_t index, const size_t length = npos)
 	{
-		const char * str_walk = str;
-		size_t start_of_match = npos;
-		for(size_t x=0; x < bytes; ++x){
-			if(*str_walk == 0){
-				break;
-			}
-			if(buff[x] == *str_walk){
-				++str_walk;
-				if(start_of_match == npos){
-					start_of_match = x;
-				}
-			}else{
-				str_walk = str;
-			}
+		if(length == npos){
+			assert(index < bytes);
+			allocate(bytes, index);
+		}else{
+			assert(index + length <= bytes);
+			std::memmove(buff + index, buff + index + length, bytes - index - length);
+			allocate(bytes, bytes - length);
 		}
-		return start_of_match;
+	}
+
+	//find substring starting at index
+	int find(const unsigned char * str, const int length, int index = 0)
+	{
+		assert(index + length < bytes);
+		unsigned char * pos = std::search(
+			(unsigned char *)(buff + index), (unsigned char *)(buff + bytes),
+			(unsigned char *)str, (unsigned char *)(str + length)
+		);
+
+		if(pos == (unsigned char *)(str + length)){
+			//substring not found
+			return npos;
+		}else{
+			return (int)(pos - buff);
+		}
 	}
 
 	//keeps a specified minimum number of bytes allocated
-	void reserve(const size_t & size)
+	void reserve(const size_t size)
 	{
 		allocate(reserved, size);
 	}
 
-	const size_t & size()
+	//makes buffer the specified size, memory in buffer left uninitialized
+	void resize(const size_t size)
+	{
+		allocate(bytes, size);
+	}
+
+	size_t size()
 	{
 		return bytes;
 	}
 
 	//allows access to individual bytes
-	unsigned char & operator [] (const size_t & index)
+	unsigned char & operator [] (const size_t index)
 	{
-		assert(index < bytes || index < reserved);
+		assert(index < bytes);
 		return buff[index];
 	}
 

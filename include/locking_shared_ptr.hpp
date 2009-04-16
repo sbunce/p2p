@@ -65,26 +65,14 @@ public:
 		boost::shared_ptr<boost::recursive_mutex> pointee_mutex;
 	};
 
-	/*
-	DEBUG
-	Consider using boost::recursive_mutex ctor param to provide destruction function.
-	boost::shared_ptr<boost::recursive_mutex>
-		(&pointee_mutex, mem_fn(&boost::recursive_mutex::my_unlock))
-	*/
 	proxy operator -> () const { return proxy(pointee, pointee_mutex); }
 	proxy operator * () const { return proxy(pointee, pointee_mutex); }
 
-	/*
-	These are for when multiple expressions must hold the lock on the
-	locking_shared_ptr.
-	*/
+	//allows exclusive access for multiple expressions
 	void lock() const { pointee_mutex->lock(); }
 	void unlock() const { pointee_mutex->unlock(); }
 
-	/*
-	Returns copy of wrapped pointer. This should generally only be used to
-	compare pointers by value. This doesn't do any locking.
-	*/
+	//get wrapped pointer, does not do locking
 	T * get() const
 	{
 		return pointee.get();

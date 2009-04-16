@@ -27,15 +27,15 @@ def setup(env):
 	num_cpu = int(os.environ.get('NUM_CPU', 2))
 	env.SetOption('num_jobs', num_cpu)
 
-	env['CPPPATH'].append(['#include', '#libsqlite3', '#libtommath'])
-	env['LIBPATH'].append(['#include', '#libsqlite3', '#libtommath'])
+	env['CPPPATH'].append(['#include', '#libsnet', '#libsqlite3', '#libtommath'])
+	env['LIBPATH'].append(['#libsqlite3', '#libtommath', '#libsnet'])
 
 	#boost headers are default for all targets
 	boost.include(env)
 
 	#platform specific options
 	if sys.platform == 'linux2':
-		env['CCFLAGS'].append('-O0')
+		env['CCFLAGS'].append('-O3')
 		#env['CCFLAGS'].append('-fno-inline')
 		env['LIBS'].append('pthread')
 	if sys.platform == 'win32':

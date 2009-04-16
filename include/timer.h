@@ -1,6 +1,9 @@
 //C
 #include <stdint.h>
 
+//include
+#include <portable_sleep.hpp>
+
 //std
 #include <cassert>
 #include <cmath>
@@ -39,14 +42,14 @@ namespace timer
 	/*
 	Returns CPU speed (hz). Sleeps for 1 second the first time it is called.
 	*/
-	static unsigned int CPU_hz = 0;
 	unsigned int hz()
 	{
+		static unsigned int CPU_hz = 0;
 		if(CPU_hz != 0){
 			return CPU_hz;
 		}else{
 			uint64_t start = TSC();
-			sleep(1);
+			portable_sleep::ms(1000);
 			uint64_t end = TSC();
 			return CPU_hz = end - start;
 		}

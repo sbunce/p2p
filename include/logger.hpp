@@ -16,6 +16,7 @@ class logger
 public:
 	~logger()
 	{
+//DEBUG, initialization of Mutex not thread safe
 		static boost::mutex Mutex;
 		boost::mutex::scoped_lock lock(Mutex);
 		std::cout << file << ":" << func << ":" << line << " " << buffer.str() << "\n";

@@ -80,7 +80,7 @@ public:
 	blob(
 		const std::string & table_in,
 		const std::string & column_in,
-		const boost::int64_t & rowid_in
+		const boost::int64_t rowid_in
 	):
 		table(table_in),
 		column(column_in),
@@ -89,7 +89,7 @@ public:
 
 	const std::string table;
 	const std::string column;
-	const boost::int64_t rowid;
+	const boost::int64_t rowid; //primary key of row
 };
 
 class connection : private boost::noncopyable
@@ -450,7 +450,9 @@ private:
 	*/
 	bool blob_open(blob & Blob, const bool & writeable, sqlite3_blob *& blob_handle)
 	{
-		assert(Blob.rowid != 0);
+		assert(!Blob.column.empty());
+		assert(!Blob.table.empty());
+		assert(Blob.rowid > 0);
 		int code;
 		while((code = sqlite3_blob_open(
 			DB_handle,

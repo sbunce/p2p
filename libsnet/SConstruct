@@ -4,12 +4,9 @@ import unit_test
 
 Import('env_base')
 
-static_libs = [
-	boost.static_library('date_time'),
-	boost.static_library('system'),
-	boost.static_library('thread')
-]
+#sub scons files
+SConscript([
+	'http/SConstruct'
+])
 
-env_base.Program('net', 
-	['main.cpp', 'network.cpp'] + static_libs
-)
+env_base.StaticLibrary('libsnet', ['network.cpp', 'rate_limit.cpp'])

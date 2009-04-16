@@ -12,10 +12,10 @@
 #include "settings.hpp"
 
 //include
-#include <portable_sleep.hpp>
 #include <singleton.hpp>
 
 //std
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -32,59 +32,47 @@ class number_generator : public singleton_base<number_generator>
 {
 	friend class singleton_base<number_generator>;
 public:
+	//called by p2p dtor to terminate generate thread
+	void stop();
 
 	/*
-	init:
-		Initialize singleton. Not necessary to call but can be called to
-		make sure prime generation thread is running.
 	prime_count:
-		Return number of primes in prime cache.
-	random_mpint:
-		Return random mpint of specified size.
-	random_prime_mpint:
-		Return random mpint settings::DH_KEY_SIZE long.Blocks if cache empty, until
-		new primes generated.
+		Returns number of primes in prime_cache.
+	random:
+		Returns random mpint of specified size.
+	random_prime:
+		Returns prime in prime cache. Size of prime is always settings::DH_KEY_SIZE.
 	*/
 	unsigned prime_count();
-	mpint random_mpint(const int & bytes);
-	mpint random_prime_mpint();
+	mpint random(const int & bytes);
+	mpint random_prime();
 
 private:
 	number_generator();
-	~number_generator();
 
-	//used to block genprime_loop if enough primes generated
-	boost::condition_variable_any genprime_loop_cond;
-	boost::mutex genprime_loop_mutex;
+	boost::thread generate_thread;
 
-	//used to block random_prime_mpint if no prime available
-	boost::condition_variable_any random_prime_mpint_cond;
-	boost::mutex random_prime_mpint_mutex;
+	boost::condition_variable_any prime_remove_cond;
+	boost::condition_variable_any prime_generate_cond;
+	boost::mutex prime_mutex;
+
+	//cache of primes, all access must be locked with prime_mutex
+	std::vector<mpint> Prime_Cache;
 
 	/*
 	PRNG function that mp_prime_random_ex needs
-		buff will be filled with random bytes
-		length is how many random bytes desired
-		data is an optional pointer to an object that can be passed to PRNG
+		buff is filled with random bytes
+		length is how many bytes to put in to buff
+		data is optional pointer
 	*/
 	static int PRNG(unsigned char * buff, int length, void * data);
 
 	/*
-	All of these functions are associated with public static member functions.
-	Look at documentation for static member functions to find out what these do.
-
-	Do not request more than settings::DH_KEY_SIZE + 1 from random_mpint_priv().
+	generate:
+		The generate_thread runs in this function and generates primes.
 	*/
-	mpint random_mpint_priv(const int & bytes);
-	mpint random_prime_mpint_priv();
+	void generate();
 
-	/*
-	Generating primes takes a long time, all this function does is generate
-	primes in it's own thread.
-	*/
-	boost::thread genprime_thread;
-	void genprime_loop();
-
-	database::table::prime DB_Prime;
+	database::connection DB;
 };
 #endif

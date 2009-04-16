@@ -19,7 +19,7 @@ class CLI_args
 {
 public:
 	//pass argc and argv strait from the main() function parameters
-	CLI_args(const int & argc_in, char * argv_in[]):
+	CLI_args(const int argc_in, char * argv_in[]):
 		argc(argc_in)
 	{
 		for(int x=0; x<argc; ++x){
@@ -27,13 +27,7 @@ public:
 		}
 	}
 
-	/*
-	check_bool   - returns true if specified parameter was passed to program
-	get_string   - sets str to string associated with param (ex: -path=/tra/la/la would set str to /tra/la/la)
-	               returns false if string not found, else true
-	help_message - prints a help message and exits the program if a specified parameter is found
-	program_name - returns the program name
-	*/
+	//returns true if specified parameter was passed to program
 	bool check_bool(const std::string & param)
 	{
 		boost::recursive_mutex::scoped_lock lock(Mutex);
@@ -49,6 +43,12 @@ public:
 		return false;
 	}
 
+	/*
+	Returns true and sets string if string parameter passed to program. Parameter
+	must contain a zero before string. ex:
+		--foo=bar
+		Use "--foo" as param and str would be set to "bar".
+	*/
 	bool get_string(const std::string & param, std::string & str)
 	{
 		boost::recursive_mutex::scoped_lock lock(Mutex);
@@ -65,6 +65,7 @@ public:
 		return false;
 	}
 
+	//prints help message if specified help parameter exists
 	void help_message(const std::string & help_param, const std::string & help_message)
 	{
 		boost::recursive_mutex::scoped_lock lock(Mutex);
@@ -74,6 +75,7 @@ public:
 		}
 	}
 
+	//returns name of program (parameter 0)
 	const std::string & program_name()
 	{
 		boost::recursive_mutex::scoped_lock lock(Mutex);

@@ -16,28 +16,12 @@ atomic_int<int> & database::table::blacklist::blacklist_state()
 }
 //END static
 
-database::table::blacklist::blacklist(const std::string & database_path):
-	DB(database_path)
-{
-
-}
-
-void database::table::blacklist::add(const std::string & IP)
-{
-	add(IP, DB);
-}
-
 void database::table::blacklist::add(const std::string & IP, database::connection & DB)
 {
 	std::stringstream ss;
 	ss << "INSERT INTO blacklist VALUES ('" << IP << "')";
 	DB.query(ss.str());
 	++blacklist_state();
-}
-
-bool database::table::blacklist::is_blacklisted(const std::string & IP)
-{
-	return is_blacklisted(IP, DB);
 }
 
 static int is_blacklisted_call_back(bool & found, int columns, char ** response, char ** column_name)

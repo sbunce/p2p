@@ -1,44 +1,39 @@
 #include "number_generator.hpp"
 
-number_generator::number_generator()
+number_generator::number_generator():
+	DB(path::database())
 {
-	genprime_thread = boost::thread(boost::bind(&number_generator::genprime_loop, this));
-}
-
-number_generator::~number_generator()
-{
-	genprime_thread.interrupt();
-	genprime_thread.join();
+	database::table::prime::read_all(Prime_Cache, DB);
+	generate_thread = boost::thread(boost::bind(&number_generator::generate, this));
 }
 
 unsigned number_generator::prime_count()
 {
-	return DB_Prime.count();
+	boost::mutex::scoped_lock lock(prime_mutex);
+	return Prime_Cache.size();
 }
 
-mpint number_generator::random_mpint(const int & bytes)
+mpint number_generator::random(const int & bytes)
 {
-	unsigned char buff[protocol::DH_KEY_SIZE];
+	unsigned char * buff = (unsigned char *)std::malloc(bytes);
+	assert(buff);
 	PRNG(buff, bytes, NULL);
-	return mpint(buff, bytes);
+	mpint temp(buff, bytes);
+	std::free(buff);
+	return temp;
 }
 
-mpint number_generator::random_prime_mpint()
+mpint number_generator::random_prime()
 {
-	try{
-		mpint random;
-		random_prime_mpint_mutex.lock();
-		while(!DB_Prime.retrieve(random)){
-			random_prime_mpint_cond.wait(random_prime_mpint_mutex);
-		}
-		random_prime_mpint_mutex.unlock();
-		genprime_loop_cond.notify_one();
-		return random;
-	}catch(const boost::thread_interrupted & ex){
-		random_prime_mpint_mutex.unlock();
-		LOGGER << "thread should not be interrupted";
-		exit(1);
+	mpint temp;
+	boost::mutex::scoped_lock lock(prime_mutex);
+	while(Prime_Cache.empty()){
+		prime_remove_cond.wait(prime_mutex);
 	}
+	temp = Prime_Cache.back();
+	Prime_Cache.pop_back();
+	prime_generate_cond.notify_one();
+	return temp;
 }
 
 int number_generator::PRNG(unsigned char * buff, int length, void * data)
@@ -46,7 +41,7 @@ int number_generator::PRNG(unsigned char * buff, int length, void * data)
 #ifdef WIN32
 	HCRYPTPROV hProvider = 0;
 	if(CryptAcquireContextW(&hProvider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)){
-		if(CryptGenRandom(hProvider, sizeof(buff), buff)){
+		if(CryptGenRandom(hProvider, length, buff)){
 			CryptReleaseContext(hProvider, 0); 
 			return length;
 		}
@@ -54,40 +49,51 @@ int number_generator::PRNG(unsigned char * buff, int length, void * data)
 	LOGGER << "error generating random number";
 	exit(1);
 #else
-	char ch;
-	int length_start = length;
 	std::fstream fin("/dev/urandom", std::ios::in | std::ios::binary);
-	while(length--){
+	char ch;
+	for(int x=0; x<length; ++x){
 		fin.get(ch);
 		*buff++ = (unsigned char)ch;
 	}
-	return length_start;
+	return length;
 #endif
 }
 
-void number_generator::genprime_loop()
+void number_generator::generate()
 {
-	try{
-		while(true){
-			boost::this_thread::interruption_point();
-			genprime_loop_mutex.lock();
-			while(DB_Prime.count() >= settings::PRIME_CACHE){
-				genprime_loop_cond.wait(genprime_loop_mutex);
-			}
-			genprime_loop_mutex.unlock();
-			mpint random;
-			mp_prime_random_ex(
-				&random.c_struct(),
-				1,                       //Miller-Rabin tests
-				protocol::DH_KEY_SIZE*8, //size (bits) of prime to generate
-				0,                       //optional flags
-				&PRNG,
-				NULL                     //optional void* that can be passed to PRNG
-			);
-			DB_Prime.add(random);
-			random_prime_mpint_cond.notify_one();
+	mpint random;
+	while(true){
+		boost::this_thread::interruption_point();
+		{//begin lock scope
+		boost::mutex::scoped_lock lock(prime_mutex);
+		while(Prime_Cache.size() >= settings::PRIME_CACHE){
+			prime_generate_cond.wait(prime_mutex);
 		}
-	}catch(const boost::thread_interrupted & ex){
-		genprime_loop_mutex.unlock();
+		}//end lock scope
+
+		//this should not be locked
+		mp_prime_random_ex(
+			&random.c_struct(),
+			1,                         //Miller-Rabin tests
+			protocol::DH_KEY_SIZE * 8, //size (bits) of prime to generate
+			0,                         //optional flags
+			&PRNG,                     //random byte source
+			NULL                       //optional void * passed to PRNG
+		);
+
+		{//begin lock scope
+		boost::mutex::scoped_lock lock(prime_mutex);
+		Prime_Cache.push_back(random);
+		}//end lock scope
+
+		//notify possible threads waiting for prime to be generated
+		prime_remove_cond.notify_all();
 	}
+}
+
+void number_generator::stop()
+{
+	generate_thread.interrupt();
+	generate_thread.join();
+	database::table::prime::write_all(Prime_Cache, DB);
 }

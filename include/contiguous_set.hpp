@@ -25,17 +25,30 @@ template <typename T_key>
 class contiguous_set
 {
 public:
+	//if this ctor is used set_range() should be called
+	contiguous_set()
+	{
+		set_range(0, 0);
+	}
+
 	/*
 	start_key: lowest possible element insertable in to range
 	end_key:   one past highest possible element insertable in to range
 	*/
-	contiguous_set(
-		const T_key & start_key_in,
-		const T_key & end_key_in
-	):
-		start_key(start_key_in),
-		end_key(end_key_in)
-	{}
+	contiguous_set(const T_key & start_key_in, const T_key & end_key_in)
+	{
+		set_range(start_key_in, end_key_in);
+	}
+
+	/*
+	Clears the contiguous map and sets the range.
+	*/
+	void set_range(const T_key & start_key_in, const T_key & end_key_in)
+	{
+		range.clear();
+		start_key = start_key_in;
+		end_key = end_key_in;
+	}
 
 	//normal iteration done with regular std::map iterator
 	typedef typename std::set<T_key>::iterator iterator;
@@ -69,7 +82,7 @@ public:
 		}
 
 		//pre-increment
-		const contiguous_iterator & operator ++ ()
+		contiguous_iterator & operator ++ ()
 		{
 			++iter;
 			return *this;

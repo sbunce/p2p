@@ -73,7 +73,7 @@ system.setup_static(env_nogui_static)
 
 #sub scons files
 SConscript([
-#	'include/SConstruct',
+	'include/SConstruct',
 	'libsnet/SConstruct',
 	'libsqlite3/SConstruct',
 	'libtommath/SConstruct',
@@ -100,4 +100,4 @@ common_obj = env_base.Object(src_common)
 #link
 env_gui.Program('p2p_gui', gui_obj + common_obj + static_libs)
 env_nogui.Program('p2p_nogui', nogui_obj + common_obj + static_libs)
-#env_nogui_static.Program('p2p_nogui_static', nogui_obj + common_obj + static_libs)
+env_nogui_static.Program('p2p_nogui_static', nogui_obj + common_obj + static_libs)

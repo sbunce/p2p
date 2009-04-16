@@ -24,7 +24,7 @@ static std::string main()
 {
 	std::string path;
 	path += std::getenv("HOME");
-	path += "/.p2p";
+	path += "/.p2p/";
 	return path;
 }
 
@@ -33,7 +33,7 @@ static std::string download()
 {
 	std::string path;
 	path += std::getenv("HOME");
-	path += "/.p2p/download";
+	path += "/.p2p/download/";
 	return path;
 }
 
@@ -42,7 +42,7 @@ static std::string download_unfinished()
 {
 	std::string path;
 	path += std::getenv("HOME");
-	path += "/.p2p/download_unfinished";
+	path += "/.p2p/download_unfinished/";
 	return path;
 }
 
@@ -51,7 +51,7 @@ static std::string share()
 {
 	std::string path;
 	path += std::getenv("HOME");
-	path += "/.p2p/share";
+	path += "/.p2p/share/";
 	return path;
 }
 

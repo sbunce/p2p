@@ -1,15 +1,18 @@
 TODO
 
--make database::connection lazy.
+-idea: remove fd from fd_set when calling recv_call_back/send_call_back. Call
+the recv_call_back/send_call_back functions with thread pool. When call_back
+returns re-add the fd to fd_set. Queue proxy function to handle removing fd
+and adding fd when call back done.
 
--move include directory to programs directory, same for site scons. Make it so
-scons can build all programs.
+-how is P_WAIT supposed to work with libsnet? I'd need a function to trigger
+a callback with the desired socket. Or some sort of function to send data to a
+specific socket. Perhaps have a event setup. Register an event for a call back
+at a specific time.
+
+-get rid of the copy in network.cpp from array to buffer
 
 -make request generator unit test
-
--turn database_init in to normal class which belongs to p2p.cpp
-
--have all directories created in p2p.cpp ctor.
 
 -requests should be sent before file blocks, when two hosts download from
 eachother the file blocks hog upload that should be used to get requests out.
