@@ -2,6 +2,9 @@
 #include <contiguous_map.hpp>
 #include <logger.hpp>
 
+//std
+#include <cstdlib>
+
 bool test_iterator()
 {
 	contiguous_map<int, char> C(0,5);

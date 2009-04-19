@@ -1,9 +1,6 @@
 #ifndef H_LOGGER
 #define H_LOGGER
 
-//boost
-#include <boost/thread.hpp>
-
 //std
 #include <iostream>
 #include <sstream>
@@ -16,10 +13,7 @@ class logger
 public:
 	~logger()
 	{
-//DEBUG, initialization of Mutex not thread safe
-		static boost::mutex Mutex;
-		boost::mutex::scoped_lock lock(Mutex);
-		std::cout << file << ":" << func << ":" << line << " " << buffer.str() << "\n";
+		//std::cout << file << ":" << func << ":" << line << " " << buffer.str() << "\n";
 	}
 
 	static logger make(const char * file, const char * func, const int & line)

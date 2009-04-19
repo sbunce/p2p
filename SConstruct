@@ -74,7 +74,6 @@ system.setup_static(env_nogui_static)
 #sub scons files
 SConscript([
 	'include/SConstruct',
-	'libsnet/SConstruct',
 	'libsqlite3/SConstruct',
 	'libtommath/SConstruct',
 	'site_scons/SConstruct',

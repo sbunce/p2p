@@ -1,3 +1,4 @@
 SConscript([
+	'http/SConstruct',      #used to test network.hpp
 	'unit_tests/SConstruct'
 ])

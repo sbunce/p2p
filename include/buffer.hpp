@@ -240,6 +240,42 @@ public:
 		allocate(bytes, size);
 	}
 
+	/* Special tail_* Functions
+	These functions should not normally be used.
+
+	A possible use of these functions is with something like send() or recv()
+	that needs to put bytes in the buffer but we're not sure how many.
+
+	tail_start:
+		Returns pointer to start of reserved space past used bytes.
+	tail_reserve:
+		Reserves free space at end of buffer. The tail_resize() function should be
+		used to gain access to this space after it's reserved.
+	tail_resize:
+		Uses the specified number of bytes in the tail.
+	tail_size:
+		Returns size of unused space at end of buffer.
+	*/
+	unsigned char * tail_start()
+	{
+		assert(reserved > bytes);
+		return buff + bytes;
+	}
+	void tail_reserve(const size_t size)
+	{
+		allocate(reserved, bytes + size);
+	}
+	void tail_resize(const size_t size)
+	{
+		allocate(bytes, bytes + size);
+	}
+	size_t tail_size()
+	{
+		assert(reserved > bytes);
+		return reserved - bytes;
+	}
+
+	//returns size of buffer
 	size_t size()
 	{
 		return bytes;

@@ -8,12 +8,11 @@
 #include <boost/thread.hpp>
 
 //std
+#include <algorithm>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
-
-//custom
-#include "global.hpp"
 
 class CLI_args
 {
@@ -22,6 +21,7 @@ public:
 	CLI_args(const int argc_in, char * argv_in[]):
 		argc(argc_in)
 	{
+		assert(argc_in > 0);
 		for(int x=0; x<argc; ++x){
 			argv.push_back(std::string(argv_in[x]));
 		}
@@ -31,16 +31,9 @@ public:
 	bool check_bool(const std::string & param)
 	{
 		boost::recursive_mutex::scoped_lock lock(Mutex);
-		std::vector<std::string>::iterator iter_cur, iter_end;
-		iter_cur = argv.begin();
-		iter_end = argv.end();
-		while(iter_cur != iter_end){
-			if(*iter_cur == param){
-				return true;
-			}
-			++iter_cur;
-		}
-		return false;
+		std::vector<std::string>::iterator iter;
+		iter = std::find(argv.begin(), argv.end(), param);
+		return iter != argv.end();
 	}
 
 	/*
@@ -65,6 +58,22 @@ public:
 		return false;
 	}
 
+	/*
+	Returns true and sets unsigned if parameter passed to program.
+	*/
+	bool get_uint(const std::string & param, unsigned & uint)
+	{
+		std::string temp_str;
+		if(get_string(param, temp_str)){
+			std::stringstream ss;
+			ss << temp_str;
+			ss >> uint;
+			return true;
+		}else{
+			return false;
+		}
+	}
+
 	//prints help message if specified help parameter exists
 	void help_message(const std::string & help_param, const std::string & help_message)
 	{
@@ -76,7 +85,7 @@ public:
 	}
 
 	//returns name of program (parameter 0)
-	const std::string & program_name()
+	std::string program_name()
 	{
 		boost::recursive_mutex::scoped_lock lock(Mutex);
 		return argv[0];

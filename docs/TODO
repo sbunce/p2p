@@ -1,17 +1,5 @@
 TODO
 
--idea: remove fd from fd_set when calling recv_call_back/send_call_back. Call
-the recv_call_back/send_call_back functions with thread pool. When call_back
-returns re-add the fd to fd_set. Queue proxy function to handle removing fd
-and adding fd when call back done.
-
--how is P_WAIT supposed to work with libsnet? I'd need a function to trigger
-a callback with the desired socket. Or some sort of function to send data to a
-specific socket. Perhaps have a event setup. Register an event for a call back
-at a specific time.
-
--get rid of the copy in network.cpp from array to buffer
-
 -make request generator unit test
 
 -requests should be sent before file blocks, when two hosts download from

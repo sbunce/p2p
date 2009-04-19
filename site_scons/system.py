@@ -27,8 +27,8 @@ def setup(env):
 	num_cpu = int(os.environ.get('NUM_CPU', 2))
 	env.SetOption('num_jobs', num_cpu)
 
-	env['CPPPATH'].append(['#include', '#libsnet', '#libsqlite3', '#libtommath'])
-	env['LIBPATH'].append(['#libsqlite3', '#libtommath', '#libsnet'])
+	env['CPPPATH'].append(['#include', '#libsqlite3', '#libtommath'])
+	env['LIBPATH'].append(['#libsqlite3', '#libtommath'])
 
 	#boost headers are default for all targets
 	boost.include(env)

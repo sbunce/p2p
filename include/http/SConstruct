@@ -1,7 +1,6 @@
 #site_scons
 import boost
 import unit_test
-import snet
 
 Import('env_base')
 
@@ -13,5 +12,5 @@ static_libs = [
 ]
 
 env_base.Program('http',
-	['main.cpp', 'http.cpp', snet.static_library()] + static_libs
+	['main.cpp', 'http.cpp'] + static_libs
 )

@@ -78,3 +78,5 @@ env_base.unit_test([
 	boost.static_library('system'),
 	boost.static_library('thread')
 ])
+
+Clean('DB','DB')
