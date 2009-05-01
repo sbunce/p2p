@@ -5,10 +5,6 @@ The purpose of this container is to be used for a network buffer. It doesn't do
 copy-on-write optimization which is not thread safe. It also allows it's
 underlying buffer to be exposed in a non-const way so it can be directly
 written to.
-
-This container has a size and a reserve size. The size is memory used and the
-reserve size is the memory allocated for the buffer (the same as the reserve
-size on a std::string).
 */
 #ifndef H_BUFFER
 #define H_BUFFER

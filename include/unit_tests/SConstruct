@@ -79,4 +79,8 @@ env_base.unit_test([
 	boost.static_library('thread')
 ])
 
+env_base.unit_test([
+	'timer.cpp'
+])
+
 Clean('DB','DB')

@@ -1,5 +1,9 @@
 #ifndef H_PORTABLE_SLEEP
 #define H_PORTABLE_SLEEP
+
+//std
+#include <cassert>
+
 //replacement for system specific sleep functions
 namespace portable_sleep
 {

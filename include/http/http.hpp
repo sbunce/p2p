@@ -1,8 +1,3 @@
-/*
-todo:
--have connection class to associate with socket number. This will allow partial
-sends.
-*/
 #ifndef H_HTTP
 #define H_HTTP
 
@@ -15,8 +10,6 @@ sends.
 #include <buffer.hpp>
 #include <convert.hpp>
 #include <logger.hpp>
-
-//snet
 #include <network.hpp>
 
 //std
@@ -25,53 +18,29 @@ sends.
 #include <sstream>
 #include <string>
 
-class http
+class http : private boost::noncopyable
 {
 public:
-	http(
-		const std::string & web_root_in,
-		const unsigned max_upload_rate
-	);
+	http(const std::string & web_root_in);
 
 	//call backs for network
-	void connect_call_back(int socket_FD, buffer & send_buff, network::direction Direction);
-	void disconnect_call_back(int socket_FD);
-	bool recv_call_back(int socket_FD, buffer & recv_buff, buffer & send_buff);
-	bool send_call_back(int socket_FD, buffer & recv_buff, buffer & send_buff);
-
-	/*
-	monitor:
-		Print speeds and how many connected.
-	*/
-	void monitor();
+	void recv_call_back(network::socket_data & SD);
+	void send_call_back(network::socket_data & SD);
 
 private:
-	std::string web_root;
-
-	class connection
-	{
-	public:
-		connection():
-			Type(UNDETERMINED),
-			index(0)
-		{}
-
-		enum type{
-			UNDETERMINED,
-			INVALID,
-			DIRECTORY,
-			FILE,
-			DONE
-		};
-
-		type Type;
-		std::string get_path;
-		boost::filesystem::path path;
-		boost::uint64_t index;
+	enum type{
+		UNDETERMINED,
+		INVALID,
+		DIRECTORY,
+		FILE,
+		DONE
 	};
 
-	//socket_FD mapped to connection info
-	std::map<int, connection> Connection;
+	type Type;
+	std::string web_root;
+	std::string get_path;
+	boost::filesystem::path path;
+	boost::uint64_t index;
 
 	/*
 	determine_type:
@@ -82,10 +51,8 @@ private:
 	replace_encoded_chars:
 		Replaces stuff like %20 with ' '.
 	*/
-	void determine_type(connection & Conn);
-	void read(connection & Conn, buffer & send_buff);
-	void replace_encoded_chars(std::string & get_path);
-
-	network Network;
+	void determine_type();
+	void read(buffer & send_buff);
+	void replace_encoded_chars();
 };
 #endif

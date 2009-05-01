@@ -9,4 +9,4 @@ for i in `seq 1 1000`; do
 	done; 
 done
 
-find ./seek-bound/100k/ | grep 'files.*/.' | sed 's#./#http://localhost:8080/#' > http-load.100k.urls
+find ./seek-bound/100k/ | grep 'files.*/.' | sed 's#./#http://192.168.1.7:8080/#' > http-load.100k.urls

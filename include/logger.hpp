@@ -13,7 +13,7 @@ class logger
 public:
 	~logger()
 	{
-		//std::cout << file << ":" << func << ":" << line << " " << buffer.str() << "\n";
+		std::cout << file << ":" << func << ":" << line << " " << buffer.str() << "\n";
 	}
 
 	static logger make(const char * file, const char * func, const int & line)

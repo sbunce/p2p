@@ -19,6 +19,7 @@ public:
 	*/
 	sha()
 	{
+		//minimum buffer size needed for chunk
 		load_buffer.reserve(64);
 
 		//check endianness of hardware
