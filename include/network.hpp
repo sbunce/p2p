@@ -9,25 +9,9 @@
 #include <boost/utility.hpp>
 
 //include
-#include <atomic_int.hpp>
-#include <buffer.hpp>
 #include <logger.hpp>
-#include <rate_limit.hpp>
 #include <reactor.hpp>
 #include <reactor_select.hpp>
-#include <speed_calculator.hpp>
-
-//networking
-#ifdef WIN32
-	#define MSG_NOSIGNAL 0  //disable SIGPIPE on send()
-	#include <winsock.h>
-#else
-	#include <arpa/inet.h>
-	#include <fcntl.h>
-	#include <netinet/in.h>
-	#include <sys/socket.h>
-	#include <unistd.h>
-#endif
 
 //std
 #include <cstdlib>
@@ -39,7 +23,7 @@
 class network : private boost::noncopyable
 {
 public:
-	typedef reactor::socket_data::socket_data_visible socket_data;
+	typedef reactor::socket_data::socket_data_visible socket;
 
 	/* ctor parameters
 	boost::bind is the nicest way to do a callback to the member function of a
@@ -70,27 +54,20 @@ public:
 		specified) is to not listen for incoming connections.
 	*/
 	network(
-		boost::function<void (socket_data &)> connect_call_back_in,
-		boost::function<void (socket_data &)> disconnect_call_back_in,
+		boost::function<void (socket &)> failed_connect_call_back_in,
+		boost::function<void (socket &)> connect_call_back_in,
+		boost::function<void (socket &)> disconnect_call_back_in,
 		const int port = -1
 	):
+		failed_connect_call_back(failed_connect_call_back_in),
 		connect_call_back(connect_call_back_in),
 		disconnect_call_back(disconnect_call_back_in)
 	{
-		#ifdef WIN32
-		WORD wsock_ver = MAKEWORD(2,2);
-		WSADATA wsock_data;
-		int startup;
-		if((startup = WSAStartup(wsock_ver, &wsock_data)) != 0){
-			LOGGER << "winsock startup error " << startup;
-			exit(1);
-		}
-		#endif
-
 		//instantiate networking subsystem
-		Reactor = new reactor_select(port);
+		Reactor = boost::shared_ptr<reactor>(new reactor_select(port));
 
-		for(int x=0; x<4; ++x){
+		//create workers to do call backs
+		for(int x=0; x<8; ++x){
 			Workers.create_thread(boost::bind(&network::worker_pool, this));
 		}
 	}
@@ -99,111 +76,52 @@ public:
 	{
 		Workers.interrupt_all();
 		Workers.join_all();
-
-		//deleting reactor stops internal reactor thread
-		delete Reactor;
-
-		#ifdef WIN32
-		WSACleanup();
-		#endif
 	}
 
-	/*
-	Establish connection to specified IP and port. Returns true if connection
-	will be tried, or false if outgoing_connection limit reached.
-	*/
 	bool add_connection(const std::string & IP, const int port)
 	{
-		int new_FD = socket(PF_INET, SOCK_STREAM, 0);
-		if(new_FD == -1){
-			#ifdef WIN32
-			LOGGER << "winsock error " << WSAGetLastError();
-			#else
-			perror("socket");
-			#endif
-			return false;
-		}
-
-		//set socket to non-blocking for async connect
-		fcntl(new_FD, F_SETFL, O_NONBLOCK);
-
-		sockaddr_in dest;
-		dest.sin_family = AF_INET;   //IPV4
-		dest.sin_port = htons(port); //port to connect to
-
-		/*
-		The inet_aton function is not used because winsock doesn't have it. Instead
-		the inet_addr function is used which is 'almost' equivalent.
-
-		If you try to connect to 255.255.255.255 the return value is -1 which is the
-		correct conversion, but also the same return as an error. This is ambiguous
-		so a special case is needed for it.
-		*/
-		if(IP == "255.255.255.255"){
-			dest.sin_addr.s_addr = inet_addr(IP.c_str());
-		}else if((dest.sin_addr.s_addr = inet_addr(IP.c_str())) == -1){
-			LOGGER << "invalid IP " << IP;
-			return false;
-		}
-
-		/*
-		The sockaddr_in struct is smaller than the sockaddr struct. The sin_zero
-		member of sockaddr_in is padding to make them the same size. It is required
-		that the sine_zero space be zero'd out. Not doing so can result in undefined
-		behavior.
-		*/
-		std::memset(&dest.sin_zero, 0, sizeof(dest.sin_zero));
-
-		if(connect(new_FD, (sockaddr *)&dest, sizeof(dest)) == -1){
-			//socket in progress of connecting
-			LOGGER << "async connection " << IP << ":" << port << " socket " << new_FD;
-//DEBUG, register with reactor
-		}else{
-			//socket connected right away, rare but it might happen
-			LOGGER << "connection " << IP << ":" << port << " socket " << new_FD;
-//DEBUG, register with reactor
-		}
-		return true;
+		return Reactor->add_connection(IP, port);
 	}
 
 private:
 	//reactor for networking
-	reactor * Reactor;
+	boost::shared_ptr<reactor> Reactor;
 
 	//worker threads to handle call backs
 	boost::thread_group Workers;
 
 	//call backs
-	boost::function<void (socket_data &)> connect_call_back;
-	boost::function<void (socket_data &)> disconnect_call_back;
+	boost::function<void (socket &)> failed_connect_call_back;
+	boost::function<void (socket &)> connect_call_back;
+	boost::function<void (socket &)> disconnect_call_back;
 
 	void worker_pool()
 	{
 		boost::shared_ptr<reactor::socket_data> info;
 		while(true){
 			boost::this_thread::interruption_point();
-
 			Reactor->get_job(info);
-
-			if(!info->connect_flag){
-				info->connect_flag = true;
-				connect_call_back(info->Socket_Data_Visible);
+			if(info->failed_connect_flag){
+				failed_connect_call_back(info->Socket_Data_Visible);
+			}else{
+				if(!info->connect_flag){
+					info->connect_flag = true;
+					connect_call_back(info->Socket_Data_Visible);
+				}
+				assert(info->Socket_Data_Visible.recv_call_back);
+				assert(info->Socket_Data_Visible.send_call_back);
+				if(info->recv_flag){
+					info->recv_flag = false;
+					info->Socket_Data_Visible.recv_call_back(info->Socket_Data_Visible);
+				}
+				if(info->send_flag){
+					info->send_flag = false;
+					info->Socket_Data_Visible.send_call_back(info->Socket_Data_Visible);
+				}
+				if(info->disconnect_flag){
+					disconnect_call_back(info->Socket_Data_Visible);
+				}
 			}
-
-			if(info->recv_flag){
-				info->recv_flag = false;
-				info->Socket_Data_Visible.recv_call_back(info->Socket_Data_Visible);
-			}
-
-			if(info->send_flag){
-				info->send_flag = false;
-				info->Socket_Data_Visible.send_call_back(info->Socket_Data_Visible);
-			}
-
-			if(info->disconnect_flag){
-				disconnect_call_back(info->Socket_Data_Visible);
-			}
-
 			Reactor->finish_job(info);
 		}
 	}

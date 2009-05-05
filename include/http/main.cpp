@@ -7,6 +7,7 @@
 
 //include
 #include <CLI_args.hpp>
+#include <logger.hpp>
 #include <portable_sleep.hpp>
 #include <network.hpp>
 
@@ -17,18 +18,32 @@ boost::mutex Connection_mutex;
 std::map<int, boost::shared_ptr<http> > Connection;
 std::string web_root;
 
-void connect_call_back(network::socket_data & SD)
+void connect_call_back(network::socket & Socket)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
-	Connection.insert(std::make_pair(SD.socket_FD, new http(web_root)));
-	SD.recv_call_back = boost::bind(&http::recv_call_back, Connection[SD.socket_FD].get(), _1);
-	SD.send_call_back = boost::bind(&http::send_call_back, Connection[SD.socket_FD].get(), _1);
+	if(Socket.outgoing){
+		LOGGER << "outgoing socket:" << Socket.socket_FD << " IP:" << Socket.IP
+			<< " port:" << Socket.port;
+	}else{
+		LOGGER << "incoming socket:" << Socket.socket_FD << " IP:" << Socket.IP
+			<< " port:" << Socket.port;
+	}
+	Connection.insert(std::make_pair(Socket.socket_FD, new http(web_root)));
+	Socket.recv_call_back = boost::bind(&http::recv_call_back, Connection[Socket.socket_FD].get(), _1);
+	Socket.send_call_back = boost::bind(&http::send_call_back, Connection[Socket.socket_FD].get(), _1);
 }
 
-void disconnect_call_back(network::socket_data & SD)
+void disconnect_call_back(network::socket & Socket)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
-	Connection.erase(SD.socket_FD);
+	LOGGER << "disconnect socket:" << Socket.socket_FD << " IP:" << Socket.IP
+		<< " port:" << Socket.port;
+	Connection.erase(Socket.socket_FD);
+}
+
+void failed_connect_call_back(network::socket & Socket)
+{
+	LOGGER << "failed connect: " << Socket.IP << ":" << Socket.port;
 }
 
 int main(int argc, char ** argv)
@@ -40,7 +55,9 @@ int main(int argc, char ** argv)
 		exit(1);
 	}
 
-	network Network(&connect_call_back, &disconnect_call_back, 8080);
+	network Network(&failed_connect_call_back, &connect_call_back, &disconnect_call_back, 8080);
+
+	Network.add_connection("123.123.123.123", 9000);
 
 	/*
 	Priveledge drop after starting listener. We try this when the user is

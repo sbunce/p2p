@@ -10,7 +10,7 @@ http::http(
 
 }
 
-void http::recv_call_back(network::socket_data & SD)
+void http::recv_call_back(network::socket & SD)
 {
 	namespace fs = boost::filesystem;
 
@@ -47,7 +47,7 @@ void http::recv_call_back(network::socket_data & SD)
 	SD.disconnect_flag = false;
 }
 
-void http::send_call_back(network::socket_data & SD)
+void http::send_call_back(network::socket & SD)
 {
 	read(SD.send_buff);
 	if(SD.send_buff.empty()){

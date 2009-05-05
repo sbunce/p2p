@@ -3,21 +3,8 @@
 #define H_REACTOR_SELECT
 
 //include
-#include <buffer.hpp>
+#include <rate_limit.hpp>
 #include <reactor.hpp>
-
-//networking
-#ifdef WIN32
-	#define MSG_NOSIGNAL 0  //disable SIGPIPE on send()
-	#define FD_SETSIZE 1024
-	#include <winsock.h>
-#else
-	#include <arpa/inet.h>
-	#include <fcntl.h>
-	#include <netinet/in.h>
-	#include <sys/socket.h>
-	#include <unistd.h>
-#endif
 
 //std
 #include <deque>
@@ -54,6 +41,70 @@ public:
 		select_loop_thread.join();
 	}
 
+	virtual bool add_connection(const std::string & IP, const int port)
+	{
+		int new_FD = socket(PF_INET, SOCK_STREAM, 0);
+		if(new_FD == -1){
+			#ifdef WIN32
+			LOGGER << "winsock error " << WSAGetLastError();
+			#else
+			perror("socket");
+			#endif
+			exit(1);
+		}
+
+		#ifndef WIN32
+		if(new_FD >= FD_SETSIZE){
+			return false;
+		}
+		#endif
+
+		//set socket to non-blocking for async connect
+		fcntl(new_FD, F_SETFL, O_NONBLOCK);
+
+		sockaddr_in dest;
+		dest.sin_family = AF_INET;   //IPV4
+		dest.sin_port = htons(port); //port to connect to
+
+		/*
+		The inet_aton function is not used because winsock doesn't have it. Instead
+		the inet_addr function is used which is 'almost' equivalent.
+
+		If you try to connect to 255.255.255.255 the return value is -1 which is the
+		correct conversion, but also the same return as an error. This is ambiguous
+		so a special case is needed for it.
+		*/
+		if(IP == "255.255.255.255"){
+			dest.sin_addr.s_addr = inet_addr(IP.c_str());
+		}else if((dest.sin_addr.s_addr = inet_addr(IP.c_str())) == -1){
+			LOGGER << "invalid IP " << IP;
+			exit(1);
+		}
+
+		/*
+		The sockaddr_in struct is smaller than the sockaddr struct. The sin_zero
+		member of sockaddr_in is padding to make them the same size. It is required
+		that the sine_zero space be zero'd out. Not doing so can result in undefined
+		behavior.
+		*/
+		std::memset(&dest.sin_zero, 0, sizeof(dest.sin_zero));
+
+		if(connect(new_FD, (sockaddr *)&dest, sizeof(dest)) == -1){
+			//socket in progress of connecting
+			boost::mutex::scoped_lock lock(connecting_mutex);
+			LOGGER << "async connection " << IP << ":" << port << " socket " << new_FD;
+			connecting.push_back(boost::shared_ptr<socket_data>(new socket_data(new_FD, IP, -1, true)));
+		}else{
+			//socket connected right away, rare but it might happen
+			boost::mutex::scoped_lock lock(job_finished_mutex);
+			LOGGER << "connection " << IP << ":" << port << " socket " << new_FD;
+			job_finished.push_back(boost::shared_ptr<socket_data>(new socket_data(new_FD, IP, -1, true)));
+		}
+
+		write(selfpipe_write, "0", 1);
+		return true;
+	}
+
 	virtual void get_job(boost::shared_ptr<socket_data> & info)
 	{
 		boost::mutex::scoped_lock lock(job_mutex);
@@ -68,12 +119,9 @@ public:
 	{
 		boost::mutex::scoped_lock lock(job_finished_mutex);
 		if(info->disconnect_flag){
-			#ifdef WIN32
-			closesocket(info->socket_FD);
-			#else
-			close(info->socket_FD);
-			#endif
-		}else{
+			boost::mutex::scoped_lock lock(disconnect_mutex);
+			disconnect.push_back(info->socket_FD);
+		}else if(!info->failed_connect_flag){
 			job_finished.push_back(info);
 			write(selfpipe_write, "0", 1);
 		}
@@ -106,7 +154,7 @@ private:
 	*/
 	int selfpipe_read;  //put in master_FDS
 	int selfpipe_write; //written to get select to return
-	char selfpipe_discard[8]; //used to discard selfpipe bytes
+	char selfpipe_discard[1024]; //used to discard selfpipe bytes
 
 	/*
 	When a socket needs to have a call back done it is queued in this container
@@ -127,6 +175,24 @@ private:
 	std::vector<boost::shared_ptr<socket_data> > job_finished;
 
 	/*
+	New sockets transferred to select_loop_thread with this. If connecting is
+	true then the socket is set in connect_FDS.
+	std::pair<socket_FD, connecting>
+	*/
+	boost::mutex connecting_mutex;
+	std::vector<boost::shared_ptr<socket_data> > connecting;
+
+	/*
+	Sockets finished_job() needs disconnected. This is done instead of calling
+	close() in finish_job() because remove_socket needs to be called so that
+	being_FD and end_FD can be called.
+	*/
+	boost::mutex disconnect_mutex;
+	std::vector<int> disconnect;
+
+	rate_limit Rate_Limit;
+
+	/*
 	Add socket to master_FDS, adjusts begin_FD and end_FD, and create socket
 	data unless explictly told not to.
 	Note: the selfpipe and listener will set create_socket_data = false;
@@ -135,7 +201,7 @@ private:
 	{
 		assert(socket_FD > 0);
 		FD_SET(socket_FD, &master_read_FDS);
-		//sockets in set
+
 		if(socket_FD < begin_FD){
 			begin_FD = socket_FD;
 		}else if(socket_FD >= end_FD){
@@ -151,25 +217,31 @@ private:
 
 			std::map<int, boost::shared_ptr<socket_data> >::iterator iter = Socket_Data.find(socket_FD);
 			assert(iter == Socket_Data.end());
-			Socket_Data.insert(std::make_pair(socket_FD, new socket_data(socket_FD, IP, port)));
+			Socket_Data.insert(std::make_pair(socket_FD, new socket_data(socket_FD, IP, port, false)));
 		}
 	}
 
 	void check_timeouts()
 	{
+		//temp vector needed because queue_job invalidates iterator
 		std::vector<int> disconnect;
 		std::map<int, boost::shared_ptr<socket_data> >::iterator
 		iter_cur = Socket_Data.begin(),
 		iter_end = Socket_Data.end();
 		while(iter_cur != iter_end){
 			if(std::time(NULL) - iter_cur->second->last_seen > 8){
+				if(FD_ISSET(iter_cur->first, &connect_FDS)){
+					iter_cur->second->failed_connect_flag = true;
+				}else{
+					iter_cur->second->disconnect_flag = true;
+				}
 				disconnect.push_back(iter_cur->first);
 			}
 			++iter_cur;
 		}
 
 		for(int x=0; x<disconnect.size(); ++x){
-			remove_socket(disconnect[x]);
+			queue_job(disconnect[x]);
 		}
 		disconnect.clear();
 	}
@@ -194,6 +266,50 @@ private:
 		}
 	}
 
+	//close sockets finish_job wants disconnected
+	void process_disconnect()
+	{
+		boost::mutex::scoped_lock lock(disconnect_mutex);
+		for(int x=0; x<disconnect.size(); ++x){
+			remove_socket(disconnect[x], false);
+			#ifdef WIN32
+			closesocket(disconnect[x]);
+			#else
+			close(disconnect[x]);
+			#endif
+		}
+		disconnect.clear();
+	}
+
+	//monitor sockets in progress of connecting
+	void process_connecting()
+	{
+		boost::mutex::scoped_lock lock(connecting_mutex);
+		for(int x=0; x<connecting.size(); ++x){
+			add_socket(connecting[x]->socket_FD, false);
+			Socket_Data.insert(std::make_pair(connecting[x]->socket_FD, connecting[x]));
+			FD_SET(connecting[x]->socket_FD, &master_write_FDS);
+			FD_SET(connecting[x]->socket_FD, &connect_FDS);
+		}
+		connecting.clear();
+	}
+
+	//monitor socket that just connected, or that worker just finished with
+	void process_job_finished()
+	{
+		boost::mutex::scoped_lock lock(job_finished_mutex);
+		for(int x=0; x<job_finished.size(); ++x){
+			add_socket(job_finished[x]->socket_FD, false);
+			Socket_Data.insert(std::make_pair(job_finished[x]->socket_FD, job_finished[x]));
+			if(!job_finished[x]->send_buff.empty()){
+				//send buff contains data, check socket for writeability
+				FD_SET(job_finished[x]->socket_FD, &master_write_FDS);
+			}
+		}
+		job_finished.clear();
+	}
+
+	//schedule socket for worker to look at
 	void queue_job(const int socket_FD)
 	{
 		boost::mutex::scoped_lock lock(job_mutex);
@@ -247,6 +363,13 @@ private:
 		std::map<int, boost::shared_ptr<socket_data> >::iterator SD_iter;
 		std::time_t Time = std::time(NULL);
 
+		//rate limiting related
+		int max_upload;              //max bytes that can be sent to stay under max upload rate
+		int max_download;            //max bytes that can be received to stay under max download rate
+		int max_upload_per_socket;   //max bytes that can be received to maintain rate limit
+		int max_download_per_socket; //max bytes that can be sent to maintain rate limit
+		int temp;
+
 		//main loop
 		while(true){
 			boost::this_thread::interruption_point();
@@ -256,20 +379,15 @@ private:
 				check_timeouts();
 			}
 
-			{//begin lock scope
-			boost::mutex::scoped_lock lock(job_finished_mutex);
-			for(int x=0; x<job_finished.size(); ++x){
-				add_socket(job_finished[x]->socket_FD, false);
-				Socket_Data.insert(std::make_pair(job_finished[x]->socket_FD, job_finished[x]));
-				if(!job_finished[x]->send_buff.empty()){
-					FD_SET(job_finished[x]->socket_FD, &master_write_FDS);
-				}
-			}
-			job_finished.clear();
-			}//end lock scope
+			process_disconnect();
+			process_connecting();
+			process_job_finished();
+
+			max_upload = Rate_Limit.upload_rate_control();
+			max_download = Rate_Limit.download_rate_control();
 
 			read_FDS = master_read_FDS;
-			if(true){
+			if(max_upload != 0){
 				//check for writeability of all sockets
 				write_FDS = master_write_FDS;
 			}else{
@@ -297,6 +415,24 @@ private:
 					exit(1);
 				}
 			}else if(service != 0){
+				/*
+				There is a starvation problem that can happen when hitting the rate
+				limit where the lower sockets hog available bandwidth and the higher
+				sockets get starved.
+
+				Because of this we set the maximum send such that in the worst case
+				each socket (that needs to be serviced) gets to send/recv and equal
+				amount of data.
+				*/
+				max_upload_per_socket = max_upload / service;
+				max_download_per_socket = max_download / service;
+				if(max_upload_per_socket == 0){
+					max_upload_per_socket = 1;
+				}
+				if(max_download_per_socket == 0){
+					max_download_per_socket = 1;
+				}
+
 				for(int x=begin_FD; x < end_FD && service; ++x){
 					socket_serviced = false;
 					need_call_back = false;
@@ -325,51 +461,95 @@ private:
 						SD_iter = Socket_Data.find(x);
 						assert(SD_iter != Socket_Data.end());
 
-						//reserve space for incoming bytes
-						SD_iter->second->recv_buff.tail_reserve(4096);
-
 						/*
-						Some implementations might return -1 to indicate an error
-						even though select() said the socket was readable. We ignore
-						that when that happens.
+						If the rate limit is such that there is a max_download less
+						than the number of sockets to service there is a case where
+						not every socket will get to be serviced.
 						*/
-						n_bytes = recv(x, SD_iter->second->recv_buff.tail_start(),
-							SD_iter->second->recv_buff.tail_size(), MSG_NOSIGNAL);
-						if(n_bytes == 0){
-							SD_iter->second->disconnect_flag = true;
-							need_call_back = true;
-						}else if(n_bytes > 0){
-							SD_iter->second->recv_buff.tail_resize(n_bytes);
-							SD_iter->second->last_seen = std::time(NULL);
-							SD_iter->second->recv_flag = true;
-							need_call_back = true;
+						if(max_download_per_socket > max_download){
+							temp = max_download;
+						}else{
+							temp = max_download_per_socket;
+						}
+
+						//make sure we don't exceed maximum recv size
+						if(temp > 4096){
+							temp = 4096;
+						}
+
+						if(temp != 0){
+							//reserve space for incoming bytes at end of buffer
+							SD_iter->second->recv_buff.tail_reserve(temp);
+
+							/*
+							Some implementations might return -1 to indicate an error
+							even though select() said the socket was readable. We ignore
+							that when that happens.
+							*/
+							n_bytes = recv(x, SD_iter->second->recv_buff.tail_start(), temp, MSG_NOSIGNAL);
+							if(n_bytes == 0){
+								SD_iter->second->disconnect_flag = true;
+								need_call_back = true;
+							}else if(n_bytes > 0){
+								SD_iter->second->recv_buff.tail_resize(n_bytes);
+								SD_iter->second->last_seen = std::time(NULL);
+								Rate_Limit.add_download_bytes(n_bytes);
+								SD_iter->second->recv_flag = true;
+								need_call_back = true;
+							}
 						}
 						socket_serviced = true;
 					}
 
 					if(FD_ISSET(x, &write_FDS)){
-						SD_iter = Socket_Data.find(x);
-						assert(SD_iter != Socket_Data.end());
+						if(FD_ISSET(x, &connect_FDS)){
+							//outgoing async connection attempt succeeded
+							FD_CLR(x, &connect_FDS);
+							need_call_back = true;
+						}else{
+							//need to send data
+							SD_iter = Socket_Data.find(x);
+							assert(SD_iter != Socket_Data.end());
+							if(!SD_iter->second->send_buff.empty()){
 
-						if(!SD_iter->second->send_buff.empty()){
-							/*
-							Some implementations might return -1 to indicate an error
-							even though select() said the socket was writeable. We
-							ignore it when that happens.
-							*/
-							n_bytes = send(x, SD_iter->second->send_buff.data(),
-								SD_iter->second->send_buff.size(), MSG_NOSIGNAL);
-							if(n_bytes == 0){
-								SD_iter->second->disconnect_flag = true;
-								need_call_back = true;
-							}else if(n_bytes > 0){
-								SD_iter->second->last_seen = std::time(NULL);
-								send_buff_empty = SD_iter->second->send_buff.empty();
-								SD_iter->second->send_buff.erase(0, n_bytes);
-								if(!send_buff_empty && SD_iter->second->send_buff.empty()){
-									//send_buff went from non-empty to empty
-									SD_iter->second->send_flag = true;
-									need_call_back = true;
+								/*
+								If the rate limit is such that there is a max_upload less
+								than the number of sockets to service there is a case where
+								not every socket will get to be serviced.
+								*/
+								if(max_upload_per_socket > max_upload){
+									temp = max_upload;
+								}else{
+									temp = max_upload_per_socket;
+								}
+
+								//make sure we don't exceed maximum send size
+								if(temp > 4096){
+									temp = 4096;
+								}
+
+								if(temp != 0){
+									/*
+									Some implementations might return -1 to indicate an error
+									even though select() said the socket was writeable. We
+									ignore it when that happens.
+									*/
+									n_bytes = send(x, SD_iter->second->send_buff.data(),
+										SD_iter->second->send_buff.size(), MSG_NOSIGNAL);
+									if(n_bytes == 0){
+										SD_iter->second->disconnect_flag = true;
+										need_call_back = true;
+									}else if(n_bytes > 0){
+										SD_iter->second->last_seen = std::time(NULL);
+										send_buff_empty = SD_iter->second->send_buff.empty();
+										SD_iter->second->send_buff.erase(0, n_bytes);
+										Rate_Limit.add_upload_bytes(n_bytes);
+										if(!send_buff_empty && SD_iter->second->send_buff.empty()){
+											//send_buff went from non-empty to empty
+											SD_iter->second->send_flag = true;
+											need_call_back = true;
+										}
+									}
 								}
 							}
 						}

@@ -8,16 +8,16 @@ import os
 import sys
 
 #link in network support
-#precondition: must have called setup()
 def networking(env):
+	environment.define_keys(env)
 	if sys.platform == 'win32':
-		env['LIBS'].append('ws2_32') #winsock
+		env['LIBS'].append('ws2_32')
 
 #link in random number generator support
-#precondition: must have called setup()
 def random_number(env):
+	environment.define_keys(env)
 	if sys.platform == 'win32':
-		env['LIBS'].append('advapi32')  #random number generator
+		env['LIBS'].append('advapi32')
 
 #stuff every targets needs
 def setup(env):
@@ -36,7 +36,6 @@ def setup(env):
 	#platform specific options
 	if sys.platform == 'linux2':
 		env['CCFLAGS'].append('-O3')
-		#env['CCFLAGS'].append('-fno-inline')
 		env['LIBS'].append('pthread')
 	if sys.platform == 'win32':
 		env['LIBPATH'].append(__win32_library_dir())
@@ -54,6 +53,9 @@ def setup_static(env):
 		env['LINKFLAGS'].append('-static')
 		env['LINKFLAGS'].append('-static-libgcc')
 		env['LINKFLAGS'].append('`g++ -print-file-name=libstdc++.a`')
+	if sys.platform == 'win32':
+		print 'windows static linking not supported'
+		exit(1)
 
 #returns path of windows API library directory
 def __win32_library_dir():

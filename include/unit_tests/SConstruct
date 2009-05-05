@@ -23,16 +23,15 @@ env_base.unit_test([
 	'buffer.cpp'
 ])
 
-
 env_base.unit_test([
-	'contiguous_map.cpp',
+	'contiguous_set.cpp',
 	boost.static_library('date_time'),
 	boost.static_library('system'),
 	boost.static_library('thread')
 ])
 
 env_base.unit_test([
-	'contiguous_set.cpp',
+	'contiguous_map.cpp',
 	boost.static_library('date_time'),
 	boost.static_library('system'),
 	boost.static_library('thread')
@@ -63,6 +62,13 @@ env_base.unit_test([
 
 env_base.unit_test([
 	'RC4.cpp'
+])
+
+env_base.unit_test([
+	'network.cpp',
+	boost.static_library('date_time'),
+	boost.static_library('system'),
+	boost.static_library('thread')
 ])
 
 env_base.unit_test([

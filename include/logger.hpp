@@ -13,7 +13,9 @@ class logger
 public:
 	~logger()
 	{
+		#ifndef NDEBUG
 		std::cout << file << ":" << func << ":" << line << " " << buffer.str() << "\n";
+		#endif
 	}
 
 	static logger make(const char * file, const char * func, const int & line)

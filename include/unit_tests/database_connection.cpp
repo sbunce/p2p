@@ -115,6 +115,5 @@ void test_call_backs()
 int main()
 {
 	test_call_backs();
-	//blob functions are tested in hash_tree unit test
 	return 0;
 }
