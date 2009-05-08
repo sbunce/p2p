@@ -1,4 +1,3 @@
 SConscript([
-	'http/SConstruct',
 	'unit_tests/SConstruct'
 ])

@@ -1,0 +1,53 @@
+#site_scons
+import boost
+import gtkmm
+import p2p
+import sqlite3
+import system
+import tommath
+
+#std
+import sys
+
+Import('env_base')
+Import('env_base_static')
+
+src_gui = [
+	'gui.cpp',
+	'gui_about.cpp',
+	'gui_statusbar_main.cpp',
+	'gui_vbox_search.cpp',
+	'gui_window_download.cpp',
+	'gui_window_download_status.cpp',
+	'gui_window_preferences.cpp',
+	'gui_window_upload.cpp',
+	'main_gui.cpp'
+]
+
+#nogui only
+src_nogui = [
+	'main_nogui.cpp'
+]
+
+#gui environment
+env_gui = env_base.Clone()
+gtkmm.setup(env_gui)
+
+static_libs = [
+	p2p.static_library(),
+	sqlite3.static_library(),
+	tommath.static_library(),
+	boost.static_library('system'),
+	boost.static_library('date_time'),
+	boost.static_library('filesystem'),
+	boost.static_library('thread')
+]
+
+#compile objects
+obj_gui = env_gui.Object(src_gui)
+obj_nogui = env_base.Object(src_nogui)
+
+#link
+env_gui.Program('p2p_gui', obj_gui + static_libs)
+env_base.Program('p2p_nogui', obj_nogui + static_libs)
+env_base_static.Program('p2p_nogui_static', obj_nogui + static_libs)

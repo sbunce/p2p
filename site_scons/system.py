@@ -1,23 +1,15 @@
 #site_scons
 import boost
 import environment
+import net
+import p2p
 import search
+import sqlite3
+import tommath
 
 #std
 import os
 import sys
-
-#link in network support
-def networking(env):
-	environment.define_keys(env)
-	if sys.platform == 'win32':
-		env['LIBS'].append('ws2_32')
-
-#link in random number generator support
-def random_number(env):
-	environment.define_keys(env)
-	if sys.platform == 'win32':
-		env['LIBS'].append('advapi32')
 
 #stuff every targets needs
 def setup(env):
@@ -27,26 +19,42 @@ def setup(env):
 	num_cpu = int(os.environ.get('NUM_CPU', 2))
 	env.SetOption('num_jobs', num_cpu)
 
-	env['CPPPATH'].append(['#include', '#libsqlite3', '#libtommath'])
-	env['LIBPATH'].append(['#libsqlite3', '#libtommath'])
+	#custom, but independent libraries
+	env['CPPPATH'].append('#include')
 
-	#boost headers are default for all targets
+	#all targets have access to these headers
 	boost.include(env)
+	net.include(env)
+	p2p.include(env)
+	sqlite3.include(env)
+	tommath.include(env)
 
-	#platform specific options
+	#each supported platform should define to_upper(sys.platform)
 	if sys.platform == 'linux2':
 		env['CCFLAGS'].append('-O3')
 		env['LIBS'].append('pthread')
+		env['CCFLAGS'].append('-DLINUX2')
 	if sys.platform == 'win32':
-		env['LIBPATH'].append(__win32_library_dir())
-		env['CPPPATH'].append(__win32_include_dir())
+		#windows lib location
+		search_dir = '/Program Files/Microsoft SDKs/Windows/'
+		found_dir = search.locate_dir(search_dir, 'Lib')
+		assert(found_dir)
+		env['LIBPATH'].append(found_dir)
+
+		#windows.h location
+		search_dir = '/Program Files/Microsoft SDKs/Windows/'
+		found_dir = search.locate_dir(search_dir, 'Include')
+		assert(found_dir)
+		env['CPPPATH'].append(found_dir)
+
 		env['CCFLAGS'].append('/EHsc')   #exception support
 		env['CCFLAGS'].append('/w')      #disable warnings
 		env['CCFLAGS'].append('/Ox')     #max optimizations
-		env['CCFLAGS'].append('/DWIN32') #make sure this is defined
+		env['CCFLAGS'].append('/DWIN32')
+		env['LIBS'].append('advapi32')   #random number gen
+		env['LIBS'].append('ws2_32')     #winsock
 
 #can be run in addition to setup to do static linking
-#DEBUG, windows not supported
 def setup_static(env):
 	environment.define_keys(env)
 	if sys.platform == 'linux2':
@@ -56,23 +64,3 @@ def setup_static(env):
 	if sys.platform == 'win32':
 		print 'windows static linking not supported'
 		exit(1)
-
-#returns path of windows API library directory
-def __win32_library_dir():
-	search_dir = '/Program Files/Microsoft SDKs/Windows/'
-	found_dir = search.locate_dir(search_dir, 'Lib')
-	if found_dir == '':
-		print 'could not locate the windows API headers'
-		exit(1)
-	else:
-		return found_dir
-
-#returns a path to the windows API include path
-def __win32_include_dir():
-	search_dir = '/Program Files/Microsoft SDKs/Windows/'
-	found_dir = search.locate_dir(search_dir, 'Include')
-	if found_dir == '':
-		print 'could not locate the windows API headers'
-		exit(1)
-	else:
-		return found_dir

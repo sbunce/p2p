@@ -1,0 +1,17 @@
+#site_scons
+import boost
+import gtkmm
+import sqlite3
+import system
+import tommath
+
+#std
+import sys
+
+Import('env_base')
+
+#sub scons files
+SConscript([
+	'http/SConstruct',
+	'unit_tests/SConstruct'
+])

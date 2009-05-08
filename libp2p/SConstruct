@@ -1,0 +1,39 @@
+#site_scons
+import boost
+import gtkmm
+import sqlite3
+import system
+import tommath
+
+#std
+import sys
+
+Import('env_base')
+
+#command to all
+src = [
+	'block_arbiter.cpp',
+	'database_init.cpp',
+	'database_table_blacklist.cpp',
+	'database_table_download.cpp',
+	'database_table_hash.cpp',
+	'database_table_preferences.cpp',
+	'database_table_prime.cpp',
+	'database_table_search.cpp',
+	'database_table_share.cpp',
+	'encryption.cpp',
+	'hash_tree.cpp',
+	'number_generator.cpp',
+	'path.cpp',
+	'p2p.cpp',
+	'request_generator.cpp',
+	'share_index.cpp'
+]
+
+#sub scons files
+SConscript([
+	'unit_tests/SConstruct'
+])
+
+#link
+env_base.StaticLibrary('p2p', src)

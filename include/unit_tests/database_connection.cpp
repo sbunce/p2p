@@ -1,8 +1,5 @@
-//custom
-#include "../database.hpp"
-#include "../settings.hpp"
-
 //include
+#include <database_connection.hpp>
 #include <logger.hpp>
 
 //std

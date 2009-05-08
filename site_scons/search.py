@@ -4,56 +4,68 @@
 import os
 import re
 
-#Returns a fully qualified path to a directory within search_dir which
-#corresponds to pattern. Recursively searches directories. Returns an empty
-#string if no directory found.
+#locate directory that matches pattern in specified search_dir
 def locate_dir(search_dir, pattern):
-	regex = re.compile(pattern)
-	return __locate_dir(search_dir, regex)
+	assert len(search_dir) > 0
 
-#private recursive function to locate directory
-def __locate_dir(search_dir, regex):
-	#make sure search_dir ends in '/'
+	regex = re.compile(pattern)
+
 	if search_dir[-1] != '/':
 		search_dir += '/'
 
-	#scan current directory
-	for file in os.listdir(search_dir):
-		if os.path.isdir(search_dir + file):
-			if regex.match(file):
-				#found directory that matches pattern
-				return search_dir + file
-			else:
-				#recurse to new directory
-				tmp = __locate_dir(search_dir + file, regex)
-				if tmp != '':
-					return tmp
+	for root, dirs, files in os.walk(search_dir):
+		for dir in dirs:
+			if regex.match(dir):
+				return search_dir + dir
+		break
 
-	#no directory matching pattern found
-	return '';
+	return False;
 
-#Returns a fully qualified path to a file within search_dir that corresponds to
-#pattern. Recursively searches directory. Returns and empty string if no file
-#is found.
+#recursivly locate directory that matches pattern starting at root_dir
+def locate_dir_recurse(root_dir, pattern):
+	assert len(root_dir) > 0
+
+	regex = re.compile(pattern)
+
+	if root_dir[-1] != '/':
+		root_dir += '/'
+
+	for root, dirs, files in os.walk(root_dir):
+		for dir in dirs:
+			if regex.match(dir):
+				return root_dir + dir
+
+	return False;
+
+#locate file that matches pattern in specified search_dir
 def locate_file(search_dir, pattern):
-	regex = re.compile(pattern)
-	return __locate_file(search_dir, regex)
+	assert len(search_dir) > 0
 
-#private recursive function to locate file
-def __locate_file(search_dir, regex):
-	#make sure search_dir ends in '/'
+	regex = re.compile(pattern)
+
 	if search_dir[-1] != '/':
 		search_dir += '/'
 
-	for file in os.listdir(search_dir):
-		path = search_dir + file
-		if os.path.isdir(path):
-			tmp = locate_file(search_dir + file, regex)
-			if tmp != '':
-				return tmp
-		else:
+	for root, dirs, files in os.walk(search_dir):
+		for file in files:
 			if regex.match(file):
-				return path
+				return search_dir + file
+		break
 
-	#no file matching pattern found
-	return ''
+	return False;
+
+#recursivly locate file that matches pattern starting at root_dir
+def locate_file_recurse(root_dir, pattern):
+	assert len(root_dir) > 0
+
+	regex = re.compile(pattern)
+
+	if root_dir[-1] != '/':
+		root_dir += '/'
+
+	for root, dirs, files in os.walk(root_dir):
+		for file in files:
+			if regex.match(file):
+				return root_dir + file
+
+	return False;

@@ -1,199 +1,194 @@
 <html>
 <head>
-<title>&#60;name&#62; Documentation</title>
+<title>P2P Documentation</title>
 </head>
 <body>
 
 <table>
 <tr><td width="640">
 
-have definitions under about, and under protocol
-
-<h2>&#60;name&#62; Documentation</h2>
-<ul>
-	<li><a href="#definitions">Definitions</a>
-	<li><a href="#about">About</a>
-	<ul>
-		<li><a href="#about_goals">Goals</a>
-	</ul>
-	<li><a href="#protocol">Protocol</a>
-	<ul>
-		<li><a href="#pipelining">Pipelining</a>
-		<li><a href="#rerequests">Rerequests</a>
-		<li><a href="#blacklist">Blacklist</a>
-		<li><a href="#commands">Commands</a>
-		<ul>
-			<li><a href="#commands_client_to_server">Client -&#62 Server</a>
-			<li><a href="#commands_server_to_client">Server -&#62 Client</a>
-		</ul>
-	</ul>
-	<li><a href="#coding_standards">Coding Standards</a>
-	<ul>
-		<li><a href="#building_gnu_linux">Test</a>
-	</ul>
-	<li><a href="#building">Building</a>
-	<ul>
-		<li><a href="#building_gnu_linux">GNU/Linux</a>
-		<li><a href="#building_windows">Windows</a>
-	</ul>
-</ul>
-
-<hr>
-
-<a name="definitions">
-<h2>Definitions</h2>
-<p>
-&nbsp&nbsp&nbsp&nbsp&nbsp
-These are definitions of terms used throughout this document. These definitions
-are specific to this document. It is possible definitions listed here are not
-general (ie applicable outside this document).
-</p>
-
-<blockquote>
-	<p>
-	<b>Command:</b> The first byte of every message. This indicates what the
-	sender wants the receiver to do.
-	</p>
-
-	<p>
-	<b>Message:</b> A command, optionally followed by a payload.
-	</p>
-
-	<p>
-	<b>Multi-Source:</b> Downloading one file from multiple peers at the same
-	time to increase download speed.
-	</p>
-
-	<p>
-	<b>Payload:</b> A message minus the command. Information possibly needed to
-	make a request or issue a response.
-	</p>
-
-	<p>
-	<b>P2P:</b> Acronym for "peer to peer". A term used to describe a program
-	which is both client and server that lets you download and share files.
-	</p>
-
-	<p>
-	<b>Request:</b> A message which is requesting that a peer do something.
-	</p>
-
-	<p>
-	<b>Response:</b> A response to a request.
-	</p>
-
-	<p>
-	<b>Segmented Downloading:</b> Dividing up a file in to segments so that
-	individual pieces of a file can be requested.
-	</p>
-</blockquote>
-
-<hr>
-
-<a name="about">
 <h2>About</h2>
 <p>
-&nbsp&nbsp&nbsp&nbsp&nbsp
-&#60;name&#62; is a P2P file sharing program with it's own protocol. It uses
-multi-source segmented downloading meaning that one file may be downloaded from
-multiple hosts at the same time to increase speeds.
+This P2P program has it's own protocol. It uses multi-source segmented
+downloading meaning that one file may be downloaded from multiple hosts at the
+same time to increase speeds.
 </p>
-
-<blockquote>
-	<a name="about_goals">
-	<h3>Goals</h3>
-	<p>
-	&nbsp&nbsp&nbsp&nbsp&nbsp
-	These goals are meant to express the direction of development for the
-	protocol and implementation. They are meant to be rough guidelines, not exact
-	requirements.
-	</p>
-
-	<h4>Protocol</h4>
-	<blockquote>
-		<p>
-		<b>Efficiency:</b> The ratio of control and error detection data to file
-		data should be as low as possible.
-		</p>
-
-		<p>
-		<b>Perfect Copies:</b> The integrity of files should be checked via hash
-		functions to insure downloaded files are perfect copies.
-		</p>
-
-		<p>
-		<b>Unpoisonable:</b> The presence of malicious peers should have minimal
-		impact on file downloads.
-		</p>
-
-		<p>
-		<b>Obfuscation:</b> The protocol should be obfuscated to make detecting
-		the protocol difficult. This should not take precedence over any other
-		goal.
-		</p>
-	</blockquote>
-
-	<h4>Implementation</h4>
-	<blockquote>
-		<p>
-		<b>Efficiency:</b> CPU and memory usage should be as low as possible.
-		</p>
-
-		<p>
-		<b>Location Awareness:</b> Closer servers should be favored when
-		downloading files.
-		</p>
-	</blockquote>
-</blockquote>
 
 <hr>
 
-<a name="protocol">
-<h2>Protocol</h2>
+<h2>Goals</h2>
+
 <p>
-&nbsp&nbsp&nbsp&nbsp&nbsp
-&#60;name&#62; is a totally symmetric protocol. After key-exchange, messages may
-be sent in either direction. There are two types of messages, binary and text.
+<b>Bandwidth Efficiency:</b><br>
+Ratio of control and error detection data to file data should be as low as
+possible.
 </p>
 
-<blockquote>
-	<b>Binary:</b> Binary messages are fixed length. Each binary command has an
-	associated message length.
+<p>
+<b>Perfect Copies:</b><br>
+The integrity of files should be checked via hash functions to insure
+downloaded files are perfect copies.
+</p>
 
-	<p>
-	Example:
-	</p>
-	<blockquote>
-		<pre>
-  0   1                0   1   2   3   4   5
-+---+---+            +---+---+---+---+---+---+
-| C |   |            | C |                   |
-+---+---+            +---+---+---+---+---+---+
- request                  response
-		</pre>
-	</blockquote>
+<p>
+<b>Unpoisonable:</b><br>
+The presence of malicious peers should have minimal impact on file downloads.
+</p>
 
-	<b>Text:</b> Text requests and responses are variable length and terminated
-	by a NULL byte. Text message are only used for development because of their
-	poor byte efficieny.
+<p>
+<b>Obfuscation:</b><br>
+The protocol should be obfuscated to make detecting the protocol difficult.
+This should not take precedence over any other goal.
+</p>
 
-	<p>
-	Example:
-	</p>
-	<blockquote>
-		<pre>
-  0   1                0   1   .........   n
-+---+---+            +---+---+---+---+---+---+
-| C |   |            |                    \0 |
-+---+---+            +---+---+---+---+---+---+
- request                  response
-		</pre>
-	</blockquote>
-</blockquote>
+<p>
+<b>Low Requirements:</b><br>
+CPU and memory usage should be as low as possible.
+</p>
 
-<hr width="100" align="left">
+<p>
+<b>Location Awareness:</b><br>
+Close servers should be favored over distant ones.
+</p>
 
-<a name="pipelining">
+<hr>
+
+<h2>Protocol</h2>
+<p>
+The protocol is symmetric with the exception of the key exchange. Any message
+can go in either direction. Messages are fixed length. Each command has an
+associated message length.
+</p>
+
+<fieldset>
+<pre>
+Name: ERROR
+Base10: 0
+Description: ERROR has different meanings in different contexts.
+
+	+---+
+	| C |
+	+---+
+	  0
+</pre>
+</fieldset>
+
+<br>
+
+<fieldset>
+<pre>
+Name: SLOT_ID
+Base10: 3
+Description: Sent in response to a REQUEST_SLOT_FILE or a
+REQUEST_SLOT_HASH. The slot ID this contains is needed to request file blocks
+or hash blocks.
+
+	+---+---+
+	| C | S | , S = slot ID
+	+---+---+
+	  0   1
+</pre>
+</fieldset>
+
+<br>
+
+<fieldset>
+<pre>
+Name: BLOCK
+Base10: 5
+Description: Either a hash block or a file block. The hash blocks are variable
+size but the file blocks are 5121 bytes (including command).
+
+	+---+---+---+---+---+---+---+---+
+	| C |            block          |
+	+---+---+---+---+---+---+---+---+
+	  0   1   2   3   ......... 5121
+</pre>
+</fieldset>
+
+<br>
+
+<fieldset>
+<pre>
+Name: REQUEST_SLOT_HASH
+Base10: 1
+Description: Request a slot for downloading a hash tree. The slot ID is 1 byte
+so 256 slots per connection are supported.
+
+	+---+---+---+---+---+---+---+---+
+	| C |         root hash         |
+	+---+---+---+---+---+---+---+---+
+	  0   1   2   3   ........    21
+
+Possible Responses:
+SLOT_ID
+ERROR - The server does not have the requested hash tree.
+</pre>
+</fieldset>
+
+<br>
+
+<fieldset>
+<pre>
+Name: REQUEST_SLOT_FILE
+Base10: 2
+Description: Request a slot for downloading a file. The slot ID is 1 byte so 256
+slots per connection are supported.
+
+	+---+---+---+---+---+---+---+---+
+	| C |         root hash         |
+	+---+---+---+---+---+---+---+---+
+	  0   1   2   3   ........    21
+
+Possible Responses:
+SLOT_ID
+ERROR - The server does not have the requested file.
+</pre>
+</fieldset>
+
+<br>
+
+<fieldset>
+<pre>
+Name: CLOSE_SLOT
+Base10: 4
+Description: Close slot for hash tree or file.
+
+	+---+---+
+	| C | S | , S = slot ID
+	+---+---+
+	  0   1
+
+No Response
+</pre>
+</fieldset>
+
+<br>
+
+<fieldset>
+<pre>
+Name: BLOCK
+Base10: 5
+Description: This is used to request a 5120 byte block from a file. The BLOCK
+command is used to request a block from a hash tree or a file. A 5120 byte block
+from a hash tree is 256 hashes.
+
+	+---+---+---+---+---+---+---+---+
+	| C | S |              RRN      | , S = slot ID
+	+---+---+---+---+---+---+---+---+
+	  0   1   2   3   .........  10
+
+Possible Responses:
+BLOCK
+WAIT
+ERROR - The server no longer has the file.
+</pre>
+</fieldset>
+
+<br>
+
+<hr>
+
 <h3>Pipelining</h3>
 <p>
 The maximum pipeline size is 8 requests.
@@ -205,311 +200,62 @@ request whenever a response is received such that there are always requests
 waiting for a request.
 </p>
 
-<br><hr width="100" align="left">
+<hr>
 
-<a name="rerequests">
 <h3>Rerequests</h3>
 <p>
-The following trigger rerequesting of file blocks:
-<br><br>
-- If a request is not fulfilled within 16 seconds a rerequest will be done.
-<br>
-- Server disconnect triggers rerequest of all requests in pipeline.
-<br>
-- Hash failure triggers blacklisting of server and rerequest of all requests in
-pipline.
+FINISH THIS
 </p>
 
-<br><hr width="100" align="left">
+<hr>
 
-<a name="blacklist">
 <h3>Blacklist</h3>
 <p>
-When a client or server disobeys the protocol it will be blacklisted. Any established
-connections to the server are immediately severed. The following trigger blacklisting:
-<br><br>
-- Unexpected commands, unknown commands, and commands out of sequence.
-<br>
-- Overpiplining from the client.
-<br>
-- Buffer overrun. Malformed commands generally lead the the client/server not being
-able to delimit commands which leads to buffer overruns.
-<br>
-- Server sending a block which fails a hash check.
+FINISH THIS
 </p>
 
-<br><hr width="100" align="left">
+<hr>
 
-<a name="commands">
-<h3>Commands</h3>
-<pre>
-C: command name
-B: base 10 value of command byte
-D: direction
-</pre>
-
-<a name="commands_server_to_client">
-<h3>Server -> Client</h3>
-<blockquote>
-<a name="ERROR">
-<fieldset>
-<pre>
-C: ERROR
-B: 0
-D: server -> client
-</pre>
-<p>
-ERROR has different meanings in different contexts.
-</p>
-<p>
-<blockquote>
-<pre>
-  0
-+---+
-| C |
-+---+
-</pre>
-</blockquote>
-</fieldset>
-
-<br>
-
-<a name="SLOT_ID">
-<fieldset>
-<pre>
-C: SLOT_ID
-B: 3
-D: server -> client
-</pre>
-<p>
-This message is sent in response to a REQUEST_SLOT_FILE or a REQUEST_SLOT_HASH.
-Contained within this response is a slot ID that can be used to request blocks
-from a file.
-</p>
-<blockquote>
-<pre>
-  0   1
-+---+---+
-| C | S | , where S = slot ID
-+---+---+
-</pre>
-</blockquote>
-</fieldset>
-
-<br>
-
-<a name="BLOCK">
-<fieldset>
-<pre>
-C: BLOCK
-B: 5
-D: server -> client
-</pre>
-<p>
-The server is sending a block.
-</p>
-<blockquote>
-<pre>
-  0   1   2   3   ......... 5121
-+---+---+---+---+---+---+---+---+
-| C |            block          |
-+---+---+---+---+---+---+---+---+
-</pre>
-</blockquote>
-</fieldset>
-
-<br>
-
-<a name="WAIT">
-<fieldset>
-<pre>
-C: WAIT
-B: 6
-D: server -> client
-</pre>
-<p>
-The server is currently downloading the file and doesn't yet have the block
-that was requested. This triggers an 8 second wait before trying to request
-any new blocks.
-</p>
-<blockquote>
-<pre>
-  0
-+---+
-| C |
-+---+
-</pre>
-</blockquote>
-</blockquote>
-
-<br><hr width="100" align="left">
-
-<a name="commands_client_to_server">
-<h3>Client -> Server</h3>
-<blockquote>
-<fieldset>
-<pre>
-C: REQUEST_SLOT_HASH
-B: 1
-D: client -> server
-</pre>
-<p>
-Request a slot for downloading a hash tree. The slot ID is 1 byte so 256 slots per
-connection are supported.
-</p>
-<blockquote>
-<pre>
-  0   1   2   3   ........    21
-+---+---+---+---+---+---+---+---+
-| C |         root hash         |
-+---+---+---+---+---+---+---+---+
-</pre>
-</blockquote>
-<pre>
-Possible Responses:
-<a href="#SLOT_ID">SLOT_ID</a>
-<a href="#ERROR">ERROR</a>   - The server does not have the requested hash.
-</pre>
-</fieldset>
-
-<br>
-
-<fieldset>
-<pre>
-C: REQUEST_SLOT_FILE
-B: 2
-D: client -> server
-</pre>
-<p>
-Request a slot for downloading a file. The slot ID is 1 byte so 256 slots per
-connection are supported.
-</p>
-<blockquote>
-<pre>
-  0   1   2   3   ........    21
-+---+---+---+---+---+---+---+---+
-| C |         root hash         |
-+---+---+---+---+---+---+---+---+
-</pre>
-</blockquote>
-<pre>
-Possible Responses:
-<a href="#SLOT_ID">SLOT_ID</a>
-<a href="#ERROR">ERROR</a>   - The server does not have the requested hash.
-</pre>
-</fieldset>
-
-<br>
-
-<fieldset>
-<pre>
-C: CLOSE_SLOT
-B: 4
-D: client -> server
-</pre>
-<p>
-Tell the server to close a slot. Generally used when finished downloading a file.
-</p>
-<blockquote>
-<pre>
-  0   1
-+---+---+
-| C | S | , where S = slot ID
-+---+---+
-</pre>
-</blockquote>
-<pre>
-No Response Expected
-</pre>
-</fieldset>
-
-<br>
-
-<fieldset>
-<pre>
-C: BLOCK
-B: 5
-D: client -> server
-</pre>
-<p>
-This is used to request a 5120 byte block from a file. The BLOCK command is used
-to request a block from a hash tree or a file. A 5120 byte block from a hash tree
-is 256 hashes.
-</p>
-<blockquote>
-<pre>
-  0   1   2   3   .........  10
-+---+---+---+---+---+---+---+---+
-| C | S |              RRN      | , S = slot ID
-+---+---+---+---+---+---+---+---+
-</pre>
-</blockquote>
-<pre>
-Possible Responses:
-<a href="#BLOCK">BLOCK</a>
-<a href="#WAIT">WAIT</a>
-<a href="#ERROR">ERROR</a>   - The server no longer has the file.
-</pre>
-</fieldset>
-</blockquote>
-
-<br><hr>
-
-<a name="building">
 <h2>Building</h2>
 
-<br><hr width="100" align="left">
-
-<a name="building_gnu_linux">
 <h3>GNU/Linux</h3>
 <p>
 There are many different flavors of GNU/Linux. Most likely you can use your package
 manager to install these packages.
 </p>
 <p>
-FINISH THIS SECTION
+FINISH THIS
 </p>
 
-<br><hr width="100" align="left">
-
-<a name="building_windows">
 <h3>Windows</h3>
 
-<a href="http://www.microsoft.com/express/vc/">Visual C++ Express 2008</a>
-<blockquote>
-	The command line compiler will be used.
-</blockquote>
+<p>
+<a href="http://www.microsoft.com/express/vc/">Visual C++ Express 2008</a><br>
+The command line compiler will be used by scons.
+</p>
 
 <p>
-<a href="http://www.boostpro.com/products/free">Boost</a>
-Version &#62;= 1.36
-</p>
-<blockquote>
+<a href="http://www.boostpro.com/products/free">Boost</a>Version &#62;= 1.36<br>
 Precompiled libraries available from Boost Consulting. When installing select
 multithreaded static.
-</blockquote>
+</p>
 
 <p>
-<a href="http://ftp.gnome.org/pub/GNOME/binaries/win32/gtkmm/">gtkmm</a>
-</p>
-<blockquote>
+<a href="http://ftp.gnome.org/pub/GNOME/binaries/win32/gtkmm/">gtkmm</a><br>
 Install to "C:\gtkmm" or pkg-config won't work properly. Latest version
 known to work is 2.12.7-3. The 2.14 versions are known to have problems building.
-</blockquote>
+</p>
 
 <p>
-<a href="http://python.org/download/">Python</a>
-</p>
-<blockquote>
+<a href="http://python.org/download/">Python</a><br>
 This is used to run the build system (scons), which is included with the source
 code.
-</blockquote>
+</p>
 
 <p>
 After downloading and installing these dependencies open cmd.exe and navigate
 to the source directory and run scons.
 </p>
-
 
 </tr></td>
 </table>

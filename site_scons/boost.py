@@ -8,47 +8,69 @@ import os
 import sys
 
 #Add required include paths to environment.
+#/usr/local/include is prioritized over /usr/include
 def include(env):
 	environment.define_keys(env)
 
-	#possible directories where the boost header directory resides
 	if sys.platform == 'linux2':
+		#try to locate boost in /usr/local/include
 		search_dir = '/usr/local/include'
 		pattern = 'boost-[0-9]{1}_[0-9]{2}'
-	if sys.platform == 'win32':
-		search_dir = '/Program Files/boost'
-		pattern = 'boost_[0-9]{1}_[0-9]{2}.*'
+		boost_dir = search.locate_dir(search_dir, pattern)
+		if boost_dir:
+			env['CPPPATH'].append(boost_dir)
+			return
 
-	found_dir = search.locate_dir(search_dir, pattern)
-	if found_dir == '':
+		#not in /usr/local/include, see if it exists in /usr/include
+		search_dir = '/usr/include'
+		pattern = 'boost'
+		boost_dir = search.locate_dir(search_dir, pattern)
+		if boost_dir:
+			env['CPPPATH'].append(found_dir)
+			return
+
 		print 'boost error: could not locate include directory'
 		exit(1)
-	else:
-		env['CPPPATH'].append(found_dir)
+
+	if sys.platform == 'win32':
+		#try to locate boost in default http://www.boostpro.com/ install location
+		search_dir = '/Program Files/boost'
+		pattern = 'boost_[0-9]{1}_[0-9]{2}.*'
+		boost_dir = search.locate_dir(search_dir, pattern)
+		if boost_dir:
+			env['CPPPATH'].append(found_dir)
+		else:
+			print 'boost error: could not locate include directory'
+			exit(1)		
 
 #Returns a full path to the static lib given the library name.
 #Example: thread, filesystem, system, etc
-def static_library(library_name):
-	pattern = 'libboost_'+library_name+'.*'
-
-	#set up suffix to append to pattern
+def static_library(lib_name):
 	if sys.platform == 'linux2':
-		pattern += '\.a'
-	if sys.platform == 'win32':
-		pattern += '\.lib'
+		#try to locate boost in /usr/local/lib
+		pattern = 'libboost_' + lib_name + '.*\.a'
+		lib_dir = '/usr/local/lib'
+		lib_path = search.locate_file(lib_dir, pattern)
+		if lib_path:
+			return lib_path
 
-	#possible locations with boost library files
-	if sys.platform == 'linux2':
-		library_dir = '/usr/local/lib'
-	if sys.platform == 'win32':
-		#locate boost library directory boost_1_36_0
-		library_dir = search.locate_dir('/Program Files/boost/', 'boost_[0-9]{1}_[0-9]{2}.*');
-		library_dir += '/lib'
+		#try to locate boost in /usr/lib
+		lib_dir = '/usr/lib'
+		lib_path = search.locate_file(lib_dir, pattern)
+		if lib_path:
+			return lib_path
 
-	#search directory for file name matching pattern
-	library_path = search.locate_file(library_dir, pattern)
-	if library_path == '':
 		print 'boost error: could not locate static library with pattern ' + pattern
 		exit(1)
-	else:
-		return library_path
+
+	if sys.platform == 'win32':
+		#try to locate boost in default http://www.boostpro.com/ install location
+		pattern = 'libboost_' + lib_name + '.*\.lib'
+		lib_dir = search.locate_dir('/Program Files/boost/', 'boost_[0-9]{1}_[0-9]{2}.*');
+		lib_path = search.locate_file(lib_dir, pattern)
+		if lib_path:
+			return lib_path
+		else:
+			print 'boost error: could not locate static library with pattern ' + pattern
+			exit(1)
+			
