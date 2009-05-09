@@ -1,5 +1,16 @@
 syntax: glob
-*.pyc
-*.o
-*.dblite
 *.a
+*.dblite
+*.exe
+*.o
+*.out
+*.pyc
+DB
+gui/p2p_gui
+gui/p2p_nogui
+gui/p2p_nogui_static
+libnet/http/http
+libp2p/unit_tests/rightside_up
+libp2p/unit_tests/upside_down
+libp2p/unit_tests/share
+libsqlite3/sqlite3
