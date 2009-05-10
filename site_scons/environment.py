@@ -1,4 +1,4 @@
-#if keys aren't defined then define them
+#if scons environment keys aren't defined then define them
 def define_keys(env):
 	if not env.has_key('LIBS'):
 		env['LIBS'] = []

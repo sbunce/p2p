@@ -1,16 +1,5 @@
-#site_scons
-import boost
-import gtkmm
-import sqlite3
-import system
-import tommath
-
-#std
-import sys
-
 Import('env_base')
 
-#command to all
 src = [
 	'block_arbiter.cpp',
 	'database_init.cpp',
@@ -30,10 +19,8 @@ src = [
 	'share_index.cpp'
 ]
 
-#sub scons files
 SConscript([
 	'unit_tests/SConstruct'
 ])
 
-#link
 env_base.StaticLibrary('p2p', src)

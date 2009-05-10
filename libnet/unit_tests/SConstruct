@@ -1,13 +1,5 @@
 #site_scons
-import boost
-import sqlite3
 import unit_test
 
 Import('env_base')
-
-env_base.unit_test([
-	'network.cpp',
-	boost.static_library('date_time'),
-	boost.static_library('system'),
-	boost.static_library('thread')
-])
+unit_test.run(env_base)

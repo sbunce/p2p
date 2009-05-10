@@ -4,13 +4,4 @@ import unit_test
 
 Import('env_base')
 
-static_libs = [
-	boost.static_library('date_time'),
-	boost.static_library('filesystem'),
-	boost.static_library('system'),
-	boost.static_library('thread')
-]
-
-env_base.Program('http',
-	['main.cpp', 'http.cpp'] + static_libs
-)
+env_base.Program('http', ['main.cpp', 'http.cpp'])

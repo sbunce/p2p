@@ -11,7 +11,6 @@ def setup(env):
 
 	if sys.platform == 'linux2':
 		env.ParseConfig('pkg-config gtkmm-2.4 --cflags --libs')
-
 	if sys.platform == 'win32':
 		pkg_config = search.locate_file_recurse('/gtkmm/', 'pkg-config\.exe')
 		if pkg_config:
