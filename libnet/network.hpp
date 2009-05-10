@@ -23,6 +23,7 @@
 class network : private boost::noncopyable
 {
 public:
+	//passed to call backs
 	typedef reactor::socket_data::socket_data_visible socket;
 
 	/* ctor parameters

@@ -12,11 +12,26 @@
 #include <network.hpp>
 
 //std
+#include <csignal>
 #include <map>
 
-boost::mutex Connection_mutex;
-std::map<int, boost::shared_ptr<http> > Connection;
-std::string web_root;
+namespace
+{
+	//connection specific information
+	boost::mutex Connection_mutex;
+	std::map<int, boost::shared_ptr<http> > Connection;
+
+	//path to web root
+	std::string web_root;
+
+	//volatile needed to stop optimizer from check-once behavior on while(!quit)
+	volatile sig_atomic_t quit;
+	void signal_handler(int sig)
+	{
+		signal(sig, signal_handler);
+		quit = 1;
+	}
+}//end of unnamed namespace
 
 void connect_call_back(network::socket & Socket)
 {
@@ -48,6 +63,9 @@ void failed_connect_call_back(network::socket & Socket)
 
 int main(int argc, char ** argv)
 {
+	//register signal handlers
+	signal(SIGINT, signal_handler);
+
 	CLI_args CLI_Args(argc, argv);
 
 	if(!CLI_Args.get_string("--web_root", web_root)){
@@ -73,7 +91,7 @@ int main(int argc, char ** argv)
 	#endif
 	*/
 
-	while(true){
+	while(!quit){
 		portable_sleep::ms(9999);
 	}
 }
