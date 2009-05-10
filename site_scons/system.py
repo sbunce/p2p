@@ -37,13 +37,13 @@ def setup(env):
 	if sys.platform == 'win32':
 		#windows lib location
 		search_dir = '/Program Files/Microsoft SDKs/Windows/'
-		found_dir = search.locate_dir(search_dir, 'Lib')
+		found_dir = search.locate_dir_recurse(search_dir, 'Lib')
 		assert(found_dir)
 		env['LIBPATH'].append(found_dir)
 
 		#windows.h location
 		search_dir = '/Program Files/Microsoft SDKs/Windows/'
-		found_dir = search.locate_dir(search_dir, 'Include')
+		found_dir = search.locate_dir_recurse(search_dir, 'Include')
 		assert(found_dir)
 		env['CPPPATH'].append(found_dir)
 
@@ -63,4 +63,3 @@ def setup_static(env):
 		env['LINKFLAGS'].append('`g++ -print-file-name=libstdc++.a`')
 	if sys.platform == 'win32':
 		print 'windows static linking not supported'
-		exit(1)

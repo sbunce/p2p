@@ -66,8 +66,10 @@ def static_library(lib_name):
 	if sys.platform == 'win32':
 		#try to locate boost in default http://www.boostpro.com/ install location
 		pattern = 'libboost_' + lib_name + '.*\.lib'
-		lib_dir = search.locate_dir('/Program Files/boost/', 'boost_[0-9]{1}_[0-9]{2}.*');
-		lib_path = search.locate_file(lib_dir, pattern)
+		boost_dir = search.locate_dir('/Program Files/boost/', 'boost_[0-9]{1}_[0-9]{2}.*');
+		assert(boost_dir)
+		boost_lib_dir = boost_dir + '/lib'
+		lib_path = search.locate_file(boost_lib_dir, pattern)
 		if lib_path:
 			return lib_path
 		else:

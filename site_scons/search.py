@@ -33,7 +33,7 @@ def locate_dir_recurse(root_dir, pattern):
 	for root, dirs, files in os.walk(root_dir):
 		for dir in dirs:
 			if regex.match(dir):
-				return root_dir + dir
+				return root + '/' + dir
 
 	return False;
 
@@ -66,6 +66,6 @@ def locate_file_recurse(root_dir, pattern):
 	for root, dirs, files in os.walk(root_dir):
 		for file in files:
 			if regex.match(file):
-				return root_dir + file
+				return root + '/' + file
 
 	return False;
