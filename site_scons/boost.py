@@ -38,7 +38,7 @@ def include(env):
 		pattern = 'boost_[0-9]{1}_[0-9]{2}.*'
 		boost_dir = search.locate_dir(search_dir, pattern)
 		if boost_dir:
-			env['CPPPATH'].append(found_dir)
+			env['CPPPATH'].append(boost_dir)
 		else:
 			print 'boost error: could not locate include directory'
 			exit(1)		

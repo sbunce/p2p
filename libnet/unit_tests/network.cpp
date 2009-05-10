@@ -87,7 +87,6 @@ void failed_connect_call_back(network::socket & Socket)
 
 int main()
 {
-	return 0;
 	network Network(&failed_connect_call_back, &connect_call_back, &disconnect_call_back, 6969);
 
 	for(int x=0; x<500; ++x){
