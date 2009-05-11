@@ -30,7 +30,8 @@ def setup(env):
 	env['LIBPATH'].append([
 		'#libp2p',
 		'#libsqlite3',
-		'#libtommath'
+		'#libtommath',
+		boost.library_path()
 	])
 
 	#libraries to link

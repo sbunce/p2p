@@ -23,7 +23,7 @@ p2p::~p2p()
 
 bool p2p::current_download(const std::string & hash, download_status & status)
 {
-
+	return false;
 }
 
 void p2p::current_downloads(std::vector<download_status> & status)

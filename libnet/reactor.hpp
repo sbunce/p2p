@@ -8,7 +8,8 @@
 //networking
 #ifdef WIN32
 	#define MSG_NOSIGNAL 0  //disable SIGPIPE on send()
-	#define FD_SETSIZE 1024
+	#define FD_SETSIZE 1024 //max number of sockets in fd_set
+	#define socklen_t int   //hack for little API difference on windows
 	#include <winsock.h>
 #else
 	#include <arpa/inet.h>

@@ -1,5 +1,7 @@
 TODO
 
+-fix timer.hpp on windows
+
 -can stdin, stdout, stderr be closed?
 
 -make request generator unit test

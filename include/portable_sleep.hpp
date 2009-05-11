@@ -4,6 +4,10 @@
 //std
 #include <cassert>
 
+#ifdef WIN32
+	#include <windows.h>
+#endif
+
 //replacement for system specific sleep functions
 namespace portable_sleep
 {

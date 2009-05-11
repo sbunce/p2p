@@ -14,8 +14,34 @@ def setup(env):
 	if sys.platform == 'win32':
 		pkg_config = search.locate_file_recurse('/gtkmm/', 'pkg-config\.exe')
 		if pkg_config:
-			env.ParseConfig(pkg_config + ' gtkmm-2.4 --cflags --libs')
+			env.ParseConfig(pkg_config + ' gtkmm-2.4 --cflags')
 			env['LIBPATH'].append('/gtkmm/lib')
+			env['LIBS'].append([
+				'gtkmm-vc90-2_4',
+				'gdkmm-vc90-2_4',
+				'pangomm-vc90-1_4',
+				'atkmm-vc90-1_6',
+				'cairomm-vc90-1_0',
+				'giomm-vc90-2_4',
+				'glibmm-vc90-2_4',
+				'sigc-vc90-2_0',
+				'gtk-win32-2.0',
+				'gdk_pixbuf-2.0',
+				'pango-1.0',
+				'pangocairo-1.0',
+				'pangoft2-1.0',
+				'pangowin32-1.0',
+				'atk-1.0',
+				'cairo',
+				'gio-2.0',
+				'gmodule-2.0',
+				'gobject-2.0',
+				'gthread-2.0',
+				'glib-2.0',
+				'libpng',
+				'intl',
+				'libtiff'
+			])
 		else:
 			print 'gtkmm error: could not locate pkg-config'
 			exit(1)

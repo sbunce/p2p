@@ -60,7 +60,12 @@ public:
 		#endif
 
 		//set socket to non-blocking for async connect
+		#ifdef WIN32
+		u_long mode = 1; //non-zero sets non-blocking
+		ioctlsocket(new_FD, FIONBIO, &mode);
+		#else
 		fcntl(new_FD, F_SETFL, O_NONBLOCK);
+		#endif
 
 		sockaddr_in dest;
 		dest.sin_family = AF_INET;   //IPV4
@@ -101,7 +106,7 @@ public:
 			job_finished.push_back(boost::shared_ptr<socket_data>(new socket_data(new_FD, IP, -1, true)));
 		}
 
-		write(selfpipe_write, "0", 1);
+		send(selfpipe_write, "0", 1, MSG_NOSIGNAL);
 		return true;
 	}
 
@@ -123,7 +128,7 @@ public:
 			disconnect.push_back(info->socket_FD);
 		}else if(!info->failed_connect_flag){
 			job_finished.push_back(info);
-			write(selfpipe_write, "0", 1);
+			send(selfpipe_write, "0", 1, MSG_NOSIGNAL);
 		}
 	}
 
@@ -405,15 +410,12 @@ private:
 			service = select(end_FD, &read_FDS, &write_FDS, NULL, &tv);
 
 			if(service == -1){
+				#ifndef WIN32
 				if(errno != EINTR){
-					//fatal error
-					#ifdef WIN32
-					LOGGER << "winsock error " << WSAGetLastError();
-					#else
 					perror("select");
-					#endif
 					exit(1);
 				}
+				#endif
 			}else if(service != 0){
 				/*
 				There is a starvation problem that can happen when hitting the rate
@@ -440,7 +442,7 @@ private:
 					//discard any selfpipe bytes
 					if(x == selfpipe_read){
 						if(FD_ISSET(x, &read_FDS)){
-							read(x, selfpipe_discard, sizeof(selfpipe_discard));
+							recv(x, selfpipe_discard, sizeof(selfpipe_discard), MSG_NOSIGNAL);
 							socket_serviced = true;
 						}
 						FD_CLR(x, &read_FDS);
@@ -486,7 +488,7 @@ private:
 							even though select() said the socket was readable. We ignore
 							that when that happens.
 							*/
-							n_bytes = recv(x, SD_iter->second->recv_buff.tail_start(), temp, MSG_NOSIGNAL);
+							n_bytes = recv(x, (char *)SD_iter->second->recv_buff.tail_start(), temp, MSG_NOSIGNAL);
 							if(n_bytes == 0){
 								SD_iter->second->disconnect_flag = true;
 								need_call_back = true;
@@ -534,7 +536,7 @@ private:
 									even though select() said the socket was writeable. We
 									ignore it when that happens.
 									*/
-									n_bytes = send(x, SD_iter->second->send_buff.data(),
+									n_bytes = send(x, (char *)SD_iter->second->send_buff.data(),
 										SD_iter->second->send_buff.size(), MSG_NOSIGNAL);
 									if(n_bytes == 0){
 										SD_iter->second->disconnect_flag = true;
@@ -592,7 +594,11 @@ private:
 		}
 
 		//reuse port if it's currently in use
+		#ifdef WIN32
+		const char yes = 1;
+		#else
 		int yes = 1;
+		#endif
 		if(setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1){
 			#ifdef WIN32
 			LOGGER << "winsock error " << WSAGetLastError();
@@ -603,7 +609,12 @@ private:
 		}
 
 		//set listener to non-blocking, incoming connections inherit this
+		#ifdef WIN32
+		u_long mode = 1; //non-zero sets non-blocking
+		ioctlsocket(listener, FIONBIO, &mode);
+		#else
 		fcntl(listener, F_SETFL, O_NONBLOCK);
+		#endif
 
 		//prepare listener info
 		sockaddr_in myaddr;                  //server address
@@ -637,9 +648,67 @@ private:
 		add_socket(listener, false);
 	}
 
+	#ifdef WIN32
+	/*
+	Windows has no pipe(), or socketpair(), or any concept of local sockets so
+	we create a socket pair using PF_INET to do the selfpipe trick.
+	*/
+	void socket_pair(int & selfpipe_read, int & selfpipe_write)
+	{
+		int listener = socket(PF_INET, SOCK_STREAM, 0);
+		selfpipe_write = socket(PF_INET, SOCK_STREAM, 0);
+		if(listener == -1 || selfpipe_read == -1 || selfpipe_write == -1){
+			LOGGER << "winsock error " << WSAGetLastError();
+			exit(1);
+		}
+
+		//prepare listener info
+		sockaddr_in addr;                              //server address
+		addr.sin_family = AF_INET;                     //ipv4
+		addr.sin_addr.s_addr = inet_addr("127.0.0.1"); //listen only on loop-back
+		addr.sin_port = htons(16000);
+
+		//docs for this in establish_connection function
+		std::memset(&addr.sin_zero, 0, sizeof(addr.sin_zero));
+
+		//set listener info
+		if(bind(listener, (sockaddr *)&addr, sizeof(addr)) == -1){
+			LOGGER << "winsock error " << WSAGetLastError();
+			exit(1);
+		}
+
+		//start listener, set max incoming connection backlog
+		if(listen(listener, 1) == -1){
+			LOGGER << WSAGetLastError();
+			exit(1);
+		}
+
+		//connect to selfpipe_read socket
+		addr.sin_family = AF_INET;                     //IPV4
+		addr.sin_addr.s_addr = inet_addr("127.0.0.1"); //connect to listening socket
+		addr.sin_port = htons(16000);         //port to connect to
+
+		if(connect(selfpipe_write, (sockaddr *)&addr, sizeof(addr)) == -1){
+			//socket failed to connect
+			LOGGER << WSAGetLastError();
+			exit(1);
+		}
+
+		socklen_t len = sizeof(addr);
+		if((selfpipe_read = accept(listener, (sockaddr *)&addr, &len)) == -1){
+			LOGGER << WSAGetLastError();
+			exit(1);
+		}
+		closesocket(listener);
+	}
+	#endif
+
 	//starts self pipe used to force select to return
 	void start_selfpipe()
 	{
+		#ifdef WIN32
+		socket_pair(selfpipe_read, selfpipe_write);
+		#else
 		int pipe_FD[2];
 		if(pipe(pipe_FD) == -1){
 			LOGGER << "error creating selfpipe";
@@ -647,9 +716,19 @@ private:
 		}
 		selfpipe_read = pipe_FD[0];
 		selfpipe_write = pipe_FD[1];
+		#endif
+
 		LOGGER << "created selfpipe socket " << selfpipe_read;
+
+		#ifdef WIN32
+		u_long mode = 1; //non-zero sets non-blocking
+		ioctlsocket(selfpipe_read, FIONBIO, &mode);
+		ioctlsocket(selfpipe_write, FIONBIO, &mode);
+		#else
 		fcntl(selfpipe_read, F_SETFL, O_NONBLOCK);
 		fcntl(selfpipe_write, F_SETFL, O_NONBLOCK);
+		#endif
+
 		add_socket(selfpipe_read, false);
 	}
 };

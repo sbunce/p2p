@@ -4,6 +4,9 @@
 #include <boost/thread.hpp>
 
 //include
+#include <portable_sleep.hpp>
+
+//net
 #include <network.hpp>
 
 class connection
@@ -96,5 +99,5 @@ int main()
 		}
 	}
 
-	sleep(10);
+	portable_sleep::ms(10*1000);
 }

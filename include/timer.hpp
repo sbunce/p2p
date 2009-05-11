@@ -30,7 +30,11 @@ namespace timer
 	boost::uint64_t TSC()
 	{
 		boost::uint32_t lo, hi;
+		#ifdef WIN32
+		LOGGER << "TIMER NOT WORKING ON WINDOWS";
+		#else
 		__asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
+		#endif
 		return (boost::uint64_t)hi << 32 | lo;
 	}
 

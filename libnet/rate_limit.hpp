@@ -11,6 +11,13 @@
 //std
 #include <limits>
 
+//this interferes with ::max()
+#ifdef WIN32
+	#ifdef max
+		#undef max
+	#endif
+#endif
+
 class rate_limit
 {
 public:
