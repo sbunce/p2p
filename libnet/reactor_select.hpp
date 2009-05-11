@@ -650,8 +650,9 @@ private:
 
 	#ifdef WIN32
 	/*
-	Windows has no pipe(), or socketpair(), or any concept of local sockets so
-	we create a socket pair using PF_INET to do the selfpipe trick.
+	Windows has no pipe(), or socketpair(), or local sockets which will work
+	with select() to do the selfpipe trick. Because of this we establish a
+	internet socket to localhost to do the selfpipe trick.
 	*/
 	void socket_pair(int & selfpipe_read, int & selfpipe_write)
 	{
@@ -666,7 +667,7 @@ private:
 		sockaddr_in addr;                              //server address
 		addr.sin_family = AF_INET;                     //ipv4
 		addr.sin_addr.s_addr = inet_addr("127.0.0.1"); //listen only on loop-back
-		addr.sin_port = htons(16000);
+		addr.sin_port = htons(0);                      //bind to available socket 1024 to 5000
 
 		//docs for this in establish_connection function
 		std::memset(&addr.sin_zero, 0, sizeof(addr.sin_zero));
@@ -683,10 +684,22 @@ private:
 			exit(1);
 		}
 
+		sockaddr_in temp_addr;
+		socklen_t temp_addr_len = sizeof(temp_addr);
+		/*
+		Error detection on getsockname not working correctly. Function will return
+		non-zero, then WSAGetLastError() returns 0. This might be threading related.
+		Not checking for error here isn't a problem because if there is one the
+		connect() will fail and exit out.
+		*/
+		getsockname(listener, (sockaddr *)&temp_addr, &temp_addr_len);
+		int listening_socket = ntohs(temp_addr.sin_port);
+		LOGGER << listening_socket;
+
 		//connect to selfpipe_read socket
 		addr.sin_family = AF_INET;                     //IPV4
 		addr.sin_addr.s_addr = inet_addr("127.0.0.1"); //connect to listening socket
-		addr.sin_port = htons(16000);         //port to connect to
+		addr.sin_port = htons(listening_socket);                  //port to connect to
 
 		if(connect(selfpipe_write, (sockaddr *)&addr, sizeof(addr)) == -1){
 			//socket failed to connect
