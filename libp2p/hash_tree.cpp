@@ -5,7 +5,8 @@ hash_tree::hash_tree(const std::string & database_path):
 	DB(database_path),
 	stop_thread(false)
 {
-
+	//make sure directory for temp hash trees created
+	boost::filesystem::create_directory(path::temp());
 }
 
 hash_tree::status hash_tree::check(tree_info & Tree_Info, boost::uint64_t & bad_block)
@@ -165,12 +166,13 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 	Note: The root hash is not included in the file because that would be
 	      redundant information and a waste of space.
 	*/
-	std::fstream upside_down("upside_down", std::ios::in | std::ios::out | std::ios::trunc | std::ios::binary);
+LOGGER << path::upside_down();
+	std::fstream upside_down(path::upside_down().c_str(), std::ios::in | std::ios::out | std::ios::trunc | std::ios::binary);
 	if(!upside_down.good()){
 		LOGGER << "error opening upside_down file";
 		return false;
 	}
-	std::fstream rightside_up("rightside_up", std::ios::in | std::ios::out | std::ios::trunc | std::ios::binary);
+	std::fstream rightside_up(path::rightside_up().c_str(), std::ios::in | std::ios::out | std::ios::trunc | std::ios::binary);
 	if(!rightside_up.good()){
 		LOGGER << "error opening rightside_up file";
 		return false;

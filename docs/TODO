@@ -1,5 +1,8 @@
 TODO
 
+-gui/upside_down, gui/rightside_up not excluded. These should be moved to
+$HOME/.p2p
+
 -fix timer.hpp on windows
 
 -can stdin, stdout, stderr be closed?
@@ -13,24 +16,12 @@ eachother the file blocks hog upload that should be used to get requests out.
 THINK ABOUT
 
 -Using new primes must be forced. To do this old primes must be kept track of.
--Think about CMWC4096 PRNG seed issue. After key exchange, each client/server
-sends 1/2 the size of the PRNG seed encrypted to the other.
--Think about how ISP might detect protocol via knowing handshake size/port.
-Initial send sizes need to be be randomized? Perhaps do a modulo of some number
-against the secret key, this could say how many extra random bytes to send.
--Possible system to do uploads. Favor the highest request, but assure that
-requests are arriving sequentially. Actually this wouldn't have to be assured,
-if someone started downloading mid file to try to get an advantage they might
-have to wait a long time to download the beginning of the file.
-
 
 DEFERRED FEATURES
 
 -SQLite blob write offset is a signed int. This limits the maximum tree size
 to 2gB. Create document like this: http://www.sqlite.org/limits.html with size
 limits.
--have temp directory for files that aren't done downloading
--client::set_download_directory() not doing anything but saving setting.
 -Support for multiple share directories.
 -Figure out how to handle naming conflicts. It should be fully automatic.
 Probably just rename the files according to some rules. It doesn't matter too

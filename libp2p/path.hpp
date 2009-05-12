@@ -9,6 +9,7 @@
 
 //std
 #include <cstdlib>
+#include <sstream>
 #include <string>
 
 class path
@@ -23,14 +24,25 @@ public:
 		Directory for finished downloads.
 	download_unfinished:
 		Directory for unfinished downloads.
+	rightside_up:
+		Location of scratch file for rightside_up hash tree. The thread id is
+		appended so different threads will get directed to different files.
 	share:
 		Directory for shared files.
+	temp:
+		Returns location of temporary directory.
+	upside_down:
+		Location of scratch file for upside_down hash tree. The thread id is
+		appended so different threads will get directed to different files.
 	*/
 	static std::string database();
 	static std::string main();
 	static std::string download();
 	static std::string download_unfinished();
+	static std::string rightside_up();
 	static std::string share();
+	static std::string temp();
+	static std::string upside_down();
 
 private:
 	path();

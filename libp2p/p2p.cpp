@@ -8,6 +8,7 @@ p2p::p2p():
 	boost::filesystem::create_directory(path::download());
 	boost::filesystem::create_directory(path::download_unfinished());
 	boost::filesystem::create_directory(path::share());
+	boost::filesystem::create_directory(path::temp());
 
 	//setup database tables
 	database::init::run(path::database());

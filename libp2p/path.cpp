@@ -40,11 +40,15 @@ std::string path::database()
 
 std::string path::main()
 {
+	#ifdef WIN32
+	return "";
+	#else
 	if(home().empty()){
 		return ".p2p/";
 	}else{
 		return home() + "/.p2p/";
 	}
+	#endif
 }
 
 std::string path::download()
@@ -65,11 +69,46 @@ std::string path::download_unfinished()
 	}
 }
 
+std::string path::rightside_up()
+{
+	if(home().empty()){
+		std::stringstream ss;
+		ss << home() << "temp/rightside_up_" << boost::this_thread::get_id();
+		return ss.str();
+	}else{
+		std::stringstream ss;
+		ss << home() << "/.p2p/temp/rightside_up_" << boost::this_thread::get_id();
+		return ss.str();
+	}
+}
+
 std::string path::share()
 {
 	if(home().empty()){
 		return "share/";
 	}else{
 		return home() + "/.p2p/share/";
+	}
+}
+
+std::string path::temp()
+{
+	if(home().empty()){
+		return "temp/";
+	}else{
+		return home() + "/.p2p/temp";
+	}
+}
+
+std::string path::upside_down()
+{
+	if(home().empty()){
+		std::stringstream ss;
+		ss << home() << "temp/upside_down_" << boost::this_thread::get_id();
+		return ss.str();
+	}else{
+		std::stringstream ss;
+		ss << home() << "/.p2p/temp/upside_down_" << boost::this_thread::get_id();
+		return ss.str();
 	}
 }
