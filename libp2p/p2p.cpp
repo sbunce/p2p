@@ -4,7 +4,10 @@ p2p::p2p():
 	DB(path::database())
 {
 	//setup directories
+	#ifndef WIN32
+	//main directory always in current directory on windows
 	boost::filesystem::create_directory(path::main());
+	#endif
 	boost::filesystem::create_directory(path::download());
 	boost::filesystem::create_directory(path::download_unfinished());
 	boost::filesystem::create_directory(path::share());

@@ -166,7 +166,6 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 	Note: The root hash is not included in the file because that would be
 	      redundant information and a waste of space.
 	*/
-LOGGER << path::upside_down();
 	std::fstream upside_down(path::upside_down().c_str(), std::ios::in | std::ios::out | std::ios::trunc | std::ios::binary);
 	if(!upside_down.good()){
 		LOGGER << "error opening upside_down file";

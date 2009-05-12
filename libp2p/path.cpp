@@ -40,15 +40,11 @@ std::string path::database()
 
 std::string path::main()
 {
-	#ifdef WIN32
-	return "";
-	#else
 	if(home().empty()){
 		return ".p2p/";
 	}else{
 		return home() + "/.p2p/";
 	}
-	#endif
 }
 
 std::string path::download()

@@ -20,6 +20,10 @@ example usage:
 #include <cmath>
 #include <iostream>
 
+#ifdef WIN32
+	#include <windows.h>
+#endif
+
 namespace timer
 {
 	/*
@@ -29,13 +33,15 @@ namespace timer
 	*/
 	boost::uint64_t TSC()
 	{
-		boost::uint32_t lo, hi;
 		#ifdef WIN32
-		LOGGER << "TIMER NOT WORKING ON WINDOWS";
+		LARGE_INTEGER LI;
+		QueryPerformanceCounter(&LI);
+		return (boost::uint64_t)LI.HighPart << 32 | LI.LowPart;
 		#else
+		boost::uint32_t lo, hi;
 		__asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
-		#endif
 		return (boost::uint64_t)hi << 32 | lo;
+		#endif
 	}
 
 	/*
