@@ -18,11 +18,13 @@ p2p::p2p():
 
 	//trigger initialization of singletons
 	number_generator::singleton();
+	share_index::singleton();
 }
 
 p2p::~p2p()
 {
 	number_generator::singleton().stop();
+	share_index::singleton().stop();
 }
 
 bool p2p::current_download(const std::string & hash, download_status & status)

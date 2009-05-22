@@ -1,9 +1,10 @@
 TODO
 
--gui/upside_down, gui/rightside_up not excluded. These should be moved to
-$HOME/.p2p
+-moving finished downloads from the download table to the share table is a pain,
+is the download table even necessary? Why not have a bit in the share table to
+indicate whether the file is downloading or not.
 
--fix timer.hpp on windows
+-handle ctrl-c in p2p_gui and p2p_nogui like in http
 
 -can stdin, stdout, stderr be closed?
 

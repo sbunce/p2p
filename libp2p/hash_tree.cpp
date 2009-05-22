@@ -146,7 +146,8 @@ void hash_tree::check_contiguous(tree_info & Tree_Info)
 	Tree_Info.Contiguous.trim_contiguous();
 }
 
-bool hash_tree::create(const std::string & file_path, std::string & root_hash)
+bool hash_tree::create(const std::string & file_path, const boost::uint64_t & expected_file_size,
+	std::string & root_hash)
 {
 	std::fstream fin(file_path.c_str(), std::ios::in | std::ios::binary);
 	if(!fin.good()){
@@ -181,6 +182,10 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 	boost::uint64_t blocks_read = 0;
 	boost::uint64_t file_size = 0;
 	while(true){
+		if(boost::this_thread::interruption_requested()){
+			return false;
+		}
+
 		fin.read(block_buff, protocol::FILE_BLOCK_SIZE);
 		if(fin.gcount() == 0){
 			break;
@@ -197,7 +202,7 @@ bool hash_tree::create(const std::string & file_path, std::string & root_hash)
 		++blocks_read;
 		file_size += fin.gcount();
 
-		if(stop_thread){
+		if(stop_thread || file_size > expected_file_size){
 			return false;
 		}
 	}
@@ -283,6 +288,10 @@ bool hash_tree::create_recurse(std::fstream & upside_down, std::fstream & rights
 
 	//loop through hashes in the lower row and create the next highest row
 	while(scratch_read_RRN < end_RRN){
+		if(boost::this_thread::interruption_requested()){
+			return false;
+		}
+
 		//hash child nodes
 		int block_buff_size = 0;
 		if(end_RRN - scratch_read_RRN < protocol::HASH_BLOCK_SIZE){

@@ -43,7 +43,7 @@ int main()
 
 	std::string root_hash;
 	boost::uint64_t bad_block;
-	if(!Hash_Tree.create(test_share + "1_block", root_hash)){
+	if(!Hash_Tree.create(test_share + "1_block", 1 * protocol::FILE_BLOCK_SIZE, root_hash)){
 		LOGGER; exit(1);
 	}
 	hash_tree::tree_info TE_1(root_hash, 1 * protocol::FILE_BLOCK_SIZE, DB);
@@ -51,7 +51,7 @@ int main()
 		LOGGER; exit(1);
 	}
 
-	if(!Hash_Tree.create(test_share + "2_block", root_hash)){
+	if(!Hash_Tree.create(test_share + "2_block", 2 * protocol::FILE_BLOCK_SIZE, root_hash)){
 		LOGGER; exit(1);
 	}
 	hash_tree::tree_info TE_2(root_hash, 2 * protocol::FILE_BLOCK_SIZE, DB);
@@ -59,7 +59,7 @@ int main()
 		LOGGER; exit(1);
 	}
 
-	if(!Hash_Tree.create(test_share + "3_block", root_hash)){
+	if(!Hash_Tree.create(test_share + "3_block", 3 * protocol::FILE_BLOCK_SIZE, root_hash)){
 		LOGGER; exit(1);
 	}
 	hash_tree::tree_info TE_3(root_hash, 3 * protocol::FILE_BLOCK_SIZE, DB);
@@ -67,7 +67,7 @@ int main()
 		LOGGER; exit(1);
 	}
 
-	if(!Hash_Tree.create(test_share + "4_block", root_hash)){
+	if(!Hash_Tree.create(test_share + "4_block", 4 * protocol::FILE_BLOCK_SIZE, root_hash)){
 		LOGGER; exit(1);
 	}
 	hash_tree::tree_info TE_4(root_hash, 4 * protocol::FILE_BLOCK_SIZE, DB);
@@ -75,7 +75,7 @@ int main()
 		LOGGER; exit(1);
 	}
 
-	if(!Hash_Tree.create(test_share + "256_block", root_hash)){
+	if(!Hash_Tree.create(test_share + "256_block", 256 * protocol::FILE_BLOCK_SIZE, root_hash)){
 		LOGGER; exit(1);
 	}
 	hash_tree::tree_info TE_256(root_hash, 256 * protocol::FILE_BLOCK_SIZE, DB);
@@ -83,7 +83,7 @@ int main()
 		LOGGER; exit(1);
 	}
 
-	if(!Hash_Tree.create(test_share + "257_block", root_hash)){
+	if(!Hash_Tree.create(test_share + "257_block", 257 * protocol::FILE_BLOCK_SIZE, root_hash)){
 		LOGGER; exit(1);
 	}
 	hash_tree::tree_info TE_257(root_hash, 257 * protocol::FILE_BLOCK_SIZE, DB);

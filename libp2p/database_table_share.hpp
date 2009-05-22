@@ -30,7 +30,8 @@ public:
 	add_entry:
 		Add entry to the DB.
 	delete_hash:
-		Removes entry from database.
+		Removes entry from database. Removes hash tree if there are no more
+		references to it.
 	*/
 	static void add_entry(const std::string & hash, const boost::uint64_t & size, const std::string & path, database::connection & DB);
 	static void delete_entry(const std::string & path, database::connection & DB);

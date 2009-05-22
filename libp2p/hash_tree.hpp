@@ -140,7 +140,10 @@ public:
 		hash tree.
 	create:
 		Create hash tree. Returns true and sets root_hash if creation suceeded.
-		Returns false if creation failed, error reading tree, or if stop called.
+		Returns false if creation failed, error reading tree, if stop called, or
+		if thread interrupted. The expected_file_size is passed to this function
+		so that hashing can be cancelled if the file is growing (which saves
+		time on file that will be rehashed anyways).
 	get_tree_info:
 		Returns tree info needed to read and write hash tree.
 		Note: This is an expensive function to call. The returned hash tree should
@@ -157,7 +160,7 @@ public:
 	*/
 	status check(tree_info & Tree_Info, boost::uint64_t & bad_block);
 	status check_file_block(tree_info & Tree_Info, const boost::uint64_t & file_block_num, const char * block, const int & size);
-	bool create(const std::string & file_path, std::string & root_hash);
+	bool create(const std::string & file_path, const boost::uint64_t & expected_file_size, std::string & root_hash);
 	status read_block(tree_info & Tree_Info, const boost::uint64_t & block_num, std::string & block);
 	void stop();
 	status write_block(tree_info & Tree_Info, const boost::uint64_t & block_num, const std::string & block, const std::string & IP);

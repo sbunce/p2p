@@ -17,6 +17,7 @@ void http::recv_call_back(network::socket & SD)
 	if(SD.recv_buff.size() > 1024 || Type != UNDETERMINED){
 		//request size limit exceeded or second request made
 		SD.disconnect_flag = true;
+		return;
 	}
 
 	int pos_1, pos_2;
@@ -44,7 +45,6 @@ void http::recv_call_back(network::socket & SD)
 		determine_type();
 		read(SD.send_buff);
 	}
-	SD.disconnect_flag = false;
 }
 
 void http::send_call_back(network::socket & SD)

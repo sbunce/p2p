@@ -10,4 +10,5 @@ gui/p2p_gui
 gui/p2p_nogui
 libnet/http/http
 libp2p/unit_tests/share
+libp2p/unit_tests/temp
 libsqlite3/sqlite3

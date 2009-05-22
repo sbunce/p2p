@@ -19,13 +19,20 @@ void database::table::share::add_entry(const std::string & hash,
 void database::table::share::delete_entry(const std::string & path,
 	database::connection & DB)
 {
-	char * sqlite3_path = sqlite3_mprintf("%Q", path.c_str());
 	DB.query("BEGIN TRANSACTION");
+	char * sqlite3_path = sqlite3_mprintf("%Q", path.c_str());
 	std::string hash;
 	boost::uint64_t file_size;
-	if(lookup_path(path, hash, file_size, DB)){
+
+	/*
+	Only remove the hash tree if this is the last reference to it. There are also
+	references to hash trees in the download table but downloads are not allowed
+	in the download table with a hash identical to a hash in the share table.
+	*/
+	if(unique_hash(hash, DB)){
 		database::table::hash::delete_tree(hash, hash_tree::tree_info::file_size_to_tree_size(file_size), DB);
 	}
+
 	std::stringstream ss;
 	ss << "DELETE FROM share WHERE hash = '" << hash << "' AND path = " << sqlite3_path;
 	sqlite3_free(sqlite3_path);
