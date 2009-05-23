@@ -17,14 +17,6 @@ bool share_index::is_indexing()
 	return workers_hashing;
 }
 
-void share_index::stop()
-{
-	Share_Scan.stop();
-	Workers.interrupt_all();
-	Workers.join_all();
-	remove_temporary_files();
-}
-
 void share_index::remove_temporary_files()
 {
 	namespace fs = boost::filesystem;
@@ -48,6 +40,19 @@ void share_index::remove_temporary_files()
 	}
 }
 
+boost::uint64_t share_index::share_size()
+{
+	return Share_Scan.share_size();
+}
+
+void share_index::stop()
+{
+	Share_Scan.stop();
+	Workers.interrupt_all();
+	Workers.join_all();
+	remove_temporary_files();
+}
+
 void share_index::worker_pool()
 {
 	hash_tree Hash_Tree(path::database());
@@ -69,10 +74,12 @@ void share_index::worker_pool()
 			if(Hash_Tree.create(info.path, info.size, root_hash)){
 				LOGGER << "add: " << info.path << " size: " << info.size;
 				database::table::share::add_entry(root_hash, info.size, info.path, DB);
+				Share_Scan.share_size_add(info.size);
 			}
 		}else{
-			LOGGER << "del: " << info.path << " size: " << info.size;
+			LOGGER << "del: " << info.path;
 			database::table::share::delete_entry(info.path, DB);
+			Share_Scan.share_size_sub(info.size);
 		}
 		--workers_hashing;
 	}

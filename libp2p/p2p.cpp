@@ -87,6 +87,12 @@ void p2p::reconnect_unfinished()
 
 }
 
+boost::uint64_t p2p::share_size()
+{
+	return share_index::singleton().share_size();
+}
+
+//DEBUG, this search needs to be asynchronous
 void p2p::search(std::string search_word, std::vector<download_info> & Search_Info)
 {
 	database::table::search::run_search(search_word, Search_Info, DB);

@@ -38,10 +38,13 @@ public:
 	/*
 	is_indexing:
 		Returns true if the server_index is hashing files.
+	share_size:
+		Returns size of shared files. (bytes)
 	stop:
 		Stops all worker threads in preparation for program shut down.
 	*/
 	bool is_indexing();
+	boost::uint64_t share_size();
 	void stop();
 
 private:

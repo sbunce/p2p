@@ -18,7 +18,7 @@ int main()
 	}
 
 	database::table::share::delete_entry("DEF", DB);
-	if(!database::table::share::lookup_hash("ABC", DB)){
+	if(database::table::share::lookup_hash("ABC", DB)){
 		LOGGER; exit(1);
 	}
 

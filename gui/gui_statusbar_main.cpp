@@ -24,15 +24,16 @@ bool gui_statusbar_main::update_status_bar()
 	upload_rate_s << convert::size_SI(upload_rate) << "/s";
 
 	std::stringstream ss;
-	ss << " D: " << download_rate_s.str();
+	ss << " DL: " << download_rate_s.str();
 	ss << std::string(16 - ss.str().size(), ' ');
-	ss << " U: " << upload_rate_s.str();
+	ss << " UL: " << upload_rate_s.str();
 	ss << std::string(32 - ss.str().size(), ' ');
-	ss << " P: " << P2P->prime_count();
-	ss << std::string(42 - ss.str().size(), ' ');
+	ss << " Prime: " << P2P->prime_count();
+	ss << std::string(52 - ss.str().size(), ' ');
+	ss << " Shared: " << convert::size_SI(P2P->share_size());
 
 	if(P2P->is_indexing()){
-		ss << "  Indexing/Hashing";
+		ss << "  Hashing";
 	}
 
 	statusbar->pop();

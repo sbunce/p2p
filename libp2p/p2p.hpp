@@ -70,6 +70,8 @@ public:
 		Returns size of prime cache used for key-exchanges.
 	remove_download:
 		Stops/Removes a running download.
+	share_size:
+		Size of all shared files. (bytes)
 	search:
 		Populates the info vector with results to search.
 	set_max_connections:
@@ -97,6 +99,7 @@ public:
 	unsigned prime_count();
 	bool is_indexing();
 	void remove_download(const std::string & hash);
+	boost::uint64_t share_size();
 	void search(std::string search_word, std::vector<download_info> & Search_Info);
 	void set_max_connections(const unsigned & max_connections_in);
 	void set_max_download_rate(unsigned download_rate);

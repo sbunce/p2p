@@ -24,12 +24,12 @@ namespace table{
 class share
 {
 public:
-	share();
+	share(){}
 
 	/* Functions to modify DB
 	add_entry:
 		Add entry to the DB.
-	delete_hash:
+	delete_entry:
 		Removes entry from database. Removes hash tree if there are no more
 		references to it.
 	*/
@@ -48,10 +48,10 @@ public:
 
 private:
 	/*
-	unique_key:
-		Returns true if key is unique in share table.
+	exists:
+		Returns true if hash exists in share table.
 	*/
-	static bool unique_hash(const std::string & hash, database::connection & DB);
+	static bool exists(const std::string & hash, database::connection & DB);
 };
 }//end of table namespace
 }//end of database namespace
