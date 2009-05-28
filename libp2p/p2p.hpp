@@ -18,7 +18,7 @@
 #include "number_generator.hpp"
 #include "path.hpp"
 #include "settings.hpp"
-#include "share_index.hpp"
+#include "share.hpp"
 #include "upload_status.hpp"
 
 //include

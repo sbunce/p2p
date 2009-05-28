@@ -15,8 +15,10 @@ src = [
 	'path.cpp',
 	'p2p.cpp',
 	'request_generator.cpp',
-	'share_scan.cpp',
-	'share_index.cpp'
+	'share.cpp',
+	'share_pipeline_0_scan.cpp',
+	'share_pipeline_1_hash.cpp',
+	'share_pipeline_2_write.cpp'
 ]
 
 SConscript([

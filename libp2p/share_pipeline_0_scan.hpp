@@ -1,19 +1,11 @@
-//THREAD-SAFE, CTOR THREAD SPAWNING
-/*
-This tree saves size when storing directory paths because it represents the
-paths as a tree. If there are two files in a directory the directory name is
-only stored once.
-
-Empty directories are not tracked.
-
-All data structures private to this class should only be accessed by scan_thread
-unless properly synchronized (like the job dequeue).
-*/
+#ifndef H_SHARE_PIPELINE_0_SCAN
+#define H_SHARE_PIPELINE_0_SCAN
 
 //custom
 #include "database.hpp"
 #include "path.hpp"
 #include "settings.hpp"
+#include "share_pipeline_job.hpp"
 
 //boost
 #include <boost/cstdint.hpp>
@@ -32,63 +24,34 @@ unless properly synchronized (like the job dequeue).
 #include <map>
 #include <string>
 
-class share_scan : private boost::noncopyable
+class share_pipeline_0_scan : private boost::noncopyable
 {
 public:
-	share_scan();
-
-	class job_info
-	{
-		friend class share_scan;
-	public:
-		job_info(){}
-
-		std::string path;
-		boost::uint64_t file_size;
-
-		//true if file added, false if removed
-		bool add;
-
-		//used by share_index
-		std::string hash;
-
-	private:
-		job_info(
-			const std::string & path_in,
-			const boost::uint64_t & file_size_in,
-			const bool add_in
-		):
-			path(path_in),
-			file_size(file_size_in),
-			add(add_in)
-		{}
-	};
+	share_pipeline_0_scan();
 
 	/*
 	get_job:
-		This is called from multiple threads concurrently. Blocks until a job is
-		read (hash tree needs to be created).
-		std::pair<file path, file_size>
+		The share_pipeline_1_hash threads get blocked at this function until there
+		is work to do.
 	share_size:
-		Returns the size of all shared files.
-	share_size_add:
-		share_index adds bytes to share size when it finishes hashing a file.
-	share_size_sub:
-		share_index subtracts bytes from share size when it removes a file from
-		the DB.
+		Returns the size of the share. (bytes)
 	stop:
-		Stops the share_scan thread. Called by stop function of share_index. This
-		is needed because singletons don't get destructred. So cleanup and thread
-		shutdown must be done manually.
+		Stops scan_thread.
 	*/
-	void get_job(job_info & info);
+	void get_job(share_pipeline_job & info);
 	boost::uint64_t share_size();
-	void share_size_add(const boost::uint64_t & bytes);
-	void share_size_sub(const boost::uint64_t & bytes);
 	void stop();
 
 private:
 	boost::thread scan_thread;
+
+	//jobs for share_pipeline_1_scan process
+	std::deque<share_pipeline_job> job;
+	boost::mutex job_mutex;
+	boost::condition_variable_any job_cond;
+
+	//used to block scan_thread when job limit reached
+	boost::condition_variable_any job_max_cond;
 
 	//information to be stored for a file
 	class file
@@ -115,26 +78,17 @@ private:
 	*/
 	directory root;
 
-//DEBUG, eventually this should be a container of paths to scan
-	//path to scan
+	//path to start recursive scan
 	boost::filesystem::path share_path;
 
 	//the sum of the size of all files that have been processed (bytes)
 	atomic_int<boost::uint64_t> _share_size;
 
 	/*
-	Jobs for share_index worker threads to pick up.
-	*/
-	std::deque<job_info> job;
-	boost::mutex job_mutex;
-	boost::condition_variable_any job_cond;
-
-	//used to block scan_thread when job limit reached
-	boost::condition_variable_any job_max_cond;
-
-	/*
 	block_on_max_jobs:
-		Blocks the scan thread when the maximum number of jobs has been reached.
+		Blocks the scan thread when the job buffer is full. This function will
+		unblock when share_pipeline_1_hash takes some of the finished jobs using
+		get_job().
 	insert and insert_recurse:
 		Adds file to tree. Returns true if a job for the file needs to be
 		scheduled.
@@ -158,3 +112,4 @@ private:
 	//call back used by ctor to populate tree with known files
 	int path_call_back(int columns_retrieved, char ** response, char ** column_name);
 };
+#endif

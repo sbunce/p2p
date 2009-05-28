@@ -1,22 +1,22 @@
-#include "share_scan.hpp"
+#include "share_pipeline_0_scan.hpp"
 
-share_scan::share_scan():
+share_pipeline_0_scan::share_pipeline_0_scan():
 	share_path(boost::filesystem::system_complete(
 		boost::filesystem::path(path::share(), boost::filesystem::native))),
 	_share_size(0)
 {
-	scan_thread = boost::thread(boost::bind(&share_scan::main_loop, this));
+	scan_thread = boost::thread(boost::bind(&share_pipeline_0_scan::main_loop, this));
 }
 
-void share_scan::block_on_max_jobs()
+void share_pipeline_0_scan::block_on_max_jobs()
 {
 	boost::mutex::scoped_lock lock(job_mutex);
-	while(job.size() >= boost::thread::hardware_concurrency() * 4){
+	while(job.size() >= settings::SHARE_SCAN_RATE){
 		job_max_cond.wait(job_mutex);
 	}
 }
 
-void share_scan::get_job(job_info & info)
+void share_pipeline_0_scan::get_job(share_pipeline_job & info)
 {
 	boost::mutex::scoped_lock lock(job_mutex);
 	while(job.empty()){
@@ -24,12 +24,10 @@ void share_scan::get_job(job_info & info)
 	}
 	info = job.front();
 	job.pop_front();
-
-	//unblock scan_thread if blocked in block_on_max_jobs()
 	job_max_cond.notify_one();
 }
 
-bool share_scan::insert(const std::string & path, const boost::uint64_t & size)
+bool share_pipeline_0_scan::insert(const std::string & path, const boost::uint64_t & size)
 {
 	boost::char_separator<char> sep("/");
 	boost::tokenizer<boost::char_separator<char> > tokens(path, sep);
@@ -71,7 +69,7 @@ bool share_scan::insert(const std::string & path, const boost::uint64_t & size)
 	}
 }
 
-bool share_scan::insert_recurse(std::map<std::string, directory>::iterator dir_iter,
+bool share_pipeline_0_scan::insert_recurse(std::map<std::string, directory>::iterator dir_iter,
 	boost::tokenizer<boost::char_separator<char> >::iterator path_iter_cur,
 	boost::tokenizer<boost::char_separator<char> >::iterator path_iter_end,
 	const boost::uint64_t & size)
@@ -90,27 +88,22 @@ bool share_scan::insert_recurse(std::map<std::string, directory>::iterator dir_i
 	}
 }
 
-void share_scan::main_loop()
+void share_pipeline_0_scan::main_loop()
 {
 	namespace fs = boost::filesystem;
 
 	{ //DB will close when it leaves this scope
 	database::connection DB(path::database());
-	DB.query("SELECT path, size FROM share", this, &share_scan::path_call_back);
+	DB.query("SELECT path, size FROM share", this, &share_pipeline_0_scan::path_call_back);
 	}
 
 	boost::uint64_t size;
 	while(true){
-		//interruption point required here for when share is empty
 		boost::this_thread::interruption_point();
 
 		//traverse tree and remove all missing files
 		remove_missing();
 
-/*
-DEBUG, eventually there will be a loop here to go through different shared
-directories.
-*/
 		if(!fs::exists(share_path)){
 			LOGGER << "error opening share: " << share_path.string();
 			portable_sleep::ms(1000);
@@ -140,7 +133,8 @@ directories.
 						if(insert(iter_cur->path().string(), size)){
 							//file hasn't been seen before, or it changed size
 							boost::mutex::scoped_lock lock(job_mutex);
-							job.push_back(job_info(iter_cur->path().string(), size, true));
+							_share_size += size;
+							job.push_back(share_pipeline_job(iter_cur->path().string(), size, true));
 							job_cond.notify_one();
 						}
 					}
@@ -156,7 +150,7 @@ directories.
 	}
 }
 
-int share_scan::path_call_back(int columns_retrieved, char ** response, char ** column_name)
+int share_pipeline_0_scan::path_call_back(int columns_retrieved, char ** response, char ** column_name)
 {
 	namespace fs = boost::filesystem;
 	assert(response[0] && response[1]);
@@ -174,7 +168,7 @@ int share_scan::path_call_back(int columns_retrieved, char ** response, char ** 
 	}
 }
 
-void share_scan::remove_missing()
+void share_pipeline_0_scan::remove_missing()
 {
 	//recurse on all the different directory roots
 	std::map<std::string, directory>::iterator
@@ -186,7 +180,7 @@ void share_scan::remove_missing()
 	}
 }
 
-void share_scan::remove_missing_recurse(
+void share_pipeline_0_scan::remove_missing_recurse(
 	std::map<std::string, directory>::iterator dir_iter,
 	std::string constructed_path)
 {
@@ -222,7 +216,6 @@ void share_scan::remove_missing_recurse(
 
 			fs::path path = fs::system_complete(fs::path(file_path, fs::native));
 
-//DEBUG, eventually will need a loop here to check all shares
 			bool exists_in_share = (path.string().find(share_path.string()) == 0u);
 			if(!exists_in_share || !fs::exists(path)){
 				/*
@@ -231,7 +224,8 @@ void share_scan::remove_missing_recurse(
 				removed.
 				*/
 				boost::mutex::scoped_lock lock(job_mutex);
-				job.push_back(job_info(file_path, file_iter_cur->second.size, false));
+				_share_size -= file_iter_cur->second.size;
+				job.push_back(share_pipeline_job(file_path, file_iter_cur->second.size, false));
 				job_cond.notify_one();
 				dir_iter->second.File.erase(file_iter_cur++);
 				remove = true;
@@ -240,7 +234,8 @@ void share_scan::remove_missing_recurse(
 			//error reading file, remove files that fail to read
 			LOGGER << ex.what();
 			boost::mutex::scoped_lock lock(job_mutex);
-			job.push_back(job_info(file_path, file_iter_cur->second.size, false));
+			_share_size -= file_iter_cur->second.size;
+			job.push_back(share_pipeline_job(file_path, file_iter_cur->second.size, false));
 			job_cond.notify_one();
 			dir_iter->second.File.erase(file_iter_cur++);
 			remove = true;
@@ -252,22 +247,12 @@ void share_scan::remove_missing_recurse(
 	}
 }
 
-boost::uint64_t share_scan::share_size()
+boost::uint64_t share_pipeline_0_scan::share_size()
 {
 	return _share_size;
 }
 
-void share_scan::share_size_add(const boost::uint64_t & bytes)
-{
-	_share_size += bytes;
-}
-
-void share_scan::share_size_sub(const boost::uint64_t & bytes)
-{
-	_share_size -= bytes;
-}
-
-void share_scan::stop()
+void share_pipeline_0_scan::stop()
 {
 	scan_thread.interrupt();
 	scan_thread.join();

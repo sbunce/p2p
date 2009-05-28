@@ -18,13 +18,13 @@ p2p::p2p():
 
 	//trigger initialization of singletons
 	number_generator::singleton();
-	share_index::singleton();
+	share::singleton();
 }
 
 p2p::~p2p()
 {
 	number_generator::singleton().stop();
-	share_index::singleton().stop();
+	share::singleton().stop();
 }
 
 bool p2p::current_download(const std::string & hash, download_status & status)
@@ -87,7 +87,7 @@ void p2p::reconnect_unfinished()
 
 boost::uint64_t p2p::share_size()
 {
-	return share_index::singleton().share_size();
+	return share::singleton().share_size();
 }
 
 //DEBUG, this search needs to be asynchronous
