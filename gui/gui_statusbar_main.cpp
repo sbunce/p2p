@@ -30,11 +30,7 @@ bool gui_statusbar_main::update_status_bar()
 	ss << std::string(32 - ss.str().size(), ' ');
 	ss << " Prime: " << P2P->prime_count();
 	ss << std::string(52 - ss.str().size(), ' ');
-	ss << " Shared: " << convert::size_SI(P2P->share_size());
-
-	if(P2P->is_indexing()){
-		ss << "  Hashing";
-	}
+	ss << " Share: " << convert::size_SI(P2P->share_size());
 
 	statusbar->pop();
 	statusbar->push(ss.str());

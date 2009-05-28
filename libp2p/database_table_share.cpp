@@ -11,42 +11,56 @@ void database::table::share::add_entry(const std::string & hash,
 	DB.query(ss.str());
 }
 
-void database::table::share::delete_entry(const std::string & path,
-	database::connection & DB)
-{
-	char * sqlite3_path = sqlite3_mprintf("%Q", path.c_str());
-	DB.query("BEGIN TRANSACTION");
-	std::string hash;
-	boost::uint64_t file_size;
-	if(lookup_path(path, hash, file_size, DB)){
-		std::stringstream ss;
-		ss << "DELETE FROM share WHERE path = " << sqlite3_path;
-		DB.query(ss.str());
-		if(!exists(hash, DB)){
-			//last file with this hash removed, delete the hash tree
-			database::table::hash::delete_tree(hash,
-				hash_tree::tree_info::file_size_to_tree_size(file_size), DB);
-		}
-	}
-	DB.query("END TRANSACTION");
-	sqlite3_free(sqlite3_path);
-}
-
-static int exists_call_back(bool & exists, int columns_retrieved,
+//this checks to see if any records with specified hash and size exist
+static int delete_entry_call_back_chain_2(bool & exists, int columns_retrieved,
 	char ** response, char ** column_name)
 {
 	exists = true;
 	return 0;
 }
 
-bool database::table::share::exists(const std::string & hash,
+//this gets the hash and file size that corresponds to a path
+static int delete_entry_call_back_chain_1(std::pair<char *, database::connection *> & info,
+	int columns_retrieved, char ** response, char ** column_name)
+{
+	/*
+	If this call back is called there is a record to delete. If it is not called
+	then nothing needs to be done.
+	*/
+	assert(response[0] && response[1]);
+
+	//delete the record
+	std::stringstream ss;
+	ss << "DELETE FROM share WHERE path = " << info.first;
+	info.second->query(ss.str());
+
+	//check if any records remain with hash
+	ss.str(""); ss.clear();
+	ss << "SELECT 1 FROM share WHERE hash = '" << response[0] << "' AND size = '"
+		<< response[1] << "' LIMIT 1";
+	bool exists = false;
+	info.second->query(ss.str(), &delete_entry_call_back_chain_2, exists);
+	if(!exists){
+		//last file with this hash removed, delete the hash tree
+		boost::uint64_t file_size;
+		ss.str(""); ss.clear();
+		ss << response[1];
+		ss >> file_size;
+		database::table::hash::delete_tree(response[0],
+			hash_tree::tree_info::file_size_to_tree_size(file_size), *info.second);
+	}
+	return 0;
+}
+
+void database::table::share::delete_entry(const std::string & path,
 	database::connection & DB)
 {
-	bool exists = false;
+	char * sqlite3_path = sqlite3_mprintf("%Q", path.c_str());
+	std::pair<char *, database::connection *> info(sqlite3_path, &DB);
 	std::stringstream ss;
-	ss << "SELECT 1 FROM share WHERE hash = '" << hash << "' LIMIT 1";
-	DB.query(ss.str(), &exists_call_back, exists);
-	return exists;
+	ss << "SELECT hash, size FROM share WHERE path = " << sqlite3_path << " LIMIT 1";
+	DB.query(ss.str(), &delete_entry_call_back_chain_1, info);
+	sqlite3_free(sqlite3_path);
 }
 
 static int lookup_hash_0_call_back(bool & entry_exists, int columns_retrieved,

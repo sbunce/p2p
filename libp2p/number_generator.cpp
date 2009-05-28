@@ -2,8 +2,6 @@
 
 number_generator::number_generator()
 {
-	database::connection DB(path::database());
-	database::table::prime::read_all(Prime_Cache, DB);
 	generate_thread = boost::thread(boost::bind(&number_generator::generate, this));
 }
 
@@ -61,6 +59,12 @@ int number_generator::PRNG(unsigned char * buff, int length, void * data)
 
 void number_generator::generate()
 {
+	{ //DB will close when it leaves this scope
+	boost::mutex::scoped_lock lock(prime_mutex);
+	database::connection DB(path::database());
+	database::table::prime::read_all(Prime_Cache, DB);
+	}
+
 	mpint random;
 	while(true){
 		boost::this_thread::interruption_point();

@@ -44,12 +44,15 @@ void p2p::current_uploads(std::vector<upload_status> & info)
 
 bool p2p::file_info(const std::string & hash, std::string & path, boost::uint64_t & tree_size, boost::uint64_t & file_size)
 {
+/*
 	if(database::table::download::lookup_hash(hash, path, file_size, DB)){
 		tree_size = hash_tree::tree_info::file_size_to_tree_size(file_size);
 		return true;
 	}else{
 		return false;
 	}
+*/
+	return false;
 }
 
 unsigned p2p::get_max_connections()
@@ -65,11 +68,6 @@ unsigned p2p::get_max_download_rate()
 unsigned p2p::get_max_upload_rate()
 {
 	return 666;
-}
-
-bool p2p::is_indexing()
-{
-	return share_index::singleton().is_indexing();
 }
 
 void p2p::pause_download(const std::string & hash)

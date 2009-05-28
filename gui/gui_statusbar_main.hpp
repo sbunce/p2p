@@ -24,7 +24,8 @@ private:
 	p2p * P2P;
 
 	/*
-	update_status_bar     - updates the information in the status bar
+	update_status_bar:
+		Updates the information in the status bar.
 	*/
 	bool update_status_bar();
 };

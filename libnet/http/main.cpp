@@ -25,11 +25,12 @@ namespace
 	std::string web_root;
 
 	//volatile needed to stop optimizer from check-once behavior on while(!quit)
-	volatile sig_atomic_t quit;
+	volatile sig_atomic_t terminate_program = 0;
+
 	void signal_handler(int sig)
 	{
 		signal(sig, signal_handler);
-		quit = 1;
+		terminate_program = 1;
 	}
 }//end of unnamed namespace
 
@@ -91,7 +92,7 @@ int main(int argc, char ** argv)
 	#endif
 	*/
 
-	while(!quit){
-		portable_sleep::ms(9999);
+	while(!terminate_program){
+		portable_sleep::ms(1000);
 	}
 }

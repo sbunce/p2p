@@ -97,7 +97,6 @@ public:
 	unsigned get_max_upload_rate();
 	void pause_download(const std::string & hash);
 	unsigned prime_count();
-	bool is_indexing();
 	void remove_download(const std::string & hash);
 	boost::uint64_t share_size();
 	void search(std::string search_word, std::vector<download_info> & Search_Info);

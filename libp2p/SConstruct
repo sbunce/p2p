@@ -4,7 +4,6 @@ src = [
 	'block_arbiter.cpp',
 	'database_init.cpp',
 	'database_table_blacklist.cpp',
-	'database_table_download.cpp',
 	'database_table_hash.cpp',
 	'database_table_preferences.cpp',
 	'database_table_prime.cpp',

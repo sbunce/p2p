@@ -236,19 +236,45 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 		return false;
 	}else{
 		/*
-		Tree sucessfully created. Look in the database to see if a tree with this
-		hash already exists, if it does then return the key of that tree.
+		Tree sucessfully created. Look in the database to see if the tree already
+		exists in the hash table. If it does there's no reason to replace it with
+		the tree just generated.
+
+		Note: The state of the hash tree is only set to reserved after this
+		finishes. Meaning if the tree is generated and the program is interrupted
+		before the tree is referenced somewhere, the tree will be deleted upon
+		program start. (think garbage collection)
+
+		Whenever a reference is made to a tree the state of the hash tree should
+		be changed to complete.
 		*/
 		assert(tree_size == rightside_up.tellp());
 		if(!database::table::hash::exists(root_hash, tree_size, DB)){
+			/*
+			This tree does not already exist in the database. The tree needs to be
+			copied from the temporary rightside_up file, in to the blob (where the
+			hash tree goes).
+
+			The transaction guarantees that the tree is either entirely there, or
+			not there at all.
+			*/
+			DB.query("BEGIN TRANSACTION");
+			//allocate blob for new hash tree
 			if(!database::table::hash::tree_allocate(root_hash, tree_size, DB)){
+				LOGGER << "could not allocate blob for hash tree";
+				DB.query("END TRANSACTION");
 				return false;
 			}
 			database::blob Blob = database::table::hash::tree_open(root_hash, tree_size, DB);
 			rightside_up.seekg(0, std::ios::beg);
 			int offset = 0, bytes_remaining = tree_size, read_size;
-			DB.query("BEGIN TRANSACTION");
 			while(bytes_remaining){
+				if(boost::this_thread::interruption_requested()){
+					database::table::hash::delete_tree(root_hash, tree_size, DB);
+					DB.query("END TRANSACTION");
+					return false;
+				}
+
 				if(bytes_remaining > protocol::FILE_BLOCK_SIZE){
 					read_size = protocol::FILE_BLOCK_SIZE;
 				}else{
@@ -256,18 +282,21 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 				}
 				rightside_up.read(block_buff, read_size);
 				if(rightside_up.gcount() != read_size){
-					database::table::hash::delete_tree(root_hash, tree_size, DB);
 					LOGGER << "error reading rightside_up file";
+					database::table::hash::delete_tree(root_hash, tree_size, DB);
+					DB.query("END TRANSACTION");
 					return false;
 				}else{
 					if(!DB.blob_write(Blob, block_buff, read_size, offset)){
+						LOGGER << "error doing incremental write to blob";
+						database::table::hash::delete_tree(root_hash, tree_size, DB);
+						DB.query("END TRANSACTION");
 						return false;
 					}
 					offset += read_size;
 					bytes_remaining -= read_size;
 				}
 			}
-			database::table::hash::set_state(root_hash, tree_size, database::table::hash::COMPLETE, DB);
 			DB.query("END TRANSACTION");
 		}
 		return true;

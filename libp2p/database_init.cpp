@@ -1,19 +1,9 @@
 #include "database_init.hpp"
 
-database::init::init()
-{
-
-}
-
 void database::init::blacklist(database::connection & DB)
 {
 	DB.query("CREATE TABLE IF NOT EXISTS blacklist (IP TEXT UNIQUE)");
 	DB.query("CREATE INDEX IF NOT EXISTS blacklist_index ON blacklist (IP)");
-}
-
-void database::init::download(database::connection & DB)
-{
-	DB.query("CREATE TABLE IF NOT EXISTS download (hash TEXT, name TEXT, size TEXT, server TEXT)");
 }
 
 void database::init::hash(database::connection & DB)
@@ -52,11 +42,10 @@ void database::init::prime(database::connection & DB)
 	DB.query("CREATE TABLE IF NOT EXISTS prime (number TEXT)");
 }
 
-void database::init::run(const std::string & database_path)
+void database::init::run(const std::string & path)
 {
-	database::connection DB(database_path);
+	database::connection DB(path);
 	blacklist(DB);
-	download(DB);
 	hash(DB);
 	preferences(DB);
 	prime(DB);

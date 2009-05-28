@@ -10,8 +10,10 @@ int read_all_call_back(std::vector<mpint> & Prime_Cache,
 
 void database::table::prime::read_all(std::vector<mpint> & Prime_Cache, database::connection & DB)
 {
+	DB.query("BEGIN TRANSACTION");
 	DB.query("SELECT number FROM prime", &read_all_call_back, Prime_Cache);
 	DB.query("DELETE FROM prime");
+	DB.query("END TRANSACTION");
 }
 
 void database::table::prime::write_all(std::vector<mpint> & Prime_Cache, database::connection & DB)

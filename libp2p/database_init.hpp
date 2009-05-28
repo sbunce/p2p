@@ -17,13 +17,12 @@ public:
 	static void run(const std::string & database_path);
 
 private:
-	init();
+	init(){}
 
 	/*
 	The function name corresponds to the table it will setup.
 	*/
 	static void blacklist(database::connection & DB);
-	static void download(database::connection & DB);
 	static void hash(database::connection & DB);
 	static void preferences(database::connection & DB);
 	static void prime(database::connection & DB);

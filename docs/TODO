@@ -1,12 +1,14 @@
 TODO
 
+-create asynchronous buffered pipeline in share_index. Model each state as a
+class with an internal running thread.
+
+share_pipeline_0_scan should have ctor that takes share_pipeline_1_hash reference
+share_pipeline_2_write should have ctor that takes share_pipeline_1_hash reference
+
 -moving finished downloads from the download table to the share table is a pain,
 is the download table even necessary? Why not have a bit in the share table to
 indicate whether the file is downloading or not.
-
--handle ctrl-c in p2p_gui and p2p_nogui like in http
-
--can stdin, stdout, stderr be closed?
 
 -make request generator unit test
 

@@ -10,6 +10,8 @@ if sys.platform == 'win32':
 	os_specific = '/'
 
 #compile as multithreaded http://www.sqlite.org/compile.html#threadsafe
+#Setting =2 doesn't serialize all access, but requires locking such that
+#no two threads use the same DB connection at the same time.
 env_sqlite['CCFLAGS'].append(os_specific+'DSQLITE_THREADSAFE=2')
 
 #enable full text search

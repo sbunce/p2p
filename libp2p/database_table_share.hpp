@@ -24,8 +24,6 @@ namespace table{
 class share
 {
 public:
-	share(){}
-
 	/* Functions to modify DB
 	add_entry:
 		Add entry to the DB.
@@ -47,11 +45,8 @@ public:
 	static bool lookup_path(const std::string & path, std::string & hash, boost::uint64_t & file_size, database::connection & DB);
 
 private:
-	/*
-	exists:
-		Returns true if hash exists in share table.
-	*/
-	static bool exists(const std::string & hash, database::connection & DB);
+	share(){}
+
 };
 }//end of table namespace
 }//end of database namespace

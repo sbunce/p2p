@@ -68,6 +68,7 @@ Read blob:
 //include
 #include <atomic_int.hpp>
 #include <logger.hpp>
+#include <portable_sleep.hpp>
 
 //sqlite
 #include <sqlite3.h>
@@ -182,7 +183,7 @@ public:
 		while((code = sqlite3_exec(DB_handle, query.c_str(), NULL, NULL, NULL)) != SQLITE_OK){
 			if(code == SQLITE_BUSY){
 				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
-				boost::this_thread::yield();
+				portable_sleep::ms(1);
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
 				break;
@@ -200,7 +201,7 @@ public:
 		while((code = sqlite3_exec(DB_handle, query.c_str(), fun_call_back_wrapper, (void *)fun_ptr, NULL)) != SQLITE_OK){
 			if(code == SQLITE_BUSY){
 				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
-				boost::this_thread::yield();
+				portable_sleep::ms(1);
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
 				break;
@@ -223,7 +224,7 @@ public:
 		{
 			if(code == SQLITE_BUSY){
 				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
-				boost::this_thread::yield();
+				portable_sleep::ms(1);
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
 				break;
@@ -246,7 +247,7 @@ public:
 		{
 			if(code == SQLITE_BUSY){
 				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
-				boost::this_thread::yield();
+				portable_sleep::ms(1);
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
 				break;
@@ -269,7 +270,7 @@ public:
 		{
 			if(code == SQLITE_BUSY){
 				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
-				boost::this_thread::yield();
+				portable_sleep::ms(1);
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
 				break;
@@ -296,7 +297,7 @@ public:
 		{
 			if(code == SQLITE_BUSY){
 				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
-				boost::this_thread::yield();
+				portable_sleep::ms(1);
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
 				break;
@@ -323,7 +324,7 @@ public:
 		{
 			if(code == SQLITE_BUSY){
 				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
-				boost::this_thread::yield();
+				portable_sleep::ms(1);
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
 				break;
@@ -370,14 +371,14 @@ private:
 			while((code = sqlite3_exec(DB_handle, "PRAGMA auto_vacuum = full;" , NULL, NULL, NULL)) != SQLITE_OK){
 				if(code == SQLITE_BUSY){
 					LOGGER << "sqlite yield on SQLITE_BUSY";
-					boost::this_thread::yield();
+					portable_sleep::ms(1);
 				}else{
 					LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle);
 					exit(1);
 				}
 			}
 			connected = true;
-			path.clear();
+			path.clear(); //save space
 		}
 	}
 
@@ -465,7 +466,7 @@ private:
 		)) != SQLITE_OK){
 			if(code == SQLITE_BUSY){
 				LOGGER << "sqlite yield on SQLITE_BUSY";
-				boost::this_thread::yield();
+				portable_sleep::ms(1);
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle);
 				return false;
