@@ -58,7 +58,7 @@ public:
 		boost::function<void (socket &)> failed_connect_call_back_in,
 		boost::function<void (socket &)> connect_call_back_in,
 		boost::function<void (socket &)> disconnect_call_back_in,
-		const int port = -1
+		const std::string port = "-1"
 	):
 		failed_connect_call_back(failed_connect_call_back_in),
 		connect_call_back(connect_call_back_in),
@@ -79,9 +79,9 @@ public:
 		Workers.join_all();
 	}
 
-	bool add_connection(const std::string & IP, const int port)
+	bool connect_to(const std::string & IP, const std::string & port)
 	{
-		return Reactor->add_connection(IP, port);
+		return Reactor->connect_to(IP, port);
 	}
 
 private:

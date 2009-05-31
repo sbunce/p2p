@@ -14,8 +14,10 @@
 #else
 	#include <arpa/inet.h>
 	#include <fcntl.h>
+	#include <netdb.h>
 	#include <netinet/in.h>
 	#include <sys/socket.h>
+	#include <sys/types.h>
 	#include <unistd.h>
 #endif
 
@@ -43,6 +45,7 @@ public:
 		#endif
 	}
 
+//DEBUG, could this be moved to network? then make reactor a friend?
 	//data needed for each socket
 	class socket_data
 	{
@@ -50,13 +53,11 @@ public:
 		socket_data(
 			const int socket_FD_in,
 			const std::string & IP_in,
-			const int port_in,
-			const bool outgoing_in
+			const std::string & port_in
 		):
 			socket_FD(socket_FD_in),
 			IP(IP_in),
 			port(port_in),
-			outgoing(outgoing_in),
 			failed_connect_flag(false),
 			connect_flag(false),
 			recv_flag(false),
@@ -67,7 +68,6 @@ public:
 				socket_FD,
 				IP,
 				port,
-				outgoing,
 				disconnect_flag,
 				recv_buff,
 				send_buff
@@ -78,9 +78,13 @@ public:
 
 		int socket_FD;
 		std::time_t last_seen; //last time socket had activity
-		std::string IP;        //stored here so IP of disconnected socket can be known
-		int port;              //stored here so port of disconnected socket can be known
-		bool outgoing;         //true if we initiated connected
+
+		/*
+		IP of remote end. If port is equal to the port that is being listened on
+		then this is a connection someone else established with us.
+		*/
+		std::string IP;
+		std::string port;
 
 		/*
 		failed_connect_flag:
@@ -120,8 +124,7 @@ public:
 			socket_data_visible(
 				const int socket_FD_in,
 				const std::string & IP_in,
-				const int port_in,
-				const bool outgoing_in,
+				const std::string & port_in,
 				bool & disconnect_flag_in,
 				buffer & recv_buff_in,
 				buffer & send_buff_in
@@ -129,18 +132,16 @@ public:
 				socket_FD(socket_FD_in),
 				IP(IP_in),
 				port(port_in),
-				outgoing(outgoing_in),
 				disconnect_flag(disconnect_flag_in),
 				recv_buff(recv_buff_in),
 				send_buff(send_buff_in)
 			{}
 
 			const int socket_FD;
-			const std::string & IP;
-			const int port;
+			const std::string & IP;   //reference to save space
+			const std::string & port; //reference to save space
 			buffer & recv_buff;
 			buffer & send_buff;
-			bool outgoing;
 			bool & disconnect_flag;
 
 			/*
@@ -155,7 +156,7 @@ public:
 	};
 
 	/*
-	add_connection:
+	connect_to:
 		Establishes new connection. Returns false if connection limit reached.
 	get_job:
 		Blocks until a job is ready. The job type is stored in socket_data
@@ -165,12 +166,37 @@ public:
 		After worker does call backs this function will be called so that the
 		socket is again monitored for activity.
 	*/
-	virtual bool add_connection(const std::string & IP, const int port) = 0;
+	virtual bool connect_to(const std::string & IP, const std::string & port) = 0;
 	virtual void get_job(boost::shared_ptr<socket_data> & info) = 0;
 	virtual void finish_job(boost::shared_ptr<socket_data> & info) = 0;
 
 protected:
 	//connected socket associated with socket_data
 	std::map<int, boost::shared_ptr<socket_data> > Socket_Data;
+
+	/*
+	Returns the IP address of a socket.
+	*/
+	std::string get_IP(const int socket_FD)
+	{
+		sockaddr_in6 sa;
+		socklen_t len = sizeof(sa);
+		getpeername(socket_FD, (sockaddr *)&sa, &len);
+		char buff[INET6_ADDRSTRLEN];
+		inet_ntop(AF_INET6, &sa.sin6_addr, buff, sizeof(buff));
+		return std::string(buff);
+	}
+
+	std::string get_port(const int socket_FD)
+	{
+		sockaddr_in6 sa;
+		socklen_t len = sizeof(sa);
+		getpeername(socket_FD, (sockaddr *)&sa, &len);
+		int port;
+		port = ntohs(sa.sin6_port);
+		std::stringstream ss;
+		ss << port;
+		return ss.str();
+	}
 };
 #endif

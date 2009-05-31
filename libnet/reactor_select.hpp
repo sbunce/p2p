@@ -13,7 +13,7 @@ class reactor_select : public reactor
 {
 public:
 	reactor_select(
-		const int port = -1
+		const std::string port = "-1"
 	):
 		begin_FD(0),
 		end_FD(1),
@@ -25,7 +25,7 @@ public:
 		FD_ZERO(&read_FDS);
 		FD_ZERO(&write_FDS);
 
-		if(port != -1){
+		if(port != "-1"){
 			start_listener(port);
 		}
 
@@ -41,71 +41,33 @@ public:
 		select_loop_thread.join();
 	}
 
-	virtual bool add_connection(const std::string & IP, const int port)
+	virtual bool connect_to(const std::string & IP, const std::string & port)
 	{
-		int new_FD = socket(PF_INET, SOCK_STREAM, 0);
-		if(new_FD == -1){
-			#ifdef WIN32
-			LOGGER << "winsock error " << WSAGetLastError();
-			#else
-			perror("socket");
-			#endif
-			exit(1);
-		}
-
-		#ifndef WIN32
-		if(new_FD >= FD_SETSIZE){
-			return false;
-		}
-		#endif
+		addrinfo hints, *res;
+		std::memset(&hints, 0, sizeof(hints));
+		hints.ai_family = AF_UNSPEC;     //IPv4 or IPv6
+		hints.ai_socktype = SOCK_STREAM; //TCP
+		getaddrinfo(IP.c_str(), port.c_str(), &hints, &res);
+		int new_FD = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
 		//set socket to non-blocking for async connect
 		#ifdef WIN32
-		u_long mode = 1; //non-zero sets non-blocking
+		u_long mode = 1;
 		ioctlsocket(new_FD, FIONBIO, &mode);
 		#else
 		fcntl(new_FD, F_SETFL, O_NONBLOCK);
 		#endif
 
-		sockaddr_in dest;
-		dest.sin_family = AF_INET;   //IPV4
-		dest.sin_port = htons(port); //port to connect to
-
-		/*
-		The inet_aton function is not used because winsock doesn't have it. Instead
-		the inet_addr function is used which is 'almost' equivalent.
-
-		If you try to connect to 255.255.255.255 the return value is -1 which is the
-		correct conversion, but also the same return as an error. This is ambiguous
-		so a special case is needed for it.
-		*/
-		if(IP == "255.255.255.255"){
-			dest.sin_addr.s_addr = inet_addr(IP.c_str());
-		}else if((dest.sin_addr.s_addr = inet_addr(IP.c_str())) == -1){
-			LOGGER << "invalid IP " << IP;
-			exit(1);
-		}
-
-		/*
-		The sockaddr_in struct is smaller than the sockaddr struct. The sin_zero
-		member of sockaddr_in is padding to make them the same size. It is required
-		that the sine_zero space be zero'd out. Not doing so can result in undefined
-		behavior.
-		*/
-		std::memset(&dest.sin_zero, 0, sizeof(dest.sin_zero));
-
-		if(connect(new_FD, (sockaddr *)&dest, sizeof(dest)) == -1){
+		if(connect(new_FD, res->ai_addr, res->ai_addrlen) == -1){
 			//socket in progress of connecting
 			boost::mutex::scoped_lock lock(connecting_mutex);
-			LOGGER << "async connection " << IP << ":" << port << " socket " << new_FD;
-			connecting.push_back(boost::shared_ptr<socket_data>(new socket_data(new_FD, IP, -1, true)));
+			connecting.push_back(boost::shared_ptr<socket_data>(new socket_data(new_FD, IP, port)));
 		}else{
 			//socket connected right away, rare but it might happen
 			boost::mutex::scoped_lock lock(job_finished_mutex);
-			LOGGER << "connection " << IP << ":" << port << " socket " << new_FD;
-			job_finished.push_back(boost::shared_ptr<socket_data>(new socket_data(new_FD, IP, -1, true)));
+			job_finished.push_back(boost::shared_ptr<socket_data>(new socket_data(new_FD, IP, port)));
 		}
-
+		freeaddrinfo(res);
 		send(selfpipe_write, "0", 1, MSG_NOSIGNAL);
 		return true;
 	}
@@ -214,15 +176,10 @@ private:
 		}
 
 		if(create_socket_data){
-			sockaddr_in addr;
-			socklen_t len = sizeof(addr);
-			getpeername(socket_FD, (sockaddr*)&addr, &len);
-			std::string IP = inet_ntoa(addr.sin_addr);
-			int port = ntohs(addr.sin_port);
-
 			std::map<int, boost::shared_ptr<socket_data> >::iterator iter = Socket_Data.find(socket_FD);
 			assert(iter == Socket_Data.end());
-			Socket_Data.insert(std::make_pair(socket_FD, new socket_data(socket_FD, IP, port, false)));
+			Socket_Data.insert(std::make_pair(socket_FD, new socket_data(socket_FD,
+				get_IP(socket_FD), get_port(socket_FD))));
 		}
 	}
 
@@ -256,16 +213,20 @@ private:
 	{
 		int new_FD = 0;
 		while(new_FD != -1){
-			sockaddr_in remoteaddr;
+//DEBUG, make wrapper for accept
+			sockaddr_storage remoteaddr;
 			socklen_t len = sizeof(remoteaddr);
 			new_FD = accept(listener, (sockaddr *)&remoteaddr, &len);
 			if(new_FD != -1){
-				//connection established
-				LOGGER << inet_ntoa(remoteaddr.sin_addr) << ":" << ntohs(remoteaddr.sin_port)
-					<< " socket " << new_FD;
+				#ifndef WIN32
+				if(new_FD >= FD_SETSIZE){
+					LOGGER << "exceeded FD_SETSIZE, disconnect socket " << new_FD;
+					close(new_FD);
+					continue;
+				}
+				#endif
+				LOGGER << "IP " << get_IP(new_FD) << " port " << get_port(new_FD) << " sock " << new_FD;
 				add_socket(new_FD);
-
-				//job for connect_call_back
 				queue_job(new_FD);
 			}
 		}
@@ -579,12 +540,18 @@ private:
 	Accept incoming connections on specified port. Called by ctor if listening
 	port is specified as last ctor parameter.
 	*/
-	void start_listener(const int port)
+	void start_listener(const std::string & port)
 	{
 		assert(listener == -1);
 
-		listener = socket(PF_INET, SOCK_STREAM, 0);
-		if(listener == -1){
+		addrinfo hints, *res;
+		memset(&hints, 0, sizeof(hints));
+		hints.ai_family = AF_UNSPEC;     //IPv4 or IPv6
+		hints.ai_socktype = SOCK_STREAM; //TCP
+		hints.ai_flags = AI_PASSIVE;     //listen on all addresses
+		getaddrinfo(NULL, port.c_str(), &hints, &res);
+
+		if((listener = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1){
 			#ifdef WIN32
 			LOGGER << "winsock error " << WSAGetLastError();
 			#else
@@ -616,17 +583,8 @@ private:
 		fcntl(listener, F_SETFL, O_NONBLOCK);
 		#endif
 
-		//prepare listener info
-		sockaddr_in myaddr;                  //server address
-		myaddr.sin_family = AF_INET;         //ipv4
-		myaddr.sin_addr.s_addr = INADDR_ANY; //listen on all interfaces
-		myaddr.sin_port = htons(port);       //listening port
-
-		//docs for this in establish_connection function
-		std::memset(&myaddr.sin_zero, 0, sizeof(myaddr.sin_zero));
-
-		//set listener info
-		if(bind(listener, (sockaddr *)&myaddr, sizeof(myaddr)) == -1){
+		//bind to port
+		if(bind(listener, res->ai_addr, res->ai_addrlen) == -1){
 			#ifdef WIN32
 			LOGGER << "winsock error " << WSAGetLastError();
 			#else
@@ -634,6 +592,7 @@ private:
 			#endif
 			exit(1);
 		}
+		freeaddrinfo(res);
 
 		//start listener, set max incoming connection backlog
 		if(listen(listener, 64) == -1){
@@ -644,7 +603,7 @@ private:
 			#endif
 			exit(1);
 		}
-		LOGGER << "listening socket " << listener << " port " << port;
+		LOGGER << "listen port " << port;
 		add_socket(listener, false);
 	}
 
@@ -663,6 +622,8 @@ private:
 			exit(1);
 		}
 
+
+//DEBUG, update to IPv6
 		//prepare listener info
 		sockaddr_in addr;                              //server address
 		addr.sin_family = AF_INET;                     //ipv4
@@ -731,7 +692,7 @@ private:
 		selfpipe_write = pipe_FD[1];
 		#endif
 
-		LOGGER << "created selfpipe socket " << selfpipe_read;
+		LOGGER << "selfpipe created";
 
 		#ifdef WIN32
 		u_long mode = 1; //non-zero sets non-blocking

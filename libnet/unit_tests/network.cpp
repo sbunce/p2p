@@ -9,16 +9,14 @@
 //net
 #include <network.hpp>
 
+const std::string listen_port = "6969";
+
 class connection
 {
 public:
-	connection(
-		const bool server_in,
-		network::socket & Socket
-	):
-		server(server_in)
+	connection(network::socket & Socket)
 	{
-		if(!server){
+		if(Socket.port != listen_port){
 			//client starts by sending a request
 			Socket.send_buff.append('x');
 		}
@@ -26,7 +24,17 @@ public:
 
 	void recv_call_back(network::socket & Socket)
 	{
-		if(server){
+		if(Socket.port != listen_port){
+			//client
+			if(Socket.recv_buff.size() != 1){
+				LOGGER; exit(1);
+			}
+			if(Socket.recv_buff[0] != 'y'){
+				LOGGER; exit(1);
+			}
+			Socket.disconnect_flag = true;
+		}else{
+			//server
 			if(Socket.recv_buff.size() != 1){
 				LOGGER; exit(1);
 			}
@@ -35,24 +43,13 @@ public:
 			}
 			Socket.send_buff.append('y');
 			Socket.recv_buff.clear();
-		}else{
-			if(Socket.recv_buff.size() != 1){
-				LOGGER; exit(1);
-			}
-			if(Socket.recv_buff[0] != 'y'){
-				LOGGER; exit(1);
-			}
-			Socket.disconnect_flag = true;
 		}
 	}
 
 	void send_call_back(network::socket & Socket)
 	{
-
+		//nothing to do after a send
 	}
-
-	//true if this is server
-	bool server;
 };
 
 boost::mutex Connection_mutex;
@@ -61,15 +58,12 @@ std::map<int, boost::shared_ptr<connection> > Connection;
 void connect_call_back(network::socket & Socket)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
-	if(Socket.outgoing){
-		LOGGER << "outgoing connect socket:" << Socket.socket_FD << " IP:" << Socket.IP
-			<< " port:" << Socket.port;
-		Connection.insert(std::make_pair(Socket.socket_FD, new connection(false, Socket)));
+	if(Socket.port != listen_port){
+		LOGGER << "inbound " << Socket.IP << " " << Socket.port;
 	}else{
-		LOGGER << "incoming connect socket:" << Socket.socket_FD << " IP:" << Socket.IP
-			<< " port:" << Socket.port;
-		Connection.insert(std::make_pair(Socket.socket_FD, new connection(true, Socket)));
+		LOGGER << "outbound " << Socket.IP << " " << Socket.port;
 	}
+	Connection.insert(std::make_pair(Socket.socket_FD, new connection(Socket)));
 	Socket.recv_call_back = boost::bind(&connection::recv_call_back, Connection[Socket.socket_FD].get(), _1);
 	Socket.send_call_back = boost::bind(&connection::send_call_back, Connection[Socket.socket_FD].get(), _1);
 }
@@ -77,27 +71,18 @@ void connect_call_back(network::socket & Socket)
 void disconnect_call_back(network::socket & Socket)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
-	LOGGER << "disconnect socket:" << Socket.socket_FD << " IP:" << Socket.IP
-		<< " port:" << Socket.port;
+	LOGGER << "disconnect IP " << Socket.IP << " port " << Socket.port << " sock " << Socket.socket_FD;
 	Connection.erase(Socket.socket_FD);
 }
 
 void failed_connect_call_back(network::socket & Socket)
 {
-	LOGGER << "failed connect: " << Socket.IP << ":" << Socket.port;
-	LOGGER; exit(1);
+	LOGGER << "connect failed " << Socket.IP << " " << Socket.port;
 }
 
 int main()
 {
-	return 0;
-	network Network(&failed_connect_call_back, &connect_call_back, &disconnect_call_back, 6969);
-
-	for(int x=0; x<500; ++x){
-		if(!Network.add_connection("127.0.0.1", 6969)){
-			LOGGER; exit(1);
-		}
-	}
-
-	portable_sleep::ms(10*1000);
+	network Network(&failed_connect_call_back, &connect_call_back, &disconnect_call_back, listen_port);
+	Network.connect_to("::1", "6969");
+	portable_sleep::ms(5*1000);
 }
