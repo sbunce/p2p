@@ -1,5 +1,9 @@
 TODO
 
+-replace static functions with unnamed namespace
+
+-create network_wrapper namespace with convenience functions.
+
 -make request generator unit test
 
 -requests should be sent before file blocks, when two hosts download from

@@ -26,7 +26,6 @@ void http::recv_call_back(network::socket & SD)
 		(pos_2 = SD.recv_buff.find((unsigned char *)"\n", 1, pos_1)) != buffer::npos
 	){
 		//path terminated by ' ', '\r', or '\n'
-		std::string get_path;
 		for(int x=pos_1+4; x<pos_2; ++x){
 			if(SD.recv_buff[x] == ' ' ||
 				SD.recv_buff[x] == '\r' ||
@@ -39,9 +38,8 @@ void http::recv_call_back(network::socket & SD)
 		}
 
 		replace_encoded_chars();
-		LOGGER << "req " << get_path;
-		get_path = get_path;
 		path = fs::system_complete(fs::path(web_root + get_path, fs::native));
+		LOGGER << "req " << path.string();
 		determine_type();
 		read(SD.send_buff);
 	}
@@ -153,6 +151,15 @@ void http::replace_encoded_chars()
 			break;
 		}else{
 			get_path = get_path.replace(pos, 3, 1, ' ');
+		}
+	}
+
+	while(true){
+		int pos = get_path.find("%27");
+		if(pos == std::string::npos){
+			break;
+		}else{
+			get_path = get_path.replace(pos, 3, 1, '\'');
 		}
 	}
 }

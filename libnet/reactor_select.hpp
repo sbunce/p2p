@@ -48,16 +48,11 @@ public:
 		hints.ai_family = AF_UNSPEC;     //IPv4 or IPv6
 		hints.ai_socktype = SOCK_STREAM; //TCP
 		getaddrinfo(IP.c_str(), port.c_str(), &hints, &res);
+
 		int new_FD = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
 		//set socket to non-blocking for async connect
-		#ifdef WIN32
-		u_long mode = 1;
-		ioctlsocket(new_FD, FIONBIO, &mode);
-		#else
-		fcntl(new_FD, F_SETFL, O_NONBLOCK);
-		#endif
-
+		network_wrapper::set_non_blocking(new_FD);
 		if(connect(new_FD, res->ai_addr, res->ai_addrlen) == -1){
 			//socket in progress of connecting
 			boost::mutex::scoped_lock lock(connecting_mutex);
@@ -179,7 +174,7 @@ private:
 			std::map<int, boost::shared_ptr<socket_data> >::iterator iter = Socket_Data.find(socket_FD);
 			assert(iter == Socket_Data.end());
 			Socket_Data.insert(std::make_pair(socket_FD, new socket_data(socket_FD,
-				get_IP(socket_FD), get_port(socket_FD))));
+				network_wrapper::get_IP(socket_FD), network_wrapper::get_port(socket_FD))));
 		}
 	}
 
@@ -225,7 +220,8 @@ private:
 					continue;
 				}
 				#endif
-				LOGGER << "IP " << get_IP(new_FD) << " port " << get_port(new_FD) << " sock " << new_FD;
+				LOGGER << "IP " << network_wrapper::get_IP(new_FD) << " port "
+					<< network_wrapper::get_port(new_FD) << " sock " << new_FD;
 				add_socket(new_FD);
 				queue_job(new_FD);
 			}
@@ -238,11 +234,7 @@ private:
 		boost::mutex::scoped_lock lock(disconnect_mutex);
 		for(int x=0; x<disconnect.size(); ++x){
 			remove_socket(disconnect[x], false);
-			#ifdef WIN32
-			closesocket(disconnect[x]);
-			#else
-			close(disconnect[x]);
-			#endif
+			network_wrapper::disconnect(disconnect[x]);
 		}
 		disconnect.clear();
 	}
@@ -366,15 +358,14 @@ private:
 			because linux will change them to reflect the time that select() has
 			blocked(POSIX.1-2001 allows this) for.
 			*/
-			tv.tv_sec = 0; tv.tv_usec = 1000000 / 100; // 1/100 second
+			tv.tv_sec = 0; tv.tv_usec = 1000000 / 1; // 1/100 second
 
 			service = select(end_FD, &read_FDS, &write_FDS, NULL, &tv);
 
 			if(service == -1){
 				#ifndef WIN32
 				if(errno != EINTR){
-					perror("select");
-					exit(1);
+					network_wrapper::error();
 				}
 				#endif
 			}else if(service != 0){
@@ -552,12 +543,7 @@ private:
 		getaddrinfo(NULL, port.c_str(), &hints, &res);
 
 		if((listener = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1){
-			#ifdef WIN32
-			LOGGER << "winsock error " << WSAGetLastError();
-			#else
-			perror("socket");
-			#endif
-			exit(1);
+			network_wrapper::error();
 		}
 
 		//reuse port if it's currently in use
@@ -567,142 +553,82 @@ private:
 		int yes = 1;
 		#endif
 		if(setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1){
-			#ifdef WIN32
-			LOGGER << "winsock error " << WSAGetLastError();
-			#else
-			perror("setsockopt");
-			#endif
-			exit(1);
+			network_wrapper::error();
 		}
 
 		//set listener to non-blocking, incoming connections inherit this
-		#ifdef WIN32
-		u_long mode = 1; //non-zero sets non-blocking
-		ioctlsocket(listener, FIONBIO, &mode);
-		#else
-		fcntl(listener, F_SETFL, O_NONBLOCK);
-		#endif
+		network_wrapper::set_non_blocking(listener);
 
 		//bind to port
 		if(bind(listener, res->ai_addr, res->ai_addrlen) == -1){
-			#ifdef WIN32
-			LOGGER << "winsock error " << WSAGetLastError();
-			#else
-			perror("bind");
-			#endif
-			exit(1);
+			network_wrapper::error();
 		}
 		freeaddrinfo(res);
 
 		//start listener, set max incoming connection backlog
 		if(listen(listener, 64) == -1){
-			#ifdef WIN32
-			LOGGER << WSAGetLastError();
-			#else
-			perror("listen");
-			#endif
-			exit(1);
+			network_wrapper::error();
 		}
+
 		LOGGER << "listen port " << port;
 		add_socket(listener, false);
 	}
 
-	#ifdef WIN32
-	/*
-	Windows has no pipe(), or socketpair(), or local sockets which will work
-	with select() to do the selfpipe trick. Because of this we establish a
-	internet socket to localhost to do the selfpipe trick.
-	*/
 	void socket_pair(int & selfpipe_read, int & selfpipe_write)
 	{
-		int listener = socket(PF_INET, SOCK_STREAM, 0);
-		selfpipe_write = socket(PF_INET, SOCK_STREAM, 0);
-		if(listener == -1 || selfpipe_read == -1 || selfpipe_write == -1){
-			LOGGER << "winsock error " << WSAGetLastError();
-			exit(1);
+		addrinfo hints, *res;
+		std::memset(&hints, 0, sizeof(hints));
+		hints.ai_family = AF_UNSPEC;     //IPv4 or IPv6
+		hints.ai_socktype = SOCK_STREAM; //TCP
+		int tmp_listener;
+
+		//find an available socket by trying to bind to different ports
+		std::string port;
+		for(int x=1024; x<65536; ++x){
+			std::stringstream ss;
+			ss << x;
+			getaddrinfo("127.0.0.1", ss.str().c_str(), &hints, &res);
+			tmp_listener = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+			network_wrapper::reuse_port(listener);
+			if(bind(tmp_listener, res->ai_addr, res->ai_addrlen) == -1){
+				freeaddrinfo(res);
+			}else{
+				freeaddrinfo(res);
+				port = ss.str();
+				break;
+			}
 		}
 
-
-//DEBUG, update to IPv6
-		//prepare listener info
-		sockaddr_in addr;                              //server address
-		addr.sin_family = AF_INET;                     //ipv4
-		addr.sin_addr.s_addr = inet_addr("127.0.0.1"); //listen only on loop-back
-		addr.sin_port = htons(0);                      //bind to available socket 1024 to 5000
-
-		//docs for this in establish_connection function
-		std::memset(&addr.sin_zero, 0, sizeof(addr.sin_zero));
-
-		//set listener info
-		if(bind(listener, (sockaddr *)&addr, sizeof(addr)) == -1){
-			LOGGER << "winsock error " << WSAGetLastError();
-			exit(1);
+		if(listen(tmp_listener, 1) == -1){
+			network_wrapper::error();
 		}
 
-		//start listener, set max incoming connection backlog
-		if(listen(listener, 1) == -1){
-			LOGGER << WSAGetLastError();
-			exit(1);
+		std::memset(&hints, 0, sizeof(hints));
+		hints.ai_family = AF_UNSPEC;     //IPv4 or IPv6
+		hints.ai_socktype = SOCK_STREAM; //TCP
+		getaddrinfo("127.0.0.1", port.c_str(), &hints, &res);
+		selfpipe_write = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+		if(connect(selfpipe_write, res->ai_addr, res->ai_addrlen) == -1){
+			network_wrapper::error();
 		}
+		freeaddrinfo(res);
 
-		sockaddr_in temp_addr;
-		socklen_t temp_addr_len = sizeof(temp_addr);
-		/*
-		Error detection on getsockname not working correctly. Function will return
-		non-zero, then WSAGetLastError() returns 0. This might be threading related.
-		Not checking for error here isn't a problem because if there is one the
-		connect() will fail and exit out.
-		*/
-		getsockname(listener, (sockaddr *)&temp_addr, &temp_addr_len);
-		int listening_socket = ntohs(temp_addr.sin_port);
-		LOGGER << listening_socket;
-
-		//connect to selfpipe_read socket
-		addr.sin_family = AF_INET;                     //IPV4
-		addr.sin_addr.s_addr = inet_addr("127.0.0.1"); //connect to listening socket
-		addr.sin_port = htons(listening_socket);                  //port to connect to
-
-		if(connect(selfpipe_write, (sockaddr *)&addr, sizeof(addr)) == -1){
-			//socket failed to connect
-			LOGGER << WSAGetLastError();
-			exit(1);
-		}
-
+		sockaddr_storage addr;
 		socklen_t len = sizeof(addr);
-		if((selfpipe_read = accept(listener, (sockaddr *)&addr, &len)) == -1){
-			LOGGER << WSAGetLastError();
-			exit(1);
+		if((selfpipe_read = accept(tmp_listener, (sockaddr *)&addr, &len)) == -1){
+			network_wrapper::error();
 		}
-		closesocket(listener);
+
+		network_wrapper::disconnect(tmp_listener);
 	}
-	#endif
 
 	//starts self pipe used to force select to return
 	void start_selfpipe()
 	{
-		#ifdef WIN32
 		socket_pair(selfpipe_read, selfpipe_write);
-		#else
-		int pipe_FD[2];
-		if(pipe(pipe_FD) == -1){
-			LOGGER << "error creating selfpipe";
-			exit(1);
-		}
-		selfpipe_read = pipe_FD[0];
-		selfpipe_write = pipe_FD[1];
-		#endif
-
-		LOGGER << "selfpipe created";
-
-		#ifdef WIN32
-		u_long mode = 1; //non-zero sets non-blocking
-		ioctlsocket(selfpipe_read, FIONBIO, &mode);
-		ioctlsocket(selfpipe_write, FIONBIO, &mode);
-		#else
-		fcntl(selfpipe_read, F_SETFL, O_NONBLOCK);
-		fcntl(selfpipe_write, F_SETFL, O_NONBLOCK);
-		#endif
-
+		LOGGER << "selfpipe read " << selfpipe_read << " write " << selfpipe_write;
+		network_wrapper::set_non_blocking(selfpipe_read);
+		network_wrapper::set_non_blocking(selfpipe_write);
 		add_socket(selfpipe_read, false);
 	}
 };

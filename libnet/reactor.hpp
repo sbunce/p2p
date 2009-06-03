@@ -6,20 +6,7 @@
 #include <logger.hpp>
 
 //networking
-#ifdef WIN32
-	#define MSG_NOSIGNAL 0  //disable SIGPIPE on send()
-	#define FD_SETSIZE 1024 //max number of sockets in fd_set
-	#define socklen_t int   //hack for little API difference on windows
-	#include <winsock.h>
-#else
-	#include <arpa/inet.h>
-	#include <fcntl.h>
-	#include <netdb.h>
-	#include <netinet/in.h>
-	#include <sys/socket.h>
-	#include <sys/types.h>
-	#include <unistd.h>
-#endif
+#include "network_wrapper.hpp"
 
 class reactor
 {
@@ -173,30 +160,5 @@ public:
 protected:
 	//connected socket associated with socket_data
 	std::map<int, boost::shared_ptr<socket_data> > Socket_Data;
-
-	/*
-	Returns the IP address of a socket.
-	*/
-	std::string get_IP(const int socket_FD)
-	{
-		sockaddr_in6 sa;
-		socklen_t len = sizeof(sa);
-		getpeername(socket_FD, (sockaddr *)&sa, &len);
-		char buff[INET6_ADDRSTRLEN];
-		inet_ntop(AF_INET6, &sa.sin6_addr, buff, sizeof(buff));
-		return std::string(buff);
-	}
-
-	std::string get_port(const int socket_FD)
-	{
-		sockaddr_in6 sa;
-		socklen_t len = sizeof(sa);
-		getpeername(socket_FD, (sockaddr *)&sa, &len);
-		int port;
-		port = ntohs(sa.sin6_port);
-		std::stringstream ss;
-		ss << port;
-		return ss.str();
-	}
 };
 #endif
