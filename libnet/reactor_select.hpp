@@ -41,28 +41,28 @@ public:
 		select_loop_thread.join();
 	}
 
-	virtual bool connect_to(const std::string & IP, const std::string & port)
+	virtual bool connect_to(const std::string & host, const std::string & port)
 	{
-		addrinfo hints, *res;
-		std::memset(&hints, 0, sizeof(hints));
-		hints.ai_family = AF_UNSPEC;     //IPv4 or IPv6
-		hints.ai_socktype = SOCK_STREAM; //TCP
-		getaddrinfo(IP.c_str(), port.c_str(), &hints, &res);
+		network_wrapper::info Info = network_wrapper::get_info(host.c_str(), port.c_str());
+		if(!Info.resolved()){
+			LOGGER << "failed to resolve host " << host << " port " << port;
+			return false;
+		}
 
-		int new_FD = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+		int new_FD = network_wrapper::create_socket(Info);
 
-		//set socket to non-blocking for async connect
+		//non-blocking required for async connect
 		network_wrapper::set_non_blocking(new_FD);
-		if(connect(new_FD, res->ai_addr, res->ai_addrlen) == -1){
+
+		if(network_wrapper::connect_socket(new_FD, Info)){
 			//socket in progress of connecting
 			boost::mutex::scoped_lock lock(connecting_mutex);
-			connecting.push_back(boost::shared_ptr<socket_data>(new socket_data(new_FD, IP, port)));
+			connecting.push_back(boost::shared_ptr<socket_data>(new socket_data(new_FD, host, port)));
 		}else{
 			//socket connected right away, rare but it might happen
 			boost::mutex::scoped_lock lock(job_finished_mutex);
-			job_finished.push_back(boost::shared_ptr<socket_data>(new socket_data(new_FD, IP, port)));
+			job_finished.push_back(boost::shared_ptr<socket_data>(new socket_data(new_FD, host, port)));
 		}
-		freeaddrinfo(res);
 		send(selfpipe_write, "0", 1, MSG_NOSIGNAL);
 		return true;
 	}
@@ -208,10 +208,7 @@ private:
 	{
 		int new_FD = 0;
 		while(new_FD != -1){
-//DEBUG, make wrapper for accept
-			sockaddr_storage remoteaddr;
-			socklen_t len = sizeof(remoteaddr);
-			new_FD = accept(listener, (sockaddr *)&remoteaddr, &len);
+			new_FD = network_wrapper::accept_socket(listener);
 			if(new_FD != -1){
 				#ifndef WIN32
 				if(new_FD >= FD_SETSIZE){
@@ -535,35 +532,19 @@ private:
 	{
 		assert(listener == -1);
 
-		addrinfo hints, *res;
-		memset(&hints, 0, sizeof(hints));
-		hints.ai_family = AF_UNSPEC;     //IPv4 or IPv6
-		hints.ai_socktype = SOCK_STREAM; //TCP
-		hints.ai_flags = AI_PASSIVE;     //listen on all addresses
-		getaddrinfo(NULL, port.c_str(), &hints, &res);
-
-		if((listener = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1){
-			network_wrapper::error();
-		}
-
-		//reuse port if it's currently in use
-		#ifdef WIN32
-		const char yes = 1;
-		#else
-		int yes = 1;
-		#endif
-		if(setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1){
-			network_wrapper::error();
-		}
+		network_wrapper::info Info = network_wrapper::get_info(NULL, port.c_str());
+		assert(Info.resolved());
+		listener = network_wrapper::create_socket(Info);
+		network_wrapper::reuse_port(listener);
 
 		//set listener to non-blocking, incoming connections inherit this
 		network_wrapper::set_non_blocking(listener);
 
 		//bind to port
-		if(bind(listener, res->ai_addr, res->ai_addrlen) == -1){
+		if(!network_wrapper::bind_socket(listener, Info)){
 			network_wrapper::error();
+			exit(1);
 		}
-		freeaddrinfo(res);
 
 		//start listener, set max incoming connection backlog
 		if(listen(listener, 64) == -1){
@@ -576,24 +557,17 @@ private:
 
 	void socket_pair(int & selfpipe_read, int & selfpipe_write)
 	{
-		addrinfo hints, *res;
-		std::memset(&hints, 0, sizeof(hints));
-		hints.ai_family = AF_UNSPEC;     //IPv4 or IPv6
-		hints.ai_socktype = SOCK_STREAM; //TCP
-		int tmp_listener;
-
 		//find an available socket by trying to bind to different ports
+		int tmp_listener;
 		std::string port;
 		for(int x=1024; x<65536; ++x){
 			std::stringstream ss;
 			ss << x;
-			getaddrinfo("127.0.0.1", ss.str().c_str(), &hints, &res);
-			tmp_listener = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-			network_wrapper::reuse_port(listener);
-			if(bind(tmp_listener, res->ai_addr, res->ai_addrlen) == -1){
-				freeaddrinfo(res);
-			}else{
-				freeaddrinfo(res);
+			network_wrapper::info Info = network_wrapper::get_info("127.0.0.1", ss.str().c_str());
+			assert(Info.resolved());
+			tmp_listener = network_wrapper::create_socket(Info);
+			network_wrapper::reuse_port(tmp_listener);
+			if(network_wrapper::bind_socket(tmp_listener, Info)){
 				port = ss.str();
 				break;
 			}
@@ -603,20 +577,19 @@ private:
 			network_wrapper::error();
 		}
 
-		std::memset(&hints, 0, sizeof(hints));
-		hints.ai_family = AF_UNSPEC;     //IPv4 or IPv6
-		hints.ai_socktype = SOCK_STREAM; //TCP
-		getaddrinfo("127.0.0.1", port.c_str(), &hints, &res);
-		selfpipe_write = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-		if(connect(selfpipe_write, res->ai_addr, res->ai_addrlen) == -1){
+		//connect socket for writer end of the pair
+		network_wrapper::info Info = network_wrapper::get_info("127.0.0.1", port.c_str());
+		assert(Info.resolved());
+		selfpipe_write = network_wrapper::create_socket(Info);
+		if(!network_wrapper::connect_socket(selfpipe_write, Info)){
 			network_wrapper::error();
+			exit(1);
 		}
-		freeaddrinfo(res);
 
-		sockaddr_storage addr;
-		socklen_t len = sizeof(addr);
-		if((selfpipe_read = accept(tmp_listener, (sockaddr *)&addr, &len)) == -1){
+		//accept socket for reader end of the pair
+		if((selfpipe_read = network_wrapper::accept_socket(tmp_listener)) == -1){
 			network_wrapper::error();
+			exit(1);
 		}
 
 		network_wrapper::disconnect(tmp_listener);

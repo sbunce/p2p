@@ -83,6 +83,6 @@ void failed_connect_call_back(network::socket & Socket)
 int main()
 {
 	network Network(&failed_connect_call_back, &connect_call_back, &disconnect_call_back, listen_port);
-	Network.connect_to("::1", "6969");
+	Network.connect_to("::ffff:127.0.0.1", "6969");
 	portable_sleep::ms(5*1000);
 }
