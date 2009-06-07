@@ -7,6 +7,7 @@
 
 //networking
 #include "network_wrapper.hpp"
+#include "rate_limit.hpp"
 
 class reactor
 {
@@ -32,19 +33,22 @@ public:
 		#endif
 	}
 
-//DEBUG, could this be moved to network? then make reactor a friend?
 	//data needed for each socket
 	class socket_data
 	{
 	public:
 		socket_data(
 			const int socket_FD_in,
+			const std::string & host_in,
 			const std::string & IP_in,
-			const std::string & port_in
+			const std::string & port_in,
+			network_wrapper::info Info_in = network_wrapper::info()
 		):
 			socket_FD(socket_FD_in),
+			host(host_in),
 			IP(IP_in),
 			port(port_in),
+			Info(Info_in),
 			failed_connect_flag(false),
 			connect_flag(false),
 			recv_flag(false),
@@ -53,6 +57,7 @@ public:
 			last_seen(std::time(NULL)),
 			Socket_Data_Visible(
 				socket_FD,
+				host,
 				IP,
 				port,
 				disconnect_flag,
@@ -66,12 +71,9 @@ public:
 		int socket_FD;
 		std::time_t last_seen; //last time socket had activity
 
-		/*
-		IP of remote end. If port is equal to the port that is being listened on
-		then this is a connection someone else established with us.
-		*/
-		std::string IP;
-		std::string port;
+		std::string host; //name we connected to (ie "google.com")
+		std::string IP;   //IP host resolved to
+		std::string port; //if listen_port == port then connection is incoming
 
 		/*
 		failed_connect_flag:
@@ -101,15 +103,24 @@ public:
 		buffer send_buff;
 
 		/*
-		This is typedef'd to socket_data in network::. The purpose of this class
-		is to limit what data the call back gets. It should not have access to the
-		flags for example.
+		This is needed if the host resolves to multiple IPs. This is used to try
+		the next IP in the list until connection happens or we run out of IPs. 
+		However, if the first IP is connected to, no other IP's will be connected
+		to.
+		*/
+		network_wrapper::info Info;
+
+		/*
+		This is typedef'd to socket in network::. The purpose of this class is to
+		limit what data the call back has access to. For example the call back
+		should not have access to any flag but the disconnect flag.
 		*/
 		class socket_data_visible
 		{
 		public:
 			socket_data_visible(
 				const int socket_FD_in,
+				const std::string & host_in,
 				const std::string & IP_in,
 				const std::string & port_in,
 				bool & disconnect_flag_in,
@@ -117,6 +128,7 @@ public:
 				buffer & send_buff_in
 			):
 				socket_FD(socket_FD_in),
+				host(host_in),
 				IP(IP_in),
 				port(port_in),
 				disconnect_flag(disconnect_flag_in),
@@ -124,12 +136,14 @@ public:
 				send_buff(send_buff_in)
 			{}
 
-			const int socket_FD;
-			const std::string & IP;   //reference to save space
-			const std::string & port; //reference to save space
+			//const references to save space, non-const references may be changed
+			const int socket_FD;      //WARNING: do not write this
+			const std::string & host; //empty when incoming connection
+			const std::string & IP;   //IP address host resolved to
+			const std::string & port; //port on remote end
 			buffer & recv_buff;
 			buffer & send_buff;
-			bool & disconnect_flag;
+			bool & disconnect_flag;   //trigger disconnect when set to true
 
 			/*
 			These must be set in the connect call back or the program will be
@@ -153,12 +167,15 @@ public:
 		After worker does call backs this function will be called so that the
 		socket is again monitored for activity.
 	*/
-	virtual bool connect_to(const std::string & IP, const std::string & port) = 0;
+	virtual bool connect_to(const std::string & host, const std::string & port) = 0;
 	virtual void get_job(boost::shared_ptr<socket_data> & info) = 0;
 	virtual void finish_job(boost::shared_ptr<socket_data> & info) = 0;
 
 protected:
 	//connected socket associated with socket_data
 	std::map<int, boost::shared_ptr<socket_data> > Socket_Data;
+
+	//controls max upload/download
+	rate_limit Rate_Limit;
 };
 #endif

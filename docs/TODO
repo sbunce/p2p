@@ -1,13 +1,8 @@
 TODO
 
--replace static functions with unnamed namespace
-
--create network_wrapper namespace with convenience functions.
+-reactor_select needs support for trying all the ai_next's
 
 -make request generator unit test
-
--requests should be sent before file blocks, when two hosts download from
-eachother the file blocks hog upload that should be used to get requests out.
 
 
 THINK ABOUT
@@ -16,6 +11,8 @@ THINK ABOUT
 
 DEFERRED FEATURES
 
+-requests should be sent before file blocks, when two hosts download from
+eachother the file blocks hog upload that should be used to get requests out.
 -SQLite blob write offset is a signed int. This limits the maximum tree size
 to 2gB. Create document like this: http://www.sqlite.org/limits.html with size
 limits.

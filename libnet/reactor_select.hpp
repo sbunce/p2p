@@ -3,7 +3,6 @@
 #define H_REACTOR_SELECT
 
 //include
-#include <rate_limit.hpp>
 #include <reactor.hpp>
 
 //std
@@ -37,6 +36,9 @@ public:
 
 	virtual ~reactor_select()
 	{
+		network_wrapper::disconnect(listener);
+		network_wrapper::disconnect(selfpipe_read);
+		network_wrapper::disconnect(selfpipe_write);
 		select_loop_thread.interrupt();
 		select_loop_thread.join();
 	}
@@ -57,11 +59,13 @@ public:
 		if(network_wrapper::connect_socket(new_FD, Info)){
 			//socket in progress of connecting
 			boost::mutex::scoped_lock lock(connecting_mutex);
-			connecting.push_back(boost::shared_ptr<socket_data>(new socket_data(new_FD, host, port)));
+			connecting.push_back(boost::shared_ptr<socket_data>(
+				new socket_data(new_FD, host, network_wrapper::get_IP(Info), port, Info)));
 		}else{
 			//socket connected right away, rare but it might happen
 			boost::mutex::scoped_lock lock(job_finished_mutex);
-			job_finished.push_back(boost::shared_ptr<socket_data>(new socket_data(new_FD, host, port)));
+			job_finished.push_back(boost::shared_ptr<socket_data>(
+				new socket_data(new_FD, host, network_wrapper::get_IP(Info), port, Info)));
 		}
 		send(selfpipe_write, "0", 1, MSG_NOSIGNAL);
 		return true;
@@ -152,8 +156,6 @@ private:
 	boost::mutex disconnect_mutex;
 	std::vector<int> disconnect;
 
-	rate_limit Rate_Limit;
-
 	/*
 	Add socket to master_FDS, adjusts begin_FD and end_FD, and create socket
 	data unless explictly told not to.
@@ -173,7 +175,7 @@ private:
 		if(create_socket_data){
 			std::map<int, boost::shared_ptr<socket_data> >::iterator iter = Socket_Data.find(socket_FD);
 			assert(iter == Socket_Data.end());
-			Socket_Data.insert(std::make_pair(socket_FD, new socket_data(socket_FD,
+			Socket_Data.insert(std::make_pair(socket_FD, new socket_data(socket_FD, "",
 				network_wrapper::get_IP(socket_FD), network_wrapper::get_port(socket_FD))));
 		}
 	}
@@ -181,26 +183,73 @@ private:
 	void check_timeouts()
 	{
 		//temp vector needed because queue_job invalidates iterator
-		std::vector<int> disconnect;
+		std::vector<int> job_tmp;
+
+		//sockets that failed to connect, but for which there is another IP to try
+		std::vector<boost::shared_ptr<socket_data> > try_next;
+
 		std::map<int, boost::shared_ptr<socket_data> >::iterator
 		iter_cur = Socket_Data.begin(),
 		iter_end = Socket_Data.end();
 		while(iter_cur != iter_end){
 			if(std::time(NULL) - iter_cur->second->last_seen > 8){
 				if(FD_ISSET(iter_cur->first, &connect_FDS)){
-					iter_cur->second->failed_connect_flag = true;
+					//advance to next IP we have for host
+					iter_cur->second->Info.next_res();
+					if(iter_cur->second->Info.resolved()){
+						//there is another address to try
+						try_next.push_back(iter_cur->second);
+					}else{
+						iter_cur->second->failed_connect_flag = true;
+						job_tmp.push_back(iter_cur->first);
+					}
 				}else{
 					iter_cur->second->disconnect_flag = true;
+					job_tmp.push_back(iter_cur->first);
 				}
-				disconnect.push_back(iter_cur->first);
 			}
 			++iter_cur;
 		}
 
-		for(int x=0; x<disconnect.size(); ++x){
-			queue_job(disconnect[x]);
+		for(int x=0; x<job_tmp.size(); ++x){
+			queue_job(job_tmp[x]);
 		}
-		disconnect.clear();
+		for(int x=0; x<try_next.size(); ++x){
+			network_wrapper::disconnect(try_next[x]->socket_FD);
+			connect_next(try_next[x]);
+		}
+
+		job_tmp.clear();
+		try_next.clear();
+	}
+
+	/*
+	DEBUG, this function has not been tested. How would one test this? I tried
+	putting multiple hosts in /etc/hosts (one good, one bad) that resolve to the
+	same IP and the addrinfo only contained the IP that the host would resolve
+	to.
+
+	Called when an outgoing connection to a host failed and there is another IP
+	for the host to try.
+	*/
+	void connect_next(boost::shared_ptr<socket_data> & old_SD)
+	{
+		int new_FD = network_wrapper::create_socket(old_SD->Info);
+
+		//non-blocking required for async connect
+		network_wrapper::set_non_blocking(new_FD);
+
+		if(network_wrapper::connect_socket(new_FD, old_SD->Info)){
+			//socket in progress of connecting
+			boost::mutex::scoped_lock lock(connecting_mutex);
+			connecting.push_back(boost::shared_ptr<socket_data>(
+				new socket_data(new_FD, old_SD->host, network_wrapper::get_IP(old_SD->Info), old_SD->port, old_SD->Info)));
+		}else{
+			//socket connected right away, rare but it might happen
+			boost::mutex::scoped_lock lock(job_finished_mutex);
+			job_finished.push_back(boost::shared_ptr<socket_data>(
+				new socket_data(new_FD, network_wrapper::get_IP(old_SD->Info), old_SD->IP, old_SD->port, old_SD->Info)));
+		}
 	}
 
 	//handle incoming connection on listener
@@ -355,7 +404,7 @@ private:
 			because linux will change them to reflect the time that select() has
 			blocked(POSIX.1-2001 allows this) for.
 			*/
-			tv.tv_sec = 0; tv.tv_usec = 1000000 / 1; // 1/100 second
+			tv.tv_sec = 0; tv.tv_usec = 1000000 / 100; // 1/100 second
 
 			service = select(end_FD, &read_FDS, &write_FDS, NULL, &tv);
 
@@ -560,7 +609,7 @@ private:
 		//find an available socket by trying to bind to different ports
 		int tmp_listener;
 		std::string port;
-		for(int x=1024; x<65536; ++x){
+		for(int x=9090; x<65536; ++x){
 			std::stringstream ss;
 			ss << x;
 			network_wrapper::info Info = network_wrapper::get_info("127.0.0.1", ss.str().c_str());
@@ -570,6 +619,8 @@ private:
 			if(network_wrapper::bind_socket(tmp_listener, Info)){
 				port = ss.str();
 				break;
+			}else{
+				network_wrapper::disconnect(tmp_listener);
 			}
 		}
 

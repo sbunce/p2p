@@ -65,20 +65,6 @@ int main(int argc, char ** argv)
 
 	network Network(&failed_connect_call_back, &connect_call_back, &disconnect_call_back, listen_port);
 
-	/*
-	Priveledge drop after starting listener. We try this when the user is
-	trying to bind to a port less than 1024 because we assume the program is
-	being run as root.
-
-	#ifndef WIN32
-	//DEBUG, hardcoded for debian www-data
-	if(seteuid(33) < 0){
-		fprintf(stderr, "Couldn't set uid.\n");
-		exit(1);
-	}
-	#endif
-	*/
-
 	//register signal handlers
 	signal(SIGINT, signal_handler);
 

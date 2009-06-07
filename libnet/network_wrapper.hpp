@@ -6,7 +6,8 @@
 	#define MSG_NOSIGNAL 0  //disable SIGPIPE on send() to disconnected socket
 	#define FD_SETSIZE 1024 //max number of sockets in fd_set
 	#define socklen_t int   //hack for API difference on windows
-	#include <winsock.h>
+	#include <winsock2.h>
+	#include <ws2tcpip.h>
 #else
 	#include <arpa/inet.h>
 	#include <fcntl.h>
@@ -21,74 +22,81 @@
 class network_wrapper
 {
 public:
+
 	class info
 	{
-		friend class network_wrapper;
 	public:
-		info():
-			res(NULL),
-			ref_count(new int(1))
-		{}
+		info(){}
 
-		info(const info & Info):
-			res(Info.res),
-			ref_count(Info.ref_count)
+		/*
+		This ctor called by get_info function. The addrinfo pointer passed to this
+		ctor should not have freeaddrinfo() called on it, and the pointer should
+		not be passed to the ctor of any other info object. The addrinfo will
+		automatically be free'd when last reference to this class destroyed.
+		*/
+		info(addrinfo * res_in)
 		{
-			++(*ref_count);
+			Ref = boost::shared_ptr<ref>(new ref(res_in));
 		}
 
-		~info()
+		/*
+		Returns stored addrinfo. This function should not be called if 
+		resolved() == false.
+		*/
+		addrinfo * get_res() const
 		{
-			check_last();
+			assert(Ref.get() != NULL);
+			return Ref->res_cur;
+		}
+
+		/*
+		Makes the info container point to the next addrinfo. After calling this
+		resolved() should be called to make sure we didn't hit the end of the
+		list.
+		*/
+		void next_res()
+		{
+			Ref->res_cur = Ref->res_cur->ai_next;
 		}
 
 		//returns true if info is good and may be used with other wrapper functions
-		bool resolved()
+		bool resolved() const
 		{
-			return res != NULL;
-		}
-
-		const info & operator = (const info & rval)
-		{
-			if(this == &rval){
-				//assignment to self, do nothing
+			if(Ref.get() == NULL){
+				return false;
 			}else{
-				//lval might be last reference
-				check_last();
-
-				//change what reference this now holds
-				res = rval.res;
-				ref_count = rval.ref_count;
-				++(*ref_count);
+				return Ref->res_cur != NULL;
 			}
 		}
 
 	private:
-		info(addrinfo * res_in):
-			res(res_in),
-			ref_count(new int(1))
-		{}
-
-		/*
-		When res = NULL the info class doesn't contain the address info and will
-		trigger an assert if it is used with one of the network functions.
-		*/
-		addrinfo * res;
-
-		/*
-		If ref_count = 1 and dtor called then freeaddrinfo will be called. This is
-		the reference counting pointer pattern.
-		*/
-		int * ref_count;
-
-		void check_last()
+		//facilitates doing reference count with boost::shared_ptr
+		class ref
 		{
-			if(*ref_count == 1 && res != NULL){
+		public:
+			ref(addrinfo * res_in):
+				res(res_in),
+				res_cur(res_in)
+			{}
+
+			~ref()
+			{
 				freeaddrinfo(res);
-			}else{
-				--(*ref_count);
 			}
-		}
+
+			/*
+			Pointer to the first addrinfo in the list.
+			*/
+			addrinfo * res;
+
+			/*
+			Pointer to current element in list. Initially this points to res. If
+			this is null there are no more results.
+			*/
+			addrinfo * res_cur;
+		};
+
+		boost::shared_ptr<ref> Ref;
 	};
 
 	/*
@@ -113,35 +121,12 @@ public:
 	*/
 	static bool connect_socket(const int socket_FD, info & Info)
 	{
-		assert(Info.res != NULL);
-		if(connect(socket_FD, Info.res->ai_addr, Info.res->ai_addrlen) == -1){
+		assert(Info.resolved());
+		if(connect(socket_FD, Info.get_res()->ai_addr, Info.get_res()->ai_addrlen) == -1){
 			return false;
 		}else{
 			return true;
 		}
-
-		/*
-DEBUG, Add support for this:
-
-		This is what would need to happen if trying all returned IPs. This doesn't
-		work with async connects. We'd need to store the info until one async
-		connect timed out. Then try ai_next etc.
-
-		addrinfo * p;
-		for(p = Info.res; p != NULL; p = p->ai_next){
-			if((sock_FD = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1){
-				error();
-				continue;
-			}
-			if(connect(socket_FD, p->ai_addr, p->ai_addrlen) == -1){
-				disconnect(sockfd);
-			}else{
-				//connected successfully
-				return true;
-			}
-		}
-		return false;
-		*/
 	}
 
 	/*
@@ -153,7 +138,8 @@ DEBUG, Add support for this:
 	*/
 	static bool bind_socket(const int socket_FD, const info & Info)
 	{
-		if(bind(socket_FD, Info.res->ai_addr, Info.res->ai_addrlen) == -1){
+		assert(Info.resolved());
+		if(bind(socket_FD, Info.get_res()->ai_addr, Info.get_res()->ai_addrlen) == -1){
 			return false;
 		}else{
 			return true;
@@ -165,8 +151,11 @@ DEBUG, Add support for this:
 	*/
 	static int create_socket(const info & Info)
 	{
+		assert(Info.resolved());
 		int socket_FD;
-		if((socket_FD = socket(Info.res->ai_family, Info.res->ai_socktype, Info.res->ai_protocol)) == -1){
+		if((socket_FD = socket(Info.get_res()->ai_family, Info.get_res()->ai_socktype,
+			Info.get_res()->ai_protocol)) == -1)
+		{
 			LOGGER << "failed to create socket";
 			error();
 			exit(1);
@@ -230,11 +219,46 @@ DEBUG, Add support for this:
 	*/
 	static std::string get_IP(const int socket_FD)
 	{
+		/*
+		Because IPv6 is used all socket addresses need to be gotten as IPv6. If
+		the IP is IPv4 then it will be represented as ::ffff:<IPv4 address>
+		*/
 		sockaddr_in6 sa;
 		socklen_t len = sizeof(sa);
 		getpeername(socket_FD, (sockaddr *)&sa, &len);
 		char buff[INET6_ADDRSTRLEN];
 		if(inet_ntop(AF_INET6, &sa.sin6_addr, buff, sizeof(buff)) == NULL){
+			LOGGER << "could not determine IP";
+			return "";
+		}else{
+			std::string tmp(buff);
+			size_t loc;
+			if((loc = tmp.find("::ffff:")) == 0){
+				//IPv4, trimm off "::ffff:"
+				return std::string(tmp.begin()+7, tmp.end());
+			}else{
+				//IPv6
+				return tmp;
+			}
+		}
+	}
+
+	/*
+	Same as above except this one takes info. This is good for getting the IP
+	when the socket has not yet connected.
+	*/
+	static std::string get_IP(const info & Info)
+	{
+		void * addr;
+		if(Info.get_res()->ai_family == AF_INET){
+			addr = &(((sockaddr_in *)Info.get_res()->ai_addr)->sin_addr);
+		}else if(Info.get_res()->ai_family == AF_INET6){
+			addr = &(((sockaddr_in6 *)Info.get_res()->ai_addr)->sin6_addr);
+		}else{
+			LOGGER << "unknown address family";
+		}
+		char buff[INET6_ADDRSTRLEN];
+		if(inet_ntop(Info.get_res()->ai_family, addr, buff, sizeof(buff)) == NULL){
 			LOGGER << "could not determine IP";
 			return "";
 		}else{

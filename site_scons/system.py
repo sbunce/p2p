@@ -12,8 +12,12 @@ def setup(env):
 	environment.define_keys(env)
 
 	#start minimum of 2 threads, more if > 2 CPUs
-	num_cpu = int(os.environ.get('NUM_CPU', 2))
-	env.SetOption('num_jobs', num_cpu)
+	if sys.platform == 'linux2':
+		num_cpu = int(os.environ.get('NUM_CPU', 2))
+		env.SetOption('num_jobs', num_cpu)
+	if sys.platform == 'win32':
+		#windows garbles compiler output with more than one thread
+		env.SetOption('num_jobs', 1)
 
 	#custom, but independent libraries
 	env['CPPPATH'].append([
