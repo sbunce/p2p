@@ -22,14 +22,12 @@ class locking_shared_ptr
 {
 public:
 	//creates empty locking_share_ptr
-	locking_shared_ptr()
-	:
+	locking_shared_ptr():
 		pointee_mutex(new boost::recursive_mutex)
 	{}
 
 	//this ctor takes a pointer to be wrapped.
-	explicit locking_shared_ptr(T * pointee_in)
-	:
+	explicit locking_shared_ptr(T * pointee_in):
 		pointee(pointee_in),
 		pointee_mutex(new boost::recursive_mutex)
 	{}
@@ -38,7 +36,6 @@ public:
 	Default copy ctor used. The boost::shared_ptr library takes care of
 	reference counting and is guaranteed to be thread safe (see boost docs).
 	*/
-
 	class proxy
 	{
 	public:
@@ -85,13 +82,13 @@ public:
 			return *this;
 		}else{
 			/*
-			Lock both objects and copy. The mutex will also be copied. This way
-			both locking_smart_ptr's protect the pointer to the same object with
-			the same mutex.
+			Lock both objects and copy. Both locking_shared_ptr's will have a
+			pointer to the same mutex.
 			*/
 			boost::recursive_mutex::scoped_lock(*pointee_mutex);
 			boost::recursive_mutex::scoped_lock(*rval.pointee_mutex);
 			pointee = rval.pointee;
+			pointee_mutex = rval.pointee_mutex;
 			return *this;
 		}
 	}

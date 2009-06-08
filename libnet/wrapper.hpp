@@ -1,11 +1,14 @@
 #ifndef H_NETWORK_WRAPPER
 #define H_NETWORK_WRAPPER
 
+//include
+#include <logger.hpp>
+
 //networking
 #ifdef WIN32
 	#define MSG_NOSIGNAL 0  //disable SIGPIPE on send() to disconnected socket
 	#define FD_SETSIZE 1024 //max number of sockets in fd_set
-	#define socklen_t int   //hack for API difference on windows
+	#define socklen_t int   //hack for API difference
 	#include <winsock2.h>
 	#include <ws2tcpip.h>
 #else
@@ -18,85 +21,75 @@
 	#include <unistd.h>
 #endif
 
-//class to define namespace and keep functions private, it's not instantiable
-class network_wrapper
+namespace network{
+class wrapper
 {
 public:
-
-	class info
+	/*
+	The getaddrinfo function allocates it's own memory and expects the user to free
+	it. This wraps that so that memory is automatically free'd when the object is
+	destoyed.
+	*/
+	class info : private boost::noncopyable
 	{
 	public:
-		info(){}
-
 		/*
 		This ctor called by get_info function. The addrinfo pointer passed to this
 		ctor should not have freeaddrinfo() called on it, and the pointer should
 		not be passed to the ctor of any other info object. The addrinfo will
 		automatically be free'd when last reference to this class destroyed.
+
+		To construct a blank info object pass the ctor NULL.
 		*/
-		info(addrinfo * res_in)
+		info(addrinfo * res_in):
+			res(res_in),
+			res_cur(res_in)
+		{}
+
+		~info()
 		{
-			Ref = boost::shared_ptr<ref>(new ref(res_in));
+			if(res != NULL){
+				freeaddrinfo(res);
+			}
 		}
 
-		/*
-		Returns stored addrinfo. This function should not be called if 
-		resolved() == false.
-		*/
+		//returns current addrinfo
 		addrinfo * get_res() const
 		{
-			assert(Ref.get() != NULL);
-			return Ref->res_cur;
+			assert(res_cur != NULL);
+			return res_cur;
 		}
 
-		/*
-		Makes the info container point to the next addrinfo. After calling this
-		resolved() should be called to make sure we didn't hit the end of the
-		list.
-		*/
+		//traverse to next node in addrinfo list
 		void next_res()
 		{
-			Ref->res_cur = Ref->res_cur->ai_next;
+			assert(res_cur != NULL);
+			res_cur = res_cur->ai_next;
 		}
 
 		//returns true if info is good and may be used with other wrapper functions
 		bool resolved() const
 		{
-			if(Ref.get() == NULL){
+			if(res == NULL){
 				return false;
 			}else{
-				return Ref->res_cur != NULL;
+				return res_cur != NULL;
 			}
 		}
 
 	private:
-		//facilitates doing reference count with boost::shared_ptr
-		class ref
-		{
-		public:
-			ref(addrinfo * res_in):
-				res(res_in),
-				res_cur(res_in)
-			{}
+		/*
+		The addrinfo struct is part of a linked list. The pointer to the next link
+		is res->ai_next. The res pointer points to the start of the list. The
+		res_cur pointer is the current node we're on.
+		Note: If res NULL there is no address info.
+		Note: If res_cur NULL we're at the end of the list.
 
-			~ref()
-			{
-				freeaddrinfo(res);
-			}
-
-			/*
-			Pointer to the first addrinfo in the list.
-			*/
-			addrinfo * res;
-
-			/*
-			Pointer to current element in list. Initially this points to res. If
-			this is null there are no more results.
-			*/
-			addrinfo * res_cur;
-		};
-
-		boost::shared_ptr<ref> Ref;
+		The addrinfo list can have more than one element if the host is multihomed.
+		This can happen when the host has both an IPv4 and IPv6 address.
+		*/
+		addrinfo * res;
+		addrinfo * res_cur;
 	};
 
 	/*
@@ -119,10 +112,9 @@ public:
 	connect with non-blocking socket being done) or false if socket is in
 	progress of connecting.
 	*/
-	static bool connect_socket(const int socket_FD, info & Info)
+	static bool connect_socket(const int socket_FD, boost::shared_ptr<info> Info)
 	{
-		assert(Info.resolved());
-		if(connect(socket_FD, Info.get_res()->ai_addr, Info.get_res()->ai_addrlen) == -1){
+		if(connect(socket_FD, Info->get_res()->ai_addr, Info->get_res()->ai_addrlen) == -1){
 			return false;
 		}else{
 			return true;
@@ -136,37 +128,30 @@ public:
 	This only generally needs to be called when setting up a listener. For
 	connecting to a remote host a random port is generally used.
 	*/
-	static bool bind_socket(const int socket_FD, const info & Info)
+	static bool bind_socket(const int socket_FD, boost::shared_ptr<info> Info)
 	{
-		assert(Info.resolved());
-		if(bind(socket_FD, Info.get_res()->ai_addr, Info.get_res()->ai_addrlen) == -1){
+		if(bind(socket_FD, Info->get_res()->ai_addr, Info->get_res()->ai_addrlen) == -1){
 			return false;
 		}else{
 			return true;
 		}
 	}
 
-	/*
-	Get the OS to allocate a socket. Returns the socket.
-	*/
-	static int create_socket(const info & Info)
+	//return a socket (have OS allocate socket)
+	static int create_socket(boost::shared_ptr<info> Info)
 	{
-		assert(Info.resolved());
 		int socket_FD;
-		if((socket_FD = socket(Info.get_res()->ai_family, Info.get_res()->ai_socktype,
-			Info.get_res()->ai_protocol)) == -1)
+		if((socket_FD = socket(Info->get_res()->ai_family, Info->get_res()->ai_socktype,
+			Info->get_res()->ai_protocol)) == -1)
 		{
 			LOGGER << "failed to create socket";
 			error();
-			exit(1);
 		}else{
 			return socket_FD;
 		}
 	}
 
-	/*
-	Disconnects a socket.
-	*/
+	//closes a socket
 	static void disconnect(const int socket_FD)
 	{
 		#ifdef WIN32
@@ -174,29 +159,6 @@ public:
 		#else
 		close(socket_FD);
 		#endif
-	}
-
-	/*
-	Returns socket information for specified host and port. The host or port may
-	be NULL but not both.
-	*/
-	static info get_info(const char * host, const char * port)
-	{
-		assert(host != NULL || port != NULL);
-		addrinfo hints, *res;
-		std::memset(&hints, 0, sizeof(hints));
-		hints.ai_family = AF_UNSPEC;     //IPv4 or IPv6
-		hints.ai_socktype = SOCK_STREAM; //TCP
-		if(host == NULL){
-			//fill in IP (all available interfaces)
-			hints.ai_flags = AI_PASSIVE;
-		}
-		if(getaddrinfo(host, port, &hints, &res) != 0){
-			LOGGER << "could not look up host " << host << " port " << port;
-			return info(NULL);
-		}else{
-			return info(res);
-		}
 	}
 
 	/*
@@ -211,6 +173,29 @@ public:
 		perror("setsockopt");
 		#endif
 		exit(1);
+	}
+
+	/*
+	Returns socket information for specified host and port. The host or port may
+	be NULL but not both.
+	*/
+	static boost::shared_ptr<info> get_info(const char * host, const char * port)
+	{
+		assert(host != NULL || port != NULL);
+		addrinfo hints, *res;
+		std::memset(&hints, 0, sizeof(hints));
+		hints.ai_family = AF_UNSPEC;     //IPv4 or IPv6
+		hints.ai_socktype = SOCK_STREAM; //TCP
+		if(host == NULL){
+			//fill in IP (all available interfaces)
+			hints.ai_flags = AI_PASSIVE;
+		}
+		if(getaddrinfo(host, port, &hints, &res) != 0){
+			LOGGER << "could not look up host " << host << " port " << port;
+			return boost::shared_ptr<info>(new info(NULL));
+		}else{
+			return boost::shared_ptr<info>(new info(res));
+		}
 	}
 
 	/*
@@ -247,18 +232,18 @@ public:
 	Same as above except this one takes info. This is good for getting the IP
 	when the socket has not yet connected.
 	*/
-	static std::string get_IP(const info & Info)
+	static std::string get_IP(boost::shared_ptr<info> Info)
 	{
 		void * addr;
-		if(Info.get_res()->ai_family == AF_INET){
-			addr = &(((sockaddr_in *)Info.get_res()->ai_addr)->sin_addr);
-		}else if(Info.get_res()->ai_family == AF_INET6){
-			addr = &(((sockaddr_in6 *)Info.get_res()->ai_addr)->sin6_addr);
+		if(Info->get_res()->ai_family == AF_INET){
+			addr = &(((sockaddr_in *)Info->get_res()->ai_addr)->sin_addr);
+		}else if(Info->get_res()->ai_family == AF_INET6){
+			addr = &(((sockaddr_in6 *)Info->get_res()->ai_addr)->sin6_addr);
 		}else{
 			LOGGER << "unknown address family";
 		}
 		char buff[INET6_ADDRSTRLEN];
-		if(inet_ntop(Info.get_res()->ai_family, addr, buff, sizeof(buff)) == NULL){
+		if(inet_ntop(Info->get_res()->ai_family, addr, buff, sizeof(buff)) == NULL){
 			LOGGER << "could not determine IP";
 			return "";
 		}else{
@@ -303,9 +288,7 @@ public:
 		}
 	}
 
-	/*
-	Sets a socket to be non-blocking.
-	*/
+	//sets a socket to non-blocking
 	static void set_non_blocking(const int socket_FD)
 	{
 		//set socket to non-blocking for async connect
@@ -317,7 +300,73 @@ public:
 		#endif
 	}
 
+	/*
+	Not all operating systems have pipes, or a socket_pair function so this
+	function is required for portability.
+	*/
+	static void socket_pair(int & selfpipe_read, int & selfpipe_write)
+	{
+		//find an available socket by trying to bind to different ports
+		int tmp_listener;
+		std::string port;
+		for(int x=9090; x<65536; ++x){
+			std::stringstream ss;
+			ss << x;
+			boost::shared_ptr<info> Info = get_info("127.0.0.1", ss.str().c_str());
+			assert(Info->resolved());
+			tmp_listener = create_socket(Info);
+			reuse_port(tmp_listener);
+			if(bind_socket(tmp_listener, Info)){
+				port = ss.str();
+				break;
+			}else{
+				disconnect(tmp_listener);
+			}
+		}
+
+		if(listen(tmp_listener, 1) == -1){
+			error();
+		}
+
+		//connect socket for writer end of the pair
+		boost::shared_ptr<info> Info = get_info("127.0.0.1", port.c_str());
+		assert(Info->resolved());
+		selfpipe_write = create_socket(Info);
+		if(!connect_socket(selfpipe_write, Info)){
+			error();
+		}
+
+		//accept socket for reader end of the pair
+		if((selfpipe_read = accept_socket(tmp_listener)) == -1){
+			error();
+		}
+
+		disconnect(tmp_listener);
+	}
+
+	//must be called before any networking functions
+	static void start_networking()
+	{
+		#ifdef WIN32
+		WORD wsock_ver = MAKEWORD(2,2);
+		WSADATA wsock_data;
+		int startup;
+		if((startup = WSAStartup(wsock_ver, &wsock_data)) != 0){
+			LOGGER << "winsock startup error " << startup;
+			exit(1);
+		}
+		#endif
+	}
+
+	//for every call to start_winsock this function must be called
+	static void stop_networking()
+	{
+		#ifdef WIN32
+		WSACleanup();
+		#endif
+	}
 private:
-	network_wrapper(){}
+	wrapper();
 };
+}//end of network namespace
 #endif

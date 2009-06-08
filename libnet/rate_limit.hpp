@@ -1,6 +1,6 @@
 //THREADSAFE
-#ifndef H_RATE_LIMIT
-#define H_RATE_LIMIT
+#ifndef H_NETWORK_RATE_LIMIT
+#define H_NETWORK_RATE_LIMIT
 
 //boost
 #include <boost/thread.hpp>
@@ -18,6 +18,7 @@
 	#endif
 #endif
 
+namespace network{
 class rate_limit
 {
 public:
@@ -40,25 +41,33 @@ public:
 		Upload.update(n_bytes);
 	}
 
-	//returns average current download rate
-	unsigned current_download_rate()
+	/*
+	Returns number of bytes that can be sent such that we don't go over
+	max_upload_rate.
+	*/
+	int available_upload()
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-		return Download.speed();
-	}
-
-	//returns average current upload rate
-	unsigned current_upload_rate()
-	{
-		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-		return Upload.speed();
+		unsigned transfer = 0;
+		if(Upload.current_second() >= max_upload_rate){
+			//limit reached, send no bytes
+			return transfer;
+		}else{
+			//limit not yet reached, determine how many bytes to send
+			transfer = max_upload_rate - Upload.current_second();
+			if(transfer > std::numeric_limits<int>::max()){
+				return std::numeric_limits<int>::max();
+			}else{
+				return transfer;
+			}
+		}
 	}
 
 	/*
 	Returns number of bytes that can be received such that we don't go over
 	max_download_rate.
 	*/
-	int download_rate_control()
+	int available_download()
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 		unsigned transfer = 0;
@@ -74,6 +83,20 @@ public:
 				return transfer;
 			}
 		}
+	}
+
+	//returns average current download rate
+	unsigned current_download_rate()
+	{
+		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+		return Download.speed();
+	}
+
+	//returns average current upload rate
+	unsigned current_upload_rate()
+	{
+		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+		return Upload.speed();
 	}
 
 	//returns maximum download rate
@@ -112,28 +135,6 @@ public:
 		}
 	}
 
-	/*
-	Returns number of bytes that can be sent such that we don't go over
-	max_upload_rate.
-	*/
-	int upload_rate_control()
-	{
-		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-		unsigned transfer = 0;
-		if(Upload.current_second() >= max_upload_rate){
-			//limit reached, send no bytes
-			return transfer;
-		}else{
-			//limit not yet reached, determine how many bytes to send
-			transfer = max_upload_rate - Upload.current_second();
-			if(transfer > std::numeric_limits<int>::max()){
-				return std::numeric_limits<int>::max();
-			}else{
-				return transfer;
-			}
-		}
-	}
-
 private:
 	//mutex for all static public functions
 	boost::recursive_mutex Recursive_Mutex;
@@ -144,4 +145,5 @@ private:
 	speed_calculator Download;
 	speed_calculator Upload;
 };
+}//end of network namespace
 #endif

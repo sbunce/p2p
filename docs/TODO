@@ -1,6 +1,9 @@
 TODO
 
--reactor_select needs support for trying all the ai_next's
+-network.hpp and reactor must be combined so that the reactor_* can signal
+condition variables when work needs to be done. This change is necessary to have
+the worker threads be more general purpose. We need to be able to have the
+workers do DNS lookups.
 
 -make request generator unit test
 

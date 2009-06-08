@@ -1,31 +1,21 @@
-//THREADSAFE, THREAD-SPAWNING
-#ifndef H_NETWORKING
-#define H_NETWORKING
+#ifndef H_NETWORK
+#define H_NETWORK
 
-//boost
-#include <boost/function.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/thread.hpp>
-#include <boost/utility.hpp>
+/*
+Select which reactor to use on each OS. These must correspond with the
+instantiated reactor in network::io_service private: section.
+*/
+#ifdef LINUX2
+	#include "reactor_select.hpp"
+#elif WIN32
+	#include "reactor_select.hpp"
+#endif
 
-//include
-#include <logger.hpp>
-#include <reactor.hpp>
-#include <reactor_select.hpp>
-
-//std
-#include <cstdlib>
-#include <limits>
-#include <map>
-#include <queue>
-#include <vector>
-
-class network : private boost::noncopyable
+namespace network{
+typedef socket_data::socket_data_visible socket;
+class io_service
 {
 public:
-	//passed to call backs
-	typedef reactor::socket_data::socket_data_visible socket;
-
 	/* ctor parameters
 	boost::bind is the nicest way to do a callback to the member function of a
 	specific object. ex:
@@ -54,77 +44,31 @@ public:
 		Port to listen on for incoming connections. The default (if no parameter
 		specified) is to not listen for incoming connections.
 	*/
-	network(
-		boost::function<void (socket &)> failed_connect_call_back_in,
-		boost::function<void (socket &)> connect_call_back_in,
-		boost::function<void (socket &)> disconnect_call_back_in,
-		const std::string port = "-1"
+	io_service(
+		boost::function<void (socket_data::socket_data_visible &)> failed_connect_call_back_in,
+		boost::function<void (socket_data::socket_data_visible &)> connect_call_back_in,
+		boost::function<void (socket_data::socket_data_visible &)> disconnect_call_back_in
 	):
-		failed_connect_call_back(failed_connect_call_back_in),
-		connect_call_back(connect_call_back_in),
-		disconnect_call_back(disconnect_call_back_in)
-	{
-		//instantiate networking subsystem
-		Reactor = boost::shared_ptr<reactor>(new reactor_select(port));
+		Reactor(
+			failed_connect_call_back_in,
+			connect_call_back_in,
+			disconnect_call_back_in
+		)
+	{}
 
-		//create workers to do call backs
-		for(int x=0; x<8; ++x){
-			Workers.create_thread(boost::bind(&network::worker_pool, this));
-		}
-	}
-
-	~network()
+	//asynchronously connect to host
+	void connect(const std::string & host, const std::string & port)
 	{
-		Workers.interrupt_all();
-		Workers.join_all();
-	}
-
-	bool connect_to(const std::string & IP, const std::string & port)
-	{
-		return Reactor->connect_to(IP, port);
+		Reactor.connect(host, port);
 	}
 
 private:
-	//reactor for networking
-	boost::shared_ptr<reactor> Reactor;
-
-	//worker threads to handle call backs
-	boost::thread_group Workers;
-
-	//call backs
-	boost::function<void (socket &)> failed_connect_call_back;
-	boost::function<void (socket &)> connect_call_back;
-	boost::function<void (socket &)> disconnect_call_back;
-
-	void worker_pool()
-	{
-		boost::shared_ptr<reactor::socket_data> info;
-		while(true){
-			boost::this_thread::interruption_point();
-			Reactor->get_job(info);
-			if(info->failed_connect_flag){
-				failed_connect_call_back(info->Socket_Data_Visible);
-			}else{
-				if(!info->connect_flag){
-					info->connect_flag = true;
-					connect_call_back(info->Socket_Data_Visible);
-				}
-				assert(info->Socket_Data_Visible.recv_call_back);
-				assert(info->Socket_Data_Visible.send_call_back);
-				if(info->recv_flag){
-					info->recv_flag = false;
-					info->Socket_Data_Visible.recv_call_back(info->Socket_Data_Visible);
-				}
-				if(info->send_flag){
-					info->send_flag = false;
-					info->Socket_Data_Visible.send_call_back(info->Socket_Data_Visible);
-				}
-				if(info->disconnect_flag){
-					disconnect_call_back(info->Socket_Data_Visible);
-				}
-			}
-			Reactor->finish_job(info);
-		}
-	}
+	//select which reactor to use on each OS
+	#ifdef LINUX2
+	reactor_select Reactor;
+	#elif WIN32
+	reactor_select Reactor;
+	#endif
 };
+}//end network namespace
 #endif

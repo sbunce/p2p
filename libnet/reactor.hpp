@@ -1,164 +1,49 @@
-#ifndef H_REACTOR
-#define H_REACTOR
+#ifndef H_NETWORK_REACTOR
+#define H_NETWORK_REACTOR
+
+//boost
+#include <boost/utility.hpp>
+
+//custom
+#include "rate_limit.hpp"
+#include "socket_data.hpp"
+#include "wrapper.hpp"
 
 //include
 #include <buffer.hpp>
 #include <logger.hpp>
 
-//networking
-#include "network_wrapper.hpp"
-#include "rate_limit.hpp"
-
+namespace network{
 class reactor
 {
 public:
-	reactor()
+	reactor(
+		boost::function<void (socket_data::socket_data_visible &)> failed_connect_call_back_in,
+		boost::function<void (socket_data::socket_data_visible &)> connect_call_back_in,
+		boost::function<void (socket_data::socket_data_visible &)> disconnect_call_back_in
+	):
+		failed_connect_call_back(failed_connect_call_back_in),
+		connect_call_back(connect_call_back_in),
+		disconnect_call_back(disconnect_call_back_in)
 	{
-		#ifdef WIN32
-//DEBUG, move this up to 2,2?
-		WORD wsock_ver = MAKEWORD(1,1);
-		WSADATA wsock_data;
-		int startup;
-		if((startup = WSAStartup(wsock_ver, &wsock_data)) != 0){
-			LOGGER << "winsock startup error " << startup;
-			exit(1);
+		wrapper::start_networking();
+
+		for(int x=0; x<8; ++x){
+			Workers.create_thread(boost::bind(&reactor::pool, this));
 		}
-		#endif
 	}
 
 	virtual ~reactor()
 	{
-		#ifdef WIN32
-		WSACleanup();
-		#endif
+		Workers.interrupt_all();
+		Workers.join_all();
+		wrapper::stop_networking();
 	}
 
-	//data needed for each socket
-	class socket_data
-	{
-	public:
-		socket_data(
-			const int socket_FD_in,
-			const std::string & host_in,
-			const std::string & IP_in,
-			const std::string & port_in,
-			network_wrapper::info Info_in = network_wrapper::info()
-		):
-			socket_FD(socket_FD_in),
-			host(host_in),
-			IP(IP_in),
-			port(port_in),
-			Info(Info_in),
-			failed_connect_flag(false),
-			connect_flag(false),
-			recv_flag(false),
-			send_flag(false),
-			disconnect_flag(false),
-			last_seen(std::time(NULL)),
-			Socket_Data_Visible(
-				socket_FD,
-				host,
-				IP,
-				port,
-				disconnect_flag,
-				recv_buff,
-				send_buff
-			)
-		{
-
-		}
-
-		int socket_FD;
-		std::time_t last_seen; //last time socket had activity
-
-		std::string host; //name we connected to (ie "google.com")
-		std::string IP;   //IP host resolved to
-		std::string port; //if listen_port == port then connection is incoming
-
-		/*
-		failed_connect_flag:
-			If true the failed connect call back needs to be done. No other call
-			backs should be done after the failed connect call back.
-		connect_flag:
-			If false the connect call back needs to be done. After the call back is
-			done this is set to true.
-		recv_flag:
-			If true the recv call back needs to be done.
-		send_flag:
-			If true the send call back needs to be done.
-		disconnect_flag:
-			If this is true after get_job returns the reactor disconnected the
-			socket (because the other end hung up). If this is true when the
-			socket_data is passed to finish_job the socket will be disconnected if
-			it wasn't already.			
-		*/
-		bool failed_connect_flag;
-		bool connect_flag;
-		bool recv_flag;
-		bool send_flag;
-		bool disconnect_flag;
-
-		//send()/recv() buffers
-		buffer recv_buff;
-		buffer send_buff;
-
-		/*
-		This is needed if the host resolves to multiple IPs. This is used to try
-		the next IP in the list until connection happens or we run out of IPs. 
-		However, if the first IP is connected to, no other IP's will be connected
-		to.
-		*/
-		network_wrapper::info Info;
-
-		/*
-		This is typedef'd to socket in network::. The purpose of this class is to
-		limit what data the call back has access to. For example the call back
-		should not have access to any flag but the disconnect flag.
-		*/
-		class socket_data_visible
-		{
-		public:
-			socket_data_visible(
-				const int socket_FD_in,
-				const std::string & host_in,
-				const std::string & IP_in,
-				const std::string & port_in,
-				bool & disconnect_flag_in,
-				buffer & recv_buff_in,
-				buffer & send_buff_in
-			):
-				socket_FD(socket_FD_in),
-				host(host_in),
-				IP(IP_in),
-				port(port_in),
-				disconnect_flag(disconnect_flag_in),
-				recv_buff(recv_buff_in),
-				send_buff(send_buff_in)
-			{}
-
-			//const references to save space, non-const references may be changed
-			const int socket_FD;      //WARNING: do not write this
-			const std::string & host; //empty when incoming connection
-			const std::string & IP;   //IP address host resolved to
-			const std::string & port; //port on remote end
-			buffer & recv_buff;
-			buffer & send_buff;
-			bool & disconnect_flag;   //trigger disconnect when set to true
-
-			/*
-			These must be set in the connect call back or the program will be
-			terminated.
-			*/
-			boost::function<void (socket_data_visible &)> recv_call_back;
-			boost::function<void (socket_data_visible &)> send_call_back;
-		};
-
-		socket_data_visible Socket_Data_Visible;
-	};
-
 	/*
-	connect_to:
-		Establishes new connection. Returns false if connection limit reached.
+	connect:
+		Establishes new connection.
+//DEBUG, have return value for maximum connections reached?
 	get_job:
 		Blocks until a job is ready. The job type is stored in socket_data
 		Socket_State variable. This function is intended to be called by multiple
@@ -167,15 +52,79 @@ public:
 		After worker does call backs this function will be called so that the
 		socket is again monitored for activity.
 	*/
-	virtual bool connect_to(const std::string & host, const std::string & port) = 0;
-	virtual void get_job(boost::shared_ptr<socket_data> & info) = 0;
+	virtual void connect(const std::string & host, const std::string & port) = 0;
+	virtual boost::shared_ptr<socket_data> get_job() = 0;
 	virtual void finish_job(boost::shared_ptr<socket_data> & info) = 0;
 
 protected:
-	//connected socket associated with socket_data
-	std::map<int, boost::shared_ptr<socket_data> > Socket_Data;
+	/*
+	Everything here is accessed by the reactor_* threads. These variables should
+	not be read or modified by a thread coming in to the reactor. Instead 
+	*/
 
-	//controls max upload/download
+	//controls maximum upload/download rate
 	rate_limit Rate_Limit;
+
+	/*
+	Whenever a job needs to be done job_cond.notify_one() should be called to
+	release a worker thread to check for jobs.
+	*/
+	boost::condition_variable_any worker_cond;
+
+private:
+	//worker threads to handle call backs
+	boost::thread_group Workers;
+
+	//mutex used with worker_cond
+	boost::mutex worker_mutex;
+
+	//call backs
+	boost::function<void (socket_data::socket_data_visible &)> failed_connect_call_back;
+	boost::function<void (socket_data::socket_data_visible &)> connect_call_back;
+	boost::function<void (socket_data::socket_data_visible &)> disconnect_call_back;
+
+	void pool()
+	{
+		while(true){
+			//workers get blocked here while there is no work
+			{//begin lock scope
+			boost::mutex::scoped_lock lock(worker_mutex);
+			worker_cond.wait(worker_mutex);
+			}//end lock scope
+
+			//check for call back job
+			boost::shared_ptr<socket_data> info = get_job();
+			if(info.get() != NULL){
+				call_back(info);
+				finish_job(info);
+			}
+		}
+	}
+
+	void call_back(boost::shared_ptr<socket_data> info)
+	{
+		if(info->failed_connect_flag){
+			failed_connect_call_back(info->Socket_Data_Visible);
+		}else{
+			if(!info->connect_flag){
+				info->connect_flag = true;
+				connect_call_back(info->Socket_Data_Visible);
+			}
+			assert(info->Socket_Data_Visible.recv_call_back);
+			assert(info->Socket_Data_Visible.send_call_back);
+			if(info->recv_flag){
+				info->recv_flag = false;
+				info->Socket_Data_Visible.recv_call_back(info->Socket_Data_Visible);
+			}
+			if(info->send_flag){
+				info->send_flag = false;
+				info->Socket_Data_Visible.send_call_back(info->Socket_Data_Visible);
+			}
+			if(info->disconnect_flag){
+				disconnect_call_back(info->Socket_Data_Visible);
+			}
+		}
+	}
 };
+}
 #endif

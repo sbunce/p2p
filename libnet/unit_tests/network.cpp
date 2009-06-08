@@ -6,7 +6,7 @@
 //include
 #include <portable_sleep.hpp>
 
-//net
+//network
 #include <network.hpp>
 
 const std::string listen_port = "6969";
@@ -82,7 +82,13 @@ void failed_connect_call_back(network::socket & Socket)
 
 int main()
 {
-	network Network(&failed_connect_call_back, &connect_call_back, &disconnect_call_back, listen_port);
-	Network.connect_to("localhost", "6969");
+	network::io_service Network(
+		&failed_connect_call_back,
+		&connect_call_back,
+		&disconnect_call_back
+	);
+
+	Network.connect("123.123.123.123", "6969");
+
 	portable_sleep::ms(5*1000);
 }
