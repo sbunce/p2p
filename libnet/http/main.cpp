@@ -63,7 +63,13 @@ int main(int argc, char ** argv)
 		exit(1);
 	}
 
-	network Network(&failed_connect_call_back, &connect_call_back, &disconnect_call_back, listen_port);
+	network::io_service Network(
+		&failed_connect_call_back,
+		&connect_call_back,
+		&disconnect_call_back,
+		"8080"
+	);
+	Network.set_max_download_rate(25*1024);
 
 	//register signal handlers
 	signal(SIGINT, signal_handler);

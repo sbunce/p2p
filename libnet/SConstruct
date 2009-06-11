@@ -1,5 +1,5 @@
 #sub scons files
 SConscript([
-	#'http/SConstruct',
+	'http/SConstruct',
 	'unit_tests/SConstruct'
 ])

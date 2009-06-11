@@ -1,9 +1,12 @@
 #ifndef H_NETWORK
 #define H_NETWORK
 
+//boost
+#include <boost/shared_ptr.hpp>
+
 /*
 Select which reactor to use on each OS. These must correspond with the
-instantiated reactor in network::io_service private: section.
+instantiated reactor in the network::io_service ctor.
 */
 #ifdef LINUX2
 	#include "reactor_select.hpp"
@@ -40,35 +43,65 @@ public:
 		Seconds before connection attempt times out.
 	socket_time_out:
 		Seconds before socket with no I/O times out.
-	listen_port:
-		Port to listen on for incoming connections. The default (if no parameter
-		specified) is to not listen for incoming connections.
 	*/
 	io_service(
 		boost::function<void (socket_data::socket_data_visible &)> failed_connect_call_back_in,
 		boost::function<void (socket_data::socket_data_visible &)> connect_call_back_in,
-		boost::function<void (socket_data::socket_data_visible &)> disconnect_call_back_in
+		boost::function<void (socket_data::socket_data_visible &)> disconnect_call_back_in,
+		const std::string & port = "-1"
 	):
-		Reactor(
+		Reactor(new
+		#ifdef LINUX2
+		reactor_select(
+		#elif WIN32
+		reactor_select(
+		#endif
 			failed_connect_call_back_in,
 			connect_call_back_in,
-			disconnect_call_back_in
-		)
-	{}
+			disconnect_call_back_in,
+			port
+		))
+	{
+		Reactor->start();
+	}
 
 	//asynchronously connect to host
 	void connect(const std::string & host, const std::string & port)
 	{
-		Reactor.connect(host, port);
+		Reactor->connect(host, port);
+	}
+
+	/*
+	Functions for getting/setting rate limits (bytes), and getting current rates
+	(bytes/second).
+	*/
+	unsigned current_download_rate()
+	{
+		return Reactor->current_download_rate();
+	}
+	unsigned current_upload_rate()
+	{
+		return Reactor->current_upload_rate();
+	}
+	unsigned get_max_download_rate()
+	{
+		return Reactor->get_max_download_rate();
+	}
+	unsigned get_max_upload_rate()
+	{
+		return Reactor->get_max_upload_rate();
+	}
+	void set_max_download_rate(const unsigned rate)
+	{
+		Reactor->set_max_download_rate(rate);
+	}
+	void set_max_upload_rate(const unsigned rate)
+	{
+		Reactor->set_max_upload_rate(rate);
 	}
 
 private:
-	//select which reactor to use on each OS
-	#ifdef LINUX2
-	reactor_select Reactor;
-	#elif WIN32
-	reactor_select Reactor;
-	#endif
+	boost::shared_ptr<reactor> Reactor;
 };
 }//end network namespace
 #endif

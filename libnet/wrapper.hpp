@@ -1,3 +1,10 @@
+/*
+Portability Notes:
+
+Functions not used:
+inet_ntop requires >= vista
+inet_pton requires >= vista
+*/
 #ifndef H_NETWORK_WRAPPER
 #define H_NETWORK_WRAPPER
 
@@ -8,8 +15,6 @@
 #ifdef WIN32
 	#define MSG_NOSIGNAL 0  //disable SIGPIPE on send() to disconnected socket
 	#define FD_SETSIZE 1024 //max number of sockets in fd_set
-	#define socklen_t int   //hack for API difference
-	#include <winsock2.h>
 	#include <ws2tcpip.h>
 #else
 	#include <arpa/inet.h>
@@ -34,17 +39,37 @@ public:
 	{
 	public:
 		/*
-		This ctor called by get_info function. The addrinfo pointer passed to this
-		ctor should not have freeaddrinfo() called on it, and the pointer should
-		not be passed to the ctor of any other info object. The addrinfo will
-		automatically be free'd when last reference to this class destroyed.
+		Constructing this object does DNS resolution. At least the host or the
+		port must be specified. If both are NULL then resolved() = false.
 
-		To construct a blank info object pass the ctor NULL.
+		The ai_family parameter is the address family to use for the socket.
+		AF_INET - IPv4
+		AF_INET6 - IPv6
+		AF_UNSPEC - IPv4 or IPv6
 		*/
-		info(addrinfo * res_in):
-			res(res_in),
-			res_cur(res_in)
-		{}
+		info(const char * host, const char * port, const int ai_family = AF_UNSPEC)
+		{
+			if(host != NULL || port != NULL){
+				addrinfo hints;
+				std::memset(&hints, 0, sizeof(hints));
+				hints.ai_family = ai_family;
+				hints.ai_socktype = SOCK_STREAM; //TCP
+				if(host == NULL){
+					//fill in IP (all available interfaces)
+					hints.ai_flags = AI_PASSIVE;
+				}
+				if(getaddrinfo(host, port, &hints, &res) != 0){
+					LOGGER << "could not look up host " << host << " port " << port;
+					res = NULL;
+					res_cur = NULL;
+				}else{
+					res_cur = res;
+				}
+			}else{
+				res = NULL;
+				res_cur = NULL;
+			}
+		}
 
 		~info()
 		{
@@ -108,13 +133,15 @@ public:
 	}
 
 	/*
-	Connects to remote host. Returns true if socket is connected (rare if async
-	connect with non-blocking socket being done) or false if socket is in
-	progress of connecting.
+	Bind a socket to a specified address and port. Return true if the binding
+	succeeded, false if it didn't (port already in use or some other error).
+
+	This only generally needs to be called when setting up a listener. For
+	connecting to a remote host a random port is generally used.
 	*/
-	static bool connect_socket(const int socket_FD, boost::shared_ptr<info> Info)
+	static bool bind_socket(const int socket_FD, const info & Info)
 	{
-		if(connect(socket_FD, Info->get_res()->ai_addr, Info->get_res()->ai_addrlen) == -1){
+		if(bind(socket_FD, Info.get_res()->ai_addr, Info.get_res()->ai_addrlen) == -1){
 			return false;
 		}else{
 			return true;
@@ -122,33 +149,24 @@ public:
 	}
 
 	/*
-	Bind a socket to a specified address and port. Return true if the binding
-	succeeded, false if it didn't (port already in use or some other error).
-
-	This only generally needs to be called when setting up a listener. For
-	connecting to a remote host a random port is generally used.
+	Connects to remote host. Returns true if socket is connected (rare if async
+	connect with non-blocking socket being done) or false if socket is in
+	progress of connecting.
 	*/
-	static bool bind_socket(const int socket_FD, boost::shared_ptr<info> Info)
+	static bool connect_socket(const int socket_FD, const info & Info)
 	{
-		if(bind(socket_FD, Info->get_res()->ai_addr, Info->get_res()->ai_addrlen) == -1){
+		if(connect(socket_FD, Info.get_res()->ai_addr, Info.get_res()->ai_addrlen) == -1){
 			return false;
 		}else{
 			return true;
 		}
 	}
 
-	//return a socket (have OS allocate socket)
-	static int create_socket(boost::shared_ptr<info> Info)
+	//Return a socket (have OS allocate socket). Returns -1 on error.
+	static int create_socket(const info & Info)
 	{
-		int socket_FD;
-		if((socket_FD = socket(Info->get_res()->ai_family, Info->get_res()->ai_socktype,
-			Info->get_res()->ai_protocol)) == -1)
-		{
-			LOGGER << "failed to create socket";
-			error();
-		}else{
-			return socket_FD;
-		}
+		return socket(Info.get_res()->ai_family, Info.get_res()->ai_socktype,
+			Info.get_res()->ai_protocol);
 	}
 
 	//closes a socket
@@ -176,29 +194,6 @@ public:
 	}
 
 	/*
-	Returns socket information for specified host and port. The host or port may
-	be NULL but not both.
-	*/
-	static boost::shared_ptr<info> get_info(const char * host, const char * port)
-	{
-		assert(host != NULL || port != NULL);
-		addrinfo hints, *res;
-		std::memset(&hints, 0, sizeof(hints));
-		hints.ai_family = AF_UNSPEC;     //IPv4 or IPv6
-		hints.ai_socktype = SOCK_STREAM; //TCP
-		if(host == NULL){
-			//fill in IP (all available interfaces)
-			hints.ai_flags = AI_PASSIVE;
-		}
-		if(getaddrinfo(host, port, &hints, &res) != 0){
-			LOGGER << "could not look up host " << host << " port " << port;
-			return boost::shared_ptr<info>(new info(NULL));
-		}else{
-			return boost::shared_ptr<info>(new info(res));
-		}
-	}
-
-	/*
 	Returns IP address of remote host. Returns empty string IP cannot be looked up
 	(can happen if socket is disconnected).
 	*/
@@ -208,23 +203,28 @@ public:
 		Because IPv6 is used all socket addresses need to be gotten as IPv6. If
 		the IP is IPv4 then it will be represented as ::ffff:<IPv4 address>
 		*/
-		sockaddr_in6 sa;
-		socklen_t len = sizeof(sa);
-		getpeername(socket_FD, (sockaddr *)&sa, &len);
+		sockaddr_storage addr;
+		socklen_t len = sizeof(addr);
+		getpeername(socket_FD, (sockaddr *)&addr, &len);
 		char buff[INET6_ADDRSTRLEN];
-		if(inet_ntop(AF_INET6, &sa.sin6_addr, buff, sizeof(buff)) == NULL){
-			LOGGER << "could not determine IP";
-			return "";
+		if(addr.ss_family == AF_INET){
+			//IPv4 socket
+			getnameinfo((sockaddr *)&addr, sizeof(sockaddr_in), buff, sizeof(buff), NULL, 0, NI_NUMERICHOST);
+		}else if(addr.ss_family == AF_INET6){
+			//IPv6 socket
+			getnameinfo((sockaddr *)&addr, sizeof(sockaddr_in6), buff, sizeof(buff), NULL, 0, NI_NUMERICHOST);
+		}
+
+		/*
+		A dualstack implementation (IPv4/IPv6 are the same code base) will return
+		a IPv4 mapped address that will look like this ::ffff:123.123.123.123. We
+		remove the front of it.
+		*/
+		std::string tmp(buff);
+		if(tmp.find("::ffff:", 0) == 0){
+			return std::string(tmp.begin()+7, tmp.end());
 		}else{
-			std::string tmp(buff);
-			size_t loc;
-			if((loc = tmp.find("::ffff:")) == 0){
-				//IPv4, trimm off "::ffff:"
-				return std::string(tmp.begin()+7, tmp.end());
-			}else{
-				//IPv6
-				return tmp;
-			}
+			return buff;
 		}
 	}
 
@@ -232,22 +232,29 @@ public:
 	Same as above except this one takes info. This is good for getting the IP
 	when the socket has not yet connected.
 	*/
-	static std::string get_IP(boost::shared_ptr<info> Info)
+	static std::string get_IP(const info & Info)
 	{
-		void * addr;
-		if(Info->get_res()->ai_family == AF_INET){
-			addr = &(((sockaddr_in *)Info->get_res()->ai_addr)->sin_addr);
-		}else if(Info->get_res()->ai_family == AF_INET6){
-			addr = &(((sockaddr_in6 *)Info->get_res()->ai_addr)->sin6_addr);
-		}else{
-			LOGGER << "unknown address family";
-		}
 		char buff[INET6_ADDRSTRLEN];
-		if(inet_ntop(Info->get_res()->ai_family, addr, buff, sizeof(buff)) == NULL){
-			LOGGER << "could not determine IP";
-			return "";
+		if(Info.get_res()->ai_family == AF_INET){
+			//IPv4 socket
+			//sockaddr_in addr = addr = &(((sockaddr_in *)Info.get_res()->ai_addr)->sin_addr);
+			getnameinfo((sockaddr *)Info.get_res()->ai_addr, sizeof(sockaddr_in), buff, sizeof(buff), NULL, 0, NI_NUMERICHOST);
+		}else if(Info.get_res()->ai_family == AF_INET6){
+			//IPv6 socket
+			//sockaddr_in6 * addr = (sockaddr_in6*)&(((sockaddr_in6 *)Info.get_res()->ai_addr)->sin6_addr);
+			getnameinfo((sockaddr *)Info.get_res()->ai_addr, sizeof(sockaddr_in6), buff, sizeof(buff), NULL, 0, NI_NUMERICHOST);
+		}
+
+		/*
+		A dualstack implementation (IPv4/IPv6 are the same code base) will return
+		a IPv4 mapped address that will look like this ::ffff:123.123.123.123. We
+		remove the front of it.
+		*/
+		std::string tmp(buff);
+		if(tmp.find("::ffff:", 0) == 0){
+			return std::string(tmp.begin()+7, tmp.end());
 		}else{
-			return std::string(buff);
+			return buff;
 		}
 	}
 
@@ -306,15 +313,19 @@ public:
 	*/
 	static void socket_pair(int & selfpipe_read, int & selfpipe_write)
 	{
+//DEBUG, try IPv4 then IPv6 if that doesn't work
 		//find an available socket by trying to bind to different ports
 		int tmp_listener;
 		std::string port;
 		for(int x=9090; x<65536; ++x){
 			std::stringstream ss;
 			ss << x;
-			boost::shared_ptr<info> Info = get_info("127.0.0.1", ss.str().c_str());
-			assert(Info->resolved());
+			info Info("127.0.0.1", ss.str().c_str(), AF_INET);
+			assert(Info.resolved());
 			tmp_listener = create_socket(Info);
+			if(tmp_listener == -1){
+				LOGGER << "error creating socket pair";
+			}
 			reuse_port(tmp_listener);
 			if(bind_socket(tmp_listener, Info)){
 				port = ss.str();
@@ -329,9 +340,12 @@ public:
 		}
 
 		//connect socket for writer end of the pair
-		boost::shared_ptr<info> Info = get_info("127.0.0.1", port.c_str());
-		assert(Info->resolved());
+		info Info("127.0.0.1", port.c_str(), AF_INET);
+		assert(Info.resolved());
 		selfpipe_write = create_socket(Info);
+		if(selfpipe_write == -1){
+			LOGGER << "error creating socket pair";
+		}
 		if(!connect_socket(selfpipe_write, Info)){
 			error();
 		}
@@ -342,6 +356,51 @@ public:
 		}
 
 		disconnect(tmp_listener);
+	}
+
+	/*
+	Accept incoming connections via IPv4 on specified port. Returns -1 if there
+	is an error.
+	*/
+	static int start_listener_IPv4(const std::string & port)
+	{
+		int listener = start_listener(port, AF_INET);
+		if(listener == -1){
+			LOGGER << "error starting IPv4 listener";
+		}else{
+			LOGGER << "started IPv4 listener port " << port << " sock " << listener;
+		}
+		return listener;
+	}
+
+	/*
+	Accept incoming connections via IPv6 on specified port. Returns -1 if there
+	is an error.
+	*/
+	static int start_listener_IPv6(const std::string & port)
+	{
+		int listener = start_listener(port, AF_INET6);
+		if(listener == -1){
+			LOGGER << "error starting IPv6 listener";
+		}else{
+			LOGGER << "started IPv6 listener port " << port << " sock " << listener;
+		}
+		return listener;
+	}
+
+	/*
+	Accept incoming connections via IPv4 or IPv6 on specified port. Returns -1 if there
+	is an error.
+	*/
+	static int start_listener_dual_stack(const std::string & port)
+	{
+		int listener = start_listener(port, AF_UNSPEC);
+		if(listener == -1){
+			LOGGER << "error starting dual stack listener";
+		}else{
+			LOGGER << "started dual stack listener port " << port << " sock " << listener;
+		}
+		return listener;
 	}
 
 	//must be called before any networking functions
@@ -367,6 +426,25 @@ public:
 	}
 private:
 	wrapper();
+
+	static int start_listener(const std::string & port, const int ai_family)
+	{
+		wrapper::info Info(NULL, port.c_str(), ai_family);
+		assert(Info.resolved());
+		int listener = create_socket(Info);
+		if(listener == -1){
+			return -1;
+		}
+		reuse_port(listener);
+		if(!bind_socket(listener, Info)){
+			error();
+		}
+		int backlog = 64;
+		if(listen(listener, backlog) == -1){
+			error();
+		}
+		return listener;
+	}
 };
 }//end of network namespace
 #endif

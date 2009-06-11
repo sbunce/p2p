@@ -12,14 +12,14 @@
 namespace portable_sleep
 {
 //sleep for specified number of milliseconds
-inline void ms(const unsigned & milliseconds)
+inline void ms(const unsigned & ms)
 {
 	//if milliseconds = 0 then yield should be used
-	assert(milliseconds != 0);
+	assert(ms != 0);
 	#ifdef WIN32
-	Sleep(milliseconds);
+	Sleep(ms);
 	#else
-	usleep(milliseconds * 1000);
+	usleep(ms * 1000);
 	#endif
 }
 

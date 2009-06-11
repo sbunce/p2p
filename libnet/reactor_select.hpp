@@ -15,7 +15,8 @@ public:
 	reactor_select(
 		boost::function<void (socket_data::socket_data_visible &)> failed_connect_call_back_in,
 		boost::function<void (socket_data::socket_data_visible &)> connect_call_back_in,
-		boost::function<void (socket_data::socket_data_visible &)> disconnect_call_back_in
+		boost::function<void (socket_data::socket_data_visible &)> disconnect_call_back_in,
+		const std::string & port = "-1"
 	):
 		network::reactor(
 			failed_connect_call_back_in,
@@ -24,7 +25,8 @@ public:
 		),
 		begin_FD(0),
 		end_FD(1),
-		listener(-1)
+		listener_IPv4(-1),
+		listener_IPv6(-1)
 	{
 		//initialize fd_set
 		FD_ZERO(&master_read_FDS);
@@ -32,59 +34,76 @@ public:
 		FD_ZERO(&read_FDS);
 		FD_ZERO(&write_FDS);
 
-		//start self pipe used to get select to return
-		start_selfpipe();
+		//start listener
+		if(port != "-1"){
+			#ifdef WIN32
+			//win32 doesn't support dual stack networking < vista
+			listener_IPv4 = wrapper::start_listener_IPv4(port);
+			listener_IPv6 = wrapper::start_listener_IPv6(port);
+			#else
+			listener_IPv4 = wrapper::start_listener_dual_stack(port);
+			listener_IPv6 = listener_IPv4;
+			#endif
+			if(listener_IPv4 == -1 && listener_IPv6 == -1){
+				LOGGER << "failed to start either IPv4 or IPv6 listener";
+				exit(1);
+			}
+			wrapper::set_non_blocking(listener_IPv4);
+			wrapper::set_non_blocking(listener_IPv6);
+			add_socket(listener_IPv4, false);
+			add_socket(listener_IPv6, false);
+		}
 
-		main_loop_thread = boost::thread(boost::bind(&reactor_select::main_loop, this));
+		//start self pipe used to get select to return
+		wrapper::socket_pair(selfpipe_read, selfpipe_write);
+		LOGGER << "selfpipe read " << selfpipe_read << " write " << selfpipe_write;
+		wrapper::set_non_blocking(selfpipe_read);
+		wrapper::set_non_blocking(selfpipe_write);
+		add_socket(selfpipe_read, false);
 	}
 
 	virtual ~reactor_select()
 	{
 		main_loop_thread.interrupt();
 		main_loop_thread.join();
-		wrapper::disconnect(listener);
+		wrapper::disconnect(listener_IPv4);
+		wrapper::disconnect(listener_IPv6);
 		wrapper::disconnect(selfpipe_read);
 		wrapper::disconnect(selfpipe_write);
 	}
 
-	virtual void connect(const std::string & host, const std::string & port)
+	virtual void connect(const std::string & host, const std::string & port,
+		boost::shared_ptr<wrapper::info> Info)
 	{
-//DNS resolution should not be done in caller thread
-		boost::shared_ptr<wrapper::info> Info = wrapper::get_info(host.c_str(), port.c_str());
 		if(!Info->resolved()){
 			LOGGER << "failed to resolve host " << host << " port " << port;
 			return;
 		}
 
-		int new_FD = wrapper::create_socket(Info);
+		int new_FD = wrapper::create_socket(*Info);
+		if(new_FD == -1){
+//DEBUG, figure out how to handle this, a failed_connect call back needs to happen
+			LOGGER << "failed connect to " << host;
+			exit(1);
+		}
+
+//DEBUG, need to check for socket > FD_SETSIZE
 
 		//non-blocking required for async connect
 		wrapper::set_non_blocking(new_FD);
 
-		if(wrapper::connect_socket(new_FD, Info)){
+		if(wrapper::connect_socket(new_FD, *Info)){
 			//socket connected right away, rare but it might happen
 			boost::mutex::scoped_lock lock(job_finished_mutex);
 			job_finished.push_back(boost::shared_ptr<socket_data>(
-				new socket_data(new_FD, host, wrapper::get_IP(Info), port, Info)));
+				new socket_data(new_FD, host, wrapper::get_IP(*Info), port, Info)));
 		}else{
 			//socket in progress of connecting
 			boost::mutex::scoped_lock lock(connecting_mutex);
 			connecting.push_back(boost::shared_ptr<socket_data>(
-				new socket_data(new_FD, host, wrapper::get_IP(Info), port, Info)));
+				new socket_data(new_FD, host, wrapper::get_IP(*Info), port, Info)));
 		}
 		send(selfpipe_write, "0", 1, MSG_NOSIGNAL);
-	}
-
-	virtual boost::shared_ptr<socket_data> get_job()
-	{
-		boost::mutex::scoped_lock lock(job_mutex);
-		if(!job.empty()){
-			boost::shared_ptr<socket_data> info = job.front();
-			job.pop_front();
-			return info;
-		}else{
-			return boost::shared_ptr<socket_data>();
-		}
 	}
 
 	virtual void finish_job(boost::shared_ptr<socket_data> & info)
@@ -117,12 +136,14 @@ private:
 
 	int begin_FD; //first socket
 	int end_FD;   //one past last socket
-	int listener; //socket of listener (-1 means no listener)
 
-/*
-int listener_IPv4;
-int listener_IPv6;
-*/
+	/*
+	Listening sockets. If on a dualstack OS then listener_IPv4 = listener_IPv6.
+	If -1 then there is no listener.
+	*/
+	int listener_IPv4;
+	int listener_IPv6;
+
 	/*
 	This is used for the selfpipe trick. A pipe is opened and put in the fd_set
 	select() will monitor. We can asynchronously signal select() to return by
@@ -134,16 +155,6 @@ int listener_IPv6;
 
 	//connected socket associated with socket_data
 	std::map<int, boost::shared_ptr<socket_data> > Socket_Data;
-
-	/*
-	When a socket needs to have a call back done it is queued in this container
-	along with the socket_data.
-
-	The socket_data doesn't need to be locked because it's guaranteed that the
-	select_loop_thread won't touch it.
-	*/
-	std::deque<boost::shared_ptr<socket_data> > job;
-	boost::mutex job_mutex;
 
 	/*
 	The finish_job function passes off sockets to the select_loop_thread using
@@ -173,7 +184,7 @@ int listener_IPv6;
 	data unless explictly told not to.
 	Note: the selfpipe and listener will set create_socket_data = false;
 	*/
-	void add_socket(const int socket_FD, bool create_socket_data = true)
+	void add_socket(const int socket_FD, bool create_socket_data)
 	{
 		assert(socket_FD > 0);
 		FD_SET(socket_FD, &master_read_FDS);
@@ -216,12 +227,11 @@ int listener_IPv6;
 		for(int x=0; x<job_tmp.size(); ++x){
 			queue_job(job_tmp[x]);
 		}
-
 		job_tmp.clear();
 	}
 
 	//handle incoming connection on listener
-	void establish_incoming()
+	void establish_incoming(const int listener)
 	{
 		int new_FD = 0;
 		while(new_FD != -1){
@@ -236,90 +246,9 @@ int listener_IPv6;
 				#endif
 				LOGGER << "IP " << wrapper::get_IP(new_FD) << " port "
 					<< wrapper::get_port(new_FD) << " sock " << new_FD;
-				add_socket(new_FD);
+				add_socket(new_FD, true);
 				queue_job(new_FD);
 			}
-		}
-	}
-
-	//close sockets finish_job wants disconnected
-	void process_disconnect()
-	{
-		boost::mutex::scoped_lock lock(disconnect_pending_mutex);
-		for(int x=0; x<disconnect_pending.size(); ++x){
-			remove_socket(disconnect_pending[x], false);
-			wrapper::disconnect(disconnect_pending[x]);
-		}
-		disconnect_pending.clear();
-	}
-
-	//monitor sockets in progress of connecting
-	void process_connecting()
-	{
-		boost::mutex::scoped_lock lock(connecting_mutex);
-		for(int x=0; x<connecting.size(); ++x){
-			add_socket(connecting[x]->socket_FD, false);
-			Socket_Data.insert(std::make_pair(connecting[x]->socket_FD, connecting[x]));
-			FD_SET(connecting[x]->socket_FD, &master_write_FDS);
-			FD_SET(connecting[x]->socket_FD, &connect_FDS);
-		}
-		connecting.clear();
-	}
-
-	//monitor socket that just connected, or that worker just finished with
-	void process_job_finished()
-	{
-		boost::mutex::scoped_lock lock(job_finished_mutex);
-		for(int x=0; x<job_finished.size(); ++x){
-			add_socket(job_finished[x]->socket_FD, false);
-			Socket_Data.insert(std::make_pair(job_finished[x]->socket_FD, job_finished[x]));
-			if(!job_finished[x]->send_buff.empty()){
-				//send buff contains data, check socket for writeability
-				FD_SET(job_finished[x]->socket_FD, &master_write_FDS);
-			}
-		}
-		job_finished.clear();
-	}
-
-	//schedule socket for worker to look at
-	void queue_job(const int socket_FD)
-	{
-		boost::mutex::scoped_lock lock(job_mutex);
-		std::map<int, boost::shared_ptr<socket_data> >::iterator iter = Socket_Data.find(socket_FD);
-		assert(iter != Socket_Data.end());
-		job.push_back(iter->second);
-		remove_socket(iter->first);
-		worker_cond.notify_one();
-	}
-
-	//remove socket from all fd_set's, adjust min_FD and end_FD.
-	void remove_socket(const int socket_FD, bool remove_socket_data = true)
-	{
-		FD_CLR(socket_FD, &master_read_FDS);
-		FD_CLR(socket_FD, &master_write_FDS);
-		FD_CLR(socket_FD, &read_FDS);
-		FD_CLR(socket_FD, &write_FDS);
-		FD_CLR(socket_FD, &connect_FDS);
-
-		//update end_FD
-		for(int x=end_FD; x>begin_FD; --x){
-			if(FD_ISSET(x, &master_read_FDS)){
-				end_FD = x + 1;
-				break;
-			}
-		}
-		//update begin_FD
-		for(int x=begin_FD; x<end_FD; ++x){
-			if(FD_ISSET(x, &master_read_FDS)){
-				begin_FD = x;
-				break;
-			}
-		}
-
-		if(remove_socket_data){
-			std::map<int, boost::shared_ptr<socket_data> >::iterator iter = Socket_Data.find(socket_FD);
-			assert(iter != Socket_Data.end());
-			Socket_Data.erase(socket_FD);
 		}
 	}
 
@@ -333,6 +262,7 @@ int listener_IPv6;
 				Time = std::time(NULL);
 				check_timeouts();
 			}
+
 			process_disconnect();
 			process_connecting();
 			process_job_finished();
@@ -355,7 +285,7 @@ int listener_IPv6;
 			}
 
 			timeval tv;
-			tv.tv_sec = 0; tv.tv_usec = 1000000 / 100; //1/100 sec timeout
+			tv.tv_sec = 0; tv.tv_usec = 1000000 / 1; //1/100 sec timeout
 			int service = select(end_FD, &read_FDS, &write_FDS, NULL, &tv);
 
 			if(service == -1){
@@ -385,57 +315,58 @@ int listener_IPv6;
 
 				bool socket_serviced;
 				bool need_call_back;
-				for(int x=begin_FD; x < end_FD && service; ++x){
+				for(int socket_FD = begin_FD; socket_FD < end_FD && service; ++socket_FD){
 					socket_serviced = false;
 					need_call_back = false;
-					if(x == selfpipe_read){
-						main_loop_discard_selfpipe(x, socket_serviced);
+					if(socket_FD == selfpipe_read){
+						if(FD_ISSET(socket_FD, &read_FDS)){
+							recv(socket_FD, selfpipe_discard, sizeof(selfpipe_discard), MSG_NOSIGNAL);
+							socket_serviced = true;
+						}
+						FD_CLR(socket_FD, &read_FDS);
+						FD_CLR(socket_FD, &write_FDS);
 					}
-					if(x == listener){
-						main_loop_establish_incoming(x, socket_serviced);
+
+					/*
+					On dual stack OS's listener_IPv4 == listener_IPv6 so
+					main_loop_establish_incoming() only neeeds to be called once.
+					*/
+					if(socket_FD == listener_IPv4){
+						if(FD_ISSET(socket_FD, &read_FDS)){
+							establish_incoming(socket_FD);
+							socket_serviced = true;
+						}
+						FD_CLR(socket_FD, &read_FDS);
+						FD_CLR(socket_FD, &write_FDS);
+					}else if(socket_FD == listener_IPv6){
+						if(FD_ISSET(socket_FD, &read_FDS)){
+							establish_incoming(socket_FD);
+							socket_serviced = true;
+						}
+						FD_CLR(socket_FD, &read_FDS);
+						FD_CLR(socket_FD, &write_FDS);
 					}
-					if(FD_ISSET(x, &write_FDS) && FD_ISSET(x, &connect_FDS)){
+
+					if(FD_ISSET(socket_FD, &write_FDS) && FD_ISSET(socket_FD, &connect_FDS)){
 						need_call_back = true;
-						FD_CLR(x, &write_FDS);
-						FD_CLR(x, &connect_FDS);
+						FD_CLR(socket_FD, &write_FDS);
+						FD_CLR(socket_FD, &connect_FDS);
 					}
-					if(FD_ISSET(x, &read_FDS)){
-						main_loop_recv(x, max_recv_per_socket, max_recv, socket_serviced, need_call_back);
+					if(FD_ISSET(socket_FD, &read_FDS)){
+						main_loop_recv(socket_FD, max_recv_per_socket, max_recv, socket_serviced, need_call_back);
 					}
-					if(FD_ISSET(x, &write_FDS)){
-						main_loop_send(x, max_send_per_socket, max_send, socket_serviced, need_call_back);
+					if(FD_ISSET(socket_FD, &write_FDS)){
+						main_loop_send(socket_FD, max_send_per_socket, max_send, socket_serviced, need_call_back);
 					}
 					if(socket_serviced){
 						--service;
 					}
 					if(need_call_back){
-						queue_job(x);
+						queue_job(socket_FD);
 					}
 				}
 			}
 		}
-	}
-
-	//discard incoming selfpipe bytes
-	void main_loop_discard_selfpipe(const int socket_FD, bool & socket_serviced)
-	{
-		if(FD_ISSET(socket_FD, &read_FDS)){
-			recv(socket_FD, selfpipe_discard, sizeof(selfpipe_discard), MSG_NOSIGNAL);
-			socket_serviced = true;
-		}
-		FD_CLR(socket_FD, &read_FDS);
-		FD_CLR(socket_FD, &write_FDS);
-	}
-
-	//handle incoming connections
-	void main_loop_establish_incoming(const int socket_FD, bool & socket_serviced)
-	{
-		if(FD_ISSET(socket_FD, &read_FDS)){
-			establish_incoming();
-			socket_serviced = true;
-		}
-		FD_CLR(socket_FD, &read_FDS);
-		FD_CLR(socket_FD, &write_FDS);
 	}
 
 	//recv data from a socket
@@ -537,45 +468,91 @@ int listener_IPv6;
 		socket_serviced = true;
 	}
 
-	/*
-	Accept incoming connections on specified port. Called by ctor if listening
-	port is specified as last ctor parameter.
-	*/
-//DEBUG, move this to wrapper
-	void start_listener(const std::string & port)
+	//close sockets finish_job wants disconnected
+	void process_disconnect()
 	{
-		assert(listener == -1);
-
-		boost::shared_ptr<wrapper::info> Info = wrapper::get_info(NULL, port.c_str());
-		assert(Info->resolved());
-		listener = wrapper::create_socket(Info);
-		wrapper::reuse_port(listener);
-
-		//set listener to non-blocking, incoming connections inherit this
-		wrapper::set_non_blocking(listener);
-
-		//bind to port
-		if(!wrapper::bind_socket(listener, Info)){
-			wrapper::error();
+		boost::mutex::scoped_lock lock(disconnect_pending_mutex);
+		for(int x=0; x<disconnect_pending.size(); ++x){
+			remove_socket(disconnect_pending[x], false);
 		}
-
-		//start listener, set max incoming connection backlog
-		if(listen(listener, 64) == -1){
-			wrapper::error();
-		}
-
-		LOGGER << "listen port " << port;
-		add_socket(listener, false);
+		disconnect_pending.clear();
 	}
 
-	//starts self pipe used to force select to return
-	void start_selfpipe()
+	//monitor sockets in progress of connecting
+	void process_connecting()
 	{
-		wrapper::socket_pair(selfpipe_read, selfpipe_write);
-		LOGGER << "selfpipe read " << selfpipe_read << " write " << selfpipe_write;
-		wrapper::set_non_blocking(selfpipe_read);
-		wrapper::set_non_blocking(selfpipe_write);
-		add_socket(selfpipe_read, false);
+		boost::mutex::scoped_lock lock(connecting_mutex);
+		for(int x=0; x<connecting.size(); ++x){
+			add_socket(connecting[x]->socket_FD, false);
+			Socket_Data.insert(std::make_pair(connecting[x]->socket_FD, connecting[x]));
+			FD_SET(connecting[x]->socket_FD, &master_write_FDS);
+			FD_SET(connecting[x]->socket_FD, &connect_FDS);
+		}
+		connecting.clear();
+	}
+
+	//monitor socket that just connected, or that worker just finished with
+	void process_job_finished()
+	{
+		boost::mutex::scoped_lock lock(job_finished_mutex);
+		for(int x=0; x<job_finished.size(); ++x){
+			add_socket(job_finished[x]->socket_FD, false);
+			Socket_Data.insert(std::make_pair(job_finished[x]->socket_FD, job_finished[x]));
+			if(!job_finished[x]->send_buff.empty()){
+				//send buff contains data, check socket for writeability
+				FD_SET(job_finished[x]->socket_FD, &master_write_FDS);
+			}
+		}
+		job_finished.clear();
+	}
+
+	//schedule socket for worker to look at
+	void queue_job(const int socket_FD)
+	{
+		std::map<int, boost::shared_ptr<socket_data> >::iterator iter = Socket_Data.find(socket_FD);
+		assert(iter != Socket_Data.end());
+
+		//schedule the call back job
+		add_call_back_job(iter->second);
+
+		//stop monitoring this socket while job running
+		remove_socket(iter->first, true);
+	}
+
+	//remove socket from all fd_set's, adjust min_FD and end_FD.
+	void remove_socket(const int socket_FD, bool remove_socket_data)
+	{
+		FD_CLR(socket_FD, &master_read_FDS);
+		FD_CLR(socket_FD, &master_write_FDS);
+		FD_CLR(socket_FD, &read_FDS);
+		FD_CLR(socket_FD, &write_FDS);
+		FD_CLR(socket_FD, &connect_FDS);
+
+		//update end_FD
+		for(int x=end_FD; x>begin_FD; --x){
+			if(FD_ISSET(x, &master_read_FDS)){
+				end_FD = x + 1;
+				break;
+			}
+		}
+		//update begin_FD
+		for(int x=begin_FD; x<end_FD; ++x){
+			if(FD_ISSET(x, &master_read_FDS)){
+				begin_FD = x;
+				break;
+			}
+		}
+
+		if(remove_socket_data){
+			std::map<int, boost::shared_ptr<socket_data> >::iterator iter = Socket_Data.find(socket_FD);
+			assert(iter != Socket_Data.end());
+			Socket_Data.erase(socket_FD);
+		}
+	}
+
+	void start_networking()
+	{
+		main_loop_thread = boost::thread(boost::bind(&reactor_select::main_loop, this));
 	}
 };
 }//end of network namespace

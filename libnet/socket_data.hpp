@@ -23,7 +23,8 @@ public:
 		const std::string & host_in,
 		const std::string & IP_in,
 		const std::string & port_in,
-		boost::shared_ptr<wrapper::info> Info_in = boost::shared_ptr<wrapper::info>(new wrapper::info(NULL))
+		boost::shared_ptr<wrapper::info> Info_in
+			= boost::shared_ptr<wrapper::info>(new wrapper::info(NULL, NULL))
 	):
 		socket_FD(socket_FD_in),
 		host(host_in),

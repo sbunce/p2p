@@ -3,11 +3,13 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 
-//include
-#include <portable_sleep.hpp>
-
 //network
 #include <network.hpp>
+
+/*
+Must be included after network because network 
+*/
+#include <portable_sleep.hpp>
 
 const std::string listen_port = "6969";
 
@@ -85,10 +87,11 @@ int main()
 	network::io_service Network(
 		&failed_connect_call_back,
 		&connect_call_back,
-		&disconnect_call_back
+		&disconnect_call_back,
+		"6969"
 	);
 
-	Network.connect("123.123.123.123", "6969");
+	Network.connect("::1", "6969");
 
-	portable_sleep::ms(5*1000);
+	portable_sleep::ms(10*1000);
 }

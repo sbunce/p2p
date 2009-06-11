@@ -5,7 +5,8 @@ syntax: glob
 *.o
 *.out
 *.pyc
-DB
+libp2p/unit_tests/DB
+libp2p/unit_tests/DB-journal
 gui/p2p_gui
 gui/p2p_nogui
 libnet/http/http
