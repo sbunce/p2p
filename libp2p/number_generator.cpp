@@ -78,7 +78,7 @@ void number_generator::generate()
 		//this should not be locked
 		mp_prime_random_ex(
 			&random.c_struct(),
-			1,                         //Miller-Rabin tests
+			10,                        //Miller-Rabin tests
 			protocol::DH_KEY_SIZE * 8, //size (bits) of prime to generate
 			0,                         //optional flags
 			&PRNG,                     //random byte source

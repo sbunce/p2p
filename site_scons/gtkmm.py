@@ -16,6 +16,8 @@ def setup(env):
 		if pkg_config:
 			env.ParseConfig(pkg_config + ' gtkmm-2.4 --cflags')
 			env['LIBPATH'].append('/gtkmm/lib')
+
+			#pkgconfig --lflags not working correctly, manually specify libs
 			env['LIBS'].append([
 				'gtkmm-vc90-2_4',
 				'gdkmm-vc90-2_4',

@@ -59,7 +59,6 @@ public:
 					hints.ai_flags = AI_PASSIVE;
 				}
 				if(getaddrinfo(host, port, &hints, &res) != 0){
-					LOGGER << "could not look up host " << host << " port " << port;
 					res = NULL;
 					res_cur = NULL;
 				}else{
@@ -130,6 +129,24 @@ public:
 		sockaddr_storage remoteaddr;
 		socklen_t len = sizeof(remoteaddr);
 		return accept(listener_FD, (sockaddr *)&remoteaddr, &len);
+	}
+
+	/*
+	When a asynchronously connecting socket (socket set to non-blocking and given
+	to connect()) becomes writeable this needs to be called to see if the
+	connection was made. If this returns false it means the connection attempt
+	failed.
+	*/
+	static bool async_connect_succeeded(const int socket_FD)
+	{
+		#ifdef WIN32
+		const char optval = 1;
+		#else
+		int optval = 1;
+		#endif
+		int optlen = sizeof(optval);
+		getsockopt(socket_FD, SOL_SOCKET, SO_ERROR, &optval, (socklen_t *)&optlen);
+		return optval == 0;
 	}
 
 	/*
@@ -286,11 +303,12 @@ public:
 	static void reuse_port(const int socket_FD)
 	{
 		#ifdef WIN32
-		const char yes = 1;
+		const char optval = 1;
 		#else
-		int yes = 1;
+		int optval = 1;
 		#endif
-		if(setsockopt(socket_FD, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1){
+		int optlen = sizeof(optval);
+		if(setsockopt(socket_FD, SOL_SOCKET, SO_REUSEADDR, &optval, optlen) == -1){
 			error();
 		}
 	}
@@ -401,6 +419,27 @@ public:
 			LOGGER << "started dual stack listener port " << port << " sock " << listener;
 		}
 		return listener;
+	}
+
+	/*
+	Starts the listeners depending on what system this is. If a listener can't be
+	started the socket_FD will be set to -1. If neither listener can be started
+	then the program will be terminated. If a dualstack socket is started then
+	both listeners will be equal.
+	*/
+	static void start_listeners(int & listener_IPv4, int & listener_IPv6, const std::string & port)
+	{
+		#ifdef WIN32
+		listener_IPv4 = wrapper::start_listener_IPv4(port);
+		listener_IPv6 = wrapper::start_listener_IPv6(port);
+		#else
+		listener_IPv4 = wrapper::start_listener_dual_stack(port);
+		listener_IPv6 = listener_IPv4;
+		#endif
+		if(listener_IPv4 == -1 && listener_IPv6 == -1){
+			LOGGER << "failed to start either IPv4 or IPv6 listener";
+			exit(1);
+		}
 	}
 
 	//must be called before any networking functions

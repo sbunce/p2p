@@ -1,6 +1,6 @@
 TODO
 
--inet_ntop not supported on xp/2003
+-need to connect to next in sockaddr list when failed connect
 
 -Think about moving Socket_Data to reactor class and having protected accessor
 functions which lock it.
@@ -25,17 +25,4 @@ Probably just rename the files according to some rules. It doesn't matter too
 much since the hashes stay the same.
 -Have a tab that shows share stats, upload/download stats, duplicate files, etc.
 -Make sure program works when out of hard drive space.
-
-Transactions:		        1248 hits
-Availability:		      100.00 %
-Elapsed time:		        9.97 secs
-Data transferred:	      227.79 MB
-Response time:		        0.77 secs
-Transaction rate:	      125.18 trans/sec
-Throughput:		       22.85 MB/sec
-Concurrency:		       96.00
-Successful transactions:        1248
-Failed transactions:	           0
-Longest transaction:	        0.89
-Shortest transaction:	        0.00
 

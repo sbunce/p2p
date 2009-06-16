@@ -20,34 +20,14 @@ class io_service
 {
 public:
 	/* ctor parameters
-	boost::bind is the nicest way to do a callback to the member function of a
+	boost::bind is used to do a callback to the member function of a
 	specific object. ex:
 		boost::bind(&http::connect_call_back, &HTTP, _1, _2, _3)
-
-	connect_call_back:
-		Called when server connected to. The direction indicates whether we
-		established connection (direction OUTGOING), or if someone established a
-		connection to us (direction INCOMING). The send_buff is to this function
-		in case something needs to be sent after connect.
-	recv_call_back:
-		Called after data received (received data in recv_buff). A return value of 
-		true will keep the server connected, but false will cause it to be
-		disconnected.
-	send_call_back:
-		Called after data sent. The send_buff will contain data that hasn't yet
-		been sent. A return value of true will keep the server connected, but
-		false will cause it to be disconnected.
-	disconnect_call-back:
-		Called when a connected socket disconnects.
-	connect_time_out:
-		Seconds before connection attempt times out.
-	socket_time_out:
-		Seconds before socket with no I/O times out.
 	*/
 	io_service(
-		boost::function<void (socket_data::socket_data_visible &)> failed_connect_call_back_in,
-		boost::function<void (socket_data::socket_data_visible &)> connect_call_back_in,
-		boost::function<void (socket_data::socket_data_visible &)> disconnect_call_back_in,
+		boost::function<void (const std::string & host, const std::string & port)> failed_connect_call_back_in,
+		boost::function<void (socket_data::socket_data_visible & Socket)> connect_call_back_in,
+		boost::function<void (socket_data::socket_data_visible & Socket)> disconnect_call_back_in,
 		const std::string & port = "-1"
 	):
 		Reactor(new
@@ -65,10 +45,29 @@ public:
 		Reactor->start();
 	}
 
+	~io_service()
+	{
+		Reactor->stop();
+	}
+
 	//asynchronously connect to host
 	void connect(const std::string & host, const std::string & port)
 	{
 		Reactor->connect(host, port);
+	}
+
+	//returns how many connections are established
+	unsigned connections()
+	{
+		return Reactor->get_connections();
+	}
+	unsigned incoming_connections()
+	{
+		return Reactor->get_incoming_connections();
+	}
+	unsigned outgoing_connections()
+	{
+		return Reactor->get_outgoing_connections();
 	}
 
 	/*

@@ -36,6 +36,7 @@ public:
 		recv_flag(false),
 		send_flag(false),
 		disconnect_flag(false),
+		Error(NONE),
 		last_seen(std::time(NULL)),
 		Socket_Data_Visible(
 			socket_FD,
@@ -44,16 +45,16 @@ public:
 			port,
 			disconnect_flag,
 			recv_buff,
-			send_buff
+			send_buff,
+			Error
 		)
 	{}
 
-	int socket_FD;
-	std::time_t last_seen; //last time socket had activity
-
-	std::string host; //name we connected to (ie "google.com")
-	std::string IP;   //IP host resolved to
-	std::string port; //if listen_port == port then connection is incoming
+	const int socket_FD;    //should not be used except by reactor_*
+	const std::string host; //name we connected to (ie "google.com")
+	const std::string IP;   //IP host resolved to
+	const std::string port; //if listen_port == port then connection is incoming
+	std::time_t last_seen;  //last time seen
 
 	/*
 	failed_connect_flag:
@@ -83,6 +84,16 @@ public:
 	buffer send_buff;
 
 	/*
+	This error condition is set when a connection fails.
+	*/
+	enum error{
+		NONE,            //default
+		MAX_CONNECTIONS, //maximum allowed connections reached
+		FAILED           //failed to connect
+	};
+	error Error;
+
+	/*
 	This is needed if the host resolves to multiple IPs. This is used to try
 	the next IP in the list until connection happens or we run out of IPs. 
 	However, if the first IP is connected to, no other IP's will be connected
@@ -105,7 +116,8 @@ public:
 			const std::string & port_in,
 			bool & disconnect_flag_in,
 			buffer & recv_buff_in,
-			buffer & send_buff_in
+			buffer & send_buff_in,
+			const error & Error_in
 		):
 			socket_FD(socket_FD_in),
 			host(host_in),
@@ -113,7 +125,8 @@ public:
 			port(port_in),
 			disconnect_flag(disconnect_flag_in),
 			recv_buff(recv_buff_in),
-			send_buff(send_buff_in)
+			send_buff(send_buff_in),
+			Error(Error_in)
 		{}
 
 		//const references to save space, non-const references may be changed
@@ -124,6 +137,7 @@ public:
 		buffer & recv_buff;
 		buffer & send_buff;
 		bool & disconnect_flag;   //trigger disconnect when set to true
+		const error & Error;
 
 		/*
 		These must be set in the connect call back or the program will be

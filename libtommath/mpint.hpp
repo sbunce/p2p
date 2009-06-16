@@ -6,12 +6,11 @@
 //std
 #include <iostream>
 
-class ltmpp_error
+class ltmpp_error : public std::exception
 {
 public:
-	ltmpp_error(int c){ type = c; }
-	int getType(void){ return type; }
-	const char *getTypeStr(){
+	ltmpp_error(int c):type(c){}
+	const char * what(){
 		switch (type) {
 		case MP_MEM: return "Out of memory";
 		case MP_VAL: return "Invalid value";

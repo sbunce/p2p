@@ -6,6 +6,7 @@
 #include "http.hpp"
 
 //include
+#include <convert.hpp>
 #include <CLI_args.hpp>
 #include <logger.hpp>
 #include <portable_sleep.hpp>
@@ -69,12 +70,17 @@ int main(int argc, char ** argv)
 		&disconnect_call_back,
 		"8080"
 	);
-	Network.set_max_download_rate(25*1024);
+	Network.set_max_upload_rate(500*1024);
 
 	//register signal handlers
 	signal(SIGINT, signal_handler);
 
 	while(!terminate_program){
+		LOGGER << "connections: " << Network.connections()
+		<< " in: " << Network.incoming_connections()
+		<< " out: " << Network.outgoing_connections()
+		<< " dl: " << convert::size_SI(Network.current_download_rate())
+		<< " ul: " << convert::size_SI(Network.current_upload_rate());
 		portable_sleep::ms(1000);
 	}
 }

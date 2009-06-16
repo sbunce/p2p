@@ -9,6 +9,9 @@ written to.
 #ifndef H_BUFFER
 #define H_BUFFER
 
+//include
+#include <logger.hpp>
+
 //std
 #include <algorithm>
 #include <cassert>
@@ -299,18 +302,26 @@ private:
 	void allocate(size_t & var, const size_t & size)
 	{
 		if(var == size){
+			//requested allocation is equal to what's already allocated
 			return;
 		}else{
 			var = size;
 			if(reserved == 0 && bytes == 0){
+				//no reserve, nothing in buffer, set buff = NULL to signify empty
 				if(buff != NULL){
+					//free any memory currently in buffer
 					free(buff);
 					buff = NULL;
 				}
 			}else if(buff == NULL){
+				//requested allocation non-zero and currently nothing is allocated
 				buff = (unsigned char *)std::malloc(var);
 				assert(buff);
-			}else if(var > reserved){
+			}else if(var >= reserved){
+				/*
+				Either reserve needs to be increased, or bytes are above what is
+				reserved so we need to allocate beyond what is reserved.
+				*/
 				buff = (unsigned char *)std::realloc(buff, var);
 				assert(buff);
 			}
