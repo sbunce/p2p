@@ -1,10 +1,8 @@
-//include
-#include <buffer.hpp>
-#include <logger.hpp>
+#include "../buffer.hpp"
 
 int main()
 {
-	buffer Buffer;
+	network::buffer Buffer;
 	for(int x=0; x<163; ++x){
 		Buffer.append('x');
 	}

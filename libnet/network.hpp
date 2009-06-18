@@ -4,15 +4,8 @@
 //boost
 #include <boost/shared_ptr.hpp>
 
-/*
-Select which reactor to use on each OS. These must correspond with the
-instantiated reactor in the network::io_service ctor.
-*/
-#ifdef LINUX2
-	#include "reactor_select.hpp"
-#elif WIN32
-	#include "reactor_select.hpp"
-#endif
+//reactors
+#include "reactor_select.hpp"
 
 namespace network{
 typedef socket_data::socket_data_visible socket;
@@ -30,12 +23,7 @@ public:
 		boost::function<void (socket_data::socket_data_visible & Socket)> disconnect_call_back_in,
 		const std::string & port = "-1"
 	):
-		Reactor(new
-		#ifdef LINUX2
-		reactor_select(
-		#elif WIN32
-		reactor_select(
-		#endif
+		Reactor(new reactor_select(
 			failed_connect_call_back_in,
 			connect_call_back_in,
 			disconnect_call_back_in,

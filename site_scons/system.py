@@ -5,19 +5,16 @@ import search
 
 #std
 import os
-import sys
+import platform
+import string
 
 #stuff every targets needs
 def setup(env):
 	environment.define_keys(env)
 
 	#start minimum of 2 threads, more if > 2 CPUs
-	if sys.platform == 'linux2':
-		num_cpu = int(os.environ.get('NUM_CPU', 2))
-		env.SetOption('num_jobs', num_cpu)
-	if sys.platform == 'win32':
-		#windows garbles compiler output with more than one thread
-		env.SetOption('num_jobs', 1)
+	num_cpu = int(os.environ.get('NUM_CPU', 2))
+	env.SetOption('num_jobs', num_cpu)
 
 	#custom, but independent libraries
 	env['CPPPATH'].append([
@@ -25,7 +22,7 @@ def setup(env):
 		'#libnet',
 		'#libp2p',
 		'#libsqlite3',
-		'#libtommath',
+		'#libtommath', #TO BE REMOVED SOON
 		boost.include()
 	])
 
@@ -34,7 +31,7 @@ def setup(env):
 	env['LIBPATH'].append([
 		'#libp2p',
 		'#libsqlite3',
-		'#libtommath',
+		'#libtommath', #TO BE REMOVED SOON
 		boost.library_path()
 	])
 
@@ -42,19 +39,21 @@ def setup(env):
 	env['LIBS'] = [
 		'p2p',
 		'sqlite3',
-		'tommath',
+		'tommath', #TO BE REMOVED SOON
 		boost.library('system'),
 		boost.library('date_time'),
 		boost.library('filesystem'),
 		boost.library('thread')
 	]
 
+	#defines preprocessor macros for different systems (eg LINUX, WINDOWS)
+	env['CPPDEFINES'].append(string.upper(system()))
+
 	#each supported platform should define to_upper(sys.platform)
-	if sys.platform == 'linux2':
+	if system() == 'linux':
 		env['LIBS'].append('pthread')
 		env['CCFLAGS'].append('-O3')
-		env['CCFLAGS'].append('-DLINUX2')
-	if sys.platform == 'win32':
+	if system() == 'windows':
 		env['LIBS'].append([
 			'advapi32', #random number gen
 			'ws2_32'    #winsock
@@ -75,18 +74,26 @@ def setup(env):
 			print 'error: could not locate windows library directory'
 			exit(1)
 		env['LIBPATH'].append(found_dir)
-
 		env['CCFLAGS'].append('/EHsc')   #exception support
 		env['CCFLAGS'].append('/w')      #disable warnings
 		env['CCFLAGS'].append('/Ox')     #max optimization
-		env['CCFLAGS'].append('/DWIN32')
+
 
 #can be run in addition to setup to do static linking
 def setup_static(env):
 	environment.define_keys(env)
-	if sys.platform == 'linux2':
+	if system() == 'linux':
 		env['LINKFLAGS'].append('-static')
 		env['LINKFLAGS'].append('-static-libgcc')
 		env['LINKFLAGS'].append('`g++ -print-file-name=libstdc++.a`')
-	if sys.platform == 'win32':
-		print 'TODO: windows static linking not supported'
+	if system() == 'windows':
+		print 'TODO: windows static linking not supported on windows'
+
+#returns the name of the system all upper case (eg "linux", "windows")
+#exits the program if system can't be determined
+def system():
+	if(platform.system() == ''):
+		print 'could not determine system type'
+		exit(1)
+	else:
+		return string.lower(platform.system())

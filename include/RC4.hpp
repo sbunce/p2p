@@ -8,9 +8,13 @@ public:
 		seeded(false)
 	{}
 
-	void seed(unsigned char * key, unsigned key_length)
+	void seed(unsigned char * buff, unsigned len)
 	{
-		assert(key_length > 0);
+		/*
+		Seed must be at least one byte. It can be longer than 256 but the extra
+		wouldn't be used. There is an assert for > 256 because it's wasteful.
+		*/
+		assert(len > 0 && len <= 256);
 		seeded = true;
 
 		for(i=0; i < 256; ++i){
@@ -19,14 +23,17 @@ public:
 
 		for(i=j=0; i < 256; ++i){
 			unsigned char temp;
-			j = (j + key[i % key_length] + S[i]) & 255;
+			j = (j + buff[i % len] + S[i]) & 255;
 			temp = S[i];
 			S[i] = S[j];
 			S[j] = temp;
 		}
 		i = j = 0;
 
-		//drop 768 bytes to avoid Fluhrer, Mantin, and Shamir attack
+		/*
+		Drop 768 bytes to avoid Fluhrer, Mantin, and Shamir attack.
+		http://en.wikipedia.org/wiki/Fluhrer,_Mantin,_and_Shamir_attack
+		*/
 		for(int x=0; x<768; ++x){
 			get_byte();
 		}

@@ -1,23 +1,22 @@
 #site_scons
 import environment
 import search
-
-#std
-import sys
+import system
 
 #complete setup of env for gtkmm
 def setup(env):
 	environment.define_keys(env)
 
-	if sys.platform == 'linux2':
+	if system.system() == 'linux':
 		env.ParseConfig('pkg-config gtkmm-2.4 --cflags --libs')
-	if sys.platform == 'win32':
+	if system.system() == 'windows':
 		pkg_config = search.locate_file_recurse('/gtkmm/', 'pkg-config\.exe')
 		if pkg_config:
 			env.ParseConfig(pkg_config + ' gtkmm-2.4 --cflags')
 			env['LIBPATH'].append('/gtkmm/lib')
 
 			#pkgconfig --lflags not working correctly, manually specify libs
+			#DEBUG, try to get pkgconfig working
 			env['LIBS'].append([
 				'gtkmm-vc90-2_4',
 				'gdkmm-vc90-2_4',

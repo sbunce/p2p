@@ -38,8 +38,13 @@ public:
 	class info : private boost::noncopyable
 	{
 	public:
+		info():
+			res(NULL),
+			res_cur(NULL)
+		{}
+
 		/*
-		Constructing this object does DNS resolution. At least the host or the
+		Using this ctor does DNS resolution. At least the host or the
 		port must be specified. If both are NULL then resolved() = false.
 
 		The ai_family parameter is the address family to use for the socket.

@@ -1,10 +1,5 @@
 TODO
 
--need to connect to next in sockaddr list when failed connect
-
--Think about moving Socket_Data to reactor class and having protected accessor
-functions which lock it.
-
 -make request generator unit test
 
 

@@ -108,6 +108,7 @@ namespace convert
 		return hex;
 	}
 
+//DEBUG, needs to be cleaned up
 	//convert bytes to reasonable SI unit, example 1024 -> 1kB
 	static std::string size_SI(boost::uint64_t bytes)
 	{
@@ -126,6 +127,7 @@ namespace convert
 		return oss.str();
 	}
 
+//DEBUG, needs to be cleaned up
 	/*
 	Given two strings obtained from size_unit_select, returns less than (-1),
 	equal to (0), or greater than (1). Just like strcmp.

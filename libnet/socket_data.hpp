@@ -6,10 +6,8 @@
 #include <boost/function.hpp>
 
 //custom
+#include "buffer.hpp"
 #include "wrapper.hpp"
-
-//include
-#include <buffer.hpp>
 
 //std
 #include <string>
@@ -24,7 +22,7 @@ public:
 		const std::string & IP_in,
 		const std::string & port_in,
 		boost::shared_ptr<wrapper::info> Info_in
-			= boost::shared_ptr<wrapper::info>(new wrapper::info(NULL, NULL))
+			= boost::shared_ptr<wrapper::info>(new wrapper::info())
 	):
 		socket_FD(socket_FD_in),
 		host(host_in),
@@ -83,15 +81,11 @@ public:
 	buffer recv_buff;
 	buffer send_buff;
 
-	/*
-	This error condition is set when a connection fails.
-	*/
 	enum error{
 		NONE,            //default
 		MAX_CONNECTIONS, //maximum allowed connections reached
 		FAILED           //failed to connect
-	};
-	error Error;
+	} Error;
 
 	/*
 	This is needed if the host resolves to multiple IPs. This is used to try

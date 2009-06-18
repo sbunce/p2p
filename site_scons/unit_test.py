@@ -1,3 +1,6 @@
+#site_scons
+import system
+
 #std
 import glob
 import os
@@ -13,7 +16,7 @@ def run(env):
 
 #unit test to hook in to scons
 def __unit_test(env, source):
-	if sys.platform == 'win32':
+	if system.system() == 'windows':
 		test = env.Program(source)
 		env.AddPostAction(test, 'cd '+os.getcwd()+' && '+str(test[0]))
 	else:

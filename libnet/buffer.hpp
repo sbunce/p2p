@@ -5,6 +5,8 @@ The purpose of this container is to be used for a network buffer. It doesn't do
 copy-on-write optimization which is not thread safe. It also allows it's
 underlying buffer to be exposed in a non-const way so it can be directly
 written to.
+
+Functions to encode data to send over the network should be included here.
 */
 #ifndef H_BUFFER
 #define H_BUFFER
@@ -20,6 +22,7 @@ written to.
 #include <iostream>
 #include <string>
 
+namespace network{
 class buffer
 {
 public:
@@ -332,4 +335,5 @@ private:
 	size_t bytes;         //how many bytes are currently allocated to buff
 	unsigned char * buff; //holds the string
 };
+}//end of network namespace
 #endif

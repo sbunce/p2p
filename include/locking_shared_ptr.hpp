@@ -1,15 +1,9 @@
-//THREADSAFE
 /*
 Accessing the object within this class using the -> opterator will be locked:
 ex: locking_shared_ptr<my_class> x(new my_class);
     x->func();
-
-When using the * dereference operator an extra * will be needed. The returned
-proxy object must be "dereferenced":
-ex: locking_shared_ptr<int> x(new int);
-    **x = 0;
 */
-
+//THREADSAFE
 #ifndef H_LOCKING_SHARED_PTR
 #define H_LOCKING_SHARED_PTR
 
@@ -21,12 +15,10 @@ template <typename T>
 class locking_shared_ptr
 {
 public:
-	//creates empty locking_share_ptr
 	locking_shared_ptr():
 		pointee_mutex(new boost::recursive_mutex)
 	{}
 
-	//this ctor takes a pointer to be wrapped.
 	explicit locking_shared_ptr(T * pointee_in):
 		pointee(pointee_in),
 		pointee_mutex(new boost::recursive_mutex)
@@ -34,7 +26,7 @@ public:
 
 	/*
 	Default copy ctor used. The boost::shared_ptr library takes care of
-	reference counting and is guaranteed to be thread safe (see boost docs).
+	reference counting and is guaranteed to be thread safe.
 	*/
 	class proxy
 	{
@@ -55,7 +47,6 @@ public:
 		}
 
 		T * operator -> () const { return pointee.get(); }
-		T & operator * () const { return *pointee; }
 
 	private:
 		typename boost::shared_ptr<T> pointee;
@@ -63,11 +54,6 @@ public:
 	};
 
 	proxy operator -> () const { return proxy(pointee, pointee_mutex); }
-	proxy operator * () const { return proxy(pointee, pointee_mutex); }
-
-	//allows exclusive access for multiple expressions
-	void lock() const { pointee_mutex->lock(); }
-	void unlock() const { pointee_mutex->unlock(); }
 
 	//get wrapped pointer, does not do locking
 	T * get() const
@@ -81,10 +67,6 @@ public:
 		if(this == &rval){
 			return *this;
 		}else{
-			/*
-			Lock both objects and copy. Both locking_shared_ptr's will have a
-			pointer to the same mutex.
-			*/
 			boost::recursive_mutex::scoped_lock(*pointee_mutex);
 			boost::recursive_mutex::scoped_lock(*rval.pointee_mutex);
 			pointee = rval.pointee;

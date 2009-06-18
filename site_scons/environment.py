@@ -8,5 +8,7 @@ def define_keys(env):
 		env['LIBPATH'] = []
 	if not env.has_key('CPPPATH'):
 		env['CPPPATH'] = []
+	if not env.has_key('CPPDEFINES'):
+		env['CPPDEFINES'] = []
 	if not env.has_key('CCFLAGS'):
 		env['CCFLAGS'] = []
