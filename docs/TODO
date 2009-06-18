@@ -1,6 +1,7 @@
 TODO
 
--make request generator unit test
+-The network connection count can be the size of Socket_Data_All. Then have
+checks which fail new connections in reactor_select when going over the limit.
 
 
 THINK ABOUT

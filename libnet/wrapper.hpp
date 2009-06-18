@@ -1,10 +1,3 @@
-/*
-Portability Notes:
-
-Functions not used:
-inet_ntop requires >= vista
-inet_pton requires >= vista
-*/
 #ifndef H_NETWORK_WRAPPER
 #define H_NETWORK_WRAPPER
 
@@ -12,7 +5,7 @@ inet_pton requires >= vista
 #include <logger.hpp>
 
 //networking
-#ifdef WIN32
+#ifdef WINDOWS
 	#define MSG_NOSIGNAL 0  //disable SIGPIPE on send() to disconnected socket
 	#define FD_SETSIZE 1024 //max number of sockets in fd_set
 	#include <ws2tcpip.h>
@@ -144,7 +137,7 @@ public:
 	*/
 	static bool async_connect_succeeded(const int socket_FD)
 	{
-		#ifdef WIN32
+		#ifdef WINDOWS
 		const char optval = 1;
 		#else
 		int optval = 1;
@@ -194,7 +187,7 @@ public:
 	//closes a socket
 	static void disconnect(const int socket_FD)
 	{
-		#ifdef WIN32
+		#ifdef WINDOWS
 		closesocket(socket_FD);
 		#else
 		close(socket_FD);
@@ -207,7 +200,7 @@ public:
 	*/
 	static void error()
 	{
-		#ifdef WIN32
+		#ifdef WINDOWS
 		LOGGER << "winsock error " << WSAGetLastError();
 		#else
 		perror("setsockopt");
@@ -307,7 +300,7 @@ public:
 	*/
 	static void reuse_port(const int socket_FD)
 	{
-		#ifdef WIN32
+		#ifdef WINDOWS
 		const char optval = 1;
 		#else
 		int optval = 1;
@@ -322,7 +315,7 @@ public:
 	static void set_non_blocking(const int socket_FD)
 	{
 		//set socket to non-blocking for async connect
-		#ifdef WIN32
+		#ifdef WINDOWS
 		u_long mode = 1;
 		ioctlsocket(socket_FD, FIONBIO, &mode);
 		#else
@@ -434,7 +427,7 @@ public:
 	*/
 	static void start_listeners(int & listener_IPv4, int & listener_IPv6, const std::string & port)
 	{
-		#ifdef WIN32
+		#ifdef WINDOWS
 		listener_IPv4 = wrapper::start_listener_IPv4(port);
 		listener_IPv6 = wrapper::start_listener_IPv6(port);
 		#else
@@ -450,7 +443,7 @@ public:
 	//must be called before any networking functions
 	static void start_networking()
 	{
-		#ifdef WIN32
+		#ifdef WINDOWS
 		WORD wsock_ver = MAKEWORD(2,2);
 		WSADATA wsock_data;
 		int startup;
@@ -464,7 +457,7 @@ public:
 	//for every call to start_winsock this function must be called
 	static void stop_networking()
 	{
-		#ifdef WIN32
+		#ifdef WINDOWS
 		WSACleanup();
 		#endif
 	}

@@ -12,11 +12,6 @@
 #include <limits>
 #include <string>
 
-#ifdef WIN32
-#include <windows.h>
-#undef max //this interferes with std::numeric_limits<int>::max()
-#endif
-
 namespace settings
 {
 const std::string NAME = "p2p";

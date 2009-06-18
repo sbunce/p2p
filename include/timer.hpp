@@ -20,7 +20,7 @@ example usage:
 #include <cmath>
 #include <iostream>
 
-#ifdef WIN32
+#ifdef WINDOWS
 	#include <windows.h>
 #endif
 
@@ -33,7 +33,7 @@ namespace timer
 	*/
 	boost::uint64_t TSC()
 	{
-		#ifdef WIN32
+		#ifdef WINDOWS
 		LARGE_INTEGER LI;
 		QueryPerformanceCounter(&LI);
 		return (boost::uint64_t)LI.HighPart << 32 | LI.LowPart;

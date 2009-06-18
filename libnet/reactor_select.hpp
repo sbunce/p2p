@@ -243,7 +243,7 @@ private:
 			int service = select(end_FD, &read_FDS, &write_FDS, NULL, &tv);
 
 			if(service == -1){
-				#ifndef WIN32
+				#ifndef WINDOWS
 				if(errno != EINTR){
 					wrapper::error();
 				}
