@@ -7,3 +7,8 @@ syntax: glob
 *.pyc
 bin
 lib
+include/unit_tests/DB
+include/unit_tests/DB-journal
+lib_src/libp2p/unit_tests/DB
+lib_src/libp2p/unit_tests/DB-journal
+lib_src/libp2p/unit_tests/share/
