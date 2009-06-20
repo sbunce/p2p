@@ -1,6 +1,9 @@
 #ifndef H_PORTABLE_SLEEP
 #define H_PORTABLE_SLEEP
 
+//C
+#include <unistd.h>
+
 //std
 #include <cassert>
 

@@ -11,7 +11,6 @@ import re
 #Returns include path for boost. Terminates program if no boost headers found.
 def include():
 	#possible locations of headers
-	print system.system()
 	if system.system() == 'linux':
 		possible_locations = ['/usr/local/include', '/usr/include']
 	if system.system() == 'windows':

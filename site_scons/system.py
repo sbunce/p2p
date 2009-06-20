@@ -19,19 +19,13 @@ def setup(env):
 	#custom, but independent libraries
 	env['CPPPATH'].append([
 		'#include',
-		'#libnet',
-		'#libp2p',
-		'#libsqlite3',
-		'#libtommath', #TO BE REMOVED SOON
 		boost.include()
 	])
 
 	#where to look for libraries
 	#scons determines library build dependencies from this
 	env['LIBPATH'].append([
-		'#libp2p',
-		'#libsqlite3',
-		'#libtommath', #TO BE REMOVED SOON
+		'#lib',
 		boost.library_path()
 	])
 
@@ -39,7 +33,7 @@ def setup(env):
 	env['LIBS'] = [
 		'p2p',
 		'sqlite3',
-		'tommath', #TO BE REMOVED SOON
+		'tommath',
 		boost.library('system'),
 		boost.library('date_time'),
 		boost.library('filesystem'),

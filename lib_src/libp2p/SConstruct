@@ -1,0 +1,9 @@
+#std
+import glob
+
+SConscript([
+	'unit_tests/SConstruct'
+])
+
+Import('env_base')
+env_base.StaticLibrary('#lib/p2p', glob.glob('*.cpp'))

@@ -4,6 +4,7 @@ import sqlite3
 import unit_test
 
 Import('env_base')
+
 unit_test.run(env_base)
 
 Clean('DB','DB')

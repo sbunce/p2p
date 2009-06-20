@@ -6,14 +6,16 @@ env_base = Environment()
 system.setup(env_base)
 Export('env_base')
 
-print 'building with',env_base.GetOption('num_jobs'),'threads'
+print 'starting',env_base.GetOption('num_jobs'),'builder threads'
 
 SConscript([
-	'gui/SConstruct',
+	'gui_CLI/SConstruct',
+	'gui_gtkmm/SConstruct',
 	'include/SConstruct',
-	'libnet/SConstruct',
-	'libp2p/SConstruct',
-	'libsqlite3/SConstruct',
-	'libtommath/SConstruct',
+	'lib_src/SConstruct',
 	'site_scons/SConstruct',
+
 ])
+
+Clean('bin','bin') #directory for built binaries
+Clean('lib','lib') #directory for built libraries
