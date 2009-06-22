@@ -27,9 +27,9 @@ public:
 	ltmpp_error(int c):type(c){}
 	const char * what(){
 		switch (type) {
-		case MP_MEM: return "Out of memory";
-		case MP_VAL: return "Invalid value";
-		default    : return "Unknown error";
+		case MP_MEM: return "out of memory";
+		case MP_VAL: return "invalid value";
+		default    : return "unknown error";
 		}
    }
 private:
@@ -618,7 +618,7 @@ public:
 		return tmp;
 	}
 
-	//invers modulo
+	//inverse modulo
 	mpint invmod(const mpint & b)
 	{
 		int err;
