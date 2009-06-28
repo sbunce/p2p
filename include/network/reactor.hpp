@@ -5,12 +5,12 @@
 #include <boost/utility.hpp>
 
 //custom
+#include "buffer.hpp"
 #include "rate_limit.hpp"
 #include "socket_data.hpp"
 #include "wrapper.hpp"
 
 //include
-#include <buffer.hpp>
 #include <logger.hpp>
 
 namespace network{
@@ -19,17 +19,17 @@ class reactor
 public:
 	//derived class ctors must call this base class ctor
 	reactor(
-		boost::function<void (const std::string & host, const std::string & port)> failed_connect_call_back_in,
-		boost::function<void (socket_data::socket_data_visible & Socket)> connect_call_back_in,
-		boost::function<void (socket_data::socket_data_visible & Socket)> disconnect_call_back_in
+		boost::function<void (socket_data_visible & Socket)> failed_connect_call_back_in,
+		boost::function<void (socket_data_visible & Socket)> connect_call_back_in,
+		boost::function<void (socket_data_visible & Socket)> disconnect_call_back_in
 	):
 		failed_connect_call_back(failed_connect_call_back_in),
 		connect_call_back(connect_call_back_in),
 		disconnect_call_back(disconnect_call_back_in),
-		max_connections(0),
-		connections(0),
 		incoming_connections(0),
-		outgoing_connections(0)
+		max_incoming_connections(5),
+		outgoing_connections(0),
+		max_outgoing_connections(5)
 	{
 		wrapper::start_networking();
 	}
@@ -55,7 +55,7 @@ public:
 	unsigned get_connections()
 	{
 		boost::mutex::scoped_lock lock(connections_mutex);
-		return connections;
+		return incoming_connections + outgoing_connections;
 	}
 	unsigned get_incoming_connections()
 	{
@@ -118,24 +118,14 @@ protected:
 	rate_limit Rate_Limit;
 
 	/*
-	All these must be locked with connections_mutex. The max_connections are set
-	in the ctor of the derived class.
-	*/
-	boost::mutex connections_mutex;
-	unsigned max_connections;
-	unsigned connections;
-	unsigned incoming_connections;
-	unsigned outgoing_connections;
-
-	/*
 	Adds a new socket_data for a specified socket.
 	Precondition: socket_data must not already exist.
-	Precondition: SD->socket_FD != -1.
+	Precondition: SD->socket_FD >= 0.
 	*/
 	void add_socket_data(boost::shared_ptr<socket_data> & SD)
 	{
 		boost::mutex::scoped_lock lock(Socket_Data_mutex);
-		if(SD->socket_FD == -1){
+		if(SD->socket_FD < 0){
 			LOGGER << "violated precondition";
 			exit(1);
 		}
@@ -161,8 +151,6 @@ protected:
 		function. If get_socket_data() is called when the socket_data is not in
 		Socket_Data_Network the program will be terminated because this means a
 		worker is using the socket_data.
-	Note: After this function is called the network thread should not continue to
-		use the socket_data.
 	*/
 	void call_back(const int socket_FD)
 	{
@@ -195,15 +183,18 @@ protected:
 	any socket or socket_data. This will need to be used when DNS resolution or
 	socket allocation fails.
 	*/
-	void call_back_failed_connect(const std::string & host, const std::string & port)
+	void call_back_failed_connect(const std::string & host, const std::string & port,
+		const ERROR Error)
 	{
 		boost::mutex::scoped_lock lock(job_mutex);
+		assert(Error != NONE);
 		/*
 		This is a dummy socket_data which allows us to use the same mechanism for doing
 		the failed_connect_call_back(). It won't be passed back to finish_job().
 		*/
 		boost::shared_ptr<socket_data> SD(new socket_data(-1, host, "", port));
 		SD->failed_connect_flag = true;
+		SD->Error = Error;
 		call_back_job.push_back(SD);
 		job_cond.notify_one();
 	}
@@ -280,6 +271,24 @@ protected:
 	virtual void stop_networking() = 0;
 
 private:
+	/* Connection counts and limits.
+	Note: All these must be locked with connections_mutex.
+
+	incoming_connections:
+		Number of connections remote hosts established with us.
+	max_incoming_connections:
+		Maximum possible incoming connections.
+	outgoing_connections:
+		Number of connections we established with remote hosts.
+	max_outgoing_connection:
+		Maximum possible outgoing connections.
+	*/
+	boost::mutex connections_mutex;
+	unsigned incoming_connections;
+	unsigned max_incoming_connections;
+	unsigned outgoing_connections;
+	unsigned max_outgoing_connections;
+
 	/*
 	Connected socket associated with socket_data. All access to these are locked
 	with Socket_Data_mutex.
@@ -296,11 +305,11 @@ private:
 	std::map<int, boost::shared_ptr<socket_data> > Socket_Data_All;
 	std::map<int, boost::shared_ptr<socket_data> > Socket_Data_Network;
 
-	//worker threads to handle call backs
+	//worker threads to handle call backs and DNS resolution
 	boost::thread_group Workers;
 
 	/*
-	Mutex used with job_cond. Mutex locks access to all job containers.
+	Mutex used with job_cond. Mutex locks access to all job_* containers.
 	*/
 	boost::mutex job_mutex;
 	boost::condition_variable_any job_cond;
@@ -308,9 +317,9 @@ private:
 	std::deque<boost::shared_ptr<socket_data> > call_back_job;
 
 	//call backs
-	boost::function<void (const std::string & host, const std::string & port)> failed_connect_call_back;
-	boost::function<void (socket_data::socket_data_visible & Socket)> connect_call_back;
-	boost::function<void (socket_data::socket_data_visible & Socket)> disconnect_call_back;
+	boost::function<void (socket_data_visible & Socket)> failed_connect_call_back;
+	boost::function<void (socket_data_visible & Socket)> connect_call_back;
+	boost::function<void (socket_data_visible & Socket)> disconnect_call_back;
 
 	void pool()
 	{
@@ -350,7 +359,7 @@ private:
 	void run_call_back_job(boost::shared_ptr<socket_data> & SD)
 	{
 		if(SD->failed_connect_flag){
-			failed_connect_call_back(SD->host, SD->port);
+			failed_connect_call_back(SD->Socket_Data_Visible);
 		}else{
 			if(!SD->connect_flag){
 				SD->connect_flag = true;

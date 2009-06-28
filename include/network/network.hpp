@@ -8,7 +8,7 @@
 #include "reactor_select.hpp"
 
 namespace network{
-typedef socket_data::socket_data_visible socket;
+typedef socket_data_visible socket;
 class io_service
 {
 public:
@@ -18,9 +18,9 @@ public:
 		boost::bind(&http::connect_call_back, &HTTP, _1, _2, _3)
 	*/
 	io_service(
-		boost::function<void (const std::string & host, const std::string & port)> failed_connect_call_back_in,
-		boost::function<void (socket_data::socket_data_visible & Socket)> connect_call_back_in,
-		boost::function<void (socket_data::socket_data_visible & Socket)> disconnect_call_back_in,
+		boost::function<void (socket_data_visible & Socket)> failed_connect_call_back_in,
+		boost::function<void (socket_data_visible & Socket)> connect_call_back_in,
+		boost::function<void (socket_data_visible & Socket)> disconnect_call_back_in,
 		const std::string & port = "-1"
 	):
 		Reactor(new reactor_select(
@@ -56,6 +56,18 @@ public:
 	unsigned outgoing_connections()
 	{
 		return Reactor->get_outgoing_connections();
+	}
+
+	/* Functions to set maximum connections.
+
+	*/
+	void set_max_incoming_connections()
+	{
+
+	}
+	void set_max_outgoing_connections()
+	{
+
 	}
 
 	/*

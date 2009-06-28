@@ -1,5 +1,42 @@
 #include "window_about.hpp"
 
+//returns the version of the program (version based on compile date)
+std::string version()
+{
+	std::string year(__DATE__, 7, 4);
+	std::string month(__DATE__, 0, 3);
+	if(month == "Jan"){
+		month = "01";
+	}else if(month == "Feb"){
+		month = "02";
+	}else if(month == "Mar"){
+		month = "03";
+	}else if(month == "Apr"){
+		month = "04";
+	}else if(month == "May"){
+		month = "05";
+	}else if(month == "Jun"){
+		month = "06";
+	}else if(month == "Jul"){
+		month = "07";
+	}else if(month == "Aug"){
+		month = "08";
+	}else if(month == "Sep"){
+		month = "09";
+	}else if(month == "Oct"){
+		month = "10";
+	}else if(month == "Nov"){
+		month = "11";
+	}else if(month == "Dec"){
+		month = "12";
+	}else{
+		LOGGER << "unknown month";
+		exit(1);
+	}
+	std::string day(__DATE__, 4, 2);
+	return year + month + day;
+}
+
 window_about::window_about()
 {
 	window = this;
@@ -25,8 +62,9 @@ window_about::window_about()
 	scrolled_window->set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
 	vbox->pack_start(*scrolled_window);
 
+
 	text_buff = Gtk::TextBuffer::create();
-	text_buff->set_text(settings::NAME+" version: "+settings::VERSION+" © Seth Bunce 2006");
+	text_buff->set_text(settings::NAME+" version: "+version()+" © Seth Bunce 2006");
 	text_view->set_buffer(text_buff);
 	text_view->set_editable(false);
 

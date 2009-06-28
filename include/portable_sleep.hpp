@@ -7,7 +7,7 @@
 //std
 #include <cassert>
 
-#ifdef WINDOWS
+#ifdef _WIN32
 	#include <windows.h>
 #endif
 
@@ -19,7 +19,7 @@ inline void ms(const unsigned & ms)
 {
 	//if milliseconds = 0 then yield should be used
 	assert(ms != 0);
-	#ifdef WINDOWS
+	#ifdef _WIN32
 	Sleep(ms);
 	#else
 	usleep(ms * 1000);
@@ -29,7 +29,7 @@ inline void ms(const unsigned & ms)
 //yield time slice
 inline void yield()
 {
-	#ifdef WINDOWS
+	#ifdef _WIN32
 	Sleep(0);
 	#else
 	usleep(1);

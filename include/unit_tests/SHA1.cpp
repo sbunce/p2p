@@ -1,8 +1,8 @@
 //include
 #include <logger.hpp>
-#include <sha.hpp>
+#include <SHA1.hpp>
 
-sha SHA;
+SHA1 SHA;
 
 void test_text()
 {

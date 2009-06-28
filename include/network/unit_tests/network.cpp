@@ -3,11 +3,15 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 
+//include
+#include <convert.hpp>
+
 //network
-#include <network.hpp>
+#include "../network.hpp"
 
 /*
-Must be included after network because network 
+Must be included after network because network includes windows.h which
+must be included after ws2tcpip.h.
 */
 #include <portable_sleep.hpp>
 
@@ -64,11 +68,11 @@ void connect_call_back(network::socket & Socket)
 
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	if(Socket.port != listen_port){
-		LOGGER << "h<" << Socket.host << "> IP<" << Socket.IP << "> p<"
-			<< Socket.port << "> s<" << Socket.socket_FD << ">";
+		LOGGER << "H<" << Socket.host << "> IP<" << Socket.IP << "> P<"
+			<< Socket.port << "> S<" << Socket.socket_FD << ">";
 	}else{
-		LOGGER << "h<" << Socket.host << "> IP<" << Socket.IP << "> p"
-			<< Socket.port << "> s<" << Socket.socket_FD << ">";
+		LOGGER << "H<" << Socket.host << "> IP<" << Socket.IP << "> P"
+			<< Socket.port << "> S<" << Socket.socket_FD << ">";
 	}
 	Connection.insert(std::make_pair(Socket.socket_FD, new connection(Socket)));
 	Socket.recv_call_back = boost::bind(&connection::recv_call_back, Connection[Socket.socket_FD].get(), _1);
@@ -81,17 +85,27 @@ void disconnect_call_back(network::socket & Socket)
 	portable_sleep::ms(1000);
 
 	boost::mutex::scoped_lock lock(Connection_mutex);
-	LOGGER << "h<" << Socket.host << "> IP<" << Socket.IP << "> p<"
-		<< Socket.port << "> s<" << Socket.socket_FD << ">";
+	LOGGER << "H<" << Socket.host << "> IP<" << Socket.IP << "> P<"
+		<< Socket.port << "> S<" << Socket.socket_FD << ">";
 	Connection.erase(Socket.socket_FD);
 }
 
-void failed_connect_call_back(const std::string & host, const std::string & port)
+void failed_connect_call_back(network::socket & Socket)
 {
 	//simulate sessions that take 1 second to complete
 	portable_sleep::ms(1000);
 
-	LOGGER << "h<" << host << "> p<" << port << ">";
+	std::string reason;
+	if(Socket.Error == network::MAX_CONNECTIONS){
+		reason = "max connections";
+	}else if(Socket.Error == network::FAILED_VALID){
+		reason = "failed valid";
+	}else if(Socket.Error == network::FAILED_INVALID){
+		reason = "failed invalid";
+	}else{
+		reason = "unknown";
+	}
+	LOGGER << "H<" << Socket.host << "> P<" << Socket.port << ">" << " R<" << reason << ">";
 }
 
 int main()
@@ -112,12 +126,18 @@ int main()
 		++cnt;
 	}
 
-	//while(Network.connections() != 0){
-		LOGGER << "connections: " << Network.connections()
-		<< " incoming: " << Network.incoming_connections()
-		<< " outgoing: " << Network.outgoing_connections();
+	while(/*Network.connections() != 0*/ false){
+		if(Network.connections() != 0 || Network.current_download_rate()
+			|| Network.current_upload_rate())
+		{
+			LOGGER << "C<" << Network.connections() << "> "
+			<< "IC<" << Network.incoming_connections() << "> "
+			<< "OC<" << Network.outgoing_connections() << "> "
+			<< "D<" << convert::size_SI(Network.current_download_rate()) << "> "
+			<< "U<" << convert::size_SI(Network.current_upload_rate()) << ">";
+		}
 		portable_sleep::ms(1000);
-	//}
+	}
 
 	portable_sleep::ms(10*1000);
 }

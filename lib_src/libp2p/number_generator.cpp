@@ -36,7 +36,7 @@ mpint number_generator::random_prime()
 
 int number_generator::PRNG(unsigned char * buff, int length, void * data)
 {
-#ifdef WIN32
+#ifdef _WIN32
 	HCRYPTPROV hProvider = 0;
 	if(CryptAcquireContextW(&hProvider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)){
 		if(CryptGenRandom(hProvider, length, buff)){

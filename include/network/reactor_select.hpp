@@ -3,7 +3,7 @@
 #define H_REACTOR_SELECT
 
 //include
-#include <reactor.hpp>
+#include "reactor.hpp"
 
 //std
 #include <deque>
@@ -13,9 +13,9 @@ class reactor_select : public network::reactor
 {
 public:
 	reactor_select(
-		boost::function<void (const std::string & host, const std::string & port)> failed_connect_call_back_in,
-		boost::function<void (socket_data::socket_data_visible & Socket)> connect_call_back_in,
-		boost::function<void (socket_data::socket_data_visible & Socket)> disconnect_call_back_in,
+		boost::function<void (socket_data_visible & Socket)> failed_connect_call_back_in,
+		boost::function<void (socket_data_visible & Socket)> connect_call_back_in,
+		boost::function<void (socket_data_visible & Socket)> disconnect_call_back_in,
 		const std::string & port = "-1"
 	):
 		network::reactor(
@@ -28,8 +28,6 @@ public:
 		listener_IPv4(-1),
 		listener_IPv6(-1)
 	{
-		max_connections = FD_SETSIZE;
-
 		//initialize fd_set
 		FD_ZERO(&master_read_FDS);
 		FD_ZERO(&master_write_FDS);
@@ -70,7 +68,7 @@ public:
 		boost::shared_ptr<wrapper::info> & Info)
 	{
 		if(!Info->resolved()){
-			call_back_failed_connect(host, port);
+			call_back_failed_connect(host, port, FAILED_VALID);
 			return;
 		}
 
@@ -238,12 +236,12 @@ private:
 			timeout select will return and the master_write_FDS will be checked.
 			*/
 			timeval tv;
-			tv.tv_sec = 0; tv.tv_usec = 1000000 / 10; //1/10 second
+			tv.tv_sec = 0; tv.tv_usec = 1000000 / 100;
 
 			int service = select(end_FD, &read_FDS, &write_FDS, NULL, &tv);
 
 			if(service == -1){
-				#ifndef WINDOWS
+				#ifndef _WIN32
 				if(errno != EINTR){
 					wrapper::error();
 				}
@@ -309,7 +307,7 @@ private:
 						if(!wrapper::async_connect_succeeded(socket_FD)){
 							boost::shared_ptr<socket_data> SD = get_socket_data(socket_FD);
 							SD->failed_connect_flag = true;
-							SD->Error = socket_data::FAILED;
+							SD->Error = FAILED_VALID;
 						}
 					}
 
@@ -373,7 +371,9 @@ private:
 			}else if(n_bytes > 0){
 				SD->recv_buff.tail_resize(n_bytes);
 				SD->last_seen = std::time(NULL);
-				Rate_Limit.add_download_bytes(n_bytes);
+				if(!SD->localhost){
+					Rate_Limit.add_download_bytes(n_bytes);
+				}
 				max_recv -= n_bytes;
 				SD->recv_flag = true;
 				need_call_back = true;
@@ -425,7 +425,9 @@ private:
 					SD->last_seen = std::time(NULL);
 					bool send_buff_empty = SD->send_buff.empty();
 					SD->send_buff.erase(0, n_bytes);
-					Rate_Limit.add_upload_bytes(n_bytes);
+					if(!SD->localhost){
+						Rate_Limit.add_upload_bytes(n_bytes);
+					}
 					max_send -= n_bytes;
 					if(!send_buff_empty && SD->send_buff.empty()){
 						//send_buff went from non-empty to empty
@@ -458,45 +460,62 @@ private:
 	*/
 	void process_connect()
 	{
-		std::vector<connect_job> connect_pending_temp;
+		std::vector<connect_job> CP;
 
 		//copy connect_pending so we can unlock ASAP
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(connect_pending_mutex);
-		connect_pending_temp.assign(connect_pending.begin(), connect_pending.end());
+		CP.assign(connect_pending.begin(), connect_pending.end());
 		connect_pending.clear();
 		}//end lock scope
 
-		std::vector<connect_job>::iterator
-			iter_cur = connect_pending_temp.begin(),
-			iter_end = connect_pending_temp.end();
-		while(iter_cur != iter_end){
-			int new_FD = wrapper::create_socket(*iter_cur->Info);
+		for(int x=0; x<CP.size(); ++x){
+			int new_FD = wrapper::create_socket(*CP[x].Info);
 			if(new_FD == -1){
-				call_back_failed_connect(iter_cur->host, iter_cur->port);
-				++iter_cur;
+				call_back_failed_connect(CP[x].host, CP[x].port, FAILED_INVALID);
 				continue;
 			}
+
+			#ifdef _WIN32
+			/*
+			On windows the socket_FD numbers will not necessarily be below
+			FD_SETSIZE. However, windows has the fd_count member variable which
+			will tell us how many sockets exist in the fd_set.
+			*/
+			if(master_read_FDS.fd_count >= FD_SETSIZE){
+				call_back_failed_connect(CP[x].host, CP[x].port, MAX_CONNECTIONS);
+				continue;
+			}
+			#else
+			/*
+			On POSIX systems the fd_set cannot hold sockets >= FD_SETSIZE.
+			*/
+			if(new_FD >= FD_SETSIZE){
+				call_back_failed_connect(CP[x].host, CP[x].port, MAX_CONNECTIONS);
+				continue;
+			}
+			#endif
+
+//DEBUG, need to check soft limits
 
 			//non-blocking required for async connect
 			wrapper::set_non_blocking(new_FD);
 
-			if(wrapper::connect_socket(new_FD, *iter_cur->Info)){
+			if(wrapper::connect_socket(new_FD, *CP[x].Info)){
 				//socket connected right away, rare but it might happen
 				boost::shared_ptr<socket_data> SD(new socket_data(new_FD,
-					iter_cur->host, wrapper::get_IP(*iter_cur->Info), iter_cur->port));
+					CP[x].host, wrapper::get_IP(*CP[x].Info), CP[x].port));
 				add_socket_data(SD);
 				call_back(new_FD);
 			}else{
 				//socket in progress of connecting
 				add_socket(new_FD);
-				boost::shared_ptr<socket_data> SD(new socket_data(new_FD, iter_cur->host,
-					wrapper::get_IP(*iter_cur->Info), iter_cur->port, iter_cur->Info));
+				boost::shared_ptr<socket_data> SD(new socket_data(new_FD, CP[x].host,
+					wrapper::get_IP(*CP[x].Info), CP[x].port, CP[x].Info));
 				add_socket_data(SD);
 				FD_SET(new_FD, &master_write_FDS);
 				FD_SET(new_FD, &connect_FDS);
 			}
-			++iter_cur;
 		}
 	}
 
@@ -537,7 +556,7 @@ private:
 					connect(SD->host, SD->port, SD->Info);
 				}else{
 					SD->failed_connect_flag = true;
-					SD->Error = socket_data::FAILED;
+					SD->Error = FAILED_VALID;
 					call_back(timed_out[x]);
 				}
 			}else{

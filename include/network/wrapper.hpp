@@ -137,7 +137,7 @@ public:
 	*/
 	static bool async_connect_succeeded(const int socket_FD)
 	{
-		#ifdef WINDOWS
+		#ifdef _WIN32
 		const char optval = 1;
 		#else
 		int optval = 1;
@@ -187,7 +187,7 @@ public:
 	//closes a socket
 	static void disconnect(const int socket_FD)
 	{
-		#ifdef WINDOWS
+		#ifdef _WIN32
 		closesocket(socket_FD);
 		#else
 		close(socket_FD);
@@ -200,7 +200,7 @@ public:
 	*/
 	static void error()
 	{
-		#ifdef WINDOWS
+		#ifdef _WIN32
 		LOGGER << "winsock error " << WSAGetLastError();
 		#else
 		perror("setsockopt");
@@ -300,7 +300,7 @@ public:
 	*/
 	static void reuse_port(const int socket_FD)
 	{
-		#ifdef WINDOWS
+		#ifdef _WIN32
 		const char optval = 1;
 		#else
 		int optval = 1;
@@ -315,7 +315,7 @@ public:
 	static void set_non_blocking(const int socket_FD)
 	{
 		//set socket to non-blocking for async connect
-		#ifdef WINDOWS
+		#ifdef _WIN32
 		u_long mode = 1;
 		ioctlsocket(socket_FD, FIONBIO, &mode);
 		#else
@@ -427,7 +427,7 @@ public:
 	*/
 	static void start_listeners(int & listener_IPv4, int & listener_IPv6, const std::string & port)
 	{
-		#ifdef WINDOWS
+		#ifdef _WIN32
 		listener_IPv4 = wrapper::start_listener_IPv4(port);
 		listener_IPv6 = wrapper::start_listener_IPv6(port);
 		#else
@@ -443,7 +443,7 @@ public:
 	//must be called before any networking functions
 	static void start_networking()
 	{
-		#ifdef WINDOWS
+		#ifdef _WIN32
 		WORD wsock_ver = MAKEWORD(2,2);
 		WSADATA wsock_data;
 		int startup;
@@ -457,7 +457,7 @@ public:
 	//for every call to start_winsock this function must be called
 	static void stop_networking()
 	{
-		#ifdef WINDOWS
+		#ifdef _WIN32
 		WSACleanup();
 		#endif
 	}

@@ -1,17 +1,14 @@
 #ifndef H_WINDOW_ABOUT
 #define H_WINDOW_ABOUT
 
-//custom
-#include "settings.hpp"
-
-//boost
+//include
 #include <boost/utility.hpp>
-
-//p2p
+#include <logger.hpp>
 #include <p2p/p2p.hpp>
-
-//gtkmm
 #include <gtkmm.h>
+
+//local
+#include "settings.hpp"
 
 class window_about : public Gtk::Window, private boost::noncopyable
 {

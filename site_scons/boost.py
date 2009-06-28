@@ -1,20 +1,20 @@
 #site_scons
 import environment
 import search
-import system
 
 #std
 import fnmatch
 import os
+import platform
 import re
 
 #Returns include path for boost. Terminates program if no boost headers found.
 def include():
 	#possible locations of headers
-	if system.system() == 'linux':
-		possible_locations = ['/usr/local/include', '/usr/include']
-	if system.system() == 'windows':
+	if platform.system() == 'Windows':
 		possible_locations = ['/Program Files/boost']
+	else:
+		possible_locations = ['/usr/local/include', '/usr/include']
 
 	pattern = 'boost[\_-]{1}[0-9]{1}_[0-9]{2}.*'
 	for location in possible_locations:
@@ -29,17 +29,17 @@ def include():
 #Example: system -> boost_system-gcc43-mt-1_39
 def library(lib_name):
 	#possible location of library
-	if system.system() == 'linux':
-		possible_locations = ['/usr/local/lib', '/usr/lib']
-	if system.system() == 'windows':
+	if platform.system() == 'Windows':
 		possible_locations = ['/Program Files/boost/']
+	else:
+		possible_locations = ['/usr/local/lib', '/usr/lib']
 
 	pattern = 'libboost_' + lib_name + '.*'
 	for location in possible_locations:
 		lib_path = search.locate_file_recurse(location, pattern)
 		if lib_path:
 			(head, tail) = os.path.split(lib_path)
-			if system.system() == 'windows':
+			if platform.system() == 'Windows':
 				return tail
 			else:
 				lib_name = re.sub('lib', '', tail, 1)   #remove start of file name 'lib'
@@ -50,7 +50,7 @@ def library(lib_name):
 	exit(1)
 
 def library_path():
-	if system.system() == 'windows':
+	if platform.system() == 'Windows':
 		possible_locations = ['/Program Files/boost']
 
 		pattern = 'boost[\_-]{1}[0-9]{1}_[0-9]{2}.*'

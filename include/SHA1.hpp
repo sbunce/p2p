@@ -1,6 +1,6 @@
 //NOT-THREADSAFE
-#ifndef H_SHA
-#define H_SHA
+#ifndef H_SHA1
+#define H_SHA1
 
 //boost
 #include <boost/cstdint.hpp>
@@ -10,14 +10,14 @@
 #include <iostream>
 #include <string>
 
-class sha
+class SHA1
 {
 public:
 	/*
 	It is best to reserve a buffer that is as large as the chunks you are loading
 	with the load() function.
 	*/
-	sha()
+	SHA1()
 	{
 		//minimum buffer size needed for chunk
 		load_buffer.reserve(64);

@@ -14,18 +14,17 @@ queries per second, or other units per second.
 #include <ctime>
 #include <deque>
 
-//seconds to average over
-#define SC_AVERAGE_SECONDS 4
-
 class speed_calculator
 {
 public:
+	static const int average_seconds = 4;
+
 	speed_calculator():
 		Recursive_Mutex(new boost::recursive_mutex()),
 		average(0)
 	{
 		Second_Bytes[0] = std::make_pair(std::time(NULL), 0);
-		for(int x=1; x < SC_AVERAGE_SECONDS + 1; ++x){
+		for(int x=1; x < average_seconds + 1; ++x){
 			Second_Bytes[x] = std::make_pair(0, 0);
 		}
 	}
@@ -61,7 +60,7 @@ public:
 			shifts and inject new seconds on the left.
 			*/
 			while(Second_Bytes[0].first != current_time){
-				for(int x=SC_AVERAGE_SECONDS; x > 0; --x){
+				for(int x=average_seconds; x > 0; --x){
 					Second_Bytes[x] = Second_Bytes[x-1];
 				}
 				Second_Bytes[0] = std::make_pair(Second_Bytes[1].first + 1, 0);
@@ -69,9 +68,9 @@ public:
 			Second_Bytes[0].second += n_bytes;
 		}
 
-		//calculate average, don't include first incomplete second
+		//calculate average
 		unsigned total_bytes = 0, counted_seconds = 0;
-		for(int x=1; x < SC_AVERAGE_SECONDS + 1; ++x){
+		for(int x=1; x < average_seconds + 1; ++x){
 			if(Second_Bytes[x].first != 0){
 				total_bytes += Second_Bytes[x].second;
 				++counted_seconds;
@@ -95,7 +94,6 @@ private:
 	pair<second, bytes in second>
 	The low elements are more current in time.
 	*/
-	std::pair<time_t, unsigned> Second_Bytes[SC_AVERAGE_SECONDS + 1];
+	std::pair<time_t, unsigned> Second_Bytes[average_seconds + 1];
 };
-#undef SC_AVERAGE_SECONDS
 #endif

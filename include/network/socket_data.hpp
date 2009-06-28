@@ -13,6 +13,78 @@
 #include <string>
 
 namespace network{
+
+/*
+NONE:
+	Default value of Error.
+MAX_CONNECTIONS:
+	Reached the maximum number of possible connections.
+FAILED_VALID:
+	Connection attempt failed. A DNS lookup failed, or an attempt to connect
+	to the host failed. It is possible that in the future an attempt might
+	succeed.
+FAILED_INVALID:
+	The address family, or address protocol might be invalid. This can happen
+	when trying to connect to IPv6 on a computer that doesn't support IPv6.
+	This error means that future attempts to connect to this address will
+	never succeed.
+*/
+enum ERROR{
+	NONE,
+	MAX_CONNECTIONS,
+	FAILED_VALID,
+	FAILED_INVALID
+};
+
+/*
+This is typedef'd to socket in network::. The purpose of this class is to
+limit what data the call back has access to. For example the call back
+should not have access to any flag but the disconnect flag.
+*/
+class socket_data_visible
+{
+public:
+	socket_data_visible(
+		const int socket_FD_in,
+		const std::string & host_in,
+		const std::string & IP_in,
+		const std::string & port_in,
+		bool & disconnect_flag_in,
+		buffer & recv_buff_in,
+		buffer & send_buff_in,
+		const ERROR & Error_in
+	):
+		socket_FD(socket_FD_in),
+		host(host_in),
+		IP(IP_in),
+		port(port_in),
+		disconnect_flag(disconnect_flag_in),
+		recv_buff(recv_buff_in),
+		send_buff(send_buff_in),
+		Error(Error_in)
+	{}
+
+	//const references to save space, non-const references may be changed
+	const int socket_FD;      //WARNING: do not write to this
+	const std::string & host; //empty when incoming connection
+	const std::string & IP;   //IP address host resolved to
+	const std::string & port; //port on remote end
+	buffer & recv_buff;
+	buffer & send_buff;
+	bool & disconnect_flag;   //trigger disconnect when set to true
+	const ERROR & Error;
+
+	/*
+	These must be set in the connect call back or the program will be
+	terminated.
+	*/
+	boost::function<void (socket_data_visible &)> recv_call_back;
+	boost::function<void (socket_data_visible &)> send_call_back;
+};
+
+/*
+This is all the state that needs to be associated with a socket.
+*/
 class socket_data
 {
 public:
@@ -36,6 +108,7 @@ public:
 		disconnect_flag(false),
 		Error(NONE),
 		last_seen(std::time(NULL)),
+		localhost((IP.find("127.") == 0) || (IP == "::1")),
 		Socket_Data_Visible(
 			socket_FD,
 			host,
@@ -53,6 +126,9 @@ public:
 	const std::string IP;   //IP host resolved to
 	const std::string port; //if listen_port == port then connection is incoming
 	std::time_t last_seen;  //last time seen
+
+	//set to true if this is a localhost connection
+	const bool localhost;
 
 	/*
 	failed_connect_flag:
@@ -81,11 +157,7 @@ public:
 	buffer recv_buff;
 	buffer send_buff;
 
-	enum error{
-		NONE,            //default
-		MAX_CONNECTIONS, //maximum allowed connections reached
-		FAILED           //failed to connect
-	} Error;
+	ERROR Error;
 
 	/*
 	This is needed if the host resolves to multiple IPs. This is used to try
@@ -94,52 +166,6 @@ public:
 	to.
 	*/
 	boost::shared_ptr<wrapper::info> Info;
-
-	/*
-	This is typedef'd to socket in network::. The purpose of this class is to
-	limit what data the call back has access to. For example the call back
-	should not have access to any flag but the disconnect flag.
-	*/
-	class socket_data_visible
-	{
-	public:
-		socket_data_visible(
-			const int socket_FD_in,
-			const std::string & host_in,
-			const std::string & IP_in,
-			const std::string & port_in,
-			bool & disconnect_flag_in,
-			buffer & recv_buff_in,
-			buffer & send_buff_in,
-			const error & Error_in
-		):
-			socket_FD(socket_FD_in),
-			host(host_in),
-			IP(IP_in),
-			port(port_in),
-			disconnect_flag(disconnect_flag_in),
-			recv_buff(recv_buff_in),
-			send_buff(send_buff_in),
-			Error(Error_in)
-		{}
-
-		//const references to save space, non-const references may be changed
-		const int socket_FD;      //WARNING: do not write this
-		const std::string & host; //empty when incoming connection
-		const std::string & IP;   //IP address host resolved to
-		const std::string & port; //port on remote end
-		buffer & recv_buff;
-		buffer & send_buff;
-		bool & disconnect_flag;   //trigger disconnect when set to true
-		const error & Error;
-
-		/*
-		These must be set in the connect call back or the program will be
-		terminated.
-		*/
-		boost::function<void (socket_data_visible &)> recv_call_back;
-		boost::function<void (socket_data_visible &)> send_call_back;
-	};
 
 	socket_data_visible Socket_Data_Visible;
 };

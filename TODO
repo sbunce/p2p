@@ -1,18 +1,18 @@
 TODO
 
+-Pass the phoney socket_data back to failed_call_back
+-Make wrapper for send()/recv() that takes a socket and a buffer.
 -Generating prime PRNG needs to be fast PRNG, not /dev/urandom. That should only
-be used to seed the fast PRNG.
-
--Need to exclude localhost from adding to rate limit byte calculation.
-
--The network connection count can be the size of Socket_Data_All. Then have
-checks which fail new connections in reactor_select when going over the limit.
+be used to seed the fast PRNG. Miller-Rabin test count needs to be adjusted
+according to how big the prime is.
+-Get rid of all C style casting.
+-P2P program can be opened multiple times.
 
 
 DEFERRED FEATURES
 
 -Using new primes must be forced. To do this old primes must be kept track of.
--requests should be sent before file blocks, when two hosts download from
+-Requests should be sent before file blocks, when two hosts download from
 eachother the file blocks hog upload that should be used to get requests out.
 -SQLite blob write offset is a signed int. This limits the maximum tree size
 to 2gB. Create document like this: http://www.sqlite.org/limits.html with size

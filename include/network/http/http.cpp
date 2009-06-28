@@ -22,8 +22,8 @@ void http::recv_call_back(network::socket & SD)
 
 	int pos_1, pos_2;
 	if(SD.recv_buff.size() >= 6 &&
-		(pos_1 = SD.recv_buff.find((unsigned char *)"GET ", 4)) != buffer::npos &&
-		(pos_2 = SD.recv_buff.find((unsigned char *)"\n", 1, pos_1)) != buffer::npos
+		(pos_1 = SD.recv_buff.find((unsigned char *)"GET ", 4)) != network::buffer::npos &&
+		(pos_2 = SD.recv_buff.find((unsigned char *)"\n", 1, pos_1)) != network::buffer::npos
 	){
 		//path terminated by ' ', '\r', or '\n'
 		for(int x=pos_1+4; x<pos_2; ++x){
@@ -83,7 +83,7 @@ void http::determine_type()
 	}
 }
 
-void http::read(buffer & send_buff)
+void http::read(network::buffer & send_buff)
 {
 	namespace fs = boost::filesystem;
 	assert(Type != UNDETERMINED);

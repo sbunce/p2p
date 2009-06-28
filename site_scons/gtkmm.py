@@ -1,15 +1,14 @@
 #site_scons
 import environment
 import search
-import system
+
+#std
+import platform
 
 #complete setup of env for gtkmm
 def setup(env):
 	environment.define_keys(env)
-
-	if system.system() == 'linux':
-		env.ParseConfig('pkg-config gtkmm-2.4 --cflags --libs')
-	if system.system() == 'windows':
+	if platform.system() == 'Windows':
 		pkg_config = search.locate_file_recurse('/gtkmm/', 'pkg-config\.exe')
 		if pkg_config:
 			env.ParseConfig(pkg_config + ' gtkmm-2.4 --cflags')
@@ -46,3 +45,5 @@ def setup(env):
 		else:
 			print 'gtkmm error: could not locate pkg-config'
 			exit(1)
+	else:
+		env.ParseConfig('pkg-config gtkmm-2.4 --cflags --libs')

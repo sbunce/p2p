@@ -3,10 +3,8 @@
 p2p_real::p2p_real():
 	DB(path::database())
 {
-//create start() function for this, call it from ctor (for the C API)
-
 	//setup directories
-	#ifndef WINDOWS
+	#ifndef _WIN32
 	//main directory always in current directory on windows
 	boost::filesystem::create_directory(path::main());
 	#endif
@@ -25,8 +23,6 @@ p2p_real::p2p_real():
 
 p2p_real::~p2p_real()
 {
-//create stop() function for this, call it from dtor (for the C API)
-
 	number_generator::singleton().stop();
 	share::singleton().stop();
 }

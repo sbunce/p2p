@@ -40,14 +40,7 @@ def setup(env):
 		boost.library('thread')
 	]
 
-	#defines preprocessor macros for different systems (eg LINUX, WINDOWS)
-	env['CPPDEFINES'].append(string.upper(system()))
-
-	#each supported platform should define to_upper(sys.platform)
-	if system() == 'linux':
-		env['LIBS'].append('pthread')
-		env['CCFLAGS'].append('-O3')
-	if system() == 'windows':
+	if platform.system() == 'Windows':
 		env['LIBS'].append([
 			'advapi32', #random number gen
 			'ws2_32'    #winsock
@@ -71,23 +64,16 @@ def setup(env):
 		env['CCFLAGS'].append('/EHsc')   #exception support
 		env['CCFLAGS'].append('/w')      #disable warnings
 		env['CCFLAGS'].append('/Ox')     #max optimization
-
+	else:
+		env['LIBS'].append('pthread')
+		env['CCFLAGS'].append('-O3')
 
 #can be run in addition to setup to do static linking
 def setup_static(env):
 	environment.define_keys(env)
-	if system() == 'linux':
+	if platform.system() == 'Windows':
+		print 'TODO: windows static linking not supported on windows'
+	else:
 		env['LINKFLAGS'].append('-static')
 		env['LINKFLAGS'].append('-static-libgcc')
 		env['LINKFLAGS'].append('`g++ -print-file-name=libstdc++.a`')
-	if system() == 'windows':
-		print 'TODO: windows static linking not supported on windows'
-
-#returns the name of the system all upper case (eg "linux", "windows")
-#exits the program if system can't be determined
-def system():
-	if(platform.system() == ''):
-		print 'could not determine system type'
-		exit(1)
-	else:
-		return string.lower(platform.system())

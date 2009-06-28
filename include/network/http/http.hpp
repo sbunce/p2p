@@ -7,10 +7,12 @@
 #include <boost/filesystem.hpp>
 
 //include
-#include <buffer.hpp>
 #include <convert.hpp>
 #include <logger.hpp>
-#include <network.hpp>
+
+//network
+#include "../buffer.hpp"
+#include "../network.hpp"
 
 //std
 #include <fstream>
@@ -52,7 +54,7 @@ private:
 		Replaces stuff like %20 with ' '.
 	*/
 	void determine_type();
-	void read(buffer & send_buff);
+	void read(network::buffer & send_buff);
 	void replace_encoded_chars();
 };
 #endif

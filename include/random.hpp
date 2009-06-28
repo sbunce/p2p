@@ -8,7 +8,7 @@
 #include <fstream>
 
 //windows PRNG
-#ifdef WINDOWS
+#ifdef _WIN32
 #include <wincrypt.h>
 #endif
 
@@ -21,7 +21,7 @@ PRNG.
 */
 static void random(unsigned char * buff, size_t length)
 {
-#ifdef WINDOWS
+#ifdef _WIN32
 	HCRYPTPROV hProvider = 0;
 	if(CryptAcquireContextW(&hProvider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)){
 		if(CryptGenRandom(hProvider, length, buff)){

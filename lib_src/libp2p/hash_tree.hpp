@@ -18,7 +18,7 @@
 #include <atomic_bool.hpp>
 #include <convert.hpp>
 #include <contiguous_map.hpp>
-#include <sha.hpp>
+#include <SHA1.hpp>
 
 //std
 #include <deque>
@@ -188,6 +188,6 @@ private:
 		boost::uint64_t start_RRN, boost::uint64_t end_RRN, std::string & root_hash);
 
 	database::connection DB;
-	sha SHA;
+	SHA1 SHA;
 };
 #endif
