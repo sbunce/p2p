@@ -2,18 +2,16 @@
 #ifndef H_DATABASE_TABLE_BLACKLIST
 #define H_DATABASE_TABLE_BLACKLIST
 
-//boost
-#include <boost/thread.hpp>
-
 //custom
+#include "database.hpp"
 #include "path.hpp"
 #include "settings.hpp"
 
 //include
 #include <atomic_int.hpp>
-#include <database_connection.hpp>
+#include <boost/thread.hpp>
 
-//std
+//standard
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -48,7 +46,6 @@ private:
 	static void init();
 	static atomic_int<int> * _blacklist_state;
 
-
 	/* Accessor functions for static variables.
 	blacklist_state:
 		Incremented whenever IP added to blacklist. This makes it possible to
@@ -56,6 +53,6 @@ private:
 	*/
 	static atomic_int<int> & blacklist_state();
 };
-}//end of table namespace
-}//end of database namespace
+}//end of namespace table
+}//end of namespace database
 #endif

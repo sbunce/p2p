@@ -2,18 +2,16 @@
 #ifndef H_DATABASE_TABLE_SHARE
 #define H_DATABASE_TABLE_SHARE
 
-//boost
-#include <boost/tuple/tuple.hpp>
-
 //custom
+#include "database.hpp"
 #include "hash_tree.hpp"
 #include "settings.hpp"
 
 //include
 #include <atomic_bool.hpp>
-#include <database_connection.hpp>
+#include <boost/tuple/tuple.hpp>
 
-//std
+//standard
 #include <fstream>
 #include <set>
 #include <sstream>
@@ -48,6 +46,6 @@ private:
 	share(){}
 
 };
-}//end of table namespace
-}//end of database namespace
+}//end of namespace table
+}//end of namespace database
 #endif

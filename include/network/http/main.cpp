@@ -1,25 +1,16 @@
-//boost
-#include <boost/thread.hpp>
-#include <boost/shared_ptr.hpp>
-
 //custom
+#include "../network.hpp"
 #include "http.hpp"
 
 //include
+#include <boost/thread.hpp>
+#include <boost/shared_ptr.hpp>
 #include <convert.hpp>
 #include <CLI_args.hpp>
 #include <logger.hpp>
-
-//network
-#include "../network.hpp"
-
-/*
-Must be included after network because network includes windows.h which
-must be included after ws2tcpip.h.
-*/
 #include <portable_sleep.hpp>
 
-//std
+//standard
 #include <csignal>
 #include <map>
 

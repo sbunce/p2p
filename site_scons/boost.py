@@ -2,7 +2,7 @@
 import environment
 import search
 
-#std
+#standard
 import fnmatch
 import os
 import platform

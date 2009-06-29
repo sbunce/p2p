@@ -2,11 +2,6 @@
 #ifndef H_HASH_TREE
 #define H_HASH_TREE
 
-//boost
-#include <boost/filesystem.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/thread.hpp>
-
 //custom
 #include "database.hpp"
 #include "request_generator.hpp"
@@ -16,11 +11,14 @@
 
 //include
 #include <atomic_bool.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/thread.hpp>
 #include <convert.hpp>
 #include <contiguous_map.hpp>
 #include <SHA1.hpp>
 
-//std
+//standard
 #include <deque>
 #include <fstream>
 #include <iostream>

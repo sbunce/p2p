@@ -1,7 +1,7 @@
 #ifndef H_SINGLETON
 #define H_SINGLETON
 
-//boost
+//include
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread/once.hpp>
 #include <boost/utility.hpp>

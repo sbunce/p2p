@@ -5,7 +5,7 @@
 //include
 #include "reactor.hpp"
 
-//std
+//standard
 #include <deque>
 
 namespace network{
@@ -446,10 +446,12 @@ private:
 	void process_disconnect()
 	{
 		boost::mutex::scoped_lock lock(disconnect_pending_mutex);
-		for(int x=0; x<disconnect_pending.size(); ++x){
-			remove_socket(disconnect_pending[x]);
-			wrapper::disconnect(disconnect_pending[x]);
-			remove_socket_data(disconnect_pending[x]);
+		for(std::vector<int>::iterator iter_cur = disconnect_pending.begin(),
+			iter_end = disconnect_pending.end(); iter_cur != iter_end; ++iter_cur)
+		{
+			remove_socket(*iter_cur);
+			wrapper::disconnect(*iter_cur);
+			remove_socket_data(*iter_cur);
 		}
 		disconnect_pending.clear();
 	}
@@ -469,13 +471,16 @@ private:
 		connect_pending.clear();
 		}//end lock scope
 
-		for(int x=0; x<CP.size(); ++x){
-			int new_FD = wrapper::create_socket(*CP[x].Info);
+		for(std::vector<connect_job>::iterator iter_cur = CP.begin(), iter_end = CP.end();
+			iter_cur != iter_end; ++iter_cur)
+		{
+			int new_FD = wrapper::create_socket(*iter_cur->Info);
 			if(new_FD == -1){
-				call_back_failed_connect(CP[x].host, CP[x].port, FAILED_INVALID);
+				call_back_failed_connect(iter_cur->host, iter_cur->port, FAILED_INVALID);
 				continue;
 			}
 
+			//check hard limits
 			#ifdef _WIN32
 			/*
 			On windows the socket_FD numbers will not necessarily be below
@@ -483,7 +488,7 @@ private:
 			will tell us how many sockets exist in the fd_set.
 			*/
 			if(master_read_FDS.fd_count >= FD_SETSIZE){
-				call_back_failed_connect(CP[x].host, CP[x].port, MAX_CONNECTIONS);
+				call_back_failed_connect(iter_cur->host, iter_cur->port, MAX_CONNECTIONS);
 				continue;
 			}
 			#else
@@ -491,27 +496,28 @@ private:
 			On POSIX systems the fd_set cannot hold sockets >= FD_SETSIZE.
 			*/
 			if(new_FD >= FD_SETSIZE){
-				call_back_failed_connect(CP[x].host, CP[x].port, MAX_CONNECTIONS);
+				call_back_failed_connect(iter_cur->host, iter_cur->port, MAX_CONNECTIONS);
 				continue;
 			}
 			#endif
 
-//DEBUG, need to check soft limits
+			//check soft-limits
+			
 
 			//non-blocking required for async connect
 			wrapper::set_non_blocking(new_FD);
 
-			if(wrapper::connect_socket(new_FD, *CP[x].Info)){
+			if(wrapper::connect_socket(new_FD, *iter_cur->Info)){
 				//socket connected right away, rare but it might happen
 				boost::shared_ptr<socket_data> SD(new socket_data(new_FD,
-					CP[x].host, wrapper::get_IP(*CP[x].Info), CP[x].port));
+					iter_cur->host, wrapper::get_IP(*iter_cur->Info), iter_cur->port));
 				add_socket_data(SD);
 				call_back(new_FD);
 			}else{
 				//socket in progress of connecting
 				add_socket(new_FD);
-				boost::shared_ptr<socket_data> SD(new socket_data(new_FD, CP[x].host,
-					wrapper::get_IP(*CP[x].Info), CP[x].port, CP[x].Info));
+				boost::shared_ptr<socket_data> SD(new socket_data(new_FD, iter_cur->host,
+					wrapper::get_IP(*iter_cur->Info), iter_cur->port, iter_cur->Info));
 				add_socket_data(SD);
 				FD_SET(new_FD, &master_write_FDS);
 				FD_SET(new_FD, &connect_FDS);
@@ -527,11 +533,13 @@ private:
 	void process_job_finished()
 	{
 		boost::mutex::scoped_lock lock(job_finished_mutex);
-		for(int x=0; x<job_finished.size(); ++x){
-			add_socket(job_finished[x]->socket_FD);
-			if(!job_finished[x]->send_buff.empty()){
+		for(std::vector<boost::shared_ptr<socket_data> >::iterator iter_cur = job_finished.begin(),
+			iter_end = job_finished.end(); iter_cur != iter_end; ++iter_cur)
+		{
+			add_socket((*iter_cur)->socket_FD);
+			if(!(*iter_cur)->send_buff.empty()){
 				//send buff contains data, check socket for writeability
-				FD_SET(job_finished[x]->socket_FD, &master_write_FDS);
+				FD_SET((*iter_cur)->socket_FD, &master_write_FDS);
 			}
 		}
 		job_finished.clear();
@@ -545,11 +553,14 @@ private:
 	{
 		std::vector<int> timed_out;
 		check_timeouts(timed_out);
-		for(int x=0; x<timed_out.size(); ++x){
+		//for(int x=0; x<timed_out.size(); ++x){
+		for(std::vector<int>::iterator iter_cur = timed_out.begin(), iter_end = timed_out.end();
+			iter_cur != iter_end; ++iter_cur)
+		{
 			//if socket failed connection see if there are any more addresses to try
-			boost::shared_ptr<socket_data> SD = get_socket_data(timed_out[x]);
-			if(FD_ISSET(timed_out[x], &connect_FDS)){
-				remove_socket(timed_out[x]);
+			boost::shared_ptr<socket_data> SD = get_socket_data(*iter_cur);
+			if(FD_ISSET(*iter_cur, &connect_FDS)){
+				remove_socket(*iter_cur);
 				SD->Info->next_res();
 				if(SD->Info->resolved()){
 					//try next address the host resolved to
@@ -557,12 +568,12 @@ private:
 				}else{
 					SD->failed_connect_flag = true;
 					SD->Error = FAILED_VALID;
-					call_back(timed_out[x]);
+					call_back(*iter_cur);
 				}
 			}else{
-				remove_socket(timed_out[x]);
+				remove_socket(*iter_cur);
 				SD->disconnect_flag = true;
-				call_back(timed_out[x]);
+				call_back(*iter_cur);
 			}
 		}
 	}

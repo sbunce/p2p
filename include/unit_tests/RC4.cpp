@@ -2,7 +2,7 @@
 #include <convert.hpp>
 #include <RC4.hpp>
 
-//std
+//standard
 #include <iostream>
 #include <string>
 

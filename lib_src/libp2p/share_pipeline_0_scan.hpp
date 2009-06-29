@@ -7,18 +7,16 @@
 #include "settings.hpp"
 #include "share_pipeline_job.hpp"
 
-//boost
+//include
+#include <atomic_int.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/thread.hpp>
 #include <boost/tokenizer.hpp>
-
-//include
-#include <atomic_int.hpp>
 #include <logger.hpp>
 #include <portable_sleep.hpp>
 
-//std
+//standard
 #include <cassert>
 #include <deque>
 #include <map>

@@ -134,39 +134,36 @@ bool window_download_status::refresh()
 	servers_connected_value->set_text(ss.str());
 
 	//update bottom pane info
-	for(int x=0; x<status.servers.size(); ++x){
-		std::string IP = status.servers[x].first;
-		unsigned speed = status.servers[x].second;
-
+	for(std::vector<std::pair<std::string, unsigned> >::iterator
+		server_iter_cur = status.servers.begin(), server_iter_end = status.servers.end();
+		server_iter_cur != server_iter_end; ++server_iter_cur)
+	{
 		//attempt to locate existing entry in treeview
 		bool entry_found = false;
 		Gtk::TreeModel::Children children = servers_list->children();
-		Gtk::TreeModel::Children::iterator iter_cur, iter_end;
-		iter_cur = children.begin();
-		iter_end = children.end();
-		while(iter_cur != iter_end){
- 			Gtk::TreeModel::Row row = *iter_cur;
+ 		for(Gtk::TreeModel::Children::iterator child_iter_cur = children.begin(),
+			child_iter_end = children.end(); child_iter_cur != child_iter_end; ++child_iter_cur)
+		{
+			Gtk::TreeModel::Row row = *child_iter_cur;
 			Glib::ustring IP_retrieved;
 			row.get_value(0, IP_retrieved);
-			if(IP_retrieved == IP){
-				row[column_speed] = convert::size_SI(speed) + "/s";
+			if(IP_retrieved == server_iter_cur->first){
+				row[column_speed] = convert::size_SI(server_iter_cur->second) + "/s";
 				entry_found = true;
 				break;
 			}
-			++iter_cur;
 		}
 		if(!entry_found){
 			Gtk::TreeModel::Row row = *(servers_list->append());
-			row[column_server] = IP;
-			row[column_speed] = convert::size_SI(speed) + "/s";
+			row[column_server] = server_iter_cur->first;
+			row[column_speed] = convert::size_SI(server_iter_cur->second) + "/s";
 		}
 	}
 
 	//remove rows without a corresponding server in the download_info element
 	Gtk::TreeModel::Children children = servers_list->children();
-	Gtk::TreeModel::Children::iterator
-	iter_cur = children.begin(),
-	iter_end = children.end();
+	Gtk::TreeModel::Children::iterator iter_cur = children.begin(),
+		iter_end = children.end();
 	while(iter_cur != iter_end){
 	 	Gtk::TreeModel::Row row = *iter_cur;
 		Glib::ustring IP_retrieved;

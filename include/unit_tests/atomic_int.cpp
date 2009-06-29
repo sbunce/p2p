@@ -1,7 +1,7 @@
-//custom
-#include "../atomic_int.hpp"
+//include
+#include <atomic_int.hpp>
 
-//std
+//standard
 #include <limits>
 
 //assignment (=)

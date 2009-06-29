@@ -8,7 +8,7 @@
 //#define CORRUPT_HASH_BLOCK_TEST
 //#define CORRUPT_FILE_BLOCK_TEST
 
-//std
+//standard
 #include <limits>
 #include <string>
 

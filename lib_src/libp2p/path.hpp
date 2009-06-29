@@ -1,13 +1,11 @@
 #ifndef H_PATH
 #define H_PATH
 
-//boost
-#include <boost/thread.hpp>
-
 //include
+#include <boost/thread.hpp>
 #include <logger.hpp>
 
-//std
+//standard
 #include <cstdlib>
 #include <sstream>
 #include <string>

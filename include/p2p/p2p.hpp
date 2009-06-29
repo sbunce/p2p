@@ -1,14 +1,14 @@
 #ifndef H_P2P
 #define H_P2P
 
-//boost
-#include <boost/utility.hpp>
-#include <boost/shared_ptr.hpp>
-
 //custom
 #include "download_info.hpp"
 #include "download_status.hpp"
 #include "upload_status.hpp"
+
+//include
+#include <boost/utility.hpp>
+#include <boost/shared_ptr.hpp>
 
 class p2p_real;
 

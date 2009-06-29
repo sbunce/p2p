@@ -1,12 +1,10 @@
 TODO
 
--Pass the phoney socket_data back to failed_call_back
 -Make wrapper for send()/recv() that takes a socket and a buffer.
 -Generating prime PRNG needs to be fast PRNG, not /dev/urandom. That should only
 be used to seed the fast PRNG. Miller-Rabin test count needs to be adjusted
 according to how big the prime is.
--Get rid of all C style casting.
--P2P program can be opened multiple times.
+-P2P program can be opened multiple times. Make lock file.
 
 
 DEFERRED FEATURES

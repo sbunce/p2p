@@ -2,14 +2,14 @@
 #ifndef H_REQUEST_GENERATOR
 #define H_REQUEST_GENERATOR
 
-//boost
-#include <boost/cstdint.hpp>
-#include <boost/thread.hpp>
-
 //custom
 #include "settings.hpp"
 
-//std
+//include
+#include <boost/cstdint.hpp>
+#include <boost/thread.hpp>
+
+//standard
 #include <ctime>
 #include <deque>
 #include <iostream>

@@ -2,20 +2,18 @@
 #ifndef H_BLOCK_ARBITER
 #define H_BLOCK_ARBITER
 
-//boost
-#include <boost/scoped_ptr.hpp>
-#include <boost/thread.hpp>
-#include <boost/utility.hpp>
-
 //custom
 #include "settings.hpp"
 
 //include
 #include <atomic_bool.hpp>
+#include <boost/scoped_ptr.hpp>
+#include <boost/thread.hpp>
+#include <boost/utility.hpp>
 #include <contiguous_set.hpp>
 #include <singleton.hpp>
 
-//std
+//standard
 #include <map>
 #include <set>
 #include <string>

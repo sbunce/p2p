@@ -2,17 +2,15 @@
 #ifndef H_DATABASE_TABLE_HASH
 #define H_DATABASE_TABLE_HASH
 
-//boost
-#include <boost/thread.hpp>
-
 //custom
+#include "database.hpp"
 #include "path.hpp"
 #include "settings.hpp"
 
 //include
-#include <database_connection.hpp>
+#include <boost/thread.hpp>
 
-//std
+//standard
 #include <sstream>
 
 namespace database{
@@ -48,6 +46,6 @@ public:
 private:
 	hash(){}
 };
-}//end of table namespace
-}//end of database namespace
+}//end of namespace table
+}//end of namespace database
 #endif

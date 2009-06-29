@@ -41,25 +41,27 @@ window_upload::window_upload(
 
 bool window_upload::upload_info_refresh()
 {
-	//update upload info
 	std::vector<upload_status> status;
 	P2P.current_uploads(status);
 
-	std::vector<upload_status>::iterator
-	status_iter_cur = status.begin(),
-	status_iter_end = status.end();
-	while(status_iter_cur != status_iter_end){
+	//std::vector<upload_status>::iterator
+	//status_iter_cur = status.begin(),
+	//status_iter_end = status.end();
+	//while(status_iter_cur != status_iter_end){
+	for(std::vector<upload_status>::iterator status_iter_cur = status.begin(),
+		status_iter_end = status.end(); status_iter_cur != status_iter_end;
+		++status_iter_cur)
+	{
 		std::string speed = convert::size_SI(status_iter_cur->speed) + "/s";
 		std::string size = convert::size_SI(status_iter_cur->size);
 
 		//update rows
 		bool entry_found = false;
 		Gtk::TreeModel::Children children = upload_list->children();
-		Gtk::TreeModel::Children::iterator Children_iter_cur, Children_iter_end;
-		Children_iter_cur = children.begin();
-		Children_iter_end = children.end();
-		while(Children_iter_cur != Children_iter_end){
- 			Gtk::TreeModel::Row row = *Children_iter_cur;
+		for(Gtk::TreeModel::Children::iterator child_iter_cur = children.begin(),
+			child_iter_end = children.end(); child_iter_cur != child_iter_end; ++child_iter_cur)
+		{
+ 			Gtk::TreeModel::Row row = *child_iter_cur;
 			Glib::ustring hash_retrieved;
 			row.get_value(0, hash_retrieved);
 			if(hash_retrieved == status_iter_cur->hash){
@@ -76,7 +78,6 @@ bool window_upload::upload_info_refresh()
 				entry_found = true;
 				break;
 			}
-			++Children_iter_cur;
 		}
 
 		if(!entry_found){
@@ -93,7 +94,6 @@ bool window_upload::upload_info_refresh()
 			row[column_speed] = speed;
 			row[column_percent_complete] = status_iter_cur->percent_complete;
 		}
-		++status_iter_cur;
 	}
 
 	//if no upload info exists remove all remaining rows
@@ -103,24 +103,21 @@ bool window_upload::upload_info_refresh()
 
 	//remove rows without corresponding upload_info
 	Gtk::TreeModel::Children children = upload_list->children();
-	Gtk::TreeModel::Children::iterator
-	Children_iter_cur = children.begin(),
-	Children_iter_end = children.end();
+	Gtk::TreeModel::Children::iterator Children_iter_cur = children.begin(),
+		Children_iter_end = children.end();
 	while(Children_iter_cur != Children_iter_end){
 	 	Gtk::TreeModel::Row row = *Children_iter_cur;
 		Glib::ustring hash_retrieved;
 		row.get_value(0, hash_retrieved);
 
-		std::vector<upload_status>::iterator
-		status_iter_cur = status.begin(),
-		status_iter_end = status.end();
 		bool entry_found = false;
-		while(status_iter_cur != status_iter_end){
+		for(std::vector<upload_status>::iterator status_iter_cur = status.begin(),
+			status_iter_end = status.end(); status_iter_cur != status_iter_end; ++status_iter_cur)
+		{
 			if(hash_retrieved == status_iter_cur->hash){
 				entry_found = true;
 				break;
 			}
-			++status_iter_cur;
 		}
 
 		if(!entry_found){

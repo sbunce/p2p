@@ -2,10 +2,10 @@
 #ifndef H_SHA1
 #define H_SHA1
 
-//boost
+//include
 #include <boost/cstdint.hpp>
 
-//std
+//standard
 #include <algorithm>
 #include <iostream>
 #include <string>
@@ -13,10 +13,6 @@
 class SHA1
 {
 public:
-	/*
-	It is best to reserve a buffer that is as large as the chunks you are loading
-	with the load() function.
-	*/
 	SHA1()
 	{
 		//minimum buffer size needed for chunk
@@ -104,8 +100,8 @@ public:
 		static const char hex[] = "0123456789ABCDEF";
 		std::string hash;
 		for(int x=0; x<20; ++x){
-			hash += hex[(int)((raw[x] >> 4) & 15)];
-			hash += hex[(int)(raw[x] & 15)];
+			hash += hex[static_cast<int>((raw[x] >> 4) & 15)];
+			hash += hex[static_cast<int>(raw[x] & 15)];
 		}
 		return hash;
 	}
@@ -140,13 +136,13 @@ private:
 
 	inline void append_tail()
 	{
-		load_buffer += (char)128; //append bit 1
+		load_buffer += static_cast<char>(128); //append bit 1
 
 		//append k zero bits such that size (in bits) is congruent to 448 mod(512)
 		if(load_buffer.size() % 64 < 56){
-			load_buffer.append(56 - (load_buffer.size() % 64), (char)0);
+			load_buffer.append(56 - (load_buffer.size() % 64), static_cast<char>(0));
 		}else if(load_buffer.size() % 64 > 56){
-			load_buffer.append(64 + (load_buffer.size() % 64), (char)0);
+			load_buffer.append(64 + (load_buffer.size() % 64), static_cast<char>(0));
 		}
 
 		//append size of original message (in bits) encoded as a 64bit big-endian int

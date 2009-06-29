@@ -1,7 +1,7 @@
 #ifndef H_CONVERT
 #define H_CONVERT
 
-//boost
+//include
 #include <boost/cstdint.hpp>
 
 //std
@@ -63,11 +63,11 @@ namespace convert
 		} NB;
 		if(endianness() == LITTLE_ENDIAN_ENUM){
 			for(int x=0; x<sizeof(T); ++x){
-				NB.byte[x] = (unsigned char)encoded[sizeof(T)-1-x];
+				NB.byte[x] = static_cast<unsigned char>(encoded[sizeof(T)-1-x]);
 			}
 		}else{
 			for(int x=0; x<sizeof(T); ++x){
-				NB.byte[x] = (unsigned char)encoded[x];
+				NB.byte[x] = static_cast<unsigned char>(encoded[x]);
 			}
 		}
 		return NB.num;
@@ -102,13 +102,12 @@ namespace convert
 		std::string hex;
 		int size = bin.size();
 		for(int x=0; x<size; ++x){
-			hex += HEX[(int)((bin[x] >> 4) & 15)];
-			hex += HEX[(int)(bin[x] & 15)];
+			hex += HEX[static_cast<int>((bin[x] >> 4) & 15)];
+			hex += HEX[static_cast<int>(bin[x] & 15)];
 		}
 		return hex;
 	}
 
-//DEBUG, needs to be cleaned up
 	//convert bytes to reasonable SI unit, example 1024 -> 1kB
 	static std::string size_SI(boost::uint64_t bytes)
 	{
@@ -116,18 +115,21 @@ namespace convert
 		if(bytes < 1024){
 			oss << bytes << "B";
 		}else if(bytes >= 1024ull*1024*1024*1024){
-			oss << std::fixed << std::setprecision(2) << bytes / (double)(1024ull*1024*1024*1024) << "tB";
+			oss << std::fixed << std::setprecision(2)
+				<< bytes / static_cast<double>(1024ull*1024*1024*1024) << "tB";
 		}else if(bytes >= 1024*1024*1024){
-			oss << std::fixed << std::setprecision(2) << bytes / (double)(1024*1024*1024) << "gB";
+			oss << std::fixed << std::setprecision(2)
+				<< bytes / static_cast<double>(1024*1024*1024) << "gB";
 		}else if(bytes >= 1024*1024){
-			oss << std::fixed << std::setprecision(2) << bytes / (double)(1024*1024) << "mB";
+			oss << std::fixed << std::setprecision(2)
+				<< bytes / static_cast<double>(1024*1024) << "mB";
 		}else if(bytes >= 1024){
-			oss << std::fixed << std::setprecision(1) << bytes / (double)1024 << "kB";
+			oss << std::fixed << std::setprecision(1)
+				<< bytes / static_cast<double>(1024) << "kB";
 		}
 		return oss.str();
 	}
 
-//DEBUG, needs to be cleaned up
 	/*
 	Given two strings obtained from size_unit_select, returns less than (-1),
 	equal to (0), or greater than (1). Just like strcmp.

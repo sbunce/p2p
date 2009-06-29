@@ -2,30 +2,26 @@
 #ifndef H_NUMBER_GENERATOR
 #define H_NUMBER_GENERATOR
 
-//boost
-#include <boost/bind.hpp>
-#include <boost/thread.hpp>
-#include <boost/utility.hpp>
-
 //custom
 #include "database.hpp"
 #include "settings.hpp"
 
 //include
+#include <boost/bind.hpp>
+#include <boost/thread.hpp>
+#include <boost/utility.hpp>
 #include <singleton.hpp>
+#include <tommath/mpint.hpp>
 
-//std
+//standard
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <vector>
 
-//tommath
-#include <tommath/mpint.hpp>
-
 //windows PRNG
 #ifdef WIN32
-#include <wincrypt.h>
+	#include <wincrypt.h>
 #endif
 
 class number_generator : public singleton_base<number_generator>

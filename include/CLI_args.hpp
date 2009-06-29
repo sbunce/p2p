@@ -1,13 +1,11 @@
-//DEBUG, this needs a lot of work
-
 //THREADSAFE
 #ifndef H_CLI_ARGS
 #define H_CLI_ARGS
 
-//boost
+//include
 #include <boost/thread.hpp>
 
-//std
+//standard
 #include <algorithm>
 #include <iostream>
 #include <sstream>

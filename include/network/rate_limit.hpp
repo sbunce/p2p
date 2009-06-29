@@ -2,21 +2,12 @@
 #ifndef H_NETWORK_RATE_LIMIT
 #define H_NETWORK_RATE_LIMIT
 
-//boost
-#include <boost/thread.hpp>
-
 //include
+#include <boost/thread.hpp>
 #include <speed_calculator.hpp>
 
-//std
+//standard
 #include <limits>
-
-//this interferes with ::max()
-#ifdef WIN32
-	#ifdef max
-		#undef max
-	#endif
-#endif
 
 namespace network{
 class rate_limit

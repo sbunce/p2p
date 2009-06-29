@@ -1,11 +1,11 @@
 #ifndef H_NETWORK
 #define H_NETWORK
 
-//boost
-#include <boost/shared_ptr.hpp>
-
-//reactors
+//custom
 #include "reactor_select.hpp"
+
+//include
+#include <boost/shared_ptr.hpp>
 
 namespace network{
 typedef socket_data_visible socket;

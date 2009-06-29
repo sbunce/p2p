@@ -1,15 +1,9 @@
-/*
-This is the C++ wrapper implementation to hide implementation details from the
-user of the library.
-*/
-//API
-#include <p2p/p2p.hpp>
-
-//boost
-#include <boost/shared_ptr.hpp>
-
-//wrapped interface
+//custom
 #include "p2p_real.hpp"
+
+//include
+#include <boost/shared_ptr.hpp>
+#include <p2p/p2p.hpp>
 
 p2p::p2p():
 	P2P_Real(new p2p_real())

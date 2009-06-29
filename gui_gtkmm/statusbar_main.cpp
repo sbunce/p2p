@@ -12,8 +12,6 @@ statusbar_main::statusbar_main(
 
 bool statusbar_main::update_status_bar()
 {
-	std::string status; //holds entire status line
-
 	//get the total client download speed
 	int download_rate = P2P.download_rate();
 	std::stringstream download_rate_s;

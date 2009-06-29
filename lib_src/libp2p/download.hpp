@@ -1,19 +1,16 @@
 #ifndef H_DOWNLOAD
 #define H_DOWNLOAD
 
-//API
-#include <p2p/download_info.hpp>
-#include <p2p/download_status.hpp>
-
 //custom
 #include "hash_tree.hpp"
 #include "path.hpp"
 #include "request_generator.hpp"
 
 //inclucde
+#include <p2p/p2p.hpp>
 #include <speed_calculator.hpp>
 
-//std
+//standard
 #include <map>
 
 class download : private boost::noncopyable

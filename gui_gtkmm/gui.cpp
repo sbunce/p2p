@@ -1,6 +1,7 @@
 #include "gui.hpp"
 
-gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
+gui::gui():
+	Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 {
 	window = this;
 
@@ -13,9 +14,12 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 	help_menu = Gtk::manage(new Gtk::Menu);
 
 	//notebook labels
-	Gtk::Image * search_label = Gtk::manage(new Gtk::Image(Gtk::Stock::FIND, Gtk::ICON_SIZE_LARGE_TOOLBAR));
-	Gtk::Image * download_label = Gtk::manage(new Gtk::Image(Gtk::Stock::GO_DOWN, Gtk::ICON_SIZE_LARGE_TOOLBAR));
-	Gtk::Image * upload_label = Gtk::manage(new Gtk::Image(Gtk::Stock::GO_UP, Gtk::ICON_SIZE_LARGE_TOOLBAR));
+	Gtk::Image * search_label = Gtk::manage(new Gtk::Image(Gtk::Stock::FIND,
+		Gtk::ICON_SIZE_LARGE_TOOLBAR));
+	Gtk::Image * download_label = Gtk::manage(new Gtk::Image(Gtk::Stock::GO_DOWN,
+		Gtk::ICON_SIZE_LARGE_TOOLBAR));
+	Gtk::Image * upload_label = Gtk::manage(new Gtk::Image(Gtk::Stock::GO_UP,
+		Gtk::ICON_SIZE_LARGE_TOOLBAR));
 
 	VBox_Search = Gtk::manage(new vbox_search(P2P));
 	Window_Download = Gtk::manage(new window_download(P2P, notebook));
@@ -32,21 +36,22 @@ gui::gui() : Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 
 	//add items to File menu
 	file_menu->items().push_back(Gtk::Menu_Helpers::StockMenuElem(Gtk::StockID(Gtk::Stock::QUIT)));
-	quit = (Gtk::ImageMenuItem *)&file_menu->items().back();
+	quit = static_cast<Gtk::ImageMenuItem *>(&file_menu->items().back());
 	menubar->items().push_back(Gtk::Menu_Helpers::MenuElem(("_File"), *file_menu));
-	file_menu_item = (Gtk::MenuItem *)&menubar->items().back();
+	file_menu_item = static_cast<Gtk::MenuItem *>(&menubar->items().back());
 	menubar->items().push_back(Gtk::Menu_Helpers::MenuElem(("_Settings"), *settings_menu));
-	settings_menu_item = (Gtk::MenuItem *)&menubar->items().back();
+	settings_menu_item = static_cast<Gtk::MenuItem *>(&menubar->items().back());
 	menubar->items().push_back(Gtk::Menu_Helpers::MenuElem(("_Help"), *help_menu));
-	help_menu_item = (Gtk::MenuItem *)&menubar->items().back();
+	help_menu_item = static_cast<Gtk::MenuItem *>(&menubar->items().back());
 
 	//add items to Settings menu
-	settings_menu->items().push_back(Gtk::Menu_Helpers::StockMenuElem(Gtk::StockID(Gtk::Stock::PREFERENCES)));
-	preferences = (Gtk::MenuItem *)&settings_menu->items().back();
+	settings_menu->items().push_back(Gtk::Menu_Helpers::StockMenuElem(
+		Gtk::StockID(Gtk::Stock::PREFERENCES)));
+	preferences = static_cast<Gtk::MenuItem *>(&settings_menu->items().back());
 
 	//add items to Help menu
 	help_menu->items().push_back(Gtk::Menu_Helpers::StockMenuElem(Gtk::StockID(Gtk::Stock::ABOUT)));
-	about = (Gtk::MenuItem *)&help_menu->items().back();
+	about = static_cast<Gtk::MenuItem *>(&help_menu->items().back());
 
 	//set notebook properties
 	notebook->set_flags(Gtk::CAN_FOCUS);

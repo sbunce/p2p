@@ -2,25 +2,21 @@
 #ifndef H_ENCRYPTION
 #define H_ENCRYPTION
 
-//boost
-#include <boost/utility.hpp>
-
 //custom
 #include "number_generator.hpp"
 #include "protocol.hpp"
 #include "settings.hpp"
 
 //include
+#include <boost/utility.hpp>
 #include <RC4.hpp>
+#include <tommath/mpint.hpp>
 
 //std
 #include <cassert>
 #include <ctime>
 #include <fstream>
 #include <iostream>
-
-//tommath
-#include <tommath/mpint.hpp>
 
 class encryption : private boost::noncopyable
 {

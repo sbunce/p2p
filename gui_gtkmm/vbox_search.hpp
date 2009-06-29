@@ -1,20 +1,14 @@
 #ifndef H_VBOX_SEARCH
 #define H_VBOX_SEARCH
 
-//boost
+//include
 #include <boost/shared_ptr.hpp>
 #include <boost/utility.hpp>
-
-//p2p
+#include <convert.hpp>
+#include <gtkmm.h>
 #include <p2p/p2p.hpp>
 
-//gui
-#include <gtkmm.h>
-
-//include
-#include <convert.hpp>
-
-//std
+//standard
 #include <algorithm>
 #include <string>
 
@@ -24,6 +18,8 @@ public:
 	vbox_search(p2p & P2P_in);
 
 private:
+	p2p & P2P;
+
 	//convenience pointer to this
 	Gtk::VBox * vbox;
 
@@ -35,8 +31,8 @@ private:
 	//objects for display of search results
 	Gtk::ScrolledWindow * search_scrolled_window; //scrolled window for search_view
 	Gtk::TreeView * search_view;
-	Glib::RefPtr<Gtk::ListStore> search_list;     //list to display with search_view
-	Gtk::Menu search_popup_menu;                  //right click popup menu
+	Glib::RefPtr<Gtk::ListStore> search_list;     //list displayed with search_view
+	Gtk::Menu search_popup_menu;
 
 	//columns of the treeview
 	Gtk::TreeModel::ColumnRecord column;
@@ -44,9 +40,6 @@ private:
 	Gtk::TreeModelColumn<Glib::ustring> column_name;
 	Gtk::TreeModelColumn<Glib::ustring> column_size;
 	Gtk::TreeModelColumn<Glib::ustring> column_IP;
-
-	//pointer to client that exists in gui class
-	p2p & P2P;
 
 	/*
 	Signaled Functions:

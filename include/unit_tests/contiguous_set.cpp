@@ -2,7 +2,7 @@
 #include <contiguous_set.hpp>
 #include <logger.hpp>
 
-//std
+//standard
 #include <cstdlib>
 
 bool test_iterator()

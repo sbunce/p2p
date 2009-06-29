@@ -3,7 +3,7 @@ import boost
 import environment
 import search
 
-#std
+#standard
 import os
 import platform
 import string

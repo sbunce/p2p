@@ -1,10 +1,6 @@
 #ifndef H_GUI
 #define H_GUI
 
-//boost
-#include <boost/shared_ptr.hpp>
-#include <boost/utility.hpp>
-
 //custom
 #include "settings.hpp"
 #include "statusbar_main.hpp"
@@ -14,16 +10,14 @@
 #include "window_preferences.hpp"
 #include "window_upload.hpp"
 
-//p2p
+//include
+#include <boost/shared_ptr.hpp>
+#include <boost/utility.hpp>
+#include <convert.hpp>
+#include <gtkmm.h>
 #include <p2p/p2p.hpp>
 
-//gui
-#include <gtkmm.h>
-
-//include
-#include <convert.hpp>
-
-//std
+//standard
 #include <algorithm>
 #include <ctime>
 #include <iomanip>
@@ -76,7 +70,7 @@ private:
 	*/
 	vbox_search * VBox_Search;         //stuff in search tab
 	window_download * Window_Download; //stuff in download tab
-	window_upload   * Window_Upload;   //stuff in upload tab
+	window_upload * Window_Upload;     //stuff in upload tab
 
 	/*
 	Signaled Functions

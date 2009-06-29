@@ -1,14 +1,14 @@
 #ifndef H_WINDOW_ABOUT
 #define H_WINDOW_ABOUT
 
+//custom
+#include "settings.hpp"
+
 //include
 #include <boost/utility.hpp>
 #include <logger.hpp>
 #include <p2p/p2p.hpp>
 #include <gtkmm.h>
-
-//local
-#include "settings.hpp"
 
 class window_about : public Gtk::Window, private boost::noncopyable
 {
@@ -25,7 +25,8 @@ private:
 	Gtk::Button * close_button;
 
 	/*
-	close_click - close button clicked
+	close_click:
+		Called when close button clicked.
 	*/
 	void close_click();
 };

@@ -15,7 +15,7 @@ window_download::window_download(
 
 	//options and ownership
 	download_view->set_headers_visible(true);
-	download_view->set_rules_hint(true); //alternating row background colors
+	download_view->set_rules_hint(true); //alternate row background colors
 	window->add(*download_view);
 
 	//set up column
@@ -66,7 +66,6 @@ int window_download::compare_file_size(const Gtk::TreeModel::iterator & lval, co
 	Gtk::TreeModel::Row row_lval = *lval;
 	Gtk::TreeModel::Row row_rval = *rval;
 
-	//convert to std::string, involves a lot of copying but no known alternative
 	std::stringstream ss;
 	ss << row_lval[column_size];
 	std::string left = ss.str();
@@ -81,9 +80,9 @@ void window_download::delete_download()
 {
 	Glib::RefPtr<Gtk::TreeView::Selection> refSelection = download_view->get_selection();
 	if(refSelection){
-		Gtk::TreeModel::iterator iter0 = refSelection->get_selected();
-		if(iter0){
-			Gtk::TreeModel::Row row = *iter0;
+		Gtk::TreeModel::iterator selected_row_iter = refSelection->get_selected();
+		if(selected_row_iter){
+			Gtk::TreeModel::Row row = *selected_row_iter;
 			Glib::ustring hash_retrieved;
 			row.get_value(0, hash_retrieved);
 			P2P.remove_download(hash_retrieved);
@@ -141,8 +140,7 @@ void window_download::download_info_tab()
 		return;
 	}
 
-	std::set<std::string>::iterator iter = open_info_tabs.find(root_hash);
-	if(iter != open_info_tabs.end()){
+	if(open_info_tabs.find(root_hash) != open_info_tabs.end()){
 		LOGGER << "tab for " << root_hash << " already open";
 		return;
 	}else{
@@ -196,10 +194,9 @@ bool window_download::download_info_refresh()
 	std::vector<download_status> status;
 	P2P.current_downloads(status);
 
-	std::vector<download_status>::iterator
-	info_iter_cur = status.begin(),
-	info_iter_end = status.end();
-	while(info_iter_cur != info_iter_end){
+	for(std::vector<download_status>::iterator info_iter_cur = status.begin(),
+		info_iter_end = status.end(); info_iter_cur != info_iter_end; ++info_iter_cur)
+	{
 		//set up column
 		std::stringstream ss;
 		ss << info_iter_cur->servers.size();
@@ -209,11 +206,11 @@ bool window_download::download_info_refresh()
 		//update rows
 		bool entry_found = false;
 		Gtk::TreeModel::Children children = download_list->children();
-		Gtk::TreeModel::Children::iterator
-		Children_iter_cur = children.begin(),
-		Children_iter_end = children.end();
-		while(Children_iter_cur != Children_iter_end){
- 			Gtk::TreeModel::Row row = *Children_iter_cur;
+		for(Gtk::TreeModel::Children::iterator child_iter_cur = children.begin(),
+			child_iter_end = children.end(); child_iter_cur != child_iter_end;
+			++child_iter_cur)
+		{
+ 			Gtk::TreeModel::Row row = *child_iter_cur;
 			Glib::ustring hash_retrieved;
 			row.get_value(0, hash_retrieved);
 			if(hash_retrieved == info_iter_cur->hash){
@@ -225,7 +222,6 @@ bool window_download::download_info_refresh()
 				entry_found = true;
 				break;
 			}
-			++Children_iter_cur;
 		}
 
 		if(!entry_found){
@@ -237,7 +233,6 @@ bool window_download::download_info_refresh()
 			row[column_speed] = speed;
 			row[column_percent_complete] = info_iter_cur->percent_complete;
 		}
-		++info_iter_cur;
 	}
 
 	//if no download info exists remove all remaining rows
@@ -247,33 +242,29 @@ bool window_download::download_info_refresh()
 
 	//remove rows without corresponding download_info
 	Gtk::TreeModel::Children children = download_list->children();
-	Gtk::TreeModel::Children::iterator
-	Children_iter_cur = children.begin(),
-	Children_iter_end = children.end();
-	while(Children_iter_cur != Children_iter_end){
-	 	Gtk::TreeModel::Row row = *Children_iter_cur;
+	Gtk::TreeModel::Children::iterator child_iter_cur = children.begin(),
+		child_iter_end = children.end();
+	while(child_iter_cur != child_iter_end){
+	 	Gtk::TreeModel::Row row = *child_iter_cur;
 		Glib::ustring hash_retrieved;
 		row.get_value(0, hash_retrieved);
 
-		std::vector<download_status>::iterator
-		info_iter_cur = status.begin(),
-		info_iter_end = status.end();
 		bool entry_found = false;
-		while(info_iter_cur != info_iter_end){
+		for(std::vector<download_status>::iterator info_iter_cur = status.begin(),
+			info_iter_end = status.end(); info_iter_cur != info_iter_end; ++info_iter_cur)
+		{
 			if(hash_retrieved == info_iter_cur->hash){
 				entry_found = true;
 				break;
 			}
-			++info_iter_cur;
 		}
 
 		if(!entry_found){
-			Children_iter_cur = download_list->erase(Children_iter_cur);
+			child_iter_cur = download_list->erase(child_iter_cur);
 		}else{
-			++Children_iter_cur;
+			++child_iter_cur;
 		}
 	}
-
 	return true;
 }
 
@@ -281,9 +272,9 @@ void window_download::pause_download()
 {
 	Glib::RefPtr<Gtk::TreeView::Selection> refSelection = download_view->get_selection();
 	if(refSelection){
-		Gtk::TreeModel::iterator iter0 = refSelection->get_selected();
-		if(iter0){
-			Gtk::TreeModel::Row row = *iter0;
+		Gtk::TreeModel::iterator selected_row_iter = refSelection->get_selected();
+		if(selected_row_iter){
+			Gtk::TreeModel::Row row = *selected_row_iter;
 			Glib::ustring hash_retrieved;
 			row.get_value(0, hash_retrieved);
 			P2P.pause_download(hash_retrieved);

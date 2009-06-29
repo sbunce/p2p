@@ -2,7 +2,7 @@
 import environment
 import search
 
-#std
+#standard
 import platform
 
 #complete setup of env for gtkmm

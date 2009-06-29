@@ -1,7 +1,7 @@
 #ifndef H_LOGGER
 #define H_LOGGER
 
-//std
+//standard
 #include <iostream>
 #include <sstream>
 

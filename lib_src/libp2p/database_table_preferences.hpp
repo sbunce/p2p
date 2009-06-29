@@ -2,17 +2,15 @@
 #ifndef H_DATABASE_TABLE_PREFERENCES
 #define H_DATABASE_TABLE_PREFERENCES
 
-//boost
-#include <boost/thread.hpp>
-
 //custom
+#include "database.hpp"
 #include "path.hpp"
 #include "settings.hpp"
 
 //include
-#include <database_connection.hpp>
+#include <boost/thread.hpp>
 
-//std
+//standard
 #include <string>
 
 namespace database{
@@ -36,6 +34,6 @@ public:
 private:
 	preferences(){}
 };
-}//end of table namespace
-}//end of database namespace
+}//end of namespace table
+}//end of namespace database
 #endif

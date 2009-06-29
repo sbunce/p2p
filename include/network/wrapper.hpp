@@ -252,11 +252,9 @@ public:
 		char buff[INET6_ADDRSTRLEN];
 		if(Info.get_res()->ai_family == AF_INET){
 			//IPv4 socket
-			//sockaddr_in addr = addr = &(((sockaddr_in *)Info.get_res()->ai_addr)->sin_addr);
 			getnameinfo((sockaddr *)Info.get_res()->ai_addr, sizeof(sockaddr_in), buff, sizeof(buff), NULL, 0, NI_NUMERICHOST);
 		}else if(Info.get_res()->ai_family == AF_INET6){
 			//IPv6 socket
-			//sockaddr_in6 * addr = (sockaddr_in6*)&(((sockaddr_in6 *)Info.get_res()->ai_addr)->sin6_addr);
 			getnameinfo((sockaddr *)Info.get_res()->ai_addr, sizeof(sockaddr_in6), buff, sizeof(buff), NULL, 0, NI_NUMERICHOST);
 		}
 

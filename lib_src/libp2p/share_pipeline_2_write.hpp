@@ -11,18 +11,16 @@ amount of database contention.
 #ifndef H_SHARE_PIPELINE_2_WRITE
 #define H_SHARE_PIPELINE_2_WRITE
 
-//boost
-#include <boost/bind.hpp>
-#include <boost/thread.hpp>
-
 //custom
 #include "share_pipeline_job.hpp"
 #include "share_pipeline_1_hash.hpp"
 
 //include
+#include <boost/bind.hpp>
+#include <boost/thread.hpp>
 #include <portable_sleep.hpp>
 
-//std
+//standard
 #include <vector>
 
 class share_pipeline_2_write

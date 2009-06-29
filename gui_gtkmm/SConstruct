@@ -1,7 +1,7 @@
 #site_scons
 import gtkmm
 
-#std
+#standard
 import glob
 
 Import('env_base')

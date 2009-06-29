@@ -1,16 +1,12 @@
-/*
-This container measures a speed. It can be used for measuring bytes per second,
-queries per second, or other units per second.
-*/
 //THREADSAFE
 #ifndef H_SPEED_CALCULATOR
 #define H_SPEED_CALCULATOR
 
-//boost
+//include
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 
-//std
+//standard
 #include <ctime>
 #include <deque>
 

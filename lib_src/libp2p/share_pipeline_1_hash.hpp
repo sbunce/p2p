@@ -1,14 +1,14 @@
 #ifndef H_SHARE_PIPELINE_1_HASH
 #define H_SHARE_PIPELINE_1_HASH
 
-//boost
-#include <boost/bind.hpp>
-#include <boost/thread.hpp>
-#include <boost/utility.hpp>
-
 //custom
 #include "share_pipeline_job.hpp"
 #include "share_pipeline_0_scan.hpp"
+
+//include
+#include <boost/bind.hpp>
+#include <boost/thread.hpp>
+#include <boost/utility.hpp>
 
 class share_pipeline_1_hash
 {

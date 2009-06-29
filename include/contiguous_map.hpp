@@ -9,11 +9,10 @@ checking hash blocks.
 
 There is also a contiguous_set. Both templates have the same functionality.
 */
-
 #ifndef H_CONTIGUOUS_MAP
 #define H_CONTIGUOUS_MAP
 
-//std
+//standard
 #include <cassert>
 #include <map>
 

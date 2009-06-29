@@ -1,25 +1,12 @@
 //THREADSAFE
-
-/*
-Note: this wrapper is to be replaced by C++0x atomic types.
-
-This is a wrapper meant to be used with integers. It makes access to the wrapped
-integer atomic with the use of a mutex.
-
-The template parameter is used to specify what kind of integer you want:
-example atomic_int<int>, atomic_int<unsigned>, etc..
-*/
-
 #ifndef H_ATOMIC_INT
 #define H_ATOMIC_INT
 
-//boost
-#include <boost/thread.hpp>
-
 //include
+#include <boost/thread.hpp>
 #include <logger.hpp>
 
-//std
+//standard
 #include <iostream>
 
 template<class T>

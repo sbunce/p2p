@@ -1,10 +1,10 @@
 /*
 This container is modeled after a std::string.
 
-The purpose of this container is to be used for a network buffer. It doesn't do
-copy-on-write optimization which is not thread safe. It also allows it's
-underlying buffer to be exposed in a non-const way so it can be directly
-written to.
+This container doesn't do copy-on-write optimization which can make writing
+thread safe code difficult. This container also exposes it's underlying buffer
+in a non-const way which makes it possible to use it with send()/recv() without
+extra copying.
 
 Functions to encode data to send over the network should be included here.
 */
@@ -14,7 +14,7 @@ Functions to encode data to send over the network should be included here.
 //include
 #include <logger.hpp>
 
-//std
+//standard
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
@@ -36,7 +36,7 @@ public:
 		reserved(Buffer.reserved),
 		bytes(Buffer.bytes)
 	{
-		buff = (unsigned char *)malloc(bytes);
+		buff = static_cast<unsigned char *>(std::malloc(bytes));
 		std::memcpy(buff, Buffer.buff, bytes);
 	}
 
@@ -218,8 +218,8 @@ public:
 	{
 		assert(index + length < bytes);
 		unsigned char * pos = std::search(
-			(unsigned char *)(buff + index), (unsigned char *)(buff + bytes),
-			(unsigned char *)str, (unsigned char *)(str + length)
+			static_cast<unsigned char *>(buff + index), static_cast<unsigned char *>(buff + bytes),
+			static_cast<const unsigned char *>(str), static_cast<const unsigned char *>(str + length)
 		);
 
 		if(pos == (unsigned char *)(str + length)){
@@ -318,14 +318,14 @@ private:
 				}
 			}else if(buff == NULL){
 				//requested allocation non-zero and currently nothing is allocated
-				buff = (unsigned char *)std::malloc(var);
+				buff = static_cast<unsigned char *>(std::malloc(var));
 				assert(buff);
 			}else if(var >= reserved){
 				/*
 				Either reserve needs to be increased, or bytes are above what is
 				reserved so we need to allocate beyond what is reserved.
 				*/
-				buff = (unsigned char *)std::realloc(buff, var);
+				buff = static_cast<unsigned char *>(std::realloc(buff, var));
 				assert(buff);
 			}
 		}

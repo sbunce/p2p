@@ -2,13 +2,6 @@
 #ifndef H_SHARE
 #define H_SHARE
 
-//boost
-#include <boost/bind.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/thread.hpp>
-#include <boost/tokenizer.hpp>
-#include <boost/utility.hpp>
-
 //custom
 #include "database.hpp"
 #include "hash_tree.hpp"
@@ -18,11 +11,15 @@
 
 //include
 #include <atomic_int.hpp>
+#include <boost/bind.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/thread.hpp>
+#include <boost/tokenizer.hpp>
+#include <boost/utility.hpp>
 #include <portable_sleep.hpp>
 #include <singleton.hpp>
-#include <thread_pool.hpp>
 
-//std
+//standard
 #include <ctime>
 #include <deque>
 #include <fstream>

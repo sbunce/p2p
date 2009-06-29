@@ -1,10 +1,7 @@
 #ifndef H_PORTABLE_SLEEP
 #define H_PORTABLE_SLEEP
 
-//C
-#include <unistd.h>
-
-//std
+//standard
 #include <cassert>
 
 #ifdef _WIN32
@@ -35,5 +32,5 @@ inline void yield()
 	usleep(1);
 	#endif
 }
-} //end of portable_sleep namespace
+} //end of namespace portable_sleep
 #endif

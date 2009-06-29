@@ -5,13 +5,9 @@
 #include "settings.hpp"
 #include "window_download_status.hpp"
 
-//gui
-#include <gtkmm.h>
-
 //include
+#include <gtkmm.h>
 #include <logger.hpp>
-
-//p2p
 #include <p2p/p2p.hpp>
 
 //std
@@ -27,6 +23,8 @@ public:
 	);
 
 private:
+	p2p & P2P;
+
 	//convenience pointer
 	Gtk::ScrolledWindow * window;
 
@@ -54,14 +52,13 @@ private:
 	//hashes of all opened tabs
 	std::set<std::string> open_info_tabs;
 
-	//pointer to client that exists in gui class
-	p2p & P2P;
-
-	/*
-	Signaled Functions
-	compare_file_size       - signaled when user clicks size column to sort
-	download_click          - called when download_view clicked
-	download_info_tab_close - called when download info tab button clicked
+	/* Signaled Functions
+	compare_file_size:
+		Signaled when user clicks size column to sort.
+	download_click:
+		Called when download_view clicked.
+	download_info_tab_close:
+		Called when download info tab button clicked.
 	*/
 	int compare_file_size(const Gtk::TreeModel::iterator & lval,
 		const Gtk::TreeModel::iterator & rval);

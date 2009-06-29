@@ -24,9 +24,9 @@ void share_pipeline_2_write::main_loop()
 
 		if(!temp.empty()){
 			DB.query("BEGIN TRANSACTION");
-			std::vector<share_pipeline_job>::iterator iter_cur = temp.begin(),
-				iter_end = temp.end();
-			while(iter_cur != iter_end){
+			for(std::vector<share_pipeline_job>::iterator iter_cur = temp.begin(),
+				iter_end = temp.end(); iter_cur != iter_end; ++iter_cur)
+			{
 				if(iter_cur->add){
 					//job to add file to share table
 					database::table::share::add_entry(iter_cur->hash, iter_cur->file_size, iter_cur->path, DB);
@@ -37,7 +37,6 @@ void share_pipeline_2_write::main_loop()
 					//job to remove file from share table
 					database::table::share::delete_entry(iter_cur->path, DB);
 				}
-				++iter_cur;
 			}
 			DB.query("END TRANSACTION");
 		}

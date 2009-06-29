@@ -100,10 +100,11 @@ hash_tree::status hash_tree::check_file_block(tree_info & Tree_Info, const boost
 
 void hash_tree::check_contiguous(tree_info & Tree_Info)
 {
-	contiguous_map<boost::uint64_t, std::string>::contiguous_iterator c_iter_cur, c_iter_end;
-	c_iter_cur = Tree_Info.Contiguous.begin_contiguous();
-	c_iter_end = Tree_Info.Contiguous.end_contiguous();
-	while(c_iter_cur != c_iter_end){
+	for(contiguous_map<boost::uint64_t, std::string>::contiguous_iterator
+		c_iter_cur = Tree_Info.Contiguous.begin_contiguous(),
+		c_iter_end = Tree_Info.Contiguous.end_contiguous();
+		c_iter_cur != c_iter_end; ++c_iter_cur)
+	{
 		status Status = check_block(Tree_Info, c_iter_cur->first);
 		if(Status == BAD){
 			#ifdef CORRUPT_HASH_BLOCK_TEST
@@ -139,7 +140,6 @@ void hash_tree::check_contiguous(tree_info & Tree_Info)
 			*/
 			break;
 		}
-		++c_iter_cur;
 	}
 
 	//any contiguous blocks left were checked and can now be removed
@@ -628,13 +628,11 @@ bool hash_tree::tree_info::highest_good(boost::uint64_t & HG)
 boost::uint64_t hash_tree::tree_info::rerequest_bad_blocks(request_generator & Request_Generator)
 {
 	boost::uint64_t size = 0;
-	std::vector<boost::uint64_t>::iterator iter_cur, iter_end;
-	iter_cur = bad_block.begin();
-	iter_end = bad_block.end();
-	while(iter_cur != iter_end){
+	for(std::vector<boost::uint64_t>::iterator iter_cur = bad_block.begin(),
+		iter_end = bad_block.end(); iter_cur != iter_end; ++iter_cur)
+	{
 		size += block_size(*iter_cur);
 		Request_Generator.force_rerequest(*iter_cur);
-		++iter_cur;
 	}
 	bad_block.clear();
 	return size;

@@ -1,22 +1,16 @@
 #ifndef H_STATUSBAR_MAIN
 #define H_STATUSBAR_MAIN
 
-//boost
-#include <boost/utility.hpp>
-
 //custom
 #include "settings.hpp"
 
-//gui
-#include <gtkmm.h>
-
 //include
+#include <boost/utility.hpp>
 #include <convert.hpp>
-
-//p2p
+#include <gtkmm.h>
 #include <p2p/p2p.hpp>
 
-//std
+//standard
 #include <sstream>
 #include <string>
 
@@ -26,11 +20,10 @@ public:
 	statusbar_main(p2p & P2P_in);
 
 private:
+	p2p & P2P;
+
 	//convenience pointer
 	Gtk::Statusbar * statusbar;
-
-	//same client and server that exist in gui
-	p2p & P2P;
 
 	/*
 	update_status_bar:

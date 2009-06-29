@@ -1,4 +1,4 @@
-#std
+#standard
 import glob
 import os
 import platform

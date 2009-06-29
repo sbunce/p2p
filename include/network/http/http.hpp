@@ -1,20 +1,18 @@
 #ifndef H_HTTP
 #define H_HTTP
 
-//boost
-#include <boost/bind.hpp>
-#include <boost/cstdint.hpp>
-#include <boost/filesystem.hpp>
-
-//include
-#include <convert.hpp>
-#include <logger.hpp>
-
-//network
+//custom
 #include "../buffer.hpp"
 #include "../network.hpp"
 
-//std
+//include
+#include <boost/bind.hpp>
+#include <boost/cstdint.hpp>
+#include <boost/filesystem.hpp>
+#include <convert.hpp>
+#include <logger.hpp>
+
+//standard
 #include <fstream>
 #include <map>
 #include <sstream>

@@ -1,23 +1,6 @@
-/*
-This is the _real_ interface to the p2p library. There are wrappers that store
-an opaque pointer to this class to hide all the internal library headers from
-the user of the library.
-*/
 //THREADSAFE, CTOR THREAD SPAWNING
 #ifndef H_P2P_REAL
 #define H_P2P_REAL
-
-//API
-#include <p2p/download_info.hpp>
-#include <p2p/download_status.hpp>
-#include <p2p/upload_status.hpp>
-
-//boost
-#include <boost/bind.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/thread.hpp>
-#include <boost/utility.hpp>
 
 //custom
 #include "database.hpp"
@@ -30,11 +13,16 @@ the user of the library.
 
 //include
 #include <atomic_int.hpp>
+#include <boost/bind.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/thread.hpp>
+#include <boost/utility.hpp>
+#include <p2p/download_info.hpp>
+#include <p2p/download_status.hpp>
+#include <p2p/upload_status.hpp>
 
-//net
-//#include <network.hpp>
-
-//std
+//standard
 #include <cstdlib>
 #include <fstream>
 #include <string>

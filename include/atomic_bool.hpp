@@ -1,12 +1,11 @@
 //THREADSAFE
-
 #ifndef H_ATOMIC_BOOL
 #define H_ATOMIC_BOOL
 
-//boost
+//include
 #include <boost/thread.hpp>
 
-//std
+//standard
 #include <iostream>
 
 class atomic_bool

@@ -125,21 +125,6 @@ void window_preferences::apply_settings()
 	ss >> upload_rate;
 	ss.str(""); ss.clear();
 
-	/*
-	Maintain minimum of 1 to 256 ratio of upload to download. Without this
-	downloads can starve because they don't have enough upload to make requests.
-	*/
-	if(upload_rate != 0 && upload_rate < (unsigned)((float)download_rate / 256 + 0.5)){
-		upload_rate = (unsigned)((float)download_rate / 256 + 0.5);
-		ss << upload_rate;
-		max_upload_rate_entry->set_text(ss.str());
-	}
-
-	if(download_rate == 0){
-		upload_rate = 0;
-		max_upload_rate_entry->set_text("0");
-	}
-
 	P2P.set_max_download_rate(download_rate * 1024);
 	P2P.set_max_connections((int)connections_hscale->get_value());
 	P2P.set_max_upload_rate(upload_rate * 1024);

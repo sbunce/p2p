@@ -21,14 +21,12 @@ void request_generator::init(const boost::uint64_t & begin_in, const boost::uint
 void request_generator::check_timeouts()
 {
 	//do re_request on requests that are older than timeout seconds
-	std::map<boost::uint64_t, request_info>::iterator iter_cur, iter_end;
-	iter_cur = unfulfilled_request.begin();
-	iter_end = unfulfilled_request.end();
-	while(iter_cur != iter_end){
+	for(std::map<boost::uint64_t, request_info>::iterator iter_cur = unfulfilled_request.begin(),
+		iter_end = unfulfilled_request.end(); iter_cur != iter_end; ++iter_cur)
+	{
 		if(iter_cur->second.time > time(NULL) + timeout * iter_cur->second.pipeline_size){
 			re_request.insert(iter_cur->first);
 		}
-		++iter_cur;
 	}
 }
 
@@ -83,14 +81,13 @@ bool request_generator::request(std::deque<boost::uint64_t> & prev_request)
 		A re_request needs to be done. Only do re_requests from servers that haven't
 		already had a block re_requested from them.
 		*/
-		std::set<boost::uint64_t>::iterator re_requested_iter_cur, re_requested_iter_end;
-		std::deque<boost::uint64_t>::iterator prev_iter_cur, prev_iter_end;
-		re_requested_iter_cur = re_requested.begin();
-		re_requested_iter_end = re_requested.end();
-		while(re_requested_iter_cur != re_requested_iter_end){
-			prev_iter_cur = prev_request.begin();
-			prev_iter_end = prev_request.end();
-			while(prev_iter_cur != prev_iter_end){
+		for(std::set<boost::uint64_t>::iterator re_requested_iter_cur = re_requested.begin(),
+			re_requested_iter_end = re_requested.end(); re_requested_iter_cur != re_requested_iter_end;
+			++re_requested_iter_cur)
+		{
+			for(std::deque<boost::uint64_t>::iterator prev_iter_cur = prev_request.begin(),
+				prev_iter_end = prev_request.end(); prev_iter_cur != prev_iter_end; ++prev_iter_cur)
+			{
 				if(*re_requested_iter_cur == *prev_iter_cur){
 					/*
 					A re-request was already made from this server. It won't be allowed
@@ -98,9 +95,7 @@ bool request_generator::request(std::deque<boost::uint64_t> & prev_request)
 					*/
 					return false;
 				}
-				++prev_iter_cur;
 			}
-			++re_requested_iter_cur;
 		}
 
 		prev_request.push_back(*(re_request.begin()));

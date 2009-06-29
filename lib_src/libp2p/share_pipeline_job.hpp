@@ -1,10 +1,10 @@
 #ifndef H_SHARE_PIPELINE_JOB
 #define H_SHARE_PIPELINE_JOB
 
-//boost
+//include
 #include <boost/cstdint.hpp>
 
-//std
+//standard
 #include <string>
 
 class share_pipeline_job

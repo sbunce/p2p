@@ -4,16 +4,15 @@
 //include
 #include <logger.hpp>
 
-//std
+//standard
 #include <fstream>
 
 //windows PRNG
 #ifdef _WIN32
-#include <wincrypt.h>
+	#include <wincrypt.h>
 #endif
 
 namespace custom {
-
 /*
 Generates random bytes in a system specific way. This is good enough to use as
 a CSPRNG but it's slow. It's adviseable to use this to get a seed for a faster
@@ -41,6 +40,5 @@ static void random(unsigned char * buff, size_t length)
 	}
 #endif
 }
-
 }//end namespace custom
 #endif

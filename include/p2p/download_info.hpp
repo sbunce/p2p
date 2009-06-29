@@ -1,10 +1,10 @@
 #ifndef H_DOWNLOAD_INFO
 #define H_DOWNLOAD_INFO
 
-//boost
+//include
 #include <boost/cstdint.hpp>
 
-//std
+//standard
 #include <string>
 #include <vector>
 

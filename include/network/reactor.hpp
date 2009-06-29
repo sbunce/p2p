@@ -1,9 +1,6 @@
 #ifndef H_NETWORK_REACTOR
 #define H_NETWORK_REACTOR
 
-//boost
-#include <boost/utility.hpp>
-
 //custom
 #include "buffer.hpp"
 #include "rate_limit.hpp"
@@ -11,6 +8,7 @@
 #include "wrapper.hpp"
 
 //include
+#include <boost/utility.hpp>
 #include <logger.hpp>
 
 namespace network{

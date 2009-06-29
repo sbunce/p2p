@@ -2,7 +2,8 @@
 
 share_pipeline_0_scan::share_pipeline_0_scan():
 	share_path(boost::filesystem::system_complete(
-		boost::filesystem::path(path::share(), boost::filesystem::native))),
+		boost::filesystem::path(path::share(), boost::filesystem::native)
+	)),
 	_share_size(0)
 {
 	scan_thread = boost::thread(boost::bind(&share_pipeline_0_scan::main_loop, this));

@@ -1,20 +1,14 @@
 #ifndef H_WINDOW_DOWNLOAD_STATUS
 #define H_WINDOW_DOWNLOAD_STATUS
 
-//boost
+//include
 #include <boost/shared_ptr.hpp>
 #include <boost/utility.hpp>
-
-//gui
-#include <gtkmm.h>
-
-//include
 #include <convert.hpp>
-
-//p2p
+#include <gtkmm.h>
 #include <p2p/p2p.hpp>
 
-//std
+//standard
 #include <string>
 
 class window_download_status : public Gtk::ScrolledWindow, private boost::noncopyable
@@ -34,7 +28,6 @@ public:
 	bool refresh();
 
 private:
-	//pointer to client that exists in GUI class
 	p2p & P2P;
 
 	std::string root_hash;

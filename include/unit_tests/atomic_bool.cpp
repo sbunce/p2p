@@ -1,10 +1,8 @@
 //include
+#include <atomic_bool.hpp>
 #include <logger.hpp>
 
-//libcustom
-#include "../atomic_bool.hpp"
-
-//std
+//standard
 #include <sstream>
 
 void assignment()

@@ -1,15 +1,15 @@
 #ifndef H_NETWORK_SOCKET_DATA
 #define H_NETWORK_SOCKET_DATA
 
-//boost
-#include <boost/shared_ptr.hpp>
-#include <boost/function.hpp>
-
 //custom
 #include "buffer.hpp"
 #include "wrapper.hpp"
 
-//std
+//include
+#include <boost/shared_ptr.hpp>
+#include <boost/function.hpp>
+
+//standard
 #include <string>
 
 namespace network{

@@ -1,10 +1,10 @@
 #ifndef H_UPLOAD_STATUS
 #define H_UPLOAD_STATUS
 
-//boost
+//include
 #include <boost/cstdint.hpp>
 
-//std
+//standard
 #include <string>
 
 class upload_status

@@ -1,10 +1,8 @@
-//boost
-#include <boost/shared_ptr.hpp>
-
 //custom
 #include "gui.hpp"
 
-//gtkmm
+//include
+#include <boost/shared_ptr.hpp>
 #include <gtkmm.h>
 
 //std

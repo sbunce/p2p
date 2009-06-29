@@ -2,7 +2,7 @@
 #include <convert.hpp>
 #include <logger.hpp>
 
-//std
+//standard
 #include <string>
 
 bool test_encode_decode()

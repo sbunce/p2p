@@ -61,16 +61,12 @@ Read blob:
 #ifndef H_DATABASE_CONNECTION
 #define H_DATABASE_CONNECTION
 
-//boost
-#include <boost/thread.hpp>
-#include <boost/shared_ptr.hpp>
-
 //include
 #include <atomic_int.hpp>
+#include <boost/thread.hpp>
+#include <boost/shared_ptr.hpp>
 #include <logger.hpp>
 #include <portable_sleep.hpp>
-
-//sqlite
 #include <sqlite3.h>
 
 namespace database{
@@ -151,7 +147,7 @@ public:
 		if(!blob_open(Blob, false, blob_handle)){
 			return false;
 		}
-		if(sqlite3_blob_read(blob_handle, (void *)buff, size, offset) != SQLITE_OK){
+		if(sqlite3_blob_read(blob_handle, static_cast<void *>(buff), size, offset) != SQLITE_OK){
 			LOGGER << sqlite3_errmsg(DB_handle);
 			return false;
 		}
@@ -167,7 +163,7 @@ public:
 		if(!blob_open(Blob, true, blob_handle)){
 			return false;
 		}
-		if(sqlite3_blob_write(blob_handle, (const void *)buff, size, offset) != SQLITE_OK){
+		if(sqlite3_blob_write(blob_handle, static_cast<const void *>(buff), size, offset) != SQLITE_OK){
 			LOGGER << sqlite3_errmsg(DB_handle);
 			return false;
 		}
@@ -185,7 +181,8 @@ public:
 				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 				portable_sleep::ms(1);
 			}else{
-				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
+				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
+					<< " query: " << query;
 				break;
 			}
 		}
@@ -198,12 +195,15 @@ public:
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 		connect();
 		int code;
-		while((code = sqlite3_exec(DB_handle, query.c_str(), fun_call_back_wrapper, (void *)fun_ptr, NULL)) != SQLITE_OK){
+		while((code = sqlite3_exec(DB_handle, query.c_str(), fun_call_back_wrapper,
+			(void *)fun_ptr, NULL)) != SQLITE_OK)
+		{
 			if(code == SQLITE_BUSY){
 				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 				portable_sleep::ms(1);
 			}else{
-				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
+				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
+					<< " query: " << query;
 				break;
 			}
 		}
@@ -220,13 +220,14 @@ public:
 		std::pair<int (*)(T, int, char **, char **), T*> call_back_info(fun_ptr, &t);
 		int code;
 		while((code = sqlite3_exec(DB_handle, query.c_str(), fun_with_object_call_back_wrapper<T>,
-			(void *)&call_back_info, NULL)) != SQLITE_OK)
+			static_cast<void *>(&call_back_info), NULL)) != SQLITE_OK)
 		{
 			if(code == SQLITE_BUSY){
 				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 				portable_sleep::ms(1);
 			}else{
-				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
+				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
+					<< " query: " << query;
 				break;
 			}
 		}
@@ -242,14 +243,16 @@ public:
 		//std::pair<func signature, object>
 		std::pair<int (*)(T&, int, char **, char **), T*> call_back_info(fun_ptr, &t);
 		int code;
-		while((code = sqlite3_exec(DB_handle, query.c_str(), fun_with_object_reference_call_back_wrapper<T>,
-			(void *)&call_back_info, NULL)) != SQLITE_OK)
+		while((code = sqlite3_exec(DB_handle, query.c_str(),
+			fun_with_object_reference_call_back_wrapper<T>,
+			static_cast<void *>(&call_back_info), NULL)) != SQLITE_OK)
 		{
 			if(code == SQLITE_BUSY){
 				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 				portable_sleep::ms(1);
 			}else{
-				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
+				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
+					<< " query: " << query;
 				break;
 			}
 		}
@@ -266,13 +269,14 @@ public:
 		std::pair<T*, int (T::*)(int, char **, char **)> call_back_info(t, memfun_ptr);
 		int code;
 		while((code = sqlite3_exec(DB_handle, query.c_str(), memfun_call_back_wrapper<T>,
-			(void *)&call_back_info, NULL)) != SQLITE_OK)
+			static_cast<void *>(&call_back_info), NULL)) != SQLITE_OK)
 		{
 			if(code == SQLITE_BUSY){
 				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 				portable_sleep::ms(1);
 			}else{
-				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
+				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
+					<< " query: " << query;
 				break;
 			}
 		}
@@ -292,14 +296,16 @@ public:
 		std::pair<std::pair<T*, int (T::*)(T_obj, int, char **, char **)>, T_obj*>
 			call_back_info(std::make_pair(t, memfun_ptr), &T_Obj);
 		int code;
-		while((code = sqlite3_exec(DB_handle, query.c_str(), memfun_with_object_call_back_wrapper<T, T_obj>,
-			(void *)&call_back_info, NULL)) != SQLITE_OK)
+		while((code = sqlite3_exec(DB_handle, query.c_str(),
+			memfun_with_object_call_back_wrapper<T, T_obj>,
+			static_cast<void *>(&call_back_info), NULL)) != SQLITE_OK)
 		{
 			if(code == SQLITE_BUSY){
 				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 				portable_sleep::ms(1);
 			}else{
-				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
+				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
+					<< " query: " << query;
 				break;
 			}
 		}
@@ -319,14 +325,16 @@ public:
 		std::pair<std::pair<T*, int (T::*)(T_obj&, int, char **, char **)>, T_obj*>
 			call_back_info(std::make_pair(t, memfun_ptr), &T_Obj);
 		int code;
-		while((code = sqlite3_exec(DB_handle, query.c_str(), memfun_with_object_reference_call_back_wrapper<T, T_obj>,
-			(void *)&call_back_info, NULL)) != SQLITE_OK)
+		while((code = sqlite3_exec(DB_handle, query.c_str(),
+			memfun_with_object_reference_call_back_wrapper<T, T_obj>,
+			static_cast<void *>(&call_back_info), NULL)) != SQLITE_OK)
 		{
 			if(code == SQLITE_BUSY){
 				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 				portable_sleep::ms(1);
 			}else{
-				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle) << " query: " << query;
+				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
+					<< " query: " << query;
 				break;
 			}
 		}
@@ -368,7 +376,9 @@ private:
 
 			//move free pages to EOF and truncate at every commit
 			int code;
-			while((code = sqlite3_exec(DB_handle, "PRAGMA auto_vacuum = full;" , NULL, NULL, NULL)) != SQLITE_OK){
+			while((code = sqlite3_exec(DB_handle, "PRAGMA auto_vacuum = full;" ,
+				NULL, NULL, NULL)) != SQLITE_OK)
+			{
 				if(code == SQLITE_BUSY){
 					LOGGER << "sqlite yield on SQLITE_BUSY";
 					portable_sleep::ms(1);
@@ -383,13 +393,15 @@ private:
 	}
 
 	//call backs for query functions
-	static int fun_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)
+	static int fun_call_back_wrapper(void * obj_ptr, int columns, char ** response,
+		char ** column_name)
 	{
 		int (*fun_ptr)(int, char **, char **) = (int (*)(int, char **, char **))obj_ptr;
 		return fun_ptr(columns, response, column_name);
 	}
 	template <typename T>
-	static int fun_with_object_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)
+	static int fun_with_object_call_back_wrapper(void * obj_ptr, int columns,
+		char ** response, char ** column_name)
 	{
 		std::pair<int (*)(T, int, char **, char **), T*> * call_back_info;
 		call_back_info = (std::pair<int (*)(T, int, char **, char **), T*> *)obj_ptr;
@@ -398,7 +410,8 @@ private:
 	}
 
 	template <typename T>
-	static int fun_with_object_reference_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)
+	static int fun_with_object_reference_call_back_wrapper(void * obj_ptr, int columns,
+		char ** response, char ** column_name)
 	{
 		std::pair<int (*)(T&, int, char **, char **), T*> * call_back_info;
 		call_back_info = (std::pair<int (*)(T&, int, char **, char **), T*> *)obj_ptr;
@@ -407,7 +420,8 @@ private:
 	}
 
 	template <typename T>
-	static int memfun_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)
+	static int memfun_call_back_wrapper(void * obj_ptr, int columns, char ** response,
+		char ** column_name)
 	{
 		std::pair<T*, int (T::*)(int, char **, char **)> * call_back_info;
 		call_back_info = (std::pair<T*, int (T::*)(int, char **, char **)> *)obj_ptr;
@@ -415,7 +429,8 @@ private:
 	}
 
 	template <typename T, typename T_obj>
-	static int memfun_with_object_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)
+	static int memfun_with_object_call_back_wrapper(void * obj_ptr, int columns,
+		char ** response, char ** column_name)
 	{
 		std::pair<std::pair<T*, int (T::*)(T_obj, int, char **, char **)>, T_obj*> * call_back_info;
 		call_back_info = (std::pair<std::pair<T*, int (T::*)(T_obj, int, char **, char **)>, T_obj*> *)obj_ptr;
@@ -424,7 +439,8 @@ private:
 	}
 
 	template <typename T, typename T_obj>
-	static int memfun_with_object_reference_call_back_wrapper(void * obj_ptr, int columns, char ** response, char ** column_name)
+	static int memfun_with_object_reference_call_back_wrapper(void * obj_ptr,
+		int columns, char ** response, char ** column_name)
 	{
 		std::pair<std::pair<T*, int (T::*)(T_obj&, int, char **, char **)>, T_obj*> * call_back_info;
 		call_back_info = (std::pair<std::pair<T*, int (T::*)(T_obj&, int, char **, char **)>, T_obj*> *)obj_ptr;

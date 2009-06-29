@@ -1,26 +1,19 @@
-/*
-This should generally only be used by the number_generator class.
-*/
 //THREADSAFE
 #ifndef H_DATABASE_TABLE_PRIME
 #define H_DATABASE_TABLE_PRIME
 
-//boost
-#include <boost/tuple/tuple.hpp>
-
 //custom
+#include "database.hpp"
 #include "path.hpp"
 #include "settings.hpp"
 
 //include
-#include <database_connection.hpp>
+#include <boost/tuple/tuple.hpp>
+#include <tommath/mpint.hpp>
 
 //std
 #include <iostream>
 #include <sstream>
-
-//tommath
-#include <tommath/mpint.hpp>
 
 namespace database{
 namespace table{
@@ -39,6 +32,6 @@ public:
 private:
 	prime(){}
 };
-}//end of table namespace
-}//end of database namespace
+}//end of namespace table
+}//end of namespace database
 #endif

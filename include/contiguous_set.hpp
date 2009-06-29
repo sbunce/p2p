@@ -13,11 +13,10 @@ Note: objects used within contiguous require a lot of different operators to
 be overloaded. If you need to associate something with a key use the
 contiguous_map instead.
 */
-
 #ifndef H_CONTIGUOUS_SET
 #define H_CONTIGUOUS_SET
 
-//std
+//standard
 #include <cassert>
 #include <set>
 

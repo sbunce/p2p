@@ -1,4 +1,4 @@
-#std
+#standard
 import os
 import re
 

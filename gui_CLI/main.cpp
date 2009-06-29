@@ -1,15 +1,13 @@
-//p2p
-#include <p2p/p2p.hpp>
-
 //include
+#include <p2p/p2p.hpp>
 #include <portable_sleep.hpp>
 
-//std
+//standard
 #include <csignal>
 
 namespace
 {
-	//volatile needed to stop optimizer from check-once behavior on while(!quit)
+	//volatile needed to stop optimizer turning while(!quit) in to while(true)
 	volatile sig_atomic_t terminate_program = 0;
 
 	void signal_handler(int sig)

@@ -9,13 +9,11 @@ example usage:
 	boost::uint64_t end = timer::TSC();
 	elapsed(start, end, timer::SECONDS);
 */
-//boost
-#include <boost/cstdint.hpp>
-
 //include
+#include <boost/cstdint.hpp>
 #include <portable_sleep.hpp>
 
-//std
+//standard
 #include <cassert>
 #include <cmath>
 #include <iostream>

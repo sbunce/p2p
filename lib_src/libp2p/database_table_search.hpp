@@ -2,17 +2,13 @@
 #ifndef H_DATABASE_TABLE_SEARCH
 #define H_DATABASE_TABLE_SEARCH
 
-//API
-#include <p2p/download_info.hpp>
-
-//boost
-#include <boost/tokenizer.hpp>
-
 //custom
+#include "database.hpp"
 #include "path.hpp"
 
 //include
-#include <database_connection.hpp>
+#include <boost/tokenizer.hpp>
+#include <p2p/download_info.hpp>
 
 //std
 #include <algorithm>
@@ -38,6 +34,6 @@ public:
 private:
 	database::connection DB;
 };
-}//end of table namespace
-}//end of database namespace
+}//end of namespace table
+}//end of namespace database
 #endif

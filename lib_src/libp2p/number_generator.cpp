@@ -13,7 +13,7 @@ unsigned number_generator::prime_count()
 
 mpint number_generator::random(const int & bytes)
 {
-	unsigned char * buff = (unsigned char *)std::malloc(bytes);
+	unsigned char * buff = static_cast<unsigned char *>(std::malloc(bytes));
 	assert(buff);
 	PRNG(buff, bytes, NULL);
 	mpint temp(buff, bytes);
@@ -51,7 +51,7 @@ int number_generator::PRNG(unsigned char * buff, int length, void * data)
 	char ch;
 	for(int x=0; x<length; ++x){
 		fin.get(ch);
-		*buff++ = (unsigned char)ch;
+		*buff++ = static_cast<unsigned char>(ch);
 	}
 	return length;
 #endif

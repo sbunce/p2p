@@ -1,7 +1,7 @@
 #ifndef H_DOWNLOAD_STATUS
 #define H_DOWNLOAD_STATUS
 
-//std
+//standard
 #include <string>
 #include <vector>
 
@@ -14,7 +14,7 @@ public:
 	unsigned percent_complete; //0-100
 	unsigned total_speed;      //total download speed (bytes/second)
 
-	//IP and speed downloading from server
+	//std::pair<IP, speed (bps)>
 	std::vector<std::pair<std::string, unsigned> > servers;
 };
 #endif

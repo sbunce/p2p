@@ -3,11 +3,9 @@
 #define H_DATABASE_INIT
 
 //custom
+#include "database.hpp"
 #include "path.hpp"
 #include "settings.hpp"
-
-//include
-#include <database_connection.hpp>
 
 namespace database{
 class init
