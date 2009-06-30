@@ -3,7 +3,7 @@
 
 //include
 #include <boost/scoped_ptr.hpp>
-#include <boost/thread/once.hpp>
+#include <boost/thread.hpp>
 #include <boost/utility.hpp>
 
 template<typename T>

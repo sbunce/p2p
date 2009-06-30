@@ -11,6 +11,9 @@
 #include <boost/utility.hpp>
 #include <logger.hpp>
 
+//standard
+#include <limits>
+
 namespace network{
 class reactor
 {
@@ -25,9 +28,9 @@ public:
 		connect_call_back(connect_call_back_in),
 		disconnect_call_back(disconnect_call_back_in),
 		incoming_connections(0),
-		max_incoming_connections(5),
+		max_incoming_connections(0),
 		outgoing_connections(0),
-		max_outgoing_connections(5)
+		max_outgoing_connections(0)
 	{
 		wrapper::start_networking();
 	}
@@ -49,7 +52,7 @@ public:
 		job_cond.notify_one();
 	}
 
-	//functions for getting/settings max connections, and getting current connections
+	//functions for getting/settings connection related things
 	unsigned get_connections()
 	{
 		boost::mutex::scoped_lock lock(connections_mutex);
@@ -60,10 +63,29 @@ public:
 		boost::mutex::scoped_lock lock(connections_mutex);
 		return incoming_connections;
 	}
+	unsigned get_max_incoming_connections()
+	{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		return max_incoming_connections;
+	}
 	unsigned get_outgoing_connections()
 	{
 		boost::mutex::scoped_lock lock(connections_mutex);
 		return outgoing_connections;
+	}
+	unsigned get_max_outgoing_connections()
+	{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		return max_outgoing_connections;
+	}
+
+	//sets maximum number of incoming/outgoing connections
+	void set_max_connections(const unsigned max_incoming_connections_in,
+		const unsigned max_outgoing_connections_in)
+	{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		max_incoming_connections = max_incoming_connections_in;
+		max_outgoing_connections = max_outgoing_connections_in;
 	}
 
 	//functions for getting/setting rate limits, and getting current rates
@@ -122,6 +144,9 @@ protected:
 	*/
 	void add_socket_data(boost::shared_ptr<socket_data> & SD)
 	{
+		DIRECTION direction;
+
+		{//begin lock scope
 		boost::mutex::scoped_lock lock(Socket_Data_mutex);
 		if(SD->socket_FD < 0){
 			LOGGER << "violated precondition";
@@ -138,6 +163,17 @@ protected:
 			LOGGER << "violated precondition";
 			exit(1);
 		}
+		direction = ret.first->second->direction;
+		}//end lock scope
+
+		{//begin lock scope
+		boost::mutex::scoped_lock lock(connections_mutex);
+		if(direction == INCOMING){
+			++incoming_connections;
+		}else{
+			++outgoing_connections;
+		}
+		}//end lock scope
 	}
 
 	/*
@@ -192,7 +228,7 @@ protected:
 		*/
 		boost::shared_ptr<socket_data> SD(new socket_data(-1, host, "", port));
 		SD->failed_connect_flag = true;
-		SD->Error = Error;
+		SD->error = Error;
 		call_back_job.push_back(SD);
 		job_cond.notify_one();
 	}
@@ -208,14 +244,13 @@ protected:
 	{
 		boost::mutex::scoped_lock lock(Socket_Data_mutex);
 		timed_out.clear();
-		std::map<int, boost::shared_ptr<socket_data> >::iterator
-		iter_cur = Socket_Data_Network.begin(),
-		iter_end = Socket_Data_Network.end();
-		while(iter_cur != iter_end){
+		for(std::map<int, boost::shared_ptr<socket_data> >::iterator
+			iter_cur = Socket_Data_Network.begin(), iter_end = Socket_Data_Network.end();
+			iter_cur != iter_end; ++iter_cur)
+		{
 			if(std::time(NULL) - iter_cur->second->last_seen > 4){
 				timed_out.push_back(iter_cur->second->socket_FD);
 			}
-			++iter_cur;
 		}
 	}
 
@@ -230,20 +265,54 @@ protected:
 		std::map<int, boost::shared_ptr<socket_data> >::iterator
 			iter = Socket_Data_Network.find(socket_FD);
 		if(iter == Socket_Data_Network.end()){
-			LOGGER << "violated precondition";
+			LOGGER << "violated precondition ";
 			exit(1);
 		}
 		return iter->second;
 	}
 
+	bool incoming_connection_limit_reached()
+	{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		return incoming_connections >= max_incoming_connections;
+	}
+
+	bool outgoing_connection_limit_reached()
+	{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		return outgoing_connections >= max_outgoing_connections;
+	}
+
 	/*
 	Removes socket_data from both Socket_Data_All and Socket_Data_Network.
+	Precondition: Socket must exist in Socket_Data_All (it must have been added
+		with add_socket_data()).
 	*/
 	void remove_socket_data(const int socket_FD)
 	{
+		DIRECTION direction;
+
+		{//begin lock scope
 		boost::mutex::scoped_lock lock(Socket_Data_mutex);
-		Socket_Data_All.erase(socket_FD);
+		std::map<int, boost::shared_ptr<socket_data> >::iterator
+			iter = Socket_Data_All.find(socket_FD);
+		if(iter == Socket_Data_All.end()){
+			LOGGER << "violated precondition";
+			exit(1);
+		}
+		direction = iter->second->direction;
+		Socket_Data_All.erase(iter);
 		Socket_Data_Network.erase(socket_FD);
+		}//end lock scope
+
+		{//begin lock scope
+		boost::mutex::scoped_lock lock(connections_mutex);
+		if(direction == INCOMING){
+			--incoming_connections;
+		}else{
+			--outgoing_connections;
+		}
+		}//end lock scope
 	}
 
 	/* Functions Reactors Must Define.
@@ -253,6 +322,9 @@ protected:
 	finish_job:
 		After worker does call backs this function will be called so that the
 		socket is again monitored for activity.
+	hard_connection_limit:
+		This function returns the maximum possible number of sockets supported by
+		the reactor. The number returned must always be the same during runtime.
 	start_networking:
 		After the reactor is constructed the reactor::start() function will be
 		called. The reactor::start() function will call the start_networking()
@@ -271,7 +343,9 @@ protected:
 private:
 	/* Connection counts and limits.
 	Note: All these must be locked with connections_mutex.
-
+	max_connections:
+		This is the maximum possible number of connections the reactor supports.
+		The reactor_select() for example supports slightly less than 1024.
 	incoming_connections:
 		Number of connections remote hosts established with us.
 	max_incoming_connections:
@@ -331,7 +405,7 @@ private:
 				job_cond.wait(job_mutex);
 			}
 
-			//connect jobs always prioritized over call
+			//connect jobs always prioritized over call back
 			if(!connect_job.empty()){
 				connect_info = connect_job.front();
 				connect_job.pop_front();

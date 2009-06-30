@@ -1,6 +1,7 @@
 TODO
 
--Make wrapper for send()/recv() that takes a socket and a buffer.
+-It's possible for sockets to get reused before a remove_socket_data is called
+causing the precondition to be violated.
 -Generating prime PRNG needs to be fast PRNG, not /dev/urandom. That should only
 be used to seed the fast PRNG. Miller-Rabin test count needs to be adjusted
 according to how big the prime is.

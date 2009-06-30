@@ -29,11 +29,21 @@ FAILED_INVALID:
 	This error means that future attempts to connect to this address will
 	never succeed.
 */
-enum ERROR{
+enum ERROR {
 	NONE,
 	MAX_CONNECTIONS,
 	FAILED_VALID,
 	FAILED_INVALID
+};
+
+/*
+Direction of a connection. An incoming connection is one a remote host
+established with us. An outgoing connection is one we establish with a remote
+host.
+*/
+enum DIRECTION {
+	INCOMING,
+	OUTGOING
 };
 
 /*
@@ -49,6 +59,8 @@ public:
 		const std::string & host_in,
 		const std::string & IP_in,
 		const std::string & port_in,
+		const bool localhost_in,
+		const DIRECTION direction_in,
 		bool & disconnect_flag_in,
 		buffer & recv_buff_in,
 		buffer & send_buff_in,
@@ -58,21 +70,25 @@ public:
 		host(host_in),
 		IP(IP_in),
 		port(port_in),
+		localhost(localhost_in),
+		direction(direction_in),
 		disconnect_flag(disconnect_flag_in),
 		recv_buff(recv_buff_in),
 		send_buff(send_buff_in),
-		Error(Error_in)
+		error(Error_in)
 	{}
 
 	//const references to save space, non-const references may be changed
-	const int socket_FD;      //WARNING: do not write to this
-	const std::string & host; //empty when incoming connection
-	const std::string & IP;   //IP address host resolved to
-	const std::string & port; //port on remote end
+	const int socket_FD;
+	const std::string & host;  //host connected to (empty when incoming connection)
+	const std::string & IP;    //IP address host resolved to
+	const std::string & port;  //port on remote end
+	const bool localhost;      //true if connection to or from localhost
+	const DIRECTION direction;
 	buffer & recv_buff;
 	buffer & send_buff;
-	bool & disconnect_flag;   //trigger disconnect when set to true
-	const ERROR & Error;
+	bool & disconnect_flag;    //trigger disconnect when set to true
+	const ERROR & error;
 
 	/*
 	These must be set in the connect call back or the program will be
@@ -106,29 +122,33 @@ public:
 		recv_flag(false),
 		send_flag(false),
 		disconnect_flag(false),
-		Error(NONE),
+		error(NONE),
 		last_seen(std::time(NULL)),
 		localhost((IP.find("127.") == 0) || (IP == "::1")),
+		direction(host.empty() ? INCOMING : OUTGOING),
 		Socket_Data_Visible(
 			socket_FD,
 			host,
 			IP,
 			port,
+			localhost,
+			direction,
 			disconnect_flag,
 			recv_buff,
 			send_buff,
-			Error
+			error
 		)
 	{}
 
-	const int socket_FD;    //should not be used except by reactor_*
-	const std::string host; //name we connected to (ie "google.com")
-	const std::string IP;   //IP host resolved to
-	const std::string port; //if listen_port == port then connection is incoming
-	std::time_t last_seen;  //last time seen
+	const int socket_FD;       //should not be used except by reactor_*
+	const std::string host;    //name we connected to (ie "google.com")
+	const std::string IP;      //IP host resolved to
+	const std::string port;    //if listen_port == port then connection is incoming
+	const bool localhost;      //true if connection to or from localhost
+	const DIRECTION direction;
 
-	//set to true if this is a localhost connection
-	const bool localhost;
+	//last time seen (used for timeouts)
+	std::time_t last_seen;
 
 	/*
 	failed_connect_flag:
@@ -157,7 +177,7 @@ public:
 	buffer recv_buff;
 	buffer send_buff;
 
-	ERROR Error;
+	ERROR error;
 
 	/*
 	This is needed if the host resolves to multiple IPs. This is used to try

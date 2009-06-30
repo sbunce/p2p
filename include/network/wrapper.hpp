@@ -92,11 +92,7 @@ public:
 		//returns true if info is good and may be used with other wrapper functions
 		bool resolved() const
 		{
-			if(res == NULL){
-				return false;
-			}else{
-				return res_cur != NULL;
-			}
+			return res_cur != NULL;
 		}
 
 	private:
@@ -474,7 +470,7 @@ private:
 		if(!bind_socket(listener, Info)){
 			error();
 		}
-		int backlog = 64;
+		int backlog = 32;
 		if(listen(listener, backlog) == -1){
 			error();
 		}

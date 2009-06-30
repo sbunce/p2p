@@ -68,15 +68,15 @@ public:
 		boost::shared_ptr<wrapper::info> & Info)
 	{
 		if(!Info->resolved()){
-			call_back_failed_connect(host, port, FAILED_VALID);
+			call_back_failed_connect(host, port, FAILED_INVALID);
 			return;
 		}
 
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(connect_pending_mutex);
-		connect_pending.push_back(connect_job(host, port, Info));
-		send(selfpipe_write, "0", 1, MSG_NOSIGNAL);
+		connect_pending.push_back(boost::shared_ptr<connect_job>(new connect_job(host, port, Info)));
 		}//end lock scope
+		send(selfpipe_write, "0", 1, MSG_NOSIGNAL);
 	}
 
 	virtual void finish_job(boost::shared_ptr<socket_data> & SD)
@@ -91,6 +91,27 @@ public:
 			job_finished.push_back(SD);
 			send(selfpipe_write, "0", 1, MSG_NOSIGNAL);
 		}
+	}
+
+	/*
+	Returns the maximum number of connections this reactor supports.
+	*/
+	static unsigned max_connections_supported()
+	{
+		#ifdef _WIN32
+		/*
+		Subtract two for possible listeners (IPv4 and IPv6 listener). Subtract one
+		for self-pipe read.
+		*/
+		return FD_SETSIZE - 3
+		#else
+		/*
+		Subtract two for possible listeners (some POSIX systems don't support
+		dual-stack so we subtract two to leave space). Subtract 3 for
+		stdin/stdout/stderr. Subtract one for self-pipe read.
+		*/
+		return FD_SETSIZE - 6;
+		#endif
 	}
 
 private:
@@ -133,7 +154,7 @@ private:
 	this vector.
 	*/
 	boost::mutex job_finished_mutex;
-	std::vector<boost::shared_ptr<socket_data> > job_finished;
+	std::deque<boost::shared_ptr<socket_data> > job_finished;
 
 	/*
 	New sockets transferred to select_loop_thread with this. This is needed so
@@ -158,7 +179,7 @@ private:
 		boost::shared_ptr<wrapper::info> Info;
 	};
 	boost::mutex connect_pending_mutex;
-	std::vector<connect_job> connect_pending;
+	std::deque<boost::shared_ptr<connect_job> > connect_pending;
 
 	/*
 	Sockets finished_job() needs disconnected. This is done instead of calling
@@ -166,7 +187,7 @@ private:
 	being_FD and end_FD can be called.
 	*/
 	boost::mutex disconnect_pending_mutex;
-	std::vector<int> disconnect_pending;
+	std::deque<int> disconnect_pending;
 
 	/*
 	Add socket to master_read_FDS and adjusts begin_FD and end_FD.
@@ -189,10 +210,14 @@ private:
 		while(new_FD != -1){
 			new_FD = wrapper::accept_socket(listener);
 			if(new_FD != -1){
-				boost::shared_ptr<socket_data> SD(new socket_data(new_FD, "",
-					wrapper::get_IP(new_FD), wrapper::get_port(new_FD)));
-				add_socket_data(SD);
-				call_back(new_FD);
+				if(incoming_connection_limit_reached()){
+					wrapper::disconnect(new_FD);
+				}else{
+					boost::shared_ptr<socket_data> SD(new socket_data(new_FD, "",
+						wrapper::get_IP(new_FD), wrapper::get_port(new_FD)));
+					add_socket_data(SD);
+					call_back(new_FD);
+				}
 			}
 		}
 	}
@@ -305,9 +330,10 @@ private:
 						FD_CLR(socket_FD, &write_FDS);
 						FD_CLR(socket_FD, &connect_FDS);
 						if(!wrapper::async_connect_succeeded(socket_FD)){
+							FD_CLR(socket_FD, &read_FDS);
 							boost::shared_ptr<socket_data> SD = get_socket_data(socket_FD);
 							SD->failed_connect_flag = true;
-							SD->Error = FAILED_VALID;
+							SD->error = FAILED_VALID;
 						}
 					}
 
@@ -371,9 +397,7 @@ private:
 			}else if(n_bytes > 0){
 				SD->recv_buff.tail_resize(n_bytes);
 				SD->last_seen = std::time(NULL);
-				if(!SD->localhost){
-					Rate_Limit.add_download_bytes(n_bytes);
-				}
+				Rate_Limit.add_download_bytes(n_bytes);
 				max_recv -= n_bytes;
 				SD->recv_flag = true;
 				need_call_back = true;
@@ -425,9 +449,7 @@ private:
 					SD->last_seen = std::time(NULL);
 					bool send_buff_empty = SD->send_buff.empty();
 					SD->send_buff.erase(0, n_bytes);
-					if(!SD->localhost){
-						Rate_Limit.add_upload_bytes(n_bytes);
-					}
+					Rate_Limit.add_upload_bytes(n_bytes);
 					max_send -= n_bytes;
 					if(!send_buff_empty && SD->send_buff.empty()){
 						//send_buff went from non-empty to empty
@@ -445,15 +467,22 @@ private:
 	*/
 	void process_disconnect()
 	{
-		boost::mutex::scoped_lock lock(disconnect_pending_mutex);
-		for(std::vector<int>::iterator iter_cur = disconnect_pending.begin(),
-			iter_end = disconnect_pending.end(); iter_cur != iter_end; ++iter_cur)
-		{
-			remove_socket(*iter_cur);
-			wrapper::disconnect(*iter_cur);
-			remove_socket_data(*iter_cur);
+		while(true){
+			int socket_FD;
+			{//begin lock scope
+			boost::mutex::scoped_lock lock(disconnect_pending_mutex);
+			if(disconnect_pending.empty()){
+				break;
+			}else{
+				socket_FD = disconnect_pending.front();
+				disconnect_pending.pop_front();
+			}
+			}//end lock scope
+
+			wrapper::disconnect(socket_FD);
+			remove_socket(socket_FD);
+			remove_socket_data(socket_FD);
 		}
-		disconnect_pending.clear();
 	}
 
 	/*
@@ -462,62 +491,57 @@ private:
 	*/
 	void process_connect()
 	{
-		std::vector<connect_job> CP;
+		while(true){
+			boost::shared_ptr<connect_job> CJ;
+			{//begin lock scope
+			boost::mutex::scoped_lock lock(connect_pending_mutex);
+			if(connect_pending.empty()){
+				break;
+			}else{
+				CJ = connect_pending.front();
+				connect_pending.pop_front();
+			}
+			}//end lock scope
 
-		//copy connect_pending so we can unlock ASAP
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(connect_pending_mutex);
-		CP.assign(connect_pending.begin(), connect_pending.end());
-		connect_pending.clear();
-		}//end lock scope
-
-		for(std::vector<connect_job>::iterator iter_cur = CP.begin(), iter_end = CP.end();
-			iter_cur != iter_end; ++iter_cur)
-		{
-			int new_FD = wrapper::create_socket(*iter_cur->Info);
+			int new_FD = wrapper::create_socket(*CJ->Info);
 			if(new_FD == -1){
-				call_back_failed_connect(iter_cur->host, iter_cur->port, FAILED_INVALID);
+				call_back_failed_connect(CJ->host, CJ->port, FAILED_INVALID);
 				continue;
 			}
 
 			//check hard limits
 			#ifdef _WIN32
-			/*
-			On windows the socket_FD numbers will not necessarily be below
-			FD_SETSIZE. However, windows has the fd_count member variable which
-			will tell us how many sockets exist in the fd_set.
-			*/
 			if(master_read_FDS.fd_count >= FD_SETSIZE){
-				call_back_failed_connect(iter_cur->host, iter_cur->port, MAX_CONNECTIONS);
-				continue;
+				call_back_failed_connect(CJ->host, CJ->port, MAX_CONNECTIONS);
+				break;
 			}
 			#else
-			/*
-			On POSIX systems the fd_set cannot hold sockets >= FD_SETSIZE.
-			*/
 			if(new_FD >= FD_SETSIZE){
-				call_back_failed_connect(iter_cur->host, iter_cur->port, MAX_CONNECTIONS);
-				continue;
+				call_back_failed_connect(CJ->host, CJ->port, MAX_CONNECTIONS);
+				break;
 			}
 			#endif
 
-			//check soft-limits
-			
+			//check soft limit
+			if(outgoing_connection_limit_reached()){
+				call_back_failed_connect(CJ->host, CJ->port, MAX_CONNECTIONS);
+				break;
+			}
 
 			//non-blocking required for async connect
 			wrapper::set_non_blocking(new_FD);
 
-			if(wrapper::connect_socket(new_FD, *iter_cur->Info)){
+			if(wrapper::connect_socket(new_FD, *CJ->Info)){
 				//socket connected right away, rare but it might happen
-				boost::shared_ptr<socket_data> SD(new socket_data(new_FD,
-					iter_cur->host, wrapper::get_IP(*iter_cur->Info), iter_cur->port));
+				boost::shared_ptr<socket_data> SD(new socket_data(new_FD, CJ->host,
+					wrapper::get_IP(*CJ->Info), CJ->port));
 				add_socket_data(SD);
 				call_back(new_FD);
 			}else{
 				//socket in progress of connecting
 				add_socket(new_FD);
-				boost::shared_ptr<socket_data> SD(new socket_data(new_FD, iter_cur->host,
-					wrapper::get_IP(*iter_cur->Info), iter_cur->port, iter_cur->Info));
+				boost::shared_ptr<socket_data> SD(new socket_data(new_FD, CJ->host,
+					wrapper::get_IP(*CJ->Info), CJ->port, CJ->Info));
 				add_socket_data(SD);
 				FD_SET(new_FD, &master_write_FDS);
 				FD_SET(new_FD, &connect_FDS);
@@ -532,17 +556,24 @@ private:
 	*/
 	void process_job_finished()
 	{
-		boost::mutex::scoped_lock lock(job_finished_mutex);
-		for(std::vector<boost::shared_ptr<socket_data> >::iterator iter_cur = job_finished.begin(),
-			iter_end = job_finished.end(); iter_cur != iter_end; ++iter_cur)
-		{
-			add_socket((*iter_cur)->socket_FD);
-			if(!(*iter_cur)->send_buff.empty()){
+		while(true){
+			boost::shared_ptr<socket_data> JF;
+			{//begin lock scope
+			boost::mutex::scoped_lock lock(job_finished_mutex);
+			if(job_finished.empty()){
+				break;
+			}else{
+				JF = job_finished.front();
+				job_finished.pop_front();
+			}			
+			}//end lock scope
+
+			add_socket(JF->socket_FD);
+			if(!JF->send_buff.empty()){
 				//send buff contains data, check socket for writeability
-				FD_SET((*iter_cur)->socket_FD, &master_write_FDS);
+				FD_SET(JF->socket_FD, &master_write_FDS);
 			}
 		}
-		job_finished.clear();
 	}
 
 	/*
@@ -553,26 +584,36 @@ private:
 	{
 		std::vector<int> timed_out;
 		check_timeouts(timed_out);
-		//for(int x=0; x<timed_out.size(); ++x){
 		for(std::vector<int>::iterator iter_cur = timed_out.begin(), iter_end = timed_out.end();
 			iter_cur != iter_end; ++iter_cur)
 		{
-			//if socket failed connection see if there are any more addresses to try
 			boost::shared_ptr<socket_data> SD = get_socket_data(*iter_cur);
 			if(FD_ISSET(*iter_cur, &connect_FDS)){
+				//failed to connect
 				remove_socket(*iter_cur);
 				SD->Info->next_res();
 				if(SD->Info->resolved()){
-					//try next address the host resolved to
+					/*
+					Try next address the host resolved to. We don't do any call back
+					for the first failed connect attempt. We only do a call back when
+					we have exhausted all addresses.
+					*/
+					wrapper::disconnect(*iter_cur);
+					remove_socket_data(*iter_cur);
 					connect(SD->host, SD->port, SD->Info);
 				}else{
+					/*
+					No more addresses to try. We now follow the normal disconnect
+					procedure.
+					*/
 					SD->failed_connect_flag = true;
-					SD->Error = FAILED_VALID;
+					SD->error = FAILED_VALID;
 					call_back(*iter_cur);
 				}
 			}else{
-				remove_socket(*iter_cur);
+				//connected socket timed out
 				SD->disconnect_flag = true;
+				remove_socket(*iter_cur);
 				call_back(*iter_cur);
 			}
 		}

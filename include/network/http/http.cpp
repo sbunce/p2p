@@ -39,7 +39,7 @@ void http::recv_call_back(network::socket & SD)
 
 		replace_encoded_chars();
 		path = fs::system_complete(fs::path(web_root + get_path, fs::native));
-		LOGGER << "req " << path.string();
+		//LOGGER << "req " << path.string();
 		determine_type();
 		read(SD.send_buff);
 	}
