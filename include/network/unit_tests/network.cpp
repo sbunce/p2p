@@ -6,6 +6,7 @@
 #include <convert.hpp>
 #include <network/network.hpp>
 #include <portable_sleep.hpp>
+#include <timer.hpp>
 
 const std::string listen_port = "6969";
 
@@ -59,8 +60,8 @@ void connect_call_back(network::socket & Socket)
 	}else{
 		direction = "out";
 	}
-	LOGGER << direction << " H<" << Socket.host << "> IP<" << Socket.IP << "> P<"
-		<< Socket.port << "> S<" << Socket.socket_FD << ">";
+	//LOGGER << direction << " H<" << Socket.host << "> IP<" << Socket.IP << "> P<"
+	//	<< Socket.port << "> S<" << Socket.socket_FD << ">";
 	Connection.insert(std::make_pair(Socket.socket_FD, new connection(Socket)));
 	Socket.recv_call_back = boost::bind(&connection::recv_call_back, Connection[Socket.socket_FD].get(), _1);
 	Socket.send_call_back = boost::bind(&connection::send_call_back, Connection[Socket.socket_FD].get(), _1);
@@ -75,8 +76,8 @@ void disconnect_call_back(network::socket & Socket)
 	}else{
 		direction = "out";
 	}
-	LOGGER << direction << " H<" << Socket.host << "> IP<" << Socket.IP << "> P<"
-		<< Socket.port << "> S<" << Socket.socket_FD << ">";
+	//LOGGER << direction << " H<" << Socket.host << "> IP<" << Socket.IP << "> P<"
+	//	<< Socket.port << "> S<" << Socket.socket_FD << ">";
 	Connection.erase(Socket.socket_FD);
 }
 
@@ -98,20 +99,20 @@ void failed_connect_call_back(network::socket & Socket)
 int main()
 {
 	LOGGER << "supported connections: " << network::io_service::max_connections_supported();
-	unsigned connection_limit = network::io_service::max_connections_supported() / 2;
 	network::io_service Network(
 		&failed_connect_call_back,
 		&connect_call_back,
 		&disconnect_call_back,
-		connection_limit,     //max_incoming_connections
-		connection_limit,     //max_outgoing_connections
+		network::io_service::max_connections_supported() / 2,
+		network::io_service::max_connections_supported() / 2,
 		"6969"
 	);
 
-	for(int x=0; x<1024; ++x){
-		Network.connect("127.0.0.1", "6969");       //IPv4
-		Network.connect("::1", "6969");             //IPv6
-		//Network.connect("1234.123.123.123", "123"); //malformed
+	boost::uint64_t start = timer::TSC();
+	for(int x=0; x<network::io_service::max_connections_supported() / 2; ++x){
+		//Network.connect("127.0.0.1", "6969");       //IPv4
+		//Network.connect("::1", "6969");             //IPv6
+		//Network.connect("192.168.1.113", "123"); //does not exist
 	}
 
 	bool hack = true;
@@ -124,4 +125,7 @@ int main()
 		portable_sleep::ms(1000);
 		hack = false;
 	}
+	boost::uint64_t end = timer::TSC();
+	LOGGER << network::io_service::max_connections_supported() /
+		timer::elapsed(start, end, timer::SECONDS) << " CPS";
 }

@@ -7,7 +7,7 @@ example usage:
 	boost::uint64_t start = timer::TSC();
 	//code to measure goes here
 	boost::uint64_t end = timer::TSC();
-	elapsed(start, end, timer::SECONDS);
+	timer::elapsed(start, end, timer::SECONDS);
 */
 //include
 #include <boost/cstdint.hpp>

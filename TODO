@@ -7,6 +7,17 @@ be used to seed the fast PRNG. Miller-Rabin test count needs to be adjusted
 according to how big the prime is.
 -P2P program can be opened multiple times. Make lock file.
 
+REACTOR IDEA
+	Have reactor_* keep socket_data in map. Map can be used to iterated through to check
+sockets so that it's not possible to f'up and check a socket a worker is using.
+When doing call back the socket_data should be removed from the map and passed
+to a reactor call back scheduler function. The act of passing the socket_data
+from the reactor_select to the reactor transfers control of the socket data.
+	socket_data with the failed_connect_flag or disconnect_flag set should not
+be passed back to the reactor_select when the reactor is done with it. The
+reactor_select needs to make sure the socket was disconnected before scheduling
+the call back.
+
 
 DEFERRED FEATURES
 

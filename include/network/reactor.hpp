@@ -138,45 +138,6 @@ protected:
 	rate_limit Rate_Limit;
 
 	/*
-	Adds a new socket_data for a specified socket.
-	Precondition: socket_data must not already exist.
-	Precondition: SD->socket_FD >= 0.
-	*/
-	void add_socket_data(boost::shared_ptr<socket_data> & SD)
-	{
-		DIRECTION direction;
-
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(Socket_Data_mutex);
-		if(SD->socket_FD < 0){
-			LOGGER << "violated precondition";
-			exit(1);
-		}
-		std::pair<std::map<int, boost::shared_ptr<socket_data> >::iterator, bool> ret;
-		ret = Socket_Data_All.insert(std::make_pair(SD->socket_FD, SD));
-		if(!ret.second){
-			LOGGER << "violated precondition";
-			exit(1);
-		}
-		ret = Socket_Data_Network.insert(std::make_pair(SD->socket_FD, SD));
-		if(!ret.second){
-			LOGGER << "violated precondition";
-			exit(1);
-		}
-		direction = ret.first->second->direction;
-		}//end lock scope
-
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(connections_mutex);
-		if(direction == INCOMING){
-			++incoming_connections;
-		}else{
-			++outgoing_connections;
-		}
-		}//end lock scope
-	}
-
-	/*
 	Called by the derived class to schedule a call back.
 	Precondition: Network thread must have ownership of the socket_data (it must
 		exist in Socket_Data_Network).
@@ -186,30 +147,11 @@ protected:
 		Socket_Data_Network the program will be terminated because this means a
 		worker is using the socket_data.
 	*/
-	void call_back(const int socket_FD)
+	void call_back(boost::shared_ptr<socket_data> & SD)
 	{
-		boost::shared_ptr<socket_data> SD;
-
-		//find socket_data to do call back with
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(Socket_Data_mutex);
-		std::map<int, boost::shared_ptr<socket_data> >::iterator
-			iter = Socket_Data_Network.find(socket_FD);
-		if(iter == Socket_Data_Network.end()){
-			LOGGER << "violated precondition";
-			exit(1);
-		}else{
-			SD = iter->second;
-			Socket_Data_Network.erase(iter);
-		}
-		}//end lock scope
-
-		//schedule call back
-		{//begin lock scope
 		boost::mutex::scoped_lock lock(job_mutex);
 		call_back_job.push_back(SD);
 		job_cond.notify_one();
-		}//end lock scope
 	}
 
 	/*
@@ -221,11 +163,12 @@ protected:
 		const ERROR Error)
 	{
 		boost::mutex::scoped_lock lock(job_mutex);
-		assert(Error != NONE);
+
 		/*
-		This is a dummy socket_data which allows us to use the same mechanism for doing
-		the failed_connect_call_back(). It won't be passed back to finish_job().
+		Create a dummy socket_data so we can use the same mechanism for the
+		failed_connect_call_back.
 		*/
+		assert(Error != NONE);
 		boost::shared_ptr<socket_data> SD(new socket_data(-1, host, "", port));
 		SD->failed_connect_flag = true;
 		SD->error = Error;
@@ -234,92 +177,81 @@ protected:
 	}
 
 	/*
-	Checks timeouts on all sockets.
-	Note: Only sockets in Socket_Data_Network are checked because that means the
-		workers aren't currently using them. A socket can only time out when the
-		network thread isn't doing anything with it (no data to send/recv).
-	Note: This function only needs to be checked once per second.
+	incoming_decrement:
+		Decrements the incoming connection count.
+		Note: Done by reactor::run_call_back_job().
+		Precondition: incoming_connections != 0.
+	incoming_increment:
+		Increments the incoming connection count.
+		Precondition: incoming_connections < max_incoming_connections.
+	incoming_limit_reached:
+		Return true if incoming connection limit reached.
+	outgoing_decrement:
+		Decrements the outgoing connection count.
+		Note: Done by reactor::run_call_back_job().
+		Precondition: outgoing_connections != 0.
+	outgoing_increment:
+		Increments the outgoing connection count.
+		Precondition: outgoing_connections < max_outgoing_connections.
+	outgoing_limit_reached:
+		Return true if outgoing connection limit reached.
 	*/
-	void check_timeouts(std::vector<int> & timed_out)
+	void incoming_decrement()
 	{
-		boost::mutex::scoped_lock lock(Socket_Data_mutex);
-		timed_out.clear();
-		for(std::map<int, boost::shared_ptr<socket_data> >::iterator
-			iter_cur = Socket_Data_Network.begin(), iter_end = Socket_Data_Network.end();
-			iter_cur != iter_end; ++iter_cur)
-		{
-			if(std::time(NULL) - iter_cur->second->last_seen > 4){
-				timed_out.push_back(iter_cur->second->socket_FD);
-			}
-		}
-	}
-
-	/*
-	Returns the socket_data associated with the socket.
-	Precondition: Socket must exists in Socket_Data_Network (it must be owned by
-		the network thread).
-	*/
-	boost::shared_ptr<socket_data> get_socket_data(const int socket_FD)
-	{
-		boost::mutex::scoped_lock lock(Socket_Data_mutex);
-		std::map<int, boost::shared_ptr<socket_data> >::iterator
-			iter = Socket_Data_Network.find(socket_FD);
-		if(iter == Socket_Data_Network.end()){
-			LOGGER << "violated precondition ";
+		boost::mutex::scoped_lock lock(connections_mutex);
+		if(incoming_connections <= 0){
+			LOGGER << "violated precondition";
 			exit(1);
+		}else{
+			--incoming_connections;
 		}
-		return iter->second;
 	}
-
-	bool incoming_connection_limit_reached()
+	void incoming_increment()
+	{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		if(incoming_connections >= max_incoming_connections){
+			LOGGER << "violated precondition";
+			exit(1);
+		}else{
+			++incoming_connections;
+		}
+	}
+	bool incoming_limit_reached()
 	{
 		boost::mutex::scoped_lock lock(connections_mutex);
 		return incoming_connections >= max_incoming_connections;
 	}
-
-	bool outgoing_connection_limit_reached()
+	void outgoing_decrement()
 	{
 		boost::mutex::scoped_lock lock(connections_mutex);
-		return outgoing_connections >= max_outgoing_connections;
-	}
-
-	/*
-	Removes socket_data from both Socket_Data_All and Socket_Data_Network.
-	Precondition: Socket must exist in Socket_Data_All (it must have been added
-		with add_socket_data()).
-	*/
-	void remove_socket_data(const int socket_FD)
-	{
-		DIRECTION direction;
-
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(Socket_Data_mutex);
-		std::map<int, boost::shared_ptr<socket_data> >::iterator
-			iter = Socket_Data_All.find(socket_FD);
-		if(iter == Socket_Data_All.end()){
+		if(outgoing_connections <= 0){
 			LOGGER << "violated precondition";
 			exit(1);
-		}
-		direction = iter->second->direction;
-		Socket_Data_All.erase(iter);
-		Socket_Data_Network.erase(socket_FD);
-		}//end lock scope
-
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(connections_mutex);
-		if(direction == INCOMING){
-			--incoming_connections;
 		}else{
 			--outgoing_connections;
 		}
-		}//end lock scope
+	}
+	void outgoing_increment()
+	{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		if(outgoing_connections >= max_outgoing_connections){
+			LOGGER << "violated precondition";
+			exit(1);
+		}else{
+			++outgoing_connections;
+		}
+	}
+	bool outgoing_limit_reached()
+	{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		return outgoing_connections >= max_outgoing_connections;
 	}
 
 	/* Functions Reactors Must Define.
 	connect:
 		Establishes new connection. This is called by a worker after DNS
 		resolution.
-	finish_job:
+	finish_call_back:
 		After worker does call backs this function will be called so that the
 		socket is again monitored for activity.
 	hard_connection_limit:
@@ -336,7 +268,7 @@ protected:
 	*/
 	virtual void connect(const std::string & host, const std::string & port,
 		boost::shared_ptr<wrapper::info> & Info) = 0;
-	virtual void finish_job(boost::shared_ptr<socket_data> & SD) = 0;
+	virtual void finish_call_back(boost::shared_ptr<socket_data> & SD) = 0;
 	virtual void start_networking() = 0;
 	virtual void stop_networking() = 0;
 
@@ -361,28 +293,10 @@ private:
 	unsigned outgoing_connections;
 	unsigned max_outgoing_connections;
 
-	/*
-	Connected socket associated with socket_data. All access to these are locked
-	with Socket_Data_mutex.
-	Socket_Data_All: This is a collection of all socket_data objects. A
-		socket_data object will be put in here upon add_socket_data() and removed
-		upon remove_socket_data().
-	Socket_Data_Network: This container stores socket_data which the network
-		thread (thread in derived class) has access to. When a call back job is
-		scheduled for a socket the coresponding socket_data will be removed from
-		this container. This is a way of transferring ownership of a socket_data
-		between threads.
-	*/
-	boost::mutex Socket_Data_mutex;
-	std::map<int, boost::shared_ptr<socket_data> > Socket_Data_All;
-	std::map<int, boost::shared_ptr<socket_data> > Socket_Data_Network;
-
 	//worker threads to handle call backs and DNS resolution
 	boost::thread_group Workers;
 
-	/*
-	Mutex used with job_cond. Mutex locks access to all job_* containers.
-	*/
+	//mutex locks access to all job_* containers
 	boost::mutex job_mutex;
 	boost::condition_variable_any job_cond;
 	std::deque<std::pair<std::string, std::string> > connect_job; //std::pair<host, port>
@@ -397,20 +311,19 @@ private:
 	{
 		while(true){
 			std::pair<std::string, std::string> connect_info;
-			boost::shared_ptr<socket_data> call_back_info;
+			boost::shared_ptr<socket_data> SD;
 
 			{//begin lock scope
 			boost::mutex::scoped_lock lock(job_mutex);
 			if(connect_job.empty() && call_back_job.empty()){
 				job_cond.wait(job_mutex);
 			}
-
 			//connect jobs always prioritized over call back
 			if(!connect_job.empty()){
 				connect_info = connect_job.front();
 				connect_job.pop_front();
 			}else if(!call_back_job.empty()){
-				call_back_info = call_back_job.front();
+				SD = call_back_job.front();
 				call_back_job.pop_front();
 			}
 			}//end lock scope
@@ -421,8 +334,8 @@ private:
 					connect_info.first.c_str(), connect_info.second.c_str()));
 				connect(connect_info.first, connect_info.second, Info);
 			}
-			if(call_back_info.get() != NULL){
-				run_call_back_job(call_back_info);
+			if(SD){
+				run_call_back_job(SD);
 			}
 		}
 	}
@@ -432,6 +345,7 @@ private:
 	{
 		if(SD->failed_connect_flag){
 			failed_connect_call_back(SD->Socket_Data_Visible);
+			wrapper::disconnect(SD->socket_FD);
 		}else{
 			if(!SD->connect_flag){
 				SD->connect_flag = true;
@@ -449,20 +363,22 @@ private:
 			}
 			if(SD->disconnect_flag){
 				disconnect_call_back(SD->Socket_Data_Visible);
+				wrapper::disconnect(SD->socket_FD);
+			}
+		}
+
+		if(SD->socket_FD != -1 && SD->failed_connect_flag || SD->disconnect_flag){
+			if(SD->direction == INCOMING){
+				incoming_decrement();
+			}else{
+				outgoing_decrement();
 			}
 		}
 
 		//ignore dummy socket_data used to do failed_connect_call_back()
-		if(SD->socket_FD != -1){
-			transfer_socket_data_ownership(SD);
-			finish_job(SD);
+		if(SD->socket_FD != -1 && !SD->failed_connect_flag && !SD->disconnect_flag){
+			finish_call_back(SD);
 		}
-	}
-
-	void transfer_socket_data_ownership(boost::shared_ptr<socket_data> & SD)
-	{
-		boost::mutex::scoped_lock lock(Socket_Data_mutex);
-		Socket_Data_Network.insert(std::make_pair(SD->socket_FD, SD));
 	}
 };
 }

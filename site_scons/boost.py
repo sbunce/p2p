@@ -59,3 +59,6 @@ def library_path():
 			if boost_dir and os.path.exists(os.path.join(boost_dir, 'lib')):
 				return os.path.join(boost_dir, 'lib')
 		print 'boost error: could not locate lib directory'
+	else:
+		#already in LIBPATH by default
+		return ''

@@ -37,6 +37,7 @@ def setup(env):
 		boost.library('system'),
 		boost.library('date_time'),
 		boost.library('filesystem'),
+		boost.library('regex'),
 		boost.library('thread')
 	]
 
