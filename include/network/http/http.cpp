@@ -7,7 +7,7 @@ http::http(
 	Type(UNDETERMINED),
 	index(0)
 {
-
+	std::srand(time(NULL));
 }
 
 void http::recv_call_back(network::socket & SD)
@@ -83,6 +83,59 @@ void http::determine_type()
 	}
 }
 
+std::string http::create_header(const unsigned content_length)
+{
+	/* Example Header:
+	HTTP/1.1 200 OK
+	Date: Mon, 01 Jan 1970 01:00:00 GMT
+	Server: test
+	Last-Modified: Mon, 01 Jan 1970 01:00:00 GMT
+	Etag: "3f80f-1b6-3e1cb03b"
+	Accept-Ranges: bytes
+	Content-Length: 438
+	Connection: close
+	Content-Type: text/html; charset=UTF-8
+	*/
+
+	std::string header;
+	header += "HTTP/1.1 200 OK\r\n";
+
+	//dummy date
+	header += "Date: Mon, 01 Jan 1970 01:00:00 GMT\r\n";
+
+	//server name/version
+	header += "Server: test 123\r\n";
+
+	//dummy page modification date
+	header += "Last-Modified: Mon, 01 Jan 1970 01:00:00 GMT\r\n";
+
+	//some sort of page hash (determines if browser uses cached version)
+	header += "Etag: \"";
+	for(int x=0; x<18; ++x){
+		//0-9
+		header += (char)((std::rand() % 10) + 48);
+	}
+	header += "\"\r\n";
+
+	//"bytes" means we support partial file requests, any other value means we don't
+	header += "Accept-Ranges: unsupported\r\n";
+
+	//length of document following header
+	std::stringstream ss;
+	ss << content_length;
+	header += "Content-Length: " + ss.str() + "\r\n";
+
+	//indicate we will close connection after send done
+	header += "Connection: close\r\n";
+
+	//do NOT specify content type, let the client try to figure it out
+	//header += "Content-Type: text/html; charset=UTF-8\r\n";
+
+	//header must end with blank line
+	header += "\r\n";
+	return header;
+}
+
 void http::read(network::buffer & send_buff)
 {
 	namespace fs = boost::filesystem;
@@ -124,15 +177,26 @@ void http::read(network::buffer & send_buff)
 		}
 		ss << "</table>\n"
 			<< "</body>";
-		send_buff.append((unsigned char *)ss.str().data(), ss.str().size());
+		std::string header = create_header(ss.str().size());
+		std::string buff = header + ss.str();
+		send_buff.append((unsigned char *)buff.data(), buff.size());
 		Type = DONE;
 	}else if(Type == FILE){
+		boost::uint64_t size;
+		try{
+			size = boost::filesystem::file_size(path);
+		}catch(std::exception & ex){
+			LOGGER << "exception: " << ex.what();
+			exit(1);
+		}
 		std::fstream fin(path.string().c_str(), std::ios::in | std::ios::binary);
 		if(fin.is_open()){
 			fin.seekg(index, std::ios::beg);
-			send_buff.tail_reserve(4096);
-			fin.read((char *)send_buff.tail_start(), send_buff.tail_size());
-			send_buff.tail_resize(fin.gcount());
+			char buff[4096];
+			fin.read(buff, sizeof(buff));
+			std::string header = create_header(size);
+			send_buff.append((unsigned char *)header.data(), header.size());
+			send_buff.append((unsigned char *)buff, fin.gcount());
 			index += fin.gcount();
 			if(fin.eof()){
 				Type == DONE;

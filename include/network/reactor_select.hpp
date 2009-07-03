@@ -252,6 +252,8 @@ private:
 			process_call_back_finished();
 			process_timeouts();
 
+			timeval tv;
+
 			/*
 			Maximum bytes that can be send()'d/recv()'d before exceeding maximum
 			upload/download rate. These are decremented by however many bytes are
@@ -264,19 +266,25 @@ private:
 			if(max_send == 0){
 				//rate limit reached, only check for new connections
 				write_FDS = connect_FDS;
+
+				/*
+				The select() time out is needed because of the rate limiter. If we
+				hit the maximum rate we will not send/recv until the current second
+				elapses. If select() didn't have a timeout select could get stuck.
+				With the timeout select will return and the master_write_FDS will be
+				checked.
+				*/
+				tv.tv_sec = 0; tv.tv_usec = 1000000 / 100;
 			}else{
 				//check for writeability of all sockets
 				write_FDS = master_write_FDS;
-			}
 
-			/*
-			The select time out is needed because of the rate limiter. If we hit
-			the maximum rate we will not send/recv until the current second
-			elapses. If select didn't have a timeout it'd get stuck. With the
-			timeout select will return and the master_write_FDS will be checked.
-			*/
-			timeval tv;
-			tv.tv_sec = 0; tv.tv_usec = 1000000 / 100;
+				/*
+				When the rate limit is not maxed out there is no reason to have a
+				short sleep.
+				*/
+				tv.tv_sec = 1; tv.tv_usec = 0;
+			}
 
 			int service = select(end_FD, &read_FDS, &write_FDS, NULL, &tv);
 

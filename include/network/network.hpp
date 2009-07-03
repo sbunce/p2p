@@ -3,6 +3,7 @@
 
 //custom
 #include "reactor_select.hpp"
+#include "validate.hpp"
 
 //include
 #include <boost/shared_ptr.hpp>
@@ -51,9 +52,14 @@ public:
 	be a IP address or hostname. DNS resolution done with an internal thread
 	pool.
 	*/
-	void connect(const std::string & host, const std::string & port)
+	bool connect(const std::string & host, const std::string & port)
 	{
-		Reactor->connect(host, port);
+		if(valid_address(host) && valid_port(port)){
+			Reactor->connect(host, port);
+			return true;
+		}else{
+			return false;
+		}
 	}
 
 	/* Connection count/limit related functions.

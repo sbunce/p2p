@@ -45,6 +45,9 @@ private:
 	/*
 	determine_type:
 		Sets connection::Type to what type of request was made.
+	create_header:
+		Creates a HTTP header. Content length should be the size (bytes) of the
+		document we're sending.
 	read:
 		Appends new data on to send_buff if any exists.
 		Precondition: determine_type must have been called.
@@ -52,6 +55,7 @@ private:
 		Replaces stuff like %20 with ' '.
 	*/
 	void determine_type();
+	std::string create_header(const unsigned content_length);
 	void read(network::buffer & send_buff);
 	void replace_encoded_chars();
 };

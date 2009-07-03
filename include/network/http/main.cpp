@@ -71,7 +71,7 @@ int main(int argc, char ** argv)
 		0,
 		"8080"
 	);
-	//Network.set_max_upload_rate(1024);
+	//Network.set_max_upload_rate(1024*1024);
 
 	//register signal handlers
 	signal(SIGINT, signal_handler);
