@@ -1,17 +1,4 @@
 /*
-Short:
-	This container wraps all the call back and incremental blob reading/writing
-	features of SQLite3.
-
-Copying:
-	This container may be copied, but when it is the same database connection is
-	used for every copy. This container (and copies of this container) are thread
-	safe.
-
-Ref Counting:
-	This object reference counts. When all database::connections instantations
-	are destructed the database connection is closed.
-
 ************************** Open Database: **************************************
  database::connection DB("database");
 

@@ -13,7 +13,8 @@ class reactor_select : public network::reactor
 {
 public:
 	reactor_select(
-		boost::function<void (socket_data_visible & Socket)> failed_connect_call_back_in,
+		boost::function<void (const std::string & host, const std::string & port,
+			const network::ERROR error)> failed_connect_call_back_in,
 		boost::function<void (socket_data_visible & Socket)> connect_call_back_in,
 		boost::function<void (socket_data_visible & Socket)> disconnect_call_back_in,
 		const std::string & port = "-1"
@@ -69,7 +70,7 @@ public:
 	{
 		boost::mutex::scoped_lock lock(connect_pending_mutex);
 		if(!Info->resolved()){
-			call_back_failed_connect(host, port, FAILED_VALID);
+			call_back_failed_connect(host, port, FAILED_DNS_RESOLUTION);
 		}else{
 			connect_pending.push_back(boost::shared_ptr<connect_job>(new connect_job(host, port, Info)));
 			send(selfpipe_write, "0", 1, MSG_NOSIGNAL);
@@ -348,15 +349,25 @@ private:
 					}
 
 					if(FD_ISSET(socket_FD, &write_FDS) && FD_ISSET(socket_FD, &connect_FDS)){
-						need_call_back = true;
 						socket_serviced = true;
+						FD_CLR(socket_FD, &read_FDS);
 						FD_CLR(socket_FD, &write_FDS);
 						FD_CLR(socket_FD, &connect_FDS);
-						if(!wrapper::async_connect_succeeded(socket_FD)){
-							FD_CLR(socket_FD, &read_FDS);
+						if(wrapper::async_connect_succeeded(socket_FD)){
+							need_call_back = true;
+						}else{
+							//see if there is another address to try
 							boost::shared_ptr<socket_data> SD = get_socket_data(socket_FD);
-							SD->failed_connect_flag = true;
-							SD->error = FAILED_VALID;
+							SD->Info->next_res();
+							if(SD->Info->resolved()){
+								boost::mutex::scoped_lock lock(connect_pending_mutex);
+								connect_pending.push_back(boost::shared_ptr<connect_job>(
+									new connect_job(SD->host, SD->port, SD->Info)));
+							}else{
+								need_call_back = true;
+								SD->failed_connect_flag = true;
+								SD->error = TIMED_OUT;
+							}
 						}
 					}
 
@@ -523,7 +534,7 @@ private:
 					Most likely invalid protocol family meaning we will never be able
 					to connect to this address.
 					*/
-					call_back_failed_connect(CJ->host, CJ->port, FAILED_INVALID);
+					call_back_failed_connect(CJ->host, CJ->port, UNKNOWN);
 					continue;
 				}
 			}
@@ -603,7 +614,7 @@ private:
 				boost::shared_ptr<socket_data> SD = iter_cur->second;
 				Socket_Data.erase(iter_cur++);
 				SD->failed_connect_flag = true;
-				SD->error = FAILED_VALID;
+				SD->error = TIMED_OUT;
 				remove_socket(SD->socket_FD);
 				call_back(SD);
 			}else{

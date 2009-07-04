@@ -19,21 +19,17 @@ NONE:
 	Default value of Error.
 MAX_CONNECTIONS:
 	Reached the maximum number of possible connections.
-FAILED_VALID:
-	Connection attempt failed. A DNS lookup failed, or an attempt to connect
-	to the host failed. It is possible that in the future an attempt might
-	succeed.
-FAILED_INVALID:
-	The address family, or address protocol might be invalid. This can happen
-	when trying to connect to IPv6 on a computer that doesn't support IPv6.
-	This error means that future attempts to connect to this address will
-	never succeed.
+FAILED_DNS_RESOLVE:
+	DNS resolution failed.
+TIMED_OUT:
+	Socket disconnected due to inactivity.
 */
 enum ERROR {
 	NONE,
 	MAX_CONNECTIONS,
-	FAILED_VALID,
-	FAILED_INVALID
+	FAILED_DNS_RESOLUTION,
+	TIMED_OUT,
+	UNKNOWN
 };
 
 /*

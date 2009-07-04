@@ -20,7 +20,8 @@ class reactor
 public:
 	//derived class ctors must call this base class ctor
 	reactor(
-		boost::function<void (socket_data_visible & Socket)> failed_connect_call_back_in,
+		boost::function<void (const std::string & host, const std::string & port,
+			const network::ERROR error)> failed_connect_call_back_in,
 		boost::function<void (socket_data_visible & Socket)> connect_call_back_in,
 		boost::function<void (socket_data_visible & Socket)> disconnect_call_back_in
 	):
@@ -168,7 +169,6 @@ protected:
 		Create a dummy socket_data so we can use the same mechanism for the
 		failed_connect_call_back.
 		*/
-		assert(Error != NONE);
 		boost::shared_ptr<socket_data> SD(new socket_data(-1, host, "", port));
 		SD->failed_connect_flag = true;
 		SD->error = Error;
@@ -296,46 +296,47 @@ private:
 	//worker threads to handle call backs and DNS resolution
 	boost::thread_group Workers;
 
-	//mutex locks access to all job_* containers
+	//mutex locks access to all *_job containers
 	boost::mutex job_mutex;
 	boost::condition_variable_any job_cond;
-	std::deque<std::pair<std::string, std::string> > connect_job; //std::pair<host, port>
+	//connect_job, std::pair<host, port>
+	std::deque<std::pair<std::string, std::string> > connect_job;
 	std::deque<boost::shared_ptr<socket_data> > call_back_job;
 
 	//call backs
-	boost::function<void (socket_data_visible & Socket)> failed_connect_call_back;
+	boost::function<void (const std::string & host, const std::string & port,
+		const network::ERROR error)> failed_connect_call_back;
 	boost::function<void (socket_data_visible & Socket)> connect_call_back;
 	boost::function<void (socket_data_visible & Socket)> disconnect_call_back;
 
 	void pool()
 	{
 		while(true){
-			std::pair<std::string, std::string> connect_info;
-			boost::shared_ptr<socket_data> SD;
+			std::pair<std::string, std::string> CJ; //connect job
+			boost::shared_ptr<socket_data> CBJ;     //call back job
 
 			{//begin lock scope
 			boost::mutex::scoped_lock lock(job_mutex);
 			if(connect_job.empty() && call_back_job.empty()){
 				job_cond.wait(job_mutex);
 			}
-			//connect jobs always prioritized over call back
 			if(!connect_job.empty()){
-				connect_info = connect_job.front();
+				CJ = connect_job.front();
 				connect_job.pop_front();
 			}else if(!call_back_job.empty()){
-				SD = call_back_job.front();
+				CBJ = call_back_job.front();
 				call_back_job.pop_front();
 			}
 			}//end lock scope
 
-			if(!connect_info.first.empty()){
+			if(!CJ.first.empty()){
 				//construction of wrapper::info does DNS lookup
 				boost::shared_ptr<wrapper::info> Info(new wrapper::info(
-					connect_info.first.c_str(), connect_info.second.c_str()));
-				connect(connect_info.first, connect_info.second, Info);
+					CJ.first.c_str(), CJ.second.c_str()));
+				connect(CJ.first, CJ.second, Info);
 			}
-			if(SD){
-				run_call_back_job(SD);
+			if(CBJ){
+				run_call_back_job(CBJ);
 			}
 		}
 	}
@@ -344,7 +345,8 @@ private:
 	void run_call_back_job(boost::shared_ptr<socket_data> & SD)
 	{
 		if(SD->failed_connect_flag){
-			failed_connect_call_back(SD->Socket_Data_Visible);
+			assert(SD->error != NONE);
+			failed_connect_call_back(SD->host, SD->port, SD->error);
 			wrapper::disconnect(SD->socket_FD);
 		}else{
 			if(!SD->connect_flag){
@@ -367,7 +369,7 @@ private:
 			}
 		}
 
-		if(SD->socket_FD != -1 && SD->failed_connect_flag || SD->disconnect_flag){
+		if(SD->socket_FD != -1 && (SD->failed_connect_flag || SD->disconnect_flag)){
 			if(SD->direction == INCOMING){
 				incoming_decrement();
 			}else{

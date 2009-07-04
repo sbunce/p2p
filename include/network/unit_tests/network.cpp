@@ -83,19 +83,19 @@ void disconnect_call_back(network::socket & Socket)
 	Connection.erase(Socket.socket_FD);
 }
 
-void failed_connect_call_back(network::socket & Socket)
+void failed_connect_call_back(const std::string & host, const std::string & port, const network::ERROR error)
 {
 	std::string reason;
-	if(Socket.error == network::MAX_CONNECTIONS){
+	if(error == network::MAX_CONNECTIONS){
 		reason = "max connections";
-	}else if(Socket.error == network::FAILED_VALID){
-		reason = "failed valid";
-	}else if(Socket.error == network::FAILED_INVALID){
-		reason = "failed invalid";
-	}else{
+	}else if(error == network::FAILED_DNS_RESOLUTION){
+		reason = "failed DNS resolution";
+	}else if(error == network::TIMED_OUT){
+		reason = "timed out";
+	}else if(error == network::UNKNOWN){
 		reason = "unknown";
 	}
-	LOGGER << "H<" << Socket.host << "> P<" << Socket.port << ">" << " R<" << reason << ">";
+	LOGGER << "H<" << host << "> P<" << port << ">" << " R<" << reason << ">";
 }
 
 int main()
