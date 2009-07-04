@@ -4,4 +4,4 @@ import unit_test
 
 Import('env_base')
 
-env_base.Program('http', ['main.cpp', 'http.cpp'])
+env_base.Program('#/bin/http', ['main.cpp', 'http.cpp'])
