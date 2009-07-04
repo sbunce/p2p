@@ -118,11 +118,8 @@ int main()
 	}
 
 	boost::uint64_t start = timer::TSC();
-	for(int x=0; x<network::io_service::max_connections_supported() / 4; ++x){
+	for(int x=0; x<network::io_service::max_connections_supported() / 2; ++x){
 		if(!Network.connect("127.0.0.1", "6969")){
-			LOGGER << "rejected valid address";
-		}
-		if(!Network.connect("::1", "6969")){
 			LOGGER << "rejected valid address";
 		}
 	}

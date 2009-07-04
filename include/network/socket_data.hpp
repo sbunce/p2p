@@ -24,6 +24,12 @@ FAILED_DNS_RESOLVE:
 TIMED_OUT:
 	Socket disconnected due to inactivity.
 */
+//windows has ERROR defined somewhere
+#ifdef _WIN32
+	#ifdef ERROR
+		#undef ERROR
+	#endif
+#endif
 enum ERROR {
 	NONE,
 	MAX_CONNECTIONS,

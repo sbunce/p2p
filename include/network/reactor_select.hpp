@@ -94,7 +94,7 @@ public:
 		Subtract two for possible listeners (IPv4 and IPv6 listener). Subtract one
 		for self-pipe read.
 		*/
-		return FD_SETSIZE - 3
+		return FD_SETSIZE - 3;
 		#else
 		/*
 		Subtract two for possible listeners (some POSIX systems don't support
@@ -290,11 +290,9 @@ private:
 			int service = select(end_FD, &read_FDS, &write_FDS, NULL, &tv);
 
 			if(service == -1){
-				#ifndef _WIN32
 				if(errno != EINTR){
 					wrapper::error();
 				}
-				#endif
 			}else if(service != 0){
 				/*
 				There is a starvation problem that can happen when hitting the rate
@@ -613,7 +611,7 @@ private:
 			if(std::time(NULL) - iter_cur->second->last_seen >= 4){
 				boost::shared_ptr<socket_data> SD = iter_cur->second;
 				Socket_Data.erase(iter_cur++);
-				SD->failed_connect_flag = true;
+				SD->disconnect_flag = true;
 				SD->error = TIMED_OUT;
 				remove_socket(SD->socket_FD);
 				call_back(SD);

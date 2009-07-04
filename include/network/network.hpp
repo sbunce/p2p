@@ -20,7 +20,7 @@ public:
 	*/
 	io_service(
 		boost::function<void (const std::string & host, const std::string & port,
-			const network::ERROR error)> failed_connect_call_back_in,
+			const ERROR error)> failed_connect_call_back_in,
 		boost::function<void (socket_data_visible & Socket)> connect_call_back_in,
 		boost::function<void (socket_data_visible & Socket)> disconnect_call_back_in,
 		const unsigned max_incoming_connections,

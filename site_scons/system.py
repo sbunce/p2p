@@ -2,6 +2,7 @@
 import boost
 import environment
 import search
+import spawn
 
 #standard
 import os
@@ -11,6 +12,8 @@ import string
 #stuff every targets needs
 def setup(env):
 	environment.define_keys(env)
+
+	spawn.setup_buffered_output(env)
 
 	#start minimum of 2 threads, more if > 2 CPUs
 	num_cpu = int(os.environ.get('NUM_CPU', 2))

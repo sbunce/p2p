@@ -5,10 +5,22 @@
 #include <logger.hpp>
 
 //networking
-#ifdef WINDOWS
+#ifdef _WIN32
 	#define MSG_NOSIGNAL 0  //disable SIGPIPE on send() to disconnected socket
 	#define FD_SETSIZE 1024 //max number of sockets in fd_set
 	#include <ws2tcpip.h>
+
+	//close is closesocket on winsock
+	#define close closesocket
+
+	/*
+	Macros for BSD errno compatability.
+	http://msdn.microsoft.com/en-us/library/ms740668(VS.85).aspx
+	Note: Use the BSD style macro then redefine it here.
+	*/
+	#define errno WSAGetLastError()
+	#define EMFILE WSAEMFILE
+	#define EINTR WSAEINTR
 #else
 	#include <arpa/inet.h>
 	#include <fcntl.h>
@@ -134,7 +146,7 @@ public:
 	static bool async_connect_succeeded(const int socket_FD)
 	{
 		#ifdef _WIN32
-		const char optval = 1;
+		char optval = 1;
 		#else
 		int optval = 1;
 		#endif
@@ -183,11 +195,7 @@ public:
 	//closes a socket
 	static void disconnect(const int socket_FD)
 	{
-		#ifdef _WIN32
-		closesocket(socket_FD);
-		#else
 		close(socket_FD);
-		#endif
 	}
 
 	/*
@@ -196,11 +204,7 @@ public:
 	*/
 	static void error()
 	{
-		#ifdef _WIN32
-		LOGGER << "winsock error " << WSAGetLastError();
-		#else
-		perror("setsockopt");
-		#endif
+		LOGGER << errno;
 		exit(1);
 	}
 
@@ -323,7 +327,6 @@ public:
 	*/
 	static void socket_pair(int & selfpipe_read, int & selfpipe_write)
 	{
-//DEBUG, try IPv4 then IPv6 if that doesn't work
 		//find an available socket by trying to bind to different ports
 		int tmp_listener;
 		std::string port;

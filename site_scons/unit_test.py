@@ -14,7 +14,7 @@ def run(env):
 
 #unit test to hook in to scons
 def __unit_test(env, source):
-	if platform.system() == 'windows':
+	if platform.system() == 'Windows':
 		test = env.Program(source)
 		env.AddPostAction(test, 'cd '+os.getcwd()+' && '+str(test[0]))
 	else:

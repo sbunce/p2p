@@ -12,6 +12,13 @@
 #include <limits>
 #include <string>
 
+//windows.h defines max that interferes with std::numeric_limits<int>::max()
+#ifdef _WIN32
+	#ifdef max
+		#undef max
+	#endif
+#endif
+
 namespace settings
 {
 //soft settings, may be changed at runtime
