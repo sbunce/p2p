@@ -12,10 +12,9 @@ def setup(env):
 		pkg_config = search.locate_file_recurse('/gtkmm/', 'pkg-config\.exe')
 		if pkg_config:
 			env.ParseConfig(pkg_config + ' gtkmm-2.4 --cflags')
-			env['LIBPATH'].append('/gtkmm/lib')
 
-			#pkgconfig --lflags not working correctly, manually specify libs
-			#DEBUG, try to get pkgconfig working
+			#pkg-config --libs not working correctly, manually specify libs
+			env['LIBPATH'].append('/gtkmm/lib')
 			env['LIBS'].append([
 				'gtkmm-vc90-2_4',
 				'gdkmm-vc90-2_4',

@@ -10,7 +10,7 @@
 	#define FD_SETSIZE 1024 //max number of sockets in fd_set
 	#include <ws2tcpip.h>
 
-	//close is closesocket on winsock
+	//close is closesocket in winsock
 	#define close closesocket
 
 	/*
@@ -36,26 +36,18 @@ class wrapper
 {
 public:
 	/*
-	The getaddrinfo function allocates it's own memory and expects the user to free
-	it. This wraps that so that memory is automatically free'd when the object is
-	destoyed.
+		This object wraps getaddrinfo for the purpose of automatically free'ing
+	memory allocated by the getaddrinfo function.
 	*/
 	class info : private boost::noncopyable
 	{
 	public:
-		info():
-			res(NULL),
-			res_cur(NULL)
-		{}
-
 		/*
-		Using this ctor does DNS resolution. At least the host or the
-		port must be specified. If both are NULL then resolved() = false.
+		The host and/or port can be NULL. The host is generally left NULL when
+		setting up addrinfo for a listener that listens on all interfaces.
 
 		The ai_family parameter is the address family to use for the socket.
-		AF_INET - IPv4
-		AF_INET6 - IPv6
-		AF_UNSPEC - IPv4 or IPv6
+		It can be AF_INET (IPv4), AF_INET6 (IPv6), or AF_UNSPEC (IPv4 or IPv6).
 		*/
 		info(const char * host, const char * port, const int ai_family = AF_UNSPEC)
 		{
@@ -68,67 +60,75 @@ public:
 					//fill in IP (all available interfaces)
 					hints.ai_flags = AI_PASSIVE;
 				}
-				if(getaddrinfo(host, port, &hints, &res) != 0){
-					res = NULL;
-					res_cur = NULL;
+				if(getaddrinfo(host, port, &hints, &res_begin) != 0){
+					res_begin = NULL;
+					res_current = NULL;
 				}else{
-					res_cur = res;
+					res_current = res_begin;
 				}
 			}else{
-				res = NULL;
-				res_cur = NULL;
+				res_begin = NULL;
+				res_current = NULL;
 			}
 		}
 
 		~info()
 		{
-			if(res != NULL){
-				freeaddrinfo(res);
+			if(res_begin != NULL){
+				freeaddrinfo(res_begin);
 			}
 		}
 
-		//returns current addrinfo
-		addrinfo * get_res() const
+		/*
+		Returns addrinfo for the current node in the list.
+		*/
+		addrinfo * get_addrinfo() const
 		{
-			assert(res_cur != NULL);
-			return res_cur;
+			assert(res_current != NULL);
+			return res_current;
 		}
 
-		//traverse to next node in addrinfo list
-		void next_res()
+		/*
+		Traverses to the next addrinfo in the list. After calling this the
+		resolved() function should be called to see if at the end of the list.
+		*/
+		void next_addrinfo()
 		{
-			assert(res_cur != NULL);
-			res_cur = res_cur->ai_next;
+			assert(res_current != NULL);
+			res_current = res_current->ai_next;
 		}
 
-		//returns true if info is good and may be used with other wrapper functions
+		/*
+		Returns true if not at the end of the list.
+		Note: If addrinfo struct can't be filled then this will return false
+			right after instantiation.
+		*/
 		bool resolved() const
 		{
-			return res_cur != NULL;
+			return res_current != NULL;
 		}
 
 	private:
 		/*
-		The addrinfo struct is part of a linked list. The pointer to the next link
-		is res->ai_next. The res pointer points to the start of the list. The
-		res_cur pointer is the current node we're on.
-		Note: If res NULL there is no address info.
-		Note: If res_cur NULL we're at the end of the list.
+		The addrinfo struct is a linked list. The pointer to the next link is
+		the member pointer ai_next. The list will be more than one element long
+		if the host is multi-homed (domain resolves to both IPv4 and IPv6
+		address).
 
-		The addrinfo list can have more than one element if the host is multihomed.
-		This can happen when the host has both an IPv4 and IPv6 address.
+		res_begin: Pointer to beginning of address list.
+		res_current: Pointer to current node of address list.
 		*/
-		addrinfo * res;
-		addrinfo * res_cur;
+		addrinfo * res_begin;
+		addrinfo * res_current;
 	};
 
-	/*
-	Accepts an incoming connection from the specified listener. If the listener
-	is set to non-blocking this will return -1 if there is no socket to accept.
-	Otherwise the socket_FD will be returned.
+	/* Accept connections on a listener.
+	listener_FD blocking:
+		Blocks until there is an incoming connection on the specified listener_FD.
 
-	If the listener is non-blocking then any accepted socket will be non-blocking
-	also.
+	listener_FD non-blocking:
+		Returns the socket of an incoming connection or -1 if there are no
+		incoming connections to accept.
 	*/
 	static int accept_socket(const int listener_FD)
 	{
@@ -137,11 +137,10 @@ public:
 		return accept(listener_FD, (sockaddr *)&remoteaddr, &len);
 	}
 
-	/*
-	When a asynchronously connecting socket (socket set to non-blocking and given
-	to connect()) becomes writeable this needs to be called to see if the
-	connection was made. If this returns false it means the connection attempt
-	failed.
+	/* Check if asynchronous connection attempt succeeded.
+	When a non-blocking socket in progress of connecting becomes writeable this
+	function should be called to see if the connection attempt succeeded. Returns
+	true if succeeded, else false.
 	*/
 	static bool async_connect_succeeded(const int socket_FD)
 	{
@@ -156,56 +155,42 @@ public:
 	}
 
 	/*
-	Bind a socket to a specified address and port. Return true if the binding
-	succeeded, false if it didn't (port already in use or some other error).
-
-	This only generally needs to be called when setting up a listener. For
-	connecting to a remote host a random port is generally used.
+	Binds a socket to the specified addrinfo. Return false if bind fails.
+	Note: This is generally only called when setting up a listener. Usually we
+		let the OS take care of this when making an outbound connection.
 	*/
 	static bool bind_socket(const int socket_FD, const info & Info)
 	{
-		if(bind(socket_FD, Info.get_res()->ai_addr, Info.get_res()->ai_addrlen) == -1){
-			return false;
-		}else{
-			return true;
-		}
+		return bind(socket_FD, Info.get_addrinfo()->ai_addr,
+			Info.get_addrinfo()->ai_addrlen) != -1;
 	}
 
-	/*
-	Connects to remote host. Returns true if socket is connected (rare if async
-	connect with non-blocking socket being done) or false if socket is in
-	progress of connecting.
+	/* Make connection attempt.
+	non-blocking socket_FD (asynchronous connection):
+		Returns true if socket connected right away (very rare but can happen).
+		Returns false if socket in progress of connecting. Socket will become
+		writeable when it connect or fails to connect. Check to see if async
+		connected succeeded with async_connect_succeeded().
+
+	blocking socket_FD (synchronous connection):
+		Returns true if socket connected, false if failed to connect.
+		Note: This blocks until connection made or connection attempt
+			timed out.
 	*/
 	static bool connect_socket(const int socket_FD, const info & Info)
 	{
-		if(connect(socket_FD, Info.get_res()->ai_addr, Info.get_res()->ai_addrlen) == -1){
-			return false;
-		}else{
-			return true;
-		}
-	}
-
-	//Return a socket (have OS allocate socket). Returns -1 on error.
-	static int create_socket(const info & Info)
-	{
-		return socket(Info.get_res()->ai_family, Info.get_res()->ai_socktype,
-			Info.get_res()->ai_protocol);
-	}
-
-	//closes a socket
-	static void disconnect(const int socket_FD)
-	{
-		close(socket_FD);
+		return connect(socket_FD, Info.get_addrinfo()->ai_addr,
+			Info.get_addrinfo()->ai_addrlen) != -1;
 	}
 
 	/*
-	Many network functions set errno upon error. Winsock also has something
-	like errno for displaying errors. This functions prints those.
+	Have the OS allocate a socket for the specified addrinfo.
+	Return a socket or -1 on error.
 	*/
-	static void error()
+	static int create_socket(const info & Info)
 	{
-		LOGGER << errno;
-		exit(1);
+		return socket(Info.get_addrinfo()->ai_family, Info.get_addrinfo()->ai_socktype,
+			Info.get_addrinfo()->ai_protocol);
 	}
 
 	/*
@@ -224,10 +209,12 @@ public:
 		char buff[INET6_ADDRSTRLEN];
 		if(addr.ss_family == AF_INET){
 			//IPv4 socket
-			getnameinfo((sockaddr *)&addr, sizeof(sockaddr_in), buff, sizeof(buff), NULL, 0, NI_NUMERICHOST);
+			getnameinfo((sockaddr *)&addr, sizeof(sockaddr_in), buff, sizeof(buff),
+				NULL, 0, NI_NUMERICHOST);
 		}else if(addr.ss_family == AF_INET6){
 			//IPv6 socket
-			getnameinfo((sockaddr *)&addr, sizeof(sockaddr_in6), buff, sizeof(buff), NULL, 0, NI_NUMERICHOST);
+			getnameinfo((sockaddr *)&addr, sizeof(sockaddr_in6), buff, sizeof(buff),
+				NULL, 0, NI_NUMERICHOST);
 		}
 
 		/*
@@ -250,12 +237,14 @@ public:
 	static std::string get_IP(const info & Info)
 	{
 		char buff[INET6_ADDRSTRLEN];
-		if(Info.get_res()->ai_family == AF_INET){
+		if(Info.get_addrinfo()->ai_family == AF_INET){
 			//IPv4 socket
-			getnameinfo((sockaddr *)Info.get_res()->ai_addr, sizeof(sockaddr_in), buff, sizeof(buff), NULL, 0, NI_NUMERICHOST);
-		}else if(Info.get_res()->ai_family == AF_INET6){
+			getnameinfo((sockaddr *)Info.get_addrinfo()->ai_addr, sizeof(sockaddr_in),
+				buff, sizeof(buff), NULL, 0, NI_NUMERICHOST);
+		}else if(Info.get_addrinfo()->ai_family == AF_INET6){
 			//IPv6 socket
-			getnameinfo((sockaddr *)Info.get_res()->ai_addr, sizeof(sockaddr_in6), buff, sizeof(buff), NULL, 0, NI_NUMERICHOST);
+			getnameinfo((sockaddr *)Info.get_addrinfo()->ai_addr, sizeof(sockaddr_in6),
+				buff, sizeof(buff), NULL, 0, NI_NUMERICHOST);
 		}
 
 		/*
@@ -280,7 +269,6 @@ public:
 		sockaddr_in6 sa;
 		socklen_t len = sizeof(sa);
 		if(getpeername(socket_FD, (sockaddr *)&sa, &len) == -1){
-			LOGGER << "could not determine port";
 			return "";
 		}
 		int port;
@@ -305,7 +293,8 @@ public:
 		#endif
 		int optlen = sizeof(optval);
 		if(setsockopt(socket_FD, SOL_SOCKET, SO_REUSEADDR, &optval, optlen) == -1){
-			error();
+			LOGGER << errno;
+			exit(1);
 		}
 	}
 
@@ -338,18 +327,20 @@ public:
 			tmp_listener = create_socket(Info);
 			if(tmp_listener == -1){
 				LOGGER << "error creating socket pair";
+				exit(1);
 			}
 			reuse_port(tmp_listener);
 			if(bind_socket(tmp_listener, Info)){
 				port = ss.str();
 				break;
 			}else{
-				disconnect(tmp_listener);
+				close(tmp_listener);
 			}
 		}
 
 		if(listen(tmp_listener, 1) == -1){
-			error();
+			LOGGER << errno;
+			exit(1);
 		}
 
 		//connect socket for writer end of the pair
@@ -357,18 +348,20 @@ public:
 		assert(Info.resolved());
 		selfpipe_write = create_socket(Info);
 		if(selfpipe_write == -1){
-			LOGGER << "error creating socket pair";
+			LOGGER << errno;
+			exit(1);
 		}
 		if(!connect_socket(selfpipe_write, Info)){
-			error();
+			LOGGER << errno;
+			exit(1);
 		}
 
 		//accept socket for reader end of the pair
 		if((selfpipe_read = accept_socket(tmp_listener)) == -1){
-			error();
+			LOGGER << errno;
+			exit(1);
 		}
-
-		disconnect(tmp_listener);
+		close(tmp_listener);
 	}
 
 	/*
@@ -377,13 +370,7 @@ public:
 	*/
 	static int start_listener_IPv4(const std::string & port)
 	{
-		int listener = start_listener(port, AF_INET);
-		if(listener == -1){
-			LOGGER << "error starting IPv4 listener";
-		}else{
-			LOGGER << "started IPv4 listener port " << port << " sock " << listener;
-		}
-		return listener;
+		return start_listener(port, AF_INET);
 	}
 
 	/*
@@ -392,13 +379,7 @@ public:
 	*/
 	static int start_listener_IPv6(const std::string & port)
 	{
-		int listener = start_listener(port, AF_INET6);
-		if(listener == -1){
-			LOGGER << "error starting IPv6 listener";
-		}else{
-			LOGGER << "started IPv6 listener port " << port << " sock " << listener;
-		}
-		return listener;
+		return start_listener(port, AF_INET6);
 	}
 
 	/*
@@ -407,13 +388,7 @@ public:
 	*/
 	static int start_listener_dual_stack(const std::string & port)
 	{
-		int listener = start_listener(port, AF_UNSPEC);
-		if(listener == -1){
-			LOGGER << "error starting dual stack listener";
-		}else{
-			LOGGER << "started dual stack listener port " << port << " sock " << listener;
-		}
-		return listener;
+		return start_listener(port, AF_UNSPEC);
 	}
 
 	/*
@@ -437,7 +412,7 @@ public:
 		}
 	}
 
-	//must be called before any networking functions
+	//must be called before using any network functions
 	static void start_networking()
 	{
 		#ifdef _WIN32
@@ -451,7 +426,7 @@ public:
 		#endif
 	}
 
-	//for every call to start_winsock this function must be called
+	//for every call to start_networking this function must be called
 	static void stop_networking()
 	{
 		#ifdef _WIN32
@@ -471,11 +446,13 @@ private:
 		}
 		reuse_port(listener);
 		if(!bind_socket(listener, Info)){
-			error();
+			LOGGER << errno;
+			exit(1);
 		}
 		int backlog = 32;
 		if(listen(listener, backlog) == -1){
-			error();
+			LOGGER << errno;
+			exit(1);
 		}
 		return listener;
 	}

@@ -13,7 +13,8 @@ import string
 def setup(env):
 	environment.define_keys(env)
 
-	spawn.setup_buffered_output(env)
+	#buffer output so parallel building output doesn't get garbled
+	spawn.setup(env)
 
 	#start minimum of 2 threads, more if > 2 CPUs
 	num_cpu = int(os.environ.get('NUM_CPU', 2))
@@ -76,7 +77,7 @@ def setup(env):
 def setup_static(env):
 	environment.define_keys(env)
 	if platform.system() == 'Windows':
-		print 'TODO: windows static linking not supported on windows'
+		print 'TODO: static linking not setup for windows'
 	else:
 		env['LINKFLAGS'].append('-static')
 		env['LINKFLAGS'].append('-static-libgcc')

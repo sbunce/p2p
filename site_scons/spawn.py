@@ -1,4 +1,5 @@
 #standard
+import sys
 import StringIO
 
 #source: TTimo
@@ -26,7 +27,7 @@ class idBuffering:
 		return retval
 
 #get a clean error output when running multiple jobs
-def setup_buffered_output(env):
+def setup(env):
 	buf = idBuffering()
 	buf.env = env
 	env['SPAWN'] = buf.buffered_spawn

@@ -34,6 +34,19 @@ public:
 		max_outgoing_connections(0)
 	{
 		wrapper::start_networking();
+
+		int socket_IPv4 = wrapper::start_listener_IPv4("0");
+		IPv4 = (socket_IPv4 != -1);
+		close(socket_IPv4);
+
+		int socket_IPv6 = wrapper::start_listener_IPv6("0");
+		IPv6 = (socket_IPv6 != -1);
+		close(socket_IPv6);
+
+		if(!IPv4 && !IPv6){
+			LOGGER << "error: neither IPv4 or IPv6 enabled";
+			exit(1);
+		}
 	}
 
 	virtual ~reactor()
@@ -79,7 +92,6 @@ public:
 		boost::mutex::scoped_lock lock(connections_mutex);
 		return max_outgoing_connections;
 	}
-
 	//sets maximum number of incoming/outgoing connections
 	void set_max_connections(const unsigned max_incoming_connections_in,
 		const unsigned max_outgoing_connections_in)
@@ -113,6 +125,17 @@ public:
 	void set_max_upload_rate(const unsigned rate)
 	{
 		Rate_Limit.set_max_upload_rate(rate);
+	}
+
+	//returns true if IPv4 networking available on this computer
+	bool IPv4_enabled()
+	{
+		return IPv4;
+	}
+	//returns true if IPv6 networking available on this computer
+	bool IPv6_enabled()
+	{
+		return IPv6;
 	}
 
 	//must be called after construction to start reactor threads
@@ -273,6 +296,10 @@ protected:
 	virtual void stop_networking() = 0;
 
 private:
+	//true if protocol enabled
+	bool IPv4;
+	bool IPv6;
+
 	/* Connection counts and limits.
 	Note: All these must be locked with connections_mutex.
 	max_connections:
@@ -347,7 +374,7 @@ private:
 		if(SD->failed_connect_flag){
 			assert(SD->error != NONE);
 			failed_connect_call_back(SD->host, SD->port, SD->error);
-			wrapper::disconnect(SD->socket_FD);
+			close(SD->socket_FD);
 		}else{
 			if(!SD->connect_flag){
 				SD->connect_flag = true;
@@ -365,7 +392,7 @@ private:
 			}
 			if(SD->disconnect_flag){
 				disconnect_call_back(SD->Socket_Data_Visible);
-				wrapper::disconnect(SD->socket_FD);
+				close(SD->socket_FD);
 			}
 		}
 

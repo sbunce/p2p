@@ -59,10 +59,10 @@ public:
 
 	virtual ~reactor_select()
 	{
-		wrapper::disconnect(listener_IPv4);
-		wrapper::disconnect(listener_IPv6);
-		wrapper::disconnect(selfpipe_read);
-		wrapper::disconnect(selfpipe_write);
+		close(listener_IPv4);
+		close(listener_IPv6);
+		close(selfpipe_read);
+		close(selfpipe_write);
 	}
 
 	virtual void connect(const std::string & host, const std::string & port,
@@ -217,7 +217,7 @@ private:
 			new_FD = wrapper::accept_socket(listener);
 			if(new_FD != -1){
 				if(incoming_limit_reached()){
-					wrapper::disconnect(new_FD);
+					close(new_FD);
 				}else{
 					incoming_increment();
 					boost::shared_ptr<socket_data> SD(new socket_data(new_FD, "",
@@ -291,7 +291,9 @@ private:
 
 			if(service == -1){
 				if(errno != EINTR){
-					wrapper::error();
+					//profilers can cause this, it's safe to ignore
+					LOGGER << errno;
+					exit(1);
 				}
 			}else if(service != 0){
 				/*
@@ -356,7 +358,7 @@ private:
 						}else{
 							//see if there is another address to try
 							boost::shared_ptr<socket_data> SD = get_socket_data(socket_FD);
-							SD->Info->next_res();
+							SD->Info->next_addrinfo();
 							if(SD->Info->resolved()){
 								boost::mutex::scoped_lock lock(connect_pending_mutex);
 								connect_pending.push_back(boost::shared_ptr<connect_job>(

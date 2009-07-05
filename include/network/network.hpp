@@ -157,6 +157,17 @@ public:
 		Reactor->set_max_upload_rate(rate);
 	}
 
+	//returns true if IPv4 networking available on this computer
+	bool IPv4_enabled()
+	{
+		return Reactor->IPv4_enabled();
+	}
+	//returns true if IPv6 networking available on this computer
+	bool IPv6_enabled()
+	{
+		return Reactor->IPv6_enabled();
+	}
+
 private:
 	boost::shared_ptr<reactor> Reactor;
 };

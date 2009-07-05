@@ -6,7 +6,7 @@ env_base = Environment()
 system.setup(env_base)
 Export('env_base')
 
-print 'starting',env_base.GetOption('num_jobs'),'builder threads'
+print 'scons: starting',env_base.GetOption('num_jobs'),'parallel jobs'
 
 SConscript([
 	'gui_CLI/SConstruct',

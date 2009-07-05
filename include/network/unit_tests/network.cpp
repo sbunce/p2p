@@ -62,7 +62,6 @@ void connect_call_back(network::socket & Socket)
 	}
 	//LOGGER << direction << " H<" << Socket.host << "> IP<" << Socket.IP << "> P<"
 	//	<< Socket.port << "> S<" << Socket.socket_FD << ">";
-	std::cout << "+";
 	Connection.insert(std::make_pair(Socket.socket_FD, new connection(Socket)));
 	Socket.recv_call_back = boost::bind(&connection::recv_call_back, Connection[Socket.socket_FD].get(), _1);
 	Socket.send_call_back = boost::bind(&connection::send_call_back, Connection[Socket.socket_FD].get(), _1);
@@ -79,7 +78,6 @@ void disconnect_call_back(network::socket & Socket)
 	}
 	//LOGGER << direction << " H<" << Socket.host << "> IP<" << Socket.IP << "> P<"
 	//	<< Socket.port << "> S<" << Socket.socket_FD << ">";
-	std::cout << "-";
 	Connection.erase(Socket.socket_FD);
 }
 
@@ -100,6 +98,9 @@ void failed_connect_call_back(const std::string & host, const std::string & port
 
 int main()
 {
+	//disable
+	return 0;
+
 	LOGGER << "supported connections: " << network::io_service::max_connections_supported();
 	network::io_service Network(
 		&failed_connect_call_back,
@@ -110,6 +111,13 @@ int main()
 		"6969"
 	);
 
+	if(Network.IPv4_enabled()){
+		LOGGER << "IPv4 enabled";
+	}
+	if(Network.IPv6_enabled()){
+		LOGGER << "IPv6 enabled";
+	}
+
 	if(Network.connect("127.0.0.1", "0")){
 		LOGGER << "accepted invalid address";
 	}
@@ -117,14 +125,16 @@ int main()
 		LOGGER << "accepted invalid address";
 	}
 
-	boost::uint64_t start = timer::TSC();
-	for(int x=0; x<network::io_service::max_connections_supported() / 2; ++x){
-		if(!Network.connect("127.0.0.1", "6969")){
+	for(int x=0; x<network::io_service::max_connections_supported() / 4; ++x){
+		if(Network.IPv4_enabled() && !Network.connect("127.0.0.1", "6969")){
+			LOGGER << "rejected valid address";
+		}
+		if(Network.IPv6_enabled() && !Network.connect("::1", "6969")){
 			LOGGER << "rejected valid address";
 		}
 	}
 
-	bool hack = true;
+	bool hack = true; //connections won't immediately be non-zero
 	while(Network.connections() != 0 || hack){
 		LOGGER << "C<" << Network.connections() << "> "
 			<< "IC<" << Network.incoming_connections() << "> "
@@ -134,7 +144,4 @@ int main()
 		portable_sleep::ms(1000);
 		hack = false;
 	}
-	boost::uint64_t end = timer::TSC();
-	LOGGER << network::io_service::max_connections_supported() /
-		timer::elapsed(start, end, timer::SECONDS) << " CPS";
 }
