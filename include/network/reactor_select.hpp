@@ -214,7 +214,7 @@ private:
 	{
 		int new_FD = 0;
 		while(new_FD != -1){
-			new_FD = wrapper::accept_socket(listener);
+			new_FD = wrapper::accept(listener);
 			if(new_FD != -1){
 				if(incoming_limit_reached()){
 					close(new_FD);
@@ -555,7 +555,7 @@ private:
 			//non-blocking required for async connect
 			wrapper::set_non_blocking(new_FD);
 
-			if(wrapper::connect_socket(new_FD, *CJ->Info)){
+			if(wrapper::connect(new_FD, *CJ->Info)){
 				//socket connected right away, rare but it might happen
 				boost::shared_ptr<socket_data> SD(new socket_data(new_FD, CJ->host,
 					wrapper::get_IP(*CJ->Info), CJ->port));

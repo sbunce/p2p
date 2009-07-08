@@ -12,15 +12,12 @@
 #include "share.hpp"
 
 //include
-#include <atomic_int.hpp>
 #include <boost/bind.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
-#include <p2p/download_info.hpp>
-#include <p2p/download_status.hpp>
-#include <p2p/upload_status.hpp>
+#include <p2p/p2p.hpp>
 
 //standard
 #include <cstdlib>

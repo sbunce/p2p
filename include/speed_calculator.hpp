@@ -5,91 +5,106 @@
 //include
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
+#include <boost/utility.hpp>
 
 //standard
 #include <ctime>
 #include <deque>
 
-class speed_calculator
+class speed_calculator : private boost::noncopyable
 {
 public:
-	static const int average_seconds = 4;
+	//must be >= 1
+	static const unsigned AVERAGE = 4;
 
 	speed_calculator():
-		Recursive_Mutex(new boost::recursive_mutex()),
-		average(0)
+		average_speed(0)
 	{
-		Second_Bytes[0] = std::make_pair(std::time(NULL), 0);
-		for(int x=1; x < average_seconds + 1; ++x){
-			Second_Bytes[x] = std::make_pair(0, 0);
+		for(int x=0; x<AVERAGE + 1; ++x){
+			Second[x].first = Second[x].second = 0;
 		}
 	}
 
 	//returns how much has been seen in the current second
 	unsigned current_second()
 	{
-		boost::recursive_mutex::scoped_lock lock(*Recursive_Mutex);
-		update(0);
-		return Second_Bytes[0].second;
+		boost::mutex::scoped_lock lock(Mutex);
+		add_priv(0);
+		return Second[0].second;
 	}
 
-	//returns average speed		
+	/*
+	Returns average speed for the previous AVERAGE seconds. This does not include
+	the bytes for the current incomplete second.
+	*/
 	unsigned speed()
 	{
-		boost::recursive_mutex::scoped_lock lock(*Recursive_Mutex);
-		update(0);
-		return average;
+		boost::mutex::scoped_lock lock(Mutex);
+		add_priv(0);
+		return average_speed;
 	}
 
 	//add n_bytes to the average
-	void update(const unsigned & n_bytes)
+	void add(const unsigned n_bytes)
 	{
-		boost::recursive_mutex::scoped_lock lock(*Recursive_Mutex);
-		time_t current_time = std::time(NULL);
-
-		if(Second_Bytes[0].first == current_time){
-			//add bytes to current second
-			Second_Bytes[0].second += n_bytes;
-		}else{
-			/*
-			The most recent second in Second_Bytes is not the current second. Do right
-			shifts and inject new seconds on the left.
-			*/
-			while(Second_Bytes[0].first != current_time){
-				for(int x=average_seconds; x > 0; --x){
-					Second_Bytes[x] = Second_Bytes[x-1];
-				}
-				Second_Bytes[0] = std::make_pair(Second_Bytes[1].first + 1, 0);
-			}
-			Second_Bytes[0].second += n_bytes;
-		}
-
-		//calculate average
-		unsigned total_bytes = 0, counted_seconds = 0;
-		for(int x=1; x < average_seconds + 1; ++x){
-			if(Second_Bytes[x].first != 0){
-				total_bytes += Second_Bytes[x].second;
-				++counted_seconds;
-			}
-		}
-		if(counted_seconds == 0){
-			average = 0;
-		}else{
-			average = total_bytes / counted_seconds;
-		}
+		boost::mutex::scoped_lock lock(Mutex);
+		add_priv(n_bytes);
 	}
 
 private:
 	//mutex for all public functions
-	boost::shared_ptr<boost::recursive_mutex> Recursive_Mutex;
+	boost::mutex Mutex;
 
-	//average speed
-	unsigned average;
+	//most recently calculated average speed, updated by update()
+	unsigned average_speed;
 
 	/*
-	pair<second, bytes in second>
-	The low elements are more current in time.
+	The 0 element is the most recent second, the last element is the least
+	recent second. All seconds are associate with a number (of bytes or some
+	other quantity) seen in that second.
 	*/
-	std::pair<time_t, unsigned> Second_Bytes[average_seconds + 1];
+	std::pair<std::time_t, unsigned> Second[AVERAGE + 1];
+
+	/*
+	Add bytes in to the average.
+	Precondition: Mutex must be locked.
+	*/
+	void add_priv(const unsigned n_bytes)
+	{
+		std::time_t current_second = std::time(NULL);
+		if(Second[0].first == current_second){
+			//most recent second is already current second
+			Second[0].second += n_bytes;
+		}else{
+			//most recent second is not current second
+			unsigned shift = current_second - Second[0].first;
+			if(shift > AVERAGE){
+				//most recent second too old for shifting, make as new
+				for(int x=1; x<AVERAGE + 1; ++x){
+					Second[x].first = Second[x].second = 0;
+				}
+				Second[0].first = current_second;
+				Second[0].second = n_bytes;
+			}else{
+				//a shift can be done
+				for(int x=AVERAGE - shift; x>=0; --x){
+					Second[x + shift] = Second[x];
+				}
+				//fill in any gap
+				for(int x=0; x<shift; ++x){
+					Second[x].first = current_second - x;
+					Second[x].second = 0;
+				}
+				Second[0].second += n_bytes;
+			}
+		}
+
+		//update the average_speed
+		average_speed = 0;
+		for(int x=1; x<AVERAGE + 1; ++x){
+			average_speed += Second[x].second;
+		}
+		average_speed /= AVERAGE;
+	}
 };
 #endif

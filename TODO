@@ -1,26 +1,21 @@
 TODO
 
--It's possible for sockets to get reused before a remove_socket_data is called
-causing the precondition to be violated.
--Generating prime PRNG needs to be fast PRNG, not /dev/urandom. That should only
-be used to seed the fast PRNG. Miller-Rabin test count needs to be adjusted
-according to how big the prime is.
--P2P program can be opened multiple times. Make lock file.
 
-REACTOR IDEA
-	Have reactor_* keep socket_data in map. Map can be used to iterated through to check
-sockets so that it's not possible to f'up and check a socket a worker is using.
-When doing call back the socket_data should be removed from the map and passed
-to a reactor call back scheduler function. The act of passing the socket_data
-from the reactor_select to the reactor transfers control of the socket data.
-	socket_data with the failed_connect_flag or disconnect_flag set should not
-be passed back to the reactor_select when the reactor is done with it. The
-reactor_select needs to make sure the socket was disconnected before scheduling
-the call back.
+IDEAS
+-Have a singleton to write to files. This singleton should have running threads
+inside so client threads don't have to wait on I/O. The singleton should have a
+max buffer size where clients get blocked.
+Rationale: Be able to return socket_data to reactor ASAP so reactor can once
+again monitor socket for incoming data. Without this TCP window would be maxed
+out all the time.
 
 
 DEFERRED FEATURES
 
+-Generating prime PRNG needs to be fast PRNG, not /dev/urandom. That should only
+be used to seed the fast PRNG. Miller-Rabin test count needs to be adjusted
+according to how big the prime is. Fix this by updating to the mp_int library
+when the next version is released in the boost vault.
 -Using new primes must be forced. To do this old primes must be kept track of.
 -Requests should be sent before file blocks, when two hosts download from
 eachother the file blocks hog upload that should be used to get requests out.

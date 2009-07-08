@@ -22,14 +22,14 @@ public:
 	void add_download_bytes(const unsigned n_bytes)
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-		Download.update(n_bytes);
+		Download.add(n_bytes);
 	}
 
 	//add n_bytes to upload rate
 	void add_upload_bytes(const unsigned n_bytes)
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-		Upload.update(n_bytes);
+		Upload.add(n_bytes);
 	}
 
 	/*

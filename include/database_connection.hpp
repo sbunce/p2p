@@ -390,8 +390,8 @@ private:
 	static int fun_with_object_call_back_wrapper(void * obj_ptr, int columns,
 		char ** response, char ** column_name)
 	{
-		std::pair<int (*)(T, int, char **, char **), T*> * call_back_info;
-		call_back_info = (std::pair<int (*)(T, int, char **, char **), T*> *)obj_ptr;
+		std::pair<int (*)(T, int, char **, char **), T*>
+			* call_back_info = (std::pair<int (*)(T, int, char **, char **), T*> *)obj_ptr;
 		int (*fun_ptr)(T, int, char **, char **) = (int (*)(T, int, char **, char **))call_back_info->first;
 		return fun_ptr(*(call_back_info->second), columns, response, column_name);
 	}
@@ -400,8 +400,8 @@ private:
 	static int fun_with_object_reference_call_back_wrapper(void * obj_ptr, int columns,
 		char ** response, char ** column_name)
 	{
-		std::pair<int (*)(T&, int, char **, char **), T*> * call_back_info;
-		call_back_info = (std::pair<int (*)(T&, int, char **, char **), T*> *)obj_ptr;
+		std::pair<int (*)(T&, int, char **, char **), T*>
+			* call_back_info = (std::pair<int (*)(T&, int, char **, char **), T*> *)obj_ptr;
 		int (*fun_ptr)(T&, int, char **, char **) = (int (*)(T&, int, char **, char **))call_back_info->first;
 		return fun_ptr(*(call_back_info->second), columns, response, column_name);
 	}
@@ -410,8 +410,8 @@ private:
 	static int memfun_call_back_wrapper(void * obj_ptr, int columns, char ** response,
 		char ** column_name)
 	{
-		std::pair<T*, int (T::*)(int, char **, char **)> * call_back_info;
-		call_back_info = (std::pair<T*, int (T::*)(int, char **, char **)> *)obj_ptr;
+		std::pair<T*, int (T::*)(int, char **, char **)>
+			* call_back_info = (std::pair<T*, int (T::*)(int, char **, char **)> *)obj_ptr;
 		return ((*call_back_info->first).*(call_back_info->second))(columns, response, column_name);
 	}
 
@@ -419,8 +419,8 @@ private:
 	static int memfun_with_object_call_back_wrapper(void * obj_ptr, int columns,
 		char ** response, char ** column_name)
 	{
-		std::pair<std::pair<T*, int (T::*)(T_obj, int, char **, char **)>, T_obj*> * call_back_info;
-		call_back_info = (std::pair<std::pair<T*, int (T::*)(T_obj, int, char **, char **)>, T_obj*> *)obj_ptr;
+		std::pair<std::pair<T*, int (T::*)(T_obj, int, char **, char **)>, T_obj*>
+			* call_back_info = (std::pair<std::pair<T*, int (T::*)(T_obj, int, char **, char **)>, T_obj*> *)obj_ptr;
 		return ((*call_back_info->first.first).*(call_back_info->first.second))
 			(*(call_back_info->second), columns, response, column_name);
 	}
@@ -429,8 +429,8 @@ private:
 	static int memfun_with_object_reference_call_back_wrapper(void * obj_ptr,
 		int columns, char ** response, char ** column_name)
 	{
-		std::pair<std::pair<T*, int (T::*)(T_obj&, int, char **, char **)>, T_obj*> * call_back_info;
-		call_back_info = (std::pair<std::pair<T*, int (T::*)(T_obj&, int, char **, char **)>, T_obj*> *)obj_ptr;
+		std::pair<std::pair<T*, int (T::*)(T_obj&, int, char **, char **)>, T_obj*>
+			* call_back_info = (std::pair<std::pair<T*, int (T::*)(T_obj&, int, char **, char **)>, T_obj*> *)obj_ptr;
 		return ((*call_back_info->first.first).*(call_back_info->first.second))
 			(*(call_back_info->second), columns, response, column_name);
 	}

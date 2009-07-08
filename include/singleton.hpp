@@ -1,8 +1,31 @@
+/* Instructions
+Derive a class from singleton_base. The template type should be that of the
+derived class. Make the constructor of the derived class private and make the
+singleton base class a friend.
+
+example:
+class derived : public singleton_base<derived>
+{
+	friend class singleton_base<number_generator>;
+public:
+
+private:
+	derived();
+};
+
+The singletone can then be accessed via the singleton function.
+example:
+	derived::singleton().func();
+
+Note: The destructor of the derived class will not ever be called. This is done
+because of static initialization order issues. If clean up needs to be done a
+function should be included in the derived class that can be called at an
+appropriate time.
+*/
 #ifndef H_SINGLETON
 #define H_SINGLETON
 
 //include
-#include <boost/scoped_ptr.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
 
@@ -18,7 +41,6 @@ public:
 
 protected:
 	singleton_base(){}
-	virtual ~singleton_base(){}
 
 private:
 	static void init()

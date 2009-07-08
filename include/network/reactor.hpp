@@ -163,19 +163,17 @@ protected:
 
 	/*
 	Called by the derived class to schedule a call back.
-	Precondition: Network thread must have ownership of the socket_data (it must
-		exist in Socket_Data_Network).
-	Postcondition: This function disallows access to the socket_data to the
-		network thread until the worker passes this socket_data to the finish_job
-		function. If get_socket_data() is called when the socket_data is not in
-		Socket_Data_Network the program will be terminated because this means a
-		worker is using the socket_data.
+	Note: As a safety feature the shared_ptr passed to this function will be set
+		to NULL so that an assert will be triggered if it's used. This stops
+		someone from accidently introducing a thread-unsafe condition where they
+		pass the socket data to this function, but then continue to use it.
 	*/
 	void call_back(boost::shared_ptr<socket_data> & SD)
 	{
 		boost::mutex::scoped_lock lock(job_mutex);
 		call_back_job.push_back(SD);
 		job_cond.notify_one();
+		SD = boost::shared_ptr<socket_data>();
 	}
 
 	/*

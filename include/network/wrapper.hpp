@@ -130,11 +130,11 @@ public:
 		Returns the socket of an incoming connection or -1 if there are no
 		incoming connections to accept.
 	*/
-	static int accept_socket(const int listener_FD)
+	static int accept(const int listener_FD)
 	{
 		sockaddr_storage remoteaddr;
 		socklen_t len = sizeof(remoteaddr);
-		return accept(listener_FD, (sockaddr *)&remoteaddr, &len);
+		return ::accept(listener_FD, (sockaddr *)&remoteaddr, &len);
 	}
 
 	/* Check if asynchronous connection attempt succeeded.
@@ -159,9 +159,9 @@ public:
 	Note: This is generally only called when setting up a listener. Usually we
 		let the OS take care of this when making an outbound connection.
 	*/
-	static bool bind_socket(const int socket_FD, const info & Info)
+	static bool bind(const int socket_FD, const info & Info)
 	{
-		return bind(socket_FD, Info.get_addrinfo()->ai_addr,
+		return ::bind(socket_FD, Info.get_addrinfo()->ai_addr,
 			Info.get_addrinfo()->ai_addrlen) != -1;
 	}
 
@@ -177,9 +177,9 @@ public:
 		Note: This blocks until connection made or connection attempt
 			timed out.
 	*/
-	static bool connect_socket(const int socket_FD, const info & Info)
+	static bool connect(const int socket_FD, const info & Info)
 	{
-		return connect(socket_FD, Info.get_addrinfo()->ai_addr,
+		return ::connect(socket_FD, Info.get_addrinfo()->ai_addr,
 			Info.get_addrinfo()->ai_addrlen) != -1;
 	}
 
@@ -319,7 +319,7 @@ public:
 		//find an available socket by trying to bind to different ports
 		int tmp_listener;
 		std::string port;
-		for(int x=9090; x<65536; ++x){
+		for(int x=1024; x<65536; ++x){
 			std::stringstream ss;
 			ss << x;
 			info Info("127.0.0.1", ss.str().c_str(), AF_INET);
@@ -330,7 +330,7 @@ public:
 				exit(1);
 			}
 			reuse_port(tmp_listener);
-			if(bind_socket(tmp_listener, Info)){
+			if(bind(tmp_listener, Info)){
 				port = ss.str();
 				break;
 			}else{
@@ -351,13 +351,13 @@ public:
 			LOGGER << errno;
 			exit(1);
 		}
-		if(!connect_socket(selfpipe_write, Info)){
+		if(!connect(selfpipe_write, Info)){
 			LOGGER << errno;
 			exit(1);
 		}
 
 		//accept socket for reader end of the pair
-		if((selfpipe_read = accept_socket(tmp_listener)) == -1){
+		if((selfpipe_read = accept(tmp_listener)) == -1){
 			LOGGER << errno;
 			exit(1);
 		}
@@ -445,7 +445,7 @@ private:
 			return -1;
 		}
 		reuse_port(listener);
-		if(!bind_socket(listener, Info)){
+		if(!bind(listener, Info)){
 			LOGGER << errno;
 			exit(1);
 		}
