@@ -9,12 +9,11 @@ Export('env_base')
 print 'scons: starting',env_base.GetOption('num_jobs'),'parallel jobs'
 
 SConscript([
-	'gui_CLI/SConstruct',
-	'gui_gtkmm/SConstruct',
-	'include/SConstruct',
-	'lib_src/SConstruct',
-	'site_scons/SConstruct',
-
+	'gui_CLI/SConscript',
+	'gui_gtkmm/SConscript',
+	'include/SConscript',
+	'lib_src/SConscript',
+	'site_scons/SConscript'
 ])
 
 Clean('bin','bin') #directory for built binaries

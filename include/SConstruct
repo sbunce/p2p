@@ -1,4 +1,0 @@
-SConscript([
-	'network/SConstruct',
-	'unit_tests/SConstruct'
-])

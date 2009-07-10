@@ -1,0 +1,5 @@
+SConscript([
+	'libp2p/SConscript',
+	'libsqlite3/SConscript',
+	'libtommath/SConscript'
+])

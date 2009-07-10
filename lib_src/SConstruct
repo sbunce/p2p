@@ -1,5 +1,0 @@
-SConscript([
-	'libp2p/SConstruct',
-	'libsqlite3/SConstruct',
-	'libtommath/SConstruct'
-])

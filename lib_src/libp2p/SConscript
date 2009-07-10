@@ -2,7 +2,7 @@
 import glob
 
 SConscript([
-	'unit_tests/SConstruct'
+	'unit_tests/SConscript'
 ])
 
 Import('env_base')
