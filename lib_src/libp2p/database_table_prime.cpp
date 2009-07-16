@@ -8,19 +8,31 @@ int read_all_call_back(std::vector<mpint> & Prime_Cache,
 	return 0;
 }
 
-void database::table::prime::read_all(std::vector<mpint> & Prime_Cache, database::connection & DB)
+void database::table::prime::read_all(std::vector<mpint> & Prime_Cache)
 {
-	DB.query("BEGIN TRANSACTION");
-	DB.query("SELECT number FROM prime", &read_all_call_back, Prime_Cache);
-	DB.query("DELETE FROM prime");
-	DB.query("END TRANSACTION");
+	database::pool::proxy DB;
+	read_all(Prime_Cache, DB);
 }
 
-void database::table::prime::write_all(std::vector<mpint> & Prime_Cache, database::connection & DB)
+void database::table::prime::read_all(std::vector<mpint> & Prime_Cache, database::pool::proxy & DB)
+{
+	DB->query("BEGIN TRANSACTION");
+	DB->query("SELECT number FROM prime", &read_all_call_back, Prime_Cache);
+	DB->query("DELETE FROM prime");
+	DB->query("END TRANSACTION");
+}
+
+void database::table::prime::write_all(std::vector<mpint> & Prime_Cache)
+{
+	database::pool::proxy DB;
+	write_all(Prime_Cache, DB);
+}
+
+void database::table::prime::write_all(std::vector<mpint> & Prime_Cache, database::pool::proxy & DB)
 {
 	std::stringstream ss;
 	for(int x=0; x<Prime_Cache.size(); ++x){
 		ss << "INSERT INTO prime VALUES ('" << Prime_Cache[x].to_str(64) << "');";
 	}
-	DB.query(ss.str());
+	DB->query(ss.str());
 }

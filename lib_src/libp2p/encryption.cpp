@@ -47,35 +47,3 @@ void encryption::set_remote_result(std::string result)
 
 	State = ready_to_encrypt;
 }
-
-void encryption::crypt_send(std::string & bytes)
-{
-	assert(ready_to_encrypt);
-	for(int x=0; x<bytes.size(); ++x){
-		bytes[x] = (unsigned char)bytes[x] ^ PRNG_send.get_byte();
-	}
-}
-
-void encryption::crypt_send(char * bytes, const int & length)
-{
-	assert(ready_to_encrypt);
-	for(int x=0; x<length; ++x){
-		bytes[x] = (unsigned char)bytes[x] ^ PRNG_send.get_byte();
-	}
-}
-
-void encryption::crypt_recv(std::string & bytes)
-{
-	assert(ready_to_encrypt);
-	for(int x=0; x<bytes.size(); ++x){
-		bytes[x] = (unsigned char)bytes[x] ^ PRNG_recv.get_byte();
-	}
-}
-
-void encryption::crypt_recv(char * bytes, const int & length)
-{
-	assert(ready_to_encrypt);
-	for(int x=0; x<length; ++x){
-		bytes[x] = (unsigned char)bytes[x] ^ PRNG_recv.get_byte();
-	}
-}

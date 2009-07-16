@@ -19,17 +19,31 @@ class preferences
 {
 public:
 	/*
-	"get"|"set"_download_rate      - maximum download rate (bytes)
-	"get"|"set"_upload_rate        - maximum upload rate (bytes)
-	"get"|"set"_max_connections - how many incoming connections server allows
+	"get"|"set"_download_rate:
+		Maximum download rate (bytes).
+	"get"|"set"_upload_rate:
+		Maximum upload rate (bytes).
+	"get"|"set"_max_connections:
+		How many connections allowed.
 	*/
-	static unsigned get_max_download_rate(database::connection & DB);
-	static unsigned get_max_connections(database::connection & DB);
-	static unsigned get_max_upload_rate(database::connection & DB);
+	static unsigned get_max_download_rate();
+	static unsigned get_max_connections();
+	static unsigned get_max_upload_rate();
+	static void set_max_download_rate(const unsigned rate);
+	static void set_max_connections(const unsigned connections);
+	static void set_max_upload_rate(const unsigned rate);
 
-	static void set_max_download_rate(const unsigned & rate, database::connection & DB);
-	static void set_max_connections(const unsigned & connections, database::connection & DB);
-	static void set_max_upload_rate(const unsigned & rate, database::connection & DB);
+	/* Connection Functions
+	All these functions correspond to above functions but they take a database
+	connection. These are needed to do calls to multiple database functions
+	within a transaction.
+	*/
+	static unsigned get_max_download_rate(database::pool::proxy & DB);
+	static unsigned get_max_connections(database::pool::proxy & DB);
+	static unsigned get_max_upload_rate(database::pool::proxy & DB);
+	static void set_max_download_rate(const unsigned rate, database::pool::proxy & DB);
+	static void set_max_connections(const unsigned connections, database::pool::proxy & DB);
+	static void set_max_upload_rate(const unsigned rate, database::pool::proxy & DB);
 
 private:
 	preferences(){}

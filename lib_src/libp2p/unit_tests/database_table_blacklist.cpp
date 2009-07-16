@@ -1,31 +1,29 @@
 //custom
 #include "../database.hpp"
-#include "../settings.hpp"
+#include "../path.hpp"
 
 int main()
 {
-	database::connection DB("DB");
-	database::init::run("DB");
-	DB.query("DELETE FROM blacklist");
+	database::init::run();
+	database::table::blacklist::clear();
 
 	std::string IP_1 = "1.1.1.1", IP_2 = "2.2.2.2";
-
 	int state = 0;
 	if(database::table::blacklist::modified(state)){
 		LOGGER; exit(1);
 	}
 
-	database::table::blacklist::add(IP_1, DB);
+	database::table::blacklist::add(IP_1);
 
 	if(!database::table::blacklist::modified(state)){
 		LOGGER; exit(1);
 	}
 
-	if(!database::table::blacklist::is_blacklisted(IP_1, DB)){
+	if(!database::table::blacklist::is_blacklisted(IP_1)){
 		LOGGER; exit(1);
 	}
 
-	if(database::table::blacklist::is_blacklisted(IP_2, DB)){
+	if(database::table::blacklist::is_blacklisted(IP_2)){
 		LOGGER; exit(1);
 	}
 }

@@ -1,7 +1,10 @@
 TODO
 
+-preferences should be cached in memory
+
 
 IDEAS
+
 -Have a singleton to write to files. This singleton should have running threads
 inside so client threads don't have to wait on I/O. The singleton should have a
 max buffer size where clients get blocked.

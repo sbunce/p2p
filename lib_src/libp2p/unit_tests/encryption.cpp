@@ -4,7 +4,6 @@
 
 int main()
 {
-#ifndef DISABLE_ENCRYPTION
 	encryption E_server, E_client;
 
 	//client generates prime
@@ -14,7 +13,7 @@ int main()
 	//client sends prime and local result to server
 	E_server.set_prime(prime_binary);
 	E_server.set_remote_result(E_client.get_local_result());
-	
+
 	//server sends local result to client
 	E_client.set_remote_result(E_server.get_local_result());
 
@@ -47,5 +46,4 @@ int main()
 	if(server_buffer != "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"){
 		LOGGER; exit(1);
 	}
-#endif
 }

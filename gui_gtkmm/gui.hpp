@@ -4,7 +4,6 @@
 //custom
 #include "settings.hpp"
 #include "statusbar_main.hpp"
-#include "vbox_search.hpp"
 #include "window_about.hpp"
 #include "window_download.hpp"
 #include "window_preferences.hpp"
@@ -54,7 +53,6 @@ private:
 	Gtk::MenuItem * about;
 
 	//notebook labels
-	Gtk::Image * search_label;
 	Gtk::Image * download_label;
 	Gtk::Image * upload_label;
 	Gtk::Image * tracker_label;
@@ -68,20 +66,34 @@ private:
 	/*
 	Custom classes derived from gtkmm objects.
 	*/
-	vbox_search * VBox_Search;         //stuff in search tab
 	window_download * Window_Download; //stuff in download tab
 	window_upload * Window_Upload;     //stuff in upload tab
 
+	//types of data accepted by drag and drop
+	std::list<Gtk::TargetEntry> list_targets;
+
 	/*
 	Signaled Functions
-	help_about              - user clicked Help/About
-	on_quit                 - when user clicks File/Quit
-	on_delete_event         - overrides the event which happens on window close
-	settings_preferences    - user clicked Settings/Preferences
+	file_drag_data_received:
+		File dragged on to window.
+	help_about:
+		User clicked Help/About.
+	on_quit:
+		When user clicks File/Quit
+	on_delete_event:
+		Overrides the event which happens on window close.
+	process_URI:
+		Processes URI of file dropped on window.
+		Note: URI might be newline delimited list of URIs.
+	settings_preferences:
+		User clicked Settings/Preferences
 	*/
+	void file_drag_data_received(const Glib::RefPtr<Gdk::DragContext> & context,
+		int x, int y, const Gtk::SelectionData & selection_data, guint info, guint time);
 	void help_about();
 	void on_quit();
 	bool on_delete_event(GdkEventAny * event);
+	void process_URI(const std::string & URI);
 	void settings_preferences();
 
 	p2p P2P;

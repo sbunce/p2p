@@ -56,17 +56,18 @@ private:
 	std::vector<mpint> Prime_Cache;
 
 	/*
-	PRNG function that mp_prime_random_ex needs
-		buff is filled with random bytes
-		length is how many bytes to put in to buff
-		data is optional pointer
-	*/
-	static int PRNG(unsigned char * buff, int length, void * data);
-
-	/*
 	generate:
 		The generate_thread runs in this function and generates primes.
+	PRNG:
+		Used by mp_prime_random_ex() for random bytes.
+		buff: buffer with random bytes
+		length: how many random bytes to put in buff
+		data: optional pointer that can be passed to PRNG
+	recommended_miller_rabin_tests:
+		Returns the recommended number of miller rabin tests for a given key size
+		(bits).
 	*/
 	void generate();
+	static int PRNG(unsigned char * buff, int size, void * data);
 };
 #endif

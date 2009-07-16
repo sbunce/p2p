@@ -16,12 +16,29 @@ atomic_int<int> & database::table::blacklist::blacklist_state()
 }
 //END static
 
-void database::table::blacklist::add(const std::string & IP, database::connection & DB)
+void database::table::blacklist::add(const std::string & IP)
+{
+	database::pool::proxy DB;
+	add(IP, DB);
+}
+
+void database::table::blacklist::add(const std::string & IP, database::pool::proxy & DB)
 {
 	std::stringstream ss;
 	ss << "INSERT INTO blacklist VALUES ('" << IP << "')";
-	DB.query(ss.str());
+	DB->query(ss.str());
 	++blacklist_state();
+}
+
+void database::table::blacklist::clear()
+{
+	database::pool::proxy DB;
+	clear(DB);
+}
+
+void database::table::blacklist::clear(database::pool::proxy & DB)
+{
+	DB->query("DELETE FROM blacklist");
 }
 
 static int is_blacklisted_call_back(bool & found, int columns, char ** response, char ** column_name)
@@ -30,12 +47,18 @@ static int is_blacklisted_call_back(bool & found, int columns, char ** response,
 	return 0;
 }
 
-bool database::table::blacklist::is_blacklisted(const std::string & IP, database::connection & DB)
+bool database::table::blacklist::is_blacklisted(const std::string & IP)
+{
+	database::pool::proxy DB;
+	return is_blacklisted(IP, DB);
+}
+
+bool database::table::blacklist::is_blacklisted(const std::string & IP, database::pool::proxy & DB)
 {
 	bool found = false;
 	std::stringstream ss;
 	ss << "SELECT 1 FROM blacklist WHERE IP = '" << IP << "'";
-	DB.query(ss.str(), &is_blacklisted_call_back, found);
+	DB->query(ss.str(), &is_blacklisted_call_back, found);
 	return found;
 }
 

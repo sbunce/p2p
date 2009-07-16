@@ -424,7 +424,8 @@ private:
 			even though select() said the socket was readable. We ignore
 			that when that happens.
 			*/
-			int n_bytes = recv(socket_FD, (char *)SD->recv_buff.tail_start(), temp, MSG_NOSIGNAL);
+			int n_bytes = recv(socket_FD, reinterpret_cast<char *>(SD->recv_buff.tail_start()),
+				temp, MSG_NOSIGNAL);
 
 			if(n_bytes == 0){
 				SD->disconnect_flag = true;
@@ -475,7 +476,7 @@ private:
 				even though select() said the socket was writeable. We
 				ignore it when that happens.
 				*/
-				int n_bytes = send(socket_FD, (char *)SD->send_buff.data(),
+				int n_bytes = send(socket_FD, reinterpret_cast<char *>(SD->send_buff.data()),
 					temp, MSG_NOSIGNAL);
 				if(n_bytes == 0){
 					SD->disconnect_flag = true;

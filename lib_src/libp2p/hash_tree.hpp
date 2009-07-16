@@ -4,7 +4,7 @@
 
 //custom
 #include "database.hpp"
-#include "request_generator.hpp"
+//#include "request_generator.hpp"
 #include "path.hpp"
 #include "protocol.hpp"
 #include "settings.hpp"
@@ -28,7 +28,7 @@
 class hash_tree : private boost::noncopyable
 {
 public:
-	hash_tree(const std::string & database_path);
+	hash_tree();
 
 	class tree_info : private boost::noncopyable
 	{
@@ -36,8 +36,7 @@ public:
 	public:
 		tree_info(
 			const std::string & root_hash_in,
-			const boost::uint64_t & file_size_in,
-			database::connection & DB
+			const boost::uint64_t & file_size_in
 		);
 
 		//see documentation for private variables returned
@@ -63,7 +62,7 @@ public:
 		*/
 		unsigned block_size(const boost::uint64_t & block_num);
 		bool highest_good(boost::uint64_t & HG);
-		boost::uint64_t rerequest_bad_blocks(request_generator & Request_Generator);
+		//boost::uint64_t rerequest_bad_blocks(request_generator & Request_Generator);
 		static boost::uint64_t file_size_to_tree_size(const boost::uint64_t & file_size);
 
 	private:
@@ -185,7 +184,6 @@ private:
 	bool create_recurse(std::fstream & upside_down, std::fstream & rightside_up,
 		boost::uint64_t start_RRN, boost::uint64_t end_RRN, std::string & root_hash);
 
-	database::connection DB;
 	SHA1 SHA;
 };
 #endif

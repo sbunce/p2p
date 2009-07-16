@@ -21,9 +21,9 @@ public:
 		size(size_in)
 	{}
 
-	std::vector<std::string> IP; //IP's of all servers that possibly have the file
-	std::string hash;            //root hash of hash tree
 	std::string name;            //name of the file
+	std::string hash;            //root hash of hash tree
 	boost::uint64_t size;        //size of the file (bytes)
+	std::vector<std::string> IP; //IP's of all servers that have the file
 };
 #endif

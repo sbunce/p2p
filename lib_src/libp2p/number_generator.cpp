@@ -34,14 +34,14 @@ mpint number_generator::random_prime()
 	return temp;
 }
 
-int number_generator::PRNG(unsigned char * buff, int length, void * data)
+int number_generator::PRNG(unsigned char * buff, int size, void * data)
 {
 #ifdef _WIN32
 	HCRYPTPROV hProvider = 0;
 	if(CryptAcquireContextW(&hProvider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)){
-		if(CryptGenRandom(hProvider, length, buff)){
+		if(CryptGenRandom(hProvider, size, buff)){
 			CryptReleaseContext(hProvider, 0); 
-			return length;
+			return size;
 		}
 	}
 	LOGGER << "error generating random number";
@@ -49,21 +49,20 @@ int number_generator::PRNG(unsigned char * buff, int length, void * data)
 #else
 	std::fstream fin("/dev/urandom", std::ios::in | std::ios::binary);
 	char ch;
-	for(int x=0; x<length; ++x){
+	for(int x=0; x<size; ++x){
 		fin.get(ch);
 		*buff++ = static_cast<unsigned char>(ch);
 	}
-	return length;
+	return size;
 #endif
 }
 
 void number_generator::generate()
 {
-	{ //DB will close when it leaves this scope
+	{//begin lock scope
 	boost::mutex::scoped_lock lock(prime_mutex);
-	database::connection DB(path::database());
-	database::table::prime::read_all(Prime_Cache, DB);
-	}
+	database::table::prime::read_all(Prime_Cache);
+	}//end lock scope
 
 	mpint random;
 	while(true){
@@ -78,7 +77,7 @@ void number_generator::generate()
 		//this should not be locked
 		mp_prime_random_ex(
 			&random.c_struct(),
-			10,                        //Miller-Rabin tests
+			mp_prime_rabin_miller_trials(protocol::DH_KEY_SIZE * 8),
 			protocol::DH_KEY_SIZE * 8, //size (bits) of prime to generate
 			0,                         //optional flags
 			&PRNG,                     //random byte source
@@ -99,6 +98,5 @@ void number_generator::stop()
 {
 	generate_thread.interrupt();
 	generate_thread.join();
-	database::connection DB(path::database());
-	database::table::prime::write_all(Prime_Cache, DB);
+	database::table::prime::write_all(Prime_Cache);
 }

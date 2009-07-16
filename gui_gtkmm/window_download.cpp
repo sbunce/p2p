@@ -49,8 +49,6 @@ window_download::window_download(
 
 	//menu that pops up when right click happens on download
 	downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::StockMenuElem(
-		Gtk::StockID(Gtk::Stock::INFO), sigc::mem_fun(*this, &window_download::download_info_tab)));
-	downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::StockMenuElem(
 		Gtk::StockID(Gtk::Stock::MEDIA_PAUSE), sigc::mem_fun(*this, &window_download::pause_download)));
 	//downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::MenuElem(""));//spacer
 	downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::StockMenuElem(
@@ -117,75 +115,6 @@ bool window_download::download_click(GdkEventButton * event)
 		}
 	}
 	return true;
-}
-
-void window_download::download_info_tab()
-{
-	std::string root_hash, file_name;
-	Glib::RefPtr<Gtk::TreeView::Selection> refSelection = download_view->get_selection();
-	if(refSelection){
-		Gtk::TreeModel::iterator selected_row_iter = refSelection->get_selected();
-		if(selected_row_iter){
-			Gtk::TreeModel::Row row = *selected_row_iter;
-			Glib::ustring hash_retrieved;
-			row.get_value(0, root_hash);
-		}
-	}
-
-	//make sure download exists (user could have requested information on nothing)
-	std::string path;
-	boost::uint64_t tree_size, file_size;
-	if(!P2P.file_info(root_hash, path, tree_size, file_size)){
-		LOGGER << "clicked download doesn't exist";
-		return;
-	}
-
-	if(open_info_tabs.find(root_hash) != open_info_tabs.end()){
-		LOGGER << "tab for " << root_hash << " already open";
-		return;
-	}else{
-		open_info_tabs.insert(root_hash);
-	}
-
-	Gtk::HBox * hbox;           //separates tab label from button
-	Gtk::Label * tab_label;     //tab text
-	Gtk::Button * close_button; //clickable close button
-
-	window_download_status * status_window = Gtk::manage(new window_download_status(
-		root_hash,
-		path,
-		tree_size,
-		file_size,
-		hbox,         //set in ctor
-		tab_label,    //set in ctor
-		close_button, //set in ctor
-		P2P
-	));
-
-	notebook->append_page(*status_window, *hbox, *tab_label);
-	notebook->show_all_children();
-
-	//set tab window to refresh
-	sigc::connection tab_conn = Glib::signal_timeout().connect(
-		sigc::mem_fun(status_window, &window_download_status::refresh),
-		settings::GUI_TICK
-	);
-
-	//signal to close tab, function pointer bound to window pointer associated with a tab
-	close_button->signal_clicked().connect(
-		sigc::bind<window_download_status *, std::string, sigc::connection>(
-			sigc::mem_fun(*this, &window_download::download_info_tab_close),
-			status_window, root_hash, tab_conn
-		)
-	);
-}
-
-void window_download::download_info_tab_close(window_download_status * status_window,
-	std::string root_hash, sigc::connection tab_conn)
-{
-	tab_conn.disconnect();                 //stop window from refreshing
-	notebook->remove_page(*status_window); //remove from notebook
-	open_info_tabs.erase(root_hash);
 }
 
 bool window_download::download_info_refresh()

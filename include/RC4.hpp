@@ -8,7 +8,7 @@ public:
 		seeded(false)
 	{}
 
-	void seed(unsigned char * buff, unsigned len)
+	void seed(unsigned char * buff, int len)
 	{
 		/*
 		Seed must be at least one byte. It can be longer than 256 but the extra
@@ -42,7 +42,6 @@ public:
 	unsigned char get_byte()
 	{
 		assert(seeded);
-
 		unsigned char temp;
 		i = (i + 1) & 255;
 		j = (j + S[i]) & 255;

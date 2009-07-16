@@ -25,6 +25,8 @@ public:
 	};
 
 	/*
+	clear:
+		Clears the entire hash table.
 	delete_tree:
 		Delete entry for tree of specified hash and tree_size.
 	exists:
@@ -36,12 +38,26 @@ public:
 		function must be called for the hash tree to not be deleted on next
 		program start.
 	*/
-	static void delete_tree(const std::string & hash, const int & tree_size, database::connection & DB);
-	static bool exists(const std::string & hash, const int & tree_size, database::connection & DB);
-	static bool get_state(const std::string & hash, const int & tree_size, state & State, database::connection & DB);
-	static void set_state(const std::string & hash, const int & tree_size, const state & State, database::connection & DB);
-	static bool tree_allocate(const std::string & hash, const int & tree_size, database::connection & DB);
-	static database::blob tree_open(const std::string & hash, const int & tree_size, database::connection & DB);
+	static void clear();
+	static void delete_tree(const std::string & hash, const int tree_size);
+	static bool exists(const std::string & hash, const int tree_size);
+	static bool get_state(const std::string & hash, const int tree_size, state & State);
+	static void set_state(const std::string & hash, const int tree_size, const state State);
+	static bool tree_allocate(const std::string & hash, const int tree_size);
+	static database::blob tree_open(const std::string & hash, const int tree_size);
+
+	/* Connection Functions
+	All these functions correspond to above functions but they take a database
+	connection. These are needed to do calls to multiple database functions
+	within a transaction.
+	*/
+	static void clear(database::pool::proxy & DB);
+	static void delete_tree(const std::string & hash, const int tree_size, database::pool::proxy & DB);
+	static bool exists(const std::string & hash, const int tree_size, database::pool::proxy & DB);
+	static bool get_state(const std::string & hash, const int tree_size, state & State, database::pool::proxy & DB);
+	static void set_state(const std::string & hash, const int tree_size, const state State, database::pool::proxy & DB);
+	static bool tree_allocate(const std::string & hash, const int tree_size, database::pool::proxy & DB);
+	static database::blob tree_open(const std::string & hash, const int tree_size, database::pool::proxy & DB);
 
 private:
 	hash(){}

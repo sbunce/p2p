@@ -11,11 +11,6 @@ p2p::p2p():
 
 }
 
-bool p2p::current_download(const std::string & hash, download_status & status)
-{
-	return P2P_Real->current_download(hash, status);
-}
-
 void p2p::current_downloads(std::vector<download_status> & CD)
 {
 	P2P_Real->current_downloads(CD);
@@ -29,12 +24,6 @@ void p2p::current_uploads(std::vector<upload_status> & CU)
 unsigned p2p::download_rate()
 {
 	return P2P_Real->download_rate();
-}
-
-bool p2p::file_info(const std::string & hash, std::string & path,
-	boost::uint64_t & tree_size, boost::uint64_t & file_size)
-{
-	return P2P_Real->file_info(hash, path, tree_size, file_size);
 }
 
 unsigned p2p::get_max_connections()
@@ -65,11 +54,6 @@ unsigned p2p::prime_count()
 void p2p::remove_download(const std::string & hash)
 {
 	P2P_Real->remove_download(hash);
-}
-
-void p2p::search(std::string search_term, std::vector<download_info> & Search_Info)
-{
-	P2P_Real->search(search_term, Search_Info);
 }
 
 void p2p::set_max_connections(const unsigned max_connections)

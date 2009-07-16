@@ -10,6 +10,9 @@
 	#define FD_SETSIZE 1024 //max number of sockets in fd_set
 	#include <ws2tcpip.h>
 
+	//int used in place of socklen_t on windows
+	#define socklen_t int
+
 	//close is closesocket in winsock
 	#define close closesocket
 
@@ -134,7 +137,7 @@ public:
 	{
 		sockaddr_storage remoteaddr;
 		socklen_t len = sizeof(remoteaddr);
-		return ::accept(listener_FD, (sockaddr *)&remoteaddr, &len);
+		return ::accept(listener_FD, reinterpret_cast<sockaddr *>(&remoteaddr), &len);
 	}
 
 	/* Check if asynchronous connection attempt succeeded.
@@ -149,8 +152,8 @@ public:
 		#else
 		int optval = 1;
 		#endif
-		int optlen = sizeof(optval);
-		getsockopt(socket_FD, SOL_SOCKET, SO_ERROR, &optval, (socklen_t *)&optlen);
+		socklen_t optlen = sizeof(optval);
+		getsockopt(socket_FD, SOL_SOCKET, SO_ERROR, &optval, &optlen);
 		return optval == 0;
 	}
 
@@ -205,15 +208,15 @@ public:
 		*/
 		sockaddr_storage addr;
 		socklen_t len = sizeof(addr);
-		getpeername(socket_FD, (sockaddr *)&addr, &len);
+		getpeername(socket_FD, reinterpret_cast<sockaddr *>(&addr), &len);
 		char buff[INET6_ADDRSTRLEN];
 		if(addr.ss_family == AF_INET){
 			//IPv4 socket
-			getnameinfo((sockaddr *)&addr, sizeof(sockaddr_in), buff, sizeof(buff),
+			getnameinfo(reinterpret_cast<sockaddr *>(&addr), sizeof(sockaddr_in), buff, sizeof(buff),
 				NULL, 0, NI_NUMERICHOST);
 		}else if(addr.ss_family == AF_INET6){
 			//IPv6 socket
-			getnameinfo((sockaddr *)&addr, sizeof(sockaddr_in6), buff, sizeof(buff),
+			getnameinfo(reinterpret_cast<sockaddr *>(&addr), sizeof(sockaddr_in6), buff, sizeof(buff),
 				NULL, 0, NI_NUMERICHOST);
 		}
 
@@ -239,18 +242,18 @@ public:
 		char buff[INET6_ADDRSTRLEN];
 		if(Info.get_addrinfo()->ai_family == AF_INET){
 			//IPv4 socket
-			getnameinfo((sockaddr *)Info.get_addrinfo()->ai_addr, sizeof(sockaddr_in),
-				buff, sizeof(buff), NULL, 0, NI_NUMERICHOST);
+			getnameinfo(reinterpret_cast<sockaddr *>(Info.get_addrinfo()->ai_addr),
+				sizeof(sockaddr_in), buff, sizeof(buff), NULL, 0, NI_NUMERICHOST);
 		}else if(Info.get_addrinfo()->ai_family == AF_INET6){
 			//IPv6 socket
-			getnameinfo((sockaddr *)Info.get_addrinfo()->ai_addr, sizeof(sockaddr_in6),
-				buff, sizeof(buff), NULL, 0, NI_NUMERICHOST);
+			getnameinfo(reinterpret_cast<sockaddr *>(Info.get_addrinfo()->ai_addr),
+				sizeof(sockaddr_in6), buff, sizeof(buff), NULL, 0, NI_NUMERICHOST);
 		}
 
 		/*
 		A dualstack implementation (IPv4/IPv6 are the same code base) will return
 		a IPv4 mapped address that will look like this ::ffff:123.123.123.123. We
-		remove the front of it.
+		remove the front of it to only return 123.123.123.123.
 		*/
 		std::string tmp(buff);
 		if(tmp.find("::ffff:", 0) == 0){
@@ -266,16 +269,21 @@ public:
 	*/
 	static std::string get_port(const int socket_FD)
 	{
-		sockaddr_in6 sa;
-		socklen_t len = sizeof(sa);
-		if(getpeername(socket_FD, (sockaddr *)&sa, &len) == -1){
+		sockaddr_storage addr;
+		socklen_t len = sizeof(addr);
+		if(getpeername(socket_FD, reinterpret_cast<sockaddr *>(&addr), &len) == -1){
 			return "";
+		}else{
+			int port;
+			if(addr.ss_family == AF_INET){
+				port = ntohs(reinterpret_cast<sockaddr_in *>(&addr)->sin_port);
+			}else if(addr.ss_family == AF_INET6){
+				port = ntohs(reinterpret_cast<sockaddr_in6 *>(&addr)->sin6_port);
+			}
+			std::stringstream ss;
+			ss << port;
+			return ss.str();
 		}
-		int port;
-		port = ntohs(sa.sin6_port);
-		std::stringstream ss;
-		ss << port;
-		return ss.str();
 	}
 
 	/*
@@ -291,7 +299,7 @@ public:
 		#else
 		int optval = 1;
 		#endif
-		int optlen = sizeof(optval);
+		socklen_t optlen = sizeof(optval);
 		if(setsockopt(socket_FD, SOL_SOCKET, SO_REUSEADDR, &optval, optlen) == -1){
 			LOGGER << errno;
 			exit(1);
@@ -403,8 +411,7 @@ public:
 		listener_IPv4 = wrapper::start_listener_IPv4(port);
 		listener_IPv6 = wrapper::start_listener_IPv6(port);
 		#else
-		listener_IPv4 = wrapper::start_listener_dual_stack(port);
-		listener_IPv6 = listener_IPv4;
+		listener_IPv4 = listener_IPv6 = wrapper::start_listener_dual_stack(port);
 		#endif
 		if(listener_IPv4 == -1 && listener_IPv6 == -1){
 			LOGGER << "failed to start either IPv4 or IPv6 listener";

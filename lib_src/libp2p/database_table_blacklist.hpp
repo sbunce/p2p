@@ -24,16 +24,28 @@ public:
 	/*
 	add:
 		Add IP to blacklist.
+	clear:
+		Clears the entire blacklist table.
 	is_blacklisted:
 		Returns true if IP is blacklisted.
 	modified:
 		Returns true if last_state_seen doesn't match the current blacklist_state.
 		Note: For first call last_state_seen == 0.
-		Postcondition: last_state_seen == blacklist_state.
+		Postcondition: last_state_seen = blacklist_state.
 	*/
-	static void add(const std::string & IP, database::connection & DB);
-	static bool is_blacklisted(const std::string & IP, database::connection & DB);
+	static void add(const std::string & IP);
+	static void clear();
+	static bool is_blacklisted(const std::string & IP);
 	static bool modified(int & last_state_seen);
+
+	/* Connection Functions
+	All these functions correspond to above functions but they take a database
+	connection. These are needed to do calls to multiple database functions
+	within a transaction.
+	*/
+	static void add(const std::string & IP, database::pool::proxy & DB);
+	static void clear(database::pool::proxy & DB);
+	static bool is_blacklisted(const std::string & IP, database::pool::proxy & DB);
 
 private:
 	blacklist(){}

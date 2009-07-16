@@ -8,8 +8,6 @@
 #include <portable_sleep.hpp>
 #include <timer.hpp>
 
-const std::string listen_port = "6969";
-
 class connection
 {
 public:
@@ -60,8 +58,8 @@ void connect_call_back(network::socket & Socket)
 	}else{
 		direction = "out";
 	}
-	//LOGGER << direction << " H<" << Socket.host << "> IP<" << Socket.IP << "> P<"
-	//	<< Socket.port << "> S<" << Socket.socket_FD << ">";
+	LOGGER << direction << " H<" << Socket.host << "> IP<" << Socket.IP << "> P<"
+		<< Socket.port << "> S<" << Socket.socket_FD << ">";
 	Connection.insert(std::make_pair(Socket.socket_FD, new connection(Socket)));
 	Socket.recv_call_back = boost::bind(&connection::recv_call_back, Connection[Socket.socket_FD].get(), _1);
 	Socket.send_call_back = boost::bind(&connection::send_call_back, Connection[Socket.socket_FD].get(), _1);
@@ -76,8 +74,8 @@ void disconnect_call_back(network::socket & Socket)
 	}else{
 		direction = "out";
 	}
-	//LOGGER << direction << " H<" << Socket.host << "> IP<" << Socket.IP << "> P<"
-	//	<< Socket.port << "> S<" << Socket.socket_FD << ">";
+	LOGGER << direction << " H<" << Socket.host << "> IP<" << Socket.IP << "> P<"
+		<< Socket.port << "> S<" << Socket.socket_FD << ">";
 	Connection.erase(Socket.socket_FD);
 }
 

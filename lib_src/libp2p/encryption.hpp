@@ -45,11 +45,25 @@ public:
 
 	/*
 	After Diffie-Hellman-Merkle these functions can be used to encrypt/decrypt.
+	T must be string-like. It must have .size() and [] must return bytes.
 	*/
-	void crypt_send(std::string & bytes);
-	void crypt_send(char * bytes, const int & length);
-	void crypt_recv(std::string & bytes);
-	void crypt_recv(char * bytes, const int & length);
+	template<typename T>
+	void crypt_send(T & buff)
+	{
+		assert(ready_to_encrypt);
+		for(int x=0; x<buff.size(); ++x){
+			buff[x] = (unsigned char)buff[x] ^ PRNG_send.get_byte();
+		}
+	}
+
+	template<typename T>
+	void crypt_recv(T & buff)
+	{
+		assert(ready_to_encrypt);
+		for(int x=0; x<buff.size(); ++x){
+			buff[x] = (unsigned char)buff[x] ^ PRNG_recv.get_byte();
+		}
+	}
 
 private:
 	//keeps track of encryption state to make sure no functions get called out of order

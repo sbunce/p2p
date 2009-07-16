@@ -14,14 +14,11 @@ gui::gui():
 	help_menu = Gtk::manage(new Gtk::Menu);
 
 	//notebook labels
-	Gtk::Image * search_label = Gtk::manage(new Gtk::Image(Gtk::Stock::FIND,
-		Gtk::ICON_SIZE_LARGE_TOOLBAR));
 	Gtk::Image * download_label = Gtk::manage(new Gtk::Image(Gtk::Stock::GO_DOWN,
 		Gtk::ICON_SIZE_LARGE_TOOLBAR));
 	Gtk::Image * upload_label = Gtk::manage(new Gtk::Image(Gtk::Stock::GO_UP,
 		Gtk::ICON_SIZE_LARGE_TOOLBAR));
 
-	VBox_Search = Gtk::manage(new vbox_search(P2P));
 	Window_Download = Gtk::manage(new window_download(P2P, notebook));
 	Window_Upload = Gtk::manage(new window_upload(P2P));
 	statusbar = Gtk::manage(new statusbar_main(P2P));
@@ -61,8 +58,6 @@ gui::gui():
 	notebook->set_scrollable(true);
 
 	//add elements to the notebook
-	notebook->append_page(*VBox_Search, *search_label);
-	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
 	notebook->append_page(*Window_Download, *download_label);
 	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
 	notebook->append_page(*Window_Upload, *upload_label);
@@ -82,7 +77,13 @@ gui::gui():
 	window->property_destroy_with_parent().set_value(false);
 	window->add(*main_VBox);
 
+	//set up window to get URIs of files dropped on it
+	list_targets.push_back(Gtk::TargetEntry("STRING"));
+	list_targets.push_back(Gtk::TargetEntry("text/plain"));
+	window->drag_dest_set(list_targets);
+
 	//signaled functions
+	window->signal_drag_data_received().connect(sigc::mem_fun(*this, &gui::file_drag_data_received));
 	quit->signal_activate().connect(sigc::mem_fun(*this, &gui::on_quit), false);
 	preferences->signal_activate().connect(sigc::mem_fun(*this, &gui::settings_preferences), false);
 	about->signal_activate().connect(sigc::mem_fun(*this, &gui::help_about), false);
@@ -96,21 +97,42 @@ gui::~gui()
 
 }
 
-void gui::on_quit()
+void gui::file_drag_data_received(
+	const Glib::RefPtr<Gdk::DragContext> & context, //info about drag (available on source and dest)
+	int x,                                          //x-coord of drop
+	int y,                                          //y-coord of drop
+	const Gtk::SelectionData & selection_data,      //data dropped
+	guint info,                                     //type of info dropped
+	guint time)                                     //time stamp of when drop happened
 {
-	hide();
-}
+	if(selection_data.get_length() >= 0 && selection_data.get_format() == 8){
+		process_URI(selection_data.get_data_as_string());
+	}
 
-bool gui::on_delete_event(GdkEventAny* event)
-{
-	on_quit();
-	return true;
+	//tell other end we're done with drag and drop so it can free resources
+	context->drag_finish(true, true, time);
 }
 
 void gui::help_about()
 {
 	boost::shared_ptr<window_about> Window_About(new window_about());
 	Gtk::Main::run(*Window_About);
+}
+
+void gui::on_quit()
+{
+	hide();
+}
+
+bool gui::on_delete_event(GdkEventAny * event)
+{
+	on_quit();
+	return true;
+}
+
+void gui::process_URI(const std::string & URI)
+{
+	LOGGER << URI;
 }
 
 void gui::settings_preferences()

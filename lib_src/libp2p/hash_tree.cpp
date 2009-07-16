@@ -1,12 +1,10 @@
 #include "hash_tree.hpp"
 
 //BEGIN hash_tree IMPLEMENTATION
-hash_tree::hash_tree(const std::string & database_path):
-	DB(database_path),
+hash_tree::hash_tree():
 	stop_thread(false)
 {
-	//make sure directory for temp hash trees created
-	boost::filesystem::create_directory(path::temp());
+
 }
 
 hash_tree::status hash_tree::check(tree_info & Tree_Info, boost::uint64_t & bad_block)
@@ -47,7 +45,9 @@ hash_tree::status hash_tree::check_block(tree_info & Tree_Info, const boost::uin
 		exit(1);
 	}
 
-	if(!DB.blob_read(Tree_Info.Blob, block_buff, info.second, info.first)){
+	if(!database::pool::get_proxy()->blob_read(Tree_Info.Blob, block_buff,
+		info.second, info.first))
+	{
 		return IO_ERROR;
 	}
 
@@ -70,7 +70,9 @@ hash_tree::status hash_tree::check_block(tree_info & Tree_Info, const boost::uin
 			return BAD;
 		}
 	}else{
-		if(!DB.blob_read(Tree_Info.Blob, block_buff, protocol::HASH_SIZE, parent)){
+		if(!database::pool::get_proxy()->blob_read(Tree_Info.Blob, block_buff,
+			protocol::HASH_SIZE, parent))
+		{
 			return IO_ERROR;
 		}
 
@@ -85,7 +87,9 @@ hash_tree::status hash_tree::check_block(tree_info & Tree_Info, const boost::uin
 hash_tree::status hash_tree::check_file_block(tree_info & Tree_Info, const boost::uint64_t & file_block_num, const char * block, const int & size)
 {
 	char parent_buff[protocol::HASH_SIZE];
-	if(!DB.blob_read(Tree_Info.Blob, parent_buff, protocol::HASH_SIZE, Tree_Info.file_hash_offset + file_block_num * protocol::HASH_SIZE)){
+	if(!database::pool::get_proxy()->blob_read(Tree_Info.Blob, parent_buff,
+		protocol::HASH_SIZE, Tree_Info.file_hash_offset + file_block_num * protocol::HASH_SIZE))
+	{
 		return IO_ERROR;
 	}
 	SHA.init();
@@ -115,7 +119,7 @@ void hash_tree::check_contiguous(tree_info & Tree_Info)
 
 			//blacklist server that sent bad block
 			LOGGER << c_iter_cur->second << " sent bad hash block " << c_iter_cur->first;
-			database::table::blacklist::add(c_iter_cur->second, DB);
+			database::table::blacklist::add(c_iter_cur->second);
 
 			//bad block, add all blocks this server sent to bad_block
 			contiguous_map<boost::uint64_t, std::string>::iterator iter_cur, iter_end;
@@ -249,6 +253,7 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 		be changed to complete.
 		*/
 		assert(tree_size == rightside_up.tellp());
+		database::pool::proxy DB;
 		if(!database::table::hash::exists(root_hash, tree_size, DB)){
 			/*
 			This tree does not already exist in the database. The tree needs to be
@@ -258,11 +263,11 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 			The transaction guarantees that the tree is either entirely there, or
 			not there at all.
 			*/
-			DB.query("BEGIN TRANSACTION");
+			DB->query("BEGIN TRANSACTION");
 			//allocate blob for new hash tree
 			if(!database::table::hash::tree_allocate(root_hash, tree_size, DB)){
 				LOGGER << "could not allocate blob for hash tree";
-				DB.query("END TRANSACTION");
+				DB->query("END TRANSACTION");
 				return false;
 			}
 			database::blob Blob = database::table::hash::tree_open(root_hash, tree_size, DB);
@@ -271,7 +276,7 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 			while(bytes_remaining){
 				if(boost::this_thread::interruption_requested()){
 					database::table::hash::delete_tree(root_hash, tree_size, DB);
-					DB.query("END TRANSACTION");
+					DB->query("END TRANSACTION");
 					return false;
 				}
 
@@ -284,20 +289,20 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 				if(rightside_up.gcount() != read_size){
 					LOGGER << "error reading rightside_up file";
 					database::table::hash::delete_tree(root_hash, tree_size, DB);
-					DB.query("END TRANSACTION");
+					DB->query("END TRANSACTION");
 					return false;
 				}else{
-					if(!DB.blob_write(Blob, block_buff, read_size, offset)){
+					if(!DB->blob_write(Blob, block_buff, read_size, offset)){
 						LOGGER << "error doing incremental write to blob";
 						database::table::hash::delete_tree(root_hash, tree_size, DB);
-						DB.query("END TRANSACTION");
+						DB->query("END TRANSACTION");
 						return false;
 					}
 					offset += read_size;
 					bytes_remaining -= read_size;
 				}
 			}
-			DB.query("END TRANSACTION");
+			DB->query("END TRANSACTION");
 		}
 		return true;
 	}
@@ -404,7 +409,9 @@ hash_tree::status hash_tree::read_block(tree_info & Tree_Info, const boost::uint
 	char block_buff[protocol::FILE_BLOCK_SIZE];
 	std::pair<boost::uint64_t, unsigned> info;
 	if(tree_info::block_info(block_num, Tree_Info.row, info)){
-		if(!DB.blob_read(Tree_Info.Blob, block_buff, info.second, info.first)){
+		if(!database::pool::get_proxy()->blob_read(Tree_Info.Blob, block_buff,
+			info.second, info.first))
+		{
 			return IO_ERROR;
 		}
 		block.clear();
@@ -425,7 +432,9 @@ hash_tree::status hash_tree::write_block(tree_info & Tree_Info, const boost::uin
 			LOGGER << "incorrect block size, programming error";
 			exit(1);
 		}
-		if(!DB.blob_write(Tree_Info.Blob, block.data(), block.size(), info.first)){
+		if(!database::pool::get_proxy()->blob_write(Tree_Info.Blob, block.data(),
+			block.size(), info.first))
+		{
 			return IO_ERROR;
 		}
 		Tree_Info.Contiguous.insert(std::make_pair(block_num, IP));
@@ -441,12 +450,11 @@ hash_tree::status hash_tree::write_block(tree_info & Tree_Info, const boost::uin
 //BEGIN hash_tree::tree_info IMPLEMENTATION
 hash_tree::tree_info::tree_info(
 	const std::string & root_hash_in,
-	const boost::uint64_t & file_size_in,
-	database::connection & DB
+	const boost::uint64_t & file_size_in
 ):
 	root_hash(root_hash_in),
 	file_size(file_size_in),
-	Blob(database::table::hash::tree_open(root_hash_in, file_size_to_tree_size(file_size_in), DB))
+	Blob(database::table::hash::tree_open(root_hash_in, file_size_to_tree_size(file_size_in)))
 {
 	file_size_to_tree_hash(file_size, row);
 	tree_block_count = row_to_tree_block_count(row);
@@ -625,6 +633,7 @@ bool hash_tree::tree_info::highest_good(boost::uint64_t & HG)
 	}
 }
 
+/*
 boost::uint64_t hash_tree::tree_info::rerequest_bad_blocks(request_generator & Request_Generator)
 {
 	boost::uint64_t size = 0;
@@ -637,7 +646,7 @@ boost::uint64_t hash_tree::tree_info::rerequest_bad_blocks(request_generator & R
 	bad_block.clear();
 	return size;
 }
-
+*/
 boost::uint64_t hash_tree::tree_info::row_to_tree_block_count(const std::deque<boost::uint64_t> & row)
 {
 	boost::uint64_t block_count = 0;

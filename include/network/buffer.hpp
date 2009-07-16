@@ -222,7 +222,7 @@ public:
 			static_cast<const unsigned char *>(str), static_cast<const unsigned char *>(str + length)
 		);
 
-		if(pos == (unsigned char *)(str + length)){
+		if(pos == static_cast<const unsigned char *>(str + length)){
 			//substring not found
 			return npos;
 		}else{

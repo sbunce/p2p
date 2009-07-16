@@ -2,10 +2,10 @@
 #define H_WINDOW_UPLOAD
 
 //custom
-#include "window_download_status.hpp"
 #include "settings.hpp"
 
 //include
+#include <convert.hpp>
 #include <gtkmm.h>
 #include <p2p/p2p.hpp>
 

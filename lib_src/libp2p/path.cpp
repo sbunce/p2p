@@ -24,9 +24,21 @@ std::string & path::home()
 }
 //END static
 
-path::path()
+void path::create_required_directories()
 {
-
+	try{
+		#ifndef _WIN32
+		//main directory always in current directory on windows
+		boost::filesystem::create_directory(main());
+		#endif
+		boost::filesystem::create_directory(download());
+		boost::filesystem::create_directory(share());
+		boost::filesystem::create_directory(temp());
+	}catch(std::exception & ex){
+		LOGGER << ex.what();
+		LOGGER << "error: could not create required directory";
+		exit(1);
+	}
 }
 
 std::string path::database()
@@ -53,15 +65,6 @@ std::string path::download()
 		return "download/";
 	}else{
 		return home() + "/.p2p/download/";
-	}
-}
-
-std::string path::download_unfinished()
-{
-	if(home().empty()){
-		return "download_unfinished/";
-	}else{
-		return home() + "/.p2p/download_unfinished/";
 	}
 }
 

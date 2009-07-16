@@ -274,16 +274,14 @@ public:
 	bool highest_contiguous(T_key & HC)
 	{
 		T_key tmp = start_key;
-		typename std::map<T_key, T_val>::iterator iter_cur, iter_end;
-		iter_cur = range.begin();
-		iter_end = range.end();
-		while(iter_cur != iter_end){
+		for(typename std::map<T_key, T_val>::iterator iter_cur = range.begin(),
+			iter_end = range.end(); iter_cur != iter_end; ++iter_cur)
+		{
 			if(iter_cur->first == tmp){
 				++tmp;
 			}else{
 				break;
 			}
-			++iter_cur;
 		}
 
 		if(tmp == start_key){

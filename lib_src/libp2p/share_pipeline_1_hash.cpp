@@ -38,7 +38,7 @@ bool share_pipeline_1_hash::get_job(share_pipeline_job & info)
 
 void share_pipeline_1_hash::main_loop()
 {
-	hash_tree Hash_Tree(path::database());
+	hash_tree Hash_Tree;
 	share_pipeline_job info;
 	while(true){
 		boost::this_thread::interruption_point();
@@ -56,12 +56,10 @@ void share_pipeline_1_hash::main_loop()
 			*/
 			if(Hash_Tree.create(info.path, info.file_size, info.hash)){
 				boost::mutex::scoped_lock lock(job_mutex);
-				//LOGGER << "add: " << info.path << " size: " << info.file_size;
 				job.push_back(info);
 			}
 		}else{
 			boost::mutex::scoped_lock lock(job_mutex);
-			//LOGGER << "del: " << info.path;
 			job.push_back(info);
 		}
 	}

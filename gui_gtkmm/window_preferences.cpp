@@ -89,14 +89,14 @@ window_preferences::window_preferences(
 	button_box->pack_start(*cancel_button);
 	button_box->pack_start(*ok_button);
 
-	fixed->put(*max_download_rate_entry, 40, 184);
-	fixed->put(*max_upload_rate_entry, 40, 224);
-	fixed->put(*rate_label, 4, 152);
-	fixed->put(*connection_limit_label, 140, 152);
-	fixed->put(*download_rate_label, 8, 187);
-	fixed->put(*upload_rate_label, 8, 227);
-	fixed->put(*connections_hscale, 140, 171);
-	fixed->put(*button_box, 80, 256);
+	fixed->put(*max_download_rate_entry, 40, 40);
+	fixed->put(*max_upload_rate_entry, 40, 80);
+	fixed->put(*rate_label, 4, 10);
+	fixed->put(*connection_limit_label, 140, 10);
+	fixed->put(*download_rate_label, 8, 45);
+	fixed->put(*upload_rate_label, 8, 85);
+	fixed->put(*connections_hscale, 140, 50);
+	fixed->put(*button_box, 80, 115);
 
 	show_all_children();
 

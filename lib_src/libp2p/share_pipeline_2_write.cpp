@@ -1,7 +1,6 @@
 #include "share_pipeline_2_write.hpp"
 
-share_pipeline_2_write::share_pipeline_2_write():
-	DB(path::database())
+share_pipeline_2_write::share_pipeline_2_write()
 {
 	write_thread = boost::thread(boost::bind(&share_pipeline_2_write::main_loop, this));
 }
@@ -23,7 +22,8 @@ void share_pipeline_2_write::main_loop()
 		}
 
 		if(!temp.empty()){
-			DB.query("BEGIN TRANSACTION");
+			database::pool::proxy DB;
+			DB->query("BEGIN TRANSACTION");
 			for(std::vector<share_pipeline_job>::iterator iter_cur = temp.begin(),
 				iter_end = temp.end(); iter_cur != iter_end; ++iter_cur)
 			{
@@ -38,7 +38,7 @@ void share_pipeline_2_write::main_loop()
 					database::table::share::delete_entry(iter_cur->path, DB);
 				}
 			}
-			DB.query("END TRANSACTION");
+			DB->query("END TRANSACTION");
 		}
 	}
 }

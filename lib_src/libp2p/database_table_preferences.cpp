@@ -18,10 +18,16 @@ static int get_download_rate_call_back(unsigned & download_rate, int columns_ret
 	return 0;
 }
 
-unsigned database::table::preferences::get_max_download_rate(database::connection & DB)
+unsigned database::table::preferences::get_max_download_rate()
+{
+	database::pool::proxy DB;
+	return get_max_download_rate(DB);
+}
+
+unsigned database::table::preferences::get_max_download_rate(database::pool::proxy & DB)
 {
 	unsigned download_rate;
-	DB.query("SELECT max_download_rate FROM preferences", &get_download_rate_call_back, download_rate);
+	DB->query("SELECT max_download_rate FROM preferences", &get_download_rate_call_back, download_rate);
 	return download_rate;
 }
 
@@ -34,10 +40,16 @@ static int get_max_connections_call_back(unsigned & server_connections,
 	return 0;
 }
 
-unsigned database::table::preferences::get_max_connections(database::connection & DB)
+unsigned database::table::preferences::get_max_connections()
+{
+	database::pool::proxy DB;
+	return get_max_connections(DB);
+}
+
+unsigned database::table::preferences::get_max_connections(database::pool::proxy & DB)
 {
 	unsigned server_connections;
-	DB.query("SELECT max_connections FROM preferences",
+	DB->query("SELECT max_connections FROM preferences",
 		&get_max_connections_call_back, server_connections);
 	return server_connections;
 }
@@ -51,31 +63,55 @@ static int get_upload_rate_call_back(unsigned & upload_rate, int columns_retriev
 	return 0;
 }
 
-unsigned database::table::preferences::get_max_upload_rate(database::connection & DB)
+unsigned database::table::preferences::get_max_upload_rate()
+{
+	database::pool::proxy DB;
+	return get_max_upload_rate(DB);
+}
+
+unsigned database::table::preferences::get_max_upload_rate(database::pool::proxy & DB)
 {
 	unsigned upload_rate;
-	DB.query("SELECT max_upload_rate FROM preferences",
+	DB->query("SELECT max_upload_rate FROM preferences",
 		&get_upload_rate_call_back, upload_rate);
 	return upload_rate;
 }
 
-void database::table::preferences::set_max_download_rate(const unsigned & rate, database::connection & DB)
+void database::table::preferences::set_max_download_rate(const unsigned rate)
+{
+	database::pool::proxy DB;
+	set_max_download_rate(rate, DB);
+}
+
+void database::table::preferences::set_max_download_rate(const unsigned rate, database::pool::proxy & DB)
 {
 	std::stringstream ss;
 	ss << "UPDATE preferences SET max_download_rate = " << rate;
-	DB.query(ss.str());
+	DB->query(ss.str());
 }
 
-void database::table::preferences::set_max_connections(const unsigned & connections, database::connection & DB)
+void database::table::preferences::set_max_connections(const unsigned connections)
+{
+	database::pool::proxy DB;
+	set_max_connections(connections, DB);
+}
+
+void database::table::preferences::set_max_connections(const unsigned connections, database::pool::proxy & DB)
 {
 	std::stringstream ss;
 	ss << "UPDATE preferences SET max_connections = " << connections;
-	DB.query(ss.str());
+	DB->query(ss.str());
 }
 
-void database::table::preferences::set_max_upload_rate(const unsigned & rate, database::connection & DB)
+void database::table::preferences::set_max_upload_rate(const unsigned rate)
+{
+	database::pool::proxy DB;
+	set_max_upload_rate(rate, DB);
+}
+
+void database::table::preferences::set_max_upload_rate(const unsigned rate, database::pool::proxy & DB)
 {
 	std::stringstream ss;
 	ss << "UPDATE preferences SET max_upload_rate = " << rate;
-	DB.query(ss.str());
+	DB->query(ss.str());
 }

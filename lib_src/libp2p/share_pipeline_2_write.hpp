@@ -48,8 +48,6 @@ private:
 	*/
 	void main_loop();
 
-	database::connection DB;
-
 	//the stage before this stage
 	share_pipeline_1_hash Share_Pipeline_1_Hash;
 };

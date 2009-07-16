@@ -13,7 +13,8 @@ SConscript([
 	'gui_gtkmm/SConscript',
 	'include/SConscript',
 	'lib_src/SConscript',
-	'site_scons/SConscript'
+	'site_scons/SConscript',
+	'staging_area/SConscript'
 ])
 
 Clean('bin','bin') #directory for built binaries
