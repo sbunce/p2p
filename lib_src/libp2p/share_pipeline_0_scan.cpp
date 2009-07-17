@@ -93,10 +93,8 @@ void share_pipeline_0_scan::main_loop()
 {
 	namespace fs = boost::filesystem;
 
-	{ //DB will close when it leaves this scope
-	database::connection DB(path::database());
-	DB.query("SELECT path, size FROM share", this, &share_pipeline_0_scan::path_call_back);
-	}
+	//populate in-memory tree from database
+	database::pool::get_proxy()->query("SELECT path, size FROM share", this, &share_pipeline_0_scan::path_call_back);
 
 	boost::uint64_t size;
 	while(true){
