@@ -165,12 +165,11 @@ public:
 		int code;
 		while((code = sqlite3_exec(DB_handle, query.c_str(), NULL, NULL, NULL)) != SQLITE_OK){
 			if(code == SQLITE_BUSY){
-				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 				portable_sleep::ms(1);
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
 					<< " query: " << query;
-				break;
+				exit(1);
 			}
 		}
 		return code;
@@ -186,12 +185,11 @@ public:
 			(void *)fun_ptr, NULL)) != SQLITE_OK)
 		{
 			if(code == SQLITE_BUSY){
-				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 				portable_sleep::ms(1);
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
 					<< " query: " << query;
-				break;
+				exit(1);
 			}
 		}
 		return code;
@@ -210,12 +208,11 @@ public:
 			static_cast<void *>(&call_back_info), NULL)) != SQLITE_OK)
 		{
 			if(code == SQLITE_BUSY){
-				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 				portable_sleep::ms(1);
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
 					<< " query: " << query;
-				break;
+				exit(1);
 			}
 		}
 		return code;
@@ -235,12 +232,11 @@ public:
 			static_cast<void *>(&call_back_info), NULL)) != SQLITE_OK)
 		{
 			if(code == SQLITE_BUSY){
-				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 				portable_sleep::ms(1);
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
 					<< " query: " << query;
-				break;
+				exit(1);
 			}
 		}
 		return code;
@@ -259,12 +255,11 @@ public:
 			static_cast<void *>(&call_back_info), NULL)) != SQLITE_OK)
 		{
 			if(code == SQLITE_BUSY){
-				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 				portable_sleep::ms(1);
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
 					<< " query: " << query;
-				break;
+				exit(1);
 			}
 		}
 		return code;
@@ -288,12 +283,11 @@ public:
 			static_cast<void *>(&call_back_info), NULL)) != SQLITE_OK)
 		{
 			if(code == SQLITE_BUSY){
-				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 				portable_sleep::ms(1);
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
 					<< " query: " << query;
-				break;
+				exit(1);
 			}
 		}
 		return code;
@@ -317,12 +311,11 @@ public:
 			static_cast<void *>(&call_back_info), NULL)) != SQLITE_OK)
 		{
 			if(code == SQLITE_BUSY){
-				LOGGER << "sqlite yield on SQLITE_BUSY" << " query: " << query;
 				portable_sleep::ms(1);
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
 					<< " query: " << query;
-				break;
+				exit(1);
 			}
 		}
 		return code;
@@ -367,7 +360,6 @@ private:
 				NULL, NULL, NULL)) != SQLITE_OK)
 			{
 				if(code == SQLITE_BUSY){
-					LOGGER << "sqlite yield on SQLITE_BUSY";
 					portable_sleep::ms(1);
 				}else{
 					LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle);
@@ -468,7 +460,6 @@ private:
 			&blob_handle
 		)) != SQLITE_OK){
 			if(code == SQLITE_BUSY){
-				LOGGER << "sqlite yield on SQLITE_BUSY";
 				portable_sleep::ms(1);
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle);
