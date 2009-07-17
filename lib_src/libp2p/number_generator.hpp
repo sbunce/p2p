@@ -48,6 +48,11 @@ private:
 
 	boost::thread generate_thread;
 
+	/*
+	The prime_remove_cond triggers the generate_thread to make more primes. The
+	prime_generate_cond triggers threads waiting on primes to check to see if
+	there is a prime to get. The prime_mutex locks all access to Prime_Cache.
+	*/
 	boost::condition_variable_any prime_remove_cond;
 	boost::condition_variable_any prime_generate_cond;
 	boost::mutex prime_mutex;
@@ -63,9 +68,6 @@ private:
 		buff: buffer with random bytes
 		length: how many random bytes to put in buff
 		data: optional pointer that can be passed to PRNG
-	recommended_miller_rabin_tests:
-		Returns the recommended number of miller rabin tests for a given key size
-		(bits).
 	*/
 	void generate();
 	static int PRNG(unsigned char * buff, int size, void * data);
