@@ -29,13 +29,13 @@ public:
 	share_pipeline_2_write();
 
 	/*
-	share_size:
-		Returns the size of the share. (bytes)
+	size_bytes:
+		Returns the size of the share.
 	stop:
 		Stops all pipeline threads starting with pipeline 0 and working it's way
 		back up.
 	*/
-	boost::uint64_t share_size();
+	boost::uint64_t size_bytes();
 	void stop();
 
 private:

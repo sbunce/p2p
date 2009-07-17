@@ -20,13 +20,13 @@ public:
 		Returns true and sets info to a job if there is a job to be done. Returns
 		false and leaves info unset if there is no job. This function does not
 		block.
-	share_size:
-		Returns the size of the share. (bytes)
+	size_bytes:
+		Returns the size of the share.
 	stop:
 		Stops all threads in Workers group that are hashing files.
 	*/
 	bool get_job(share_pipeline_job & info);
-	boost::uint64_t share_size();
+	boost::uint64_t size_bytes();
 	void stop();
 
 private:

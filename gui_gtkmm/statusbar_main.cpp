@@ -29,7 +29,7 @@ bool statusbar_main::update_status_bar()
 	ss << std::string(32 - ss.str().size(), ' ');
 	ss << " Prime: " << P2P.prime_count();
 	ss << std::string(52 - ss.str().size(), ' ');
-	ss << " Share: " << convert::size_SI(P2P.share_size());
+	ss << " Share: " << convert::size_SI(P2P.share_size_bytes());
 
 	statusbar->pop();
 	statusbar->push(ss.str());

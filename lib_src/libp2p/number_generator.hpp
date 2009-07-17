@@ -28,8 +28,7 @@ class number_generator : public singleton_base<number_generator>
 {
 	friend class singleton_base<number_generator>;
 public:
-	//called by p2p dtor to terminate generate thread
-	void stop();
+	virtual ~number_generator();
 
 	/*
 	prime_count:
@@ -40,7 +39,7 @@ public:
 		Returns prime in prime cache. Size of prime is always settings::DH_KEY_SIZE.
 	*/
 	unsigned prime_count();
-	mpint random(const int & bytes);
+	mpint random(const int bytes);
 	mpint random_prime();
 
 private:

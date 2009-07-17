@@ -4,7 +4,7 @@ share_pipeline_0_scan::share_pipeline_0_scan():
 	share_path(boost::filesystem::system_complete(
 		boost::filesystem::path(path::share(), boost::filesystem::native)
 	)),
-	_share_size(0)
+	_size_bytes(0)
 {
 	scan_thread = boost::thread(boost::bind(&share_pipeline_0_scan::main_loop, this));
 }
@@ -134,7 +134,7 @@ void share_pipeline_0_scan::main_loop()
 						if(insert(iter_cur->path().string(), size)){
 							//file hasn't been seen before, or it changed size
 							boost::mutex::scoped_lock lock(job_mutex);
-							_share_size += size;
+							_size_bytes += size;
 							job.push_back(share_pipeline_job(iter_cur->path().string(), size, true));
 							job_cond.notify_one();
 						}
@@ -159,7 +159,7 @@ int share_pipeline_0_scan::path_call_back(int columns_retrieved, char ** respons
 	std::stringstream ss;
 	ss << response[1];
 	ss >> size;
-	_share_size += size;
+	_size_bytes += size;
 	fs::path path = fs::system_complete(fs::path(response[0], fs::native));
 	insert(path.string(), size);
 	if(boost::this_thread::interruption_requested()){
@@ -225,7 +225,7 @@ void share_pipeline_0_scan::remove_missing_recurse(
 				removed.
 				*/
 				boost::mutex::scoped_lock lock(job_mutex);
-				_share_size -= file_iter_cur->second.size;
+				_size_bytes -= file_iter_cur->second.size;
 				job.push_back(share_pipeline_job(file_path, file_iter_cur->second.size, false));
 				job_cond.notify_one();
 				dir_iter->second.File.erase(file_iter_cur++);
@@ -235,7 +235,7 @@ void share_pipeline_0_scan::remove_missing_recurse(
 			//error reading file, remove files that fail to read
 			LOGGER << ex.what();
 			boost::mutex::scoped_lock lock(job_mutex);
-			_share_size -= file_iter_cur->second.size;
+			_size_bytes -= file_iter_cur->second.size;
 			job.push_back(share_pipeline_job(file_path, file_iter_cur->second.size, false));
 			job_cond.notify_one();
 			dir_iter->second.File.erase(file_iter_cur++);
@@ -248,9 +248,9 @@ void share_pipeline_0_scan::remove_missing_recurse(
 	}
 }
 
-boost::uint64_t share_pipeline_0_scan::share_size()
+boost::uint64_t share_pipeline_0_scan::size_bytes()
 {
-	return _share_size;
+	return _size_bytes;
 }
 
 void share_pipeline_0_scan::stop()

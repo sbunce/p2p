@@ -43,9 +43,9 @@ void share_pipeline_2_write::main_loop()
 	}
 }
 
-boost::uint64_t share_pipeline_2_write::share_size()
+boost::uint64_t share_pipeline_2_write::size_bytes()
 {
-	return Share_Pipeline_1_Hash.share_size();
+	return Share_Pipeline_1_Hash.size_bytes();
 }
 
 void share_pipeline_2_write::stop()

@@ -5,13 +5,20 @@ number_generator::number_generator()
 	generate_thread = boost::thread(boost::bind(&number_generator::generate, this));
 }
 
+number_generator::~number_generator()
+{
+	generate_thread.interrupt();
+	generate_thread.join();
+	database::table::prime::write_all(Prime_Cache);
+}
+
 unsigned number_generator::prime_count()
 {
 	boost::mutex::scoped_lock lock(prime_mutex);
 	return Prime_Cache.size();
 }
 
-mpint number_generator::random(const int & bytes)
+mpint number_generator::random(const int bytes)
 {
 	unsigned char * buff = static_cast<unsigned char *>(std::malloc(bytes));
 	assert(buff);
@@ -92,11 +99,4 @@ void number_generator::generate()
 		//notify possible threads waiting for prime to be generated
 		prime_remove_cond.notify_all();
 	}
-}
-
-void number_generator::stop()
-{
-	generate_thread.interrupt();
-	generate_thread.join();
-	database::table::prime::write_all(Prime_Cache);
 }

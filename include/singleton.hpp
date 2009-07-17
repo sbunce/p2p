@@ -17,15 +17,16 @@ The singletone can then be accessed via the singleton function.
 example:
 	derived::singleton().func();
 
-Note: The destructor of the derived class will not ever be called. This is done
-because of static initialization order issues. If clean up needs to be done a
-function should be included in the derived class that can be called at an
-appropriate time.
+Note: Singleton objects are static so they are destructed in the reverse order
+they are constructed. You may have to explicitly specify the order of
+initialization of singletons by calling the singleton() function on the various
+singleton objects in the correct order. 
 */
 #ifndef H_SINGLETON
 #define H_SINGLETON
 
 //include
+#include <boost/scoped_ptr.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
 
@@ -41,17 +42,24 @@ public:
 
 protected:
 	singleton_base(){}
+	virtual ~singleton_base(){}
 
 private:
 	static void init()
 	{
-		t = new T();
+		/*
+		The scoped_ptr is guaranteed to never throw. If T ctor throws the
+		scoped_ptr will set itself to NULL which will cause an exception when
+		singleton() is called. For this reason classes derived from the
+		singleton_base must never throw.
+		*/
+		t.reset(new T());
 	}
 
-	static T * t;
+	static boost::scoped_ptr<T> t;
 	static boost::once_flag once_flag;
 };
 
-template<typename T> T * singleton_base<T>::t(NULL);
+template<typename T> boost::scoped_ptr<T> singleton_base<T>::t(NULL);
 template<typename T> boost::once_flag singleton_base<T>::once_flag = BOOST_ONCE_INIT;
 #endif

@@ -18,6 +18,11 @@ class pool : public singleton_base<pool>
 {
 	friend class singleton_base<pool>;
 public:
+	virtual ~pool()
+	{
+		LOGGER << "pool destructed";
+	}
+
 	/*
 	Manually get()'ing and put()'ing database connections is very error prone
 	because it'd be easy for someone to get() and accidently forget to put() the
@@ -51,18 +56,6 @@ public:
 			singleton().put(Connection);
 		}
 	};
-
-	/*
-	Removes all database connections from the pool. This should be called before
-	program shutdown but after everyone is done with the pool.
-	*/
-	void clear()
-	{
-		boost::mutex::scoped_lock lock(Pool_mutex);
-		while(!Pool.empty()){
-			Pool.pop();
-		}
-	}
 
 	/*
 	This should be used when a single database call needs to be done. The

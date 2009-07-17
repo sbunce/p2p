@@ -71,9 +71,9 @@ void p2p::set_max_upload_rate(const unsigned max_upload_rate)
 	P2P_Real->set_max_upload_rate(max_upload_rate);
 }
 
-boost::uint64_t p2p::share_size()
+boost::uint64_t p2p::share_size_bytes()
 {
-	return P2P_Real->share_size();
+	return P2P_Real->share_size_bytes();
 }
 
 void p2p::start_download(const download_info & DI)

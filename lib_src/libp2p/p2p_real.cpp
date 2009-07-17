@@ -3,16 +3,37 @@
 p2p_real::p2p_real()
 {
 	path::create_required_directories();
+
+	/* BEGIN STATIC INITIALIZATION
+	The order these are specified in is EXTREMELY important. The C++ standard
+	specifies that order of destruction of static objects is the opposite of
+	order of initialization. The singletons are static objects which get
+	initialized when we first call the singleton() member function. We specify
+	the order of initialization (and consequently destruction) based on their
+	dependencies on other static objects.
+	*/
+
+	/*
+	The database::init::run() function depends upon the database::pool singleton.
+	The database::init::run() function will intantiate the database::pool
+	singleton by itself but we do it explicitly for extra clarity.
+	*/
 	database::init::run();
+	database::pool::singleton();
+
+	/*
+	The number_generator singleton depends on the database::pool singleton. We
+	initialize the number_generator singleton after the database::pool singleton
+	so the number_generator singleton gets destructed before the database::pool
+	singleton.
+	*/
 	number_generator::singleton();
-	share::singleton();
+	//END STATIC INITIALIZATION
 }
 
 p2p_real::~p2p_real()
 {
-	number_generator::singleton().stop();
-	share::singleton().stop();
-	database::pool::singleton().clear();
+
 }
 
 void p2p_real::current_downloads(std::vector<download_status> & CD)
@@ -55,9 +76,9 @@ void p2p_real::reconnect_unfinished()
 
 }
 
-boost::uint64_t p2p_real::share_size()
+boost::uint64_t p2p_real::share_size_bytes()
 {
-	return share::singleton().share_size();
+	return Share.size_bytes();
 }
 
 void p2p_real::set_max_connections(const unsigned max_connections)

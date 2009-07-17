@@ -31,13 +31,13 @@ public:
 	get_job:
 		The share_pipeline_1_hash threads get blocked at this function until there
 		is work to do.
-	share_size:
-		Returns the size of the share. (bytes)
+	size_bytes:
+		Returns the size of the share.
 	stop:
 		Stops scan_thread.
 	*/
 	void get_job(share_pipeline_job & info);
-	boost::uint64_t share_size();
+	boost::uint64_t size_bytes();
 	void stop();
 
 private:
@@ -80,7 +80,7 @@ private:
 	boost::filesystem::path share_path;
 
 	//the sum of the size of all files that have been processed (bytes)
-	atomic_int<boost::uint64_t> _share_size;
+	atomic_int<boost::uint64_t> _size_bytes;
 
 	/*
 	block_on_max_jobs:
