@@ -52,7 +52,7 @@ public:
 	{
 		assert(ready_to_encrypt);
 		for(int x=0; x<buff.size(); ++x){
-			buff[x] = (unsigned char)buff[x] ^ PRNG_send.get_byte();
+			buff[x] = static_cast<unsigned char>(buff[x]) ^ PRNG_send.get_byte();
 		}
 	}
 
@@ -61,7 +61,7 @@ public:
 	{
 		assert(ready_to_encrypt);
 		for(int x=0; x<buff.size(); ++x){
-			buff[x] = (unsigned char)buff[x] ^ PRNG_recv.get_byte();
+			buff[x] = static_cast<unsigned char>(buff[x]) ^ PRNG_recv.get_byte();
 		}
 	}
 
