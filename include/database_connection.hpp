@@ -125,8 +125,8 @@ public:
 		return true;
 	}
 
-	//read data from blob
-	bool blob_read(blob & Blob, char * const buff, const int & size, const int & offset)
+	//read data from blob, returns true if success else false
+	bool blob_read(blob & Blob, char * const buff, const int size, const int offset)
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 		connect();
@@ -141,8 +141,8 @@ public:
 		return blob_close(blob_handle);
 	}
 
-	//write data to blob
-	bool blob_write(blob & Blob, const char * const buff, const int & size, const int & offset)
+	//write data to blob, returns true if success else false
+	bool blob_write(blob & Blob, const char * const buff, const int size, const int offset)
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 		connect();

@@ -38,29 +38,28 @@ public:
 		function must be called for the hash tree to not be deleted on next
 		program start.
 	*/
-	static void clear();
-	static void delete_tree(const std::string & hash, const int tree_size);
-	static bool exists(const std::string & hash, const int tree_size);
-	static bool get_state(const std::string & hash, const int tree_size, state & State);
-	static void set_state(const std::string & hash, const int tree_size, const state State);
-	static bool tree_allocate(const std::string & hash, const int tree_size);
-	static database::blob tree_open(const std::string & hash, const int tree_size);
-
-	/* Connection Functions
-	All these functions correspond to above functions but they take a database
-	connection. These are needed to do calls to multiple database functions
-	within a transaction.
-	*/
-	static void clear(database::pool::proxy & DB);
-	static void delete_tree(const std::string & hash, const int tree_size, database::pool::proxy & DB);
-	static bool exists(const std::string & hash, const int tree_size, database::pool::proxy & DB);
-	static bool get_state(const std::string & hash, const int tree_size, state & State, database::pool::proxy & DB);
-	static void set_state(const std::string & hash, const int tree_size, const state State, database::pool::proxy & DB);
-	static bool tree_allocate(const std::string & hash, const int tree_size, database::pool::proxy & DB);
-	static database::blob tree_open(const std::string & hash, const int tree_size, database::pool::proxy & DB);
+	static void clear(database::pool::proxy DB = database::pool::proxy());
+	static void delete_tree(const std::string & hash, const int tree_size,
+		database::pool::proxy DB = database::pool::proxy());
+	static bool exists(const std::string & hash, const int tree_size,
+		database::pool::proxy DB = database::pool::proxy());
+	static bool get_state(const std::string & hash, const int tree_size,
+		state & State, database::pool::proxy DB = database::pool::proxy());
+	static void set_state(const std::string & hash, const int tree_size,
+		const state State, database::pool::proxy DB = database::pool::proxy());
+	static bool tree_allocate(const std::string & hash, const int tree_size,
+		database::pool::proxy DB = database::pool::proxy());
+	static database::blob tree_open(const std::string & hash,
+		const int tree_size, database::pool::proxy DB = database::pool::proxy());
 
 private:
 	hash(){}
+
+	/*
+	The once_func is only called once. It sets up the table.
+	*/
+	static boost::once_flag once_flag;
+	static void once_func(database::pool::proxy & DB);
 };
 }//end of namespace table
 }//end of namespace database

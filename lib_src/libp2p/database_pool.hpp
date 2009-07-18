@@ -18,10 +18,7 @@ class pool : public singleton_base<pool>
 {
 	friend class singleton_base<pool>;
 public:
-	virtual ~pool()
-	{
-		LOGGER << "pool destructed";
-	}
+	~pool(){}
 
 	/*
 	Manually get()'ing and put()'ing database connections is very error prone

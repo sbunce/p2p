@@ -26,27 +26,24 @@ public:
 	"get"|"set"_max_connections:
 		How many connections allowed.
 	*/
-	static unsigned get_max_download_rate();
-	static unsigned get_max_connections();
-	static unsigned get_max_upload_rate();
-	static void set_max_download_rate(const unsigned rate);
-	static void set_max_connections(const unsigned connections);
-	static void set_max_upload_rate(const unsigned rate);
-
-	/* Connection Functions
-	All these functions correspond to above functions but they take a database
-	connection. These are needed to do calls to multiple database functions
-	within a transaction.
-	*/
-	static unsigned get_max_download_rate(database::pool::proxy & DB);
-	static unsigned get_max_connections(database::pool::proxy & DB);
-	static unsigned get_max_upload_rate(database::pool::proxy & DB);
-	static void set_max_download_rate(const unsigned rate, database::pool::proxy & DB);
-	static void set_max_connections(const unsigned connections, database::pool::proxy & DB);
-	static void set_max_upload_rate(const unsigned rate, database::pool::proxy & DB);
+	static unsigned get_max_download_rate(database::pool::proxy DB = database::pool::proxy());
+	static unsigned get_max_connections(database::pool::proxy DB = database::pool::proxy());
+	static unsigned get_max_upload_rate(database::pool::proxy DB = database::pool::proxy());
+	static void set_max_download_rate(const unsigned rate,
+		database::pool::proxy DB = database::pool::proxy());
+	static void set_max_connections(const unsigned connections,
+		database::pool::proxy DB = database::pool::proxy());
+	static void set_max_upload_rate(const unsigned rate,
+		database::pool::proxy DB = database::pool::proxy());
 
 private:
 	preferences(){}
+
+	/*
+	The once_func is only called once. It sets up the table.
+	*/
+	static boost::once_flag once_flag;
+	static void once_func(database::pool::proxy & DB);
 };
 }//end of namespace table
 }//end of namespace database

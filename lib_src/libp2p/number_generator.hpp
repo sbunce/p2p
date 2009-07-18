@@ -4,12 +4,14 @@
 
 //custom
 #include "database.hpp"
+#include "protocol.hpp"
 #include "settings.hpp"
 
 //include
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
+#include <random.hpp>
 #include <singleton.hpp>
 #include <tommath/mpint.hpp>
 

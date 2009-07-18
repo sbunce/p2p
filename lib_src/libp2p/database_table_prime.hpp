@@ -26,19 +26,19 @@ public:
 	write_all:
 		Copies all primes in vector to database.
 	*/
-	static void read_all(std::vector<mpint> & Prime_Cache);
-	static void write_all(std::vector<mpint> & Prime_Cache);
-
-	/* Connection Functions
-	All these functions correspond to above functions but they take a database
-	connection. These are needed to do calls to multiple database functions
-	within a transaction.
-	*/
-	static void read_all(std::vector<mpint> & Prime_Cache, database::pool::proxy & DB);
-	static void write_all(std::vector<mpint> & Prime_Cache, database::pool::proxy & DB);
+	static void read_all(std::vector<mpint> & Prime_Cache,
+		database::pool::proxy DB = database::pool::proxy());
+	static void write_all(std::vector<mpint> & Prime_Cache,
+		database::pool::proxy DB = database::pool::proxy());
 
 private:
 	prime(){}
+
+	/*
+	The once_func is only called once. It sets up the table.
+	*/
+	static boost::once_flag once_flag;
+	static void once_func(database::pool::proxy & DB);
 };
 }//end of namespace table
 }//end of namespace database

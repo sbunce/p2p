@@ -3,7 +3,6 @@
 #include "../hash_tree.hpp"
 #include "../path.hpp"
 #include "../protocol.hpp"
-#include "../settings.hpp"
 
 //include
 #include <logger.hpp>
@@ -30,7 +29,6 @@ void create_test_file(const std::string & name, const unsigned & bytes)
 int main()
 {
 	path::create_required_directories();
-	database::init::run();
 	database::table::hash::clear();
 
 	create_test_file("1_block", 1 * protocol::FILE_BLOCK_SIZE);

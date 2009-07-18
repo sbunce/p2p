@@ -18,7 +18,6 @@ p2p_real::p2p_real()
 	The database::init::run() function will intantiate the database::pool
 	singleton by itself but we do it explicitly for extra clarity.
 	*/
-	database::init::run();
 	database::pool::singleton();
 
 	/*

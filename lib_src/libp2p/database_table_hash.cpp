@@ -1,26 +1,26 @@
 #include "database_table_hash.hpp"
 
-void database::table::hash::clear()
+boost::once_flag database::table::hash::once_flag = BOOST_ONCE_INIT;
+
+void database::table::hash::once_func(database::pool::proxy & DB)
 {
-	database::pool::proxy DB;
-	clear(DB);
+	DB->query("CREATE TABLE IF NOT EXISTS hash(key INTEGER PRIMARY KEY, hash TEXT, state INTEGER, size INTEGER, tree BLOB)");
+	DB->query("CREATE INDEX IF NOT EXISTS hash_hash_index ON hash(hash)");
+	DB->query("CREATE INDEX IF NOT EXISTS hash_state_index ON hash(state)");
+	DB->query("CREATE INDEX IF NOT EXISTS hash_size_index ON hash(size)");
+	DB->query("DELETE FROM hash WHERE state = 0");
 }
 
-void database::table::hash::clear(database::pool::proxy & DB)
+void database::table::hash::clear(database::pool::proxy DB)
 {
+	boost::call_once(once_flag, boost::bind(once_func, DB));
 	DB->query("DELETE FROM hash");
 }
 
 void database::table::hash::delete_tree(const std::string & hash,
-	const int tree_size)
+	const int tree_size, database::pool::proxy DB)
 {
-	database::pool::proxy DB;
-	delete_tree(hash, tree_size, DB);
-}
-
-void database::table::hash::delete_tree(const std::string & hash,
-	const int tree_size, database::pool::proxy & DB)
-{
+	boost::call_once(once_flag, boost::bind(once_func, DB));
 	std::stringstream ss;
 	ss << "DELETE FROM hash WHERE hash = '" << hash << "' AND size = " << tree_size;
 	DB->query(ss.str());
@@ -35,15 +35,9 @@ static int exists_call_back(bool & tree_exists, int columns_retrieved,
 }
 
 bool database::table::hash::exists(const std::string & hash,
-	const int tree_size)
+	const int tree_size, database::pool::proxy DB)
 {
-	database::pool::proxy DB;
-	return exists(hash, tree_size, DB);
-}
-
-bool database::table::hash::exists(const std::string & hash,
-	const int tree_size, database::pool::proxy & DB)
-{
+	boost::call_once(once_flag, boost::bind(once_func, DB));
 	bool tree_exists = false;
 	std::stringstream ss;
 	ss << "SELECT 1 FROM hash WHERE hash = '" << hash << "' AND size = "
@@ -64,15 +58,9 @@ static int get_state_call_back(std::pair<bool, unsigned> & info,
 }
 
 bool database::table::hash::get_state(const std::string & hash,
-	const int tree_size, state & State)
+	const int tree_size, state & State, database::pool::proxy DB)
 {
-	database::pool::proxy DB;
-	return get_state(hash, tree_size, State, DB);
-}
-
-bool database::table::hash::get_state(const std::string & hash,
-	const int tree_size, state & State, database::pool::proxy & DB)
-{
+	boost::call_once(once_flag, boost::bind(once_func, DB));
 	//std::pair<true if found, key>
 	std::pair<bool, unsigned> info(false, 0);
 	std::stringstream ss;
@@ -89,15 +77,9 @@ bool database::table::hash::get_state(const std::string & hash,
 }
 
 void database::table::hash::set_state(const std::string & hash,
-	const int tree_size, const state State)
+	const int tree_size, const state State, database::pool::proxy DB)
 {
-	database::pool::proxy DB;
-	set_state(hash, tree_size, State, DB);
-}
-
-void database::table::hash::set_state(const std::string & hash,
-	const int tree_size, const state State, database::pool::proxy & DB)
-{
+	boost::call_once(once_flag, boost::bind(once_func, DB));
 	assert(State >= RESERVED && State <= COMPLETE);
 	std::stringstream ss;
 	ss << "UPDATE hash SET state = " << State << " WHERE hash = '"
@@ -106,15 +88,9 @@ void database::table::hash::set_state(const std::string & hash,
 }
 
 bool database::table::hash::tree_allocate(const std::string & hash,
-	const int tree_size)
+	const int tree_size, database::pool::proxy DB)
 {
-	database::pool::proxy DB;
-	return tree_allocate(hash, tree_size, DB);
-}
-
-bool database::table::hash::tree_allocate(const std::string & hash,
-	const int tree_size, database::pool::proxy & DB)
-{
+	boost::call_once(once_flag, boost::bind(once_func, DB));
 	std::stringstream ss;
 	ss << "INSERT INTO hash(key, hash, state, size, tree) VALUES(NULL, '"
 		<< hash << "', 0, " << tree_size << ", ?)";
@@ -133,15 +109,9 @@ static int get_key_call_back(std::pair<bool, boost::int64_t> & info,
 }
 
 database::blob database::table::hash::tree_open(const std::string & hash,
-	const int tree_size)
+	const int tree_size, database::pool::proxy DB)
 {
-	database::pool::proxy DB;
-	return tree_open(hash, tree_size, DB);
-}
-
-database::blob database::table::hash::tree_open(const std::string & hash,
-	const int tree_size, database::pool::proxy & DB)
-{
+	boost::call_once(once_flag, boost::bind(once_func, DB));
 	std::pair<bool, boost::int64_t> info(false, 0);
 	std::stringstream ss;
 	ss << "SELECT key FROM hash WHERE hash = '" << hash << "' AND size = "
