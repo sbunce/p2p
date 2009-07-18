@@ -43,8 +43,10 @@ public:
 		existing downloads are to be saved to.
 	set_max_download_rate:
 		Sets the upload rate limit.
-	share_size:
-		Size of all shared files. (bytes)
+	share_size_bytes:
+		Size of all shared files.
+	share_size_files:
+		The number of files shared.
 	start_download:
 		Starts a download.
 	upload_rate:
@@ -63,6 +65,7 @@ public:
 	void set_max_download_rate(const unsigned max_download_rate);
 	void set_max_upload_rate(const unsigned max_upload_rate);
 	boost::uint64_t share_size_bytes();
+	boost::uint64_t share_size_files();
 	void start_download(const download_info & info);
 	unsigned upload_rate();
 

@@ -76,6 +76,11 @@ boost::uint64_t p2p::share_size_bytes()
 	return P2P_Real->share_size_bytes();
 }
 
+boost::uint64_t p2p::share_size_files()
+{
+	return P2P_Real->share_size_files();
+}
+
 void p2p::start_download(const download_info & DI)
 {
 	P2P_Real->start_download(DI);

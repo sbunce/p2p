@@ -48,6 +48,11 @@ boost::uint64_t share_pipeline_2_write::size_bytes()
 	return Share_Pipeline_1_Hash.size_bytes();
 }
 
+boost::uint64_t share_pipeline_2_write::size_files()
+{
+	return Share_Pipeline_1_Hash.size_files();
+}
+
 void share_pipeline_2_write::stop()
 {
 	Share_Pipeline_1_Hash.stop();

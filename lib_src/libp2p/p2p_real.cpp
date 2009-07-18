@@ -80,6 +80,11 @@ boost::uint64_t p2p_real::share_size_bytes()
 	return Share.size_bytes();
 }
 
+boost::uint64_t p2p_real::share_size_files()
+{
+	return Share.size_files();
+}
+
 void p2p_real::set_max_connections(const unsigned max_connections)
 {
 

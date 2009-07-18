@@ -36,8 +36,11 @@ public:
 	/*
 	size_bytes:
 		Returns size of shared files.
+	size_files:
+		Returns the number of shared files.
 	*/
 	boost::uint64_t size_bytes();
+	boost::uint64_t size_files();
 
 private:
 	/*

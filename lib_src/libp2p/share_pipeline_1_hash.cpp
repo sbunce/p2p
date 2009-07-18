@@ -62,6 +62,11 @@ boost::uint64_t share_pipeline_1_hash::size_bytes()
 	return Share_Pipeline_0_Scan.size_bytes();
 }
 
+boost::uint64_t share_pipeline_1_hash::size_files()
+{
+	return Share_Pipeline_0_Scan.size_files();
+}
+
 void share_pipeline_1_hash::stop()
 {
 	Share_Pipeline_0_Scan.stop();

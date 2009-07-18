@@ -48,6 +48,7 @@ public:
 	void set_max_download_rate(const unsigned max_download_rate);
 	void set_max_upload_rate(const unsigned max_upload_rate);
 	boost::uint64_t share_size_bytes();
+	boost::uint64_t share_size_files();
 	void start_download(const download_info & DI);
 	unsigned upload_rate();
 

@@ -4,7 +4,8 @@ share_pipeline_0_scan::share_pipeline_0_scan():
 	share_path(boost::filesystem::system_complete(
 		boost::filesystem::path(path::share(), boost::filesystem::native)
 	)),
-	_size_bytes(0)
+	_size_bytes(0),
+	_size_files(0)
 {
 	scan_thread = boost::thread(boost::bind(&share_pipeline_0_scan::main_loop, this));
 }
@@ -134,6 +135,7 @@ void share_pipeline_0_scan::main_loop()
 							//file hasn't been seen before, or it changed size
 							boost::mutex::scoped_lock lock(job_mutex);
 							_size_bytes += size;
+							++_size_files;
 							job.push_back(share_pipeline_job(iter_cur->path().string(), size, true));
 							job_cond.notify_one();
 						}
@@ -159,6 +161,7 @@ int share_pipeline_0_scan::path_call_back(int columns_retrieved, char ** respons
 	ss << response[1];
 	ss >> size;
 	_size_bytes += size;
+	++_size_files;
 	fs::path path = fs::system_complete(fs::path(response[0], fs::native));
 	insert(path.string(), size);
 	if(boost::this_thread::interruption_requested()){
@@ -225,6 +228,7 @@ void share_pipeline_0_scan::remove_missing_recurse(
 				*/
 				boost::mutex::scoped_lock lock(job_mutex);
 				_size_bytes -= file_iter_cur->second.size;
+				--_size_files;
 				job.push_back(share_pipeline_job(file_path, file_iter_cur->second.size, false));
 				job_cond.notify_one();
 				dir_iter->second.File.erase(file_iter_cur++);
@@ -235,6 +239,7 @@ void share_pipeline_0_scan::remove_missing_recurse(
 			LOGGER << ex.what();
 			boost::mutex::scoped_lock lock(job_mutex);
 			_size_bytes -= file_iter_cur->second.size;
+			--_size_files;
 			job.push_back(share_pipeline_job(file_path, file_iter_cur->second.size, false));
 			job_cond.notify_one();
 			dir_iter->second.File.erase(file_iter_cur++);
@@ -250,6 +255,11 @@ void share_pipeline_0_scan::remove_missing_recurse(
 boost::uint64_t share_pipeline_0_scan::size_bytes()
 {
 	return _size_bytes;
+}
+
+boost::uint64_t share_pipeline_0_scan::size_files()
+{
+	return _size_files;
 }
 
 void share_pipeline_0_scan::stop()
