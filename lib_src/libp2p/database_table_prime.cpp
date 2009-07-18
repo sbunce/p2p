@@ -7,6 +7,12 @@ void database::table::prime::once_func(database::pool::proxy & DB)
 	DB->query("CREATE TABLE IF NOT EXISTS prime (number TEXT)");
 }
 
+void database::table::prime::clear(database::pool::proxy DB)
+{
+	boost::call_once(once_flag, boost::bind(once_func, DB));
+	DB->query("DELETE FROM prime");
+}
+
 int read_all_call_back(std::vector<mpint> & Prime_Cache,
 	int columns_retrieved, char ** response, char ** column_name)
 {

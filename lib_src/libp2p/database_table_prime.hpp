@@ -26,6 +26,7 @@ public:
 	write_all:
 		Copies all primes in vector to database.
 	*/
+	static void clear(database::pool::proxy DB = database::pool::proxy());
 	static void read_all(std::vector<mpint> & Prime_Cache,
 		database::pool::proxy DB = database::pool::proxy());
 	static void write_all(std::vector<mpint> & Prime_Cache,
