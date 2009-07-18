@@ -4,6 +4,7 @@
 
 int main()
 {
+	database::init init;
 	encryption E_server, E_client;
 
 	//client generates prime

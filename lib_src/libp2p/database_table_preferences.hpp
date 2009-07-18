@@ -38,12 +38,6 @@ public:
 
 private:
 	preferences(){}
-
-	/*
-	The once_func is only called once. It sets up the table.
-	*/
-	static boost::once_flag once_flag;
-	static void once_func(database::pool::proxy & DB);
 };
 }//end of namespace table
 }//end of namespace database

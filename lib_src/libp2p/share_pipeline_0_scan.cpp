@@ -94,7 +94,8 @@ void share_pipeline_0_scan::main_loop()
 	namespace fs = boost::filesystem;
 
 	//populate in-memory tree from database
-	database::pool::get_proxy()->query("SELECT path, size FROM share", this, &share_pipeline_0_scan::path_call_back);
+	database::pool::get_proxy()->query("SELECT path, size FROM share", this,
+		&share_pipeline_0_scan::path_call_back);
 
 	boost::uint64_t size;
 	while(true){

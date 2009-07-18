@@ -2,15 +2,7 @@
 
 share_pipeline_1_hash::share_pipeline_1_hash()
 {
-	//start one thread per hardware thread with a max of 8
-	int worker_count;
-	if(boost::thread::hardware_concurrency() > 8){
-		worker_count = 8;
-	}else{
-		worker_count = boost::thread::hardware_concurrency();
-	}
-
-	for(int x=0; x<worker_count; ++x){
+	for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
 		Workers.create_thread(boost::bind(&share_pipeline_1_hash::main_loop, this));
 	}
 }

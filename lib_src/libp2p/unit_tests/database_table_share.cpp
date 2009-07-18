@@ -3,6 +3,7 @@
 
 int main()
 {
+	database::init init;
 	database::table::share::clear();
 	if(database::table::share::lookup_hash("ABC")){
 		LOGGER; exit(1);

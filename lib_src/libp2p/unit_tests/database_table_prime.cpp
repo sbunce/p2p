@@ -3,6 +3,7 @@
 
 int main()
 {
+	database::init init;
 	database::table::prime::clear();
 	std::vector<mpint> Prime_Cache;
 	Prime_Cache.push_back(mpint("123"));

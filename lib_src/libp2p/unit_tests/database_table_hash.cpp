@@ -6,6 +6,7 @@
 
 int main()
 {
+	database::init init;
 	database::table::hash::clear();
 	int test_tree_size = 123;
 	if(database::table::hash::exists("ABC", test_tree_size)){

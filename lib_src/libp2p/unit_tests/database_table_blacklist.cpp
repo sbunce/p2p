@@ -3,6 +3,7 @@
 
 int main()
 {
+	database::init init;
 	database::table::blacklist::clear();
 	std::string IP_1 = "1.1.1.1", IP_2 = "2.2.2.2";
 	int state = 0;

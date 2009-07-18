@@ -3,6 +3,7 @@
 
 int main()
 {
+	database::init init;
 	database::table::preferences::set_max_download_rate(123);
 	if(database::table::preferences::get_max_download_rate() != 123){
 		LOGGER; exit(1);

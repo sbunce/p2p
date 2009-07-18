@@ -6,21 +6,6 @@
 //std
 #include <iostream>
 
-/*
-TODO: add prime generator that bases number of miller rabin tests on size,
-also do division test before miller-rabin.
-{
-  {   128,    28 },
-  {   256,    16 },
-  {   384,    10 },
-  {   512,     7 },
-  {   640,     6 },
-  {   768,     5 },
-  {   896,     4 },
-  {  1024,     4 }
-};
-*/
-
 class ltmpp_error : public std::exception
 {
 public:

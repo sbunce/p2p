@@ -25,6 +25,11 @@
 
 class p2p_real : private boost::noncopyable
 {
+	/*
+	Sets up database tables. Must be specified before any other class which uses
+	the database.
+	*/
+	database::init init;
 public:
 	p2p_real();
 	~p2p_real();

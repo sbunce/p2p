@@ -28,6 +28,7 @@ void create_test_file(const std::string & name, const unsigned & bytes)
 
 int main()
 {
+	database::init init;
 	path::create_required_directories();
 	database::table::hash::clear();
 

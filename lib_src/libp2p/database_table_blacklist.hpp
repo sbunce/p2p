@@ -9,8 +9,6 @@
 
 //include
 #include <atomic_int.hpp>
-#include <boost/bind.hpp>
-#include <boost/thread.hpp>
 
 //standard
 #include <iostream>
@@ -45,15 +43,8 @@ private:
 	blacklist(){}
 
 	/*
-	The once_func is only called once. It sets up the table.
-	*/
-	static boost::once_flag once_flag;
-	static void once_func(database::pool::proxy & DB);
-
-	/* Accessor functions for static variables.
-	blacklist_state:
-		Incremented whenever IP added to blacklist. This makes it possible to
-		determine if blacklist has changed without doing a database query.
+	Incremented whenever IP added to blacklist. This makes it possible to
+	determine if blacklist has changed without doing a database query.
 	*/
 	static atomic_int<int> blacklist_state;
 };

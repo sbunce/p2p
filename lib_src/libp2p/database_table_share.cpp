@@ -1,19 +1,9 @@
 #include "database_table_share.hpp"
 
-boost::once_flag database::table::share::once_flag = BOOST_ONCE_INIT;
-
-void database::table::share::once_func(database::pool::proxy & DB)
-{
-	DB->query("CREATE TABLE IF NOT EXISTS share (hash TEXT, size TEXT, path TEXT)");
-	DB->query("CREATE INDEX IF NOT EXISTS share_hash_index ON share (hash)");
-	DB->query("CREATE INDEX IF NOT EXISTS share_path_index ON share (path)");
-}
-
 void database::table::share::add_entry(const std::string & hash,
 	const boost::uint64_t & size, const std::string & path,
 	database::pool::proxy DB)
 {
-	boost::call_once(once_flag, boost::bind(once_func, DB));
 	char * path_sqlite = sqlite3_mprintf("%Q", path.c_str());
 	std::stringstream ss;
 	ss << "INSERT INTO share(hash, size, path) VALUES('" << hash << "', '"
@@ -24,7 +14,6 @@ void database::table::share::add_entry(const std::string & hash,
 
 void database::table::share::clear(database::pool::proxy DB)
 {
-	boost::call_once(once_flag, boost::bind(once_func, DB));
 	DB->query("DELETE FROM share");
 }
 
@@ -68,7 +57,6 @@ static int delete_entry_call_back_chain_1(std::pair<char *, database::pool::prox
 void database::table::share::delete_entry(const std::string & path,
 	database::pool::proxy DB)
 {
-	boost::call_once(once_flag, boost::bind(once_func, DB));
 	char * sqlite3_path = sqlite3_mprintf("%Q", path.c_str());
 	std::pair<char *, database::pool::proxy *> info(sqlite3_path, &DB);
 	std::stringstream ss;
@@ -88,7 +76,6 @@ static int lookup_hash_0_call_back(bool & entry_exists, int columns_retrieved,
 bool database::table::share::lookup_hash(const std::string & hash,
 	database::pool::proxy DB)
 {
-	boost::call_once(once_flag, boost::bind(once_func, DB));
 	bool entry_exists = false;
 	std::stringstream ss;
 	ss << "SELECT 1 FROM share WHERE hash = '" << hash << "' LIMIT 1";
@@ -109,7 +96,6 @@ static int lookup_hash_1_call_back(std::pair<bool, std::string *> & info,
 bool database::table::share::lookup_hash(const std::string & hash,
 	std::string & path, database::pool::proxy DB)
 {
-	boost::call_once(once_flag, boost::bind(once_func, DB));
 	std::pair<bool, std::string *> info(false, &path);
 	std::stringstream ss;
 	ss << "SELECT path FROM share WHERE hash = '" << hash << "' LIMIT 1";
@@ -130,7 +116,6 @@ static int lookup_hash_2_call_back(std::pair<bool, boost::uint64_t *> & info,
 bool database::table::share::lookup_hash(const std::string & hash,
 	boost::uint64_t & file_size, database::pool::proxy DB)
 {
-	boost::call_once(once_flag, boost::bind(once_func, DB));
 	std::pair<bool, boost::uint64_t *> info(false, &file_size);
 	std::stringstream ss;
 	ss << "SELECT size FROM share WHERE hash = '" << hash << "' LIMIT 1";
@@ -153,7 +138,6 @@ static int lookup_hash_3_call_back(
 bool database::table::share::lookup_hash(const std::string & hash,
 	std::string & path, boost::uint64_t & file_size, database::pool::proxy DB)
 {
-	boost::call_once(once_flag, boost::bind(once_func, DB));
 	boost::tuple<bool, boost::uint64_t *, std::string *> info(false, &file_size, &path);
 	std::stringstream ss;
 	ss << "SELECT size, path FROM share WHERE hash = '" << hash << "' LIMIT 1";
@@ -177,7 +161,6 @@ static int lookup_path_call_back(
 bool database::table::share::lookup_path(const std::string & path, std::string & hash,
 	boost::uint64_t & file_size, database::pool::proxy DB)
 {
-	boost::call_once(once_flag, boost::bind(once_func, DB));
 	boost::tuple<bool, std::string *, boost::uint64_t *> info(false, &hash, &file_size);
 	char * query = sqlite3_mprintf("SELECT hash, size FROM share WHERE path = %Q LIMIT 1", path.c_str());
 	DB->query(query, &lookup_path_call_back, info);
