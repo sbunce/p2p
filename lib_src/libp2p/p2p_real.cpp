@@ -5,28 +5,15 @@ p2p_real::p2p_real()
 	path::create_required_directories();
 
 	/* BEGIN STATIC INITIALIZATION
-	The order these are specified in is EXTREMELY important. The C++ standard
-	specifies that order of destruction of static objects is the opposite of
-	order of initialization. The singletons are static objects which get
-	initialized when we first call the singleton() member function. We specify
-	the order of initialization (and consequently destruction) based on their
-	dependencies on other static objects.
-	*/
-
-	/*
-	The database::init::run() function depends upon the database::pool singleton.
-	The database::init::run() function will intantiate the database::pool
-	singleton by itself but we do it explicitly for extra clarity.
+	The order these are specified in is important. The C++ standard specifies
+	that order of destruction of static objects is the opposite of order of
+	initialization. The singletons are static objects which get initialized when
+	we first call the singleton() member function. We specify the order of
+	initialization (and consequently destruction) based on their dependencies on
+	other static objects.
 	*/
 	database::pool::singleton();
-
-	/*
-	The number_generator singleton depends on the database::pool singleton. We
-	initialize the number_generator singleton after the database::pool singleton
-	so the number_generator singleton gets destructed before the database::pool
-	singleton.
-	*/
-	number_generator::singleton();
+	prime_generator::singleton();
 	//END STATIC INITIALIZATION
 }
 
@@ -67,7 +54,7 @@ void p2p_real::pause_download(const std::string & hash)
 
 unsigned p2p_real::prime_count()
 {
-	return number_generator::singleton().prime_count();
+	return prime_generator::singleton().prime_count();
 }
 
 void p2p_real::reconnect_unfinished()

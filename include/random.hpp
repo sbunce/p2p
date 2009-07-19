@@ -12,7 +12,7 @@
 	#include <wincrypt.h>
 #endif
 
-static void system_urandom(unsigned char * buff, size_t size)
+static int portable_urandom(unsigned char * buff, int size, void * data)
 {
 #ifdef _WIN32
 	HCRYPTPROV hProvider = 0;
@@ -33,5 +33,6 @@ static void system_urandom(unsigned char * buff, size_t size)
 		*buff++ = static_cast<unsigned char>(ch);
 	}
 #endif
+	return size;
 }
 #endif

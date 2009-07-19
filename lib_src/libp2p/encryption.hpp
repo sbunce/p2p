@@ -3,7 +3,7 @@
 #define H_ENCRYPTION
 
 //custom
-#include "number_generator.hpp"
+#include "prime_generator.hpp"
 #include "protocol.hpp"
 #include "settings.hpp"
 

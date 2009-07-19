@@ -5,7 +5,7 @@
 //custom
 #include "database.hpp"
 #include "hash_tree.hpp"
-#include "number_generator.hpp"
+#include "prime_generator.hpp"
 #include "path.hpp"
 #include "settings.hpp"
 #include "share.hpp"

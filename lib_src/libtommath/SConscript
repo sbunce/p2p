@@ -2,4 +2,4 @@
 import glob
 
 Import('env_base')
-env_base.StaticLibrary('#lib/tommath', glob.glob('*.c'))
+env_base.StaticLibrary('#lib/tommath', glob.glob('*.c*'))

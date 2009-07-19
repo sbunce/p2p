@@ -1,6 +1,6 @@
 //THREADSAFE, SINGLETON, THREAD SPAWNING
-#ifndef H_NUMBER_GENERATOR
-#define H_NUMBER_GENERATOR
+#ifndef H_PRIME_GENERATOR
+#define H_PRIME_GENERATOR
 
 //custom
 #include "database.hpp"
@@ -26,28 +26,25 @@
 	#include <wincrypt.h>
 #endif
 
-class number_generator : public singleton_base<number_generator>
+class prime_generator : public singleton_base<prime_generator>
 {
-	friend class singleton_base<number_generator>;
+	friend class singleton_base<prime_generator>;
 public:
-	virtual ~number_generator();
+	virtual ~prime_generator();
 
 	/*
 	prime_count:
 		Returns number of primes in prime_cache.
-	random:
-		Returns random mpint of specified size.
 	random_prime:
 		Returns prime in prime cache. Size of prime is always settings::DH_KEY_SIZE.
 	*/
 	unsigned prime_count();
-	mpint random(const int bytes);
 	mpint random_prime();
 
 private:
-	number_generator();
+	prime_generator();
 
-	boost::thread generate_thread;
+	boost::thread_group Workers;
 
 	/*
 	The prime_remove_cond triggers the generate_thread to make more primes. The
@@ -64,13 +61,7 @@ private:
 	/*
 	generate:
 		The generate_thread runs in this function and generates primes.
-	PRNG:
-		Used by mp_prime_random_ex() for random bytes.
-		buff: buffer with random bytes
-		length: how many random bytes to put in buff
-		data: optional pointer that can be passed to PRNG
 	*/
 	void generate();
-	static int PRNG(unsigned char * buff, int size, void * data);
 };
 #endif
