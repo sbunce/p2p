@@ -2,25 +2,24 @@
 
 //BEGIN static
 boost::once_flag path::once_flag = BOOST_ONCE_INIT;
-std::string * path::_home;
+std::string path::_home;
 
 void path::init()
 {
-	_home = new std::string();
-	const char * tmp = std::getenv("HOME");
-	if(tmp != NULL){
-		*_home = tmp;
+	const char * temp = std::getenv("HOME");
+	if(temp != NULL){
+		_home = temp;
 		//make sure path doesn't end in '/'
-		if(!_home->empty() && (*_home)[_home->size()-1] == '/'){
-			_home->erase(_home->size()-1);
+		if(!_home.empty() && _home[_home.size()-1] == '/'){
+			_home.erase(_home.size()-1);
 		}
 	}
 }
 
-std::string & path::home()
+const std::string & path::home()
 {
 	boost::call_once(init, once_flag);
-	return *_home;
+	return _home;
 }
 //END static
 

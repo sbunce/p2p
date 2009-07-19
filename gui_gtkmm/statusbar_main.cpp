@@ -35,6 +35,5 @@ bool statusbar_main::update_status_bar()
 
 	statusbar->pop();
 	statusbar->push(ss.str());
-
 	return true;
 }

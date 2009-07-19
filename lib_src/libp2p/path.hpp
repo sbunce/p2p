@@ -56,12 +56,12 @@ private:
 	*/
 	static boost::once_flag once_flag;
 	static void init();
-	static std::string * _home;
+	static std::string _home;
 
 	/* Accessor functions for static variables.
 	home:
 		Path to home directory. Or empty string if not defined.
 	*/
-	static std::string & home();
+	static const std::string & home();
 };
 #endif
