@@ -4,6 +4,7 @@
 
 int main()
 {
+	prime_generator::singleton().start();
 	database::init init;
 	encryption E_server, E_client;
 
@@ -47,4 +48,5 @@ int main()
 	if(server_buffer != "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"){
 		LOGGER; exit(1);
 	}
+	prime_generator::singleton().stop();
 }

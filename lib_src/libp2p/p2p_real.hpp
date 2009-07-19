@@ -5,10 +5,10 @@
 //custom
 #include "database.hpp"
 #include "hash_tree.hpp"
-#include "prime_generator.hpp"
 #include "path.hpp"
 #include "settings.hpp"
-#include "share.hpp"
+#include "singleton_start.hpp"
+#include "singleton_stop.hpp"
 
 //include
 #include <boost/bind.hpp>
@@ -25,11 +25,8 @@
 
 class p2p_real : private boost::noncopyable
 {
-	/*
-	Sets up database tables. Must be specified before any other class which uses
-	the database.
-	*/
-	database::init init;
+	//must be specified first in header
+	singleton_start Singleton_Start;
 public:
 	p2p_real();
 	~p2p_real();
@@ -54,11 +51,16 @@ public:
 
 private:
 	/*
-	reconnect_unfinished:
-		Resumes downloads upon program start.
+	The values that database::table::get_<"max_connections" | "max_download_rate"
+	| "max_upload_rate"> return are proxied here so that the database calls to
+	get or set the values in the database can be done asynchronously. This is
+	important to make these calls very responsive.
 	*/
-	void reconnect_unfinished();
+	atomic_int<unsigned> max_connections_proxy;
+	atomic_int<unsigned> max_download_rate_proxy;
+	atomic_int<unsigned> max_upload_rate_proxy;
 
-	share Share;
+	//must be specified last in header
+	singleton_stop Singleton_Stop;
 };
 #endif

@@ -28,16 +28,20 @@ public:
 	share_pipeline_0_scan();
 
 	/*
+	stop:
+		Stops scan_thread.
+	*/
+	void start();
+	void stop();
+
+	/*
 	get_job:
 		The share_pipeline_1_hash threads get blocked at this function until there
 		is work to do.
-	stop:
-		Stops scan_thread.
 	*/
 	void get_job(share_pipeline_job & info);
 	boost::uint64_t size_bytes();
 	boost::uint64_t size_files();
-	void stop();
 
 private:
 	boost::thread scan_thread;

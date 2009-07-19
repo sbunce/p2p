@@ -30,7 +30,18 @@ class prime_generator : public singleton_base<prime_generator>
 {
 	friend class singleton_base<prime_generator>;
 public:
-	virtual ~prime_generator();
+	~prime_generator();
+
+	/*
+	start:
+		Starts prime generation threads.
+		Note: This is only to be used from singleton_start.
+	stop:
+		Stops prime generation threads.
+		Note: This is only to be used from singleton_stop.
+	*/
+	void start();
+	void stop();
 
 	/*
 	prime_count:
@@ -59,9 +70,9 @@ private:
 	std::vector<mpint> Prime_Cache;
 
 	/*
-	generate:
-		The generate_thread runs in this function and generates primes.
+	main_loop:
+		Worker threads loop in this thread and generate primes.
 	*/
-	void generate();
+	void main_loop();
 };
 #endif

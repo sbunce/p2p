@@ -2,7 +2,7 @@
 
 share_pipeline_2_write::share_pipeline_2_write()
 {
-	write_thread = boost::thread(boost::bind(&share_pipeline_2_write::main_loop, this));
+
 }
 
 void share_pipeline_2_write::main_loop()
@@ -51,6 +51,12 @@ boost::uint64_t share_pipeline_2_write::size_bytes()
 boost::uint64_t share_pipeline_2_write::size_files()
 {
 	return Share_Pipeline_1_Hash.size_files();
+}
+
+void share_pipeline_2_write::start()
+{
+	write_thread = boost::thread(boost::bind(&share_pipeline_2_write::main_loop, this));
+	Share_Pipeline_1_Hash.start();
 }
 
 void share_pipeline_2_write::stop()

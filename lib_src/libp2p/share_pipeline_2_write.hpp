@@ -28,6 +28,9 @@ class share_pipeline_2_write
 public:
 	share_pipeline_2_write();
 
+	void start();
+	void stop();
+
 	/*
 	stop:
 		Stops all pipeline threads starting with pipeline 0 and working it's way
@@ -35,7 +38,6 @@ public:
 	*/
 	boost::uint64_t size_bytes();
 	boost::uint64_t size_files();
-	void stop();
 
 private:
 	boost::thread write_thread;

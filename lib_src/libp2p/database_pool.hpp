@@ -21,34 +21,22 @@ public:
 	~pool(){}
 
 	/*
-	Manually get()'ing and put()'ing database connections is very error prone
-	because it'd be easy for someone to get() and accidently forget to put() the
-	connection back when finished. The proxy automatically returns the connection
-	to the pool when done which eliminates the problem.
-
-	Note: The proxy is meant to be used at the function scope. Do NOT declare one
-		in a class that will be around for a long time.
+	The proxy automatically returns the connection to the pool when the last copy
+	of the proxy is destroyed. The proxy object should be kept for as little time
+	as possible.
 	*/
 	class proxy
 	{
 	public:
 		proxy():
 			Connection(singleton().get()),
-			This(this, boost::bind(&proxy::deleter, this))
+			This(this, boost::bind(&proxy::deleter, this, Connection))
 		{}
-
 		boost::shared_ptr<connection> & operator -> (){ return Connection; }
 	private:
-		//connection that proxy wraps
 		boost::shared_ptr<connection> Connection;
-
-		/*
-		Used to trigger deleter which passes Connection back to pool. Basically
-		"This" is used to reference count for the proxy.
-		*/
 		boost::shared_ptr<proxy> This;
-
-		void deleter()
+		void deleter(boost::shared_ptr<connection> Connection)
 		{
 			singleton().put(Connection);
 		}

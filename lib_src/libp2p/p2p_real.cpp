@@ -4,17 +4,10 @@ p2p_real::p2p_real()
 {
 	path::create_required_directories();
 
-	/* BEGIN STATIC INITIALIZATION
-	The order these are specified in is important. The C++ standard specifies
-	that order of destruction of static objects is the opposite of order of
-	initialization. The singletons are static objects which get initialized when
-	we first call the singleton() member function. We specify the order of
-	initialization (and consequently destruction) based on their dependencies on
-	other static objects.
-	*/
-	database::pool::singleton();
-	prime_generator::singleton();
-	//END STATIC INITIALIZATION
+	//setup proxies for async getter/setter function calls
+	max_connections_proxy = database::table::preferences::get_max_connections();
+	max_download_rate_proxy = database::table::preferences::get_max_download_rate();
+	max_upload_rate_proxy = database::table::preferences::get_max_upload_rate();
 }
 
 p2p_real::~p2p_real()
@@ -34,17 +27,17 @@ void p2p_real::current_uploads(std::vector<upload_status> & CU)
 
 unsigned p2p_real::get_max_connections()
 {
-	return 666;
+	return max_connections_proxy;
 }
 
 unsigned p2p_real::get_max_download_rate()
 {
-	return 666;
+	return max_download_rate_proxy;
 }
 
 unsigned p2p_real::get_max_upload_rate()
 {
-	return 666;
+	return max_upload_rate_proxy;
 }
 
 void p2p_real::pause_download(const std::string & hash)
@@ -57,34 +50,50 @@ unsigned p2p_real::prime_count()
 	return prime_generator::singleton().prime_count();
 }
 
-void p2p_real::reconnect_unfinished()
-{
-
-}
-
 boost::uint64_t p2p_real::share_size_bytes()
 {
-	return Share.size_bytes();
+	return share::singleton().size_bytes();
 }
 
 boost::uint64_t p2p_real::share_size_files()
 {
-	return Share.size_files();
+	return share::singleton().size_files();
 }
 
+//boost::bind can't handle default parameter, wrapper required
+static void set_max_connections_wrapper(const unsigned max_connections)
+{
+	database::table::preferences::set_max_connections(max_connections);
+}
 void p2p_real::set_max_connections(const unsigned max_connections)
 {
-
+	max_connections_proxy = max_connections;
+	thread_pool::singleton().queue(boost::bind(&set_max_connections_wrapper,
+		max_connections));
 }
 
+//boost::bind can't handle default parameter, wrapper required
+static void set_max_download_rate_wrapper(const unsigned max_download_rate)
+{
+	database::table::preferences::set_max_download_rate(max_download_rate);
+}
 void p2p_real::set_max_download_rate(const unsigned max_download_rate)
 {
-
+	max_download_rate_proxy = max_download_rate;
+	thread_pool::singleton().queue(boost::bind(&set_max_download_rate_wrapper,
+		max_download_rate));
 }
 
+//boost::bind can't handle default parameter, wrapper required
+static void set_max_upload_rate_wrapper(const unsigned max_upload_rate)
+{
+	database::table::preferences::set_max_upload_rate(max_upload_rate);
+}
 void p2p_real::set_max_upload_rate(const unsigned max_upload_rate)
 {
-
+	max_upload_rate_proxy = max_upload_rate;
+	thread_pool::singleton().queue(boost::bind(&set_max_upload_rate_wrapper,
+		max_upload_rate));
 }
 
 void p2p_real::start_download(const download_info & DI)
@@ -99,10 +108,10 @@ void p2p_real::remove_download(const std::string & hash)
 
 unsigned p2p_real::download_rate()
 {
-	return 666;
+	return 123;
 }
 
 unsigned p2p_real::upload_rate()
 {
-	return 666;
+	return 123;
 }

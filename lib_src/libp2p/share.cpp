@@ -2,12 +2,11 @@
 
 share::share()
 {
-	remove_temporary_files();
+
 }
 
 share::~share()
 {
-	Share_Pipeline_2_Write.stop();
 	remove_temporary_files();
 }
 
@@ -42,4 +41,14 @@ boost::uint64_t share::size_bytes()
 boost::uint64_t share::size_files()
 {
 	return Share_Pipeline_2_Write.size_files();
+}
+
+void share::start()
+{
+	Share_Pipeline_2_Write.start();
+}
+
+void share::stop()
+{
+	Share_Pipeline_2_Write.stop();
 }

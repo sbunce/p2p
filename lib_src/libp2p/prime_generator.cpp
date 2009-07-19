@@ -2,38 +2,15 @@
 
 prime_generator::prime_generator()
 {
-	for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
-		Workers.create_thread(boost::bind(&prime_generator::generate, this));
-	}
+
 }
 
 prime_generator::~prime_generator()
 {
-	Workers.interrupt_all();
-	Workers.join_all();
 	database::table::prime::write_all(Prime_Cache);
 }
 
-unsigned prime_generator::prime_count()
-{
-	boost::mutex::scoped_lock lock(prime_mutex);
-	return Prime_Cache.size();
-}
-
-mpint prime_generator::random_prime()
-{
-	mpint temp;
-	boost::mutex::scoped_lock lock(prime_mutex);
-	while(Prime_Cache.empty()){
-		prime_remove_cond.wait(prime_mutex);
-	}
-	temp = Prime_Cache.back();
-	Prime_Cache.pop_back();
-	prime_generate_cond.notify_one();
-	return temp;
-}
-
-void prime_generator::generate()
+void prime_generator::main_loop()
 {
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(prime_mutex);
@@ -72,4 +49,36 @@ void prime_generator::generate()
 		//notify possible threads waiting for prime to be generated
 		prime_remove_cond.notify_one();
 	}
+}
+
+unsigned prime_generator::prime_count()
+{
+	boost::mutex::scoped_lock lock(prime_mutex);
+	return Prime_Cache.size();
+}
+
+mpint prime_generator::random_prime()
+{
+	mpint temp;
+	boost::mutex::scoped_lock lock(prime_mutex);
+	while(Prime_Cache.empty()){
+		prime_remove_cond.wait(prime_mutex);
+	}
+	temp = Prime_Cache.back();
+	Prime_Cache.pop_back();
+	prime_generate_cond.notify_one();
+	return temp;
+}
+
+void prime_generator::start()
+{
+	for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
+		Workers.create_thread(boost::bind(&prime_generator::main_loop, this));
+	}
+}
+
+void prime_generator::stop()
+{
+	Workers.interrupt_all();
+	Workers.join_all();
 }

@@ -17,6 +17,7 @@
 #include <boost/tokenizer.hpp>
 #include <boost/utility.hpp>
 #include <portable_sleep.hpp>
+#include <singleton.hpp>
 
 //standard
 #include <ctime>
@@ -27,11 +28,22 @@
 #include <sstream>
 #include <string>
 
-class share : private boost::noncopyable
+class share : public singleton_base<share>
 {
+	friend class singleton_base<share>;
 public:
-	share();
 	~share();
+
+	/*
+	start:
+		Starts share indexing threads.
+		Note: This is only to be used from singleton_start.
+	stop:
+		Stops share indexing threads.
+		Note: This is only to be used from singleton_stop.
+	*/
+	void start();
+	void stop();
 
 	/*
 	size_bytes:
@@ -43,6 +55,8 @@ public:
 	boost::uint64_t size_files();
 
 private:
+	share();
+
 	/*
 	remove_temporary_files:
 		Remove all temporary files used for generating hash trees by the different
