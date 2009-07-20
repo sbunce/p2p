@@ -9,7 +9,6 @@
 #include <boost/shared_ptr.hpp>
 
 namespace network{
-typedef socket_data_visible socket;
 class io_service
 {
 public:
@@ -21,8 +20,8 @@ public:
 	io_service(
 		boost::function<void (const std::string & host, const std::string & port,
 			const ERROR error)> failed_connect_call_back_in,
-		boost::function<void (socket_data_visible & Socket)> connect_call_back_in,
-		boost::function<void (socket_data_visible & Socket)> disconnect_call_back_in,
+		boost::function<void (socket_data & Socket)> connect_call_back_in,
+		boost::function<void (socket_data & Socket)> disconnect_call_back_in,
 		const unsigned max_incoming_connections,
 		const unsigned max_outgoing_connections,
 		const std::string & port = "-1"

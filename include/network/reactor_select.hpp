@@ -15,8 +15,8 @@ public:
 	reactor_select(
 		boost::function<void (const std::string & host, const std::string & port,
 			const network::ERROR error)> failed_connect_call_back_in,
-		boost::function<void (socket_data_visible & Socket)> connect_call_back_in,
-		boost::function<void (socket_data_visible & Socket)> disconnect_call_back_in,
+		boost::function<void (socket_data & Socket)> connect_call_back_in,
+		boost::function<void (socket_data & Socket)> disconnect_call_back_in,
 		const std::string & port = "-1"
 	):
 		network::reactor(

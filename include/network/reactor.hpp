@@ -22,8 +22,8 @@ public:
 	reactor(
 		boost::function<void (const std::string & host, const std::string & port,
 			const ERROR error)> failed_connect_call_back_in,
-		boost::function<void (socket_data_visible & Socket)> connect_call_back_in,
-		boost::function<void (socket_data_visible & Socket)> disconnect_call_back_in
+		boost::function<void (socket_data & Socket)> connect_call_back_in,
+		boost::function<void (socket_data & Socket)> disconnect_call_back_in
 	):
 		failed_connect_call_back(failed_connect_call_back_in),
 		connect_call_back(connect_call_back_in),
@@ -331,8 +331,8 @@ private:
 	//call backs
 	boost::function<void (const std::string & host, const std::string & port,
 		const network::ERROR error)> failed_connect_call_back;
-	boost::function<void (socket_data_visible & Socket)> connect_call_back;
-	boost::function<void (socket_data_visible & Socket)> disconnect_call_back;
+	boost::function<void (socket_data & Socket)> connect_call_back;
+	boost::function<void (socket_data & Socket)> disconnect_call_back;
 
 	void pool()
 	{
@@ -376,20 +376,20 @@ private:
 		}else{
 			if(!SD->connect_flag){
 				SD->connect_flag = true;
-				connect_call_back(SD->Socket_Data_Visible);
+				connect_call_back(*SD);
 			}
-			assert(SD->Socket_Data_Visible.recv_call_back);
-			assert(SD->Socket_Data_Visible.send_call_back);
+			assert(SD->recv_call_back);
+			assert(SD->send_call_back);
 			if(SD->recv_flag){
 				SD->recv_flag = false;
-				SD->Socket_Data_Visible.recv_call_back(SD->Socket_Data_Visible);
+				SD->recv_call_back(*SD);
 			}
 			if(SD->send_flag){
 				SD->send_flag = false;
-				SD->Socket_Data_Visible.send_call_back(SD->Socket_Data_Visible);
+				SD->send_call_back(*SD);
 			}
 			if(SD->disconnect_flag){
-				disconnect_call_back(SD->Socket_Data_Visible);
+				disconnect_call_back(*SD);
 				close(SD->socket_FD);
 			}
 		}

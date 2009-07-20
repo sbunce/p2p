@@ -1,4 +1,4 @@
 SConscript([
-	'http/SConscript',
+	#'http/SConscript',
 	'unit_tests/SConscript'
 ])

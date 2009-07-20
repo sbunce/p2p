@@ -13,7 +13,6 @@
 #include <string>
 
 namespace network{
-
 /*
 NONE:
 	Default value of Error.
@@ -48,63 +47,16 @@ enum DIRECTION {
 	OUTGOING
 };
 
-/*
-This is typedef'd to socket in network::. The purpose of this class is to
-limit what data the call back has access to. For example the call back
-should not have access to any flag but the disconnect flag.
-*/
-class socket_data_visible
-{
-public:
-	socket_data_visible(
-		const int socket_FD_in,
-		const std::string & host_in,
-		const std::string & IP_in,
-		const std::string & port_in,
-		const bool localhost_in,
-		const DIRECTION direction_in,
-		bool & disconnect_flag_in,
-		buffer & recv_buff_in,
-		buffer & send_buff_in,
-		const ERROR & Error_in
-	):
-		socket_FD(socket_FD_in),
-		host(host_in),
-		IP(IP_in),
-		port(port_in),
-		localhost(localhost_in),
-		direction(direction_in),
-		disconnect_flag(disconnect_flag_in),
-		recv_buff(recv_buff_in),
-		send_buff(send_buff_in),
-		error(Error_in)
-	{}
-
-	//const references to save space, non-const references may be changed
-	const int socket_FD;
-	const std::string & host;  //host connected to (empty when incoming connection)
-	const std::string & IP;    //IP address host resolved to
-	const std::string & port;  //port on remote end
-	const bool localhost;      //true if connection to or from localhost
-	const DIRECTION direction;
-	buffer & recv_buff;
-	buffer & send_buff;
-	bool & disconnect_flag;    //trigger disconnect when set to true
-	const ERROR & error;
-
-	/*
-	These must be set in the connect call back or the program will be
-	terminated.
-	*/
-	boost::function<void (socket_data_visible &)> recv_call_back;
-	boost::function<void (socket_data_visible &)> send_call_back;
-};
+class reactor;
+class reactor_select;
 
 /*
 This is all the state that needs to be associated with a socket.
 */
 class socket_data
 {
+	friend class reactor;
+	friend class reactor_select;
 public:
 	socket_data(
 		const int socket_FD_in,
@@ -127,19 +79,7 @@ public:
 		error(NONE),
 		last_seen(std::time(NULL)),
 		localhost((IP.find("127.") == 0) || (IP == "::1")),
-		direction(host.empty() ? INCOMING : OUTGOING),
-		Socket_Data_Visible(
-			socket_FD,
-			host,
-			IP,
-			port,
-			localhost,
-			direction,
-			disconnect_flag,
-			recv_buff,
-			send_buff,
-			error
-		)
+		direction(host.empty() ? INCOMING : OUTGOING)
 	{}
 
 	const int socket_FD;       //should not be used except by reactor_*
@@ -149,6 +89,27 @@ public:
 	const bool localhost;      //true if connection to or from localhost
 	const DIRECTION direction;
 
+	//if this is true when the call back returns the socket will be disconnected
+	bool disconnect_flag;
+
+	//send()/recv() buffers
+	buffer recv_buff;
+	buffer send_buff;
+
+	/*
+	If there is an error when a socket disconnects or fails to connect it will
+	be stored here.
+	*/
+	ERROR error;
+
+	/*
+	These must be set in the connect call back or the program will be
+	terminated.
+	*/
+	boost::function<void (socket_data &)> recv_call_back;
+	boost::function<void (socket_data &)> send_call_back;
+
+private:
 	//last time seen (used for timeouts)
 	std::time_t last_seen;
 
@@ -162,24 +123,12 @@ public:
 	recv_flag:
 		If true the recv call back needs to be done.
 	send_flag:
-		If true the send call back needs to be done.
-	disconnect_flag:
-		If this is true after get_job returns the reactor disconnected the
-		socket (because the other end hung up). If this is true when the
-		socket_data is passed to finish_job the socket will be disconnected if
-		it wasn't already.			
+		If true the send call back needs to be done.	
 	*/
 	bool failed_connect_flag;
 	bool connect_flag;
 	bool recv_flag;
 	bool send_flag;
-	bool disconnect_flag;
-
-	//send()/recv() buffers
-	buffer recv_buff;
-	buffer send_buff;
-
-	ERROR error;
 
 	/*
 	This is needed if the host resolves to multiple IPs. This is used to try
@@ -188,8 +137,6 @@ public:
 	to.
 	*/
 	boost::shared_ptr<wrapper::info> Info;
-
-	socket_data_visible Socket_Data_Visible;
 };
 }//end of network namespace
 #endif

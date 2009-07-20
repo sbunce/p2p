@@ -11,14 +11,14 @@
 class connection
 {
 public:
-	connection(network::socket & Socket)
+	connection(network::socket_data & Socket)
 	{
 		if(Socket.direction == network::OUTGOING){
 			Socket.send_buff.append('x');
 		}
 	}
 
-	void recv_call_back(network::socket & Socket)
+	void recv_call_back(network::socket_data & Socket)
 	{
 		if(Socket.direction == network::OUTGOING){
 			if(Socket.recv_buff.size() != 1){
@@ -40,7 +40,7 @@ public:
 		}
 	}
 
-	void send_call_back(network::socket & Socket)
+	void send_call_back(network::socket_data & Socket)
 	{
 		//nothing to do after a send
 	}
@@ -49,7 +49,7 @@ public:
 boost::mutex Connection_mutex;
 std::map<int, boost::shared_ptr<connection> > Connection;
 
-void connect_call_back(network::socket & Socket)
+void connect_call_back(network::socket_data & Socket)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	std::string direction;
@@ -65,7 +65,7 @@ void connect_call_back(network::socket & Socket)
 	Socket.send_call_back = boost::bind(&connection::send_call_back, Connection[Socket.socket_FD].get(), _1);
 }
 
-void disconnect_call_back(network::socket & Socket)
+void disconnect_call_back(network::socket_data & Socket)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	std::string direction;
@@ -97,7 +97,7 @@ void failed_connect_call_back(const std::string & host, const std::string & port
 int main()
 {
 	//disable
-	return 0;
+	//return 0;
 
 	LOGGER << "supported connections: " << network::io_service::max_connections_supported();
 	network::io_service Network(
