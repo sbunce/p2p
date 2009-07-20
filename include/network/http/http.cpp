@@ -10,7 +10,7 @@ http::http(
 	std::srand(time(NULL));
 }
 
-void http::recv_call_back(network::socket & SD)
+void http::recv_call_back(network::socket_data & SD)
 {
 	namespace fs = boost::filesystem;
 
@@ -45,7 +45,7 @@ void http::recv_call_back(network::socket & SD)
 	}
 }
 
-void http::send_call_back(network::socket & SD)
+void http::send_call_back(network::socket_data & SD)
 {
 	read(SD.send_buff);
 	if(SD.send_buff.empty()){
@@ -99,14 +99,8 @@ std::string http::create_header(const unsigned content_length)
 
 	std::string header;
 	header += "HTTP/1.1 200 OK\r\n";
-
-	//dummy date
 	header += "Date: Mon, 01 Jan 1970 01:00:00 GMT\r\n";
-
-	//server name/version
 	header += "Server: test 123\r\n";
-
-	//dummy page modification date
 	header += "Last-Modified: Mon, 01 Jan 1970 01:00:00 GMT\r\n";
 
 	//some sort of page hash (determines if browser uses cached version)

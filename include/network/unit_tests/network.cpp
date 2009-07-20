@@ -99,13 +99,13 @@ int main()
 	//disable
 	//return 0;
 
-	LOGGER << "supported connections: " << network::io_service::max_connections_supported();
-	network::io_service Network(
+	LOGGER << "supported connections: " << network::proactor::max_connections_supported();
+	network::proactor Network(
 		&failed_connect_call_back,
 		&connect_call_back,
 		&disconnect_call_back,
-		network::io_service::max_connections_supported() / 2,
-		network::io_service::max_connections_supported() / 2,
+		network::proactor::max_connections_supported() / 2,
+		network::proactor::max_connections_supported() / 2,
 		"6969"
 	);
 
@@ -123,7 +123,7 @@ int main()
 		LOGGER << "accepted invalid address";
 	}
 
-	for(int x=0; x<network::io_service::max_connections_supported() / 4; ++x){
+	for(int x=0; x<network::proactor::max_connections_supported() / 4; ++x){
 		if(Network.IPv4_enabled() && !Network.connect("127.0.0.1", "6969")){
 			LOGGER << "rejected valid address";
 		}

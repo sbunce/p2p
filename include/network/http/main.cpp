@@ -35,7 +35,7 @@ namespace
 	}
 }//end of unnamed namespace
 
-void connect_call_back(network::socket & Socket)
+void connect_call_back(network::socket_data & Socket)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	Connection.insert(std::make_pair(Socket.socket_FD, new http(web_root)));
@@ -43,7 +43,7 @@ void connect_call_back(network::socket & Socket)
 	Socket.send_call_back = boost::bind(&http::send_call_back, Connection[Socket.socket_FD].get(), _1);
 }
 
-void disconnect_call_back(network::socket & Socket)
+void disconnect_call_back(network::socket_data & Socket)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	Connection.erase(Socket.socket_FD);
@@ -72,12 +72,12 @@ int main(int argc, char ** argv)
 		exit(1);
 	}
 
-	LOGGER << "supported connections: " << network::io_service::max_connections_supported();
-	network::io_service Network(
+	LOGGER << "supported connections: " << network::proactor::max_connections_supported();
+	network::proactor Network(
 		&failed_connect_call_back,
 		&connect_call_back,
 		&disconnect_call_back,
-		network::io_service::max_connections_supported(),
+		network::proactor::max_connections_supported(),
 		0,
 		"8080"
 	);

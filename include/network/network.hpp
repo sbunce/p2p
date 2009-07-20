@@ -9,7 +9,7 @@
 #include <boost/shared_ptr.hpp>
 
 namespace network{
-class io_service
+class proactor
 {
 public:
 	/* ctor parameters
@@ -17,7 +17,7 @@ public:
 	specific object. ex:
 		boost::bind(&http::connect_call_back, &HTTP, _1, _2, _3)
 	*/
-	io_service(
+	proactor(
 		boost::function<void (const std::string & host, const std::string & port,
 			const ERROR error)> failed_connect_call_back_in,
 		boost::function<void (socket_data & Socket)> connect_call_back_in,
@@ -42,7 +42,7 @@ public:
 		Reactor->start();
 	}
 
-	~io_service()
+	~proactor()
 	{
 		Reactor->stop();
 	}

@@ -24,8 +24,8 @@ public:
 	http(const std::string & web_root_in);
 
 	//call backs for network
-	void recv_call_back(network::socket & SD);
-	void send_call_back(network::socket & SD);
+	void recv_call_back(network::socket_data & SD);
+	void send_call_back(network::socket_data & SD);
 
 private:
 	enum type{
