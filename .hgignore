@@ -1,15 +1,15 @@
 syntax: glob
 *.a
 *.dblite
+*.db
 *.exe
 *.o
 *.out
 *.pyc
+*-journal
 bin
 lib
-include/unit_tests/DB
-include/unit_tests/DB-journal
-lib_src/libp2p/unit_tests/DB
-lib_src/libp2p/unit_tests/DB-journal
+lib_src/libp2p/unit_tests/download/
 lib_src/libp2p/unit_tests/share/
 lib_src/libp2p/unit_tests/temp/
+lib_src/libp2p/unit_tests/.p2p/

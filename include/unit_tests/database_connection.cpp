@@ -2,10 +2,8 @@
 #include <database_connection.hpp>
 #include <logger.hpp>
 
-//std
+//standard
 #include <string>
-
-database::connection DB("DB");
 
 class test
 {
@@ -72,8 +70,9 @@ int call_back_with_object_reference(std::string & str, int columns, char ** resp
 	return 0;
 }
 
-void test_call_backs()
+int main()
 {
+	database::connection DB("database_connection.db");
 	DB.query("DROP TABLE IF EXISTS sqlite3_wrapper");
 	if(DB.query("CREATE TABLE sqlite3_wrapper(test_text TEXT)") != SQLITE_OK){
 		LOGGER; exit(1);
@@ -107,10 +106,4 @@ void test_call_backs()
 	if(DB.query("SELECT test_text FROM sqlite3_wrapper", &Test, &test::call_back_with_object_reference, str) != SQLITE_OK){
 		LOGGER; exit(1);
 	}
-}
-
-int main()
-{
-	test_call_backs();
-	return 0;
 }

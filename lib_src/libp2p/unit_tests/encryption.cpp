@@ -4,8 +4,23 @@
 
 int main()
 {
-	prime_generator::singleton().start();
+	/*
+	This test does Diffie-Helman-Merkle key-exchange. And then tests encrypting
+	and decrypting a message.
+	*/
+
+	//setup database and make sure prime table clear
+	database::pool::singleton().unit_test_override("encryption.db");
 	database::init init;
+	database::table::prime::clear();
+
+	/*
+	Prime numbers generated asynchronously. Start the singleton that does this.
+	The encryption class relies on this being started.
+	*/
+	prime_generator::singleton().start();
+
+	//client/server encryption class
 	encryption E_server, E_client;
 
 	//client generates prime

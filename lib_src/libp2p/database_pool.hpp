@@ -55,6 +55,22 @@ public:
 		return proxy();
 	}
 
+	/*
+	Removes the connections from the Pool and replaces them with connections to
+	a database at a specified path. This should be called at the top of a unit
+	test before any database use.
+	*/
+	void unit_test_override(const std::string & DB_path)
+	{
+		boost::mutex::scoped_lock lock(Pool_mutex);
+		while(!Pool.empty()){
+			Pool.pop();
+		}
+		for(int x=0; x<settings::DATABASE_POOL_SIZE; ++x){
+			Pool.push(boost::shared_ptr<connection>(new connection(DB_path)));
+		}
+	}
+
 private:
 	pool()
 	{
