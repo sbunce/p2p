@@ -117,7 +117,7 @@ public:
 	static mpint random_prime(const int bytes);
 
 	//prints mpint in base 10
-	friend std::ostream & operator << (std::ostream & lval, mpint rval)
+	friend std::ostream & operator << (std::ostream & lval, mpint & rval)
 	{
 		return lval << rval.to_str(10);
 	}
