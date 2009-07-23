@@ -19,7 +19,6 @@ public:
 	CLI_args(const int argc_in, char * argv_in[]):
 		argc(argc_in)
 	{
-		assert(argc_in > 0);
 		for(int x=0; x<argc; ++x){
 			argv.push_back(std::string(argv_in[x]));
 		}
@@ -28,7 +27,6 @@ public:
 	//returns true if specified parameter was passed to program
 	bool check_bool(const std::string & param)
 	{
-		boost::recursive_mutex::scoped_lock lock(Mutex);
 		std::vector<std::string>::iterator iter;
 		iter = std::find(argv.begin(), argv.end(), param);
 		return iter != argv.end();
@@ -42,7 +40,6 @@ public:
 	*/
 	bool get_string(const std::string & param, std::string & str)
 	{
-		boost::recursive_mutex::scoped_lock lock(Mutex);
 		std::vector<std::string>::iterator iter_cur, iter_end;
 		iter_cur = argv.begin();
 		iter_end = argv.end();
@@ -75,7 +72,6 @@ public:
 	//prints help message if specified help parameter exists
 	void help_message(const std::string & help_param, const std::string & help_message)
 	{
-		boost::recursive_mutex::scoped_lock lock(Mutex);
 		if(check_bool(help_param)){
 			std::cout << help_message;
 			exit(0);
@@ -85,14 +81,9 @@ public:
 	//returns name of program (parameter 0)
 	std::string program_name()
 	{
-		boost::recursive_mutex::scoped_lock lock(Mutex);
 		return argv[0];
 	}
 private:
-	//locks all public member functions
-	boost::recursive_mutex Mutex;
-
-	//holds original arguments as passed in by ctor
 	int argc;
 	std::vector<std::string> argv;
 };

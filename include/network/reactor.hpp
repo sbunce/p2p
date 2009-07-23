@@ -15,6 +15,11 @@
 #include <limits>
 
 namespace network{
+
+/*
+The reactor is really a proactor because it has multiple threads which do call
+backs. It was named reactor so the class which wraps it can be called proactor.
+*/
 class reactor
 {
 public:
@@ -61,9 +66,9 @@ public:
 	*/
 	void connect(const std::string & host, const std::string & port)
 	{
-		boost::mutex::scoped_lock lock(job_mutex);
+		boost::mutex::scoped_lock lock(connect_job_mutex);
 		connect_job.push_back(std::make_pair(host, port));
-		job_cond.notify_one();
+		connect_job_cond.notify_one();
 	}
 
 	//functions for getting/settings connection related things
@@ -141,11 +146,10 @@ public:
 	//must be called after construction to start reactor threads
 	void start()
 	{
-		//workers to do call backs and DNS resolution
 		for(int x=0; x<8; ++x){
-			Workers.create_thread(boost::bind(&reactor::pool, this));
+			Workers.create_thread(boost::bind(&reactor::dispatch, this));
 		}
-		//thread to send/recv and create jobs for the workers
+		Workers.create_thread(boost::bind(&reactor::resolve, this));
 		start_networking();
 	}
 
@@ -170,9 +174,9 @@ protected:
 	*/
 	void call_back(boost::shared_ptr<socket_data> & SD)
 	{
-		boost::mutex::scoped_lock lock(job_mutex);
+		boost::mutex::scoped_lock lock(call_back_job_mutex);
 		call_back_job.push_back(SD);
-		job_cond.notify_one();
+		call_back_job_cond.notify_one();
 		SD = boost::shared_ptr<socket_data>();
 	}
 
@@ -184,7 +188,7 @@ protected:
 	void call_back_failed_connect(const std::string & host, const std::string & port,
 		const ERROR Error)
 	{
-		boost::mutex::scoped_lock lock(job_mutex);
+		boost::mutex::scoped_lock lock(call_back_job_mutex);
 
 		/*
 		Create a dummy socket_data so we can use the same mechanism for the
@@ -194,7 +198,7 @@ protected:
 		SD->failed_connect_flag = true;
 		SD->error = Error;
 		call_back_job.push_back(SD);
-		job_cond.notify_one();
+		call_back_job_cond.notify_one();
 	}
 
 	/*
@@ -318,51 +322,73 @@ private:
 	unsigned outgoing_connections;
 	unsigned max_outgoing_connections;
 
-	//worker threads to handle call backs and DNS resolution
-	boost::thread_group Workers;
-
-	//mutex locks access to all *_job containers
-	boost::mutex job_mutex;
-	boost::condition_variable_any job_cond;
-	//connect_job, std::pair<host, port>
-	std::deque<std::pair<std::string, std::string> > connect_job;
-	std::deque<boost::shared_ptr<socket_data> > call_back_job;
-
 	//call backs
 	boost::function<void (const std::string & host, const std::string & port,
 		const network::ERROR error)> failed_connect_call_back;
 	boost::function<void (socket_data & Socket)> connect_call_back;
 	boost::function<void (socket_data & Socket)> disconnect_call_back;
 
-	void pool()
+	//worker threads to handle call backs and DNS resolution
+	boost::thread_group Workers;
+
+	/*
+	Jobs to connect to a server.
+	Note: connect_job_mutex locks all access to connect_job.
+	Note: connect job contains std::pair<host, port>
+	Note: connect_job_cond used for reactor::connect() function to signal the
+		resove threads that a job is ready to be processed.
+	*/
+	boost::mutex connect_job_mutex;
+	boost::condition_variable_any connect_job_cond;
+	std::deque<std::pair<std::string, std::string> > connect_job;
+
+	/*
+	Jobs to do call backs.
+	Note: call_back_job_mutex locks all access to call_back_job.
+	Note: call_back_job_cond used for reactor_select to signal when call backs
+		need to be done.
+	*/
+	boost::mutex call_back_job_mutex;
+	boost::condition_variable_any call_back_job_cond;
+	std::deque<boost::shared_ptr<socket_data> > call_back_job;
+
+	void resolve()
 	{
 		while(true){
-			std::pair<std::string, std::string> CJ; //connect job
-			boost::shared_ptr<socket_data> CBJ;     //call back job
+			std::pair<std::string, std::string> job;
 
 			{//begin lock scope
-			boost::mutex::scoped_lock lock(job_mutex);
-			if(connect_job.empty() && call_back_job.empty()){
-				job_cond.wait(job_mutex);
+			boost::mutex::scoped_lock lock(connect_job_mutex);
+			while(connect_job.empty()){
+				connect_job_cond.wait(connect_job_mutex);
 			}
-			if(!connect_job.empty()){
-				CJ = connect_job.front();
-				connect_job.pop_front();
-			}else if(!call_back_job.empty()){
-				CBJ = call_back_job.front();
-				call_back_job.pop_front();
-			}
+			job = connect_job.front();
+			connect_job.pop_front();
 			}//end lock scope
 
-			if(!CJ.first.empty()){
-				//construction of wrapper::info does DNS lookup
-				boost::shared_ptr<wrapper::info> Info(new wrapper::info(
-					CJ.first.c_str(), CJ.second.c_str()));
-				connect(CJ.first, CJ.second, Info);
+			//construction of wrapper::info does DNS lookup
+			boost::shared_ptr<wrapper::info> Info(new wrapper::info(
+				job.first.c_str(), job.second.c_str()));
+			connect(job.first, job.second, Info);
+		}
+	}
+
+	//threads which do call backs reside in this function
+	void dispatch()
+	{
+		while(true){
+			boost::shared_ptr<socket_data> job;
+
+			{//begin lock scope
+			boost::mutex::scoped_lock lock(call_back_job_mutex);
+			while(call_back_job.empty()){
+				call_back_job_cond.wait(call_back_job_mutex);
 			}
-			if(CBJ){
-				run_call_back_job(CBJ);
-			}
+			job = call_back_job.front();
+			call_back_job.pop_front();
+			}//end lock scope
+
+			run_call_back_job(job);
 		}
 	}
 
@@ -378,13 +404,13 @@ private:
 				SD->connect_flag = true;
 				connect_call_back(*SD);
 			}
-			assert(SD->recv_call_back);
-			assert(SD->send_call_back);
-			if(SD->recv_flag){
+			if(!SD->disconnect_flag && SD->recv_flag){
+				assert(SD->recv_call_back);
 				SD->recv_flag = false;
 				SD->recv_call_back(*SD);
 			}
-			if(SD->send_flag){
+			if(!SD->disconnect_flag && SD->send_flag){
+				assert(SD->send_call_back);
 				SD->send_flag = false;
 				SD->send_call_back(*SD);
 			}
@@ -402,7 +428,10 @@ private:
 			}
 		}
 
-		//ignore dummy socket_data used to do failed_connect_call_back()
+		/*
+		Ignore dummy socket_data used to do failed_connect_call_back(). Also don't
+		pass back sockets that were disconnected.
+		*/
 		if(SD->socket_FD != -1 && !SD->failed_connect_flag && !SD->disconnect_flag){
 			finish_call_back(SD);
 		}

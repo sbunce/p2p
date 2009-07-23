@@ -445,6 +445,4 @@ int main()
 	bitwise();
 	compound_assignment();
 	stream();
-
-	return 0;
 }

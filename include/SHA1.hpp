@@ -9,15 +9,13 @@
 #include <algorithm>
 #include <iostream>
 #include <string>
+#include <vector>
 
 class SHA1
 {
 public:
 	SHA1()
 	{
-		//minimum buffer size needed for chunk
-		load_buffer.reserve(64);
-
 		//check endianness of hardware
 		sha_uint32_t IC = { 1 };
 		if(IC.byte[0] == 1){
@@ -27,20 +25,13 @@ public:
 		}
 	}
 
-	/*
-	If you know exactly how much data you will be loading this can speed up
-	things by reserving space in the load buffer.
-	*/
-	void reserve(const unsigned res)
-	{
-		load_buffer.reserve(res);
-	}
-
-	/*
-	Functions to load data to be hashed.
-	init - must be called before load()'ing (clears buffers and does setup)
-	load - load data in chunks
-	end  - must be called before retrieving the hash with hex_hash or raw_hash
+	/* Data Loading Functions
+	init:
+		Must be called before loading data.
+	load:
+		Load data in chunks.
+	end:
+		Must be called before retrieving the hash with hex_hash or raw_hash.
 	*/
 	void init()
 	{
@@ -49,10 +40,10 @@ public:
 		h[2].num = 0x98BADCFE;
 		h[3].num = 0x10325476;
 		h[4].num = 0xC3D2E1F0;
-
 		loaded_bytes = 0;
 		load_buffer.clear();
 	}
+
 	void load(const char * data, int len)
 	{
 		//update buffer
@@ -68,6 +59,7 @@ public:
 			load_buffer.erase(0,ready_chunks*64);
 		}
 	}
+
 	void end()
 	{
 		//append trailing 1 bit and size
@@ -91,9 +83,11 @@ public:
 	}
 
 	/*
-	Functions to retrieve hash for data.
-	hex_hash - returns hash in hex
-	raw_hash - returns hash in binary
+	Precondition: Must have hashed some data and called end().
+	hex_hash:
+		Returns hash in hex.
+	raw_hash:
+		Returns hash in binary.
 	*/
 	std::string hex_hash()
 	{
@@ -105,6 +99,7 @@ public:
 		}
 		return hash;
 	}
+
 	const char * raw_hash()
 	{
 		return raw;

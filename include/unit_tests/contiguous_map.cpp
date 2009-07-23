@@ -159,6 +159,4 @@ int main()
 	if(!test_empty()){
 		LOGGER; exit(1);
 	}
-
-	return 0;
 }

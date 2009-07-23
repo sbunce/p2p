@@ -138,13 +138,83 @@ public:
 		}
 	};
 
+	//returns proxy object (see documentation for proxy)
 	proxy operator [](const int index)
 	{
 		assert(index < groups);
 		return proxy(index, group_size, set);
 	}
 
-	//returns the number of bitgroups
+	//returns true if two bitgroup_sets are equal
+	bool operator == (const bitgroup_set & rval)
+	{
+		return set == rval.set;
+	}
+
+	//returns true if two bitgroup_sets are inequal
+	bool operator != (const bitgroup_set & rval)
+	{
+		return set != rval.set;
+	}
+
+	//bitwise AND one bitgroup_set with another
+	bitgroup_set & operator &= (const bitgroup_set & rval)
+	{
+		int small = set.size() < rval.set.size() ? set.size() : rval.set.size();
+		for(int x=0; x<small; ++x){
+			set[x] &= rval.set[x];
+		}
+		return *this;
+	}
+
+	//bitwise XOR one bitgroup_set with another
+	bitgroup_set & operator ^= (const bitgroup_set & rval)
+	{
+		int small = set.size() < rval.set.size() ? set.size() : rval.set.size();
+		for(int x=0; x<small; ++x){
+			set[x] ^= rval.set[x];
+		}
+		return *this;
+	}
+
+	//bitwise OR one bitgroup_set with another
+	bitgroup_set & operator |= (const bitgroup_set & rval)
+	{
+		int small = set.size() < rval.set.size() ? set.size() : rval.set.size();
+		for(int x=0; x<small; ++x){
+			set[x] |= rval.set[x];
+		}
+		return *this;
+	}
+
+	//bitwise NOT bitgroup_set
+	bitgroup_set & operator ~ ()
+	{
+		for(int x=0; x<set.size(); ++x){
+			set[x] = ~set[x];
+		}
+		return *this;
+	}
+
+	//assign a bitgroup_set
+	bitgroup_set & operator = (const bitgroup_set & rval)
+	{
+		set = rval.set;
+		return *this;
+	}
+
+	/*
+	Sets all bitgroups to zero. The way this function works is faster than
+	looping through the individual bitgroups and setting them to zero.
+	*/
+	void reset()
+	{
+		for(int x=0; x<set.size(); ++x){
+			set[x] = '\0';
+		}
+	}
+
+	//returns the number of bitgroups in the bitgroup_set
 	unsigned size()
 	{
 		return group_size;

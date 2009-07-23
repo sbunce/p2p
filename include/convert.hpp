@@ -3,8 +3,9 @@
 
 //include
 #include <boost/cstdint.hpp>
+#include <logger.hpp>
 
-//std
+//standard
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -12,24 +13,9 @@
 #include <sstream>
 #include <string>
 
-namespace convert
+class convert
 {
-	//returns endianness of hardware
-	enum { BIG_ENDIAN_ENUM, LITTLE_ENDIAN_ENUM };
-	static int endianness()
-	{
-		union{
-			unsigned num;
-			unsigned char byte[sizeof(unsigned)];
-		} test;
-		test.num = 1;
-		if(test.byte[0] == 1){
-			return LITTLE_ENDIAN_ENUM;
-		}else{
-			return BIG_ENDIAN_ENUM;
-		}
-	}
-
+public:
 	//encode, number -> bytes (encoded in big-endian)
 	template<class T>
 	static std::string encode(const T & number)
@@ -82,15 +68,21 @@ namespace convert
 
 		int index = 0;
 		while(index != hex.size()){
-			if((hex[index] < 48 || hex[index] > 57) && (hex[index] < 65 || hex[index] > 70)){
+			if((hex[index] < 48 || hex[index] > 57) && (hex[index] < 65
+				|| hex[index] > 70))
+			{
 				return false;
 			}
-			char ch = ((hex[index] >= 'A') ? (hex[index] - 'A' + 10) : (hex[index] - '0')) << 4;
+			char ch = ((hex[index] >= 'A') ?
+				(hex[index] - 'A' + 10) : (hex[index] - '0')) << 4;
 			++index;
-			if((hex[index] < 48 || hex[index] > 57) && (hex[index] < 65 || hex[index] > 70)){
+			if((hex[index] < 48 || hex[index] > 57) && (hex[index] < 65
+				|| hex[index] > 70))
+			{
 				return false;
 			}
-			bin += ch + ((hex[index] >= 'A') ? (hex[index] - 'A' + 10) : (hex[index] - '0'));
+			bin += ch + ((hex[index] >= 'A') ?
+				(hex[index] - 'A' + 10) : (hex[index] - '0'));
 			++index;
 		}
 		return true;
@@ -98,7 +90,7 @@ namespace convert
 
 	static std::string bin_to_hex(const std::string & bin)
 	{
-		static const char HEX[] = "0123456789ABCDEF";
+		const char HEX[] = "0123456789ABCDEF";
 		std::string hex;
 		int size = bin.size();
 		for(int x=0; x<size; ++x){
@@ -135,101 +127,74 @@ namespace convert
 	equal to (0), or greater than (1). Just like strcmp.
 
 	This function doesn't do any converting but it's related to size_SI so it
-	can go in the convert namespace.
+	goes in the convert namespace.
 	*/
 	static int size_SI_cmp(const std::string & left, const std::string & right)
 	{
-		if(left == right){
+		//size prefix used for comparison
+		const char * prefix = "Bkmgt";
+
+		int left_prefix = -1;
+		for(int x=0; x<left.size(); ++x){
+			if(!((int)left[x] >= 48 && (int)left[x] <= 57) && left[x] != '.'){
+				for(int y=0; y<5; ++y){
+					if(left[x] == prefix[y]){
+						left_prefix = y;
+						goto end_left_find;
+					}
+				}
+			}
+		}
+		end_left_find:
+
+		int right_prefix = -1;
+		for(int x=0; x<right.size(); ++x){
+			if(!((int)right[x] >= 48 && (int)right[x] <= 57) && right[x] != '.'){
+				for(int y=0; y<5; ++y){
+					if(right[x] == prefix[y]){
+						right_prefix = y;
+						goto end_right_find;
+					}
+				}
+			}
+		}
+		end_right_find:
+
+		if(left_prefix == -1 || right_prefix == -1){
 			return 0;
-		}else if(left.find("tB") != std::string::npos){
-			if(right.find("tB") != std::string::npos){
-				//both are tB, compare
-				std::string left_temp(left, 0, left.find("tB"));
-				std::string right_temp(right, 0, right.find("tB"));
-				left_temp.erase(std::remove(left_temp.begin(), left_temp.end(), '.'), left_temp.end());
-				right_temp.erase(std::remove(right_temp.begin(), right_temp.end(), '.'), right_temp.end());
-				return std::strcmp(left_temp.c_str(), right_temp.c_str());		
-			}else if(right.find("gB") != std::string::npos){
-				return 1;
-			}else if(right.find("mB") != std::string::npos){
-				return 1;
-			}else if(right.find("kB") != std::string::npos){
-				return 1;
-			}else{ //bytes
-				return 1;
-			}
-		}else if(left.find("gB") != std::string::npos){
-			if(right.find("tB") != std::string::npos){
-				return -1;
-			}else if(right.find("gB") != std::string::npos){
-				//both are gB, compare
-				std::string left_temp(left, 0, left.find("gB"));
-				std::string right_temp(right, 0, right.find("gB"));
-				left_temp.erase(std::remove(left_temp.begin(), left_temp.end(), '.'), left_temp.end());
-				right_temp.erase(std::remove(right_temp.begin(), right_temp.end(), '.'), right_temp.end());
-				return std::strcmp(left_temp.c_str(), right_temp.c_str());		
-			}else if(right.find("mB") != std::string::npos){
-				return 1;
-			}else if(right.find("kB") != std::string::npos){
-				return 1;
-			}else{ //bytes
-				return 1;
-			}
-		}else if(left.find("mB") != std::string::npos){
-			if(right.find("tB") != std::string::npos){
-				return -1;
-			}else if(right.find("gB") != std::string::npos){
-				return -1;
-			}else if(right.find("mB") != std::string::npos){
-				//both are mB, compare
-				std::string left_temp(left, 0, left.find("mB"));
-				std::string right_temp(right, 0, right.find("mB"));
-				left_temp.erase(std::remove(left_temp.begin(), left_temp.end(), '.'), left_temp.end());
-				right_temp.erase(std::remove(right_temp.begin(), right_temp.end(), '.'), right_temp.end());
-				return std::strcmp(left_temp.c_str(), right_temp.c_str());		
-			}else if(right.find("kB") != std::string::npos){
-				return 1;
-			}else{ //bytes
-				return 1;
-			}
-		}else if(left.find("kB") != std::string::npos){
-			if(right.find("tB") != std::string::npos){
-				return -1;
-			}else if(right.find("gB") != std::string::npos){
-				return -1;
-			}else if(right.find("mB") != std::string::npos){
-				return -1;
-			}else if(right.find("kB") != std::string::npos){
-				//both are kB, compare
-				std::string left_temp(left, 0, left.find("kB"));
-				std::string right_temp(right, 0, right.find("kB"));
-				left_temp.erase(std::remove(left_temp.begin(), left_temp.end(), '.'), left_temp.end());
-				right_temp.erase(std::remove(right_temp.begin(), right_temp.end(), '.'), right_temp.end());
-				return std::strcmp(left_temp.c_str(), right_temp.c_str());		
-			}else{ //bytes
-				return 1;
-			}
-		}else if(left.find("B") != std::string::npos){
-			if(right.find("tB") != std::string::npos){
-				return -1;
-			}else if(right.find("gB") != std::string::npos){
-				return -1;
-			}else if(right.find("mB") != std::string::npos){
-				return -1;
-			}else if(right.find("kB") != std::string::npos){
-				return -1;
-			}else{ //bytes
-				//both are B, compare
-				std::string left_temp(left, 0, left.find("B"));
-				std::string right_temp(right, 0, right.find("B"));
-				left_temp.erase(std::remove(left_temp.begin(), left_temp.end(), '.'), left_temp.end());
-				right_temp.erase(std::remove(right_temp.begin(), right_temp.end(), '.'), right_temp.end());
-				return std::strcmp(left_temp.c_str(), right_temp.c_str());		
-			}
+		}else if(left_prefix < right_prefix){
+			return -1;
+		}else if(right_prefix < left_prefix){
+			return 1;
 		}else{
-			//unrecognized size
-			return 0;
+			//same units on both sides, compare values
+			std::string left_temp(left, 0, left.find(prefix[left_prefix]));
+			std::string right_temp(right, 0, right.find(prefix[right_prefix]));
+			left_temp.erase(std::remove(left_temp.begin(), left_temp.end(), '.'),
+				left_temp.end());
+			right_temp.erase(std::remove(right_temp.begin(), right_temp.end(), '.'),
+				right_temp.end());
+			return std::strcmp(left_temp.c_str(), right_temp.c_str());		
 		}
 	}
-}
+
+private:
+	convert(){}
+
+	//returns endianness of hardware
+	enum { BIG_ENDIAN_ENUM, LITTLE_ENDIAN_ENUM };
+	static int endianness()
+	{
+		union{
+			boost::uint32_t num;
+			unsigned char byte[sizeof(boost::uint32_t)];
+		} test;
+		test.num = 1;
+		if(test.byte[0] == 1){
+			return LITTLE_ENDIAN_ENUM;
+		}else{
+			return BIG_ENDIAN_ENUM;
+		}
+	}
+};
 #endif

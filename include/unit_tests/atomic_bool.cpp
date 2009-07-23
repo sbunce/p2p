@@ -72,6 +72,4 @@ int main()
 	relational();
 	conditional();
 	stream();
-
-	return 0;
 }

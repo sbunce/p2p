@@ -29,5 +29,4 @@ int main()
 {
 	test_text();
 	test_empty();
-	return 0;
 }
