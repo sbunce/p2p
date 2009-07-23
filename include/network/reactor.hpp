@@ -146,7 +146,7 @@ public:
 	//must be called after construction to start reactor threads
 	void start()
 	{
-		for(int x=0; x<8; ++x){
+		for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
 			Workers.create_thread(boost::bind(&reactor::dispatch, this));
 		}
 		Workers.create_thread(boost::bind(&reactor::resolve, this));
