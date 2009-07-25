@@ -8,8 +8,33 @@ p2p_real::p2p_real()
 	max_connections_proxy = database::table::preferences::get_max_connections();
 	max_download_rate_proxy = database::table::preferences::get_max_download_rate();
 	max_upload_rate_proxy = database::table::preferences::get_max_upload_rate();
+
+/*
+	Network(
+		&failed_connect_call_back,
+		&connect_call_back,
+		&disconnect_call_back,
+		network::proactor::max_connections_supported() / 2,
+		network::proactor::max_connections_supported() / 2,
+		settings::P2P_PORT
+	)
+*/
+}
+/*
+void p2p_real::connect_call_back(network::socket_data & Socket)
+{
 }
 
+void p2p_real::disconnect_call_back(network::socket_data & Socket)
+{
+
+}
+
+void p2p_real::failed_connect_call_back(const std::string & host, const std::string & port, const network::ERROR error)
+{
+
+}
+*/
 p2p_real::~p2p_real()
 {
 

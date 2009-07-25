@@ -10,30 +10,30 @@ http::http(
 	std::srand(time(NULL));
 }
 
-void http::recv_call_back(network::socket_data & SD)
+void http::recv_call_back(network::sock & S)
 {
 	namespace fs = boost::filesystem;
 
-	if(SD.recv_buff.size() > 1024 || Type != UNDETERMINED){
+	if(S.recv_buff.size() > 1024 || Type != UNDETERMINED){
 		//request size limit exceeded or second request made
-		SD.disconnect_flag = true;
+		S.disconnect_flag = true;
 		return;
 	}
 
 	int pos_1, pos_2;
-	if(SD.recv_buff.size() >= 6 &&
-		(pos_1 = SD.recv_buff.find((unsigned char *)"GET ", 4)) != network::buffer::npos &&
-		(pos_2 = SD.recv_buff.find((unsigned char *)"\n", 1, pos_1)) != network::buffer::npos
+	if(S.recv_buff.size() >= 6 &&
+		(pos_1 = S.recv_buff.find((unsigned char *)"GET ", 4)) != network::buffer::npos &&
+		(pos_2 = S.recv_buff.find((unsigned char *)"\n", 1, pos_1)) != network::buffer::npos
 	){
 		//path terminated by ' ', '\r', or '\n'
 		for(int x=pos_1+4; x<pos_2; ++x){
-			if(SD.recv_buff[x] == ' ' ||
-				SD.recv_buff[x] == '\r' ||
-				SD.recv_buff[x] == '\n'
+			if(S.recv_buff[x] == ' ' ||
+				S.recv_buff[x] == '\r' ||
+				S.recv_buff[x] == '\n'
 			){
 				break;
 			}else{
-				get_path += SD.recv_buff[x];
+				get_path += S.recv_buff[x];
 			}
 		}
 
@@ -41,15 +41,15 @@ void http::recv_call_back(network::socket_data & SD)
 		path = fs::system_complete(fs::path(web_root + get_path, fs::native));
 		//LOGGER << "req " << path.string();
 		determine_type();
-		read(SD.send_buff);
+		read(S.send_buff);
 	}
 }
 
-void http::send_call_back(network::socket_data & SD)
+void http::send_call_back(network::sock & S)
 {
-	read(SD.send_buff);
-	if(SD.send_buff.empty()){
-		SD.disconnect_flag = true;
+	read(S.send_buff);
+	if(S.send_buff.empty()){
+		S.disconnect_flag = true;
 	}
 }
 

@@ -38,11 +38,14 @@ namespace network{
 class wrapper
 {
 public:
+
 	/*
-		This object wraps getaddrinfo for the purpose of automatically free'ing
-	memory allocated by the getaddrinfo function.
+	Wraps getaddr info. Frees memory when destroyed.
+	Note: typedef'd to network::address_info because address_info so common to
+		use. However it is a wrapper so it belongs in network::wrapper namespace
+		also.
 	*/
-	class info : private boost::noncopyable
+	class address_info : private boost::noncopyable
 	{
 	public:
 		/*
@@ -52,18 +55,24 @@ public:
 		The ai_family parameter is the address family to use for the socket.
 		It can be AF_INET (IPv4), AF_INET6 (IPv6), or AF_UNSPEC (IPv4 or IPv6).
 		*/
-		info(const char * host, const char * port, const int ai_family = AF_UNSPEC)
+		address_info(
+			const char * host_in,
+			const char * port_in,
+			const int ai_family = AF_UNSPEC
+		):
+			host(host_in == NULL ? "" : host_in),
+			port(port_in == NULL ? "" : port_in)
 		{
-			if(host != NULL || port != NULL){
+			if(host_in != NULL || port_in != NULL){
 				addrinfo hints;
 				std::memset(&hints, 0, sizeof(hints));
 				hints.ai_family = ai_family;
 				hints.ai_socktype = SOCK_STREAM; //TCP
-				if(host == NULL){
+				if(host_in == NULL){
 					//fill in IP (all available interfaces)
 					hints.ai_flags = AI_PASSIVE;
 				}
-				if(getaddrinfo(host, port, &hints, &res_begin) != 0){
+				if(getaddrinfo(host_in, port_in, &hints, &res_begin) != 0){
 					res_begin = NULL;
 					res_current = NULL;
 				}else{
@@ -75,7 +84,12 @@ public:
 			}
 		}
 
-		~info()
+		address_info():
+			res_begin(NULL),
+			res_current(NULL)
+		{}
+
+		~address_info()
 		{
 			if(res_begin != NULL){
 				freeaddrinfo(res_begin);
@@ -85,17 +99,29 @@ public:
 		/*
 		Returns addrinfo for the current node in the list.
 		*/
-		addrinfo * get_addrinfo() const
+		addrinfo * get() const
 		{
 			assert(res_current != NULL);
 			return res_current;
+		}
+
+		//returns host (empty if none was specified)
+		const std::string & get_host()
+		{
+			return host;
+		}
+
+		//returns port (empty if none was specified)
+		const std::string get_port()
+		{
+			return port;
 		}
 
 		/*
 		Traverses to the next addrinfo in the list. After calling this the
 		resolved() function should be called to see if at the end of the list.
 		*/
-		void next_addrinfo()
+		void next()
 		{
 			assert(res_current != NULL);
 			res_current = res_current->ai_next;
@@ -123,6 +149,10 @@ public:
 		*/
 		addrinfo * res_begin;
 		addrinfo * res_current;
+
+		//host name and port (empty if wasn't specified)
+		std::string host;
+		std::string port;
 	};
 
 	/* Accept connections on a listener.
@@ -162,10 +192,10 @@ public:
 	Note: This is generally only called when setting up a listener. Usually we
 		let the OS take care of this when making an outbound connection.
 	*/
-	static bool bind(const int socket_FD, const info & Info)
+	static bool bind(const int socket_FD, const address_info & Address_Info)
 	{
-		return ::bind(socket_FD, Info.get_addrinfo()->ai_addr,
-			Info.get_addrinfo()->ai_addrlen) != -1;
+		return ::bind(socket_FD, Address_Info.get()->ai_addr,
+			Address_Info.get()->ai_addrlen) != -1;
 	}
 
 	/* Make connection attempt.
@@ -180,20 +210,20 @@ public:
 		Note: This blocks until connection made or connection attempt
 			timed out.
 	*/
-	static bool connect(const int socket_FD, const info & Info)
+	static bool connect(const int socket_FD, const address_info & Address_Info)
 	{
-		return ::connect(socket_FD, Info.get_addrinfo()->ai_addr,
-			Info.get_addrinfo()->ai_addrlen) != -1;
+		return ::connect(socket_FD, Address_Info.get()->ai_addr,
+			Address_Info.get()->ai_addrlen) != -1;
 	}
 
 	/*
 	Have the OS allocate a socket for the specified addrinfo.
 	Return a socket or -1 on error.
 	*/
-	static int create_socket(const info & Info)
+	static int create_socket(const address_info & Address_Info)
 	{
-		return socket(Info.get_addrinfo()->ai_family, Info.get_addrinfo()->ai_socktype,
-			Info.get_addrinfo()->ai_protocol);
+		return socket(Address_Info.get()->ai_family, Address_Info.get()->ai_socktype,
+			Address_Info.get()->ai_protocol);
 	}
 
 	/*
@@ -212,12 +242,12 @@ public:
 		char buff[INET6_ADDRSTRLEN];
 		if(addr.ss_family == AF_INET){
 			//IPv4 socket
-			getnameinfo(reinterpret_cast<sockaddr *>(&addr), sizeof(sockaddr_in), buff, sizeof(buff),
-				NULL, 0, NI_NUMERICHOST);
+			getnameinfo(reinterpret_cast<sockaddr *>(&addr), sizeof(sockaddr_in),
+				buff, sizeof(buff), NULL, 0, NI_NUMERICHOST);
 		}else if(addr.ss_family == AF_INET6){
 			//IPv6 socket
-			getnameinfo(reinterpret_cast<sockaddr *>(&addr), sizeof(sockaddr_in6), buff, sizeof(buff),
-				NULL, 0, NI_NUMERICHOST);
+			getnameinfo(reinterpret_cast<sockaddr *>(&addr), sizeof(sockaddr_in6),
+				buff, sizeof(buff), NULL, 0, NI_NUMERICHOST);
 		}
 
 		/*
@@ -234,19 +264,19 @@ public:
 	}
 
 	/*
-	Same as above except this one takes info. This is good for getting the IP
-	when the socket has not yet connected.
+	Same as above except this one takes address_info. This is good for getting
+	the IP when the socket has not yet connected.
 	*/
-	static std::string get_IP(const info & Info)
+	static std::string get_IP(const address_info & Address_Info)
 	{
 		char buff[INET6_ADDRSTRLEN];
-		if(Info.get_addrinfo()->ai_family == AF_INET){
+		if(Address_Info.get()->ai_family == AF_INET){
 			//IPv4 socket
-			getnameinfo(reinterpret_cast<sockaddr *>(Info.get_addrinfo()->ai_addr),
+			getnameinfo(reinterpret_cast<sockaddr *>(Address_Info.get()->ai_addr),
 				sizeof(sockaddr_in), buff, sizeof(buff), NULL, 0, NI_NUMERICHOST);
-		}else if(Info.get_addrinfo()->ai_family == AF_INET6){
+		}else if(Address_Info.get()->ai_family == AF_INET6){
 			//IPv6 socket
-			getnameinfo(reinterpret_cast<sockaddr *>(Info.get_addrinfo()->ai_addr),
+			getnameinfo(reinterpret_cast<sockaddr *>(Address_Info.get()->ai_addr),
 				sizeof(sockaddr_in6), buff, sizeof(buff), NULL, 0, NI_NUMERICHOST);
 		}
 
@@ -330,15 +360,15 @@ public:
 		for(int x=1024; x<65536; ++x){
 			std::stringstream ss;
 			ss << x;
-			info Info("127.0.0.1", ss.str().c_str(), AF_INET);
-			assert(Info.resolved());
-			tmp_listener = create_socket(Info);
+			address_info Address_Info("127.0.0.1", ss.str().c_str(), AF_INET);
+			assert(Address_Info.resolved());
+			tmp_listener = create_socket(Address_Info);
 			if(tmp_listener == -1){
 				LOGGER << "error creating socket pair";
 				exit(1);
 			}
 			reuse_port(tmp_listener);
-			if(bind(tmp_listener, Info)){
+			if(bind(tmp_listener, Address_Info)){
 				port = ss.str();
 				break;
 			}else{
@@ -352,14 +382,14 @@ public:
 		}
 
 		//connect socket for writer end of the pair
-		info Info("127.0.0.1", port.c_str(), AF_INET);
-		assert(Info.resolved());
-		selfpipe_write = create_socket(Info);
+		address_info Address_Info("127.0.0.1", port.c_str(), AF_INET);
+		assert(Address_Info.resolved());
+		selfpipe_write = create_socket(Address_Info);
 		if(selfpipe_write == -1){
 			LOGGER << errno;
 			exit(1);
 		}
-		if(!connect(selfpipe_write, Info)){
+		if(!connect(selfpipe_write, Address_Info)){
 			LOGGER << errno;
 			exit(1);
 		}
@@ -445,14 +475,14 @@ private:
 
 	static int start_listener(const std::string & port, const int ai_family)
 	{
-		wrapper::info Info(NULL, port.c_str(), ai_family);
-		assert(Info.resolved());
-		int listener = create_socket(Info);
+		address_info Address_Info(NULL, port.c_str(), ai_family);
+		assert(Address_Info.resolved());
+		int listener = create_socket(Address_Info);
 		if(listener == -1){
 			return -1;
 		}
 		reuse_port(listener);
-		if(!bind(listener, Info)){
+		if(!bind(listener, Address_Info)){
 			LOGGER << errno;
 			exit(1);
 		}
@@ -464,5 +494,8 @@ private:
 		return listener;
 	}
 };
+
+typedef wrapper::address_info address_info;
+
 }//end of network namespace
 #endif

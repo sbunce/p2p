@@ -7,15 +7,6 @@
 namespace network {
 namespace {
 
-/*
-Returns true if address "looks like" IPv6.
-Note: The address is IPv6 only if looks_like_IPv6() valid_IP() return true.
-*/
-bool looks_like_IPv6(const std::string & IP)
-{
-	return IP.find(":") != std::string::npos;
-}
-
 //returns true if domain is valid
 bool valid_domain(const std::string & domain)
 {

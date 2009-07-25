@@ -15,6 +15,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
+//#include <network/network.hpp>
 #include <p2p/p2p.hpp>
 
 //standard
@@ -59,6 +60,12 @@ private:
 	atomic_int<unsigned> max_connections_proxy;
 	atomic_int<unsigned> max_download_rate_proxy;
 	atomic_int<unsigned> max_upload_rate_proxy;
+
+	/*
+	We make a shared_ptr to the proactor so we can make sure the class is
+	instantiated before we register call backs.
+	*/
+	//boost::shared_ptr<network::proactor> Network;
 
 	//must be specified last in header
 	singleton_stop Singleton_Stop;
