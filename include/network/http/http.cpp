@@ -4,7 +4,7 @@ http::http(
 	const std::string & web_root_in
 ):
 	web_root(web_root_in),
-	Type(UNDETERMINED),
+	State(UNDETERMINED),
 	index(0)
 {
 	std::srand(time(NULL));
@@ -14,100 +14,72 @@ void http::recv_call_back(network::sock & S)
 {
 	namespace fs = boost::filesystem;
 
-	if(S.recv_buff.size() > 1024 || Type != UNDETERMINED){
+	if(S.recv_buff.size() > 1024 || State != UNDETERMINED){
 		//request size limit exceeded or second request made
 		S.disconnect_flag = true;
 		return;
 	}
 
-	int pos_1, pos_2;
-	if(S.recv_buff.size() >= 6 &&
-		(pos_1 = S.recv_buff.find((unsigned char *)"GET ", 4)) != network::buffer::npos &&
-		(pos_2 = S.recv_buff.find((unsigned char *)"\n", 1, pos_1)) != network::buffer::npos
-	){
-		//path terminated by ' ', '\r', or '\n'
-		for(int x=pos_1+4; x<pos_2; ++x){
-			if(S.recv_buff[x] == ' ' ||
-				S.recv_buff[x] == '\r' ||
-				S.recv_buff[x] == '\n'
-			){
-				break;
+	//sub-expression 1 is the request path
+	boost::regex expression("GET\\s([^\\s]*)(\\s|\\r|\\n)");
+	boost::match_results<std::string::iterator> what;
+	std::string req = S.recv_buff.str();
+	if(boost::regex_search(req.begin(), req.end(), what, expression)){
+		std::string temp = what[1];
+		replace_encoded_chars(temp);
+		LOGGER << "req " << temp;
+		path = fs::system_complete(fs::path(web_root + temp, fs::native));
+		if(path.string().find("..") != std::string::npos){
+			//stop directory traversal
+			State = INVALID;
+		}else{
+			if(fs::exists(path)){
+				if(fs::is_directory(path)){
+					fs::path temp = fs::system_complete(fs::path(path.string() + "/index.html", fs::native));
+					if(fs::exists(temp)){
+						path = temp;
+						State = FILE;
+					}else{
+						State = DIRECTORY;
+					}
+				}else{
+					State = FILE;
+				}
 			}else{
-				get_path += S.recv_buff[x];
+				State = INVALID;
 			}
 		}
-
-		replace_encoded_chars();
-		path = fs::system_complete(fs::path(web_root + get_path, fs::native));
-		//LOGGER << "req " << path.string();
-		determine_type();
-		read(S.send_buff);
+		read(S);
 	}
 }
 
 void http::send_call_back(network::sock & S)
 {
-	read(S.send_buff);
-	if(S.send_buff.empty()){
-		S.disconnect_flag = true;
+	if(S.send_buff.size() < chunk_size){
+		read(S);
 	}
-}
-
-void http::determine_type()
-{
-	namespace fs = boost::filesystem;
-	assert(path.string().size() > 0);
-	if(path.string().find("..") != std::string::npos){
-		//stop directory traversal
-		Type = INVALID;
-	}else{
-		if(fs::exists(path)){
-			if(fs::is_directory(path)){
-				Type = DIRECTORY;	
-				if(!get_path.empty() && get_path[get_path.size() - 1] != '/'){
-					get_path += '/';
-				}
-				//see if index.html exists in directory
-				fs::path temp = fs::system_complete(fs::path(path.string() + "/index.html", fs::native));
-				if(fs::exists(temp)){
-					get_path += "index.html";
-					path = temp;
-					Type = FILE;
-				}
-			}else{
-				Type = FILE;
-			}
-		}else{
-			Type = INVALID;
-		}
+	if(S.send_buff.empty()){
+		//buffer empty after reading means we're done sending
+		S.disconnect_flag = true;
 	}
 }
 
 std::string http::create_header(const unsigned content_length)
 {
-	/* Example Header:
-	HTTP/1.1 200 OK
-	Date: Mon, 01 Jan 1970 01:00:00 GMT
-	Server: test
-	Last-Modified: Mon, 01 Jan 1970 01:00:00 GMT
-	Etag: "3f80f-1b6-3e1cb03b"
-	Accept-Ranges: bytes
-	Content-Length: 438
-	Connection: close
-	Content-Type: text/html; charset=UTF-8
-	*/
-
 	std::string header;
 	header += "HTTP/1.1 200 OK\r\n";
 	header += "Date: Mon, 01 Jan 1970 01:00:00 GMT\r\n";
 	header += "Server: test 123\r\n";
 	header += "Last-Modified: Mon, 01 Jan 1970 01:00:00 GMT\r\n";
 
-	//some sort of page hash (determines if browser uses cached version)
+	/*
+	Etag is a hash of the page to determine if the client should use a page in
+	their cache. We set it to a random string to make the client always get the
+	new version.
+	*/
 	header += "Etag: \"";
 	for(int x=0; x<18; ++x){
-		//0-9
-		header += (char)((std::rand() % 10) + 48);
+		header += (char)((std::rand() % 10) + 48); //random '0' to '9'
 	}
 	header += "\"\r\n";
 
@@ -122,102 +94,80 @@ std::string http::create_header(const unsigned content_length)
 	//indicate we will close connection after send done
 	header += "Connection: close\r\n";
 
-	//do NOT specify content type, let the client try to figure it out
-	//header += "Content-Type: text/html; charset=UTF-8\r\n";
+	/*
+	Content type is the mime type of the document. If this is not included the
+	client has to figure out what to do with the document.
+	*/
+	//header += "Content-State: text/html; charset=UTF-8\r\n";
 
 	//header must end with blank line
 	header += "\r\n";
 	return header;
 }
 
-void http::read(network::buffer & send_buff)
+void http::read(network::sock & S)
 {
 	namespace fs = boost::filesystem;
-	assert(Type != UNDETERMINED);
-	if(Type == INVALID){
-		send_buff.append((unsigned char *)"404", 3);
-		Type = DONE;
-	}else if(Type == DIRECTORY){
+	assert(State != UNDETERMINED);
+	if(State == INVALID){
+		S.send_buff.append("404");
+		State = DONE;
+	}else if(State == DIRECTORY){
 		std::stringstream ss;
-		ss << "<head>\n"
-			<< "</head>\n"
-			<< "<body bgcolor=\"#111111\" text=\"#D8D8D8\" link=\"#FF8C00\" vlink=\"#FF8C00\">\n"
-			<< "<table>\n"
-			<< "<tr><td>Filename</td><td>Size</td></tr>\n";
+		ss <<
+		"<head></head>"
+		"<body bgcolor=\"#111111\" text=\"#D8D8D8\" link=\"#FF8C00\" vlink=\"#FF8C00\">"
+		"<table><tr><td>Filename</td><td>Size</td></tr>";
 		try{
-			fs::directory_iterator iter_cur(path), iter_end;
-			while(iter_cur != iter_end){
+			for(fs::directory_iterator iter_cur(path), iter_end; iter_cur != iter_end; ++iter_cur){
+				std::string relative_path = iter_cur->path().directory_string().substr(web_root.size());
 				if(fs::is_directory(iter_cur->path())){
-					std::string dir = iter_cur->path().directory_string();
-					dir = dir.substr(web_root.size());
-					ss << "<tr>\n"
-						<< "<td>\n"
-						<< "<a href=\"" << dir << "\">" << dir.substr(dir.find_last_of('/') + 1) << "/" << "</a>\n"
-						<< "</td>\n"
-						<< "<td>DIR</td>\n";
+					std::string dir_name =  relative_path.substr(relative_path.find_last_of('/') + 1);
+					ss << "<tr><td><a href=\"" << relative_path << "\">" << dir_name
+					<< "/</a></td><td>DIR</td></tr>";
 				}else{
-					ss << "<tr>\n"
-						<< "<td>\n"
-						<< "<a href=\"" << get_path + iter_cur->path().filename() << "\">" << iter_cur->path().filename() << "</a>\n"
-						<< "</td>\n"
-						<< "<td>\n"
-						<< convert::size_SI(fs::file_size(iter_cur->path()))
-						<< "</td>\n";
+					ss << "<tr><td><a href=\"" << relative_path << "\">" << iter_cur->path().filename()
+					<< "</a></td><td>" << convert::size_SI(fs::file_size(iter_cur->path())) << "</td></tr>";
 				}
-				++iter_cur;
 			}
 		}catch(std::exception & ex){
 			LOGGER << "exception: " << ex.what();
 		}
-		ss << "</table>\n"
-			<< "</body>";
+		ss << "</table></body>";
 		std::string header = create_header(ss.str().size());
 		std::string buff = header + ss.str();
-		send_buff.append((unsigned char *)buff.data(), buff.size());
-		Type = DONE;
-	}else if(Type == FILE){
-		boost::uint64_t size;
-		try{
-			size = boost::filesystem::file_size(path);
-		}catch(std::exception & ex){
-			LOGGER << "exception: " << ex.what();
-			exit(1);
+		S.send_buff.append(buff);
+		State = DONE;
+	}else if(State == FILE){
+		if(index == 0){
+			boost::uint64_t size;
+			try{
+				size = boost::filesystem::file_size(path);
+			}catch(std::exception & ex){
+				LOGGER << "exception: " << ex.what();
+				exit(1);
+			}
+			std::string header = create_header(size);
+			S.send_buff.append(header.c_str());
 		}
 		std::fstream fin(path.string().c_str(), std::ios::in | std::ios::binary);
 		if(fin.is_open()){
 			fin.seekg(index, std::ios::beg);
-			char buff[4096];
-			fin.read(buff, sizeof(buff));
-			std::string header = create_header(size);
-			send_buff.append((unsigned char *)header.data(), header.size());
-			send_buff.append((unsigned char *)buff, fin.gcount());
+			S.send_buff.tail_reserve(chunk_size);
+			fin.read(reinterpret_cast<char *>(S.send_buff.tail_start()), S.send_buff.tail_size());
+			S.send_buff.tail_resize(fin.gcount());
 			index += fin.gcount();
 			if(fin.eof()){
-				Type == DONE;
+				State == DONE;
 			}
 		}else{
-			Type == DONE;
+			State == DONE;
 		}
 	}
 }
 
-void http::replace_encoded_chars()
+void http::replace_encoded_chars(std::string & str)
 {
-	while(true){
-		int pos = get_path.find("%20");
-		if(pos == std::string::npos){
-			break;
-		}else{
-			get_path = get_path.replace(pos, 3, 1, ' ');
-		}
-	}
-
-	while(true){
-		int pos = get_path.find("%27");
-		if(pos == std::string::npos){
-			break;
-		}else{
-			get_path = get_path.replace(pos, 3, 1, '\'');
-		}
-	}
+	boost::algorithm::replace_all(str, "%20", " ");
+	boost::algorithm::replace_all(str, "%27", "'");
 }

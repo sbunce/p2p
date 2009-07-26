@@ -9,6 +9,8 @@
 #include <boost/bind.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/regex.hpp>
+#include <boost/algorithm/string.hpp>
 #include <convert.hpp>
 #include <logger.hpp>
 
@@ -20,6 +22,7 @@
 
 class http : private boost::noncopyable
 {
+	static const int chunk_size = 4096;
 public:
 	http(const std::string & web_root_in);
 
@@ -28,23 +31,26 @@ public:
 	void send_call_back(network::sock & S);
 
 private:
-	enum type{
+	std::string web_root;
+
+	enum{
 		UNDETERMINED,
 		INVALID,
 		DIRECTORY,
 		FILE,
 		DONE
-	};
+	} State;
 
-	type Type;
-	std::string web_root;
-	std::string get_path;
+	//path to file or directory requested
 	boost::filesystem::path path;
+
+	/*
+	If file requested this will hold a index of where we are in the file. This is
+	needed so we don't have to read the entire file in to memory before sending.
+	*/
 	boost::uint64_t index;
 
 	/*
-	determine_type:
-		Sets connection::Type to what type of request was made.
 	create_header:
 		Creates a HTTP header. Content length should be the size (bytes) of the
 		document we're sending.
@@ -54,9 +60,8 @@ private:
 	replace_encoded_chars:
 		Replaces stuff like %20 with ' '.
 	*/
-	void determine_type();
 	std::string create_header(const unsigned content_length);
-	void read(network::buffer & send_buff);
-	void replace_encoded_chars();
+	void read(network::sock & S);
+	void replace_encoded_chars(std::string & str);
 };
 #endif

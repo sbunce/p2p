@@ -20,6 +20,7 @@ Functions to encode data to send over the network should be included here.
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <iterator>
 #include <string>
 
 namespace network{
@@ -48,25 +49,30 @@ public:
 	}
 
 	//bidirectional iterator
-	class iterator
+	class iterator : public std::iterator<std::random_access_iterator_tag, unsigned char>
 	{
 		friend class buffer;
 	public:
 		iterator(){}
-		const iterator & operator = (const iterator & rval)
+		iterator & operator = (const iterator & rval)
 		{
 			pos = rval.pos;
 			buff = rval.buff;
 			return *this;
 		}
-		bool operator == (const iterator & rval)
+		bool operator == (const iterator & rval) const
 		{
 			return pos == rval.pos;
 		}
-		bool operator != (const iterator & rval)
+		bool operator != (const iterator & rval) const
 		{
 			return pos != rval.pos;
 		}
+		unsigned char & operator * ()
+		{
+			return buff[pos];
+		}
+		//operator -> doesn't have to be defined because ->m is not well-defined
 		iterator & operator ++ ()
 		{
 			++pos;
@@ -89,10 +95,6 @@ public:
 			--pos;
 			return iterator(pos_tmp, buff);
 		}
-		unsigned char & operator * ()
-		{
-			return buff[pos];
-		}
 		iterator operator + (const int rval)
 		{
 			return iterator(pos + rval, buff);
@@ -105,9 +107,9 @@ public:
 		{
 			return iterator(pos - rval, buff);
 		}
-		iterator operator - (const iterator & rval)
+		ptrdiff_t operator - (const iterator & rval)
 		{
-			return iterator(pos - rval.pos, buff);
+			return pos - rval.pos;
 		}
 		iterator & operator += (const int rval)
 		{
@@ -133,9 +135,21 @@ public:
 		{
 			return buff[pos + idx];
 		}
-		bool operator < (const iterator & rval)
+		bool operator < (const iterator & rval) const
 		{
 			return pos < rval.pos;
+		}
+		bool operator > (const iterator & rval) const
+		{
+			return pos > rval.pos;
+		}
+		bool operator >= (const iterator & rval) const
+		{
+			return pos >= rval.pos;
+		}
+		bool operator <= (const iterator & rval) const
+		{
+			return pos <= rval.pos;
 		}
 
 	private:
@@ -167,6 +181,22 @@ public:
 		return *this;
 	}
 
+	//append NULL terminated string, useful for plain text protocols
+	buffer & append(const char * buff_append)
+	{
+		size_t size = std::strlen(buff_append);
+		allocate(bytes, bytes + size);
+		std::memcpy(buff + bytes - size, buff_append, size);
+		return *this;
+	}
+
+	//append std::string
+	buffer & append(const std::string & buff_append)
+	{
+		append(reinterpret_cast<const unsigned char *>(buff_append.data()),
+			buff_append.size());
+	}
+
 	//returns iterator to first unsigned char of buffer
 	iterator begin()
 	{
@@ -179,7 +209,7 @@ public:
 		allocate(bytes, 0);
 	}
 
-	//returns non NULL terminated string
+	//returns non NULL terminated string, use size() to find out how long it is
 	unsigned char * data()
 	{
 		return buff;
@@ -210,23 +240,6 @@ public:
 			assert(index + length <= bytes);
 			std::memmove(buff + index, buff + index + length, bytes - index - length);
 			allocate(bytes, bytes - length);
-		}
-	}
-
-	//find substring starting at index
-	int find(const unsigned char * str, const int length, int index = 0)
-	{
-		assert(index + length < bytes);
-		unsigned char * pos = std::search(
-			static_cast<unsigned char *>(buff + index), static_cast<unsigned char *>(buff + bytes),
-			static_cast<const unsigned char *>(str), static_cast<const unsigned char *>(str + length)
-		);
-
-		if(pos == static_cast<const unsigned char *>(str + length)){
-			//substring not found
-			return npos;
-		}else{
-			return (int)(pos - buff);
 		}
 	}
 
@@ -281,6 +294,20 @@ public:
 	size_t size()
 	{
 		return bytes;
+	}
+
+	/*
+	Returns std::string of buffer. This is useful for text protocols.
+	*/
+	std::string str(const size_t index = 0, const size_t len = npos)
+	{
+		if(len == npos){
+			assert(index < bytes);
+			return std::string(reinterpret_cast<const char *>(buff + index), bytes);
+		}else{
+			assert(index + len <= bytes);
+			return std::string(reinterpret_cast<const char *>(buff + index), len);
+		}
 	}
 
 	//allows access to individual bytes
