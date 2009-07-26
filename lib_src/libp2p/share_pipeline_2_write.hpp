@@ -27,7 +27,15 @@ class share_pipeline_2_write
 {
 public:
 	share_pipeline_2_write();
-	~share_pipeline_2_write();
+
+	/*
+	start:
+		Starts write_thread which combines writes to the database.
+	stop:
+		Stops write_thread.
+	*/
+	void start();
+	void stop();
 
 	/*
 	stop:

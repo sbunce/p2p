@@ -26,7 +26,15 @@ class share_pipeline_0_scan : private boost::noncopyable
 {
 public:
 	share_pipeline_0_scan();
-	~share_pipeline_0_scan();
+
+	/*
+	start:
+		Starts scan_thread.
+	stop:
+		Stops scan_thread.
+	*/
+	void start();
+	void stop();
 
 	/*
 	get_job:

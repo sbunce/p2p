@@ -14,7 +14,15 @@ class share_pipeline_1_hash
 {
 public:
 	share_pipeline_1_hash();
-	~share_pipeline_1_hash();
+
+	/*
+	start:
+		Starts workers to hash files.
+	stop:
+		Stops workers that are hashing files.
+	*/
+	void start();
+	void stop();
 
 	/*
 	get_job:

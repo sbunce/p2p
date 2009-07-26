@@ -2,15 +2,7 @@
 
 share_pipeline_1_hash::share_pipeline_1_hash()
 {
-	for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
-		Workers.create_thread(boost::bind(&share_pipeline_1_hash::main_loop, this));
-	}
-}
 
-share_pipeline_1_hash::~share_pipeline_1_hash()
-{
-	Workers.interrupt_all();
-	Workers.join_all();
 }
 
 void share_pipeline_1_hash::block_on_max_jobs()
@@ -71,4 +63,19 @@ boost::uint64_t share_pipeline_1_hash::size_bytes()
 boost::uint64_t share_pipeline_1_hash::size_files()
 {
 	return Share_Pipeline_0_Scan.size_files();
+}
+
+void share_pipeline_1_hash::start()
+{
+	for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
+		Workers.create_thread(boost::bind(&share_pipeline_1_hash::main_loop, this));
+	}
+	Share_Pipeline_0_Scan.start();
+}
+
+void share_pipeline_1_hash::stop()
+{
+	Share_Pipeline_0_Scan.stop();
+	Workers.interrupt_all();
+	Workers.join_all();
 }

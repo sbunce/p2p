@@ -17,7 +17,6 @@
 #include <boost/tokenizer.hpp>
 #include <boost/utility.hpp>
 #include <portable_sleep.hpp>
-#include <singleton.hpp>
 
 //standard
 #include <ctime>
@@ -33,6 +32,17 @@ class share
 public:
 	share();
 	~share();
+
+	/*
+	start:
+		Starts share indexing threads.
+		Note: This is only to be used from singleton_start.
+	stop:
+		Stops share indexing threads.
+		Note: This is only to be used from singleton_stop.
+	*/
+	void start();
+	void stop();
 
 	/*
 	size_bytes:

@@ -13,7 +13,10 @@ int main()
 	database::pool::singleton().unit_test_override("encryption.db");
 	database::init init;
 	database::table::prime::clear();
+
+	//prime generator that the encryption class depends upon
 	prime_generator Prime_Generator;
+	Prime_Generator.start();
 
 	//client/server encryption class
 	encryption E_server(Prime_Generator), E_client(Prime_Generator);
