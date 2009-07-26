@@ -72,17 +72,17 @@ void p2p_real::pause_download(const std::string & hash)
 
 unsigned p2p_real::prime_count()
 {
-	return prime_generator::singleton().prime_count();
+	return Prime_Generator.prime_count();
 }
 
 boost::uint64_t p2p_real::share_size_bytes()
 {
-	return share::singleton().size_bytes();
+	return Share.size_bytes();
 }
 
 boost::uint64_t p2p_real::share_size_files()
 {
-	return share::singleton().size_files();
+	return Share.size_files();
 }
 
 //boost::bind can't handle default parameter, wrapper required

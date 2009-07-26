@@ -67,24 +67,25 @@ int main(int argc, char ** argv)
 		&disconnect_call_back,
 		&failed_connect_call_back
 	);
+	Reactor.start();
 	Proactor.start();
 
 	//register signal handlers
 	signal(SIGINT, signal_handler);
 
 	while(!terminate_program){
+		if(Reactor.current_download_rate() || Reactor.current_upload_rate()){
+			LOGGER
 /*
-		if(Network.connections() != 0 || Network.current_download_rate()
-			|| Network.current_upload_rate())
-		{
-			LOGGER << "C<" << Network.connections() << "> "
+<< "C<" << Network.connections() << "> "
 			<< "IC<" << Network.incoming_connections() << "> "
 			<< "OC<" << Network.outgoing_connections() << "> "
-			<< "D<" << convert::size_SI(Network.current_download_rate()) << "> "
-			<< "U<" << convert::size_SI(Network.current_upload_rate()) << ">";
-		}
 */
+			<< "D<" << convert::size_SI(Reactor.current_download_rate()) << "> "
+			<< "U<" << convert::size_SI(Reactor.current_upload_rate()) << ">";
+		}
 		portable_sleep::ms(1000);
 	}
+	Reactor.stop();
 	Proactor.stop();
 }

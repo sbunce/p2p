@@ -27,9 +27,7 @@ class share_pipeline_2_write
 {
 public:
 	share_pipeline_2_write();
-
-	void start();
-	void stop();
+	~share_pipeline_2_write();
 
 	/*
 	stop:

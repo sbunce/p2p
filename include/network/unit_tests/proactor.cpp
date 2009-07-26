@@ -88,19 +88,19 @@ int main()
 	//return 0;
 
 	network::reactor_select Reactor("65001");
+	network::async_resolve Async_Resolve(Reactor);
 	network::proactor Proactor(
 		Reactor,
 		&connect_call_back,
 		&disconnect_call_back,
 		&failed_connect_call_back
 	);
+	Reactor.start();
+	Async_Resolve.start();
 	Proactor.start();
 
 	for(int x=0; x<16; ++x){
-		boost::shared_ptr<network::address_info> AI(
-			new network::address_info("127.0.0.1", "65001"));
-		boost::shared_ptr<network::sock> S(new network::sock(AI));
-		Reactor.connect(S);
+		Async_Resolve.connect("127.0.0.1", "65001");
 	}
 
 /*
@@ -117,5 +117,7 @@ int main()
 */
 	portable_sleep::ms(10*1000);
 
+	Reactor.stop();
+	Async_Resolve.stop();
 	Proactor.stop();
 }

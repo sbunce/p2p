@@ -1,3 +1,8 @@
+/*
+This class handles rate limiting and can be used to get access to the average
+upload and download rates. It is also used to set maximum upload/download rates.
+This class is generally accessed through the reactor interface.
+*/
 //THREADSAFE
 #ifndef H_NETWORK_RATE_LIMIT
 #define H_NETWORK_RATE_LIMIT

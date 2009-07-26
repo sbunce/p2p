@@ -12,7 +12,6 @@
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
 #include <random.hpp>
-#include <singleton.hpp>
 #include <tommath/mpint.hpp>
 
 //standard
@@ -26,10 +25,10 @@
 	#include <wincrypt.h>
 #endif
 
-class prime_generator : public singleton_base<prime_generator>
+class prime_generator
 {
-	friend class singleton_base<prime_generator>;
 public:
+	prime_generator();
 	~prime_generator();
 
 	/*
@@ -53,8 +52,6 @@ public:
 	mpint random_prime();
 
 private:
-	prime_generator();
-
 	boost::thread_group Workers;
 
 	/*

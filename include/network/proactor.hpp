@@ -1,3 +1,7 @@
+/*
+The proactor gets jobs from a reactor and dispacthes them by calling the
+appropriate call back. The proactor uses as many threads as there are CPUs.
+*/
 #ifndef H_NETWORK_PROACTOR
 #define H_NETWORK_PROACTOR
 
@@ -29,10 +33,14 @@ public:
 		failed_connect_call_back(failed_connect_call_back_in)
 	{}
 
-	//starts both the proactor, and the reactor
+	//starts both the proactor
 	void start()
 	{
-		Reactor.start();
+		boost::mutex::scoped_lock lock(start_stop_mutex);
+		if(Workers.size() != 0){
+			LOGGER << "start called on already started proactor";
+			exit(1);
+		}
 		for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
 			Workers.create_thread(boost::bind(&proactor::dispatch, this));
 		}
@@ -41,11 +49,19 @@ public:
 	//must be called before destruction to stop threads
 	void stop()
 	{
+		boost::mutex::scoped_lock lock(start_stop_mutex);
+		if(Workers.size() == 0){
+			LOGGER << "stop called on already stopped proactor";
+			exit(1);
+		}
 		Workers.interrupt_all();
 		Workers.join_all();
 	}
 
 private:
+	//mutex for start/stop
+	boost::mutex start_stop_mutex;
+
 	reactor & Reactor;
 
 	boost::function<void (sock & Sock)> failed_connect_call_back;

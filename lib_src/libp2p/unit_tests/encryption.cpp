@@ -13,15 +13,10 @@ int main()
 	database::pool::singleton().unit_test_override("encryption.db");
 	database::init init;
 	database::table::prime::clear();
-
-	/*
-	Prime numbers generated asynchronously. Start the singleton that does this.
-	The encryption class relies on this being started.
-	*/
-	prime_generator::singleton().start();
+	prime_generator Prime_Generator;
 
 	//client/server encryption class
-	encryption E_server, E_client;
+	encryption E_server(Prime_Generator), E_client(Prime_Generator);
 
 	//client generates prime
 	std::string prime_binary = E_client.get_prime();
@@ -63,5 +58,4 @@ int main()
 	if(server_buffer != "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"){
 		LOGGER; exit(1);
 	}
-	prime_generator::singleton().stop();
 }

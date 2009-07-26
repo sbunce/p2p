@@ -6,6 +6,8 @@
 #include "database.hpp"
 #include "hash_tree.hpp"
 #include "path.hpp"
+#include "prime_generator.hpp"
+#include "share.hpp"
 #include "settings.hpp"
 #include "singleton_start.hpp"
 #include "singleton_stop.hpp"
@@ -65,7 +67,10 @@ private:
 	We make a shared_ptr to the proactor so we can make sure the class is
 	instantiated before we register call backs.
 	*/
-	//boost::shared_ptr<network::proactor> Network;
+	//network::proactor Proactor;
+
+	prime_generator Prime_Generator;
+	share Share;
 
 	//must be specified last in header
 	singleton_stop Singleton_Stop;

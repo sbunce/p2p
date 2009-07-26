@@ -3,16 +3,13 @@
 
 //custom
 #include "database.hpp"
-#include "prime_generator.hpp"
-#include "share.hpp"
+#include "thread_pool.hpp"
 
 class singleton_stop
 {
 public:
 	~singleton_stop()
 	{
-		prime_generator::singleton().stop();
-		share::singleton().stop();
 		thread_pool::singleton().stop();
 	}
 };

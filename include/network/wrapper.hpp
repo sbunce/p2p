@@ -1,3 +1,10 @@
+/*
+Making sure the BSD sockets interface is portable accross systems takes a lot of
+care. Using the regular BSD sockets interface can also be complicated and hence
+error prone. The network::wrapper namespace addresses both of these concerns by
+simplifying the interface, and putting all system specific network functions in
+one place.
+*/
 #ifndef H_NETWORK_WRAPPER
 #define H_NETWORK_WRAPPER
 
@@ -217,12 +224,12 @@ public:
 	}
 
 	/*
-	Have the OS allocate a socket for the specified addrinfo.
-	Return a socket or -1 on error.
+	Have the OS allocate a socket for the specified addrinfo. Returns a socket or
+	-1 on error.
 	*/
-	static int create_socket(const address_info & Address_Info)
+	static int socket(const address_info & Address_Info)
 	{
-		return socket(Address_Info.get()->ai_family, Address_Info.get()->ai_socktype,
+		return ::socket(Address_Info.get()->ai_family, Address_Info.get()->ai_socktype,
 			Address_Info.get()->ai_protocol);
 	}
 
@@ -362,7 +369,7 @@ public:
 			ss << x;
 			address_info Address_Info("127.0.0.1", ss.str().c_str(), AF_INET);
 			assert(Address_Info.resolved());
-			tmp_listener = create_socket(Address_Info);
+			tmp_listener = socket(Address_Info);
 			if(tmp_listener == -1){
 				LOGGER << "error creating socket pair";
 				exit(1);
@@ -384,7 +391,7 @@ public:
 		//connect socket for writer end of the pair
 		address_info Address_Info("127.0.0.1", port.c_str(), AF_INET);
 		assert(Address_Info.resolved());
-		selfpipe_write = create_socket(Address_Info);
+		selfpipe_write = socket(Address_Info);
 		if(selfpipe_write == -1){
 			LOGGER << errno;
 			exit(1);
@@ -477,7 +484,7 @@ private:
 	{
 		address_info Address_Info(NULL, port.c_str(), ai_family);
 		assert(Address_Info.resolved());
-		int listener = create_socket(Address_Info);
+		int listener = socket(Address_Info);
 		if(listener == -1){
 			return -1;
 		}

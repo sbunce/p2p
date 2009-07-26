@@ -7,7 +7,13 @@ share_pipeline_0_scan::share_pipeline_0_scan():
 	_size_bytes(0),
 	_size_files(0)
 {
+	scan_thread = boost::thread(boost::bind(&share_pipeline_0_scan::main_loop, this));
+}
 
+share_pipeline_0_scan::~share_pipeline_0_scan()
+{
+	scan_thread.interrupt();
+	scan_thread.join();
 }
 
 void share_pipeline_0_scan::block_on_max_jobs()
@@ -260,15 +266,4 @@ boost::uint64_t share_pipeline_0_scan::size_bytes()
 boost::uint64_t share_pipeline_0_scan::size_files()
 {
 	return _size_files;
-}
-
-void share_pipeline_0_scan::start()
-{
-	scan_thread = boost::thread(boost::bind(&share_pipeline_0_scan::main_loop, this));
-}
-
-void share_pipeline_0_scan::stop()
-{
-	scan_thread.interrupt();
-	scan_thread.join();
 }

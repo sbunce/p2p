@@ -1,3 +1,11 @@
+/*
+All the reactors deal with sock's. The sock has all data that needs to be
+associated with a socket. When the sock is passed to a reactor the reactor
+monitors the socket the socket is associated with.
+
+Note: It is not thread safe to modify a sock after it has been passed to a
+reactor.
+*/
 #ifndef H_NETWORK_SOCK
 #define H_NETWORK_SOCK
 
@@ -24,6 +32,16 @@ enum DIRECTION {
 };
 
 /*
+When a socket is disconnected without the program telling it to an error code
+is given.
+*/
+enum SOCK_ERROR {
+	NO_ERROR,        //default, no error
+	MAX_CONNECTIONS, //connection limit reached
+	TIMEOUT,         //socket timed out
+};
+
+/*
 This is all the state that needs to be associated with a socket.
 */
 class sock
@@ -44,7 +62,8 @@ public:
 		disconnect_flag(false),
 		failed_connect_flag(false),
 		recv_flag(false),
-		send_flag(false)
+		send_flag(false),
+		sock_error(NO_ERROR)
 	{
 		wrapper::set_non_blocking(socket_FD);
 	}
@@ -55,7 +74,7 @@ public:
 	*/
 	sock(boost::shared_ptr<address_info> info_in):
 		info(info_in),
-		socket_FD(wrapper::create_socket(*info)),
+		socket_FD(wrapper::socket(*info)),
 		host(info->get_host()),
 		IP(wrapper::get_IP(*info)),
 		port(info->get_port()),
@@ -65,7 +84,8 @@ public:
 		disconnect_flag(false),
 		failed_connect_flag(false),
 		recv_flag(false),
-		send_flag(false)
+		send_flag(false),
+		sock_error(NO_ERROR)
 	{
 		wrapper::set_non_blocking(socket_FD);
 	}
@@ -111,8 +131,12 @@ public:
 	buffer recv_buff;
 	buffer send_buff;
 
+	//call backs used by the proactor
 	boost::function<void (sock &)> recv_call_back;
 	boost::function<void (sock &)> send_call_back;
+
+	//error stored here after abnormal disconnect
+	SOCK_ERROR sock_error;
 
 	/* Used by Reactor.
 	seen:

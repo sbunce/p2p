@@ -1,3 +1,8 @@
+/*
+This reactor is the most portable. It uses the select() call which is the most
+portable way of doing I/O multiplexing. The select() call is synchronous but we
+make it somewhat asynchronous by handing off jobs to another thread.
+*/
 //THREADSAFE, THREAD-SPAWNING
 #ifndef H_NETWORK_REACTOR_SELECT
 #define H_NETWORK_REACTOR_SELECT
@@ -76,15 +81,21 @@ public:
 
 	virtual void start()
 	{
-		//assert reactor not already started
-		assert(main_loop_thread.get_id() == boost::thread::id());
+		boost::mutex::scoped_lock lock(start_stop_mutex);
+		if(main_loop_thread.get_id() != boost::thread::id()){
+			LOGGER << "start called on already started reactor";
+			exit(1);
+		}
 		main_loop_thread = boost::thread(boost::bind(&reactor_select::main_loop, this));
 	}
 
 	virtual void stop()
 	{
-		//assert reactor started
-		assert(main_loop_thread.get_id() != boost::thread::id());
+		boost::mutex::scoped_lock lock(start_stop_mutex);
+		if(main_loop_thread.get_id() == boost::thread::id()){
+			LOGGER << "stop called on already stopped reactor";
+			exit(1);
+		}
 		main_loop_thread.interrupt();
 		main_loop_thread.join();
 	}
@@ -95,6 +106,9 @@ public:
 	}
 
 private:
+	//mutex for start/stop
+	boost::mutex start_stop_mutex;
+
 	//thread for main_loop
 	boost::thread main_loop_thread;
 

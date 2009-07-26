@@ -6,7 +6,8 @@ thread safe code difficult. This container also exposes it's underlying buffer
 in a non-const way which makes it possible to use it with send()/recv() without
 extra copying.
 
-Functions to encode data to send over the network should be included here.
+This container offers many convenience functions for encoding data to be sent
+over the network.
 */
 #ifndef H_BUFFER
 #define H_BUFFER

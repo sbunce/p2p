@@ -145,7 +145,8 @@ void http::read(network::sock & S)
 				size = boost::filesystem::file_size(path);
 			}catch(std::exception & ex){
 				LOGGER << "exception: " << ex.what();
-				exit(1);
+				State = DONE;
+				return;
 			}
 			std::string header = create_header(size);
 			S.send_buff.append(header.c_str());

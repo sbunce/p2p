@@ -14,13 +14,7 @@ class share_pipeline_1_hash
 {
 public:
 	share_pipeline_1_hash();
-
-	/*
-	stop:
-		Stops all threads in Workers group that are hashing files.
-	*/
-	void start();
-	void stop();
+	~share_pipeline_1_hash();
 
 	/*
 	get_job:

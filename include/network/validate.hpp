@@ -1,5 +1,8 @@
-#ifndef VALIDATE
-#define VALIDATE
+/*
+Functions for validating addresses.
+*/
+#ifndef NETWORK_VALIDATE
+#define NETWORK_VALIDATE
 
 //include
 #include <boost/regex.hpp>
@@ -10,7 +13,7 @@ namespace {
 //returns true if domain is valid
 bool valid_domain(const std::string & domain)
 {
-	const boost::regex regex("[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-])*");
+	boost::regex regex("[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-])*");
 	boost::cmatch what;
 	return domain.size() <= 255 && boost::regex_match(domain.c_str(), what, regex);
 }
@@ -25,7 +28,7 @@ bool valid_IP(const std::string & IP)
 	Conforms to RFC4291 section 2.2
 	http://www.ietf.org/rfc/rfc4291.txt
 	*/
-	const boost::regex regex(
+	boost::regex regex(
 "^\\s*((([0-9A-Fa-f]{1,4}:){7}(([0-9A-Fa-f]{1,4})|:))|(([0-9A-Fa-f]{1,4}:){6}(:"
 "|((25[0-5]|2[0-4]\\d|[01]?\\d{1,2})(\\.(25[0-5]|2[0-4]\\d|[01]?\\d{1,2})){3})|"
 "(:[0-9A-Fa-f]{1,4})))|(([0-9A-Fa-f]{1,4}:){5}((:((25[0-5]|2[0-4]\\d|[01]?\\d{1"

@@ -2,11 +2,15 @@
 
 prime_generator::prime_generator()
 {
-
+	for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
+		Workers.create_thread(boost::bind(&prime_generator::main_loop, this));
+	}
 }
 
 prime_generator::~prime_generator()
 {
+	Workers.interrupt_all();
+	Workers.join_all();
 	database::table::prime::write_all(Prime_Cache);
 }
 
@@ -68,17 +72,4 @@ mpint prime_generator::random_prime()
 	Prime_Cache.pop_back();
 	prime_generate_cond.notify_one();
 	return temp;
-}
-
-void prime_generator::start()
-{
-	for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
-		Workers.create_thread(boost::bind(&prime_generator::main_loop, this));
-	}
-}
-
-void prime_generator::stop()
-{
-	Workers.interrupt_all();
-	Workers.join_all();
 }

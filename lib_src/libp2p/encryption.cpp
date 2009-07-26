@@ -1,6 +1,7 @@
 #include "encryption.hpp"
 
-encryption::encryption()
+encryption::encryption(prime_generator & Prime_Generator_in):
+	Prime_Generator(Prime_Generator_in)
 {
 	g = "2"; //fast generater
 	s = mpint::random(protocol::DH_KEY_SIZE);
@@ -9,7 +10,7 @@ encryption::encryption()
 
 std::string encryption::get_prime()
 {
-	p = prime_generator::singleton().random_prime();
+	p = Prime_Generator.random_prime();
 	return std::string((char *)p.to_bin(), p.to_bin_size());
 }
 

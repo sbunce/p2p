@@ -21,7 +21,7 @@
 class encryption : private boost::noncopyable
 {
 public:
-	encryption();
+	encryption(prime_generator & Prime_Generator_in);
 
 	/* Protocol for key exchange:
 	1. Client connects
@@ -66,6 +66,8 @@ public:
 	}
 
 private:
+	prime_generator & Prime_Generator;
+
 	//keeps track of encryption state to make sure no functions get called out of order
 	enum state{
 		waiting_for_prime,
