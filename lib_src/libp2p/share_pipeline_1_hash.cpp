@@ -28,6 +28,9 @@ bool share_pipeline_1_hash::get_job(share_pipeline_job & info)
 
 void share_pipeline_1_hash::main_loop()
 {
+	//delay allows p2p_real to be constructed faster
+	portable_sleep::ms(100);
+
 	hash_tree Hash_Tree;
 	share_pipeline_job info;
 	while(true){

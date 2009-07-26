@@ -92,6 +92,9 @@ bool share_pipeline_0_scan::insert_recurse(std::map<std::string, directory>::ite
 
 void share_pipeline_0_scan::main_loop()
 {
+	//delay allows p2p_real to be constructed faster
+	portable_sleep::ms(100);
+
 	namespace fs = boost::filesystem;
 
 	//populate in-memory tree from database

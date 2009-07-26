@@ -12,6 +12,9 @@ prime_generator::~prime_generator()
 
 void prime_generator::main_loop()
 {
+	//delay allows p2p_real to be constructed faster
+	portable_sleep::ms(100);
+
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(prime_mutex);
 	static bool read_in = false;

@@ -61,4 +61,5 @@ int main()
 	if(server_buffer != "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"){
 		LOGGER; exit(1);
 	}
+	Prime_Generator.stop();
 }

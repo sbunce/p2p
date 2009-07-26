@@ -7,6 +7,9 @@ share_pipeline_2_write::share_pipeline_2_write()
 
 void share_pipeline_2_write::main_loop()
 {
+	//delay allows p2p_real to be constructed faster
+	portable_sleep::ms(100);
+
 	std::vector<share_pipeline_job> temp;
 	share_pipeline_job info;
 	while(true){
