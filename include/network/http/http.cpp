@@ -27,7 +27,7 @@ void http::recv_call_back(network::sock & S)
 	if(boost::regex_search(req.begin(), req.end(), what, expression)){
 		std::string temp = what[1];
 		replace_encoded_chars(temp);
-		LOGGER << "req " << temp;
+		//LOGGER << "req " << temp;
 		path = fs::system_complete(fs::path(web_root + temp, fs::native));
 		if(path.string().find("..") != std::string::npos){
 			//stop directory traversal
@@ -55,7 +55,7 @@ void http::recv_call_back(network::sock & S)
 
 void http::send_call_back(network::sock & S)
 {
-	if(S.send_buff.size() < chunk_size){
+	if(S.send_buff.size() < network::reactor::MTU){
 		read(S);
 	}
 	if(S.send_buff.empty()){
@@ -154,7 +154,7 @@ void http::read(network::sock & S)
 		std::fstream fin(path.string().c_str(), std::ios::in | std::ios::binary);
 		if(fin.is_open()){
 			fin.seekg(index, std::ios::beg);
-			S.send_buff.tail_reserve(chunk_size);
+			S.send_buff.tail_reserve(network::reactor::MTU);
 			fin.read(reinterpret_cast<char *>(S.send_buff.tail_start()), S.send_buff.tail_size());
 			S.send_buff.tail_resize(fin.gcount());
 			index += fin.gcount();

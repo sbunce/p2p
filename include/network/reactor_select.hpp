@@ -10,6 +10,9 @@ make it somewhat asynchronous by handing off jobs to another thread.
 //custom
 #include "reactor.hpp"
 
+//standard
+#include <set>
+
 namespace network{
 class reactor_select : public reactor
 {
@@ -127,6 +130,7 @@ private:
 	*/
 	fd_set connect_FDS;
 
+	//select() requires these
 	int begin_FD; //first socket
 	int end_FD;   //one past last socket
 
@@ -144,7 +148,6 @@ private:
 	*/
 	int selfpipe_read;  //put in master_FDS
 	int selfpipe_write; //written to get select to return
-	char selfpipe_discard[512]; //used to discard selfpipe bytes
 
 	/*
 	The sock's in this container are monitored by select for activity. When
@@ -315,8 +318,6 @@ private:
 			check_job_finished();
 			check_timeouts();
 
-			timeval tv;
-
 			/*
 			Maximum bytes that can be send()'d/recv()'d before exceeding maximum
 			upload/download rate. These are decremented by however many bytes are
@@ -326,6 +327,7 @@ private:
 			int max_recv = Rate_Limit.available_download();
 
 			read_FDS = master_read_FDS;
+			timeval tv;
 			if(max_send == 0){
 				//rate limit reached, only check for new connections
 				write_FDS = connect_FDS;
@@ -359,93 +361,103 @@ private:
 				}
 			}else if(service != 0){
 				/*
-				There is a starvation problem that can happen when hitting the rate
-				limit where the lower sockets hog available bandwidth and the higher
-				sockets get starved.
-
-				Because of this we set the maximum send such that in the worst case
-				each socket (that needs to be serviced) gets to send/recv an equal
-				amount of data.
+				This loop discards selfpipe bytes, handles incoming connections, and
+				determines what sockets need read/write. We don't service sockets
+				for read/write at this point because we don't know how many there
+				are.
 				*/
-				int max_send_per_socket = max_send / service;
-				int max_recv_per_socket = max_recv / service;
-				if(max_send_per_socket == 0){
-					max_send_per_socket = 1;
-				}
-				if(max_recv_per_socket == 0){
-					max_recv_per_socket = 1;
-				}
-
-				//socket scan loop
-				bool socket_serviced;
-				bool schedule_job;
+				std::vector<int> read_socket, write_socket;
 				for(int socket_FD = begin_FD; socket_FD < end_FD && service; ++socket_FD){
-					socket_serviced = false;
-					schedule_job = false;
-
 					if(socket_FD == selfpipe_read){
 						if(FD_ISSET(socket_FD, &read_FDS)){
+							--service;
+							static char selfpipe_discard[512];
 							recv(socket_FD, selfpipe_discard, sizeof(selfpipe_discard), MSG_NOSIGNAL);
-							socket_serviced = true;
 						}
-						FD_CLR(socket_FD, &read_FDS);
-						FD_CLR(socket_FD, &write_FDS);
-					}
-
-					if(socket_FD == listener_IPv4){
+					}else if(socket_FD == listener_IPv4){
 						if(FD_ISSET(socket_FD, &read_FDS)){
+							--service;
 							establish_incoming(socket_FD);
-							socket_serviced = true;
 						}
-						FD_CLR(socket_FD, &read_FDS);
-						FD_CLR(socket_FD, &write_FDS);
-					}
-
-					if(socket_FD == listener_IPv6){
+					}else if(socket_FD == listener_IPv6){
 						if(FD_ISSET(socket_FD, &read_FDS)){
+							--service;
 							establish_incoming(socket_FD);
-							socket_serviced = true;
 						}
-						FD_CLR(socket_FD, &read_FDS);
-						FD_CLR(socket_FD, &write_FDS);
-					}
-
-					if(FD_ISSET(socket_FD, &write_FDS) && FD_ISSET(socket_FD, &connect_FDS)){
-						socket_serviced = true;
-						FD_CLR(socket_FD, &read_FDS);
-						FD_CLR(socket_FD, &write_FDS);
-						FD_CLR(socket_FD, &connect_FDS);
+					}else if(FD_ISSET(socket_FD, &write_FDS) && FD_ISSET(socket_FD, &connect_FDS)){
+						--service;
 						if(wrapper::async_connect_succeeded(socket_FD)){
-							schedule_job = true;
+							boost::shared_ptr<sock> S = get_monitored(socket_FD);
+							remove_socket(S);
+							add_job(S);
 						}else{
 							//see if there is another address to try
 							boost::shared_ptr<sock> S = get_monitored(socket_FD);
+							remove_socket(S);
 							S->info->next();
 							if(S->info->resolved()){
+								//another address to try
 								reactor::connect(S);
 							}else{
-								schedule_job = true;
+								//no more addresses to try, connect failed
 								S->failed_connect_flag = true;
+								add_job(S);
 							}
 						}
+					}else{
+						if(FD_ISSET(socket_FD, &read_FDS)){
+							read_socket.push_back(socket_FD);
+						}
+						if(FD_ISSET(socket_FD, &write_FDS)){
+							write_socket.push_back(socket_FD);
+						}
+						if(FD_ISSET(socket_FD, &read_FDS) || FD_ISSET(socket_FD, &write_FDS)){
+							--service;
+						}
 					}
+				}
 
-					if(FD_ISSET(socket_FD, &read_FDS)){
-						main_loop_recv(socket_FD, max_recv_per_socket, max_recv, socket_serviced, schedule_job);
-					}
+				/*
+				We use a set because one socket might both read and write. If it
+				does we only need to schedule one job.
+				*/
+				std::set<int> job;
 
-					if(FD_ISSET(socket_FD, &write_FDS)){
-						main_loop_send(socket_FD, max_send_per_socket, max_send, socket_serviced, schedule_job);
+				//try to read sockets that were in read_FDS
+				if(!read_socket.empty()){
+					int max_recv_per_socket = max_recv / read_socket.size();
+					for(std::vector<int>::iterator iter_cur = read_socket.begin(),
+						iter_end = read_socket.end(); iter_cur != iter_end; ++iter_cur)
+					{
+						bool schedule_job = false;
+						main_loop_recv(*iter_cur, max_recv_per_socket, max_recv, schedule_job);
+						if(schedule_job){
+							job.insert(*iter_cur);
+						}
 					}
+				}
 
-					if(socket_serviced){
-						--service;
+				//try to write sockets that were in write_FDS
+				if(!write_socket.empty()){
+					int max_send_per_socket = max_send / write_socket.size();
+					for(std::vector<int>::iterator iter_cur = write_socket.begin(),
+						iter_end = write_socket.end(); iter_cur != iter_end; ++iter_cur)
+					{
+						bool schedule_job = false;
+						main_loop_send(*iter_cur, max_send_per_socket, max_send, schedule_job);
+						if(schedule_job){
+							job.insert(*iter_cur);
+						}
 					}
-					if(schedule_job){
-						boost::shared_ptr<sock> S = get_monitored(socket_FD);
-						remove_socket(S);
-						add_job(S);
-					}
+				}
+
+				//schedule jobs for sockets that either did read, write, or both
+				for(std::set<int>::iterator iter_cur = job.begin(),
+					iter_end = job.end(); iter_cur != iter_end; ++iter_cur)
+				{
+					boost::shared_ptr<sock> S = get_monitored(*iter_cur);
+					remove_socket(S);
+					add_job(S);
 				}
 			}
 		}
@@ -453,7 +465,7 @@ private:
 
 	//recv data from a socket
 	void main_loop_recv(const int socket_FD, const int max_recv_per_socket,
-		int & max_recv, bool & socket_serviced, bool & schedule_job)
+		int & max_recv, bool & schedule_job)
 	{
 		boost::shared_ptr<sock> S = get_monitored(socket_FD);
 		/*
@@ -469,8 +481,8 @@ private:
 		}
 
 		//make sure we don't exceed maximum recv size
-		if(temp > 4096){
-			temp = 4096;
+		if(temp > MTU){
+			temp = MTU;
 		}
 
 		if(temp != 0){
@@ -487,22 +499,20 @@ private:
 
 			if(n_bytes == 0){
 				S->disconnect_flag = true;
-				schedule_job = true;
 			}else if(n_bytes > 0){
 				S->recv_buff.tail_resize(n_bytes);
 				S->seen();
 				Rate_Limit.add_download_bytes(n_bytes);
 				max_recv -= n_bytes;
 				S->recv_flag = true;
-				schedule_job = true;
 			}
+			schedule_job = true;
 		}
-		socket_serviced = true;
 	}
 
 	//send data to a socket
 	void main_loop_send(const int socket_FD, const int max_send_per_socket,
-		int & max_send, bool & socket_serviced, bool & schedule_job)
+		int & max_send, bool & schedule_job)
 	{
 		boost::shared_ptr<sock> S = get_monitored(socket_FD);
 		if(!S->send_buff.empty()){
@@ -524,8 +534,8 @@ private:
 			}
 
 			//make sure we don't exceed maximum send size
-			if(temp > 4096){
-				temp = 4096;
+			if(temp > MTU){
+				temp = MTU;
 			}
 
 			if(temp != 0){
@@ -553,7 +563,6 @@ private:
 				}
 			}
 		}
-		socket_serviced = true;
 	}
 
 	/*

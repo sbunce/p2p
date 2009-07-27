@@ -22,7 +22,6 @@
 
 class http : private boost::noncopyable
 {
-	static const int chunk_size = 4096;
 public:
 	http(const std::string & web_root_in);
 

@@ -22,11 +22,19 @@ namespace network{
 class reactor : private boost::noncopyable
 {
 public:
+	/*
+	Maximum size sent in one shot. The actual hardware MTU will likely be less.
+	On the internet the MTU will probably be around 1500. This maximum size was
+	chosen because some LANs go up to 2^14 with "jumbo frames".
+	*/
+	static const int MTU = 16384;
+
 	reactor():
 		_incoming_connections(0),
 		max_incoming_connections(0),
 		_outgoing_connections(0),
-		max_outgoing_connections(0)
+		max_outgoing_connections(0),
+job_count(0)
 	{
 		wrapper::start_networking();
 	}
@@ -62,6 +70,8 @@ public:
 		}
 	}
 
+unsigned job_count;
+
 	//block until a some socket_data needs attention
 	boost::shared_ptr<sock> get()
 	{
@@ -71,6 +81,7 @@ public:
 		}
 		boost::shared_ptr<sock> S = job.front();
 		job.pop_front();
+++job_count;
 		return S;
 	}
 
