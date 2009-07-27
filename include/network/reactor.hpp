@@ -1,6 +1,10 @@
 /*
-The reactor should be interfaced with through this class. It is not possible to
-directly interface with a specific reactor.
+The reactor contains the thread which does the networking. Reactors must be
+accessed through this class. It is not possible to access the derived reactor
+directly.
+
+Note: It's a major PITA to use the reactor by itself. It is much easier to use
+the reactor with the proactor.
 */
 #ifndef H_NETWORK_REACTOR
 #define H_NETWORK_REACTOR

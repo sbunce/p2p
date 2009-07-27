@@ -54,6 +54,9 @@ void failed_connect_call_back(network::sock & S)
 
 int main(int argc, char ** argv)
 {
+	//register signal handlers
+	signal(SIGINT, signal_handler);
+
 	CLI_args CLI_Args(argc, argv);
 	if(!CLI_Args.get_string("--web_root", web_root)){
 		LOGGER << "web root not specified";
@@ -67,20 +70,15 @@ int main(int argc, char ** argv)
 		&disconnect_call_back,
 		&failed_connect_call_back
 	);
+	Reactor.set_max_upload_rate(1024*100);
 	Reactor.start();
 	Proactor.start();
 
-	//register signal handlers
-	signal(SIGINT, signal_handler);
-
 	while(!terminate_program){
 		if(Reactor.current_download_rate() || Reactor.current_upload_rate()){
-			LOGGER
-/*
-<< "C<" << Network.connections() << "> "
-			<< "IC<" << Network.incoming_connections() << "> "
-			<< "OC<" << Network.outgoing_connections() << "> "
-*/
+			LOGGER << "C<" << Reactor.connections() << "> "
+			<< "IC<" << Reactor.incoming_connections() << "> "
+			<< "OC<" << Reactor.outgoing_connections() << "> "
 			<< "D<" << convert::size_SI(Reactor.current_download_rate()) << "> "
 			<< "U<" << convert::size_SI(Reactor.current_upload_rate()) << ">";
 		}
