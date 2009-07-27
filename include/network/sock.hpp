@@ -37,8 +37,10 @@ is given.
 */
 enum SOCK_ERROR {
 	NO_ERROR,        //default, no error
+	FAILED_RESOLVE,  //failed to resolve host
 	MAX_CONNECTIONS, //connection limit reached
 	TIMEOUT,         //socket timed out
+	OTHER            //error there is no other enum for
 };
 
 /*
@@ -46,12 +48,15 @@ This is all the state that needs to be associated with a socket.
 */
 class sock
 {
+	static const int default_timeout = 16;
 public:
 	/*
 	Constructor for new incoming connection. This is generally used inside a
 	reactor when an incoming connection is established.
 	*/
-	sock(const int socket_FD_in):
+	sock(
+		const int socket_FD_in
+	):
 		info(new address_info()),
 		socket_FD(socket_FD_in),
 		IP(wrapper::get_IP(socket_FD)),
@@ -63,18 +68,19 @@ public:
 		failed_connect_flag(false),
 		recv_flag(false),
 		send_flag(false),
-		sock_error(NO_ERROR)
-	{
-		wrapper::set_non_blocking(socket_FD);
-	}
+		sock_error(NO_ERROR),
+		timeout(default_timeout)
+	{}
 
 	/*
 	Constructor for establishing a new connection. This needs to be created to
 	be given to the reactor. Which will in turn connect to the host.
 	*/
-	sock(boost::shared_ptr<address_info> info_in):
+	sock(
+		boost::shared_ptr<address_info> info_in
+	):
 		info(info_in),
-		socket_FD(wrapper::socket(*info)),
+		socket_FD(-1),
 		host(info->get_host()),
 		IP(wrapper::get_IP(*info)),
 		port(info->get_port()),
@@ -85,10 +91,9 @@ public:
 		failed_connect_flag(false),
 		recv_flag(false),
 		send_flag(false),
-		sock_error(NO_ERROR)
-	{
-		wrapper::set_non_blocking(socket_FD);
-	}
+		sock_error(NO_ERROR),
+		timeout(default_timeout)
+	{}
 
 	~sock()
 	{
@@ -100,7 +105,13 @@ public:
 	//info for who we're connected to
 	boost::shared_ptr<wrapper::address_info> info;
 
-	const int socket_FD;       //file descriptor for network connection
+	/*
+	File descriptor for network connection. If the second ctor is used this is
+	set to -1. The reactor will const_cast this and set it when connecting. The
+	const acts as a safety cover here.
+	*/
+	const int socket_FD;
+
 	const std::string host;    //name we connected to (ie "google.com")
 	const std::string IP;      //IP host resolved to
 	const std::string port;    //if listen_port == port then connection is incoming
@@ -138,15 +149,26 @@ public:
 	//error stored here after abnormal disconnect
 	SOCK_ERROR sock_error;
 
-	/* Used by Reactor.
-	seen:
-		Updates last seen. Used for timeouts. Used by reactor but harmless to call
-		from outside the reactor.
-	last_seen:
-		Returns how many seconds since the socket was last has activity.
+	/*
+	If the socket is in the reactor for this long it will time out. This may be
+	changed from the default value. Value is in seconds.
 	*/
-	void seen(){ last_active = std::time(NULL); }
-	std::time_t last_seen() { return std::time(NULL) - last_active; }
+	std::time_t timeout;
+
+	/*
+	Updates last_active. Used for timeouts. Used by reactor but harmless to call
+	from outside the reactor (although this has no meaning).
+	*/
+	void seen()
+	{
+		last_active = std::time(NULL);
+	}
+
+	//returns true if the socket has timed out
+	bool timed_out()
+	{
+		return std::time(NULL) - last_active > timeout;
+	}
 
 private:
 	//last time seen (used for timeouts)

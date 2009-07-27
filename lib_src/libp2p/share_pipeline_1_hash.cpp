@@ -44,8 +44,9 @@ void share_pipeline_1_hash::main_loop()
 
 		if(info.add){
 			/*
-			If hash_tree::create returns false it means there was a read error or that
-			hash tree generation was stopped because program is being shut down.
+			If hash_tree::create returns false it means there was a read error or
+			that hash tree generation was stopped because program is being shut
+			down.
 			*/
 			if(Hash_Tree.create(info.path, info.file_size, info.hash)){
 				boost::mutex::scoped_lock lock(job_mutex);

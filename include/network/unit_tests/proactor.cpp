@@ -79,7 +79,22 @@ void disconnect_call_back(network::sock & S)
 
 void failed_connect_call_back(network::sock & S)
 {
-	LOGGER << "H<" << S.host << "> P<" << S.port << ">";
+	assert(S.sock_error != network::NO_ERROR);
+	std::string reason;
+	if(S.sock_error == network::FAILED_RESOLVE){
+		reason = "failed resolve";
+	}else if(S.sock_error == network::MAX_CONNECTIONS){
+		reason = "max connections";
+	}else if(S.sock_error == network::TIMEOUT){
+		reason = "timeout";
+	}else if(S.sock_error == network::OTHER){
+		reason = "other";
+	}else{
+		LOGGER << "unrecognized failure reason";
+		exit(1);
+	}
+	LOGGER << "H<" << S.host << "> P<" << S.port << ">" << " R<" << reason << ">";
+	exit(1);
 }
 
 int main()
@@ -99,23 +114,20 @@ int main()
 	Async_Resolve.start();
 	Proactor.start();
 
-	for(int x=0; x<16; ++x){
+	for(int x=0; x<Reactor.max_connections_supported() / 2; ++x){
 		Async_Resolve.connect("127.0.0.1", "65001");
 	}
 
-/*
 	bool hack = true; //connections won't immediately be non-zero
-	while(Network.connections() != 0 || hack){
-		LOGGER << "C<" << Network.connections() << "> "
-			<< "IC<" << Network.incoming_connections() << "> "
-			<< "OC<" << Network.outgoing_connections() << "> "
-			<< "D<" << convert::size_SI(Network.current_download_rate()) << "> "
-			<< "U<" << convert::size_SI(Network.current_upload_rate()) << ">";
+	while(Reactor.connections() != 0 || hack){
+		LOGGER << "C<" << Reactor.connections() << "> "
+			<< "IC<" << Reactor.incoming_connections() << "> "
+			<< "OC<" << Reactor.outgoing_connections() << "> "
+			<< "D<" << convert::size_SI(Reactor.current_download_rate()) << "> "
+			<< "U<" << convert::size_SI(Reactor.current_upload_rate()) << ">";
 		portable_sleep::ms(1000);
 		hack = false;
 	}
-*/
-	portable_sleep::ms(10*1000);
 
 	Reactor.stop();
 	Async_Resolve.stop();

@@ -493,7 +493,7 @@ private:
 			LOGGER << errno;
 			exit(1);
 		}
-		int backlog = 32;
+		int backlog = 512;
 		if(listen(listener, backlog) == -1){
 			LOGGER << errno;
 			exit(1);

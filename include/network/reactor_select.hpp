@@ -48,6 +48,9 @@ public:
 		wrapper::set_non_blocking(selfpipe_read);
 		wrapper::set_non_blocking(selfpipe_write);
 		add_socket(selfpipe_read);
+
+		//set default maximum connections to maximum
+		set_max_connections(max_connections_supported() / 2, max_connections_supported() / 2);
 	}
 
 	~reactor_select()
@@ -185,25 +188,38 @@ private:
 	{
 		boost::shared_ptr<sock> S;
 		while(S = get_job_connect()){
-/*
-//check soft connection limit
-if(outgoing_limit_reached()){
-	call_back_failed_connect(CJ->host, CJ->port, MAX_CONNECTIONS);
-	break;
-}else{
-	outgoing_increment();
-}
-*/
+			//check soft connection limit
+			if(outgoing_limit_reached()){
+				S->failed_connect_flag = true;
+				S->sock_error = MAX_CONNECTIONS;
+				add_job(S);
+				return;
+			}
+
 			//check hard connection limit
 			#ifdef _WIN32
 			if(master_read_FDS.fd_count >= FD_SETSIZE){
 			#else
 			if(S->socket_FD >= FD_SETSIZE){
 			#endif
+				S->failed_connect_flag = true;
+				S->sock_error = MAX_CONNECTIONS;
 				add_job(S);
 				return;
 			}
 
+			assert(S->socket_FD == -1);
+			const_cast<int &>(S->socket_FD) = wrapper::socket(*S->info);
+
+			if(S->socket_FD == -1){
+				S->failed_connect_flag = true;
+				S->sock_error = OTHER;
+				add_job(S);
+				return;
+			}
+
+			wrapper::set_non_blocking(S->socket_FD);
+			outgoing_increment();
 			if(wrapper::connect(S->socket_FD, *S->info)){
 				//socket connected right away, rare but it might happen
 				add_job(S);
@@ -228,10 +244,6 @@ if(outgoing_limit_reached()){
 	//checks timeouts once per second
 	void check_timeouts()
 	{
-/*
-Each socket should have it's own timeout that the client can set.
-*/
-
 		//only check timeouts once per second
 		static std::time_t Time = std::time(NULL);
 		if(Time == std::time(NULL)){
@@ -239,22 +251,25 @@ Each socket should have it's own timeout that the client can set.
 		}else{
 			Time = std::time(NULL);
 		}
-/*
+
 		std::map<int, boost::shared_ptr<sock> >::iterator
 			iter_cur = Monitored.begin(), iter_end = Monitored.end();
 		while(iter_cur != iter_end){
-			if(std::time(NULL) - iter_cur->second->last_seen >= 4){
+			if(iter_cur->second->timed_out()){
 				boost::shared_ptr<sock> S = iter_cur->second;
 				Monitored.erase(iter_cur++);
-				S->disconnect_flag = true;
-				S->error = TIMED_OUT;
+				if(FD_ISSET(S->socket_FD, &connect_FDS)){
+					S->failed_connect_flag = true;
+				}else{
+					S->disconnect_flag = true;
+				}
+				S->sock_error = TIMEOUT;
 				remove_socket(S->socket_FD);
-				call_back(S);
+				add_job(S);
 			}else{
 				++iter_cur;
 			}
 		}
-*/
 	}
 
 	//handle incoming connection on listener
@@ -264,13 +279,13 @@ Each socket should have it's own timeout that the client can set.
 		while(new_FD != -1){
 			new_FD = wrapper::accept(listener);
 			if(new_FD != -1){
-//				if(incoming_limit_reached()){
-//					close(new_FD);
-//				}else{
-//incoming_increment();
+				if(incoming_limit_reached()){
+					close(new_FD);
+				}else{
+					incoming_increment();
 					boost::shared_ptr<sock> S(new sock(new_FD));
 					add_job(S);
-//				}
+				}
 			}
 		}
 	}

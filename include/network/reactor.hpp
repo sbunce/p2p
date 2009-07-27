@@ -18,7 +18,11 @@ namespace network{
 class reactor : private boost::noncopyable
 {
 public:
-	reactor()
+	reactor():
+		_incoming_connections(0),
+		max_incoming_connections(0),
+		_outgoing_connections(0),
+		max_outgoing_connections(0)
 	{
 		wrapper::start_networking();
 	}
@@ -44,8 +48,9 @@ public:
 	void connect(boost::shared_ptr<sock> & S)
 	{
 		boost::mutex::scoped_lock lock(job_connect_mutex);
-		if(S->socket_FD == -1 || !S->info->resolved()){
+		if(!S->info->resolved()){
 			S->failed_connect_flag = true;
+			S->sock_error = FAILED_RESOLVE;
 			add_job(S);
 		}else{
 			job_connect.push_back(S);
@@ -65,10 +70,24 @@ public:
 		return S;
 	}
 
-	//when finished with a socket return it here
+	/*
+	When finished with a socket return it here.
+	Note: If a sock is not returned then the connection counts will get screwed
+		up and the program will likely be terminated. For this reason it's
+		inadviseable to use a reactor directly. Using the proactor makes it
+		impossible to forget to return a sock.
+	*/
 	void put(boost::shared_ptr<sock> & S)
 	{
-		if(!S->disconnect_flag && !S->failed_connect_flag){
+		if(S->disconnect_flag || S->failed_connect_flag){
+			if(S->socket_FD != -1){
+				if(S->direction == INCOMING){
+					incoming_decrement();
+				}else{
+					outgoing_decrement();
+				}
+			}
+		}else{
 			boost::mutex::scoped_lock lock(job_finished_mutex);
 
 			//after the first get() of this sock the connect job is done
@@ -83,27 +102,91 @@ public:
 		}
 	}
 
-	//functions for getting/setting rate limits, and getting current rates
+	//returns current total connections, both incoming and outgoing
+	unsigned connections()
+	{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		return _incoming_connections + _outgoing_connections;
+	}
+
+	//returns current incoming connections
+	unsigned incoming_connections()
+	{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		return _incoming_connections;
+	}
+
+	//returns maximum allowed incoming connections
+	unsigned get_max_incoming_connections()
+	{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		return max_incoming_connections;
+	}
+
+	//returns current outgoing connections
+	unsigned outgoing_connections()
+	{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		return _outgoing_connections;
+	}
+
+	//returns maximum allowed outgoing connections
+	unsigned get_max_outgoing_connections()
+	{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		return max_outgoing_connections;
+	}
+
+	/*
+	Sets maximum number of incoming/outgoing connections.
+	Note: max_incoming_connections_in + max_outgoing_connections_in must not
+		exceed max_connection_supported().
+	*/
+	void set_max_connections(const unsigned max_incoming_connections_in,
+		const unsigned max_outgoing_connections_in)
+	{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		if(max_incoming_connections_in + max_outgoing_connections_in
+			> max_connections_supported())
+		{
+			LOGGER << "max_incoming + max_outgoing connections exceed implementation max";
+			exit(1);
+		}
+		max_incoming_connections = max_incoming_connections_in;
+		max_outgoing_connections = max_outgoing_connections_in;
+	}
+
+	//returns current download rate (bytes/second)
 	unsigned current_download_rate()
 	{
 		return Rate_Limit.current_download_rate();
 	}
+
+	//returns current upload rate (bytes/second)
 	unsigned current_upload_rate()
 	{
 		return Rate_Limit.current_upload_rate();
 	}
+
+	//returns maximum allowed download rate (bytes/second)
 	unsigned get_max_download_rate()
 	{
 		return Rate_Limit.get_max_download_rate();
 	}
+
+	//returns maximum alloed upload rate (bytes/second)
 	unsigned get_max_upload_rate()
 	{
 		return Rate_Limit.get_max_upload_rate();
 	}
+
+	//sets the maximum allowed download rate (bytes/second)
 	void set_max_download_rate(const unsigned rate)
 	{
 		Rate_Limit.set_max_download_rate(rate);
 	}
+
+	//sets the maximum allowed upload rate (bytes/second)
 	void set_max_upload_rate(const unsigned rate)
 	{
 		Rate_Limit.set_max_upload_rate(rate);
@@ -136,6 +219,7 @@ protected:
 		}else{
 			boost::shared_ptr<sock> S = job_connect.front();
 			job_connect.pop_front();
+			S->seen();
 			return S;
 		}
 	}
@@ -149,8 +233,89 @@ protected:
 		}else{
 			boost::shared_ptr<sock> S = job_finished.front();
 			job_finished.pop_front();
+			S->seen();
 			return S;
 		}
+	}
+
+	/*
+	Decrements the incoming connection count.
+	Precondition: incoming_connections != 0.
+	*/
+	void incoming_decrement()
+	{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		if(_incoming_connections == 0){
+			LOGGER << "violated precondition";
+			exit(1);
+		}else{
+			--_incoming_connections;
+		}
+	}
+
+	/*
+	Increments the incoming connection count.
+	Precondition: A sock must exist with a socket_FD != -1. This is because
+		incoming_decrement() will be called for a sock with a socket_FD != -1. We
+		want there to be a decrement for every increment.
+	Precondition: incoming_connections < max_incoming_connections.
+	*/
+	void incoming_increment()
+	{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		if(_incoming_connections >= max_incoming_connections){
+			LOGGER << "violated precondition";
+			exit(1);
+		}else{
+			++_incoming_connections;
+		}
+	}
+
+	//return true if incoming connection limit reached
+	bool incoming_limit_reached()
+	{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		return _incoming_connections >= max_incoming_connections;
+	}
+
+	/*
+	Decrements the outgoing connection count.
+	Precondition: outgoing_connections != 0.
+	*/
+	void outgoing_decrement()
+	{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		if(_outgoing_connections == 0){
+			LOGGER << "violated precondition";
+			exit(1);
+		}else{
+			--_outgoing_connections;
+		}
+	}
+
+	/*
+	Increments the outgoing connection count.
+	Precondition: A sock must exist with a socket_FD != -1. This is because
+		outgoing_decrement() will be called for a sock with a socket_FD != -1. We
+		want there to be a decrement for every increment.
+	Precondition: outgoing_connections < max_outgoing_connections.
+	*/
+	void outgoing_increment()
+	{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		if(_outgoing_connections >= max_outgoing_connections){
+			LOGGER << "violated precondition";
+			exit(1);
+		}else{
+			++_outgoing_connections;
+		}
+	}
+
+	//return true if outgoing connection limit reached
+	bool outgoing_limit_reached()
+	{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		return _outgoing_connections >= max_outgoing_connections;
 	}
 
 private:
@@ -175,6 +340,26 @@ private:
 	*/
 	boost::mutex job_finished_mutex;
 	std::deque<boost::shared_ptr<sock> > job_finished;
+
+	/* Connection counts and limits.
+	Note: All these must be locked with connections_mutex.
+	max_connections:
+		This is the maximum possible number of connections the reactor supports.
+		The reactor_select() for example supports slightly less than 1024.
+	incoming_connections:
+		Number of connections remote hosts established with us.
+	max_incoming_connections:
+		Maximum possible incoming connections.
+	outgoing_connections:
+		Number of connections we established with remote hosts.
+	max_outgoing_connection:
+		Maximum possible outgoing connections.
+	*/
+	boost::mutex connections_mutex;
+	unsigned _incoming_connections;
+	unsigned max_incoming_connections;
+	unsigned _outgoing_connections;
+	unsigned max_outgoing_connections;
 };
 }//end namespace network
 #endif
