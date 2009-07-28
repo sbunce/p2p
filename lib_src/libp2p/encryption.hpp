@@ -10,6 +10,7 @@
 //include
 #include <boost/utility.hpp>
 #include <RC4.hpp>
+#include <random.hpp>
 #include <tommath/mpint.hpp>
 
 //std

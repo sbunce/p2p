@@ -7,23 +7,19 @@ prime_generator::prime_generator()
 
 prime_generator::~prime_generator()
 {
-	database::table::prime::write_all(Prime_Cache);
+
 }
 
 void prime_generator::main_loop()
 {
-	//delay allows p2p_real to be constructed faster
-	portable_sleep::ms(100);
+	/*
+	Thread takes a lot of CPU time to bring up. This can increase the time it
+	takes to instantiate libp2p. This delay speeds up library instantiation. This
+	is important for fast GUI startup time.
+	*/
+	portable_sleep::yield();
 
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(prime_mutex);
-	static bool read_in = false;
-	if(!read_in){
-		database::table::prime::read_all(Prime_Cache);
-		read_in = true;
-	}
-	}//end lock scope
-
+	CMWC4096 PRNG;
 	mpint random_prime;
 	while(true){
 		boost::this_thread::interruption_point();
@@ -35,14 +31,13 @@ void prime_generator::main_loop()
 		}//end lock scope
 
 		//this should not be locked
-		random_prime = mpint::random_prime(protocol::DH_KEY_SIZE);
+		random_prime = mpint::random_prime_fast(protocol::DH_KEY_SIZE, PRNG);
 
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(prime_mutex);
 		/*
 		With multiple threads it's possible that we can go beyond the limit when
-		multiple threads generate primes at the same time when one below the prime
-		limit.
+		multiple threads generate primes at the same time. Hence the check.
 		*/
 		if(Prime_Cache.size() < settings::PRIME_CACHE){
 			Prime_Cache.push_back(random_prime);

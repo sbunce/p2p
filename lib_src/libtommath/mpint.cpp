@@ -611,29 +611,6 @@ bool mpint::is_prime()
 	return n;
 }
 
-mpint mpint::random(const int bytes)
-{
-	unsigned char * buff = static_cast<unsigned char *>(std::malloc(bytes));
-	portable_urandom(buff, bytes, NULL);
-	mpint temp(buff, bytes);
-	std::free(buff);
-	return temp;
-}
-
-mpint mpint::random_prime(const int bytes)
-{
-	mpint temp;
-	mp_prime_random_ex(
-		&temp.data,
-		mp_prime_rabin_miller_trials(bytes * 8),
-		bytes * 8,         //size (bits) of prime to generate
-		0,                 //optional flags
-		&portable_urandom, //random byte source
-		NULL               //optional void * passed to PRNG
-	);
-	return temp;
-}
-
 mpint mpint::exptmod(const mpint & y, const mpint & p)
 {
 	int err;

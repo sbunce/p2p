@@ -4,7 +4,7 @@ encryption::encryption(prime_generator & Prime_Generator_in):
 	Prime_Generator(Prime_Generator_in)
 {
 	g = "2"; //fast generater
-	s = mpint::random(protocol::DH_KEY_SIZE);
+	s = mpint::random(protocol::DH_KEY_SIZE, &portable_urandom);
 	State = waiting_for_prime;
 }
 

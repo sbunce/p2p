@@ -7,8 +7,12 @@ share_pipeline_2_write::share_pipeline_2_write()
 
 void share_pipeline_2_write::main_loop()
 {
-	//delay allows p2p_real to be constructed faster
-	portable_sleep::ms(100);
+	/*
+	Thread takes a lot of CPU time to bring up. This can increase the time it
+	takes to instantiate libp2p. This delay speeds up library instantiation. This
+	is important for fast GUI startup time.
+	*/
+	portable_sleep::yield();
 
 	std::vector<share_pipeline_job> temp;
 	share_pipeline_job info;

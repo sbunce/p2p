@@ -55,7 +55,7 @@ private:
 	unsigned char S[256];
 	unsigned i, j;
 
-	//true if seeded
+	//used to make sure PRNG seeded
 	bool seeded;
 };
 #endif
