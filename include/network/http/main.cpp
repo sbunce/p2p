@@ -70,7 +70,7 @@ int main(int argc, char ** argv)
 		&disconnect_call_back,
 		&failed_connect_call_back
 	);
-	Reactor.set_max_upload_rate(1024*500);
+	//Reactor.set_max_upload_rate(1024*500);
 	Reactor.start();
 	Proactor.start();
 

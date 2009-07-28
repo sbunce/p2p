@@ -339,7 +339,7 @@ private:
 				With the timeout select will return and the master_write_FDS will be
 				checked.
 				*/
-				tv.tv_sec = 0; tv.tv_usec = 1000000 / 100;
+				tv.tv_sec = 0; tv.tv_usec = 1000000 / 20;
 			}else{
 				//check for writeability of all sockets
 				write_FDS = master_write_FDS;

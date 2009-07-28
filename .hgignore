@@ -8,6 +8,8 @@ syntax: glob
 *.pyc
 *-journal
 bin
+include/network/http/benchmark/URL
+include/network/http/benchmark/test_files
 lib
 lib_src/libp2p/unit_tests/download/
 lib_src/libp2p/unit_tests/share/
