@@ -1,15 +1,5 @@
 #include "prime_generator.hpp"
 
-prime_generator::prime_generator()
-{
-
-}
-
-prime_generator::~prime_generator()
-{
-
-}
-
 void prime_generator::main_loop()
 {
 	/*

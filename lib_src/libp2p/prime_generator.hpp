@@ -29,9 +29,6 @@
 class prime_generator
 {
 public:
-	prime_generator();
-	~prime_generator();
-
 	/*
 	start:
 		Starts prime generation threads.
