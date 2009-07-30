@@ -67,6 +67,29 @@ std::string path::download()
 	}
 }
 
+void path::remove_temporary_hash_tree_files()
+{
+	namespace fs = boost::filesystem;
+	boost::uint64_t size;
+	fs::path path = fs::system_complete(fs::path(temp(), fs::native));
+	if(fs::exists(path)){
+		try{
+			for(fs::directory_iterator iter_cur(path), iter_end; iter_cur != iter_end;
+				++iter_cur)
+			{
+				if(iter_cur->path().filename().find("rightside_up_", 0) == 0
+					|| iter_cur->path().filename().find("upside_down_", 0) == 0)
+				{
+					fs::remove(iter_cur->path());
+				}
+			}
+		}catch(std::exception & ex){
+			LOGGER << ex.what();
+		}
+	}
+}
+
+
 std::string path::rightside_up()
 {
 	if(home().empty()){

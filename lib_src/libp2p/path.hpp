@@ -14,8 +14,16 @@
 class path
 {
 public:
-	//creates required directories
+	/*
+	create_required_directories:
+		Creates directories different parts of the program expect. Called from the
+		p2p_real ctor.
+	remove_temporary_hash_tree_files:
+		Remove all temporary files used for generating hash trees. This is called
+		by the share dtor and hash_tree unit test.
+	*/
 	static void create_required_directories();
+	static void remove_temporary_hash_tree_files();
 
 	/* Files
 	database:
@@ -41,7 +49,6 @@ public:
 	temp:
 		Returns location of temporary directory.
 	*/
-
 	static std::string download();
 	static std::string main();
 	static std::string share();

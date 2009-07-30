@@ -7,30 +7,7 @@ share::share()
 
 share::~share()
 {
-	remove_temporary_files();
-}
-
-void share::remove_temporary_files()
-{
-	namespace fs = boost::filesystem;
-
-	boost::uint64_t size;
-	fs::path path = fs::system_complete(fs::path(path::temp(), fs::native));
-	if(fs::exists(path)){
-		try{
-			fs::directory_iterator iter_cur(path), iter_end;
-			while(iter_cur != iter_end){
-				if(iter_cur->path().filename().find("rightside_up_", 0) == 0
-					|| iter_cur->path().filename().find("upside_down_", 0) == 0)
-				{
-					fs::remove(iter_cur->path());
-				}
-				++iter_cur;
-			}
-		}catch(std::exception & ex){
-			LOGGER << ex.what();
-		}
-	}
+	path::remove_temporary_hash_tree_files();
 }
 
 boost::uint64_t share::size_bytes()

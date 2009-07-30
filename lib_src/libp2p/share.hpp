@@ -54,13 +54,6 @@ public:
 	boost::uint64_t size_files();
 
 private:
-	/*
-	remove_temporary_files:
-		Remove all temporary files used for generating hash trees by the different
-		worker threads.
-	*/
-	void remove_temporary_files();
-
 	share_pipeline_2_write Share_Pipeline_2_Write;
 };
 #endif

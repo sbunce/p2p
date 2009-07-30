@@ -39,6 +39,7 @@ public:
 			const boost::uint64_t & file_size_in
 		);
 
+//DEBUG, can these be replaced with const variables?
 		//see documentation for private variables returned
 		const std::string & get_root_hash();
 		const boost::uint64_t & get_tree_size();
