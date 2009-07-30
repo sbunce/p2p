@@ -7,8 +7,7 @@
 #include <cmath>
 #include <limits>
 
-//does exhaustive test of different assignment operations
-void test_assignment()
+void assignment()
 {
 	unsigned groups = 1024;
 	//try all different group sizes
@@ -28,7 +27,7 @@ void test_assignment()
 	}
 }
 
-void test_named_functions()
+void named_functions()
 {
 	bitgroup_vector BGV(1, 1);
 
@@ -48,10 +47,10 @@ void test_named_functions()
 	}
 }
 
-void test_operators()
+void operators()
 {
-	bitgroup_vector BGV_0(1, 1);
-	bitgroup_vector BGV_1(1, 1);
+	bitgroup_vector BGV_0(2, 1);
+	bitgroup_vector BGV_1(2, 1);
 
 	//==
 	if(!(BGV_0 == BGV_1)){
@@ -92,29 +91,17 @@ void test_operators()
 	if(BGV_0[0] != 0){
 		LOGGER; exit(1);
 	}
-}
 
-void test_iterator()
-{
-	bitgroup_vector BGV(8, 1);
-
-	//set every other bigroup to 0
-	for(bitgroup_vector::iterator iter_cur = BGV.begin(), iter_end = BGV.end();
-		iter_cur != iter_end; ++iter_cur)
-	{
-		*iter_cur = 1;
+	//bitgroup_vector::proxy assignment test
+	BGV_0[0] = BGV_0[1] = 1;
+	if(BGV_0[0] != 1 || BGV_0[1] != 1){
+		LOGGER; exit(1);
 	}
 }
 
 int main()
 {
-	test_assignment();
-	test_named_functions();
-	test_operators();
-	test_iterator();
-
-//infinite loop
-	bitgroup_vector BGV(8, 1);
-	BGV[0] = BGV[1] = BGV[2] = BGV[3] = 1;
-	//LOGGER << BGV[0] << BGV[1] << BGV[2] << BGV[3];
+	assignment();
+	named_functions();
+	operators();
 }

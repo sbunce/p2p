@@ -1,5 +1,5 @@
-#ifndef H_BITGROUP_SET
-#define H_BITGROUP_SET
+#ifndef H_BITGROUP_VECTOR
+#define H_BITGROUP_VECTOR
 
 //include
 #include <logger.hpp>
@@ -21,7 +21,7 @@ public:
 			((groups * group_size) / 8) : ((groups * group_size) / 8 + 1),
 			'\0'
 		),
-		max_group_value(std::pow(2, group_size))
+		max_group_value(std::pow(2, group_size) - 1)
 	{
 		if(groups == 0){
 			LOGGER << "bitgroup_set only supports groups > 0";
@@ -34,161 +34,52 @@ public:
 	}
 
 	/*
-	The proxy object is returned from functions instead of an integer because
-	special stuff needs to be done to read/write to the bitgroup_vector.
+	A reference can't be returned to a few bits so this object is returned
+	instead. This object emulates an unsigned int and overloads assignment to
+	do that special stuff that needs to happen upon assignment.
 	*/
 	class proxy
 	{
 		friend class bitgroup_vector;
 	public:
-		operator unsigned()
+		//for x = b[i];
+		operator unsigned() const
 		{
-			return BGV->get_num(index);
+			return BGV.get_num(index);
 		}
+
+		//for b[i] = x;
 		proxy & operator = (const unsigned num)
 		{
-			BGV->set_num(index, num);
+			BGV.set_num(index, num);
 			return *this;
 		}
-		friend std::ostream & operator << (std::ostream & lval, const proxy & Proxy)
+
+		//for b[i] = b[j]
+		proxy & operator = (const proxy & rval)
 		{
-			return lval << Proxy.BGV->get_num(Proxy.index);
+			BGV.set_num(index, rval.BGV.get_num(rval.index));
+			return *this;
 		}
 
 	private:
 		proxy(
-			bitgroup_vector * BGV_in,
+			bitgroup_vector & BGV_in,
 			const size_t index_in
 		):
 			BGV(BGV_in),
 			index(index_in)
 		{}
 
-		bitgroup_vector * BGV;
-		size_t index;
-	};
-
-	class iterator : public std::iterator<std::random_access_iterator_tag, unsigned>
-	{
-		friend class bitgroup_vector;
-	public:
-		iterator(){}
-		iterator & operator = (const iterator & rval)
-		{
-			index = rval.index;
-			BGV = rval.BGV;
-			return *this;
-		}
-		bool operator == (const iterator & rval) const
-		{
-			return index == rval.index;
-		}
-		bool operator != (const iterator & rval) const
-		{
-			return index != rval.index;
-		}
-		proxy operator * ()
-		{
-			return proxy(BGV, index);
-		}
-		//operator -> doesn't have to be defined because ->m is not well-defined
-		iterator & operator ++ ()
-		{
-			++index;
-			return *this;
-		}
-		iterator operator ++ (int)
-		{
-			size_t index_tmp = index;
-			++index;
-			return iterator(BGV, index_tmp);
-		}
-		iterator & operator -- ()
-		{
-			--index;
-			return *this;
-		}
-		iterator operator -- (int)
-		{
-			size_t index_tmp = index;
-			--index;
-			return iterator(BGV, index_tmp);
-		}
-		iterator operator + (const unsigned rval)
-		{
-			return iterator(BGV, index + rval);
-		}
-		iterator operator + (const iterator & rval)
-		{
-			return iterator(BGV, index + rval.index);
-		}
-		iterator operator - (const unsigned rval)
-		{
-			return iterator(BGV, index - rval);
-		}
-		ptrdiff_t operator - (const iterator & rval)
-		{
-			return (index < rval.index) ? rval.index - index : index - rval.index;
-		}
-		iterator & operator += (const unsigned rval)
-		{
-			index += rval;
-			return *this;
-		}
-		iterator & operator += (const iterator & rval)
-		{
-			index += rval.index;
-			return *this;
-		}
-		iterator & operator -= (const unsigned rval)
-		{
-			index -= rval;
-			return *this;
-		}
-		iterator & operator -= (const iterator & rval)
-		{
-			index -= rval.index;
-			return *this;
-		}
-		proxy operator [] (const size_t offset)
-		{
-			return proxy(BGV, index + offset);
-		}
-		bool operator < (const iterator & rval) const
-		{
-			return index < rval.index;
-		}
-		bool operator > (const iterator & rval) const
-		{
-			return index > rval.index;
-		}
-		bool operator >= (const iterator & rval) const
-		{
-			return index >= rval.index;
-		}
-		bool operator <= (const iterator & rval) const
-		{
-			return index <= rval.index;
-		}
-
-	private:
-		iterator(
-			bitgroup_vector * BGV_in,
-			const size_t index_in
-		):
-			BGV(BGV_in),
-			index(index_in)
-		{}
-
-		bitgroup_vector * BGV; //bitgroup_vector from which the iterator was created
-		size_t index;          //current index
+		bitgroup_vector & BGV;
+		const size_t index;
 	};
 
 	//returns proxy object (see documentation for proxy)
 	proxy operator [](const size_t index)
 	{
 		assert(index < groups);
-		return proxy(this, index);
+		return proxy(*this, index);
 	}
 
 	//returns true if two bitgroup_sets are equal
@@ -249,16 +140,6 @@ public:
 		return *this;
 	}
 
-	iterator begin()
-	{
-		return iterator(this, 0);
-	}
-
-	iterator end()
-	{
-		return iterator(this, groups);
-	}
-
 	/*
 	Sets all bitgroups to zero. The way this function works is faster than
 	looping through the individual bitgroups and setting them to zero.
@@ -278,9 +159,9 @@ public:
 
 	/*
 	Get a number from the bitgroup_set.
-	Note: it is syntactically nicer to use the operators.
+	Note: it is syntactically nicer to use operator [].
 	*/
-	unsigned get_num(const unsigned index)
+	unsigned get_num(const size_t index)
 	{
 		unsigned byte_offset = index * group_size / 8;
 		unsigned bit_offset = index * group_size % 8;
@@ -305,28 +186,38 @@ public:
 				result |= temp;
 			}
 		}
-		return (unsigned)result;
+		return result;
 	}
 
 	/*
 	Set a number in the bitgroup_set.
-	Note: it is syntactically nicer to use the operators.
+	Note: it is syntactically nicer to use operator [].
 	*/
-	void set_num(const unsigned index, const unsigned num)
+	void set_num(const size_t index, const unsigned num)
 	{
-		assert(num < max_group_value);
+		assert(num <= max_group_value);
 		unsigned byte_offset = index * group_size / 8;
 		unsigned bit_offset = index * group_size % 8;
 		unsigned char temp;
-		vec[byte_offset] <<= 8 - bit_offset;
-		vec[byte_offset] >>= 8 - bit_offset;
+
+		//use bitmask to clear group bits
+		temp = max_group_value;
+		temp <<= bit_offset;
+		temp = ~temp;
+		vec[byte_offset] &= temp;
+
+		//write bits in first byte
 		temp = num;
 		temp <<= bit_offset;
 		vec[byte_offset] |= temp;
+
+		//if true then bitgroup spans two bytes
 		if(bit_offset + group_size > 8){
-			//bitgroup spans two bytes
+			//clear bits on the right by doing bit shifts
 			vec[byte_offset+1] >>= 8 - bit_offset + group_size;
 			vec[byte_offset+1] <<= 8 - bit_offset + group_size;
+
+			//write bits in second byte
 			temp = num;
 			temp >>= -bit_offset + 8;
 			vec[byte_offset+1] |= temp;
@@ -343,7 +234,10 @@ private:
 	*/
 	std::vector<unsigned char> vec;
 
-	//maximum value a group can hold (used for asserts)
-	const unsigned max_group_value;
+	/*
+	Maximum value a bitgroup can hold.
+		2^(group_size) - 1
+	*/
+	unsigned max_group_value;
 };
 #endif
