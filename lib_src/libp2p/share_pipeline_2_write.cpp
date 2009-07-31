@@ -39,7 +39,7 @@ void share_pipeline_2_write::main_loop()
 					database::table::share::add_entry(iter_cur->hash,
 						iter_cur->file_size, iter_cur->path, DB);
 					database::table::hash::set_state(iter_cur->hash,
-						hash_tree::tree_info::file_size_to_tree_size(iter_cur->file_size),
+						hash_tree::file_size_to_tree_size(iter_cur->file_size),
 						database::table::hash::COMPLETE, DB);
 				}else{
 					//job to remove file from share table

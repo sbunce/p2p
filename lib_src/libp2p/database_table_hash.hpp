@@ -37,6 +37,14 @@ public:
 		Allocates space for tree with specified hash and size. The set_state
 		function must be called for the hash tree to not be deleted on next
 		program start.
+		Note: This function doesn't allocate and returns false if tree_size = 0.
+	tree_open:
+		Returns a database::blob to the hash tree that corresponds to the
+		specified hash and tree_size. A empty blob will be returned (rowid = 0)
+		if the tree cannot be opened.
+		Note: It may not be an error if the blob can't be opened. However if it
+		is then the program will be terminated trying to read or write to the
+		blob.
 	*/
 	static void clear(database::pool::proxy DB = database::pool::proxy());
 	static void delete_tree(const std::string & hash, const int tree_size,

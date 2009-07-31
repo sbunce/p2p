@@ -255,11 +255,8 @@ public:
 		allocate(bytes, size);
 	}
 
-	/* Special tail_* Functions
-	These functions should not normally be used.
-
-	A possible use of these functions is with something like send() or recv()
-	that needs to put bytes in the buffer but we're not sure how many.
+	/*
+	Tail functions used for appending to the buffer.
 
 	tail_start:
 		Returns pointer to start of reserved space past used bytes.

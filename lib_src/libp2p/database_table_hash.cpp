@@ -74,10 +74,14 @@ void database::table::hash::set_state(const std::string & hash,
 bool database::table::hash::tree_allocate(const std::string & hash,
 	const int tree_size, database::pool::proxy DB)
 {
-	std::stringstream ss;
-	ss << "INSERT INTO hash(key, hash, state, size, tree) VALUES(NULL, '"
-		<< hash << "', 0, " << tree_size << ", ?)";
-	return DB->blob_allocate(ss.str(), tree_size);
+	if(tree_size != 0){
+		std::stringstream ss;
+		ss << "INSERT INTO hash(key, hash, state, size, tree) VALUES(NULL, '"
+			<< hash << "', 0, " << tree_size << ", ?)";
+		return DB->blob_allocate(ss.str(), tree_size);
+	}else{
+		return false;
+	}
 }
 
 static int get_key_call_back(std::pair<bool, boost::int64_t> & info,

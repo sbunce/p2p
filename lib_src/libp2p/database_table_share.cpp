@@ -49,7 +49,7 @@ static int delete_entry_call_back_chain_1(std::pair<char *, database::pool::prox
 		ss << response[1];
 		ss >> file_size;
 		database::table::hash::delete_tree(response[0],
-			hash_tree::tree_info::file_size_to_tree_size(file_size), *info.second);
+			hash_tree::file_size_to_tree_size(file_size), *info.second);
 	}
 	return 0;
 }

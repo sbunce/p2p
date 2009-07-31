@@ -35,7 +35,6 @@ void share_pipeline_1_hash::main_loop()
 	*/
 	portable_sleep::yield();
 
-	hash_tree Hash_Tree;
 	share_pipeline_job info;
 	while(true){
 		boost::this_thread::interruption_point();
@@ -52,7 +51,7 @@ void share_pipeline_1_hash::main_loop()
 			that hash tree generation was stopped because program is being shut
 			down.
 			*/
-			if(Hash_Tree.create(info.path, info.file_size, info.hash)){
+			if(hash_tree::create(info.path, info.file_size, info.hash)){
 				boost::mutex::scoped_lock lock(job_mutex);
 				job.push_back(info);
 			}

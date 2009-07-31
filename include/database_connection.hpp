@@ -61,6 +61,11 @@ namespace database{
 class blob
 {
 public:
+	//a read or write to a blob constructed with this will fail
+	blob():
+		rowid(0)
+	{}
+
 	blob(
 		const std::string & table_in,
 		const std::string & column_in,
@@ -71,9 +76,19 @@ public:
 		rowid(rowid_in)
 	{}
 
-	const std::string table;
-	const std::string column;
-	const boost::int64_t rowid; //primary key of row
+	blob & operator = (const blob & Blob)
+	{
+		table = Blob.table;
+		column = Blob.column;
+		rowid = Blob.rowid;
+		return *this;
+	}
+
+	std::string table;
+	std::string column;
+
+	//primary key of row (starts at 1)
+	boost::int64_t rowid;
 };
 
 class connection : private boost::noncopyable
@@ -126,7 +141,7 @@ public:
 	}
 
 	//read data from blob, returns true if success else false
-	bool blob_read(blob & Blob, char * const buff, const int size, const int offset)
+	bool blob_read(const blob & Blob, char * const buff, const int size, const int offset)
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 		connect();
@@ -142,7 +157,7 @@ public:
 	}
 
 	//write data to blob, returns true if success else false
-	bool blob_write(blob & Blob, const char * const buff, const int size, const int offset)
+	bool blob_write(const blob & Blob, const char * const buff, const int size, const int offset)
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 		connect();
@@ -444,7 +459,7 @@ private:
 	Opens a blob with the info contained in Blob.
 	Precondition: Recursive_Mutex must be locked.
 	*/
-	bool blob_open(blob & Blob, const bool & writeable, sqlite3_blob *& blob_handle)
+	bool blob_open(const blob & Blob, const bool & writeable, sqlite3_blob *& blob_handle)
 	{
 		assert(!Blob.column.empty());
 		assert(!Blob.table.empty());
