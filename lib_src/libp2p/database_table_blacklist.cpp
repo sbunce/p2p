@@ -5,7 +5,7 @@ atomic_int<int> database::table::blacklist::blacklist_state(0);
 void database::table::blacklist::add(const std::string & IP, database::pool::proxy DB)
 {
 	std::stringstream ss;
-	ss << "INSERT INTO blacklist VALUES ('" << IP << "')";
+	ss << "INSERT OR IGNORE INTO blacklist VALUES ('" << IP << "')";
 	DB->query(ss.str());
 	++blacklist_state;
 }

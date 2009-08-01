@@ -107,26 +107,59 @@ void random_assemble()
 		LOGGER; exit(1);
 	}
 
-	//std::pair<block number, block>
-	std::vector<std::pair<boost::uint64_t, std::string> > block;
+	//read all blocks from the source hash tree then delete source tree
+	std::vector<std::string> block; //location in vector is block number
 	for(boost::uint64_t x=0; x<HT_1024.tree_block_count; ++x){
-		std::pair<boost::uint64_t, std::string> B(x, std::string());
-		HT_1024.read_block(B.first, B.second);
+		std::string B;
+		HT_1024.read_block(x, B);
 		block.push_back(B);
 	}
-
-	//deterministically randomize blocks
-	std::srand(42);
-	std::random_shuffle(block.begin(), block.end(), rand_func);
-
-	//reassemble hash tree
 	database::table::hash::delete_tree(HT_1024.root_hash, HT_1024.tree_size);
-	hash_tree HT_reassemble(HT_1024.root_hash, HT_1024.file_size);
-	for(boost::uint64_t x=0; x<HT_1024.tree_block_count; ++x){
-		HT_reassemble.write_block(block[x].first, block[x].second, "127.0.0.1");
+
+	//make a vector of all block numbers and randomize it
+	std::vector<unsigned> block_number;
+	for(unsigned int x=0; x<block.size(); ++x){
+		block_number.push_back(x);
+	}
+	std::srand(42);
+	std::random_shuffle(block_number.begin(), block_number.end(), rand_func);
+
+	//"corrupt" every other block in invertible way so we can "uncorrupt" later
+	bool alternator = false;
+	for(unsigned int x=0; x<block.size(); ++x){
+		if(alternator){
+			(*block.begin())[x] = ~(*block.begin())[x];
+		}
+		alternator = !alternator;
 	}
 
-	//check reassembled hash tree
+	//reassemble hash tree in random order
+	hash_tree HT_reassemble(HT_1024.root_hash, HT_1024.file_size);
+	for(boost::uint64_t x=0; x<HT_1024.tree_block_count; ++x){
+		HT_reassemble.write_block(block_number[x], block[block_number[x]], "127.0.0.1");
+	}
+
+	//"uncorrupt"
+	alternator = false;
+	for(unsigned int x=0; x<block.size(); ++x){
+		if(alternator){
+			(*block.begin())[x] = ~(*block.begin())[x];
+		}
+		alternator = !alternator;
+	}
+
+	//should not be complete since we corrupted a block
+	if(HT_reassemble.complete()){
+		LOGGER; exit(1);
+	}
+
+	//replace the corrupted block
+	while(!HT_reassemble.complete()){
+		boost::uint64_t num = HT_reassemble.missing_block();
+		HT_reassemble.write_block(num, block[num], "127.0.0.1");
+	}
+
+	//now the tree should be complete
 	if(!HT_reassemble.complete()){
 		LOGGER; exit(1);
 	}

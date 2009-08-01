@@ -9,6 +9,7 @@
 
 //include
 #include <atomic_int.hpp>
+#include <boost/tuple/tuple.hpp>
 
 //standard
 #include <iostream>
