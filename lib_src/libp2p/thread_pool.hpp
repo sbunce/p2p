@@ -12,6 +12,7 @@
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
 #include <logger.hpp>
+#include <singleton.hpp>
 
 //standard
 #include <deque>
@@ -23,39 +24,23 @@ class thread_pool : public singleton_base<thread_pool>
 {
 	friend class singleton_base<thread_pool>;
 public:
-	thread_pool():
-		stop_threads(false)
-	{}
-
-	void start()
-	{
-		for(int x=0; x<settings::THREAD_POOL_SIZE; ++x){
-			Workers.create_thread(boost::bind(&thread_pool::dispatcher, this));
-		}
-	}
-
-	void stop()
-	{
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(call_back_mutex);
-		stop_threads = true;
-		}//end lock scope
-		call_back_cond.notify_all();
-		Workers.join_all();
-	}
+	thread_pool();
 
 	/*
-	member function:                TP.queue(boost::bind(&A::test, &a));
-	member function with parameter: TP.queue(boost::bind(&A::test, &a, "test"));
-	function:                       TP.queue(&test);
-	function with parameter:        TP.queue(boost::bind(test, "test"));
+	queue:
+		Add call back job for the thread pool. Example:
+		member function:                TP.queue(boost::bind(&A::test, &a));
+		member function with parameter: TP.queue(boost::bind(&A::test, &a, "test"));
+		function:                       TP.queue(&test);
+		function with parameter:        TP.queue(boost::bind(test, "test"));
+	start:
+		Starts pool threads.
+	stop:
+		Stops all threads in pool.
 	*/
-	void queue(const boost::function0<void> & CB)
-	{
-		boost::mutex::scoped_lock lock(call_back_mutex);
-		call_back.push_back(CB);
-		call_back_cond.notify_one();
-	}
+	void queue(const boost::function0<void> & CB);
+	void start();
+	void stop();
 
 private:
 	boost::thread_group Workers;
@@ -71,24 +56,10 @@ private:
 	*/
 	bool stop_threads;
 
-	void dispatcher()
-	{
-		boost::function0<void> CB;
-		while(true){
-			{//begin lock scope
-			boost::mutex::scoped_lock lock(call_back_mutex);
-			while(call_back.empty()){
-				//only stop thread when there are no more jobs
-				if(stop_threads){
-					return;
-				}
-				call_back_cond.wait(call_back_mutex);
-			}
-			CB = call_back.front();
-			call_back.pop_front();
-			}//end lock scope
-			CB();
-		}
-	}
+	/*
+	dispatcher:
+		Threads wait here for call backs to do.
+	*/
+	void dispatcher();
 };
 #endif

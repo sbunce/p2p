@@ -43,41 +43,23 @@ public:
 	};
 
 	/*
-	This should be used when a single database call needs to be done. The
-	advantage of this is that the connection will be returned after the
-	expression rather than having to wait for the block to end. This is important
-	because it returns the database connection to the pool ASAP.
-	example:
-		database::pool::get_proxy()->query("SELECT foo FROM bar");
+	get_proxy:
+		This should be used when a single database call needs to be done. The
+		advantage of this is that the connection will be returned after the
+		expression rather than having to wait for the block to end. This is
+		important because it returns the database connection to the pool ASAP.
+		Example:
+			database::pool::get_proxy()->query("SELECT foo FROM bar");
+	unit_test_override:
+		Removes the connections from the Pool and replaces them with connections
+		to a database at a specified path. This should be called at the top of a
+		unit test before any database use.
 	*/
-	static proxy get_proxy()
-	{
-		return proxy();
-	}
-
-	/*
-	Removes the connections from the Pool and replaces them with connections to
-	a database at a specified path. This should be called at the top of a unit
-	test before any database use.
-	*/
-	void unit_test_override(const std::string & DB_path)
-	{
-		boost::mutex::scoped_lock lock(Pool_mutex);
-		while(!Pool.empty()){
-			Pool.pop();
-		}
-		for(int x=0; x<settings::DATABASE_POOL_SIZE; ++x){
-			Pool.push(boost::shared_ptr<connection>(new connection(DB_path)));
-		}
-	}
+	static proxy get_proxy();
+	void unit_test_override(const std::string & DB_path);
 
 private:
-	pool()
-	{
-		for(int x=0; x<settings::DATABASE_POOL_SIZE; ++x){
-			Pool.push(boost::shared_ptr<connection>(new connection(path::database())));
-		}
-	}
+	pool();
 
 	/*
 	The Pool container holds available database connections. When there are no
@@ -88,25 +70,14 @@ private:
 	boost::condition_variable_any Pool_cond;
 	std::stack<boost::shared_ptr<connection> > Pool;
 
-	//blocks until there is an available connection
-	boost::shared_ptr<connection> get()
-	{
-		boost::mutex::scoped_lock lock(Pool_mutex);
-		while(Pool.empty()){
-			Pool_cond.wait(Pool_mutex);
-		}
-		boost::shared_ptr<connection> Connection = Pool.top();
-		Pool.pop();
-		return Connection;
-	}
-
-	//the connection gotten with get() is returned with this
-	void put(boost::shared_ptr<connection> & Connection)
-	{
-		boost::mutex::scoped_lock lock(Pool_mutex);
-		Pool.push(Connection);
-		Pool_cond.notify_one();
-	}
+	/*
+	get:
+		Blocks until connection available to return.
+	put:
+		Function to return a connection to the pool.
+	*/
+	boost::shared_ptr<connection> get();
+	void put(boost::shared_ptr<connection> & Connection);
 };
 }//end namespace database
 #endif
