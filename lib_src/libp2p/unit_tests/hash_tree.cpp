@@ -34,14 +34,13 @@ void create_test_file(const std::string & name, const unsigned & bytes)
 void create_and_check()
 {
 	std::string root_hash;
-	boost::uint64_t bad_block;
 
 	//test 1
 	if(!hash_tree::create(path::share() + "1_block", 1 * protocol::FILE_BLOCK_SIZE, root_hash)){
 		LOGGER; exit(1);
 	}
 	hash_tree HT_1(root_hash, 1 * protocol::FILE_BLOCK_SIZE);
-	if(HT_1.check(bad_block) != hash_tree::GOOD){
+	if(!HT_1.complete()){
 		LOGGER; exit(1);
 	}
 
@@ -50,7 +49,7 @@ void create_and_check()
 		LOGGER; exit(1);
 	}
 	hash_tree HT_2(root_hash, 2 * protocol::FILE_BLOCK_SIZE);
-	if(HT_2.check(bad_block) != hash_tree::GOOD){
+	if(!HT_2.complete()){
 		LOGGER; exit(1);
 	}
 
@@ -59,7 +58,7 @@ void create_and_check()
 		LOGGER; exit(1);
 	}
 	hash_tree HT_3(root_hash, 3 * protocol::FILE_BLOCK_SIZE);
-	if(HT_3.check(bad_block) != hash_tree::GOOD){
+	if(!HT_3.complete()){
 		LOGGER; exit(1);
 	}
 
@@ -68,7 +67,7 @@ void create_and_check()
 		LOGGER; exit(1);
 	}
 	hash_tree HT_4(root_hash, 4 * protocol::FILE_BLOCK_SIZE);
-	if(HT_4.check(bad_block) != hash_tree::GOOD){
+	if(!HT_4.complete()){
 		LOGGER; exit(1);
 	}
 
@@ -77,7 +76,7 @@ void create_and_check()
 		LOGGER; exit(1);
 	}
 	hash_tree HT_256(root_hash, 256 * protocol::FILE_BLOCK_SIZE);
-	if(HT_256.check(bad_block) != hash_tree::GOOD){
+	if(!HT_256.complete()){
 		LOGGER; exit(1);
 	}
 
@@ -86,7 +85,7 @@ void create_and_check()
 		LOGGER; exit(1);
 	}
 	hash_tree HT_257(root_hash, 257 * protocol::FILE_BLOCK_SIZE);
-	if(HT_257.check(bad_block) != hash_tree::GOOD){
+	if(!HT_257.complete()){
 		LOGGER; exit(1);
 	}
 }
@@ -100,13 +99,11 @@ int rand_func(int n)
 void random_assemble()
 {
 	std::string root_hash;
-	boost::uint64_t bad_block;
-
 	if(!hash_tree::create(path::share() + "1024_block", 1024 * protocol::FILE_BLOCK_SIZE, root_hash)){
 		LOGGER; exit(1);
 	}
 	hash_tree HT_1024(root_hash, 1024 * protocol::FILE_BLOCK_SIZE);
-	if(HT_1024.check(bad_block) != hash_tree::GOOD){
+	if(!HT_1024.complete()){
 		LOGGER; exit(1);
 	}
 
@@ -130,7 +127,7 @@ void random_assemble()
 	}
 
 	//check reassembled hash tree
-	if(HT_reassemble.check(bad_block) != hash_tree::GOOD){
+	if(!HT_reassemble.complete()){
 		LOGGER; exit(1);
 	}
 }

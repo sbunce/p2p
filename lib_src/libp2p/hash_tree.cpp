@@ -20,18 +20,45 @@ hash_tree::hash_tree(
 			(protocol::FILE_BLOCK_SIZE) :
 			(file_size % protocol::FILE_BLOCK_SIZE)
 	),
-	set_state_downloading(false)
+	set_state_downloading(false),
+	block_status(tree_block_count, 1),
+	end_of_good(0)
 {
-	Contiguous.set_range(0, tree_block_count);
-
 	database::pool::proxy DB;
 	DB->query("BEGIN TRANSACTION");
-	if(!database::table::hash::exists(root_hash, tree_size, DB)){
+	if(database::table::hash::exists(root_hash, tree_size, DB)){
+		//tree already exists, open it and find the first bad block
+		Blob = database::table::hash::tree_open(root_hash, tree_size, DB);
+		DB->query("END TRANSACTION");
+		for(boost::uint64_t x=0; x<tree_block_count; ++x){
+			status Status = check_block(x);
+			if(Status == GOOD){
+				end_of_good = x+1;
+				block_status[x] = 1;
+			}else if(Status == BAD){
+				break;
+			}else if(Status == IO_ERROR){
+				/*
+				This error will get picked up and handled later when a block fails
+				to read or write.
+				*/
+				break;
+			}
+		}
+	}else{
+		//tree doesn't yet exist, allocate it
 		database::table::hash::tree_allocate(root_hash, tree_size, DB);
+		DB->query("END TRANSACTION");
 		set_state_downloading = true;
+		Blob = database::table::hash::tree_open(root_hash, tree_size);
 	}
-	Blob = database::table::hash::tree_open(root_hash, tree_size, DB);
-	DB->query("END TRANSACTION");
+}
+
+bool hash_tree::block_info(const boost::uint64_t & block, const std::deque<boost::uint64_t> & row,
+	std::pair<boost::uint64_t, unsigned> & info)
+{
+	boost::uint64_t throw_away;
+	return block_info(block, row, info, throw_away);
 }
 
 bool hash_tree::block_info(const boost::uint64_t & block, const std::deque<boost::uint64_t> & row,
@@ -95,29 +122,6 @@ unsigned hash_tree::block_size(const boost::uint64_t & block_num)
 	}
 }
 
-hash_tree::status hash_tree::check(boost::uint64_t & bad_block)
-{
-	if(tree_block_count == 0){
-		return GOOD;
-	}else{
-		status Status;
-		for(boost::uint64_t x=0; x<tree_block_count; ++x){
-			Status = check_block(x);
-			if(Status == BAD){
-				Contiguous.trim(x);
-				bad_block = x;
-				if(bad_block != 0){
-					LOGGER << "bad block " << x << " in tree " << root_hash;
-				}
-				return BAD;
-			}else if(Status == IO_ERROR){
-				return IO_ERROR;
-			}
-		}
-	}
-	return GOOD;
-}
-
 hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 {
 	if(tree_block_count == 0){
@@ -174,56 +178,33 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 	}
 }
 
-void hash_tree::check_contiguous()
+hash_tree::status hash_tree::check_incremental(boost::uint64_t & bad_block)
 {
-	for(contiguous_map<boost::uint64_t, std::string>::contiguous_iterator
-		c_iter_cur = Contiguous.begin_contiguous(),
-		c_iter_end = Contiguous.end_contiguous();
-		c_iter_cur != c_iter_end; ++c_iter_cur)
-	{
-		status Status = check_block(c_iter_cur->first);
-		if(Status == BAD){
-			#ifdef CORRUPT_HASH_BLOCK_TEST
-			//rerequest only the bad block and don't blacklist
-			bad_block.push_back(c_iter_cur->first);
-			Contiguous->erase(c_iter_cur->first);
-			#else
-
-			//blacklist server that sent bad block
-			LOGGER << c_iter_cur->second << " sent bad hash block " << c_iter_cur->first;
-			database::table::blacklist::add(c_iter_cur->second);
-
-			//bad block, add all blocks this server sent to bad_block
-			contiguous_map<boost::uint64_t, std::string>::iterator iter_cur, iter_end;
-			iter_cur = Contiguous.begin();
-			iter_end = Contiguous.end();
-			while(iter_cur != iter_end){
-				if(c_iter_cur->second == iter_cur->second){
-					//found block that same server sent
-					bad_block.push_back(iter_cur->first);
-					Contiguous.erase(iter_cur++);
-				}else{
-					++iter_cur;
-				}
+	for(boost::uint64_t x=end_of_good; x<tree_block_count && block_status[x]; ++x){
+		status Status = check_block(x);
+		if(Status == GOOD){
+			end_of_good = x+1;
+		}else if(Status == BAD){
+			block_status[x] = 0;
+			bad_block = x;
+			if(bad_block != 0){
+				LOGGER << "bad block " << x << " in tree " << root_hash;
 			}
-			#endif
-			break;
+			return BAD;
 		}else if(Status == IO_ERROR){
-			/*
-			IO_ERROR can't be communicated back to download_hash_tree from here.
-			However, we can wait until download_hash_tree tries to write and it
-			should error out then.
-			*/
-			break;
+			return IO_ERROR;
 		}
 	}
-
-	//any contiguous blocks left were checked and can now be removed
-	Contiguous.trim_contiguous();
+	return GOOD;
 }
 
 hash_tree::status hash_tree::check_file_block(const boost::uint64_t & file_block_num, const char * block, const int & size)
 {
+	if(!complete()){
+		LOGGER << "precondition violated";
+		exit(1);
+	}
+
 	char parent_buff[protocol::HASH_SIZE];
 	if(!database::pool::get_proxy()->blob_read(Blob, parent_buff,
 		protocol::HASH_SIZE, file_hash_offset + file_block_num * protocol::HASH_SIZE))
@@ -239,6 +220,11 @@ hash_tree::status hash_tree::check_file_block(const boost::uint64_t & file_block
 	}else{
 		return BAD;
 	}
+}
+
+bool hash_tree::complete()
+{
+	return end_of_good == tree_block_count;
 }
 
 bool hash_tree::create(const std::string & file_path, const boost::uint64_t & expected_file_size,
@@ -479,13 +465,6 @@ bool hash_tree::create_recurse(std::fstream & upside_down, std::fstream & rights
 	return true; 
 }
 
-bool hash_tree::block_info(const boost::uint64_t & block, const std::deque<boost::uint64_t> & row,
-	std::pair<boost::uint64_t, unsigned> & info)
-{
-	boost::uint64_t throw_away;
-	return block_info(block, row, info, throw_away);
-}
-
 boost::uint64_t hash_tree::file_hash_to_tree_hash(boost::uint64_t row_hash_count)
 {
 	boost::uint64_t start_hash = row_hash_count;
@@ -535,6 +514,21 @@ std::deque<boost::uint64_t> hash_tree::file_size_to_row(const boost::uint64_t & 
 boost::uint64_t hash_tree::file_size_to_tree_size(const boost::uint64_t & file_size)
 {
 	return protocol::HASH_SIZE * file_hash_to_tree_hash(file_size_to_file_hash(file_size));
+}
+
+boost::uint64_t hash_tree::missing_block()
+{
+	if(complete()){
+		LOGGER << "precondition violated";
+		exit(1);
+	}
+	for(boost::uint64_t x=end_of_good; x<tree_block_count; ++x){
+		if(block_status[x] == 0){
+			return x;
+		}
+	}
+	LOGGER << "programmer error";
+	exit(1);
 }
 
 hash_tree::status hash_tree::read_block(const boost::uint64_t & block_num,
@@ -588,6 +582,7 @@ boost::uint64_t hash_tree::row_to_file_hash_offset(const std::deque<boost::uint6
 hash_tree::status hash_tree::write_block(const boost::uint64_t & block_num,
 	const std::string & block, const std::string & IP)
 {
+	//see documentation in header for set_state_downloading
 	if(set_state_downloading){
 		database::table::hash::set_state(root_hash, tree_size,
 			database::table::hash::DOWNLOADING);
@@ -606,9 +601,14 @@ hash_tree::status hash_tree::write_block(const boost::uint64_t & block_num,
 		{
 			return IO_ERROR;
 		}
-		Contiguous.insert(std::make_pair(block_num, IP));
-		check_contiguous();
-		return GOOD;
+
+		block_status[block_num] = 1;
+		boost::uint64_t bad_block;
+		status Status = check_incremental(bad_block);
+		if(Status == BAD && bad_block == block_num){
+			database::table::blacklist::add(IP);
+		}
+		return Status;
 	}else{
 		LOGGER << "programmer error";
 		exit(1);

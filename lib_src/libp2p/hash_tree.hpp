@@ -7,18 +7,17 @@ parts concurrently but not the same parts.
 
 //custom
 #include "database.hpp"
-//#include "request_generator.hpp"
 #include "path.hpp"
 #include "protocol.hpp"
 #include "settings.hpp"
 
 //include
 #include <atomic_bool.hpp>
+#include <bitgroup_vector.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include <convert.hpp>
-#include <contiguous_map.hpp>
 #include <network/network.hpp>
 #include <SHA1.hpp>
 
@@ -57,25 +56,19 @@ public:
 	const boost::uint64_t last_file_block_size; //size of last file block
 
 	/*
-	The Contiguous container maps a hash block number to an IP address. When a
-	bad block is detected all blocks from the server are removed from
-	contiguous and added to bad_block.
-	*/
-	contiguous_map<boost::uint64_t, std::string> Contiguous;
-	std::vector<boost::uint64_t> bad_block;
-
-	/*
 	block_size:
-		Returns the size of a hash block.
-	check:
-		Checks the entire hash tree. Returns GOOD if whole tree good. Returns BAD
-		and sets bad_block to first bad block if tree bad. Returns IO_ERROR if
-		error reading tree.
-		Note: must call this with the hash_tree_info before calling write_block
+		Returns the size of a hash block. This is used to know what to expect from
+		a hash block request.
 	check_file_block:
 		Checks a file block against a hash in the hash tree. Returns GOOD if file
 		block good. Returns BAD if file block bad. Returns IO_ERROR if cannot read
 		hash tree.
+		Precondition: The complete function must return true.
+	complete:
+		Returns true if the hash tree is complete. Complete means that all hashes
+		have been checked good. If this function returns false then the
+		missing_block function can be used to get the number of a block that needs
+		to be requested.
 	create:
 		Create a hash tree. Returns true and sets root_hash if creation suceeded.
 		The expected file size should be set to the size the file is when create()
@@ -83,10 +76,9 @@ public:
 		return false.
 	file_size_to_tree_size:
 		Given a file_size, returns tree size (bytes).
-	get_tree_info:
-		Returns tree info needed to read and write hash tree.
-		Note: This is an expensive function to call. The returned hash tree should
-		      be saved and reused.
+	missing_block:
+		Returns a missing_block number.
+		Precondition: The complete function must return false.
 	read_block:
 		Get block from hash tree. Returns GOOD if suceeded. Returns IO_ERROR if
 		cannot read hash tree.
@@ -96,12 +88,13 @@ public:
 		Precondition: Must have called check() to make sure the block is good.
 	*/
 	unsigned block_size(const boost::uint64_t & block_num);
-	status check(boost::uint64_t & bad_block);
 	status check_file_block(const boost::uint64_t & file_block_num,
 		const char * block, const int & size);
 	static bool create(const std::string & file_path,
 		const boost::uint64_t & expected_file_size, std::string & root_hash);
+	bool complete();
 	static boost::uint64_t file_size_to_tree_size(const boost::uint64_t & file_size);
+	boost::uint64_t missing_block();
 	status read_block(const boost::uint64_t & block_num, std::string & block);
 	status write_block(const boost::uint64_t & block_num, const std::string & block,
 		const std::string & IP);
@@ -121,6 +114,24 @@ private:
 	bool set_state_downloading;
 
 	/*
+	The block_status container holds bitgroups of size 1. When the bit is 0 the
+	block is not good, when the bit is 1 the block has been written but it's not
+	necessarily good. Only if the block is < end_of_good is the hash block
+	good.
+
+	Hashes inherently have to be checked in order. If a block is missing we can't
+	check blocks past it. The end_of_good value is how far we've been able to
+	hash check.
+
+	We don't keep track of what IP sent what block so we only have access to the
+	IP of the latest block that arrived. We are still able to blacklist people
+	that send bad blocks because if someone is sending bad blocks eventually they
+	will send a block equal to the value of end_of_good and get blacklisted.
+	*/
+	bitgroup_vector block_status;
+	boost::uint64_t end_of_good;
+
+	/*
 	block_info:
 		Requires a block number, and row info. Sets info.first to byte offset
 		to start of hash block and info.second to hash block length. Parent is
@@ -129,9 +140,19 @@ private:
 		Note: A version that doesn't set parent is available.
 	check_block:
 		Checks a hash tree block.
-		Precondition: the parent of this block must be valid and the block must exist.
-	check_contiguous:
-		Called after write_block() to check contiguous hash blocks blocks
+		Precondition: the parent of this block must be valid and the block must
+			exist.
+		Note: This function only called from check_incremental and check_full
+			which both make sure the precondition is satisfied.
+	check_incremental:
+		Checks received blocks (blocks where block_status[block_num] != 0) that
+		are contiguous (there is no block_status <= highest_good that is equal
+		to zero). Returns GOOD if whole tree good. Returns BAD and sets bad_block
+		to first bad block if tree bad. Returns IO_ERROR if error reading tree.
+		Postcondition: highest_good is set to the highest block number that hash
+			checked good.
+		Postcondition: If returns BAD then sets block_status of the bad block to
+			zero.
 	create_recurse:
 		Recursive function called by create() to recursively generate tree rows.
 	file_size_to_file_hash:
@@ -155,7 +176,7 @@ private:
 	static bool block_info(const boost::uint64_t & block, const std::deque<boost::uint64_t> & row,
 		std::pair<boost::uint64_t, unsigned> & info);
 	status check_block(const boost::uint64_t & block_num);
-	void check_contiguous();
+	status check_incremental(boost::uint64_t & bad_block);
 	static bool create_recurse(std::fstream & upside_down, std::fstream & rightside_up,
 		boost::uint64_t start_RRN, boost::uint64_t end_RRN, std::string & root_hash,
 		char * block_buff, SHA1 & SHA);

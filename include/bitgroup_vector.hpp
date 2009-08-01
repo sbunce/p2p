@@ -39,10 +39,6 @@ public:
 		),
 		max_group_value(std::pow(2, group_size) - 1)
 	{
-		if(groups == 0){
-			LOGGER << "bitgroup_set only supports groups > 0";
-			exit(1);
-		}
 		if(group_size < 1 && group_size > 7){
 			LOGGER << "group_size must be greater than 0 and less than 8";
 			exit(1);
