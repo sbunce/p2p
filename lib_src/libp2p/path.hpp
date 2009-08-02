@@ -2,6 +2,7 @@
 #define H_PATH
 
 //include
+#include <boost/bind.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/thread.hpp>
 #include <logger.hpp>
@@ -42,33 +43,34 @@ public:
 	/* Directories
 	download:
 		Directory for finished downloads.
-	main:
-		Main program directory.
 	share:
 		Directory for shared files.
 	temp:
 		Returns location of temporary directory.
 	*/
 	static std::string download();
-	static std::string main();
 	static std::string share();
 	static std::string temp();
+
+	/*
+	unit_test_override:
+		The home directory of unit tests should always be the current directory
+		of the unit test. This function also overrides the database path.
+	*/
+	static void unit_test_override(const std::string & DB_path);
 
 private:
 	path(){}
 
 	/*
-	Static variables and means to initialize them. Do not use these variables
-	direclty. Use the accessor functions.
+	The init function is called with boost::call_once at the top of every
+	function to make sure the static variables are initialized in a thread safe
+	way.
 	*/
 	static boost::once_flag once_flag;
 	static void init();
-	static std::string _home;
 
-	/* Accessor functions for static variables.
-	home:
-		Path to home directory. Or empty string if not defined.
-	*/
-	static const std::string & home();
+	static std::string & database_name();
+	static std::string & program_directory();
 };
 #endif

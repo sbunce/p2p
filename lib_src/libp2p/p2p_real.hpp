@@ -63,14 +63,14 @@ private:
 	atomic_int<unsigned> max_download_rate_proxy;
 	atomic_int<unsigned> max_upload_rate_proxy;
 
+	prime_generator Prime_Generator;
+	share Share;
+
 	/*
 	We make a shared_ptr to the proactor so we can make sure the class is
 	instantiated before we register call backs.
 	*/
 	//network::proactor Proactor;
-
-	prime_generator Prime_Generator;
-	share Share;
 
 	//must be specified last in header
 	singleton_stop Singleton_Stop;

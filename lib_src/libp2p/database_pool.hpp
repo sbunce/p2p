@@ -50,16 +50,14 @@ public:
 		important because it returns the database connection to the pool ASAP.
 		Example:
 			database::pool::get_proxy()->query("SELECT foo FROM bar");
-	unit_test_override:
-		Removes the connections from the Pool and replaces them with connections
-		to a database at a specified path. This should be called at the top of a
-		unit test before any database use.
 	*/
 	static proxy get_proxy();
-	void unit_test_override(const std::string & DB_path);
 
 private:
 	pool();
+
+	//used to test preconditions
+	bool started;
 
 	/*
 	The Pool container holds available database connections. When there are no

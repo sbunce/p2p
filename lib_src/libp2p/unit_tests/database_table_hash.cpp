@@ -7,7 +7,7 @@
 int main()
 {
 	//setup database and make sure hash table clear
-	database::pool::singleton().unit_test_override("database_table_hash.db");
+	path::unit_test_override("database_table_hash.db");
 	database::init init;
 	database::table::hash::clear();
 

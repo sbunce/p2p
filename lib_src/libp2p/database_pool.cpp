@@ -29,14 +29,3 @@ void database::pool::put(boost::shared_ptr<database::connection> & Connection)
 	Pool.push(Connection);
 	Pool_cond.notify_one();
 }
-
-void database::pool::unit_test_override(const std::string & DB_path)
-{
-	boost::mutex::scoped_lock lock(Pool_mutex);
-	while(!Pool.empty()){
-		Pool.pop();
-	}
-	for(int x=0; x<settings::DATABASE_POOL_SIZE; ++x){
-		Pool.push(boost::shared_ptr<connection>(new connection(DB_path)));
-	}
-}

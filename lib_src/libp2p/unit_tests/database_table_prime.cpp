@@ -10,7 +10,7 @@ int main()
 	*/
 
 	//setup database and make sure prime table clear
-	database::pool::singleton().unit_test_override("database_table_prime.db");
+	path::unit_test_override("database_table_prime.db");
 	database::init init;
 	database::table::prime::clear();
 

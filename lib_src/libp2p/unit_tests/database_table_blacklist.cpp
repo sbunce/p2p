@@ -4,7 +4,7 @@
 int main()
 {
 	//setup database and make sure blacklist table clear
-	database::pool::singleton().unit_test_override("database_table_blacklist.db");
+	path::unit_test_override("database_table_blacklist.db");
 	database::init init;
 	database::table::blacklist::clear();
 

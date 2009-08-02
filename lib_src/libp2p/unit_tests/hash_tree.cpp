@@ -168,7 +168,7 @@ void random_assemble()
 int main()
 {
 	//setup database and make sure hash table clear
-	database::pool::singleton().unit_test_override("hash_tree.db");
+	path::unit_test_override("hash_tree.db");
 	database::init init;
 	database::table::hash::clear();
 

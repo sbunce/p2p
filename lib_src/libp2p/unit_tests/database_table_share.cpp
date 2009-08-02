@@ -4,7 +4,7 @@
 int main()
 {
 	//setup database and make sure share table clear
-	database::pool::singleton().unit_test_override("database_table_share.db");
+	path::unit_test_override("database_table_share.db");
 	database::init init;
 	database::table::share::clear();
 

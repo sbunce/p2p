@@ -1,34 +1,16 @@
 #include "path.hpp"
 
-//BEGIN static
 boost::once_flag path::once_flag = BOOST_ONCE_INIT;
-std::string path::_home;
-
-void path::init()
-{
-	const char * temp = std::getenv("HOME");
-	if(temp != NULL){
-		_home = temp;
-		//make sure path doesn't end in '/'
-		if(!_home.empty() && _home[_home.size()-1] == '/'){
-			_home.erase(_home.size()-1);
-		}
-	}
-}
-
-const std::string & path::home()
-{
-	boost::call_once(init, once_flag);
-	return _home;
-}
-//END static
 
 void path::create_required_directories()
 {
+	boost::call_once(init, once_flag);
 	try{
 		#ifndef _WIN32
 		//main directory always in current directory on windows
-		boost::filesystem::create_directory(main());
+		if(!program_directory().empty()){
+			boost::filesystem::create_directory(program_directory());
+		}
 		#endif
 		boost::filesystem::create_directory(download());
 		boost::filesystem::create_directory(share());
@@ -42,33 +24,50 @@ void path::create_required_directories()
 
 std::string path::database()
 {
-	if(home().empty()){
-		return "DB";
-	}else{
-		return home() + "/.p2p/DB";
-	}
+	boost::call_once(init, once_flag);
+	return program_directory() + database_name();
 }
 
-std::string path::main()
+std::string & path::database_name()
 {
-	if(home().empty()){
-		return ".p2p/";
-	}else{
-		return home() + "/.p2p/";
+	static std::string * _database_name = new std::string();
+	return *_database_name;
+}
+
+void path::init()
+{
+	//setup program_directory
+	const char * temp = std::getenv("HOME"); //std::getenv is not thread safe
+	if(temp != NULL){
+		program_directory() = temp;
+		//make sure path doesn't end in '/'
+		if(!program_directory().empty() && program_directory()[program_directory().size()-1] == '/'){
+			program_directory().erase(program_directory().size()-1);
+		}
 	}
+	if(!program_directory().empty()){
+		program_directory() += "/.p2p/";
+	}
+
+	//setup database_name
+	database_name() = "DB";
 }
 
 std::string path::download()
 {
-	if(home().empty()){
-		return "download/";
-	}else{
-		return home() + "/.p2p/download/";
-	}
+	boost::call_once(init, once_flag);
+	return program_directory() + "download/";
+}
+
+std::string & path::program_directory()
+{
+	static std::string * _program_directory = new std::string();
+	return *_program_directory;
 }
 
 void path::remove_temporary_hash_tree_files()
 {
+	boost::call_once(init, once_flag);
 	namespace fs = boost::filesystem;
 	boost::uint64_t size;
 	fs::path path = fs::system_complete(fs::path(temp(), fs::native));
@@ -92,44 +91,35 @@ void path::remove_temporary_hash_tree_files()
 
 std::string path::rightside_up()
 {
-	if(home().empty()){
-		std::stringstream ss;
-		ss << home() << "temp/rightside_up_" << boost::this_thread::get_id();
-		return ss.str();
-	}else{
-		std::stringstream ss;
-		ss << home() << "/.p2p/temp/rightside_up_" << boost::this_thread::get_id();
-		return ss.str();
-	}
+	boost::call_once(init, once_flag);
+	std::stringstream ss;
+	ss << program_directory() << "temp/rightside_up_" << boost::this_thread::get_id();
+	return ss.str();
 }
 
 std::string path::share()
 {
-	if(home().empty()){
-		return "share/";
-	}else{
-		return home() + "/.p2p/share/";
-	}
+	boost::call_once(init, once_flag);
+	return program_directory() + "share/";
 }
 
 std::string path::temp()
 {
-	if(home().empty()){
-		return "temp/";
-	}else{
-		return home() + "/.p2p/temp";
-	}
+	boost::call_once(init, once_flag);
+	return program_directory() + "temp/";
+}
+
+void path::unit_test_override(const std::string & DB_path)
+{
+	boost::call_once(init, once_flag);
+	program_directory() = "";
+	database_name() = DB_path;
 }
 
 std::string path::upside_down()
 {
-	if(home().empty()){
-		std::stringstream ss;
-		ss << home() << "temp/upside_down_" << boost::this_thread::get_id();
-		return ss.str();
-	}else{
-		std::stringstream ss;
-		ss << home() << "/.p2p/temp/upside_down_" << boost::this_thread::get_id();
-		return ss.str();
-	}
+	boost::call_once(init, once_flag);
+	std::stringstream ss;
+	ss << program_directory() << "temp/upside_down_" << boost::this_thread::get_id();
+	return ss.str();
 }

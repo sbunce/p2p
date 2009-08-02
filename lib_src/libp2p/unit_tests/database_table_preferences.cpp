@@ -4,7 +4,7 @@
 int main()
 {
 	//setup database, there is no need to clear this table for testing
-	database::pool::singleton().unit_test_override("database_table_preferences.db");
+	path::unit_test_override("database_table_preferences.db");
 	database::init init;
 
 	//test set/get of max_download_rate

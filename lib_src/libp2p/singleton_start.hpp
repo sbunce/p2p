@@ -24,9 +24,9 @@ public:
 
 		/*
 		Start singleton threads. This is not done in the ctors because the
-		singleton threads use other singletons. We don't want to introduce a race
-		condition where one singleton is allowed to trigger the construction of
-		another in the wrong order.
+		thread_pool threads may use other singletons. We don't want to introduce a
+		race condition where one singleton is allowed to trigger the construction
+		of another in the wrong order.
 		*/
 		thread_pool::singleton().start();
 	}
