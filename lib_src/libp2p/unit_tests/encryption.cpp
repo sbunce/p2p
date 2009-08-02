@@ -11,8 +11,6 @@ int main()
 
 	//setup database and make sure prime table clear
 	path::unit_test_override("encryption.db");
-	database::init init;
-	database::table::prime::clear();
 
 	//prime generator that the encryption class depends upon
 	prime_generator Prime_Generator;

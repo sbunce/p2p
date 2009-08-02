@@ -18,9 +18,9 @@ example:
 	derived::singleton().func();
 
 Note: Singleton objects are static so they are destructed in the reverse order
-they are constructed. You may have to explicitly specify the order of
-initialization of singletons by calling the singleton() function on the various
-singleton objects in the correct order. 
+they are constructed. You will have to specify construction order if the
+singleton objects ctors or dtors depend on eachother in any way. Specifying the
+order can be done by calling the singleton() function in the appropriate order.
 */
 #ifndef H_SINGLETON
 #define H_SINGLETON

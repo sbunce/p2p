@@ -11,7 +11,7 @@ int main()
 
 	//setup database and make sure prime table clear
 	path::unit_test_override("database_table_prime.db");
-	database::init init;
+	database::init::prime();
 	database::table::prime::clear();
 
 	//vector of primes to test

@@ -169,7 +169,8 @@ int main()
 {
 	//setup database and make sure hash table clear
 	path::unit_test_override("hash_tree.db");
-	database::init init;
+	database::init::blacklist();
+	database::init::hash();
 	database::table::hash::clear();
 
 	//create required directories for the shared files and temp files

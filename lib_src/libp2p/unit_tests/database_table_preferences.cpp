@@ -5,7 +5,7 @@ int main()
 {
 	//setup database, there is no need to clear this table for testing
 	path::unit_test_override("database_table_preferences.db");
-	database::init init;
+	database::init::preferences();
 
 	//test set/get of max_download_rate
 	database::table::preferences::set_max_download_rate(123);

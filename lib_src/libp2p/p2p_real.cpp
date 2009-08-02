@@ -3,6 +3,7 @@
 p2p_real::p2p_real()
 {
 	path::create_required_directories();
+	database::init::all();
 
 	//setup proxies for async getter/setter function calls
 	max_connections_proxy = database::table::preferences::get_max_connections();
@@ -15,6 +16,7 @@ p2p_real::p2p_real()
 
 p2p_real::~p2p_real()
 {
+	thread_pool::singleton().stop();
 	Prime_Generator.stop();
 	Share.stop();
 }

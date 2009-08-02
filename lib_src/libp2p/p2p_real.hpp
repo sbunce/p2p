@@ -9,8 +9,7 @@
 #include "prime_generator.hpp"
 #include "share.hpp"
 #include "settings.hpp"
-#include "singleton_start.hpp"
-#include "singleton_stop.hpp"
+#include "thread_pool.hpp"
 
 //include
 #include <boost/bind.hpp>
@@ -28,8 +27,6 @@
 
 class p2p_real : private boost::noncopyable
 {
-	//must be specified first in header
-	singleton_start Singleton_Start;
 public:
 	p2p_real();
 	~p2p_real();
@@ -71,8 +68,5 @@ private:
 	instantiated before we register call backs.
 	*/
 	//network::proactor Proactor;
-
-	//must be specified last in header
-	singleton_stop Singleton_Stop;
 };
 #endif

@@ -11,7 +11,22 @@ namespace database{
 class init
 {
 public:
-	init();
+
+	/*
+	all:
+		Set up all tables.
+	<*>:
+		Set up <*> table.
+	*/
+	static void all();
+	static void blacklist();
+	static void hash();
+	static void preferences();
+	static void prime();
+	static void share();
+
+private:
+	init(){}
 };
 }//end of namespace database
 #endif

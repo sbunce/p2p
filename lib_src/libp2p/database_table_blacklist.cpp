@@ -1,18 +1,31 @@
 #include "database_table_blacklist.hpp"
 
-atomic_int<int> database::table::blacklist::blacklist_state(0);
+boost::once_flag database::table::blacklist::once_flag = BOOST_ONCE_INIT;
 
 void database::table::blacklist::add(const std::string & IP, database::pool::proxy DB)
 {
+	boost::call_once(init, once_flag);
 	std::stringstream ss;
 	ss << "INSERT OR IGNORE INTO blacklist VALUES ('" << IP << "')";
 	DB->query(ss.str());
-	++blacklist_state;
+	++blacklist_state();
+}
+
+atomic_int<int> & database::table::blacklist::blacklist_state()
+{
+	static atomic_int<int> * _blacklist_state = new atomic_int<int>(0);
+	return *_blacklist_state;
 }
 
 void database::table::blacklist::clear(database::pool::proxy DB)
 {
+	boost::call_once(init, once_flag);
 	DB->query("DELETE FROM blacklist");
+}
+
+void database::table::blacklist::init()
+{
+	blacklist_state();
 }
 
 static int is_blacklisted_call_back(bool & found, int columns, char ** response,
@@ -25,6 +38,7 @@ static int is_blacklisted_call_back(bool & found, int columns, char ** response,
 bool database::table::blacklist::is_blacklisted(const std::string & IP,
 	database::pool::proxy DB)
 {
+	boost::call_once(init, once_flag);
 	bool found = false;
 	std::stringstream ss;
 	ss << "SELECT 1 FROM blacklist WHERE IP = '" << IP << "'";
@@ -34,10 +48,11 @@ bool database::table::blacklist::is_blacklisted(const std::string & IP,
 
 bool database::table::blacklist::modified(int & last_state_seen)
 {
-	if(last_state_seen == blacklist_state){
+	boost::call_once(init, once_flag);
+	if(last_state_seen == blacklist_state()){
 		return false;
 	}else{
-		last_state_seen = blacklist_state;
+		last_state_seen = blacklist_state();
 		return true;
 	}
 }

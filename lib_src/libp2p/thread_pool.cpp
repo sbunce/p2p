@@ -3,7 +3,9 @@
 thread_pool::thread_pool():
 	stop_threads(false)
 {
-
+	for(int x=0; x<settings::THREAD_POOL_SIZE; ++x){
+		Workers.create_thread(boost::bind(&thread_pool::dispatcher, this));
+	}
 }
 
 void thread_pool::dispatcher()
@@ -31,13 +33,6 @@ void thread_pool::queue(const boost::function0<void> & CB)
 	boost::mutex::scoped_lock lock(call_back_mutex);
 	call_back.push_back(CB);
 	call_back_cond.notify_one();
-}
-
-void thread_pool::start()
-{
-	for(int x=0; x<settings::THREAD_POOL_SIZE; ++x){
-		Workers.create_thread(boost::bind(&thread_pool::dispatcher, this));
-	}
 }
 
 void thread_pool::stop()

@@ -8,7 +8,7 @@ int main()
 {
 	//setup database and make sure hash table clear
 	path::unit_test_override("database_table_hash.db");
-	database::init init;
+	database::init::hash();
 	database::table::hash::clear();
 
 	//size of our test tree

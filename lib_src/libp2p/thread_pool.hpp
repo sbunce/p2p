@@ -1,4 +1,9 @@
-//SINGLETON, THREADSAFE, THREAD SPAWNING
+/*
+SINGLETON, THREADSAFE, THREAD SPAWNING
+
+Note: If this singleton is constructed then the stop function must be manually
+called to properly shut down the threads before program termination.
+*/
 #ifndef H_THREAD_POOL
 #define H_THREAD_POOL
 
@@ -33,13 +38,10 @@ public:
 		member function with parameter: TP.queue(boost::bind(&A::test, &a, "test"));
 		function:                       TP.queue(&test);
 		function with parameter:        TP.queue(boost::bind(test, "test"));
-	start:
-		Starts pool threads.
 	stop:
 		Stops all threads in pool.
 	*/
 	void queue(const boost::function0<void> & CB);
-	void start();
 	void stop();
 
 private:
