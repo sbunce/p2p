@@ -24,25 +24,18 @@ public:
 		Populates info with upload_info for all uploads.
 	download_rate:
 		Returns average download rate for everything (excluding localhost).
-	get_max_connections:
-		Returns connection limit.
-	get_download_directory:
-		Returns the location where downloads are saved to.
-	get_max_download_rate:
-		Returns the download rate limit.
+	max_connections:
+		Get or set connection limit.
+	max_download_rate:
+		Get or set download rate limit (bytes).
+	max_upload_rate:
+		Get or set upload rate limit (bytes).
 	pause_download:
 		Pause a download.
 	prime_count:
 		Returns size of prime cache used for key-exchanges.
 	remove_download:
 		Stops/Removes a running download.
-	set_max_connections:
-		Sets connection limit. Disconnects servers at random if over the limit.
-	set_download_directory:
-		Set location where downloads are to be saved to. Does not change location
-		existing downloads are to be saved to.
-	set_max_download_rate:
-		Sets the upload rate limit.
 	share_size_bytes:
 		Size of all shared files.
 	share_size_files:
@@ -55,15 +48,15 @@ public:
 	void current_downloads(std::vector<download_status> & status);
 	void current_uploads(std::vector<upload_status> & CU);
 	unsigned download_rate();
-	unsigned get_max_connections();
-	unsigned get_max_download_rate();
-	unsigned get_max_upload_rate();
+	unsigned max_connections();
+	void max_connections(const unsigned connections);
+	unsigned max_download_rate();
+	void max_download_rate(const unsigned rate);
+	unsigned max_upload_rate();
+	void max_upload_rate(const unsigned rate);
 	void pause_download(const std::string & hash);
 	unsigned prime_count();
 	void remove_download(const std::string & hash);
-	void set_max_connections(const unsigned max_connections);
-	void set_max_download_rate(const unsigned max_download_rate);
-	void set_max_upload_rate(const unsigned max_upload_rate);
 	boost::uint64_t share_size_bytes();
 	boost::uint64_t share_size_files();
 	void start_download(const download_info & info);

@@ -76,19 +76,55 @@ void p2p_real::failed_connect_call_back(network::sock & S)
 	LOGGER << "failed connect to " << S.socket_FD;
 }
 
-unsigned p2p_real::get_max_connections()
+unsigned p2p_real::max_connections()
 {
 	return max_connections_proxy;
 }
 
-unsigned p2p_real::get_max_download_rate()
+//boost::bind can't handle default parameter, wrapper required
+static void max_connections_wrapper(const unsigned max_connections_in)
+{
+	database::table::preferences::set_max_connections(max_connections_in);
+}
+void p2p_real::max_connections(const unsigned connections)
+{
+	max_connections_proxy = connections;
+	thread_pool::singleton().queue(boost::bind(&max_connections_wrapper,
+		connections));
+}
+
+unsigned p2p_real::max_download_rate()
 {
 	return max_download_rate_proxy;
 }
 
-unsigned p2p_real::get_max_upload_rate()
+//boost::bind can't handle default parameter, wrapper required
+static void max_download_rate_wrapper(const unsigned rate)
+{
+	database::table::preferences::set_max_download_rate(rate);
+}
+void p2p_real::max_download_rate(const unsigned rate)
+{
+	max_download_rate_proxy = rate;
+	thread_pool::singleton().queue(boost::bind(&max_download_rate_wrapper,
+		rate));
+}
+
+unsigned p2p_real::max_upload_rate()
 {
 	return max_upload_rate_proxy;
+}
+
+//boost::bind can't handle default parameter, wrapper required
+static void max_upload_rate_wrapper(const unsigned rate)
+{
+	database::table::preferences::set_max_upload_rate(rate);
+}
+void p2p_real::max_upload_rate(const unsigned rate)
+{
+	max_upload_rate_proxy = rate;
+	thread_pool::singleton().queue(boost::bind(&max_upload_rate_wrapper,
+		rate));
 }
 
 void p2p_real::pause_download(const std::string & hash)
@@ -109,42 +145,6 @@ boost::uint64_t p2p_real::share_size_bytes()
 boost::uint64_t p2p_real::share_size_files()
 {
 	return Share.size_files();
-}
-
-//boost::bind can't handle default parameter, wrapper required
-static void set_max_connections_wrapper(const unsigned max_connections)
-{
-	database::table::preferences::set_max_connections(max_connections);
-}
-void p2p_real::set_max_connections(const unsigned max_connections)
-{
-	max_connections_proxy = max_connections;
-	thread_pool::singleton().queue(boost::bind(&set_max_connections_wrapper,
-		max_connections));
-}
-
-//boost::bind can't handle default parameter, wrapper required
-static void set_max_download_rate_wrapper(const unsigned max_download_rate)
-{
-	database::table::preferences::set_max_download_rate(max_download_rate);
-}
-void p2p_real::set_max_download_rate(const unsigned max_download_rate)
-{
-	max_download_rate_proxy = max_download_rate;
-	thread_pool::singleton().queue(boost::bind(&set_max_download_rate_wrapper,
-		max_download_rate));
-}
-
-//boost::bind can't handle default parameter, wrapper required
-static void set_max_upload_rate_wrapper(const unsigned max_upload_rate)
-{
-	database::table::preferences::set_max_upload_rate(max_upload_rate);
-}
-void p2p_real::set_max_upload_rate(const unsigned max_upload_rate)
-{
-	max_upload_rate_proxy = max_upload_rate;
-	thread_pool::singleton().queue(boost::bind(&set_max_upload_rate_wrapper,
-		max_upload_rate));
 }
 
 void p2p_real::start_download(const download_info & DI)
