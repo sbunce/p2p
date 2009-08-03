@@ -19,8 +19,8 @@ class rate_limit
 {
 public:
 	rate_limit():
-		max_download_rate(std::numeric_limits<unsigned>::max()),
-		max_upload_rate(std::numeric_limits<unsigned>::max())
+		_max_download_rate(std::numeric_limits<unsigned>::max()),
+		_max_upload_rate(std::numeric_limits<unsigned>::max())
 	{}
 
 	//add n_bytes to download rate
@@ -39,18 +39,18 @@ public:
 
 	/*
 	Returns number of bytes that can be sent such that we don't go over
-	max_upload_rate.
+	_max_upload_rate.
 	*/
 	int available_upload()
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 		unsigned transfer = 0;
-		if(Upload.current_second() >= max_upload_rate){
+		if(Upload.current_second() >= _max_upload_rate){
 			//limit reached, send no bytes
 			return transfer;
 		}else{
 			//limit not yet reached, determine how many bytes to send
-			transfer = max_upload_rate - Upload.current_second();
+			transfer = _max_upload_rate - Upload.current_second();
 			if(transfer > std::numeric_limits<int>::max()){
 				return std::numeric_limits<int>::max();
 			}else{
@@ -61,18 +61,18 @@ public:
 
 	/*
 	Returns number of bytes that can be received such that we don't go over
-	max_download_rate.
+	_max_download_rate.
 	*/
 	int available_download()
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 		unsigned transfer = 0;
-		if(Download.current_second() >= max_download_rate){
+		if(Download.current_second() >= _max_download_rate){
 			//limit reached, send no bytes
 			return transfer;
 		}else{
 			//limit not yet reached, determine how many bytes to send
-			transfer = max_download_rate - Download.current_second();
+			transfer = _max_download_rate - Download.current_second();
 			if(transfer > std::numeric_limits<int>::max()){
 				return std::numeric_limits<int>::max();
 			}else{
@@ -96,38 +96,38 @@ public:
 	}
 
 	//returns maximum download rate
-	unsigned get_max_download_rate()
+	unsigned max_download_rate()
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-		return max_download_rate;
+		return _max_download_rate;
 	}
 
 	//returns maximum upload rate
-	unsigned get_max_upload_rate()
+	unsigned max_upload_rate()
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-		return max_upload_rate;
+		return _max_upload_rate;
 	}
 
 	//sets maximum download rate
-	void set_max_download_rate(const unsigned rate)
+	void max_download_rate(const unsigned rate)
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 		if(rate == 0){
-			max_download_rate = 1;
+			_max_download_rate = 1;
 		}else{
-			max_download_rate = rate;
+			_max_download_rate = rate;
 		}
 	}
 
 	//sets maximum upload rate
-	void set_max_upload_rate(const unsigned rate)
+	void max_upload_rate(const unsigned rate)
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 		if(rate == 0){
-			max_upload_rate = 1;
+			_max_upload_rate = 1;
 		}else{
-			max_upload_rate = rate;
+			_max_upload_rate = rate;
 		}
 	}
 
@@ -135,8 +135,8 @@ private:
 	//mutex for all static public functions
 	boost::recursive_mutex Recursive_Mutex;
 
-	unsigned max_download_rate;
-	unsigned max_upload_rate;
+	unsigned _max_download_rate;
+	unsigned _max_upload_rate;
 
 	speed_calculator Download;
 	speed_calculator Upload;

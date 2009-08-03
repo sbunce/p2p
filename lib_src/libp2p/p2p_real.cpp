@@ -1,7 +1,16 @@
 #include "p2p_real.hpp"
 
-p2p_real::p2p_real()
+p2p_real::p2p_real():
+	Reactor(settings::P2P_PORT),
+	Async_Resolve(Reactor),
+	Proactor(
+		Reactor,
+		boost::bind(&p2p_real::connect_call_back, this, _1),
+		boost::bind(&p2p_real::disconnect_call_back, this, _1),
+		boost::bind(&p2p_real::failed_connect_call_back, this, _1)
+	)
 {
+	//create directories and initialize database (if not already initialized)
 	path::create_required_directories();
 	database::init::all();
 
@@ -10,32 +19,38 @@ p2p_real::p2p_real()
 	max_download_rate_proxy = database::table::preferences::get_max_download_rate();
 	max_upload_rate_proxy = database::table::preferences::get_max_upload_rate();
 
+	//start prime generation threads
 	Prime_Generator.start();
+
+	//start share scan threads
 	Share.start();
+
+	//start networking threads
+	Reactor.start();
+	Async_Resolve.start();
+	Proactor.start();
 }
 
 p2p_real::~p2p_real()
 {
+	//stop threads
 	thread_pool::singleton().stop();
 	Prime_Generator.stop();
 	Share.stop();
+	Reactor.stop();
+	Async_Resolve.stop();
+	Proactor.stop();
 }
 
-/*
 void p2p_real::connect_call_back(network::sock & S)
 {
+	boost::mutex::scoped_lock lock(Connection_mutex);
+	std::pair<std::map<int, boost::shared_ptr<connection> >::iterator, bool>
+		ret = Connection.insert(std::make_pair(S.socket_FD, new connection()));
+	assert(ret.second);
+	S.recv_call_back = boost::bind(&connection::recv_call_back, ret.first->second.get(), _1);
+	S.send_call_back = boost::bind(&connection::send_call_back, ret.first->second.get(), _1);
 }
-
-void p2p_real::disconnect_call_back(network::sock & S)
-{
-
-}
-
-void p2p_real::failed_connect_call_back(network::sock & S)
-{
-
-}
-*/
 
 void p2p_real::current_downloads(std::vector<download_status> & CD)
 {
@@ -45,6 +60,20 @@ void p2p_real::current_downloads(std::vector<download_status> & CD)
 void p2p_real::current_uploads(std::vector<upload_status> & CU)
 {
 
+}
+
+void p2p_real::disconnect_call_back(network::sock & S)
+{
+	boost::mutex::scoped_lock lock(Connection_mutex);
+	if(Connection.erase(S.socket_FD) != 1){
+		LOGGER << "disconnect called for socket that never connected";
+		exit(1);
+	}
+}
+
+void p2p_real::failed_connect_call_back(network::sock & S)
+{
+	LOGGER << "failed connect to " << S.socket_FD;
 }
 
 unsigned p2p_real::get_max_connections()

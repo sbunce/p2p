@@ -99,9 +99,6 @@ void failed_connect_call_back(network::sock & S)
 
 int main()
 {
-	//disable
-	//return 0;
-
 	network::reactor_select Reactor("65001");
 	network::async_resolve Async_Resolve(Reactor);
 	network::proactor Proactor(

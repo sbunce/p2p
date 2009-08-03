@@ -36,15 +36,20 @@ namespace
 void connect_call_back(network::sock & S)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
-	Connection.insert(std::make_pair(S.socket_FD, new http(web_root)));
-	S.recv_call_back = boost::bind(&http::recv_call_back, Connection[S.socket_FD].get(), _1);
-	S.send_call_back = boost::bind(&http::send_call_back, Connection[S.socket_FD].get(), _1);
+	std::pair<std::map<int, boost::shared_ptr<http> >::iterator, bool>
+		ret = Connection.insert(std::make_pair(S.socket_FD, new http(web_root)));
+	assert(ret.second);
+	S.recv_call_back = boost::bind(&http::recv_call_back, ret.first->second.get(), _1);
+	S.send_call_back = boost::bind(&http::send_call_back, ret.first->second.get(), _1);
 }
 
 void disconnect_call_back(network::sock & S)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
-	Connection.erase(S.socket_FD);
+	if(Connection.erase(S.socket_FD) != 1){
+		LOGGER << "disconnect called for socket that never connected";
+		exit(1);
+	}
 }
 
 void failed_connect_call_back(network::sock & S)
@@ -70,7 +75,8 @@ int main(int argc, char ** argv)
 		&disconnect_call_back,
 		&failed_connect_call_back
 	);
-	//Reactor.set_max_upload_rate(1024*500);
+	//Reactor.max_upload_rate(1024*500);
+	Reactor.max_connections(Reactor.max_connections_supported(), 0);
 	Reactor.start();
 	Proactor.start();
 
@@ -86,6 +92,4 @@ int main(int argc, char ** argv)
 	}
 	Reactor.stop();
 	Proactor.stop();
-
-	LOGGER << "jobs: " << Reactor.job_count;
 }

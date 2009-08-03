@@ -47,13 +47,12 @@ public:
 
 		//start self pipe used to get select to return
 		wrapper::socket_pair(selfpipe_read, selfpipe_write);
-		LOGGER << "selfpipe read " << selfpipe_read << " write " << selfpipe_write;
 		wrapper::set_non_blocking(selfpipe_read);
 		wrapper::set_non_blocking(selfpipe_write);
 		add_socket(selfpipe_read);
 
 		//set default maximum connections to maximum
-		set_max_connections(max_connections_supported() / 2, max_connections_supported() / 2);
+		max_connections(max_connections_supported() / 2, max_connections_supported() / 2);
 	}
 
 	~reactor_select()
