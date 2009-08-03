@@ -4,6 +4,7 @@
 
 //include
 #include <boost/cstdint.hpp>
+#include <boost/detail/endian.hpp>
 
 //standard
 #include <algorithm>
@@ -14,16 +15,7 @@
 class SHA1
 {
 public:
-	SHA1()
-	{
-		//check endianness of hardware
-		sha_uint32_t IC = { 1 };
-		if(IC.byte[0] == 1){
-			ENDIANNESS = LITTLE_ENDIAN_ENUM;
-		}else{
-			ENDIANNESS = BIG_ENDIAN_ENUM;
-		}
-	}
+	SHA1(){}
 
 	/* Data Loading Functions
 	init:
@@ -113,9 +105,6 @@ private:
 	boost::uint64_t loaded_bytes; //total bytes input
 	std::string load_buffer;      //holds data input
 
-	enum endianness { BIG_ENDIAN_ENUM, LITTLE_ENDIAN_ENUM };
-	endianness ENDIANNESS; //check done in ctor to set this
-
 	//makes conversion from int to bytes easier
 	union sha_uint32_t{
 		boost::uint32_t num;
@@ -140,26 +129,26 @@ private:
 			load_buffer.append(64 + (load_buffer.size() % 64), static_cast<char>(0));
 		}
 
-		//append size of original message (in bits) encoded as a 64bit big-endian int
-		sha_uint64_t IC = { loaded_bytes*8 };
-		if(ENDIANNESS == LITTLE_ENDIAN_ENUM){
-			for(int x=7; x>=0; --x){
-				load_buffer += IC.byte[x];
-			}
-		}else{
-			for(int x=0; x<8; ++x){
-				load_buffer += IC.byte[x];
-			}
+		//append size of original message (in bits) encoded as a 64bit big-endian
+		sha_uint64_t IC = { loaded_bytes * 8 };
+		#ifdef BOOST_LITTLE_ENDIAN
+		for(int x=7; x>=0; --x){
+			load_buffer += IC.byte[x];
 		}
+		#else
+		for(int x=0; x<8; ++x){
+			load_buffer += IC.byte[x];
+		}
+		#endif
 	}
 	void process(const int & chunk_start)
 	{
 		//break 512bit chunk in to 16, 32 bit pieces
 		for(int x=0; x<16; ++x){
 			load_buffer.copy(w[x].byte, 4, chunk_start + x*4);
-			if(ENDIANNESS == LITTLE_ENDIAN_ENUM){
-				std::reverse(w[x].byte, w[x].byte+4);
-			}
+			#ifdef BOOST_LITTLE_ENDIAN
+			std::reverse(w[x].byte, w[x].byte+4);
+			#endif
 		}
 
 		//extend the 16 pieces to 80

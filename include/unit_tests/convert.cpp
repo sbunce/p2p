@@ -7,12 +7,6 @@
 
 int main()
 {
-	//endianness
-	std::string binary = convert::encode<int>(1);
-	if(binary[0] != 0){
-		LOGGER; exit(1);
-	}
-
 	//encode/decode
 	if(convert::decode<int>(convert::encode<int>(10)) != 10){
 		LOGGER; exit(1);
