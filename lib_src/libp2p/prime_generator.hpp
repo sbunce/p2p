@@ -11,7 +11,7 @@
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
-#include <CMWC4096.hpp>
+#include <KISS.hpp>
 #include <random.hpp>
 #include <tommath/mpint.hpp>
 

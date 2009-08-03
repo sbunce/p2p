@@ -2,62 +2,66 @@
 #include "../encryption.hpp"
 #include "../settings.hpp"
 
+//copies one buffer to another, simulates sending over network
+void send(network::buffer & source, network::buffer & destination)
+{
+	destination.append(source.data(), source.size());
+	source.clear();
+}
+
 int main()
 {
-	/*
-	This test does Diffie-Helman-Merkle key-exchange. And then tests encrypting
-	and decrypting a message.
-	*/
-
-	//setup database and make sure prime table clear
 	path::unit_test_override("encryption.db");
-
-	//prime generator that the encryption class depends upon
 	prime_generator Prime_Generator;
 	Prime_Generator.start();
 
-	//client/server encryption class
-	encryption E_server(Prime_Generator), E_client(Prime_Generator);
+	//Host_0 will connect to Host_1.
+	encryption Host_0_Encryption(Prime_Generator);
+	network::buffer Host_0_send_buff;
+	network::buffer Host_0_recv_buff;
 
-	//client generates prime
-	std::string prime_binary = E_client.get_prime();
-	E_client.set_prime(prime_binary);
+	encryption Host_1_Encryption(Prime_Generator);
+	network::buffer Host_1_send_buff;
+	network::buffer Host_1_recv_buff;
 
-	//client sends prime and local result to server
-	E_server.set_prime(prime_binary);
-	E_server.set_remote_result(E_client.get_local_result());
+	//Host_0 sends prime and local_result.
+	Host_0_Encryption.send_prime_and_local_result(Host_0_send_buff);
+	send(Host_0_send_buff, Host_1_recv_buff);
 
-	//server sends local result to client
-	E_client.set_remote_result(E_server.get_local_result());
+	//Host_1 receives prime and remote_result. Host_1 sends local_result.
+	Host_1_Encryption.recv_prime_and_remote_result(Host_1_recv_buff, Host_1_send_buff);
+	send(Host_1_send_buff, Host_0_recv_buff);
 
-	//client encrypts message
-	std::string client_buffer = "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-	E_client.crypt_send(client_buffer);
+	//Host_0 receives remote_result.
+	Host_0_Encryption.recv_remote_result(Host_0_recv_buff);
 
-	if(client_buffer == "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"){
+	//all buffers should be empty at this point
+	assert(Host_0_send_buff.empty());
+	assert(Host_0_recv_buff.empty());
+	assert(Host_1_send_buff.empty());
+	assert(Host_1_recv_buff.empty());
+
+	/*
+	Both hosts are ready to encrypt/decrypt. Test sending a message from Host_0
+	to Host_1.
+	*/
+	std::string message = "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	Host_0_send_buff.append(message);
+	Host_0_Encryption.crypt_send(Host_0_send_buff);
+	send(Host_0_send_buff, Host_1_recv_buff);
+	Host_1_Encryption.crypt_recv(Host_1_recv_buff);
+	if(Host_1_recv_buff != message){
 		LOGGER; exit(1);
 	}
 
-	//server decrypts message from client
-	E_server.crypt_recv(client_buffer);
-
-	if(client_buffer != "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"){
+	//test sending a message from Host_1 to Host_0
+	Host_1_send_buff.append(message);
+	Host_1_Encryption.crypt_send(Host_1_send_buff);
+	send(Host_1_send_buff, Host_0_recv_buff);
+	Host_0_Encryption.crypt_recv(Host_0_recv_buff);
+	if(Host_0_recv_buff != message){
 		LOGGER; exit(1);
 	}
 
-	//now server encrypts message
-	std::string server_buffer = "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-	E_server.crypt_send(server_buffer);
-
-	if(server_buffer == "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"){
-		LOGGER; exit(1);
-	}
-
-	//client decrypts message from server
-	E_client.crypt_recv(server_buffer);
-
-	if(server_buffer != "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"){
-		LOGGER; exit(1);
-	}
 	Prime_Generator.stop();
 }

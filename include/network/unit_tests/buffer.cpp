@@ -39,5 +39,16 @@ int main()
 	Buffer.tail_resize(1);
 	if(Buffer[1] != 'B'){
 		LOGGER; exit(1);
-	} 
+	}
+
+	//!=
+	network::buffer B1, B2;
+	B1.append("ABC");
+	B2.append("ABC");
+	if(B1 != B2){
+		LOGGER; exit(1);
+	}
+	if(B1 != "ABC"){
+		LOGGER; exit(1);
+	}
 }

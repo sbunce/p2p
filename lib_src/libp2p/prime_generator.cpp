@@ -9,7 +9,8 @@ void prime_generator::main_loop()
 	*/
 	portable_sleep::yield();
 
-	CMWC4096 PRNG;
+	KISS PRNG;
+	PRNG.seed();
 	mpint random_prime;
 	while(true){
 		boost::this_thread::interruption_point();

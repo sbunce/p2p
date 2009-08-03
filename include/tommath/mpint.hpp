@@ -2,7 +2,7 @@
 #define H_MPINT
 
 //include
-#include <CMWC4096.hpp>
+#include <KISS.hpp>
 #include <random.hpp>
 #include <tommath/tommath.h>
 
@@ -142,16 +142,16 @@ public:
 	Returns a random prime of the specified bytes. This version uses a specified
 	CMWC4096 PRNG which is VERY fast but is not a cryptographically secure PRNG.
 	*/
-	static mpint random_prime_fast(const int bytes, CMWC4096 & PRNG)
+	static mpint random_prime_fast(const int bytes, KISS & PRNG)
 	{
 		mpint temp;
 		mp_prime_random_ex(
 			&temp.data,
 			mp_prime_rabin_miller_trials(bytes * 8),
-			bytes * 8,         //size (bits) of prime to generate
-			0,                 //optional flags
-			&CMWC4096_wrapper, //random byte source
-			&PRNG              //optional void * passed to PRNG
+			bytes * 8,     //size (bits) of prime to generate
+			0,             //optional flags
+			&KISS_wrapper, //random byte source
+			&PRNG          //optional void * passed to PRNG
 		);
 		return temp;
 	}
@@ -163,9 +163,9 @@ public:
 	}
 
 private:
-	static int CMWC4096_wrapper(unsigned char * buff, int size, void * data)
+	static int KISS_wrapper(unsigned char * buff, int size, void * data)
 	{
-		CMWC4096 * PRNG = reinterpret_cast<CMWC4096 *>(data);
+		KISS * PRNG = reinterpret_cast<KISS *>(data);
 		PRNG->bytes(buff, size);
 		return size;
 	}

@@ -1,50 +1,80 @@
 #include "encryption.hpp"
 
 encryption::encryption(prime_generator & Prime_Generator_in):
-	Prime_Generator(Prime_Generator_in)
+	Prime_Generator(Prime_Generator_in),
+	g("2"),
+	s(mpint::random(protocol::DH_KEY_SIZE, &portable_urandom))
 {
-	g = "2"; //fast generater
-	s = mpint::random(protocol::DH_KEY_SIZE, &portable_urandom);
-	State = waiting_for_prime;
+
 }
 
-std::string encryption::get_prime()
+void encryption::crypt_send(network::buffer & send_buff)
 {
-	p = Prime_Generator.random_prime();
-	return std::string((char *)p.to_bin(), p.to_bin_size());
+	for(int x=0; x<send_buff.size(); ++x){
+		send_buff[x] = static_cast<unsigned char>(send_buff[x]) ^ PRNG_send.byte();
+	}
 }
-
-bool encryption::set_prime(std::string prime)
+void encryption::crypt_recv(network::buffer & recv_buff)
 {
-	assert(State == waiting_for_prime);
-	p = mpint((unsigned char *)prime.data(), prime.length());
-
-	if(p.is_prime()){
-		local_result = g.exptmod(s, p);
-		State = waiting_for_remote_result;
-		return true;
-	}else{
-		std::cout << "encryption::set_prime was given invalid prime\n";
-		return false;
+	for(int x=0; x<recv_buff.size(); ++x){
+		recv_buff[x] = static_cast<unsigned char>(recv_buff[x]) ^ PRNG_recv.byte();
 	}
 }
 
-std::string encryption::get_local_result()
+bool encryption::recv_prime_and_remote_result(network::buffer & recv_buff,
+	network::buffer & send_buff)
 {
-	return std::string((char *)local_result.to_bin(), local_result.to_bin_size());
-}
+	assert(recv_buff.size() >= protocol::DH_KEY_SIZE * 2);
+	assert(send_buff.empty());
 
-void encryption::set_remote_result(std::string result)
-{
-	assert(State == waiting_for_remote_result);
-	remote_result = mpint((unsigned char *)result.data(), result.length());
+	//recv prime
+	p = mpint(recv_buff.data(), protocol::DH_KEY_SIZE);
+	if(!p.is_prime()){
+		//invalid prime
+		return false;
+	}
+	recv_buff.erase(0, protocol::DH_KEY_SIZE);
 
-	//(remote_result)^s % p
+	//recv remote_result
+	remote_result = mpint(recv_buff.data(), protocol::DH_KEY_SIZE);
+	recv_buff.erase(0, protocol::DH_KEY_SIZE);
+
+	//calculate local_result
+	local_result = g.exptmod(s, p);
+
+	//calculate shared_key
 	shared_key = remote_result.exptmod(s, p);
 
-	//get PRNG ready to create stream
+	//seed PRNGS
 	PRNG_send.seed(shared_key.to_bin(), shared_key.to_bin_size());
 	PRNG_recv.seed(shared_key.to_bin(), shared_key.to_bin_size());
 
-	State = ready_to_encrypt;
+	//send local_result
+	send_buff.append(local_result.to_bin(), local_result.to_bin_size());
+
+	return true;
+}
+
+void encryption::recv_remote_result(network::buffer & recv_buff)
+{
+	assert(recv_buff.size() >= protocol::DH_KEY_SIZE);
+
+	//recv remote_result
+	remote_result = mpint(recv_buff.data(), protocol::DH_KEY_SIZE);
+	recv_buff.erase(0, protocol::DH_KEY_SIZE);
+
+	//calculate shared_key
+	shared_key = remote_result.exptmod(s, p);
+
+	//seed PRNGs
+	PRNG_send.seed(shared_key.to_bin(), shared_key.to_bin_size());
+	PRNG_recv.seed(shared_key.to_bin(), shared_key.to_bin_size());
+}
+
+void encryption::send_prime_and_local_result(network::buffer & send_buff)
+{
+	p = Prime_Generator.random_prime();
+	send_buff.append(p.to_bin(), p.to_bin_size());
+	local_result = g.exptmod(s, p);
+	send_buff.append(local_result.to_bin(), local_result.to_bin_size());
 }

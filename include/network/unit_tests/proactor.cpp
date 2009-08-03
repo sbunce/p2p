@@ -58,9 +58,10 @@ void connect_call_back(network::sock & S)
 	}
 	LOGGER << direction << " H<" << S.host << "> IP<" << S.IP << "> P<"
 		<< S.port << "> S<" << S.socket_FD << ">";
-	Connection.insert(std::make_pair(S.socket_FD, new connection(S)));
-	S.recv_call_back = boost::bind(&connection::recv_call_back, Connection[S.socket_FD].get(), _1);
-	S.send_call_back = boost::bind(&connection::send_call_back, Connection[S.socket_FD].get(), _1);
+	std::pair<std::map<int, boost::shared_ptr<connection> >::iterator, bool>
+		ret = Connection.insert(std::make_pair(S.socket_FD, new connection(S)));
+	S.recv_call_back = boost::bind(&connection::recv_call_back, ret.first->second.get(), _1);
+	S.send_call_back = boost::bind(&connection::send_call_back, ret.first->second.get(), _1);
 }
 
 void disconnect_call_back(network::sock & S)
@@ -74,7 +75,10 @@ void disconnect_call_back(network::sock & S)
 	}
 	LOGGER << direction << " H<" << S.host << "> IP<" << S.IP << "> P<"
 		<< S.port << "> S<" << S.socket_FD << ">";
-	Connection.erase(S.socket_FD);
+	if(Connection.erase(S.socket_FD) != 1){
+		LOGGER << "disconnect called for socket that never connected";
+		exit(1);
+	}
 }
 
 void failed_connect_call_back(network::sock & S)

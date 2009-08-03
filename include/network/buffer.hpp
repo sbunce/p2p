@@ -314,6 +314,34 @@ public:
 		return buff[index];
 	}
 
+	bool operator == (const buffer & Buffer)
+	{
+		if(bytes != Buffer.bytes){
+			return false;
+		}else{
+			return std::memcmp(buff, Buffer.buff, bytes) == 0;
+		}
+	}
+
+	bool operator != (const buffer & Buffer)
+	{
+		return !(*this == Buffer);
+	}
+
+	bool operator == (const std::string & str)
+	{
+		if(bytes != str.size()){
+			return false;
+		}else{
+			return std::memcmp(buff, str.data(), bytes) == 0;
+		}
+	}
+
+	bool operator != (const std::string & str)
+	{
+		return !(*this == str);
+	}
+
 	//returned to indicate <something> not found
 	static const size_t npos = -1;
 

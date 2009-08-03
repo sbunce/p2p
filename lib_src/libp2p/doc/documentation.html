@@ -9,46 +9,36 @@
 
 <h2>About</h2>
 <p>
-This P2P program has it's own protocol. It uses multi-source segmented
-downloading meaning that one file may be downloaded from multiple hosts at the
-same time to increase speeds.
+LibP2P does multi-source segmented downloading meaning that one file is
+downloaded from multiple hosts concurrently to increase speeds.
 </p>
-
-<hr>
-
-<h2>Goals</h2>
 
 <p>
 <b>Bandwidth Efficiency:</b><br>
-Ratio of control and error detection data to file data should be as low as
+Ratio of control and error detection data to file data is kept as low as
 possible.
 </p>
 
 <p>
 <b>Perfect Copies:</b><br>
-The integrity of files should be checked via hash functions to insure
-downloaded files are perfect copies.
+The integrity of files is checked with hash functions to insure downloaded files
+are perfect copies.
 </p>
 
 <p>
 <b>Unpoisonable:</b><br>
-The presence of malicious peers should have minimal impact on file downloads.
+The presence of malicious peers has minimal impact on file downloads.
 </p>
 
 <p>
 <b>Obfuscation:</b><br>
-The protocol should be obfuscated to make detecting the protocol difficult.
-This should not take precedence over any other goal.
+The protocol is obfuscated to make detecting the protocol difficult. This does
+not take precedence over any other goal.
 </p>
 
 <p>
 <b>Low Requirements:</b><br>
-CPU and memory usage should be as low as possible.
-</p>
-
-<p>
-<b>Location Awareness:</b><br>
-Close servers should be favored over distant ones.
+CPU and memory usage is as low as is reasonable.
 </p>
 
 <hr>
@@ -235,7 +225,7 @@ The command line compiler will be used by scons.
 </p>
 
 <p>
-<a href="http://www.boostpro.com/products/free">Boost</a>Version &#62;= 1.36<br>
+<a href="http://www.boostpro.com/products/free">Boost</a> &#62;= 1.36<br>
 Precompiled libraries available from Boost Consulting. When installing select
 multithreaded static.
 </p>
