@@ -131,7 +131,7 @@ public:
 		}
 		int code;
 		while((code = sqlite3_step(prepared_statement)) != SQLITE_DONE){
-			LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle);
+			portable_sleep::ms(1);
 		}
 		if(sqlite3_finalize(prepared_statement) != SQLITE_OK){
 			LOGGER << sqlite3_errmsg(DB_handle);
