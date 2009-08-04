@@ -34,16 +34,19 @@ void share_pipeline_2_write::main_loop()
 			for(std::vector<share_pipeline_job>::iterator iter_cur = temp.begin(),
 				iter_end = temp.end(); iter_cur != iter_end; ++iter_cur)
 			{
-				if(iter_cur->add){
+				if(iter_cur->Type == share_pipeline_job::HASH_FILE){
 					//job to add file to share table
 					database::table::share::add_entry(iter_cur->hash,
 						iter_cur->file_size, iter_cur->path, DB);
 					database::table::hash::set_state(iter_cur->hash,
 						hash_tree::file_size_to_tree_size(iter_cur->file_size),
 						database::table::hash::COMPLETE, DB);
-				}else{
+				}else if(iter_cur->Type == share_pipeline_job::REMOVE_FILE){
 					//job to remove file from share table
 					database::table::share::delete_entry(iter_cur->path, DB);
+				}else{
+					LOGGER << "programmer error";
+					exit(1);
 				}
 			}
 			DB->query("END TRANSACTION");

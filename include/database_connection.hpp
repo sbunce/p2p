@@ -131,7 +131,17 @@ public:
 		}
 		int code;
 		while((code = sqlite3_step(prepared_statement)) != SQLITE_DONE){
-			portable_sleep::ms(1);
+			if(code == SQLITE_BUSY){
+				/*
+				The sqlite3_step documentation specifies that when SQLITE_BUSY is
+				returned a ROLLBACK must be done. The ROLLBACK may return errors but
+				they're not supposed to hurt anything or have any important meaning.
+				Without the ROLLBACK we can get stuck in this loop forever.
+				*/
+				sqlite3_exec(DB_handle, "ROLLBACK", NULL, NULL, NULL);
+			}else{
+				portable_sleep::ms(1);
+			}
 		}
 		if(sqlite3_finalize(prepared_statement) != SQLITE_OK){
 			LOGGER << sqlite3_errmsg(DB_handle);

@@ -1,11 +1,14 @@
 #include "share_pipeline_0_scan.hpp"
 
-share_pipeline_0_scan::share_pipeline_0_scan():
+share_pipeline_0_scan::share_pipeline_0_scan(
+	atomic_int<boost::uint64_t> & _size_bytes_in,
+	atomic_int<boost::uint64_t> & _size_files_in
+):
+	_size_bytes(_size_bytes_in),
+	_size_files(_size_files_in),
 	share_path(boost::filesystem::system_complete(
 		boost::filesystem::path(path::share(), boost::filesystem::native)
-	)),
-	_size_bytes(0),
-	_size_files(0)
+	))
 {
 
 }
@@ -141,9 +144,8 @@ void share_pipeline_0_scan::main_loop()
 						if(insert(iter_cur->path().string(), size)){
 							//file hasn't been seen before, or it changed size
 							boost::mutex::scoped_lock lock(job_mutex);
-							_size_bytes += size;
-							++_size_files;
-							job.push_back(share_pipeline_job(iter_cur->path().string(), size, true));
+							job.push_back(share_pipeline_job(iter_cur->path().string(),
+								size, share_pipeline_job::HASH_FILE));
 							job_cond.notify_one();
 						}
 					}
@@ -167,10 +169,11 @@ int share_pipeline_0_scan::path_call_back(int columns_retrieved, char ** respons
 	std::stringstream ss;
 	ss << response[1];
 	ss >> size;
-	_size_bytes += size;
-	++_size_files;
 	fs::path path = fs::system_complete(fs::path(response[0], fs::native));
-	insert(path.string(), size);
+	if(insert(path.string(), size)){
+		_size_bytes += size;
+		++_size_files;
+	}
 	if(boost::this_thread::interruption_requested()){
 		return 1;
 	}else{
@@ -234,9 +237,8 @@ void share_pipeline_0_scan::remove_missing_recurse(
 				removed.
 				*/
 				boost::mutex::scoped_lock lock(job_mutex);
-				_size_bytes -= file_iter_cur->second.size;
-				--_size_files;
-				job.push_back(share_pipeline_job(file_path, file_iter_cur->second.size, false));
+				job.push_back(share_pipeline_job(file_path, file_iter_cur->second.size,
+					share_pipeline_job::REMOVE_FILE));
 				job_cond.notify_one();
 				dir_iter->second.File.erase(file_iter_cur++);
 				remove = true;
@@ -245,9 +247,8 @@ void share_pipeline_0_scan::remove_missing_recurse(
 			//error reading file, remove files that fail to read
 			LOGGER << ex.what();
 			boost::mutex::scoped_lock lock(job_mutex);
-			_size_bytes -= file_iter_cur->second.size;
-			--_size_files;
-			job.push_back(share_pipeline_job(file_path, file_iter_cur->second.size, false));
+			job.push_back(share_pipeline_job(file_path, file_iter_cur->second.size,
+				share_pipeline_job::REMOVE_FILE));
 			job_cond.notify_one();
 			dir_iter->second.File.erase(file_iter_cur++);
 			remove = true;
@@ -257,16 +258,6 @@ void share_pipeline_0_scan::remove_missing_recurse(
 			++file_iter_cur;
 		}
 	}
-}
-
-boost::uint64_t share_pipeline_0_scan::size_bytes()
-{
-	return _size_bytes;
-}
-
-boost::uint64_t share_pipeline_0_scan::size_files()
-{
-	return _size_files;
 }
 
 void share_pipeline_0_scan::start()

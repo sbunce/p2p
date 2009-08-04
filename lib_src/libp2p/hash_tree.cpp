@@ -331,48 +331,56 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 		deleted on next program start. (think garbage collection)
 		*/
 		assert(tree_size == rightside_up.tellp());
+
 		database::pool::proxy DB;
 		DB->query("BEGIN TRANSACTION");
-		if(!database::table::hash::exists(root_hash, tree_size, DB)){
-			//tree does not exist in the database
-			if(!database::table::hash::tree_allocate(root_hash, tree_size, DB)){
-				LOGGER << "could not allocate blob for hash tree";
+		if(database::table::hash::exists(root_hash, tree_size)){
+			//hash tree already exists
+			DB->query("END TRANSACTION");
+			return false;
+		}
+
+		//tree doesn't exist, allocate space for it
+		if(!database::table::hash::tree_allocate(root_hash, tree_size)){
+			LOGGER << "could not allocate blob for hash tree";
+			DB->query("END TRANSACTION");
+			return false;
+		}
+
+		//copy tree from temp file to database
+		database::blob Blob = database::table::hash::tree_open(root_hash, tree_size, DB);
+		rightside_up.seekg(0, std::ios::beg);
+		int offset = 0, bytes_remaining = tree_size, read_size;
+		while(bytes_remaining){
+			if(boost::this_thread::interruption_requested()){
+				database::table::hash::delete_tree(root_hash, tree_size, DB);
 				DB->query("END TRANSACTION");
 				return false;
 			}
-			database::blob Blob = database::table::hash::tree_open(root_hash, tree_size, DB);
-			rightside_up.seekg(0, std::ios::beg);
-			int offset = 0, bytes_remaining = tree_size, read_size;
-			while(bytes_remaining){
-				if(boost::this_thread::interruption_requested()){
+			if(bytes_remaining > protocol::FILE_BLOCK_SIZE){
+				read_size = protocol::FILE_BLOCK_SIZE;
+			}else{
+				read_size = bytes_remaining;
+			}
+			rightside_up.read(block_buff, read_size);
+			if(rightside_up.gcount() != read_size){
+				LOGGER << "error reading rightside_up file";
+				database::table::hash::delete_tree(root_hash, tree_size, DB);
+				DB->query("END TRANSACTION");
+				return false;
+			}else{
+				if(!DB->blob_write(Blob, block_buff, read_size, offset)){
+					LOGGER << "error doing incremental write to blob";
 					database::table::hash::delete_tree(root_hash, tree_size, DB);
 					DB->query("END TRANSACTION");
 					return false;
 				}
-				if(bytes_remaining > protocol::FILE_BLOCK_SIZE){
-					read_size = protocol::FILE_BLOCK_SIZE;
-				}else{
-					read_size = bytes_remaining;
-				}
-				rightside_up.read(block_buff, read_size);
-				if(rightside_up.gcount() != read_size){
-					LOGGER << "error reading rightside_up file";
-					database::table::hash::delete_tree(root_hash, tree_size, DB);
-					DB->query("END TRANSACTION");
-					return false;
-				}else{
-					if(!DB->blob_write(Blob, block_buff, read_size, offset)){
-						LOGGER << "error doing incremental write to blob";
-						database::table::hash::delete_tree(root_hash, tree_size, DB);
-						DB->query("END TRANSACTION");
-						return false;
-					}
-					offset += read_size;
-					bytes_remaining -= read_size;
-				}
+				offset += read_size;
+				bytes_remaining -= read_size;
 			}
 		}
 		DB->query("END TRANSACTION");
+
 		return true;
 	}
 }

@@ -74,6 +74,9 @@ public:
 		The expected file size should be set to the size the file is when create()
 		is called. If the file changes size while hashing the create function will
 		return false.
+		Note: If hash tree creation suceeds the hash tree state will only be set
+			to RESERVED. If it's not changed the tree will be deleted upon next
+			program start.
 	file_size_to_tree_size:
 		Given a file_size, returns tree size (bytes).
 	missing_block:

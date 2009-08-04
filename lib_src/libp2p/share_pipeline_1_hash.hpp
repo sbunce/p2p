@@ -45,6 +45,10 @@ private:
 	//used to block Worker threads when job limit reached
 	boost::condition_variable_any job_max_cond;
 
+	//the size of all files and the number of files in the share
+	atomic_int<boost::uint64_t> _size_bytes;
+	atomic_int<boost::uint64_t> _size_files;
+
 	/*
 	block_on_max_jobs:
 		Blocks the Workers when the job buffer is full.

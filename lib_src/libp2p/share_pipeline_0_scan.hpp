@@ -25,7 +25,10 @@
 class share_pipeline_0_scan : private boost::noncopyable
 {
 public:
-	share_pipeline_0_scan();
+	share_pipeline_0_scan(
+		atomic_int<boost::uint64_t> & _size_bytes_in,
+		atomic_int<boost::uint64_t> & _size_files_in
+	);
 
 	/*
 	start:
@@ -56,7 +59,7 @@ private:
 	//used to block scan_thread when job limit reached
 	boost::condition_variable_any job_max_cond;
 
-	//information to be stored for a file
+	//file node in tree
 	class file
 	{
 	public:
@@ -64,6 +67,7 @@ private:
 		boost::uint64_t size;
 	};
 
+	//directory node in tree
 	class directory
 	{
 	public:
@@ -85,8 +89,8 @@ private:
 	boost::filesystem::path share_path;
 
 	//the size of all files and the number of files in the share
-	atomic_int<boost::uint64_t> _size_bytes;
-	atomic_int<boost::uint64_t> _size_files;
+	atomic_int<boost::uint64_t> & _size_bytes;
+	atomic_int<boost::uint64_t> & _size_files;
 
 	/*
 	block_on_max_jobs:
