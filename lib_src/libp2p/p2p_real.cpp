@@ -29,6 +29,8 @@ p2p_real::p2p_real():
 	Reactor.start();
 	Async_Resolve.start();
 	Proactor.start();
+
+	Async_Resolve.connect("127.0.0.1", settings::P2P_PORT);
 }
 
 p2p_real::~p2p_real()

@@ -503,6 +503,7 @@ private:
 				S->seen();
 				Rate_Limit.add_download_bytes(n_bytes);
 				max_recv -= n_bytes;
+				S->latest_recv = n_bytes;
 				S->recv_flag = true;
 			}
 			schedule_job = true;
@@ -554,6 +555,7 @@ private:
 					S->send_buff.erase(0, n_bytes);
 					Rate_Limit.add_upload_bytes(n_bytes);
 					max_send -= n_bytes;
+					S->latest_send = n_bytes;
 					if(!send_buff_empty && S->send_buff.empty()){
 						//send_buff went from non-empty to empty
 						S->send_flag = true;

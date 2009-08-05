@@ -102,7 +102,7 @@ public:
 			boost::mutex::scoped_lock lock(job_finished_mutex);
 
 			//after the first get() of this sock the connect job is done
-			const_cast<bool &>(S->connect_flag) = true;
+			S->connect_flag = true;
 
 			//reset other flags
 			S->recv_flag = false;

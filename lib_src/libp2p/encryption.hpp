@@ -30,10 +30,11 @@ public:
 
 	/*
 	Used to encrypt/decrypt buffers.
+	Decrypts buffer from index to end of buffer.
 	Precondition: Key exhange must be done before these work.
 	*/
-	void crypt_send(network::buffer & send_buff);
-	void crypt_recv(network::buffer & recv_buff);
+	void crypt_send(network::buffer & send_buff, const int index = 0);
+	void crypt_recv(network::buffer & recv_buff, const int index = 0);
 
 	/* Protocol for key exchange:
 	Host_0 initiates outgoing connection.

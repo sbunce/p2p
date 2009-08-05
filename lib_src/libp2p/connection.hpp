@@ -29,5 +29,13 @@ public:
 private:
 	prime_generator & Prime_Generator;
 	encryption Encryption;
+
+	//key exchange steps
+	enum exchange {
+		INITIAL,
+		SENT_PRIME_AND_LOCAL_RESULT,
+		RECEIVED_PRIME_AND_REMOTE_RESULT,
+		COMPLETE
+	} Exchange;
 };
 #endif

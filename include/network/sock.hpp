@@ -117,11 +117,10 @@ public:
 	const std::string port;    //if listen_port == port then connection is incoming
 	const DIRECTION direction; //INCOMING or OUTGOING
 
-	/*
+	/* Flags to indicate what has happended to the sock in the reactor.
 	connect_flag:
 		When false a connect job needs to be done. When true a connect job
-		has already been done. The reactor sets this to true. The const is like
-		a safety cover on this.
+		has already been done. The reactor sets this to true.
 	disconnect_flag:
 		if this is set to true the socket will be disconnected.
 	failed_connect_flag:
@@ -132,7 +131,7 @@ public:
 	send_flag:
 		If true the send call back needs to be done.
 	*/
-	const bool connect_flag;
+	bool connect_flag;
 	bool disconnect_flag;
 	bool failed_connect_flag;
 	bool recv_flag;
@@ -141,6 +140,10 @@ public:
 	//send()/recv() buffers
 	buffer recv_buff;
 	buffer send_buff;
+
+	//how many bytes were added to <"send"|"recv">_buff during last <"send"|"recv">()
+	int latest_recv;
+	int latest_send;
 
 	//call backs used by the proactor
 	boost::function<void (sock &)> recv_call_back;

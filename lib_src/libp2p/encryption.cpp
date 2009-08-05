@@ -8,16 +8,16 @@ encryption::encryption(prime_generator & Prime_Generator_in):
 
 }
 
-void encryption::crypt_send(network::buffer & send_buff)
+void encryption::crypt_send(network::buffer & send_buff, const int index)
 {
-	for(int x=0; x<send_buff.size(); ++x){
-		send_buff[x] = static_cast<unsigned char>(send_buff[x]) ^ PRNG_send.byte();
+	for(int x=index; x<send_buff.size(); ++x){
+		send_buff[x] ^= PRNG_send.byte();
 	}
 }
-void encryption::crypt_recv(network::buffer & recv_buff)
+void encryption::crypt_recv(network::buffer & recv_buff, const int index)
 {
-	for(int x=0; x<recv_buff.size(); ++x){
-		recv_buff[x] = static_cast<unsigned char>(recv_buff[x]) ^ PRNG_recv.byte();
+	for(int x=index; x<recv_buff.size(); ++x){
+		recv_buff[x] ^= PRNG_recv.byte();
 	}
 }
 
