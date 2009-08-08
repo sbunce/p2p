@@ -37,8 +37,8 @@ public:
 	void crypt_recv(network::buffer & recv_buff, const int index = 0);
 
 	/* Protocol for key exchange:
-	Host_0 initiates outgoing connection.
-	Host_1 accepts incoming connection.
+	Host_A initiates outgoing connection.
+	Host_B accepts incoming connection.
 	Note: All encoded numbers are big-endian.
 
 	send_prime_and_local_result:
@@ -50,22 +50,22 @@ public:
 		be disconnected because key negotiation failed.
 		Precondition: recv_buff.size() >= protocol::DH_KEY_SIZE * 2
 		Precondition: send_buff must be empty.
-		Postcondition: Host_1 is ready to crypt data.
+		Postcondition: Host_B is ready to crypt data.
 	recv_remote_result:
 		Sets remote result from recv_buff. Calculates shared_key and seeds PRNGs.
 		Precondition: recv_buff.size() >= protocol::DH_KEY_SIZE
 		Precondition: send_buff must be empty.
-		Postcondition: Host_0 is ready to crypt data.
+		Postcondition: Host_A is ready to crypt data.
 	*/
 
-	//Step 1: Host_0 sends prime followed by local_result.
+	//Step 0: Host_A sends prime followed by local_result.
 	void send_prime_and_local_result(network::buffer & send_buff);
 
-	//Step 2: Host_1 receives prime and remote_result, and sends local_result.
+	//Step 1: Host_B receives prime and remote_result, and sends local_result.
 	bool recv_prime_and_remote_result(network::buffer & recv_buff,
 		network::buffer & send_buff);
 
-	//Step 3: Host_0 receives remote_result.
+	//Step 2: Host_A receives remote_result.
 	void recv_remote_result(network::buffer & recv_buff);
 
 private:

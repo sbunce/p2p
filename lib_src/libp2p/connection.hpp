@@ -34,7 +34,6 @@ private:
 	enum exchange {
 		INITIAL,
 		SENT_PRIME_AND_LOCAL_RESULT,
-		RECEIVED_PRIME_AND_REMOTE_RESULT,
 		COMPLETE
 	} Exchange;
 };

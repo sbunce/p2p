@@ -13,13 +13,8 @@
 //create test files to hash if they don't already exist
 void create_test_file(const std::string & name, const unsigned & bytes)
 {
-	std::fstream f((path::share() + name).c_str(), std::ios::in);
-	if(f.is_open()){
-		return;
-	}
-
-	f.open((path::share() + name).c_str(), std::ios::out | std::ios::binary);
-	f.clear();
+	std::fstream f((path::share() + name).c_str(), std::ios::out
+		| std::ios::binary | std::ios::trunc);
 	for(int x=0; x<bytes; ++x){
 		if(x % 80 == 0 && x != 0){
 			f.put('\n');
