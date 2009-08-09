@@ -113,9 +113,8 @@ Both sides now have all information needed to calculate the secret key.
 <br>
 
 <p>
-The secret key is used to seed the KISS PRNG by George Marsaglia. This PRNG is
-not cryptographically secure but that is unimportant since the key exchange is
-done for the purpose of obfuscation, not security.
+The secret key is used to seed two KISS PRNGs by George Marsaglia. One PRNG is
+for sending and one is for receiving.
 </p>
 
 <pre>
@@ -139,6 +138,12 @@ unsigned long KISS(){
 }
 </pre>
 
+<p>
+After the PRNG is seeded all bytes sent and received are XOR'd against the
+output of the PRNGs. The send PRNG of Host_A remains synchronized to the recv
+PRNG of Host_B and vise versa.
+</p>
+
 <br>
 
 <h3>Requests</h2>
@@ -147,8 +152,7 @@ unsigned long KISS(){
 <pre>
 Name: REQUEST_SLOT
 Base10: 0
-Description: Request a slot for downloading a hash tree and file. The slot ID is
-1 byte so 256 slots per connection are supported.
+Description: Request a slot for downloading a hash tree and file.
 
 	+---+---+---+---+---+---+---+---+
 	| C |             R             |
@@ -159,6 +163,7 @@ Description: Request a slot for downloading a hash tree and file. The slot ID is
 
 Possible Responses:
 SLOT_ID
+SLOT_ID_WITH_BITFIELD
 ERROR (the server does not have the hash tree and file)
 </pre>
 </fieldset>
@@ -246,12 +251,13 @@ Description: ERROR has different meaning in different contexts.
 Name: SLOT_ID
 Base10: 6
 Description: Sent in response to REQUEST_SLOT. The slot ID is needed to request
-hash tree or file blocks. The host has all the blocks for the file.
+hash tree or file blocks. The host has all the blocks for the file. There are
+256 different possible slots.
 
-	+---+---+---+---+---+
-	| C | S |    FS     |
-	+---+---+---+---+---+
-	  0   1   3  ... 10
+	+---+---+
+	| C | S |
+	+---+---+
+	  0   1
 
 	C = command, S = slot ID
 </pre>
@@ -266,17 +272,17 @@ Base10: 6
 Description: Sent in response to a REQUEST_SLOT_FILE or a REQUEST_SLOT_HASH. The
 slot ID is needed to request hash tree or file blocks. The bitfield
 contains bits which symbolize blocks. Bits that are 0 indicate blocks that a
-host has.
+host has. There are 256 different possible slots.
 
-	+---+---+---+---+---+---+---+---+
-	| C | S |    FS     |     B     |
-	+---+---+---+---+---+---+---+---+
-	  0   1   3  ... 10  12  ...  n
+	+---+---+---+---+---+
+	| C | S |     B     |
+	+---+---+---+---+---+
+	  0   1   3  ...  n
 
 	C = command, S = slot ID, B = bitfield of blocks
 
 Bitfield Length:
-	(FS % 8 == 0) ? FS / 8 : FS / 8 + 1
+	(file_size % 8 == 0) ? file_size / 8 : file_size / 8 + 1
 </pre>
 </fieldset>
 
@@ -369,6 +375,37 @@ case: C > 1 && M > 1
 	//pipeline is too large, decrease by one
 	--M;
 </pre>
+
+<hr>
+
+<h2>Hash Tree</h2>
+
+<p>
+Merkle Hash Trees are used to distribute downloading of hash data needed to
+verify the integrity of file blocks. The hash "function" used to generate the
+tree is SHA1.
+</p>
+
+<p>
+The bottom row of the tree consists of hashes for every 10240 bytes of the file
+(however the last block may be shorter). Every row above the bottom row consists
+of hashes for blocks of 512 hashes in the row below it (the last hash may be
+for less than 512 child hashes).
+</p>
+
+<p>
+When the row generation process generates a row of one hash the file size
+(encoded in big endian) is prepended to that hash, then that is hashed to
+produce the hash the files will be tracked by.
+</p>
+
+<p>
+The hash tree is addressible by hash blocks. Hash block 0 is the root hash
+of the tree with the file size prepended. Hash block 1 is the group of hashes
+in the second row that the root hash is a hash for. The hash blocks are not
+relative record numbers so to know the size of each block when downloading tree
+building must be simulated to determine how many bytes are in each hash block.
+</p>
 
 <hr>
 
