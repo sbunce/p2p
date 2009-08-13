@@ -33,33 +33,44 @@ window_download::window_download(
 	download_view->append_column(" Peers ", column_servers);
 	download_view->append_column(" Speed ", column_speed);
 
-	//setup sorting on columns
-	Gtk::TreeViewColumn * C;
-	C = download_view->get_column(0); assert(C);
-	C->set_sort_column(1);
-	C = download_view->get_column(1); assert(C);
-	C->set_sort_column(2);
-	download_list->set_sort_func(2, sigc::mem_fun(*this, &window_download::compare_file_size));
-
 	//display percentage progress bar
 	cell = Gtk::manage(new Gtk::CellRendererProgress);
 	int cols_count = download_view->append_column(" Complete ", *cell);
 	Gtk::TreeViewColumn * pColumn = download_view->get_column(cols_count - 1);
 	pColumn->add_attribute(cell->property_value(), column_percent_complete);
 
+	//setup sorting on columns
+	Gtk::TreeViewColumn * C;
+	C = download_view->get_column(0); assert(C);
+	C->set_sort_column(1);
+	C = download_view->get_column(1); assert(C);
+	C->set_sort_column(2);
+	download_list->set_sort_func(2, sigc::mem_fun(*this, &window_download::compare_size));
+	C = download_view->get_column(2); assert(C);
+	C->set_sort_column(3);
+	C = download_view->get_column(3); assert(C);
+	C->set_sort_column(4);
+	download_list->set_sort_func(4, sigc::mem_fun(*this, &window_download::compare_size));
+	C = download_view->get_column(4); assert(C);
+	C->set_sort_column(5);
+
 	//menu that pops up when right click happens on download
 	downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::StockMenuElem(
-		Gtk::StockID(Gtk::Stock::MEDIA_PAUSE), sigc::mem_fun(*this, &window_download::pause_download)));
-	//downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::MenuElem(""));//spacer
+		Gtk::StockID(Gtk::Stock::MEDIA_PAUSE), sigc::mem_fun(*this,
+		&window_download::pause_download)));
 	downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::StockMenuElem(
-		Gtk::StockID(Gtk::Stock::DELETE), sigc::mem_fun(*this, &window_download::delete_download)));
+		Gtk::StockID(Gtk::Stock::DELETE), sigc::mem_fun(*this,
+		&window_download::delete_download)));
 
 	//signaled functions
-	Glib::signal_timeout().connect(sigc::mem_fun(*this, &window_download::download_info_refresh), settings::GUI_TICK);
-	download_view->signal_button_press_event().connect(sigc::mem_fun(*this, &window_download::download_click), false);
+	Glib::signal_timeout().connect(sigc::mem_fun(*this,
+		&window_download::download_info_refresh), settings::GUI_TICK);
+	download_view->signal_button_press_event().connect(sigc::mem_fun(*this,
+		&window_download::download_click), false);
 }
 
-int window_download::compare_file_size(const Gtk::TreeModel::iterator & lval, const Gtk::TreeModel::iterator & rval)
+int window_download::compare_size(const Gtk::TreeModel::iterator & lval,
+	const Gtk::TreeModel::iterator & rval)
 {
 	Gtk::TreeModel::Row row_lval = *lval;
 	Gtk::TreeModel::Row row_rval = *rval;

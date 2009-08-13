@@ -34,9 +34,40 @@ window_upload::window_upload(
 	Gtk::TreeViewColumn * pColumn = upload_view->get_column(cols_count - 1);
 	pColumn->add_attribute(cell->property_value(), column_percent_complete);
 
+	//setup sorting on columns
+	Gtk::TreeViewColumn * C;
+	C = upload_view->get_column(0); assert(C);
+	C->set_sort_column(1);
+	C = upload_view->get_column(1); assert(C);
+	C->set_sort_column(2);
+	upload_list->set_sort_func(2, sigc::mem_fun(*this, &window_upload::compare_size));
+	C = upload_view->get_column(2); assert(C);
+	C->set_sort_column(3);
+	C = upload_view->get_column(3); assert(C);
+	C->set_sort_column(4);
+	upload_list->set_sort_func(4, sigc::mem_fun(*this, &window_upload::compare_size));
+	C = upload_view->get_column(4); assert(C);
+	C->set_sort_column(5);
+
 	//timed functions
 	Glib::signal_timeout().connect(sigc::mem_fun(*this,
 		&window_upload::upload_info_refresh), settings::GUI_TICK);
+}
+
+int window_upload::compare_size(const Gtk::TreeModel::iterator & lval,
+	const Gtk::TreeModel::iterator & rval)
+{
+	Gtk::TreeModel::Row row_lval = *lval;
+	Gtk::TreeModel::Row row_rval = *rval;
+
+	std::stringstream ss;
+	ss << row_lval[column_size];
+	std::string left = ss.str();
+	ss.str(""); ss.clear();
+	ss << row_rval[column_size];
+	std::string right = ss.str();
+
+	return convert::size_SI_cmp(left, right);
 }
 
 bool window_upload::upload_info_refresh()

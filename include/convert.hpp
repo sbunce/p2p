@@ -120,6 +120,10 @@ equal to (0), or greater than (1). Just like strcmp.
 
 This function doesn't do any converting but it's related to size_SI so it
 goes in the convert namespace.
+
+Note: This function only looks for the beginning of the size unit so it is ok to
+pass it strings obtained from size_SI that have had additional characters
+appended to them. For example it is ok to compare 5kB/s to 10kB/s.
 */
 static int size_SI_cmp(const std::string & left, const std::string & right)
 {

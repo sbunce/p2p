@@ -35,9 +35,13 @@ private:
 	Gtk::CellRendererProgress * cell;
 
 	/*
+	compare_size:
+		Signaled when user clicks size or speed column to sort.
 	upload_info_refresh:
 		Refreshes upload_view.
 	*/
+	int compare_size(const Gtk::TreeModel::iterator & lval,
+		const Gtk::TreeModel::iterator & rval);
 	bool upload_info_refresh();
 };
 #endif

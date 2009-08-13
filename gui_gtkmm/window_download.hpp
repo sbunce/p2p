@@ -52,19 +52,13 @@ private:
 	//hashes of all opened tabs
 	std::set<std::string> open_info_tabs;
 
-	/* Signaled Functions
-	compare_file_size:
-		Signaled when user clicks size column to sort.
-	download_click:
-		Called when download_view clicked.
-	*/
-	int compare_file_size(const Gtk::TreeModel::iterator & lval,
-		const Gtk::TreeModel::iterator & rval);
-	bool download_click(GdkEventButton * event);
-
 	/*
+	compare_size:
+		Signaled when user clicks size or speed column to sort.
 	delete_download:
 		Removes selected download.
+	download_click:
+		Called when download_view clicked.
 	download_info_tab:
 		Sets up a download_window_download_status tab for the selected download.
 	download_info_refresh:
@@ -72,7 +66,10 @@ private:
 	pause_download:
 		Pauses the selected download.
 	*/
+	int compare_size(const Gtk::TreeModel::iterator & lval,
+		const Gtk::TreeModel::iterator & rval);
 	void delete_download();
+	bool download_click(GdkEventButton * event);
 	void download_info_tab();
 	bool download_info_refresh();
 	void pause_download();
