@@ -14,12 +14,7 @@ int main()
 
 	//hex_to_bin -> bin_to_hex
 	std::string hex = "0123456789ABCDEF";
-	std::string bin;
-	if(!convert::hex_to_bin(hex, bin)){
-		LOGGER; exit(1);
-	}
-	std::string hex_conv = convert::bin_to_hex(bin);
-	if(hex != hex_conv){
+	if(convert::bin_to_hex(convert::hex_to_bin(hex)) != hex){
 		LOGGER; exit(1);
 	}
 

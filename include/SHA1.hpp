@@ -27,11 +27,11 @@ public:
 	*/
 	void init()
 	{
-		h[0].num = 0x67452301;
-		h[1].num = 0xEFCDAB89;
-		h[2].num = 0x98BADCFE;
-		h[3].num = 0x10325476;
-		h[4].num = 0xC3D2E1F0;
+		h[0].n = 0x67452301;
+		h[1].n = 0xEFCDAB89;
+		h[2].n = 0x98BADCFE;
+		h[3].n = 0x10325476;
+		h[4].n = 0xC3D2E1F0;
 		loaded_bytes = 0;
 		load_buffer.clear();
 	}
@@ -65,12 +65,12 @@ public:
 		//erase processed chunks
 		load_buffer.erase(0,ready_chunks*64);
 
-		//create the final hash by concatenating the h's (also change endianness)
+		//create the final hash by concatenating the h's
 		for(int x=0; x<5; ++x){
-			raw[x*4+3] = h[x].byte[0];
-			raw[x*4+2] = h[x].byte[1];
-			raw[x*4+1] = h[x].byte[2];
-			raw[x*4+0] = h[x].byte[3];
+			raw[x*4+3] = h[x].b[0];
+			raw[x*4+2] = h[x].b[1];
+			raw[x*4+1] = h[x].b[2];
+			raw[x*4+0] = h[x].b[3];
 		}
 	}
 
@@ -83,7 +83,7 @@ public:
 	*/
 	std::string hex_hash()
 	{
-		static const char hex[] = "0123456789ABCDEF";
+		static const char * const hex = "0123456789ABCDEF";
 		std::string hash;
 		for(int x=0; x<20; ++x){
 			hash += hex[static_cast<int>((raw[x] >> 4) & 15)];
@@ -98,7 +98,7 @@ public:
 	}
 
 private:
-	//holds last generated raw hash
+	//holds lastest generated raw hash
 	char raw[20];
 
 	//used by load()
@@ -106,17 +106,17 @@ private:
 	std::string load_buffer;      //holds data input
 
 	//makes conversion from int to bytes easier
-	union sha_uint32_t{
-		boost::uint32_t num;
-		char byte[sizeof(boost::uint32_t)];
+	union uint32_byte{
+		boost::uint32_t n;
+		char b[sizeof(boost::uint32_t)];
 	};
-	union sha_uint64_t{
-		boost::uint64_t num;
-		unsigned char byte[sizeof(boost::uint64_t)];
+	union uint64_byte{
+		boost::uint64_t n;
+		unsigned char b[sizeof(boost::uint64_t)];
 	};
 
-	sha_uint32_t w[80]; //holds expansion of a chunk
-	sha_uint32_t h[5];  //collected hash values
+	uint32_byte w[80]; //holds expansion of a chunk
+	uint32_byte h[5];  //collected hash values
 
 	inline void append_tail()
 	{
@@ -129,39 +129,41 @@ private:
 			load_buffer.append(64 + (load_buffer.size() % 64), static_cast<char>(0));
 		}
 
-		//append size of original message (in bits) encoded as a 64bit big-endian
-		sha_uint64_t IC = { loaded_bytes * 8 };
+		//append size of original message (in bits) encoded as 64bit big-endian
+		uint64_byte IC;
+		IC.n = loaded_bytes * 8;
+		load_buffer.resize(load_buffer.size() + 8);
 		#ifdef BOOST_LITTLE_ENDIAN
-		for(int x=7; x>=0; --x){
-			load_buffer += IC.byte[x];
-		}
-		#else
-		for(int x=0; x<8; ++x){
-			load_buffer += IC.byte[x];
-		}
+		std::reverse_copy(IC.b, IC.b + sizeof(IC), load_buffer.end() - 8);
+		#elif
+		std::copy(IC.b, IC.b + sizeof(IC), load_buffer.end() - 8);
 		#endif
 	}
 	void process(const int & chunk_start)
 	{
 		//break 512bit chunk in to 16, 32 bit pieces
 		for(int x=0; x<16; ++x){
-			load_buffer.copy(w[x].byte, 4, chunk_start + x*4);
+			int offset = chunk_start + x * 4;
 			#ifdef BOOST_LITTLE_ENDIAN
-			std::reverse(w[x].byte, w[x].byte+4);
+			std::reverse_copy(load_buffer.begin() + offset,
+				load_buffer.begin() + offset + 4, w[x].b);
+			#elif
+			std::copy(load_buffer.begin() + offset,
+				load_buffer.begin() + offset + 4, w[x].b);
 			#endif
 		}
 
 		//extend the 16 pieces to 80
 		for(int x=16; x<80; ++x){
-			w[x].num = rotate_left((w[x-3].num ^ w[x-8].num ^ w[x-14].num ^ w[x-16].num), 1);
+			w[x].n = rotate_left((w[x-3].n ^ w[x-8].n ^ w[x-14].n ^ w[x-16].n), 1);
 		}
 
 		boost::uint32_t a, b, c, d, e;
-		a = h[0].num;
-		b = h[1].num;
-		c = h[2].num;
-		d = h[3].num;
-		e = h[4].num;
+		a = h[0].n;
+		b = h[1].n;
+		c = h[2].n;
+		d = h[3].n;
+		e = h[4].n;
 
 		for(int x=0; x<80; ++x){
 			boost::uint32_t f, k;
@@ -179,7 +181,7 @@ private:
 				k = 0xCA62C1D6;
 			}
 
-			boost::uint32_t temp = rotate_left(a, 5) + f + e + k + w[x].num;
+			boost::uint32_t temp = rotate_left(a, 5) + f + e + k + w[x].n;
 			e = d;
 			d = c;
 			c = rotate_left(b, 30);
@@ -187,11 +189,11 @@ private:
 			a = temp;
 		}
 
-		h[0].num += a;
-		h[1].num += b;
-		h[2].num += c;
-		h[3].num += d;
-		h[4].num += e;
+		h[0].n += a;
+		h[1].n += b;
+		h[2].n += c;
+		h[3].n += d;
+		h[4].n += e;
 	}
 
 	//bit rotation

@@ -3,11 +3,13 @@
 
 //include
 #include <boost/cstdint.hpp>
+#include <boost/detail/endian.hpp>
 #include <logger.hpp>
 
 //standard
 #include <algorithm>
 #include <cassert>
+#include <cctype>
 #include <cstring>
 #include <iomanip>
 #include <sstream>
@@ -15,81 +17,72 @@
 
 namespace convert {
 
-//encode, number -> bytes (encoded in big-endian)
+//returns num encoded in big-endian
 template<class T>
-static std::string encode(const T & number)
+static std::string encode(const T & num)
 {
 	union{
-		T num;
-		unsigned char byte[sizeof(T)];
+		T n;
+		char b[sizeof(T)];
 	} NB;
-	NB.num = number;
-	std::string encoded;
+	NB.n = num;
 	#ifdef BOOST_LITTLE_ENDIAN
-	for(int x=sizeof(T)-1; x>=0; --x){
-		encoded += NB.byte[x];
-	}
-	#else
-	for(int x=0; x<sizeof(T); ++x){
-		encoded += NB.byte[x];
-	}
+	std::reverse(NB.b, NB.b+sizeof(T));
 	#endif
-	return encoded;
+	return std::string(NB.b, sizeof(T));
 }
 
-//decode, bytes -> number
+//decode number encoded in big-endian
 template<class T>
 static T decode(const std::string & encoded)
 {
 	assert(encoded.size() == sizeof(T));
 	union{
-		T num;
-		unsigned char byte[sizeof(T)];
+		T n;
+		char b[sizeof(T)];
 	} NB;
 	#ifdef BOOST_LITTLE_ENDIAN
-	for(int x=0; x<sizeof(T); ++x){
-		NB.byte[x] = static_cast<unsigned char>(encoded[sizeof(T)-1-x]);
-	}
-	#else
-	for(int x=0; x<sizeof(T); ++x){
-		NB.byte[x] = static_cast<unsigned char>(encoded[x]);
-	}
+	std::reverse_copy(encoded.data(), encoded.data()+sizeof(T), NB.b);
+	#elif
+	std::copy(encoded.data(), encoded.data()+sizeof(T), NB.b);
 	#endif
-	return NB.num;
+	return NB.n;
 }
 
-static bool hex_to_bin(const std::string & hex, std::string & bin)
+/*
+Returns binary version of hex string encoded in big-endian. Returns empty string
+if invalid hex string.
+Examples of Invalid:
+	""       //empty
+	"123ABG" //'G' not in hex
+	"123"    //string_size % 2 != 0
+*/
+static std::string hex_to_bin(std::string hex)
 {
-	//verify size requirements
-	if(hex.empty() || hex.size() < 2 || hex.size() % 2 == 1){
-		return false;
+	std::string bin;
+	if(hex.empty() || hex.size() % 2 != 0){
+		return bin;
 	}
-
-	int index = 0;
-	while(index != hex.size()){
-		if((hex[index] < 48 || hex[index] > 57) && (hex[index] < 65
-			|| hex[index] > 70))
+	for(int x=0; x<hex.size(); x+=2){
+		hex[x] = std::toupper(hex[x]);
+		hex[x+1] = std::toupper(hex[x+1]);
+		if(!(hex[x] >= '0' && hex[x] <= '9' || hex[x] >= 'A' && hex[x] <= 'F')
+			|| !(hex[x+1] >= '0' && hex[x+1] <= '9' || hex[x+1] >= 'A' && hex[x+1] <= 'F'))
 		{
-			return false;
+			bin.clear();
+			return bin;
 		}
-		char ch = ((hex[index] >= 'A') ?
-			(hex[index] - 'A' + 10) : (hex[index] - '0')) << 4;
-		++index;
-		if((hex[index] < 48 || hex[index] > 57) && (hex[index] < 65
-			|| hex[index] > 70))
-		{
-			return false;
-		}
-		bin += ch + ((hex[index] >= 'A') ?
-			(hex[index] - 'A' + 10) : (hex[index] - '0'));
-		++index;
+		char ch;
+		ch = (hex[x] >= 'A' ? hex[x] - 'A' + 10 : hex[x] - '0') << 4;
+		bin += ch + (hex[x+1] >= 'A' ? hex[x+1] - 'A' + 10 : hex[x+1] - '0');
 	}
-	return true;
+	return bin;
 }
 
+//converts a binary string to hex
 static std::string bin_to_hex(const std::string & bin)
 {
-	const char HEX[] = "0123456789ABCDEF";
+	const char * const HEX = "0123456789ABCDEF";
 	std::string hex;
 	int size = bin.size();
 	for(int x=0; x<size; ++x){

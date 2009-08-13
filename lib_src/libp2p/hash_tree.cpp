@@ -153,8 +153,8 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 	//check child hash
 	if(block_num == 0){
 		//first row has to be checked against root hash
-		std::string hash_bin;
-		if(!convert::hex_to_bin(root_hash, hash_bin)){
+		std::string hash_bin = convert::hex_to_bin(root_hash);
+		if(hash_bin.empty()){
 			LOGGER << "invalid hex";
 			exit(1);
 		}

@@ -181,20 +181,12 @@ public:
 		return *this;
 	}
 
-	//append NULL terminated string, useful for plain text protocols
-	buffer & append(const char * buff_append)
-	{
-		size_t size = std::strlen(buff_append);
-		allocate(bytes, bytes + size);
-		std::memcpy(buff + bytes - size, buff_append, size);
-		return *this;
-	}
-
 	//append std::string
 	buffer & append(const std::string & buff_append)
 	{
 		append(reinterpret_cast<const unsigned char *>(buff_append.data()),
 			buff_append.size());
+		return *this;
 	}
 
 	//returns iterator to first unsigned char of buffer
@@ -255,32 +247,29 @@ public:
 		allocate(bytes, size);
 	}
 
-	/*
-	Tail functions used for appending to the buffer.
-
-	tail_start:
-		Returns pointer to start of reserved space past used bytes.
-	tail_reserve:
-		Reserves free space at end of buffer. The tail_resize() function should be
-		used to gain access to this space after it's reserved.
-	tail_resize:
-		Uses the specified number of bytes in the tail.
-	tail_size:
-		Returns size of unused space at end of buffer.
-	*/
+	//returns pointer to start of reserved space at end of buffer
 	unsigned char * tail_start()
 	{
 		assert(reserved > bytes);
 		return buff + bytes;
 	}
+
+	/*
+	Reserves free space at end of buffer. The tail_resize() function should be
+	used to gain access to this space after it's reserved.
+	*/
 	void tail_reserve(const size_t size)
 	{
 		allocate(reserved, bytes + size);
 	}
+
+	//uses the specified number of bytes in the tail
 	void tail_resize(const size_t size)
 	{
 		allocate(bytes, bytes + size);
 	}
+
+	//returns size of reserved space at end of buffer
 	size_t tail_size()
 	{
 		assert(reserved > bytes);
