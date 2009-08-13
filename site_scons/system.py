@@ -16,8 +16,8 @@ def setup(env):
 	#buffer output so parallel building output doesn't get garbled
 	spawn.setup(env)
 
-	#start minimum of 2 threads, more if > 2 CPUs
-	num_cpu = int(os.environ.get('NUM_CPU', 2))
+	#start one builder thread per CPU
+	num_cpu = int(os.environ.get('NUM_CPU', 1))
 	env.SetOption('num_jobs', num_cpu)
 
 	#custom, but independent libraries

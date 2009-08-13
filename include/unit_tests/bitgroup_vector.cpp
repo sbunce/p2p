@@ -3,9 +3,7 @@
 #include <timer.hpp>
 
 //standard
-#include <algorithm>
 #include <cmath>
-#include <limits>
 
 void assignment()
 {

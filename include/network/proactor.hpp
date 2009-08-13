@@ -14,9 +14,6 @@ appropriate call back. The proactor uses as many threads as there are CPUs.
 #include <boost/utility.hpp>
 #include <logger.hpp>
 
-//standard
-#include <limits>
-
 namespace network{
 class proactor
 {

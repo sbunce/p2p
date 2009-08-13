@@ -115,7 +115,7 @@ int main()
 	Async_Resolve.start();
 	Proactor.start();
 
-	for(int x=0; x<Reactor.max_connections_supported() / 2; ++x){
+	for(int x=0; x<32; ++x){
 		Async_Resolve.connect("127.0.0.1", "65001");
 	}
 

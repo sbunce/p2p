@@ -56,12 +56,46 @@ void p2p_real::connect_call_back(network::sock & S)
 
 void p2p_real::current_downloads(std::vector<download_status> & CD)
 {
+	CD.clear();
 
+	download_status DS;
+	DS.hash = "ABC";
+	DS.name = "poik.flv";
+	DS.size = 32768;
+	DS.percent_complete = 50;
+	DS.total_speed = 32768;
+	DS.servers.push_back(std::make_pair("127.0.0.1", 16384));
+	DS.servers.push_back(std::make_pair("127.0.0.2", 16384));
+	CD.push_back(DS);
+
+	DS.hash = "DEF";
+	DS.name = "zort.flv";
+	DS.size = 65535;
+	DS.percent_complete = 75;
+	DS.total_speed = 65535;
+	CD.push_back(DS);
 }
 
 void p2p_real::current_uploads(std::vector<upload_status> & CU)
 {
+	CU.clear();
 
+	upload_status US;
+	US.hash = "ABC";
+	US.IP = "127.0.0.1";
+	US.size = 32768;
+	US.path = "poik.avi";
+	US.percent_complete = 50;
+	US.speed = 32768;
+	CU.push_back(US);
+
+	US.hash = "DEF";
+	US.IP = "127.0.0.1";
+	US.size = 65535;
+	US.path = "zort.avi";
+	US.percent_complete = 75;
+	US.speed = 65535;
+	CU.push_back(US);
 }
 
 void p2p_real::disconnect_call_back(network::sock & S)

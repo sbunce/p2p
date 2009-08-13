@@ -1,19 +1,3 @@
-/*
-Note: It is impossible to define an iterator for this class. Because you can't
-return a reference to a few bits you have to return a proxy objects which acts
-like an int. It is impossible to make bitgroup_vector::iterator::operator *
-return a reference to a bitgroup_vector::proxy object which can work with
-std::swap. The std::swap function takes references so you have to return a
-reference to a bitgroup_vector::proxy, not a temporary. There is no "reasonable"
-way to keep track of the bitgroup_vector::proxy objects that would have to
-reside within the bitgroup_vector::iterator. You could do it "unreasonably"
-which would be to never free allocated bitgroup_vector::proxy objects.
-
-I speculate the std::bitset doesn't define an iterator because of this.
-
-Because a iterator can't be fully implemented (operator * and operator [] can't
-be) there is no iterator implemented at all.
-*/
 #ifndef H_BITGROUP_VECTOR
 #define H_BITGROUP_VECTOR
 

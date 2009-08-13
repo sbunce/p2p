@@ -9,8 +9,8 @@ extra copying.
 This container offers many convenience functions for encoding data to be sent
 over the network.
 */
-#ifndef H_BUFFER
-#define H_BUFFER
+#ifndef H_NETWORK_BUFFER
+#define H_NETWORK_BUFFER
 
 //include
 #include <logger.hpp>

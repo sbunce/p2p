@@ -51,7 +51,7 @@ public:
 		wrapper::set_non_blocking(selfpipe_write);
 		add_socket(selfpipe_read);
 
-		//set default maximum connections to maximum
+		//set default maximum connections
 		max_connections(max_connections_supported() / 2, max_connections_supported() / 2);
 	}
 

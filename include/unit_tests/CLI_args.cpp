@@ -2,8 +2,6 @@
 #include <CLI_args.hpp>
 #include <logger.hpp>
 
-//standard
-
 int main()
 {
 	char * argv[3];
