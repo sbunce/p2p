@@ -22,6 +22,6 @@ public:
 	The network state is entered with this function. The returned state is what
 	state to transition to. This can be the current state or a new state.
 	*/
-	virtual boost::shared_ptr<net_state> enter(network::sock & S) = 0;
+	virtual boost::shared_ptr<net_state> enter(network::buffer & recv_buff) = 0;
 };
 #endif

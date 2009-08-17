@@ -19,9 +19,6 @@ p2p_real::p2p_real():
 	max_download_rate_proxy = database::table::preferences::get_max_download_rate();
 	max_upload_rate_proxy = database::table::preferences::get_max_upload_rate();
 
-	//start prime generation threads
-	Prime_Generator.start();
-
 	//start share scan threads
 	Share.start();
 
@@ -37,7 +34,6 @@ p2p_real::~p2p_real()
 {
 	//stop threads
 	thread_pool::singleton().stop();
-	Prime_Generator.stop();
 	Share.stop();
 	Reactor.stop();
 	Async_Resolve.stop();
@@ -48,7 +44,7 @@ void p2p_real::connect_call_back(network::sock & S)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	std::pair<std::map<int, boost::shared_ptr<connection> >::iterator, bool>
-		ret = Connection.insert(std::make_pair(S.socket_FD, new connection(S, Prime_Generator)));
+		ret = Connection.insert(std::make_pair(S.socket_FD, new connection(S)));
 	assert(ret.second);
 	S.recv_call_back = boost::bind(&connection::recv_call_back, ret.first->second.get(), _1);
 	S.send_call_back = boost::bind(&connection::send_call_back, ret.first->second.get(), _1);
@@ -170,7 +166,7 @@ void p2p_real::pause_download(const std::string & hash)
 
 unsigned p2p_real::prime_count()
 {
-	return Prime_Generator.prime_count();
+	return prime_generator::singleton().prime_count();
 }
 
 boost::uint64_t p2p_real::share_size_bytes()

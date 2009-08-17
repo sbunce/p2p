@@ -1,11 +1,6 @@
 #include "connection.hpp"
 
-connection::connection(
-	network::sock & S,
-	prime_generator & Prime_Generator_in
-):
-	Prime_Generator(Prime_Generator_in),
-	Encryption(Prime_Generator),
+connection::connection(network::sock & S):
 	Exchange(INITIAL)
 {
 	if(S.direction == network::OUTGOING){

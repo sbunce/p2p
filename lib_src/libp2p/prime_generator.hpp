@@ -26,19 +26,11 @@
 	#include <wincrypt.h>
 #endif
 
-class prime_generator : private boost::noncopyable
+class prime_generator : public singleton_base<prime_generator>
 {
+	friend class singleton_base<prime_generator>;
 public:
-	/*
-	start:
-		Starts prime generation threads.
-		Note: This is only to be used from singleton_start.
-	stop:
-		Stops prime generation threads.
-		Note: This is only to be used from singleton_stop.
-	*/
-	void start();
-	void stop();
+	~prime_generator();
 
 	/*
 	prime_count:
@@ -50,6 +42,8 @@ public:
 	mpint random_prime();
 
 private:
+	prime_generator();
+
 	boost::thread_group Workers;
 
 	/*

@@ -61,7 +61,6 @@ private:
 	atomic_int<unsigned> max_download_rate_proxy;
 	atomic_int<unsigned> max_upload_rate_proxy;
 
-	prime_generator Prime_Generator;
 	share Share;
 
 	//network objects

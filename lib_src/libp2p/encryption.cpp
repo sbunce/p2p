@@ -1,7 +1,6 @@
 #include "encryption.hpp"
 
-encryption::encryption(prime_generator & Prime_Generator_in):
-	Prime_Generator(Prime_Generator_in),
+encryption::encryption():
 	g("2"),
 	s(mpint::random(protocol::DH_KEY_SIZE, &portable_urandom))
 {
@@ -102,7 +101,7 @@ void encryption::recv_remote_result(network::buffer & recv_buff)
 
 void encryption::send_prime_and_local_result(network::buffer & send_buff)
 {
-	p = Prime_Generator.random_prime();
+	p = prime_generator::singleton().random_prime();
 	if(p.to_bin_size() == protocol::DH_KEY_SIZE){
 		send_buff.append(p.to_bin(), p.to_bin_size());
 	}else{

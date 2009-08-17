@@ -26,7 +26,7 @@ public:
 	//size of the key exchanged (bytes)
 	static const int DHM_KEY_SIZE = 16;
 
-	encryption(prime_generator & Prime_Generator_in);
+	encryption();
 
 	/*
 	Used to encrypt/decrypt buffers.
@@ -69,8 +69,6 @@ public:
 	void recv_remote_result(network::buffer & recv_buff);
 
 private:
-	prime_generator & Prime_Generator;
-
 	//Diffie-Hellman-Merkle key exchange components. (g**s % p)
 	mpint g; //agreed upon base (the generator)
 	mpint p; //agreed upon prime

@@ -3,7 +3,6 @@
 
 //custom
 #include "encryption.hpp"
-#include "prime_generator.hpp"
 #include "share.hpp"
 
 //include
@@ -12,10 +11,7 @@
 class connection
 {
 public:
-	connection(
-		network::sock & S,
-		prime_generator & Prime_Generator_in
-	);
+	connection(network::sock & S);
 
 	/*
 	recv_call_back:
@@ -27,7 +23,6 @@ public:
 	void send_call_back(network::sock & S);
 
 private:
-	prime_generator & Prime_Generator;
 	encryption Encryption;
 
 	//key exchange steps

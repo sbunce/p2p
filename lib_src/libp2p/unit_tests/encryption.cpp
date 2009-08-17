@@ -12,15 +12,13 @@ void send(network::buffer & source, network::buffer & destination)
 int main()
 {
 	path::unit_test_override("encryption.db");
-	prime_generator Prime_Generator;
-	Prime_Generator.start();
 
 	//Host_A will connect to Host_B.
-	encryption Host_A_Encryption(Prime_Generator);
+	encryption Host_A_Encryption;
 	network::buffer Host_A_send_buff;
 	network::buffer Host_A_recv_buff;
 
-	encryption Host_B_Encryption(Prime_Generator);
+	encryption Host_B_Encryption;
 	network::buffer Host_B_send_buff;
 	network::buffer Host_B_recv_buff;
 
@@ -64,6 +62,4 @@ int main()
 	if(Host_A_recv_buff != message){
 		LOGGER; exit(1);
 	}
-
-	Prime_Generator.stop();
 }
