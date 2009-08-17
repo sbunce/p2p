@@ -3,6 +3,7 @@
 
 //include
 #include <KISS.hpp>
+#include <logger.hpp>
 #include <random.hpp>
 #include <tommath/tommath.h>
 
@@ -127,14 +128,17 @@ public:
 	static mpint random_prime(const int bytes)
 	{
 		mpint temp;
-		mp_prime_random_ex(
+		if(mp_prime_random_ex(
 			&temp.data,
 			mp_prime_rabin_miller_trials(bytes * 8),
 			bytes * 8,         //size (bits) of prime to generate
 			0,                 //optional flags
 			&portable_urandom, //random byte source
 			NULL               //optional void * passed to PRNG
-		);
+		) != MP_OKAY)
+		{
+			LOGGER; exit(1);
+		}
 		return temp;
 	}
 
@@ -145,14 +149,17 @@ public:
 	static mpint random_prime_fast(const int bytes, KISS & PRNG)
 	{
 		mpint temp;
-		mp_prime_random_ex(
+		if(mp_prime_random_ex(
 			&temp.data,
 			mp_prime_rabin_miller_trials(bytes * 8),
 			bytes * 8,     //size (bits) of prime to generate
 			0,             //optional flags
 			&KISS_wrapper, //random byte source
 			&PRNG          //optional void * passed to PRNG
-		);
+		) != MP_OKAY)
+		{
+			LOGGER; exit(1);
+		}
 		return temp;
 	}
 

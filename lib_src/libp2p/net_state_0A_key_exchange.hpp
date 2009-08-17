@@ -1,0 +1,3 @@
+/*
+This is the starting state for for the host that creates an outgoing connection.
+*/

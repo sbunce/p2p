@@ -1,0 +1,4 @@
+/*
+This is the starting state for for the host that receives an incoming
+connection.
+*/

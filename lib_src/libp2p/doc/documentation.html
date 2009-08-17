@@ -1,57 +1,32 @@
 <html>
 <head>
-<title>P2P Documentation</title>
-
-
+	<title>P2P Documentation</title>
+	<style type="text/css">
+		td{
+			font: 100% monospace;
+		}
+	</style>
 </head>
 <body>
 
 <table>
 <tr><td width="640">
 
-<h2>About</h2>
+<b>1.0 Abstract</b>
+<blockquote>
+The libp2p library provides the means to connect to a global DHT (distributed
+hash table) on which to lookup and download files from multiple hosts
+concurrently.
+</blockquote>
 
-<h3>Summary</h3>
-<p>
-LibP2P does multi-source segmented downloading meaning that one file is
-downloaded from multiple hosts concurrently to increase speed.
-</p>
-
-<h3>Goals</h3>
-
-<p>
-<b>Bandwidth Efficiency:</b> Ratio of control and error detection data to file
-data is kept as low as possible.
-</p>
-
-<p>
-<b>Perfect Copies:</b> The integrity of files is checked with hash functions to
-insure downloaded files are perfect copies of the original.
-</p>
-
-<p>
-<b>Unpoisonable:</b> The presence of malicious peers has minimal impact on file
-downloads.
-</p>
-
-<p>
-<b>Obfuscation:</b> The protocol is obfuscated to make detecting the protocol
-difficult. This does not take precedence over any other goal.
-</p>
-
-<p>
-<b>Low Requirements:</b> CPU and memory usage is as low as is reasonable.
-</p>
-
-<hr>
-
-<h2>Protocol</h2>
-<p>
+<b>2.0 Protocol</b>
+<blockquote>
 The protocol is symmetric with the exception of the key exchange. Any message
-can go in either direction. All numbers are big-endian.
-</p>
+can go in either direction. All numbers are encoded in big-endian.
+</blockquote>
 
-<h3>Key Exchange</h2>
+<b>2.1 Key Exchange</b>
+<blockquote>
 <pre>
 Each session starts with a Diffie-Hellman-Merkle key exchange.
 
@@ -81,10 +56,10 @@ The section header indicates who sees what.
 <pre>
 Step 0: Host_A sends p and r_A to Host_B.
 
-	+---+---+---+---+---+---+---+---+
-	|       P       |      r_A      |
-	+---+---+---+---+---+---+---+---+
-	  0    ...   15   16   ...   31
++---+---+---+---+---+---+---+---+
+|       P       |      r_A      |
++---+---+---+---+---+---+---+---+
+  0    ...   15  16    ...   31
 </pre>
 </fieldset>
 
@@ -94,10 +69,10 @@ Step 0: Host_A sends p and r_A to Host_B.
 <pre>
 Step 1: Host_B receives what was sent in Step 0. Host_B sends r_B to Host_A.
 
-	+---+---+---+---+
-	|      r_B      |
-	+---+---+---+---+
-	  0    ...   15
++---+---+---+---+
+|      r_B      |
++---+---+---+---+
+  0    ...   15
 </pre>
 </fieldset>
 
@@ -113,21 +88,25 @@ Both sides now have all information needed to calculate the secret key.
 <br>
 
 <p>
-The secret key is used to seed two KISS PRNGs by George Marsaglia. One PRNG is
-for sending and one is for receiving.
+The secret key is used to seed two KISS (created by George Marsaglia) PRNGs. One
+PRNG is for sending and one is for receiving. Note that the KISS PRNG is not
+cryptographically secure but this is okay because the goal is obfuscation and
+not security. Key exchanges without a PKI (public key infrastructure) is
+inherently insecure.
 </p>
 
 <pre>
-/*
-To seed the PRNG x, y, z, c must be set. We set these to the secret key.
-x = k[0]  .. k[3]
-y = k[4]  .. k[7]
-z = k[8]  .. k[11]
-c = k[12] .. k[15]
-*/
+|------------------------------ k ------------------------------|
++---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+|       x       |       y       |       z       |       c       |
++---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+  0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15
+
+//KISS
 uint32_t x, y, z, c;
-uint54_t t, a = 698769069LL;
-unsigned long KISS(){
+uint32 extract()
+{
+	uint64 t, a = 698769069;
 	x = 69069 * x + 12345;
 	y ^= (y << 13);
 	y ^= (y >> 17);
@@ -143,10 +122,10 @@ After the PRNG is seeded all bytes sent and received are XOR'd against the
 output of the PRNGs. The send PRNG of Host_A remains synchronized to the recv
 PRNG of Host_B and vise versa.
 </p>
+</blockquote>
 
-<br>
-
-<h3>Requests</h2>
+<b>2.2 Requests</b>
+<blockquote>
 
 <fieldset>
 <pre>
@@ -154,12 +133,12 @@ Name: REQUEST_SLOT
 Base10: 0
 Description: Request a slot for downloading a hash tree and file.
 
-	+---+---+---+---+---+---+---+---+
-	| C |             R             |
-	+---+---+---+---+---+---+---+---+
-	  0   1   2   3   ........    20
++---+---+---+---+---+---+---+---+
+| C |             R             |
++---+---+---+---+---+---+---+---+
+  0   1   2   3      ...     20
 
-	C = command, R = root hash (binary)
+C = command, R = root hash (binary)
 
 Possible Responses:
 SLOT_ID
@@ -176,12 +155,12 @@ Name: REQUEST_BLOCK_HASH_TREE
 Base10: 2
 Description: Request a block from a hash tree.
 
-	+---+---+---+---+---+---+
-	| C | S |       B       |
-	+---+---+---+---+---+---+
-	  0   1   2   3   4   5
++---+---+---+---+---+---+
+| C | S |       B       |
++---+---+---+---+---+---+
+  0   1   2   3   4   5
 
-	C = command, S = slot ID, B = block number
+C = command, S = slot ID, B = block number
 
 Possible Responses:
 BLOCK
@@ -197,12 +176,12 @@ Name: REQUEST_BLOCK_FILE
 Base10: 3
 Description: Request a block from a file.
 
-	+---+---+---+---+---+---+
-	| C | S |       B       |
-	+---+---+---+---+---+---+
-	  0   1   2   3   4   5
++---+---+---+---+---+---+
+| C | S |       B       |
++---+---+---+---+---+---+
+  0   1   2   3   4   5
 
-	C = command, S = slot ID, B = block number
+C = command, S = slot ID, B = block number
 
 Possible Responses:
 BLOCK
@@ -218,16 +197,18 @@ Name: CLOSE_SLOT
 Base10: 4
 Description: This is done after a hash tree or file is finished downloading.
 
-	+---+---+
-	| C | S |
-	+---+---+
-	  0   1
++---+---+
+| C | S |
++---+---+
+  0   1
 
-	C = command, B = block number
+C = command, B = block number
 </pre>
 </fieldset>
+</blockquote>
 
-<h3>Responses</h2>
+<b>2.3 Responses</b>
+<blockquote>
 
 <fieldset>
 <pre>
@@ -235,12 +216,12 @@ Name: ERROR
 Base10: 5
 Description: ERROR has different meaning in different contexts.
 
-	+---+
-	| C |
-	+---+
-	  0
++---+
+| C |
++---+
+  0
 
-	C = command
+C = command
 </pre>
 </fieldset>
 
@@ -254,12 +235,12 @@ Description: Sent in response to REQUEST_SLOT. The slot ID is needed to request
 hash tree or file blocks. The host has all the blocks for the file. There are
 256 different possible slots.
 
-	+---+---+
-	| C | S |
-	+---+---+
-	  0   1
++---+---+
+| C | S |
++---+---+
+  0   1
 
-	C = command, S = slot ID
+C = command, S = slot ID
 </pre>
 </fieldset>
 
@@ -274,12 +255,12 @@ slot ID is needed to request hash tree or file blocks. The bitfield
 contains bits which symbolize blocks. Bits that are 0 indicate blocks that a
 host has. There are 256 different possible slots.
 
-	+---+---+---+---+---+
-	| C | S |     B     |
-	+---+---+---+---+---+
-	  0   1   3  ...  n
++---+---+---+---+---+
+| C | S |     B     |
++---+---+---+---+---+
+  0   1   3  ...  n
 
-	C = command, S = slot ID, B = bitfield of blocks
+C = command, S = slot ID, B = bitfield of blocks
 
 Bitfield Length:
 	(file_size % 8 == 0) ? file_size / 8 : file_size / 8 + 1
@@ -296,12 +277,12 @@ Description: Either a hash tree block or file block. The hash tree blocks vary
 in size. The file blocks are fixed size except the last block which will be
 shorter.
 
-	+---+---+---+---+---+---+---+---+
-	| C |             B             |
-	+---+---+---+---+---+---+---+---+
-	  0   1   2   3   ......... 10240
++---+---+---+---+---+---+---+---+
+| C |             B             |
++---+---+---+---+---+---+---+---+
+  0   1   2   3      ...    10240
 
-	C = command, B = block number
+C = command, B = block number
 </pre>
 </fieldset>
 
@@ -314,12 +295,12 @@ Base10: 8
 Description: Sent to inform a host that a new hash tree block is available. This
 is sent to all hosts that have a open slot for a file.
 
-	+---+---+---+---+---+---+
-	| C | S |       B       |
-	+---+---+---+---+---+---+
-	  0   1   2   3   4   5
++---+---+---+---+---+---+
+| C | S |       B       |
++---+---+---+---+---+---+
+  0   1   2   3   4   5
 
-	C = command, B = block number
+C = command, B = block number
 </pre>
 </fieldset>
 
@@ -332,29 +313,33 @@ Base10: 9
 Description: Sent to inform a host that a new file block is available. This is
 sent to all hosts that have a open slot for a file.
 
-	+---+---+---+---+---+---+
-	| C | S |       B       |
-	+---+---+---+---+---+---+
-	  0   1   2   3   4   5
++---+---+---+---+---+---+
+| C | S |       B       |
++---+---+---+---+---+---+
+  0   1   2   3   4   5
 
-	C = command, B = block number
+C = command, B = block number
 </pre>
 </fieldset>
+</blockquote>
 
 <br>
 
-<h2>Pipelining</h2>
+<b>2.4 Pipelining</b>
+<blockquote>
 <p>
 Pipelining is done by sending multiple requests, and a new request whenever a
 response is received. This increases throughput because the sender will never be
 idle waiting for a request.
 </p>
 <p>
-The maximum allowed pipeline size is 16.
+The maximum allowed pipeline size is 16. This would saturate a link with a
+delay throughput product of less than 163840 (10240 * 16) bytes. For example, a
+6Mb/s connection would have to have a latency greater than 213ms to not
+saturate. This number is highly arbitrary and factors in buffering size, and
+
 </p>
-<h3>
-Adaptive Pipeline Sizing Algorithm:
-</h3>
+<b>Adaptive Pipeline Sizing Algorithm:</b>
 <p>
 This simple algorithm reduces the size of the pipeline to the minimum needed
 without reducing throughput.
@@ -375,10 +360,10 @@ case: C > 1 && M > 1
 	//pipeline is too large, decrease by one
 	--M;
 </pre>
+</blockquote>
 
-<hr>
-
-<h2>Hash Tree</h2>
+<b>2.5 Hash Tree</b>
+<blockquote>
 
 <p>
 Merkle Hash Trees are used to distribute downloading of hash data needed to
@@ -406,20 +391,24 @@ in the second row that the root hash is a hash for. The hash blocks are not
 relative record numbers so to know the size of each block when downloading tree
 building must be simulated to determine how many bytes are in each hash block.
 </p>
+</blockquote>
 
-<hr>
+<b>3.0 Building</b>
+<blockquote>
 
-<h2>Building</h2>
+</blockquote>
 
-<h3>GNU/Linux</h3>
+<b>3.1 GNU/Linux</b>
+<blockquote>
 <p>
 There are many different GNU/Linux distributions. Most likely you can use your
 package manager to install the developer versions of these packages: boost, and
 gtkmm.
 </p>
+</blockquote>
 
-<h3>Windows</h3>
-
+<b>3.2 Windows</b>
+<blockquote>
 <p>
 <a href="http://www.microsoft.com/express/vc/">Visual C++ Express 2008</a><br>
 The command line compiler will be used by scons. It is not necessary to register
@@ -447,6 +436,7 @@ This is used to run the build system (SCons).
 After installing the dependencies open cmd.exe, navigate to the source directory
 and run "scons".
 </p>
+</blockquote>
 
 </tr></td>
 </table>

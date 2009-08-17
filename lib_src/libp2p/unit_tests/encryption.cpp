@@ -29,7 +29,9 @@ int main()
 	send(Host_A_send_buff, Host_B_recv_buff);
 
 	//Host_B receives prime and remote_result. Host_B sends local_result.
-	Host_B_Encryption.recv_prime_and_remote_result(Host_B_recv_buff, Host_B_send_buff);
+	if(!Host_B_Encryption.recv_prime_and_remote_result(Host_B_recv_buff, Host_B_send_buff)){
+		LOGGER; exit(1);
+	}
 	send(Host_B_send_buff, Host_A_recv_buff);
 
 	//Host_A receives remote_result.

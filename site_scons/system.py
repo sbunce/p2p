@@ -17,8 +17,12 @@ def setup(env):
 	spawn.setup(env)
 
 	#start one builder thread per CPU
-	num_cpu = int(os.environ.get('NUM_CPU', 1))
-	env.SetOption('num_jobs', num_cpu)
+	if platform.system() == 'Linux':
+		num_cpu = 0
+		for line in open('/proc/cpuinfo', 'r'):
+			if line.startswith('processor'):
+				num_cpu += 1
+		env.SetOption('num_jobs', num_cpu)
 
 	#custom, but independent libraries
 	env['CPPPATH'].append([

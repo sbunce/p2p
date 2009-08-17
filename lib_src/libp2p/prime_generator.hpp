@@ -26,7 +26,7 @@
 	#include <wincrypt.h>
 #endif
 
-class prime_generator
+class prime_generator : private boost::noncopyable
 {
 public:
 	/*

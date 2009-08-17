@@ -27,7 +27,7 @@
 #include <sstream>
 #include <string>
 
-class share
+class share : private boost::noncopyable
 {
 public:
 	share();
