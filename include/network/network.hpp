@@ -1,5 +1,4 @@
 //includes the entire network namespace
-#include "async_resolve.hpp"
 #include "buffer.hpp"
 #include "proactor.hpp"
 #include "rate_limit.hpp"

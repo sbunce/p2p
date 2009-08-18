@@ -17,29 +17,6 @@ void assignment()
 	}
 }
 
-void relational()
-{
-	atomic_bool x, y;
-
-	//==
-	x = true; y = false;
-	if(x == y){
-		LOGGER; exit(1);
-	}
-	if(x == false){
-		LOGGER; exit(1);
-	}
-
-	//!=
-	x = true; y = true;
-	if(x != y){
-		LOGGER; exit(1);
-	}
-	if(x != true){
-		LOGGER; exit(1);
-	}
-}
-
 void conditional()
 {
 	atomic_bool x;
@@ -69,7 +46,6 @@ void stream()
 int main()
 {
 	assignment();
-	relational();
 	conditional();
 	stream();
 }

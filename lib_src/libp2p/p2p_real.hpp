@@ -63,11 +63,6 @@ private:
 
 	share Share;
 
-	//network objects
-	network::reactor_select Reactor;
-	network::async_resolve Async_Resolve;
-	network::proactor Proactor;
-
 	/*
 	Connection state will be stored in the connection object. Also call backs
 	will be registered in connect_call_back to do call backs directly to the
@@ -78,6 +73,14 @@ private:
 	*/
 	boost::mutex Connection_mutex;
 	std::map<int, boost::shared_ptr<connection> > Connection;
+
+	/*
+	Proactor which does call backs for network activity.
+	Note: This is specified last in header because it starts threads in it's ctor
+		which use objects in p2p_real. We specify it last because we want to make
+		sure the objects it uses are constructed before it uses them.
+	*/
+	network::proactor Proactor;
 
 	/*
 	connect_call_back:

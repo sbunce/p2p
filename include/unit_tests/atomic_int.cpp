@@ -25,73 +25,6 @@ void assignment()
 	}
 }
 
-//arithmetic (+, -, *, /, %)
-void arithmetic()
-{
-	atomic_int<int> x, y;
-	int z;
-
-	//+
-	x = 2; y = 2;
-	x = x + y;
-	if(x != 4){
-		LOGGER; exit(1);
-	}
-	x = 2; z = 2;
-	x = x + z;
-	if(x != 4){
-		LOGGER; exit(1);
-	}
-
-	//-
-	x = 2; y = 2;
-	x = x - y;
-	if(x != 0){
-		LOGGER; exit(1);
-	}
-	x = 2; z = 2;
-	x = x - z;
-	if(x != 0){
-		LOGGER; exit(1);
-	}
-
-	//*
-	x = 2; y = 2;
-	x = x * y;
-	if(x != 4){
-		LOGGER; exit(1);
-	}
-	x = 2; z = 2;
-	x = x * z;
-	if(x != 4){
-		LOGGER; exit(1);
-	}
-
-	///
-	x = 2; y = 2;
-	x = x / y;
-	if(x != 1){
-		LOGGER; exit(1);
-	}
-	x = 2; z = 2;
-	x = x / z;
-	if(x != 1){
-		LOGGER; exit(1);
-	}
-
-	//%
-	x = 2; y = 2;
-	x = x % y;
-	if(x != 0){
-		LOGGER; exit(1);
-	}
-	x = 2; z = 2;
-	x = x % z;
-	if(x != 0){
-		LOGGER; exit(1);
-	}
-}
-
 //increment/decrement (++, --)
 void increment_decrement()
 {
@@ -118,106 +51,6 @@ void increment_decrement()
 	}
 }
 
-//relational (==, !=, >, <, >=, <=)
-void relational()
-{
-	atomic_int<int> x, y;
-	int z;
-
-	//==
-	x = 0, y = 1;
-	if(x == y){
-		LOGGER; exit(1);
-	}
-	z = 1;
-	if(x == z){
-		LOGGER; exit(1);
-	}
-
-	//!=
-	x = 0, y = 0;
-	if(x != y){
-		LOGGER; exit(1);
-	}
-	z = 0;
-	if(x != z){
-		LOGGER; exit(1);
-	}
-
-	//>
-	x = 0; y = 1;
-	if(x > y){
-		LOGGER; exit(1);
-	}
-	z = 1;
-	if(x > z){
-		LOGGER; exit(1);
-	}
-
-	//<
-	x = 1; y = 0;
-	if(x < y){
-		LOGGER; exit(1);
-	}
-	z = 0;
-	if(x < z){
-		LOGGER; exit(1);
-	}
-
-	//>=
-	x = 0; y = 1;
-	if(x >= y){
-		LOGGER; exit(1);
-	}
-	z = 1;
-	if(x >= z){
-		LOGGER; exit(1);
-	}
-
-	//<=
-	x = 1; y = 0;
-	if(x < y){
-		LOGGER; exit(1);
-	}
-	z = 0;
-	if(x < z){
-		LOGGER; exit(1);
-	}
-}
-
-//logical (!, &&, ||)
-void logical()
-{
-	atomic_int<int> x, y;
-	int z;
-
-	//!
-	x = 1;
-	if(!x){
-		LOGGER; exit(1);
-	}
-
-	//&&
-	x = 0; y = 1;
-	if(x && y){
-		LOGGER; exit(1);
-	}
-	z = 1;
-	if(x && z){
-		LOGGER; exit(1);
-	}
-
-	//||
-	x = 0; y = 0;
-	if(x || y){
-		LOGGER; exit(1);
-	}
-	z = 0;
-	if(x || z){
-		LOGGER; exit(1);
-	}
-}
-
 //conditional (?)
 void conditional()
 {
@@ -234,70 +67,6 @@ void conditional()
 	x = 0;
 	if(x){
 		LOGGER; exit(1);	
-	}
-}
-
-//bitwise (&, |, ^, ~, <<, >>)
-void bitwise()
-{
-	atomic_int<int> x, y;
-	int z;
-
-	//&
-	x = 1; y = 3;
-	x = x & y;
-	if(x != 1){
-		LOGGER; exit(1);
-	}
-	x = 1; z = 3;
-	x = x & z;
-	if(x != 1){
-		LOGGER; exit(1);
-	}
-
-	//|
-	x = 1; y = 2;
-	x = x | y;
-	if(x != 3){
-		LOGGER; exit(1);
-	}
-	x = 1; z = 2;
-	x = x | z;
-	if(x != 3){
-		LOGGER; exit(1);
-	}
-
-	//^
-	x = 1; y = 3;
-	x = x ^ y;
-	if(x != 2){
-		LOGGER; exit(1);
-	}
-	x = 1; z = 3;
-	x = x ^ z;
-	if(x != 2){
-		LOGGER; exit(1);
-	}
-
-	//~
-	atomic_int<unsigned> q(std::numeric_limits<unsigned>::max());
-	q = ~q;
-	if(q != 0u){
-		LOGGER; exit(1);
-	}
-
-	//<<
-	x = 1;
-	x = x << 1;
-	if(x != 2){
-		LOGGER; exit(1);
-	}
-
-	//>>
-	x = 2;
-	x = x >> 1;
-	if(x != 1){
-		LOGGER; exit(1);
 	}
 }
 
@@ -435,14 +204,9 @@ void stream()
 
 int main()
 {
-	//note: a lot of these tests are interdependent
 	assignment();
-	arithmetic();
 	increment_decrement();
-	relational();
-	logical();
 	conditional();
-	bitwise();
 	compound_assignment();
 	stream();
 }

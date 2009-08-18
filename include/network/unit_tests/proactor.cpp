@@ -103,34 +103,25 @@ void failed_connect_call_back(network::sock & S)
 
 int main()
 {
-	network::reactor_select Reactor("65001");
-	network::async_resolve Async_Resolve(Reactor);
 	network::proactor Proactor(
-		Reactor,
+		"65001",
 		&connect_call_back,
 		&disconnect_call_back,
 		&failed_connect_call_back
 	);
-	Reactor.start();
-	Async_Resolve.start();
-	Proactor.start();
 
 	for(int x=0; x<32; ++x){
-		Async_Resolve.connect("127.0.0.1", "65001");
+		Proactor.connect("127.0.0.1", "65001");
 	}
 
 	bool hack = true; //connections won't immediately be non-zero
-	while(Reactor.connections() != 0 || hack){
-		LOGGER << "C<" << Reactor.connections() << "> "
-			<< "IC<" << Reactor.incoming_connections() << "> "
-			<< "OC<" << Reactor.outgoing_connections() << "> "
-			<< "D<" << convert::size_SI(Reactor.current_download_rate()) << "> "
-			<< "U<" << convert::size_SI(Reactor.current_upload_rate()) << ">";
+	while(Proactor.Reactor.connections() != 0 || hack){
+		LOGGER << "C<" << Proactor.Reactor.connections() << "> "
+			<< "IC<" << Proactor.Reactor.incoming_connections() << "> "
+			<< "OC<" << Proactor.Reactor.outgoing_connections() << "> "
+			<< "D<" << convert::size_SI(Proactor.Reactor.current_download_rate()) << "> "
+			<< "U<" << convert::size_SI(Proactor.Reactor.current_upload_rate()) << ">";
 		portable_sleep::ms(1000);
 		hack = false;
 	}
-
-	Reactor.stop();
-	Async_Resolve.stop();
-	Proactor.stop();
 }

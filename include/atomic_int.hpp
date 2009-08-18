@@ -3,6 +3,7 @@
 #define H_ATOMIC_INT
 
 //include
+#include <boost/scoped_ptr.hpp>
 #include <boost/thread.hpp>
 #include <logger.hpp>
 
@@ -13,179 +14,64 @@ template<class T>
 class atomic_int
 {
 public:
-	atomic_int(){ Mutex = new boost::recursive_mutex; }
-	atomic_int(const T & wrapped_int_in): wrapped_int(wrapped_int_in){ Mutex = new boost::recursive_mutex; }
-	atomic_int(const atomic_int<T> & val): wrapped_int(val.get_wrapped_int()){ Mutex = new boost::recursive_mutex; }
-	~atomic_int(){ delete Mutex; }
+	atomic_int():
+		Mutex(new boost::recursive_mutex)
+	{}
+
+	atomic_int(
+		const T & wrapped_int_in
+	):
+		wrapped_int(wrapped_int_in),
+		Mutex(new boost::recursive_mutex)
+	{}
+
+	atomic_int(
+		const atomic_int<T> & val
+	):
+		wrapped_int(val.get_wrapped_int()),
+		Mutex(new boost::recursive_mutex)
+	{}
 
 	//assignment (=)
-	const T operator = (const atomic_int<T> & rval)
+	atomic_int<T> & operator = (const atomic_int<T> & rval)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int = rval.get_wrapped_int();
+		wrapped_int = rval.get_wrapped_int();
+		return *this;
 	}
-	const T operator = (const T & rval)
+	atomic_int<T> & operator = (const T & rval)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int = rval;
-	}
-
-	//arithmetic (+, -, *, /, %)
-	const T operator + (const atomic_int<T> & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int + rval.get_wrapped_int();
-	}
-	const T operator + (const T & rval){
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int + rval;
-	}
-	const T operator - (const atomic_int<T> & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int - rval.get_wrapped_int();
-	}
-	const T operator - (const T & rval){
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int - rval;
-	}
-	const T operator * (const atomic_int<T> & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int *= rval.get_wrapped_int();
-	}
-	const T operator * (const T & rval){
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int *= rval;
-	}
-	const T operator / (const atomic_int<T> & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int /= rval.get_wrapped_int();
-	}
-	const T operator / (const T & rval){
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int /= rval;
-	}
-	const T operator % (const atomic_int<T> & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int %= rval.get_wrapped_int();
-	}
-	const T operator % (const T & rval){
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int %= rval;
+		wrapped_int = rval;
+		return *this;
 	}
 
 	//increment/decrement (++, --)
-	const T operator ++ ()
+	atomic_int<T> & operator ++ ()
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return ++wrapped_int;
+		++wrapped_int;
+		return *this;
 	}
-	const T operator ++ (int)
+	T operator ++ (int)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int++;
+		T temp = wrapped_int;
+		++wrapped_int;
+		return temp;
 	}
-	const T operator -- (void)
+	atomic_int<T> & operator -- (void)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return --wrapped_int;
+		--wrapped_int;
+		return *this;
 	}
-	const T operator -- (int)
+	T operator -- (int)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int--;
-	}
-
-	//relational (==, !=, >, <, >=, <=)
-	const bool operator == (const atomic_int<T> & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int == rval.get_wrapped_int();
-	}
-	const bool operator == (const T & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int == rval;
-	}
-	const bool operator != (const atomic_int<T> & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int != rval.get_wrapped_int();
-	}
-	const bool operator != (const T & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int != rval;
-	}
-	const bool operator > (const atomic_int<T> & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int > rval.get_wrapped_int();
-	}
-	const bool operator > (const T & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int > rval;
-	}
-	const bool operator < (const atomic_int<T> & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int < rval.get_wrapped_int();
-	}
-	const bool operator < (const T & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int < rval;
-	}
-	const bool operator >= (const atomic_int<T> & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int >= rval.get_wrapped_int();
-	}
-	const bool operator >= (const T & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int >= rval;
-	}
-	const bool operator <= (const atomic_int<T> & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int <= rval.get_wrapped_int();
-	}
-	const bool operator <= (const T & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int <= rval;
-	}
-
-	//logical (!, &&, ||)
-	const bool operator ! ()
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return !wrapped_int;
-	}
-	const bool operator && (const atomic_int<T> & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int && rval.get_wrapped_int();
-	}
-	const bool operator && (const T & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int && rval;
-	}
-	const bool operator || (const atomic_int<T> & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int || rval.get_wrapped_int();
-	}
-	const bool operator || (const T & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int || rval;
+		T temp = wrapped_int;
+		--wrapped_int;
+		return temp;
 	}
 
 	//conditional (?, ())
@@ -195,144 +81,114 @@ public:
 		return wrapped_int;
 	}
 
-	//bitwise (&, |, ^, ~, <<, >>)
-	const T operator & (const atomic_int<T> & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int & rval.get_wrapped_int();
-	}
-	const T operator & (const T & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int & rval;
-	}
-	const T operator | (const atomic_int<T> & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int | rval.get_wrapped_int();
-	}
-	const T operator | (const T & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int | rval;
-	}
-	const T operator ^ (const atomic_int<T> & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int ^ rval.get_wrapped_int();
-	}
-	const T operator ^ (const T & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int ^ rval;
-	}
-	const T operator ~ ()
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return ~wrapped_int;
-	}
-	const T operator << (const int & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int << rval;
-	}
-	const T operator >> (const int & rval)
-	{
-		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int >> rval;
-	}
-
-
 	//compound assignment (+=, -=, *=, /=, %=, >>=, <<=, &=, ^=, |=)
-	const T operator += (const atomic_int<T> & rval)
+	atomic_int<T> & operator += (const atomic_int<T> & rval)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int += rval.wrapped_int;
+		wrapped_int += rval.wrapped_int;
+		return *this;
 	}
-	const T operator += (const T & rval)
+	atomic_int<T> & operator += (const T & rval)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int += rval;
+		wrapped_int += rval;
+		return *this;
 	}
-	const T operator -= (const atomic_int<T> & rval)
+	atomic_int<T> & operator -= (const atomic_int<T> & rval)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int -= rval.get_wrapped_int();
+		wrapped_int -= rval.get_wrapped_int();
+		return *this;
 	}
-	const T operator -= (const T & rval)
+	atomic_int<T> & operator -= (const T & rval)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int -= rval;
+		wrapped_int -= rval;
+		return *this;
 	}
-	const T operator *= (const atomic_int<T> & rval)
+	atomic_int<T> & operator *= (const atomic_int<T> & rval)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int *= rval.get_wrapped_int();
+		wrapped_int *= rval.get_wrapped_int();
+		return *this;
 	}
-	const T operator *= (const T & rval)
+	atomic_int<T> & operator *= (const T & rval)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int *= rval;
+		wrapped_int *= rval;
+		return *this;
 	}
-	const T operator /= (const atomic_int<T> & rval)
+	atomic_int<T> & operator /= (const atomic_int<T> & rval)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int /= rval.get_wrapped_int();
+		wrapped_int /= rval.get_wrapped_int();
+		return *this;
 	}
-	const T operator /= (const T & rval)
+	atomic_int<T> & operator /= (const T & rval)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int /= rval;
+		wrapped_int /= rval;
+		return *this;
 	}
-	const T operator %= (const atomic_int<T> & rval)
+	atomic_int<T> & operator %= (const atomic_int<T> & rval)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int %= rval.get_wrapped_int();
+		wrapped_int %= rval.get_wrapped_int();
+		return *this;
 	}
-	const T operator %= (const T & rval)
+	atomic_int<T> & operator %= (const T & rval)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int %= rval;
+		wrapped_int %= rval;
+		return *this;
 	}
-	const T operator >>= (const int & rval)
+	atomic_int<T> & operator >>= (const int & rval)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int >>= rval;
+		wrapped_int >>= rval;
+		return *this;
 	}
-	const T operator <<= (const int & rval)
+	atomic_int<T> & operator <<= (const int & rval)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int <<= rval;
+		wrapped_int <<= rval;
+		return *this;
 	}
-	const T operator &= (const atomic_int<T> & rval)
+	atomic_int<T> & operator &= (const atomic_int<T> & rval)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int &= rval.get_wrapped_int();
+		wrapped_int &= rval.get_wrapped_int();
+		return *this;
 	}
-	const T operator &= (const T & rval)
+	atomic_int<T> & operator &= (const T & rval)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int &= rval;
+		wrapped_int &= rval;
+		return *this;
 	}
-	const T operator ^= (const atomic_int<T> & rval)
+	atomic_int<T> & operator ^= (const atomic_int<T> & rval)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int ^= rval.get_wrapped_int();
+		wrapped_int ^= rval.get_wrapped_int();
+		return *this;
 	}
-	const T operator ^= (const T & rval)
+	atomic_int<T> & operator ^= (const T & rval)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int ^= rval;
+		wrapped_int ^= rval;
+		return *this;
 	}
-	const T operator |= (const atomic_int<T> & rval)
+	atomic_int<T> & operator |= (const atomic_int<T> & rval)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int |= rval.get_wrapped_int();
+		wrapped_int |= rval.get_wrapped_int();
+		return *this;
 	}
-	const T operator |= (const T & rval)
+	atomic_int<T> & operator |= (const T & rval)
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
-		return wrapped_int |= rval;
+		wrapped_int |= rval;
+		return *this;
 	}
 
 	//ostream and istream
@@ -355,7 +211,7 @@ private:
 
 	example: x = x * x; x *= x;
 	*/
-	boost::recursive_mutex * Mutex;
+	boost::scoped_ptr<boost::recursive_mutex> Mutex;
 
 	//used to lock access when getting wrapped value
 	const T get_wrapped_int() const

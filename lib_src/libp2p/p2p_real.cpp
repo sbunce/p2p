@@ -1,10 +1,8 @@
 #include "p2p_real.hpp"
 
 p2p_real::p2p_real():
-	Reactor(settings::P2P_PORT),
-	Async_Resolve(Reactor),
 	Proactor(
-		Reactor,
+		settings::P2P_PORT,
 		boost::bind(&p2p_real::connect_call_back, this, _1),
 		boost::bind(&p2p_real::disconnect_call_back, this, _1),
 		boost::bind(&p2p_real::failed_connect_call_back, this, _1)
@@ -19,25 +17,20 @@ p2p_real::p2p_real():
 	max_download_rate_proxy = database::table::preferences::get_max_download_rate();
 	max_upload_rate_proxy = database::table::preferences::get_max_upload_rate();
 
-	//start share scan threads
-	Share.start();
+	//set preferences with the reactor
+	Proactor.Reactor.max_connections(max_connections_proxy / 2, max_connections_proxy / 2);
+	Proactor.Reactor.max_download_rate(max_download_rate_proxy);
+	Proactor.Reactor.max_upload_rate(max_upload_rate_proxy);
 
-	//start networking threads
-	Reactor.start();
-	Async_Resolve.start();
-	Proactor.start();
-
-	Async_Resolve.connect("127.0.0.1", settings::P2P_PORT);
+//DEBUG, test
+	Proactor.connect("127.0.0.1", settings::P2P_PORT);
 }
 
 p2p_real::~p2p_real()
 {
 	//stop threads
+//change this to clear
 	thread_pool::singleton().stop();
-	Share.stop();
-	Reactor.stop();
-	Async_Resolve.stop();
-	Proactor.stop();
 }
 
 void p2p_real::connect_call_back(network::sock & S)
@@ -191,10 +184,10 @@ void p2p_real::remove_download(const std::string & hash)
 
 unsigned p2p_real::download_rate()
 {
-	return 123;
+	return Proactor.Reactor.current_download_rate();
 }
 
 unsigned p2p_real::upload_rate()
 {
-	return 123;
+	return Proactor.Reactor.current_upload_rate();
 }

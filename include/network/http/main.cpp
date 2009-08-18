@@ -68,28 +68,23 @@ int main(int argc, char ** argv)
 		exit(1);
 	}
 
-	network::reactor_select Reactor("8080");
 	network::proactor Proactor(
-		Reactor,
+		"8080",
 		&connect_call_back,
 		&disconnect_call_back,
 		&failed_connect_call_back
 	);
-	//Reactor.max_upload_rate(1024*500);
-	Reactor.max_connections(Reactor.max_connections_supported(), 0);
-	Reactor.start();
-	Proactor.start();
+	//Proactor.Reactor.max_upload_rate(1024*500);
+	Proactor.Reactor.max_connections(Proactor.Reactor.max_connections_supported(), 0);
 
 	while(!terminate_program){
-		if(Reactor.current_download_rate() || Reactor.current_upload_rate()){
-			LOGGER << "C<" << Reactor.connections() << "> "
-			<< "IC<" << Reactor.incoming_connections() << "> "
-			<< "OC<" << Reactor.outgoing_connections() << "> "
-			<< "D<" << convert::size_SI(Reactor.current_download_rate()) << "> "
-			<< "U<" << convert::size_SI(Reactor.current_upload_rate()) << ">";
+		if(Proactor.Reactor.current_download_rate() || Proactor.Reactor.current_upload_rate()){
+			LOGGER << "C<" << Proactor.Reactor.connections() << "> "
+			<< "IC<" << Proactor.Reactor.incoming_connections() << "> "
+			<< "OC<" << Proactor.Reactor.outgoing_connections() << "> "
+			<< "D<" << convert::size_SI(Proactor.Reactor.current_download_rate()) << "> "
+			<< "U<" << convert::size_SI(Proactor.Reactor.current_upload_rate()) << ">";
 		}
 		portable_sleep::ms(1000);
 	}
-	Reactor.stop();
-	Proactor.stop();
 }

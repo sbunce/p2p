@@ -34,17 +34,6 @@ public:
 	~share();
 
 	/*
-	start:
-		Starts share indexing threads.
-		Note: This is only to be used from singleton_start.
-	stop:
-		Stops share indexing threads.
-		Note: This is only to be used from singleton_stop.
-	*/
-	void start();
-	void stop();
-
-	/*
 	size_bytes:
 		Returns size of shared files.
 	size_files:
