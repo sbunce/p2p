@@ -235,10 +235,10 @@ private:
 	}
 
 	//start monitoring socks the client is done with
-	void check_job_finished()
+	void check_finished_job()
 	{
 		boost::shared_ptr<sock> S;
-		while(S = get_job_finished()){
+		while(S = get_finished_job()){
 			add_socket(S);
 		}
 	}
@@ -314,7 +314,7 @@ private:
 			boost::this_thread::interruption_point();
 
 			check_connect();
-			check_job_finished();
+			check_finished_job();
 			check_timeouts();
 
 			/*

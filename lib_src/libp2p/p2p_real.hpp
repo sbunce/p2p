@@ -37,7 +37,7 @@ public:
 	void current_uploads(std::vector<upload_status> & CU);
 	unsigned download_rate();
 	unsigned max_connections();
-	void max_connections(const unsigned connections);
+	void max_connections(unsigned connections);
 	unsigned max_download_rate();
 	void max_download_rate(const unsigned rate);
 	unsigned max_upload_rate();

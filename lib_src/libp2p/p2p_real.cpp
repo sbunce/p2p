@@ -14,6 +14,9 @@ p2p_real::p2p_real():
 
 	//setup proxies for async getter/setter function calls
 	max_connections_proxy = database::table::preferences::get_max_connections();
+	if(max_connections_proxy > Proactor.Reactor.max_connections_supported()){
+		max_connections_proxy = Proactor.Reactor.max_connections_supported();
+	}
 	max_download_rate_proxy = database::table::preferences::get_max_download_rate();
 	max_upload_rate_proxy = database::table::preferences::get_max_upload_rate();
 
@@ -28,8 +31,6 @@ p2p_real::p2p_real():
 
 p2p_real::~p2p_real()
 {
-	//stop threads
-//change this to clear
 	thread_pool::singleton().stop();
 }
 
@@ -107,12 +108,16 @@ unsigned p2p_real::max_connections()
 }
 
 //boost::bind can't handle default parameter, wrapper required
-static void max_connections_wrapper(const unsigned max_connections_in)
+static void max_connections_wrapper(unsigned max_connections_in)
 {
 	database::table::preferences::set_max_connections(max_connections_in);
 }
-void p2p_real::max_connections(const unsigned connections)
+void p2p_real::max_connections(unsigned connections)
 {
+	if(connections > Proactor.Reactor.max_connections_supported()){
+		connections = Proactor.Reactor.max_connections_supported();
+	}
+	Proactor.Reactor.max_connections(connections / 2, connections / 2);
 	max_connections_proxy = connections;
 	thread_pool::singleton().queue(boost::bind(&max_connections_wrapper,
 		connections));
@@ -130,6 +135,7 @@ static void max_download_rate_wrapper(const unsigned rate)
 }
 void p2p_real::max_download_rate(const unsigned rate)
 {
+	Proactor.Reactor.max_download_rate(rate);
 	max_download_rate_proxy = rate;
 	thread_pool::singleton().queue(boost::bind(&max_download_rate_wrapper,
 		rate));
@@ -147,6 +153,7 @@ static void max_upload_rate_wrapper(const unsigned rate)
 }
 void p2p_real::max_upload_rate(const unsigned rate)
 {
+	Proactor.Reactor.max_upload_rate(rate);
 	max_upload_rate_proxy = rate;
 	thread_pool::singleton().queue(boost::bind(&max_upload_rate_wrapper,
 		rate));

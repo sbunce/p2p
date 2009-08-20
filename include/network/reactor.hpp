@@ -99,7 +99,7 @@ public:
 				}
 			}
 		}else{
-			boost::mutex::scoped_lock lock(job_finished_mutex);
+			boost::mutex::scoped_lock lock(finished_job_mutex);
 
 			//after the first get() of this sock the connect job is done
 			S->connect_flag = true;
@@ -108,7 +108,7 @@ public:
 			S->recv_flag = false;
 			S->send_flag = false;
 
-			job_finished.push_back(S);
+			finished_job.push_back(S);
 			trigger_selfpipe();
 		}
 	}
@@ -236,14 +236,14 @@ protected:
 	}
 
 	//get sock that was returned with put(), empty shared_ptr returned if none
-	boost::shared_ptr<sock> get_job_finished()
+	boost::shared_ptr<sock> get_finished_job()
 	{
-		boost::mutex::scoped_lock lock(job_finished_mutex);
-		if(job_finished.empty()){
+		boost::mutex::scoped_lock lock(finished_job_mutex);
+		if(finished_job.empty()){
 			return boost::shared_ptr<sock>();
 		}else{
-			boost::shared_ptr<sock> S = job_finished.front();
-			job_finished.pop_front();
+			boost::shared_ptr<sock> S = finished_job.front();
+			finished_job.pop_front();
 			S->seen();
 			return S;
 		}
@@ -346,11 +346,11 @@ private:
 	std::deque<boost::shared_ptr<sock> > job;
 
 	/*
-	This job_finished container is used by put() to pass a sock back to the
+	This finished_job container is used by put() to pass a sock back to the
 	main_loop_thread which will start monitoring it for activity.
 	*/
-	boost::mutex job_finished_mutex;
-	std::deque<boost::shared_ptr<sock> > job_finished;
+	boost::mutex finished_job_mutex;
+	std::deque<boost::shared_ptr<sock> > finished_job;
 
 	/* Connection counts and limits.
 	Note: All these must be locked with connections_mutex.

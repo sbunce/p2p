@@ -3,6 +3,7 @@
 connection::connection(network::sock & S):
 	Exchange(INITIAL)
 {
+	//if outgoing connection start key exchange by sending p and r_A
 	if(S.direction == network::OUTGOING){
 		Encryption.send_prime_and_local_result(S.send_buff);
 		Exchange = SENT_PRIME_AND_LOCAL_RESULT;
@@ -13,15 +14,19 @@ void connection::recv_call_back(network::sock & S)
 {
 	if(Exchange != COMPLETE){
 		if(Exchange == SENT_PRIME_AND_LOCAL_RESULT){
-			//expecting the remote_result
+			//expecting r_B
 			if(S.recv_buff.size() >= protocol::DH_KEY_SIZE){
 				Encryption.recv_remote_result(S.recv_buff);
 				Exchange = COMPLETE;
 			}
 		}else{
-			//expecting prime and remote_result
+			//expecting p and r_A
 			if(S.recv_buff.size() >= protocol::DH_KEY_SIZE * 2){
-				Encryption.recv_prime_and_remote_result(S.recv_buff, S.send_buff);
+				if(!Encryption.recv_prime_and_remote_result(S.recv_buff, S.send_buff)){
+					//remote host sent invalid prime
+					database::table::blacklist::add(S.IP);
+					S.disconnect_flag = true;
+				}
 				Exchange = COMPLETE;
 			}
 		}
@@ -29,11 +34,12 @@ void connection::recv_call_back(network::sock & S)
 		//decrypt new incoming data
 		Encryption.crypt_recv(S.recv_buff, S.recv_buff.size() - S.latest_recv);
 
-		//store initial size so we know how much to encrypt after appending
+		//store initial size so it is known how much to encrypt after appending
 		int initial_send_buff_size = S.send_buff.size();
 
-		LOGGER << S.recv_buff.str();
+//do work here
 
+		//encrypt from initial_send_buff_size to end of buffer
 		Encryption.crypt_send(S.send_buff, initial_send_buff_size);
 	}
 }
@@ -41,15 +47,12 @@ void connection::recv_call_back(network::sock & S)
 void connection::send_call_back(network::sock & S)
 {
 	if(Exchange == COMPLETE){
+		//store initial size so it is known how much to encrypt after appending
 		int initial_send_buff_size = S.send_buff.size();
-		if(S.direction == network::INCOMING){
-			static bool once = true;
-			if(once){
-				S.send_buff.append("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-				once = false;
-			}
-		}
 
+//do work here
+
+		//encrypt from initial_send_buff_size to end of buffer
 		Encryption.crypt_send(S.send_buff, initial_send_buff_size);
 	}
 }

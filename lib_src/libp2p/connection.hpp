@@ -25,7 +25,7 @@ public:
 private:
 	encryption Encryption;
 
-	//key exchange steps
+	//key exchange state
 	enum exchange {
 		INITIAL,
 		SENT_PRIME_AND_LOCAL_RESULT,

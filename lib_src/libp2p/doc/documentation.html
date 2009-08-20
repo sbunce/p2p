@@ -152,7 +152,7 @@ ERROR (the server does not have the hash tree and file)
 <fieldset>
 <pre>
 Name: REQUEST_BLOCK_HASH_TREE
-Base10: 2
+Base10: 1
 Description: Request a block from a hash tree.
 
 +---+---+---+---+---+---+
@@ -173,7 +173,7 @@ ERROR (the server no longer has the file)
 <fieldset>
 <pre>
 Name: REQUEST_BLOCK_FILE
-Base10: 3
+Base10: 2
 Description: Request a block from a file.
 
 +---+---+---+---+---+---+
@@ -194,7 +194,7 @@ ERROR (the server no longer has the file)
 <fieldset>
 <pre>
 Name: CLOSE_SLOT
-Base10: 4
+Base10: 3
 Description: This is done after a hash tree or file is finished downloading.
 
 +---+---+
@@ -213,7 +213,7 @@ C = command, B = block number
 <fieldset>
 <pre>
 Name: ERROR
-Base10: 5
+Base10: 4
 Description: ERROR has different meaning in different contexts.
 
 +---+
@@ -230,7 +230,7 @@ C = command
 <fieldset>
 <pre>
 Name: SLOT_ID
-Base10: 6
+Base10: 5
 Description: Sent in response to REQUEST_SLOT. The slot ID is needed to request
 hash tree or file blocks. The host has all the blocks for the file. There are
 256 different possible slots.
@@ -325,7 +325,14 @@ C = command, B = block number
 
 <br>
 
-<b>2.4 Pipelining</b>
+<b>2.4 Kademlia</b>
+<blockquote>
+
+</blockquote>
+
+<br>
+
+<b>2.5 Pipelining</b>
 <blockquote>
 <p>
 Pipelining is done by sending multiple requests, and a new request whenever a
@@ -362,7 +369,7 @@ case: C > 1 && M > 1
 </pre>
 </blockquote>
 
-<b>2.5 Hash Tree</b>
+<b>2.6 Hash Tree</b>
 <blockquote>
 
 <p>
