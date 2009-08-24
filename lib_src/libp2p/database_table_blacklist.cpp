@@ -17,12 +17,6 @@ atomic_int<int> & database::table::blacklist::blacklist_state()
 	return *_blacklist_state;
 }
 
-void database::table::blacklist::clear(database::pool::proxy DB)
-{
-	boost::call_once(init, once_flag);
-	DB->query("DELETE FROM blacklist");
-}
-
 void database::table::blacklist::init()
 {
 	blacklist_state();

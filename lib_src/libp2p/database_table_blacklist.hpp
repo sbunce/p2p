@@ -24,8 +24,6 @@ public:
 	/*
 	add:
 		Add IP to blacklist.
-	clear:
-		Clears the entire blacklist table.
 	is_blacklisted:
 		Returns true if IP is blacklisted.
 	modified:
@@ -35,7 +33,6 @@ public:
 	*/
 	static void add(const std::string & IP,
 		database::pool::proxy DB = database::pool::proxy());
-	static void clear(database::pool::proxy DB = database::pool::proxy());
 	static bool is_blacklisted(const std::string & IP,
 		database::pool::proxy DB = database::pool::proxy());
 	static bool modified(int & last_state_seen);

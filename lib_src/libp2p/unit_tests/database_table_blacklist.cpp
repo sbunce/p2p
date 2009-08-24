@@ -5,8 +5,8 @@ int main()
 {
 	//setup database and make sure blacklist table clear
 	path::unit_test_override("database_table_blacklist.db");
-	database::init::blacklist();
-	database::table::blacklist::clear();
+	database::init::drop_all();
+	database::init::create_all();
 
 	/*
 	The default blacklist state is 0. The blacklist state tells us if the

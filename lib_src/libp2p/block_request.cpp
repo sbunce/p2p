@@ -54,6 +54,11 @@ bool block_request::complete()
 	return local_block.empty();
 }
 
+void block_request::force_complete()
+{
+	local_block.clear();
+}
+
 bool block_request::next(const int socket_FD, boost::uint32_t & block)
 {
 	assert(!complete());

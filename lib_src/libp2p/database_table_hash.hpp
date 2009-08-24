@@ -25,8 +25,6 @@ public:
 	};
 
 	/*
-	clear:
-		Clears the entire hash table.
 	delete_tree:
 		Delete entry for tree of specified hash and tree_size.
 	exists:
@@ -46,7 +44,6 @@ public:
 		is then the program will be terminated trying to read or write to the
 		blob.
 	*/
-	static void clear(database::pool::proxy DB = database::pool::proxy());
 	static void delete_tree(const std::string & hash, const int tree_size,
 		database::pool::proxy DB = database::pool::proxy());
 	static bool exists(const std::string & hash, const int tree_size,

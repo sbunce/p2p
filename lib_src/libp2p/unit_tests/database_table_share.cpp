@@ -5,9 +5,8 @@ int main()
 {
 	//setup database and make sure share table clear
 	path::unit_test_override("database_table_share.db");
-	database::init::hash();
-	database::init::share();
-	database::table::share::clear();
+	database::init::drop_all();
+	database::init::create_all();
 
 	//file not yet added, lookup shouldn't work
 	if(database::table::share::lookup_hash("ABC")){

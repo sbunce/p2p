@@ -9,6 +9,7 @@
 
 //include
 #include <atomic_bool.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/tuple/tuple.hpp>
 
 //standard
@@ -16,17 +17,23 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace database{
 namespace table{
 class share
 {
 public:
-	/* Functions to modify DB
+	class file_info
+	{
+	public:
+		std::string hash;
+		//std::
+	};
+
+	/*
 	add_entry:
 		Add entry to the DB.
-	clear:
-		Clears the entire share table.
 	delete_entry:
 		Removes entry from database. Removes hash tree if there are no more
 		references to it.
@@ -36,9 +43,8 @@ public:
 		record is found (and the referenced variables are set), or false is
 		returned if no record is found (and referenced variables are no set).
 	*/
-	static void add_entry(const std::string & hash, const boost::uint64_t & size,
+	static void add_entry(const std::string & hash, const boost::uint64_t & file_size,
 		const std::string & path, database::pool::proxy DB = database::pool::proxy());
-	static void clear(database::pool::proxy DB = database::pool::proxy());
 	static void delete_entry(const std::string & path,
 		database::pool::proxy DB = database::pool::proxy());
 	static bool lookup_hash(const std::string & hash,
@@ -51,7 +57,10 @@ public:
 		boost::uint64_t & file_size, database::pool::proxy DB = database::pool::proxy());
 	static bool lookup_path(const std::string & path, std::string & hash,
 		boost::uint64_t & file_size, database::pool::proxy DB = database::pool::proxy());
-
+/*
+	static void resume(std::vector<boost::shared_ptr<slot_element> > & Resume,
+		database::pool::proxy DB = database::pool::proxy());
+*/
 private:
 	share(){}
 };

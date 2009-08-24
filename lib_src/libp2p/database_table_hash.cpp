@@ -1,15 +1,10 @@
 #include "database_table_hash.hpp"
 
-void database::table::hash::clear(database::pool::proxy DB)
-{
-	DB->query("DELETE FROM hash");
-}
-
 void database::table::hash::delete_tree(const std::string & hash,
 	const int tree_size, database::pool::proxy DB)
 {
 	std::stringstream ss;
-	ss << "DELETE FROM hash WHERE hash = '" << hash << "' AND size = " << tree_size;
+	ss << "DELETE FROM hash WHERE hash = '" << hash << "' AND tree_size = " << tree_size;
 	DB->query(ss.str());
 }
 
@@ -26,7 +21,7 @@ bool database::table::hash::exists(const std::string & hash,
 {
 	bool tree_exists = false;
 	std::stringstream ss;
-	ss << "SELECT 1 FROM hash WHERE hash = '" << hash << "' AND size = "
+	ss << "SELECT 1 FROM hash WHERE hash = '" << hash << "' AND tree_size = "
 		<< tree_size;
 	DB->query(ss.str(), &exists_call_back, tree_exists);
 	return tree_exists;
@@ -49,7 +44,7 @@ bool database::table::hash::get_state(const std::string & hash,
 	//std::pair<true if found, key>
 	std::pair<bool, unsigned> info(false, 0);
 	std::stringstream ss;
-	ss << "SELECT state FROM hash WHERE hash = '" << hash << "' AND size = "
+	ss << "SELECT state FROM hash WHERE hash = '" << hash << "' AND tree_size = "
 		<< tree_size;
 	DB->query(ss.str(), &get_state_call_back, info);
 	if(info.first){
@@ -67,7 +62,7 @@ void database::table::hash::set_state(const std::string & hash,
 	assert(State >= RESERVED && State <= COMPLETE);
 	std::stringstream ss;
 	ss << "UPDATE hash SET state = " << State << " WHERE hash = '"
-		<< hash << "' AND size = " << tree_size;
+		<< hash << "' AND tree_size = " << tree_size;
 	DB->query(ss.str());
 }
 
@@ -76,7 +71,7 @@ bool database::table::hash::tree_allocate(const std::string & hash,
 {
 	if(tree_size != 0){
 		std::stringstream ss;
-		ss << "INSERT INTO hash(key, hash, state, size, tree) VALUES(NULL, '"
+		ss << "INSERT INTO hash(key, hash, state, tree_size, tree) VALUES(NULL, '"
 			<< hash << "', 0, " << tree_size << ", ?)";
 		return DB->blob_allocate(ss.str(), tree_size);
 	}else{
@@ -100,7 +95,7 @@ database::blob database::table::hash::tree_open(const std::string & hash,
 {
 	std::pair<bool, boost::int64_t> info(false, 0);
 	std::stringstream ss;
-	ss << "SELECT key FROM hash WHERE hash = '" << hash << "' AND size = "
+	ss << "SELECT key FROM hash WHERE hash = '" << hash << "' AND tree_size = "
 		<< tree_size;
 	DB->query(ss.str(), &get_key_call_back, info);
 	if(info.first){

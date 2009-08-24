@@ -13,20 +13,23 @@ class init
 public:
 
 	/*
-	all:
-		Set up all tables.
-	<*>:
-		Set up <*> table.
+	create_all:
+		Create tables that don't yet exist.
+	drop_all:
+		Drop all tables if they exist.
 	*/
-	static void all();
+	static void create_all();
+	static void drop_all();
+
+private:
+	init(){}
+
+	//functions to create tables
 	static void blacklist();
 	static void hash();
 	static void preferences();
 	static void prime();
 	static void share();
-
-private:
-	init(){}
 };
 }//end of namespace database
 #endif

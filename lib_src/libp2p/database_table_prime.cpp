@@ -1,10 +1,5 @@
 #include "database_table_prime.hpp"
 
-void database::table::prime::clear(database::pool::proxy DB)
-{
-	DB->query("DELETE FROM prime");
-}
-
 int read_all_call_back(std::vector<mpint> & Prime_Cache,
 	int columns_retrieved, char ** response, char ** column_name)
 {

@@ -124,7 +124,7 @@ PRNG of Host_B and vise versa.
 </p>
 </blockquote>
 
-<b>2.2 Requests</b>
+<b>2.2 Commands</b>
 <blockquote>
 
 <fieldset>
@@ -143,7 +143,27 @@ C = command, R = root hash (binary)
 Possible Responses:
 SLOT_ID
 SLOT_ID_WITH_BITFIELD
-ERROR (the server does not have the hash tree and file)
+REQUEST_SLOT_FAILED (the server does not have the file)
+</pre>
+</fieldset>
+
+<br>
+
+<fieldset>
+<pre>
+Name: REQUEST_SLOT_FAILED
+Base10: 0
+Description: Server does not have requested file.
+Postcondition: Slot is not opened.
+
++---+
+| C |
++---+
+  0
+
+C = command
+
+Possible Responses: None
 </pre>
 </fieldset>
 
@@ -205,10 +225,8 @@ Description: This is done after a hash tree or file is finished downloading.
 C = command, B = block number
 </pre>
 </fieldset>
-</blockquote>
 
-<b>2.3 Responses</b>
-<blockquote>
+<br>
 
 <fieldset>
 <pre>

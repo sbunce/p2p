@@ -29,6 +29,8 @@ public:
 		host sends us a bitfield because it doesn't have all blocks.
 	complete:
 		Returns true if all blocks have been requested.
+	force_complete:
+		Equivalent to adding all blocks.
 	next:
 		Returns true and sets block to the number of the next block we need to
 		request from the remote host. If returns false then the remote host has no
@@ -49,6 +51,7 @@ public:
 	void add_host(const int socket_FD);
 	void add_host(const int socket_FD, boost::dynamic_bitset<> & BS);
 	bool complete();
+	void force_complete();
 	bool next(const int socket_FD, boost::uint32_t & block);
 	void remove_block(const boost::uint32_t block);
 	void remove_host(const int socket_FD);

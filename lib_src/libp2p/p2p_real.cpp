@@ -10,7 +10,7 @@ p2p_real::p2p_real():
 {
 	//create directories and initialize database (if not already initialized)
 	path::create_required_directories();
-	database::init::all();
+	database::init::create_all();
 
 	//setup proxies for async getter/setter function calls
 	max_connections_proxy = database::table::preferences::get_max_connections();

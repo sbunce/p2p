@@ -8,8 +8,8 @@ int main()
 {
 	//setup database and make sure hash table clear
 	path::unit_test_override("database_table_hash.db");
-	database::init::hash();
-	database::table::hash::clear();
+	database::init::drop_all();
+	database::init::create_all();
 
 	//size of our test tree
 	int test_tree_size = 123;

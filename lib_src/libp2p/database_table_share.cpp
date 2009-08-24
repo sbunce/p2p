@@ -1,20 +1,15 @@
 #include "database_table_share.hpp"
 
 void database::table::share::add_entry(const std::string & hash,
-	const boost::uint64_t & size, const std::string & path,
+	const boost::uint64_t & file_size, const std::string & path,
 	database::pool::proxy DB)
 {
 	char * path_sqlite = sqlite3_mprintf("%Q", path.c_str());
 	std::stringstream ss;
-	ss << "INSERT INTO share(hash, size, path) VALUES('" << hash << "', '"
-		<< size << "', " << path_sqlite << ")";
+	ss << "INSERT INTO share(hash, file_size, path) VALUES('" << hash << "', '"
+		<< file_size << "', " << path_sqlite << ")";
 	sqlite3_free(path_sqlite);
 	DB->query(ss.str());
-}
-
-void database::table::share::clear(database::pool::proxy DB)
-{
-	DB->query("DELETE FROM share");
 }
 
 //this checks to see if any records with specified hash and size exist
@@ -38,7 +33,7 @@ static int delete_entry_call_back_chain_1(std::pair<char *, database::pool::prox
 
 	//check if any records remain with hash
 	ss.str(""); ss.clear();
-	ss << "SELECT 1 FROM share WHERE hash = '" << response[0] << "' AND size = '"
+	ss << "SELECT 1 FROM share WHERE hash = '" << response[0] << "' AND file_size = '"
 		<< response[1] << "' LIMIT 1";
 	bool exists = false;
 	(*info.second)->query(ss.str(), &delete_entry_call_back_chain_2, exists);
@@ -60,7 +55,7 @@ void database::table::share::delete_entry(const std::string & path,
 	char * sqlite3_path = sqlite3_mprintf("%Q", path.c_str());
 	std::pair<char *, database::pool::proxy *> info(sqlite3_path, &DB);
 	std::stringstream ss;
-	ss << "SELECT hash, size FROM share WHERE path = " << sqlite3_path << " LIMIT 1";
+	ss << "SELECT hash, file_size FROM share WHERE path = " << sqlite3_path << " LIMIT 1";
 	DB->query(ss.str(), &delete_entry_call_back_chain_1, info);
 	sqlite3_free(sqlite3_path);
 }
@@ -118,7 +113,7 @@ bool database::table::share::lookup_hash(const std::string & hash,
 {
 	std::pair<bool, boost::uint64_t *> info(false, &file_size);
 	std::stringstream ss;
-	ss << "SELECT size FROM share WHERE hash = '" << hash << "' LIMIT 1";
+	ss << "SELECT file_size FROM share WHERE hash = '" << hash << "' LIMIT 1";
 	DB->query(ss.str(), &lookup_hash_2_call_back, info);
 	return info.first;
 }
@@ -140,7 +135,7 @@ bool database::table::share::lookup_hash(const std::string & hash,
 {
 	boost::tuple<bool, boost::uint64_t *, std::string *> info(false, &file_size, &path);
 	std::stringstream ss;
-	ss << "SELECT size, path FROM share WHERE hash = '" << hash << "' LIMIT 1";
+	ss << "SELECT file_size, path FROM share WHERE hash = '" << hash << "' LIMIT 1";
 	DB->query(ss.str(), &lookup_hash_3_call_back, info);
 	return info.get<0>();
 }
@@ -162,8 +157,24 @@ bool database::table::share::lookup_path(const std::string & path, std::string &
 	boost::uint64_t & file_size, database::pool::proxy DB)
 {
 	boost::tuple<bool, std::string *, boost::uint64_t *> info(false, &hash, &file_size);
-	char * query = sqlite3_mprintf("SELECT hash, size FROM share WHERE path = %Q LIMIT 1", path.c_str());
+	char * query = sqlite3_mprintf("SELECT hash, file_size FROM share WHERE path = %Q LIMIT 1", path.c_str());
 	DB->query(query, &lookup_path_call_back, info);
 	sqlite3_free(query);
 	return info.get<0>();
 }
+/*
+static int resume_call_back(
+	std::vector<boost::shared_ptr<slot_element> > & Resume,
+	int columns_retrieved, char ** response, char ** column_name)
+{
+	assert(response[0] && response[1]);
+
+	return 0;
+}
+
+void resume(std::vector<boost::shared_ptr<slot_element> > & Resume,
+	database::pool::proxy DB)
+{
+	DB->query("SELECT hash, file_size, path FROM", &resume_call_back, Resume);
+}
+*/

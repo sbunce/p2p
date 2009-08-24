@@ -1,57 +1,49 @@
 #include "hash_tree.hpp"
 
 hash_tree::hash_tree(
-	const std::string & root_hash_in,
+	const std::string & hash_in,
 	const boost::uint64_t & file_size_in
 ):
-	root_hash(root_hash_in),
+	hash(hash_in),
 	file_size(file_size_in),
 	row(file_size_to_row(file_size)),
 	tree_block_count(row_to_tree_block_count(row)),
 	file_hash_offset(row_to_file_hash_offset(row)),
 	tree_size(file_size_to_tree_size(file_size)),
 	file_block_count(
-		(file_size % protocol::FILE_BLOCK_SIZE == 0) ?
-			(file_size / protocol::FILE_BLOCK_SIZE) :
-			(file_size / protocol::FILE_BLOCK_SIZE + 1)
+		file_size % protocol::FILE_BLOCK_SIZE == 0 ?
+			file_size / protocol::FILE_BLOCK_SIZE :
+			file_size / protocol::FILE_BLOCK_SIZE + 1
 	),
 	last_file_block_size(
-		(file_size % protocol::FILE_BLOCK_SIZE == 0) ?
-			(protocol::FILE_BLOCK_SIZE) :
-			(file_size % protocol::FILE_BLOCK_SIZE)
+		file_size % protocol::FILE_BLOCK_SIZE == 0 ?
+			protocol::FILE_BLOCK_SIZE :
+			file_size % protocol::FILE_BLOCK_SIZE
 	),
+	Block_Request(tree_block_count),
 	set_state_downloading(false),
-	block_status(tree_block_count, 1),
+	block_status(tree_block_count),
 	end_of_good(0)
 {
 	database::pool::proxy DB;
 	DB->query("BEGIN TRANSACTION");
-	if(database::table::hash::exists(root_hash, tree_size, DB)){
-		//tree already exists, open it and find the first bad block
-		Blob = database::table::hash::tree_open(root_hash, tree_size, DB);
-		DB->query("END TRANSACTION");
-		for(boost::uint64_t x=0; x<tree_block_count; ++x){
-			status Status = check_block(x);
-			if(Status == GOOD){
-				end_of_good = x+1;
-				block_status[x] = 1;
-			}else if(Status == BAD){
-				break;
-			}else if(Status == IO_ERROR){
-				/*
-				This error will get picked up and handled later when a block fails
-				to read or write.
-				*/
-				break;
-			}
+	if(database::table::hash::exists(hash, tree_size, DB)){
+		Blob = database::table::hash::tree_open(hash, tree_size, DB);
+		//determine state of hash tree
+		database::table::hash::state State;
+		database::table::hash::get_state(hash, tree_size, State, DB);
+		if(State == database::table::hash::COMPLETE){
+			//tree complete
+			end_of_good = tree_block_count;
+			Block_Request.force_complete();
 		}
 	}else{
 		//tree doesn't yet exist, allocate it
-		database::table::hash::tree_allocate(root_hash, tree_size, DB);
-		DB->query("END TRANSACTION");
+		database::table::hash::tree_allocate(hash, tree_size, DB);
 		set_state_downloading = true;
-		Blob = database::table::hash::tree_open(root_hash, tree_size);
 	}
+	Blob = database::table::hash::tree_open(hash, tree_size, DB);
+	DB->query("END TRANSACTION");
 }
 
 bool hash_tree::block_info(const boost::uint64_t & block, const std::deque<boost::uint64_t> & row,
@@ -122,6 +114,29 @@ unsigned hash_tree::block_size(const boost::uint64_t & block_num)
 	}
 }
 
+void hash_tree::check()
+{
+	for(boost::uint32_t x=end_of_good; x<tree_block_count; ++x){
+		status Status = check_block(x);
+		if(Status == GOOD){
+			Block_Request.add_block(x);
+			end_of_good = x+1;
+		}else if(Status == BAD){
+			Block_Request.remove_block(x);
+			block_status[x] = 0;
+			LOGGER << "bad block " << x << " in tree " << hash;
+			return;
+		}else if(Status == IO_ERROR){
+			return;
+		}
+	}
+
+	if(complete()){
+		database::table::hash::set_state(hash, tree_size,
+			database::table::hash::COMPLETE);
+	}
+}
+
 hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 {
 	if(tree_block_count == 0){
@@ -153,7 +168,7 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 	//check child hash
 	if(block_num == 0){
 		//first row has to be checked against root hash
-		std::string hash_bin = convert::hex_to_bin(root_hash);
+		std::string hash_bin = convert::hex_to_bin(hash);
 		if(hash_bin.empty()){
 			LOGGER << "invalid hex";
 			exit(1);
@@ -178,23 +193,31 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 	}
 }
 
-hash_tree::status hash_tree::check_incremental(boost::uint64_t & bad_block)
+hash_tree::status hash_tree::check_incremental(boost::uint32_t & bad_block)
 {
-	for(boost::uint64_t x=end_of_good; x<tree_block_count && block_status[x]; ++x){
+	for(boost::uint32_t x=end_of_good; x<tree_block_count && block_status[x]; ++x){
 		status Status = check_block(x);
 		if(Status == GOOD){
+			Block_Request.add_block(x);
 			end_of_good = x+1;
 		}else if(Status == BAD){
+			Block_Request.remove_block(x);
 			block_status[x] = 0;
 			bad_block = x;
 			if(bad_block != 0){
-				LOGGER << "bad block " << x << " in tree " << root_hash;
+				LOGGER << "bad block " << x << " in tree " << hash;
 			}
 			return BAD;
 		}else if(Status == IO_ERROR){
 			return IO_ERROR;
 		}
 	}
+
+	if(complete()){
+		database::table::hash::set_state(hash, tree_size,
+			database::table::hash::COMPLETE);
+	}
+
 	return GOOD;
 }
 
@@ -228,7 +251,7 @@ bool hash_tree::complete()
 }
 
 bool hash_tree::create(const std::string & file_path, const boost::uint64_t & expected_file_size,
-	std::string & root_hash)
+	std::string & hash)
 {
 	std::fstream fin(file_path.c_str(), std::ios::in | std::ios::binary);
 	if(!fin.good()){
@@ -305,7 +328,7 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 
 	//base case, the file size is <= one block
 	if(blocks_read == 1){
-		root_hash = SHA.hex_hash();
+		hash = SHA.hex_hash();
 		return true;
 	}
 
@@ -315,9 +338,9 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 		return false;
 	}
 
-	create_recurse(upside_down, rightside_up, 0, blocks_read, root_hash, block_buff, SHA);
+	create_recurse(upside_down, rightside_up, 0, blocks_read, hash, block_buff, SHA);
 
-	if(root_hash.empty()){
+	if(hash.empty()){
 		//tree didn't generate (probably an I/O error)
 		return false;
 	}else{
@@ -334,26 +357,26 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 
 		database::pool::proxy DB;
 		DB->query("BEGIN TRANSACTION");
-		if(database::table::hash::exists(root_hash, tree_size)){
+		if(database::table::hash::exists(hash, tree_size)){
 			//hash tree already exists
 			DB->query("END TRANSACTION");
 			return false;
 		}
 
 		//tree doesn't exist, allocate space for it
-		if(!database::table::hash::tree_allocate(root_hash, tree_size)){
+		if(!database::table::hash::tree_allocate(hash, tree_size)){
 			LOGGER << "could not allocate blob for hash tree";
 			DB->query("END TRANSACTION");
 			return false;
 		}
 
 		//copy tree from temp file to database
-		database::blob Blob = database::table::hash::tree_open(root_hash, tree_size, DB);
+		database::blob Blob = database::table::hash::tree_open(hash, tree_size, DB);
 		rightside_up.seekg(0, std::ios::beg);
 		int offset = 0, bytes_remaining = tree_size, read_size;
 		while(bytes_remaining){
 			if(boost::this_thread::interruption_requested()){
-				database::table::hash::delete_tree(root_hash, tree_size, DB);
+				database::table::hash::delete_tree(hash, tree_size, DB);
 				DB->query("END TRANSACTION");
 				return false;
 			}
@@ -365,13 +388,13 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 			rightside_up.read(block_buff, read_size);
 			if(rightside_up.gcount() != read_size){
 				LOGGER << "error reading rightside_up file";
-				database::table::hash::delete_tree(root_hash, tree_size, DB);
+				database::table::hash::delete_tree(hash, tree_size, DB);
 				DB->query("END TRANSACTION");
 				return false;
 			}else{
 				if(!DB->blob_write(Blob, block_buff, read_size, offset)){
 					LOGGER << "error doing incremental write to blob";
-					database::table::hash::delete_tree(root_hash, tree_size, DB);
+					database::table::hash::delete_tree(hash, tree_size, DB);
 					DB->query("END TRANSACTION");
 					return false;
 				}
@@ -380,13 +403,12 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 			}
 		}
 		DB->query("END TRANSACTION");
-
 		return true;
 	}
 }
 
 bool hash_tree::create_recurse(std::fstream & upside_down, std::fstream & rightside_up,
-	boost::uint64_t start_RRN, boost::uint64_t end_RRN, std::string & root_hash,
+	boost::uint64_t start_RRN, boost::uint64_t end_RRN, std::string & hash,
 	char * block_buff, SHA1 & SHA)
 {
 	//used to store scratch locations for read/write
@@ -448,7 +470,7 @@ bool hash_tree::create_recurse(std::fstream & upside_down, std::fstream & rights
 	}
 
 	//recurse
-	if(!create_recurse(upside_down, rightside_up, end_RRN, scratch_write_RRN, root_hash,
+	if(!create_recurse(upside_down, rightside_up, end_RRN, scratch_write_RRN, hash,
 		block_buff, SHA))
 	{
 		return false;
@@ -457,7 +479,7 @@ bool hash_tree::create_recurse(std::fstream & upside_down, std::fstream & rights
 	//writing the final hash tree is done depth first
 	if(scratch_write_RRN - end_RRN == 1){
 		//this is the recursive call with the root hash
-		root_hash = SHA.hex_hash();
+		hash = SHA.hex_hash();
 	}
 
 	//write hashes that were passed to this function
@@ -524,21 +546,6 @@ boost::uint64_t hash_tree::file_size_to_tree_size(const boost::uint64_t & file_s
 	return protocol::HASH_SIZE * file_hash_to_tree_hash(file_size_to_file_hash(file_size));
 }
 
-boost::uint64_t hash_tree::missing_block()
-{
-	if(complete()){
-		LOGGER << "precondition violated";
-		exit(1);
-	}
-	for(boost::uint64_t x=end_of_good; x<tree_block_count; ++x){
-		if(block_status[x] == 0){
-			return x;
-		}
-	}
-	LOGGER << "programmer error";
-	exit(1);
-}
-
 hash_tree::status hash_tree::read_block(const boost::uint64_t & block_num,
 	std::string & block)
 {
@@ -592,7 +599,7 @@ hash_tree::status hash_tree::write_block(const boost::uint64_t & block_num,
 {
 	//see documentation in header for set_state_downloading
 	if(set_state_downloading){
-		database::table::hash::set_state(root_hash, tree_size,
+		database::table::hash::set_state(hash, tree_size,
 			database::table::hash::DOWNLOADING);
 		set_state_downloading = false;
 	}
@@ -611,7 +618,7 @@ hash_tree::status hash_tree::write_block(const boost::uint64_t & block_num,
 		}
 
 		block_status[block_num] = 1;
-		boost::uint64_t bad_block;
+		boost::uint32_t bad_block;
 		status Status = check_incremental(bad_block);
 		if(Status == BAD && bad_block == block_num){
 			database::table::blacklist::add(IP);

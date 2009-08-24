@@ -12,6 +12,8 @@ void send(network::buffer & source, network::buffer & destination)
 int main()
 {
 	path::unit_test_override("encryption.db");
+	database::init::drop_all();
+	database::init::create_all();
 
 	//Host_A will connect to Host_B.
 	encryption Host_A_Encryption;

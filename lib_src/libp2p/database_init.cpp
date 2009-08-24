@@ -7,7 +7,13 @@ static int check_exists_call_back(bool & exists, int columns_retrieved, char ** 
 	return 0;
 }
 
-void database::init::all()
+void database::init::blacklist()
+{
+	database::pool::proxy DB;
+	DB->query("CREATE TABLE IF NOT EXISTS blacklist (IP TEXT UNIQUE)");
+}
+
+void database::init::create_all()
 {
 	blacklist();
 	hash();
@@ -16,19 +22,23 @@ void database::init::all()
 	share();
 }
 
-void database::init::blacklist()
+void database::init::drop_all()
 {
 	database::pool::proxy DB;
-	DB->query("CREATE TABLE IF NOT EXISTS blacklist (IP TEXT UNIQUE)");
+	DB->query("DROP TABLE IF EXISTS blacklist");
+	DB->query("DROP TABLE IF EXISTS hash");
+	DB->query("DROP TABLE IF EXISTS preferences");
+	DB->query("DROP TABLE IF EXISTS prime");
+	DB->query("DROP TABLE IF EXISTS share");
 }
 
 void database::init::hash()
 {
 	database::pool::proxy DB;
-	DB->query("CREATE TABLE IF NOT EXISTS hash(key INTEGER PRIMARY KEY, hash TEXT, state INTEGER, size INTEGER, tree BLOB)");
+	DB->query("CREATE TABLE IF NOT EXISTS hash(key INTEGER PRIMARY KEY, hash TEXT, tree_size INTEGER, tree BLOB, state INTEGER)");
 	DB->query("CREATE INDEX IF NOT EXISTS hash_hash_index ON hash(hash)");
+	DB->query("CREATE INDEX IF NOT EXISTS hash_size_index ON hash(tree_size)");
 	DB->query("CREATE INDEX IF NOT EXISTS hash_state_index ON hash(state)");
-	DB->query("CREATE INDEX IF NOT EXISTS hash_size_index ON hash(size)");
 	DB->query("DELETE FROM hash WHERE state = 0");
 }
 
@@ -56,7 +66,7 @@ void database::init::prime()
 void database::init::share()
 {
 	database::pool::proxy DB;
-	DB->query("CREATE TABLE IF NOT EXISTS share (hash TEXT, size TEXT, path TEXT)");
+	DB->query("CREATE TABLE IF NOT EXISTS share (hash TEXT, file_size TEXT, path TEXT)");
 	DB->query("CREATE INDEX IF NOT EXISTS share_hash_index ON share (hash)");
 	DB->query("CREATE INDEX IF NOT EXISTS share_path_index ON share (path)");
 }

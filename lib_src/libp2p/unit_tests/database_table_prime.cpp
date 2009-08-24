@@ -11,8 +11,8 @@ int main()
 
 	//setup database and make sure prime table clear
 	path::unit_test_override("database_table_prime.db");
-	database::init::prime();
-	database::table::prime::clear();
+	database::init::drop_all();
+	database::init::create_all();
 
 	//vector of primes to test
 	std::vector<mpint> Prime_Cache;
