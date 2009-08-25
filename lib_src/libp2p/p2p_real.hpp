@@ -10,7 +10,6 @@
 #include "prime_generator.hpp"
 #include "share.hpp"
 #include "settings.hpp"
-#include "thread_pool.hpp"
 
 //include
 #include <boost/bind.hpp>
@@ -19,6 +18,7 @@
 #include <boost/utility.hpp>
 #include <network/network.hpp>
 #include <p2p/p2p.hpp>
+#include <thread_pool.hpp>
 
 //standard
 #include <cstdlib>
@@ -61,6 +61,7 @@ private:
 	atomic_int<unsigned> max_download_rate_proxy;
 	atomic_int<unsigned> max_upload_rate_proxy;
 
+	//indexes share
 	share Share;
 
 	/*
@@ -81,6 +82,9 @@ private:
 		sure the objects it uses are constructed before it uses them.
 	*/
 	network::proactor Proactor;
+
+	//used to schedule long jobs so the GUI doesn't have to wait
+	thread_pool Thread_Pool;
 
 	/*
 	connect_call_back:

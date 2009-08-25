@@ -6,7 +6,8 @@ p2p_real::p2p_real():
 		boost::bind(&p2p_real::connect_call_back, this, _1),
 		boost::bind(&p2p_real::disconnect_call_back, this, _1),
 		boost::bind(&p2p_real::failed_connect_call_back, this, _1)
-	)
+	),
+	Thread_Pool(boost::thread::hardware_concurrency())
 {
 	//create directories and initialize database (if not already initialized)
 	path::create_required_directories();
@@ -31,7 +32,8 @@ p2p_real::p2p_real():
 
 p2p_real::~p2p_real()
 {
-	thread_pool::singleton().stop();
+	Thread_Pool.interrupt();
+	Thread_Pool.join();
 }
 
 void p2p_real::connect_call_back(network::sock & S)
@@ -119,8 +121,7 @@ void p2p_real::max_connections(unsigned connections)
 	}
 	Proactor.Reactor.max_connections(connections / 2, connections / 2);
 	max_connections_proxy = connections;
-	thread_pool::singleton().queue(boost::bind(&max_connections_wrapper,
-		connections));
+	Thread_Pool.queue(boost::bind(&max_connections_wrapper, connections));
 }
 
 unsigned p2p_real::max_download_rate()
@@ -137,8 +138,7 @@ void p2p_real::max_download_rate(const unsigned rate)
 {
 	Proactor.Reactor.max_download_rate(rate);
 	max_download_rate_proxy = rate;
-	thread_pool::singleton().queue(boost::bind(&max_download_rate_wrapper,
-		rate));
+	Thread_Pool.queue(boost::bind(&max_download_rate_wrapper, rate));
 }
 
 unsigned p2p_real::max_upload_rate()
@@ -155,8 +155,7 @@ void p2p_real::max_upload_rate(const unsigned rate)
 {
 	Proactor.Reactor.max_upload_rate(rate);
 	max_upload_rate_proxy = rate;
-	thread_pool::singleton().queue(boost::bind(&max_upload_rate_wrapper,
-		rate));
+	Thread_Pool.queue(boost::bind(&max_upload_rate_wrapper, rate));
 }
 
 void p2p_real::pause_download(const std::string & hash)
