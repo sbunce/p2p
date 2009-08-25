@@ -27,12 +27,11 @@ hash_tree::hash_tree(
 {
 	database::pool::proxy DB;
 	DB->query("BEGIN TRANSACTION");
-	if(database::table::hash::exists(hash, tree_size, DB)){
-		Blob = database::table::hash::tree_open(hash, tree_size, DB);
-		//determine state of hash tree
-		database::table::hash::state State;
-		database::table::hash::get_state(hash, tree_size, State, DB);
-		if(State == database::table::hash::COMPLETE){
+	if(boost::shared_ptr<database::table::hash::tree_info>
+		TI = database::table::hash::tree_open(hash, DB))
+	{
+		Blob = TI->Blob;
+		if(TI->State == database::table::hash::COMPLETE){
 			//tree complete
 			end_of_good = tree_block_count;
 			Block_Request.force_complete();
@@ -40,9 +39,20 @@ hash_tree::hash_tree(
 	}else{
 		//tree doesn't yet exist, allocate it
 		database::table::hash::tree_allocate(hash, tree_size, DB);
+		boost::shared_ptr<database::table::hash::tree_info>
+			TI = database::table::hash::tree_open(hash, DB);
+		if(TI){
+			Blob = TI->Blob;
+		}else{
+			if(tree_size == 0){
+				//no tree for hash trees of size 0
+				Block_Request.force_complete();
+			}else{
+				LOGGER; exit(1);
+			}
+		}
 		set_state_downloading = true;
 	}
-	Blob = database::table::hash::tree_open(hash, tree_size, DB);
 	DB->query("END TRANSACTION");
 }
 
@@ -132,8 +142,7 @@ void hash_tree::check()
 	}
 
 	if(complete()){
-		database::table::hash::set_state(hash, tree_size,
-			database::table::hash::COMPLETE);
+		database::table::hash::set_state(hash, database::table::hash::COMPLETE);
 	}
 }
 
@@ -214,8 +223,7 @@ hash_tree::status hash_tree::check_incremental(boost::uint32_t & bad_block)
 	}
 
 	if(complete()){
-		database::table::hash::set_state(hash, tree_size,
-			database::table::hash::COMPLETE);
+		database::table::hash::set_state(hash, database::table::hash::COMPLETE);
 	}
 
 	return GOOD;
@@ -357,26 +365,27 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 
 		database::pool::proxy DB;
 		DB->query("BEGIN TRANSACTION");
-		if(database::table::hash::exists(hash, tree_size)){
+		if(database::table::hash::tree_open(hash, DB)){
 			//hash tree already exists
 			DB->query("END TRANSACTION");
 			return false;
 		}
 
 		//tree doesn't exist, allocate space for it
-		if(!database::table::hash::tree_allocate(hash, tree_size)){
+		if(!database::table::hash::tree_allocate(hash, tree_size, DB)){
 			LOGGER << "could not allocate blob for hash tree";
 			DB->query("END TRANSACTION");
 			return false;
 		}
 
 		//copy tree from temp file to database
-		database::blob Blob = database::table::hash::tree_open(hash, tree_size, DB);
+		boost::shared_ptr<database::table::hash::tree_info>
+			TI = database::table::hash::tree_open(hash, DB);
 		rightside_up.seekg(0, std::ios::beg);
 		int offset = 0, bytes_remaining = tree_size, read_size;
 		while(bytes_remaining){
 			if(boost::this_thread::interruption_requested()){
-				database::table::hash::delete_tree(hash, tree_size, DB);
+				database::table::hash::delete_tree(hash, DB);
 				DB->query("END TRANSACTION");
 				return false;
 			}
@@ -388,13 +397,13 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 			rightside_up.read(block_buff, read_size);
 			if(rightside_up.gcount() != read_size){
 				LOGGER << "error reading rightside_up file";
-				database::table::hash::delete_tree(hash, tree_size, DB);
+				database::table::hash::delete_tree(hash, DB);
 				DB->query("END TRANSACTION");
 				return false;
 			}else{
-				if(!DB->blob_write(Blob, block_buff, read_size, offset)){
+				if(!DB->blob_write(TI->Blob, block_buff, read_size, offset)){
 					LOGGER << "error doing incremental write to blob";
-					database::table::hash::delete_tree(hash, tree_size, DB);
+					database::table::hash::delete_tree(hash, DB);
 					DB->query("END TRANSACTION");
 					return false;
 				}
@@ -599,8 +608,7 @@ hash_tree::status hash_tree::write_block(const boost::uint64_t & block_num,
 {
 	//see documentation in header for set_state_downloading
 	if(set_state_downloading){
-		database::table::hash::set_state(hash, tree_size,
-			database::table::hash::DOWNLOADING);
+		database::table::hash::set_state(hash, database::table::hash::DOWNLOADING);
 		set_state_downloading = false;
 	}
 

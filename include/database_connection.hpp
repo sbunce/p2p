@@ -63,7 +63,7 @@ class blob
 public:
 	//a read or write to a blob constructed with this will fail
 	blob():
-		rowid(0)
+		rowid(0) //indicates blob is invalid
 	{}
 
 	blob(
@@ -76,12 +76,9 @@ public:
 		rowid(rowid_in)
 	{}
 
-	blob & operator = (const blob & Blob)
+	blob(const blob & Blob)
 	{
-		table = Blob.table;
-		column = Blob.column;
-		rowid = Blob.rowid;
-		return *this;
+		*this = Blob;
 	}
 
 	std::string table;

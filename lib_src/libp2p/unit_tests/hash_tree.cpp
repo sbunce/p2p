@@ -115,7 +115,7 @@ void random_assemble()
 		HT_1024.read_block(x, B);
 		block.push_back(B);
 	}
-	database::table::hash::delete_tree(HT_1024.hash, HT_1024.tree_size);
+	database::table::hash::delete_tree(HT_1024.hash);
 
 	//make a vector of all block numbers and randomize it
 	std::vector<unsigned> block_number;
