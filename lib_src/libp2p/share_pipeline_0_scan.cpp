@@ -108,7 +108,6 @@ void share_pipeline_0_scan::main_loop()
 	database::pool::get_proxy()->query("SELECT path, size FROM share", this,
 		&share_pipeline_0_scan::path_call_back);
 
-	boost::uint64_t size;
 	while(true){
 		boost::this_thread::interruption_point();
 
@@ -140,12 +139,12 @@ void share_pipeline_0_scan::main_loop()
 					iter_cur.pop();
 				}else{
 					if(fs::is_regular_file(iter_cur->status())){
-						size = fs::file_size(iter_cur->path().string());
-						if(insert(iter_cur->path().string(), size)){
+						boost::uint64_t file_size = fs::file_size(iter_cur->path().string());
+						if(insert(iter_cur->path().string(), file_size)){
 							//file hasn't been seen before, or it changed size
 							boost::mutex::scoped_lock lock(job_mutex);
 							job.push_back(share_pipeline_job(iter_cur->path().string(),
-								size, share_pipeline_job::HASH_FILE));
+								file_size, share_pipeline_job::HASH_FILE));
 							job_cond.notify_one();
 						}
 					}

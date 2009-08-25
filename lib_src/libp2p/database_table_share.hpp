@@ -27,8 +27,20 @@ public:
 	class file_info
 	{
 	public:
+		file_info(){}
+		file_info(
+			const std::string & hash_in,
+			const boost::uint64_t file_size_in,
+			const std::string & path_in
+		):
+			hash(hash_in),
+			file_size(file_size_in),
+			path(path_in)
+		{}
+
 		std::string hash;
-		//std::
+		boost::uint64_t file_size;
+		std::string path;
 	};
 
 	/*
@@ -37,26 +49,20 @@ public:
 	delete_entry:
 		Removes entry from database. Removes hash tree if there are no more
 		references to it.
-	lookup_<lookup by this>:
-		The first parameter is the key by which to lookup the data. The non-const
-		references will be set if the record was found. True is returned if the
-		record is found (and the referenced variables are set), or false is
-		returned if no record is found (and referenced variables are no set).
+	lookup_hash:
+		Lookup a record in the share table by it's hash. An empty shared_ptr is
+		returned if no record exists.
+	lookup_path:
+		Lookup a record in the share table by it's path. An empty shared_ptr is
+		returned if no record exists.
 	*/
-	static void add_entry(const std::string & hash, const boost::uint64_t & file_size,
-		const std::string & path, database::pool::proxy DB = database::pool::proxy());
+	static void add_entry(const file_info & FI, database::pool::proxy DB = database::pool::proxy());
 	static void delete_entry(const std::string & path,
 		database::pool::proxy DB = database::pool::proxy());
-	static bool lookup_hash(const std::string & hash,
+	static boost::shared_ptr<file_info> lookup_hash(const std::string & hash,
 		database::pool::proxy DB = database::pool::proxy());
-	static bool lookup_hash(const std::string & hash, std::string & path,
+	static boost::shared_ptr<file_info> lookup_path(const std::string & path,
 		database::pool::proxy DB = database::pool::proxy());
-	static bool lookup_hash(const std::string & hash, boost::uint64_t & file_size,
-		database::pool::proxy DB = database::pool::proxy());
-	static bool lookup_hash(const std::string & hash, std::string & path,
-		boost::uint64_t & file_size, database::pool::proxy DB = database::pool::proxy());
-	static bool lookup_path(const std::string & path, std::string & hash,
-		boost::uint64_t & file_size, database::pool::proxy DB = database::pool::proxy());
 /*
 	static void resume(std::vector<boost::shared_ptr<slot_element> > & Resume,
 		database::pool::proxy DB = database::pool::proxy());

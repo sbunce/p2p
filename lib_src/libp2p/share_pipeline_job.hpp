@@ -11,8 +11,8 @@ class share_pipeline_job
 {
 public:
 	enum type {
-		HASH_FILE,         //file needs to be hashed
-		REMOVE_FILE        //file removed
+		HASH_FILE,  //file needs to be hashed
+		REMOVE_FILE //file removed
 	} Type;
 
 	share_pipeline_job(){}
@@ -27,11 +27,11 @@ public:
 		Type(Type_in)
 	{}
 
-	//set by share_pipeline_0
-	std::string path;
-	boost::uint64_t file_size;
-
 	//set by share_pipeline_1 if Job_Type = HASH_FILE
 	std::string hash;
+
+	//set by share_pipeline_0
+	boost::uint64_t file_size;
+	std::string path;
 };
 #endif

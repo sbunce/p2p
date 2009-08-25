@@ -36,10 +36,11 @@ void share_pipeline_2_write::main_loop()
 			{
 				if(iter_cur->Type == share_pipeline_job::HASH_FILE){
 					//job to add file to share table
-					database::table::share::add_entry(iter_cur->hash,
-						iter_cur->file_size, iter_cur->path, DB);
-					database::table::hash::set_state(iter_cur->hash,
-						hash_tree::file_size_to_tree_size(iter_cur->file_size),
+					database::table::share::file_info FI(iter_cur->hash,
+						iter_cur->file_size, iter_cur->path);
+					database::table::share::add_entry(FI, DB);
+					database::table::hash::set_state(FI.hash,
+						hash_tree::file_size_to_tree_size(FI.file_size),
 						database::table::hash::COMPLETE, DB);
 				}else if(iter_cur->Type == share_pipeline_job::REMOVE_FILE){
 					//job to remove file from share table
