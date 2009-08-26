@@ -115,12 +115,12 @@ int main()
 	}
 
 	bool hack = true; //connections won't immediately be non-zero
-	while(Proactor.Reactor.connections() != 0 || hack){
-		LOGGER << "C<" << Proactor.Reactor.connections() << "> "
-			<< "IC<" << Proactor.Reactor.incoming_connections() << "> "
-			<< "OC<" << Proactor.Reactor.outgoing_connections() << "> "
-			<< "D<" << convert::size_SI(Proactor.Reactor.current_download_rate()) << "> "
-			<< "U<" << convert::size_SI(Proactor.Reactor.current_upload_rate()) << ">";
+	while(Proactor.connections() != 0 || hack){
+		LOGGER << "C<" << Proactor.connections() << "> "
+			<< "IC<" << Proactor.incoming_connections() << "> "
+			<< "OC<" << Proactor.outgoing_connections() << "> "
+			<< "D<" << convert::size_SI(Proactor.current_download_rate()) << "> "
+			<< "U<" << convert::size_SI(Proactor.current_upload_rate()) << ">";
 		portable_sleep::ms(1000);
 		hack = false;
 	}

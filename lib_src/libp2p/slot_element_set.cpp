@@ -27,7 +27,7 @@ void slot_element_set::remove(const std::string & hash)
 	Slot_Element.erase(hash);
 }
 
-void slot_element_set::resume(std::vector<boost::shared_ptr<slot_element> > & Resume)
+void slot_element_set::resume(network::proactor & Proactor)
 {
 	//read all downloading files
 	//database::table::share::resume(Resume);

@@ -5,8 +5,9 @@ slot::slot()
 
 }
 
-bool slot::add_incoming_slot(boost::shared_ptr<slot_element> SE, network::buffer & send_buff)
+bool slot::add_incoming_slot()
 {
+/*
 	if(Incoming_Slot.size() >= 256){
 		//violated protocol by opening too many slots
 		LOGGER << "remote host opened more than 256 slots";
@@ -27,6 +28,7 @@ bool slot::add_incoming_slot(boost::shared_ptr<slot_element> SE, network::buffer
 	send_buff.append(protocol::SLOT_ID)
 		.append(static_cast<unsigned char>(Incoming_Slot.size()-1));
 	return true;
+*/
 }
 
 void slot::add_outgoing_slot(boost::shared_ptr<slot_element> SE)
@@ -34,12 +36,12 @@ void slot::add_outgoing_slot(boost::shared_ptr<slot_element> SE)
 	Pending_Slot_Request.push_back(SE);
 }
 
-bool slot::message(network::buffer & recv_buff)
+bool slot::recv(network::buffer & recv_buff)
 {
 
 }
 
-bool slot::request(network::buffer & send_buff)
+bool slot::send(network::buffer & send_buff)
 {
 //DEBUG, work on this
 

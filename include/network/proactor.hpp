@@ -47,12 +47,6 @@ public:
 	}
 
 	/*
-	Reactor which the proactor uses. This object is public and can be used to get
-	network information, set rate limits, etc.
-	*/
-	reactor_select Reactor;
-
-	/*
 	Does asynchronous DNS resolution. Hands off DNS resolution to a thread inside
 	the proactor which does DNS resolution, then calls reactor::connect.
 	*/
@@ -63,9 +57,67 @@ public:
 		resolve_job_cond.notify_one();
 	}
 
+//DEBUG, move documentation here
+	unsigned connections()
+	{
+		return Reactor.connections();
+	}
+	unsigned incoming_connections()
+	{
+		return Reactor.incoming_connections();
+	}
+	unsigned max_incoming_connections()
+	{
+		return max_incoming_connections();
+	}
+	unsigned outgoing_connections()
+	{
+		return Reactor.outgoing_connections();
+	}
+	unsigned max_outgoing_connections()
+	{
+		return Reactor.max_outgoing_connections();
+	}
+	void max_connections(const unsigned max_incoming_connections_in,
+		const unsigned max_outgoing_connections_in)
+	{
+		Reactor.max_connections(max_incoming_connections_in, max_outgoing_connections_in);
+	}
+	unsigned max_connections_supported()
+	{
+		return Reactor.max_connections_supported();
+	}
+	unsigned current_download_rate()
+	{
+		return Reactor.current_download_rate();
+	}
+	unsigned current_upload_rate()
+	{
+		return Reactor.current_upload_rate();
+	}
+	unsigned max_download_rate()
+	{
+		return Reactor.max_download_rate();
+	}
+	unsigned max_upload_rate()
+	{
+		return Reactor.max_upload_rate();
+	}
+	void max_download_rate(const unsigned rate)
+	{
+		Reactor.max_download_rate(rate);
+	}
+	void max_upload_rate(const unsigned rate)
+	{
+		Reactor.max_upload_rate(rate);
+	}
+
 private:
-	//mutex for start/stop
-	boost::mutex start_stop_mutex;
+	/*
+	Reactor which the proactor uses. This object is public and can be used to get
+	network information, set rate limits, etc.
+	*/
+	reactor_select Reactor;
 
 	//worker threads to handle call backs
 	boost::thread_group Workers;

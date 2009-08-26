@@ -15,16 +15,16 @@ p2p_real::p2p_real():
 
 	//setup proxies for async getter/setter function calls
 	max_connections_proxy = database::table::preferences::get_max_connections();
-	if(max_connections_proxy > Proactor.Reactor.max_connections_supported()){
-		max_connections_proxy = Proactor.Reactor.max_connections_supported();
+	if(max_connections_proxy > Proactor.max_connections_supported()){
+		max_connections_proxy = Proactor.max_connections_supported();
 	}
 	max_download_rate_proxy = database::table::preferences::get_max_download_rate();
 	max_upload_rate_proxy = database::table::preferences::get_max_upload_rate();
 
-	//set preferences with the reactor
-	Proactor.Reactor.max_connections(max_connections_proxy / 2, max_connections_proxy / 2);
-	Proactor.Reactor.max_download_rate(max_download_rate_proxy);
-	Proactor.Reactor.max_upload_rate(max_upload_rate_proxy);
+	//set preferences with the proactor
+	Proactor.max_connections(max_connections_proxy / 2, max_connections_proxy / 2);
+	Proactor.max_download_rate(max_download_rate_proxy);
+	Proactor.max_upload_rate(max_upload_rate_proxy);
 
 //DEBUG, test
 	Proactor.connect("127.0.0.1", settings::P2P_PORT);
@@ -116,10 +116,10 @@ static void max_connections_wrapper(unsigned max_connections_in)
 }
 void p2p_real::max_connections(unsigned connections)
 {
-	if(connections > Proactor.Reactor.max_connections_supported()){
-		connections = Proactor.Reactor.max_connections_supported();
+	if(connections > Proactor.max_connections_supported()){
+		connections = Proactor.max_connections_supported();
 	}
-	Proactor.Reactor.max_connections(connections / 2, connections / 2);
+	Proactor.max_connections(connections / 2, connections / 2);
 	max_connections_proxy = connections;
 	Thread_Pool.queue(boost::bind(&max_connections_wrapper, connections));
 }
@@ -136,7 +136,7 @@ static void max_download_rate_wrapper(const unsigned rate)
 }
 void p2p_real::max_download_rate(const unsigned rate)
 {
-	Proactor.Reactor.max_download_rate(rate);
+	Proactor.max_download_rate(rate);
 	max_download_rate_proxy = rate;
 	Thread_Pool.queue(boost::bind(&max_download_rate_wrapper, rate));
 }
@@ -153,7 +153,7 @@ static void max_upload_rate_wrapper(const unsigned rate)
 }
 void p2p_real::max_upload_rate(const unsigned rate)
 {
-	Proactor.Reactor.max_upload_rate(rate);
+	Proactor.max_upload_rate(rate);
 	max_upload_rate_proxy = rate;
 	Thread_Pool.queue(boost::bind(&max_upload_rate_wrapper, rate));
 }
@@ -190,10 +190,10 @@ void p2p_real::remove_download(const std::string & hash)
 
 unsigned p2p_real::download_rate()
 {
-	return Proactor.Reactor.current_download_rate();
+	return Proactor.current_download_rate();
 }
 
 unsigned p2p_real::upload_rate()
 {
-	return Proactor.Reactor.current_upload_rate();
+	return Proactor.current_upload_rate();
 }
