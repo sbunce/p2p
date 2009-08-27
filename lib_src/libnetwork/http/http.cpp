@@ -55,7 +55,7 @@ void http::recv_call_back(network::sock & S)
 
 void http::send_call_back(network::sock & S)
 {
-	if(S.send_buff.size() < network::reactor::MTU){
+	if(S.send_buff.size() < MTU){
 		read(S);
 	}
 	if(S.send_buff.empty()){
@@ -154,7 +154,7 @@ void http::read(network::sock & S)
 		std::fstream fin(path.string().c_str(), std::ios::in | std::ios::binary);
 		if(fin.is_open()){
 			fin.seekg(index, std::ios::beg);
-			S.send_buff.tail_reserve(network::reactor::MTU);
+			S.send_buff.tail_reserve(MTU);
 			fin.read(reinterpret_cast<char *>(S.send_buff.tail_start()), S.send_buff.tail_size());
 			S.send_buff.tail_resize(fin.gcount());
 			index += fin.gcount();

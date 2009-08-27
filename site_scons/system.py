@@ -40,6 +40,7 @@ def setup(env):
 	#libraries to link
 	env['LIBS'] = [
 		'p2p',
+		'network',
 		'sqlite3',
 		'tommath',
 		boost.library('system'),

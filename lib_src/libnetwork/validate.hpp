@@ -8,10 +8,9 @@ Functions for validating addresses.
 #include <boost/regex.hpp>
 
 namespace network {
-namespace {
 
 //returns true if domain is valid
-bool valid_domain(const std::string & domain)
+static bool valid_domain(const std::string & domain)
 {
 	boost::regex regex("[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-])*");
 	boost::cmatch what;
@@ -19,7 +18,7 @@ bool valid_domain(const std::string & domain)
 }
 
 //returns true if IP is valid
-bool valid_IP(const std::string & IP)
+static bool valid_IP(const std::string & IP)
 {
 	/* IP Regex
 	source: Stephen Ryan of Dartware
@@ -50,16 +49,16 @@ bool valid_IP(const std::string & IP)
 }
 
 //returns true if address is valid domain or IP
-bool valid_address(const std::string & address)
+static bool valid_address(const std::string & address)
 {
 	return valid_domain(address) || valid_IP(address);
 }
 
-bool valid_port(const std::string & port)
+static bool valid_port(const std::string & port)
 {
 	return port.size() <= 5 && port.size() > 0 && atoi(port.c_str()) > 0
 		&& atoi(port.c_str()) < 65536;
 }
-}//end unnamed namespace
+
 }//end namespace network
 #endif

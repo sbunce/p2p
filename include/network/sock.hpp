@@ -9,18 +9,22 @@ reactor.
 #ifndef H_NETWORK_SOCK
 #define H_NETWORK_SOCK
 
-//custom
-#include "buffer.hpp"
-#include "wrapper.hpp"
-
 //include
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
+#include <network/network.hpp>
 
 //standard
 #include <string>
 
-namespace network{
+namespace network {
+
+//used for PIMPL
+namespace wrapper {
+class address_info;
+}
+typedef wrapper::address_info address_info;
+
 /*
 Direction of a connection. An incoming connection is one a remote host
 established with us. An outgoing connection is one we establish with a remote
@@ -43,67 +47,26 @@ enum SOCK_ERROR {
 	OTHER            //error there is no other enum for
 };
 
-/*
-This is all the state that needs to be associated with a socket.
-*/
 class sock
 {
-	static const int default_timeout = 16;
+	static const int DEFAULT_TIMEOUT = 16;
 public:
 	/*
 	Constructor for new incoming connection. This is generally used inside a
 	reactor when an incoming connection is established.
 	*/
-	sock(
-		const int socket_FD_in
-	):
-		info(new address_info()),
-		socket_FD(socket_FD_in),
-		IP(wrapper::get_IP(socket_FD)),
-		port(wrapper::get_port(socket_FD)),
-		last_active(std::time(NULL)),
-		direction(INCOMING),
-		connect_flag(false),
-		disconnect_flag(false),
-		failed_connect_flag(false),
-		recv_flag(false),
-		send_flag(false),
-		sock_error(NO_ERROR),
-		timeout(default_timeout)
-	{}
+	sock(const int socket_FD_in);
 
 	/*
 	Constructor for establishing a new connection. This needs to be created to
 	be given to the reactor. Which will in turn connect to the host.
 	*/
-	sock(
-		boost::shared_ptr<address_info> info_in
-	):
-		info(info_in),
-		socket_FD(-1),
-		host(info->get_host()),
-		IP(wrapper::get_IP(*info)),
-		port(info->get_port()),
-		last_active(std::time(NULL)),
-		direction(OUTGOING),
-		connect_flag(false),
-		disconnect_flag(false),
-		failed_connect_flag(false),
-		recv_flag(false),
-		send_flag(false),
-		sock_error(NO_ERROR),
-		timeout(default_timeout)
-	{}
+	sock(boost::shared_ptr<address_info> info_in);
 
-	~sock()
-	{
-		if(socket_FD != -1){
-			close(socket_FD);
-		}
-	}
+	~sock();
 
 	//info for who we're connected to
-	boost::shared_ptr<wrapper::address_info> info;
+	boost::shared_ptr<address_info> info;
 
 	/*
 	File descriptor for network connection. If the second ctor is used this is
@@ -141,8 +104,10 @@ public:
 	buffer recv_buff;
 	buffer send_buff;
 
-	//how many bytes were added to <"send"|"recv">_buff during last <"send"|"recv">()
+	//how many bytes were added to recv_buff last recv() call
 	int latest_recv;
+
+	//how many bytes were added to send_buff last send() call
 	int latest_send;
 
 	//call backs used by the proactor
@@ -159,19 +124,14 @@ public:
 	std::time_t timeout;
 
 	/*
-	Updates last_active. Used for timeouts. Used by reactor but harmless to call
-	from outside the reactor (although this has no meaning).
+	seen:
+		Updates last_active. Used for timeouts. Used by reactor but harmless to
+		call from outside the reactor (although this has no meaning).
+	timed_out:
+		Returns true if the socket has timed out.
 	*/
-	void seen()
-	{
-		last_active = std::time(NULL);
-	}
-
-	//returns true if the socket has timed out
-	bool timed_out()
-	{
-		return std::time(NULL) - last_active > timeout;
-	}
+	void seen();
+	bool timed_out();
 
 private:
 	//last time seen (used for timeouts)

@@ -1,5 +1,4 @@
 //custom
-#include "../network.hpp"
 #include "http.hpp"
 
 //include
@@ -8,6 +7,7 @@
 #include <convert.hpp>
 #include <CLI_args.hpp>
 #include <logger.hpp>
+#include <network/network.hpp>
 #include <portable_sleep.hpp>
 
 //standard

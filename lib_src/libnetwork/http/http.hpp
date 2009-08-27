@@ -1,10 +1,6 @@
 #ifndef H_HTTP
 #define H_HTTP
 
-//custom
-#include "../buffer.hpp"
-#include "../network.hpp"
-
 //include
 #include <boost/bind.hpp>
 #include <boost/cstdint.hpp>
@@ -13,6 +9,7 @@
 #include <boost/algorithm/string.hpp>
 #include <convert.hpp>
 #include <logger.hpp>
+#include <network/network.hpp>
 
 //standard
 #include <fstream>
@@ -23,6 +20,8 @@
 class http : private boost::noncopyable
 {
 public:
+	static const int MTU = 16384;
+
 	http(const std::string & web_root_in);
 
 	//call backs for network
