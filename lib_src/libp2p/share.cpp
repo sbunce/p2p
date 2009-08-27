@@ -2,6 +2,8 @@
 
 share::share()
 {
+	database::init::hash();
+	database::init::share();
 	Share_Pipeline_2_Write.start();
 }
 

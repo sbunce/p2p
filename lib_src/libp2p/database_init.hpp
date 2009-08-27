@@ -21,15 +21,15 @@ public:
 	static void create_all();
 	static void drop_all();
 
-private:
-	init(){}
-
 	//functions to create tables
 	static void blacklist();
 	static void hash();
 	static void preferences();
 	static void prime();
 	static void share();
+
+private:
+	init(){}
 };
 }//end of namespace database
 #endif
