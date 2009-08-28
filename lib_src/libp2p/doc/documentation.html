@@ -418,9 +418,15 @@ building must be simulated to determine how many bytes are in each hash block.
 </p>
 </blockquote>
 
+<b>2.7 Limits</b>
+<blockquote>
+The maximum file size supported is 1097364142080 bytes (slightly less than 1tB).
+This limit is imposed because it generates a hash tree of size 2147483640 bytes
+which is 7 bytes less than 2^31 (the largest size blob SQLite can hold).
+</blockquote>
+
 <b>3.0 Building</b>
 <blockquote>
-
 </blockquote>
 
 <b>3.1 GNU/Linux</b>

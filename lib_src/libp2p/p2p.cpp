@@ -11,14 +11,9 @@ p2p::p2p():
 
 }
 
-void p2p::current_downloads(std::vector<download_status> & CD)
+void p2p::downloads(std::vector<download_status> & CD)
 {
-	P2P_Real->current_downloads(CD);
-}
-
-void p2p::current_uploads(std::vector<upload_status> & CU)
-{
-	P2P_Real->current_uploads(CU);
+	P2P_Real->downloads(CD);
 }
 
 unsigned p2p::download_rate()
@@ -89,4 +84,9 @@ void p2p::start_download(const download_info & DI)
 unsigned p2p::upload_rate()
 {
 	return P2P_Real->upload_rate();
+}
+
+void p2p::uploads(std::vector<upload_status> & CU)
+{
+	P2P_Real->uploads(CU);
 }

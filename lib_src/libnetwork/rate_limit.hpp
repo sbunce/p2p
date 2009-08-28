@@ -32,10 +32,8 @@ public:
 	available_download:
 		Returns number of bytes that can be received such that we don't go over
 		_max_download_rate.
-	current_download_rate:
+	download_rate:
 		Returns average current download rate.
-	current_upload_rate:
-		Returns average current upload rate.
 	max_download_rate:
 		Returns maximum download rate.
 	max_upload_rate:
@@ -44,17 +42,19 @@ public:
 		Sets maximum download rate.
 	max_upload_rate:
 		Sets maximum upload rate.
+	upload_rate:
+		Returns average current upload rate.
 	*/
 	void add_download_bytes(const unsigned n_bytes);
 	void add_upload_bytes(const unsigned n_bytes);
 	int available_upload();
 	int available_download();
-	unsigned current_download_rate();
-	unsigned current_upload_rate();
+	unsigned download_rate();
 	unsigned max_download_rate();
 	unsigned max_upload_rate();
 	void max_download_rate(const unsigned rate);
 	void max_upload_rate(const unsigned rate);
+	unsigned upload_rate();
 
 private:
 	//mutex for all public functions

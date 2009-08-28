@@ -552,7 +552,11 @@ std::deque<boost::uint64_t> hash_tree::file_size_to_row(const boost::uint64_t & 
 
 boost::uint64_t hash_tree::file_size_to_tree_size(const boost::uint64_t & file_size)
 {
-	return protocol::HASH_SIZE * file_hash_to_tree_hash(file_size_to_file_hash(file_size));
+	if(file_size == 0){
+		return 0;
+	}else{
+		return protocol::HASH_SIZE * file_hash_to_tree_hash(file_size_to_file_hash(file_size));
+	}
 }
 
 hash_tree::status hash_tree::read_block(const boost::uint64_t & block_num,

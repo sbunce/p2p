@@ -16,5 +16,8 @@ env_sqlite['CPPDEFINES'].append('SQLITE_ENABLE_FTS3_PARENTHESIS')
 #remove libdl dependency by disabling dynamic module loading (not used anyways)
 env_sqlite['CPPDEFINES'].append('SQLITE_OMIT_LOAD_EXTENSION');
 
+#raise blob size limit to the maximum
+env_sqlite['CPPDEFINES'].append('SQLITE_MAX_LENGTH=2147483647');
+
 env_sqlite.StaticLibrary('#lib/sqlite3', 'sqlite3.c')
 env_sqlite.Program('#bin/sqlite3', ['shell.c'])

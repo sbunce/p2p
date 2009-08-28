@@ -119,8 +119,8 @@ int main()
 		LOGGER << "C<" << Proactor.connections() << "> "
 			<< "IC<" << Proactor.incoming_connections() << "> "
 			<< "OC<" << Proactor.outgoing_connections() << "> "
-			<< "D<" << convert::size_SI(Proactor.current_download_rate()) << "> "
-			<< "U<" << convert::size_SI(Proactor.current_upload_rate()) << ">";
+			<< "D<" << convert::size_SI(Proactor.download_rate()) << "> "
+			<< "U<" << convert::size_SI(Proactor.upload_rate()) << ">";
 		portable_sleep::ms(1000);
 		hack = false;
 	}

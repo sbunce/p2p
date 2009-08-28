@@ -33,9 +33,8 @@ public:
 	~p2p_real();
 
 	//documentation for these in p2p.hpp
-	void current_downloads(std::vector<download_status> & CD);
-	void current_uploads(std::vector<upload_status> & CU);
 	unsigned download_rate();
+	void downloads(std::vector<download_status> & CD);
 	unsigned max_connections();
 	void max_connections(unsigned connections);
 	unsigned max_download_rate();
@@ -49,6 +48,7 @@ public:
 	boost::uint64_t share_size_files();
 	void start_download(const download_info & DI);
 	unsigned upload_rate();
+	void uploads(std::vector<upload_status> & CU);
 
 private:
 	/*

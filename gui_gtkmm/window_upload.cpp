@@ -73,12 +73,8 @@ int window_upload::compare_size(const Gtk::TreeModel::iterator & lval,
 bool window_upload::upload_info_refresh()
 {
 	std::vector<upload_status> status;
-	P2P.current_uploads(status);
+	P2P.uploads(status);
 
-	//std::vector<upload_status>::iterator
-	//status_iter_cur = status.begin(),
-	//status_iter_end = status.end();
-	//while(status_iter_cur != status_iter_end){
 	for(std::vector<upload_status>::iterator status_iter_cur = status.begin(),
 		status_iter_end = status.end(); status_iter_cur != status_iter_end;
 		++status_iter_cur)

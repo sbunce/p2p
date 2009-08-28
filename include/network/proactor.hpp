@@ -32,24 +32,24 @@ public:
 	*/
 	void connect(const std::string & host, const std::string & port);
 
-//DEBUG, move documentation here
 	/*
-
+	Functions that wrap reactor functions. Documentation for these can be found
+	in reactor.hpp. The functions wrapped are named identically.
 	*/
 	unsigned connections();
+	unsigned connections_supported();
+	unsigned download_rate();
 	unsigned incoming_connections();
-	unsigned max_incoming_connections();
 	unsigned outgoing_connections();
-	unsigned max_outgoing_connections();
 	void max_connections(const unsigned max_incoming_connections_in,
 		const unsigned max_outgoing_connections_in);
-	unsigned max_connections_supported();
-	unsigned current_download_rate();
-	unsigned current_upload_rate();
 	unsigned max_download_rate();
-	unsigned max_upload_rate();
 	void max_download_rate(const unsigned rate);
+	unsigned max_incoming_connections();
+	unsigned max_outgoing_connections();
+	unsigned max_upload_rate();
 	void max_upload_rate(const unsigned rate);
+	unsigned upload_rate();
 
 private:
 	/*

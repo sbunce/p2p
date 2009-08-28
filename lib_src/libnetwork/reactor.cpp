@@ -1,10 +1,8 @@
 #include "reactor.hpp"
 
 network::reactor::reactor():
-	_incoming_connections(0),
-	_max_incoming_connections(0),
-	_outgoing_connections(0),
-	_max_outgoing_connections(0)
+	max_incoming(0),
+	max_outgoing(0)
 {
 	wrapper::start_networking();
 }
@@ -14,43 +12,7 @@ network::reactor::~reactor()
 	wrapper::stop_networking();
 }
 
-void network::reactor::add_job(boost::shared_ptr<network::sock> & S)
-{
-	boost::mutex::scoped_lock lock(job_mutex);
-	job.push_back(S);
-	job_cond.notify_one();
-}
-
-void network::reactor::connect(boost::shared_ptr<network::sock> & S)
-{
-	boost::mutex::scoped_lock lock(job_connect_mutex);
-	if(!S->info->resolved()){
-		S->failed_connect_flag = true;
-		S->sock_error = FAILED_RESOLVE;
-		add_job(S);
-	}else{
-		job_connect.push_back(S);
-		trigger_selfpipe();
-	}
-}
-
-unsigned network::reactor::connections()
-{
-	boost::mutex::scoped_lock lock(connections_mutex);
-	return _incoming_connections + _outgoing_connections;
-}
-
-unsigned network::reactor::current_download_rate()
-{
-	return Rate_Limit.current_download_rate();
-}
-
-unsigned network::reactor::current_upload_rate()
-{
-	return Rate_Limit.current_upload_rate();
-}
-
-boost::shared_ptr<network::sock> network::reactor::get_finished_job()
+boost::shared_ptr<network::sock> network::reactor::call_back_finished_job()
 {
 	boost::mutex::scoped_lock lock(finished_job_mutex);
 	if(finished_job.empty()){
@@ -63,25 +25,112 @@ boost::shared_ptr<network::sock> network::reactor::get_finished_job()
 	}
 }
 
-boost::shared_ptr<network::sock> network::reactor::get_job()
+boost::shared_ptr<network::sock> network::reactor::call_back_get_job()
 {
-	boost::mutex::scoped_lock lock(job_mutex);
-	while(job.empty()){
-		job_cond.wait(job_mutex);
+	boost::mutex::scoped_lock lock(schedule_job_mutex);
+	while(schedule_job.empty()){
+		schedule_job_cond.wait(schedule_job_mutex);
 	}
-	boost::shared_ptr<sock> S = job.front();
-	job.pop_front();
+	boost::shared_ptr<sock> S = schedule_job.front();
+	schedule_job.pop_front();
 	return S;
 }
 
-boost::shared_ptr<network::sock> network::reactor::get_job_connect()
+void network::reactor::call_back_return_job(boost::shared_ptr<network::sock> & S)
 {
-	boost::mutex::scoped_lock lock(job_connect_mutex);
-	if(job_connect.empty()){
+	if(S->disconnect_flag || S->failed_connect_flag){
+		if(S->socket_FD != -1){
+			connection_remove(S);
+		}
+	}else{
+		boost::mutex::scoped_lock lock(finished_job_mutex);
+
+		//after the first get() of this sock the connect job is done
+		S->connect_flag = true;
+
+		//reset other flags
+		S->recv_flag = false;
+		S->send_flag = false;
+
+		finished_job.push_back(S);
+		trigger_selfpipe();
+	}
+}
+
+void network::reactor::call_back_schedule_job(boost::shared_ptr<network::sock> & S)
+{
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(schedule_job_mutex);
+	schedule_job.push_back(S);
+	schedule_job_cond.notify_one();
+	}//end lock scope
+}
+
+void network::reactor::connection_add(boost::shared_ptr<sock> & S)
+{
+	if(S->direction == INCOMING){
+		boost::mutex::scoped_lock lock(connections_mutex);
+		std::pair<std::set<boost::shared_ptr<sock> >::iterator, bool>
+			ret = incoming.insert(S);
+		if(!ret.second){
+			LOGGER; exit(1);
+		}
+	}else{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		std::pair<std::set<boost::shared_ptr<sock> >::iterator, bool>
+			ret = outgoing.insert(S);
+		if(!ret.second){
+			LOGGER; exit(1);
+		}
+	}
+}
+
+bool network::reactor::connection_incoming_limit()
+{
+	boost::mutex::scoped_lock lock(connections_mutex);
+	return incoming.size() >= max_incoming;
+}
+
+bool network::reactor::connection_outgoing_limit()
+{
+	boost::mutex::scoped_lock lock(connections_mutex);
+	return outgoing.size() >= max_outgoing;
+}
+
+void network::reactor::connection_remove(boost::shared_ptr<sock> & S)
+{
+	if(S->direction == INCOMING){
+		boost::mutex::scoped_lock lock(connections_mutex);
+		if(incoming.erase(S) != 1){
+			LOGGER; exit(1);
+		}
+	}else{
+		boost::mutex::scoped_lock lock(connections_mutex);
+		if(outgoing.erase(S) != 1){
+			LOGGER; exit(1);
+		}
+	}
+}
+
+unsigned network::reactor::connections()
+{
+	boost::mutex::scoped_lock lock(connections_mutex);
+	return incoming.size() + outgoing.size();
+}
+
+unsigned network::reactor::download_rate()
+{
+	return Rate_Limit.download_rate();
+}
+
+boost::shared_ptr<network::sock> network::reactor::connect_job_get()
+{
+	boost::mutex::scoped_lock lock(connect_job_mutex);
+	if(connect_job.empty()){
 		return boost::shared_ptr<sock>();
 	}else{
-		boost::shared_ptr<sock> S = job_connect.front();
-		job_connect.pop_front();
+		boost::shared_ptr<sock> S = connect_job.front();
+		connect_job.pop_front();
 		S->seen();
 		return S;
 	}
@@ -90,49 +139,19 @@ boost::shared_ptr<network::sock> network::reactor::get_job_connect()
 unsigned network::reactor::incoming_connections()
 {
 	boost::mutex::scoped_lock lock(connections_mutex);
-	return _incoming_connections;
+	return incoming.size();
 }
 
-void network::reactor::incoming_decrement()
+void network::reactor::max_connections(const unsigned max_incoming_in,
+	const unsigned max_outgoing_in)
 {
 	boost::mutex::scoped_lock lock(connections_mutex);
-	if(_incoming_connections == 0){
-		LOGGER << "violated precondition";
-		exit(1);
-	}else{
-		--_incoming_connections;
-	}
-}
-
-void network::reactor::incoming_increment()
-{
-	boost::mutex::scoped_lock lock(connections_mutex);
-	if(_incoming_connections >= _max_incoming_connections){
-		LOGGER << "violated precondition";
-		exit(1);
-	}else{
-		++_incoming_connections;
-	}
-}
-
-bool network::reactor::incoming_limit_reached()
-{
-	boost::mutex::scoped_lock lock(connections_mutex);
-	return _incoming_connections >= _max_incoming_connections;
-}
-
-void network::reactor::max_connections(const unsigned max_incoming_connections_in,
-	const unsigned max_outgoing_connections_in)
-{
-	boost::mutex::scoped_lock lock(connections_mutex);
-	if(max_incoming_connections_in + max_outgoing_connections_in
-		> max_connections_supported())
-	{
+	if(max_incoming_in + max_outgoing_in > connections_supported()){
 		LOGGER << "max_incoming + max_outgoing connections exceed implementation max";
 		exit(1);
 	}
-	_max_incoming_connections = max_incoming_connections_in;
-	_max_outgoing_connections = max_outgoing_connections_in;
+	max_incoming = max_incoming_in;
+	max_outgoing = max_outgoing_in;
 }
 
 unsigned network::reactor::max_download_rate()
@@ -148,13 +167,13 @@ void network::reactor::max_download_rate(const unsigned rate)
 unsigned network::reactor::max_incoming_connections()
 {
 	boost::mutex::scoped_lock lock(connections_mutex);
-	return _max_incoming_connections;
+	return max_incoming;
 }
 
 unsigned network::reactor::max_outgoing_connections()
 {
 	boost::mutex::scoped_lock lock(connections_mutex);
-	return _max_outgoing_connections;
+	return max_outgoing;
 }
 
 unsigned network::reactor::max_upload_rate()
@@ -170,58 +189,23 @@ void network::reactor::max_upload_rate(const unsigned rate)
 unsigned network::reactor::outgoing_connections()
 {
 	boost::mutex::scoped_lock lock(connections_mutex);
-	return _outgoing_connections;
+	return outgoing.size();
 }
 
-void network::reactor::outgoing_decrement()
+void network::reactor::schedule_connect(boost::shared_ptr<network::sock> & S)
 {
-	boost::mutex::scoped_lock lock(connections_mutex);
-	if(_outgoing_connections == 0){
-		LOGGER << "violated precondition";
-		exit(1);
+	boost::mutex::scoped_lock lock(connect_job_mutex);
+	if(!S->info->resolved()){
+		S->failed_connect_flag = true;
+		S->sock_error = FAILED_RESOLVE;
+		call_back_schedule_job(S);
 	}else{
-		--_outgoing_connections;
-	}
-}
-
-void network::reactor::outgoing_increment()
-{
-	boost::mutex::scoped_lock lock(connections_mutex);
-	if(_outgoing_connections >= _max_outgoing_connections){
-		LOGGER << "violated precondition";
-		exit(1);
-	}else{
-		++_outgoing_connections;
-	}
-}
-
-bool network::reactor::outgoing_limit_reached()
-{
-	boost::mutex::scoped_lock lock(connections_mutex);
-	return _outgoing_connections >= _max_outgoing_connections;
-}
-
-void network::reactor::put_job(boost::shared_ptr<network::sock> & S)
-{
-	if(S->disconnect_flag || S->failed_connect_flag){
-		if(S->socket_FD != -1){
-			if(S->direction == INCOMING){
-				incoming_decrement();
-			}else{
-				outgoing_decrement();
-			}
-		}
-	}else{
-		boost::mutex::scoped_lock lock(finished_job_mutex);
-
-		//after the first get() of this sock the connect job is done
-		S->connect_flag = true;
-
-		//reset other flags
-		S->recv_flag = false;
-		S->send_flag = false;
-
-		finished_job.push_back(S);
+		connect_job.push_back(S);
 		trigger_selfpipe();
 	}
+}
+
+unsigned network::reactor::upload_rate()
+{
+	return Rate_Limit.upload_rate();
 }

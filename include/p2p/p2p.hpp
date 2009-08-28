@@ -18,10 +18,8 @@ public:
 	p2p();
 
 	/*
-	current_downloads:
+	downloads:
 		Returns info for all downloads.
-	current_uploads:
-		Populates info with upload_info for all uploads.
 	download_rate:
 		Returns average download rate for everything (excluding localhost).
 	max_connections:
@@ -44,9 +42,11 @@ public:
 		Starts a download.
 	upload_rate:
 		Returns average upload rate for everything (excluding localhost).
+	uploads:
+		Populates info with upload_info for all uploads.
 	*/
-	void current_downloads(std::vector<download_status> & status);
-	void current_uploads(std::vector<upload_status> & CU);
+	void downloads(std::vector<download_status> & status);
+	void uploads(std::vector<upload_status> & CU);
 	unsigned download_rate();
 	unsigned max_connections();
 	void max_connections(const unsigned connections);

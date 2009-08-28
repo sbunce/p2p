@@ -45,6 +45,16 @@ unsigned network::proactor::connections()
 	return Reactor->connections();
 }
 
+unsigned network::proactor::connections_supported()
+{
+	return Reactor->connections_supported();
+}
+
+unsigned network::proactor::download_rate()
+{
+	return Reactor->download_rate();
+}
+
 unsigned network::proactor::incoming_connections()
 {
 	return Reactor->incoming_connections();
@@ -71,21 +81,6 @@ void network::proactor::max_connections(const unsigned max_incoming_connections_
 	Reactor->max_connections(max_incoming_connections_in, max_outgoing_connections_in);
 }
 
-unsigned network::proactor::max_connections_supported()
-{
-	return Reactor->max_connections_supported();
-}
-
-unsigned network::proactor::current_download_rate()
-{
-	return Reactor->current_download_rate();
-}
-
-unsigned network::proactor::current_upload_rate()
-{
-	return Reactor->current_upload_rate();
-}
-
 unsigned network::proactor::max_download_rate()
 {
 	return Reactor->max_download_rate();
@@ -109,7 +104,7 @@ void network::proactor::max_upload_rate(const unsigned rate)
 void network::proactor::dispatch()
 {
 	while(true){
-		boost::shared_ptr<sock> S = Reactor->get_job();
+		boost::shared_ptr<sock> S = Reactor->call_back_get_job();
 		if(S->failed_connect_flag){
 			failed_connect_call_back(*S);
 		}else{
@@ -128,7 +123,7 @@ void network::proactor::dispatch()
 				disconnect_call_back(*S);
 			}
 		}
-		Reactor->put_job(S);
+		Reactor->call_back_return_job(S);
 	}
 }
 
@@ -147,6 +142,11 @@ void network::proactor::resolve()
 		boost::shared_ptr<address_info> AI(new address_info(
 			job.first.c_str(), job.second.c_str()));
 		boost::shared_ptr<sock> S(new sock(AI));
-		Reactor->connect(S);
+		Reactor->schedule_connect(S);
 	}
+}
+
+unsigned network::proactor::upload_rate()
+{
+	return Reactor->upload_rate();
 }

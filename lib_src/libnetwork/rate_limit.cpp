@@ -55,16 +55,10 @@ int network::rate_limit::available_download()
 	}
 }
 
-unsigned network::rate_limit::current_download_rate()
+unsigned network::rate_limit::download_rate()
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	return Download.speed();
-}
-
-unsigned network::rate_limit::current_upload_rate()
-{
-	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	return Upload.speed();
 }
 
 unsigned network::rate_limit::max_download_rate()
@@ -97,4 +91,10 @@ void network::rate_limit::max_upload_rate(const unsigned rate)
 	}else{
 		_max_upload_rate = rate;
 	}
+}
+
+unsigned network::rate_limit::upload_rate()
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	return Upload.speed();
 }

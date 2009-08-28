@@ -132,7 +132,7 @@ bool window_download::download_info_refresh()
 {
 	//update download info
 	std::vector<download_status> status;
-	P2P.current_downloads(status);
+	P2P.downloads(status);
 
 	for(std::vector<download_status>::iterator info_iter_cur = status.begin(),
 		info_iter_end = status.end(); info_iter_cur != info_iter_end; ++info_iter_cur)

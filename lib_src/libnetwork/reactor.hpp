@@ -18,6 +18,9 @@ the reactor with the proactor.
 #include <boost/utility.hpp>
 #include <network/network.hpp>
 
+//standard
+#include <set>
+
 namespace network{
 class reactor : private boost::noncopyable
 {
@@ -36,26 +39,25 @@ public:
 	max_connections_supported:
 		Maximum number of connections the reactor supports.
 	start:
-		Start the reactor.
+		Start the reactor. Called by the ctor of the proactor.
 	stop:
-		Stop the reactor.
+		Stop the reactor. Called by the dtor of the proactor.
 	*/
-	virtual unsigned max_connections_supported() = 0;
+	virtual unsigned connections_supported() = 0;
 	virtual void start() = 0;
 	virtual void stop() = 0;
 
 	/*
-	connect:
-		Asynchronously connect to a host. This function returns immediately.
-	connections:
-		Returns current total connections, both incoming and outgoing.
-	current_download_rate:
-		Returns current download rate (bytes/second).
-	current_upload_rate:
-		Returns current upload rate (bytes/second).
-	get_job:
+	call_back_get_job:
 		Block until a sock is modified. The sock will have flags set that will
 		tell the proactor what to do with it.
+	call_back_return_job:
+		The socks gotten from get_job are returned with this function.
+	connections:
+		Returns current total connections. Incoming, outgoing, and outgoing
+		connections in progress of connecting.
+	download_rate:
+		Returns current download rate (bytes/second).
 	incoming_connections:
 		Returns current incoming connection count.
 	max_connections:
@@ -74,14 +76,15 @@ public:
 		rate (bytes/second).
 	outgoing_connections:
 		Returns current outgoing connection count.
-	put_job:
-		The socks gotten from get_job are returned with this function.
+	schedule_connect:
+		Asynchronously connect to a host. This function returns immediately.
+	upload_rate:
+		Returns current upload rate (bytes/second).
 	*/
-	void connect(boost::shared_ptr<sock> & S);
 	unsigned connections();
-	unsigned current_download_rate();
-	unsigned current_upload_rate();
-	boost::shared_ptr<sock> get_job();
+	boost::shared_ptr<sock> call_back_get_job();
+	void call_back_return_job(boost::shared_ptr<sock> & S);
+	unsigned download_rate();
 	unsigned incoming_connections();
 	void max_connections(const unsigned max_incoming_connections_in,
 		const unsigned max_outgoing_connections_in);
@@ -92,7 +95,8 @@ public:
 	unsigned max_upload_rate();
 	void max_upload_rate(const unsigned rate);
 	unsigned outgoing_connections();
-	void put_job(boost::shared_ptr<sock> & S);
+	void schedule_connect(boost::shared_ptr<sock> & S);
+	unsigned upload_rate();
 
 protected:
 	//controls maximum upload/download rate
@@ -105,65 +109,53 @@ protected:
 	virtual void trigger_selfpipe() = 0;
 
 	/*
-	add_job:
+	call_back_finished_job:
+		Get a sock that was returned by the proactor with put_job(). An empty
+		shared_ptr is returned if there are no finished jobs.
+	call_back_schedule_job:
 		The derived reactor schedules a job by passing a sock to this function.
 		The job is picked up by the proactor when it calls get_job().
 		Note: The reactor does not monitor the socket for activity until it is
-			returned.
-	get_job_connect:
+			returned to the reactor.
+	connect_job:
 		The derived reactor gets a connect job scheduled with connect(). An empty
 		shared_ptr is returned if there are no connect jobs.
-	get_finished_job:
-		Get socks that were returned by the proactor with put_job(). An empty
-		shared_ptr is returned if there are no finished jobs.
-	incoming_decrement:
-		Decrements the incoming connection count.
-		Precondition: incoming_connections != 0.
-	incoming_increment:
-		Increments the incoming connection count.
-		Precondition: A sock must exist with a socket_FD != -1. This is because
-			incoming_decrement() will be called for a sock with a socket_FD != -1.
-			We want there to be a decrement for every increment.
-		Precondition: incoming_connections < _max_incoming_connections.
-	incoming_limit_reached:
+	connection_add:
+		This is called whenever there is an outgoing connection attempt or an
+		incoming connection. This is used for connection limiting.
+	connection_incoming_limit:
 		Returns true if incoming connected limit has been reached.
-	outgoing_decrement:
-		Decrements the outgoing connection count.
-		Precondition: outgoing_connections != 0.
-	outgoing_increment:
-		Increments the outgoing connection count.
-		Precondition: A sock must exist with a socket_FD != -1. This is because
-			outgoing_decrement() will be called for a sock with a socket_FD != -1. We
-			want there to be a decrement for every increment.
-		Precondition: outgoing_connections < _max_outgoing_connections.
-	outgoing_limit_reached:
+	connection_outgoing_limit:
 		Return true if outgoing connection limit reached.
+	connection_remove:
+		This is called whenever a connection attempt fails, or a connected socket
+		disconnects. This is used for connection limiting.
+		Precondition: add_connection() must have been called for sock.
 	*/
-	void add_job(boost::shared_ptr<sock> & S);
-	boost::shared_ptr<sock> get_job_connect();
-	boost::shared_ptr<sock> get_finished_job();
-	void incoming_decrement();
-	void incoming_increment();
-	bool incoming_limit_reached();
-	void outgoing_decrement();
-	void outgoing_increment();
-	bool outgoing_limit_reached();
+	boost::shared_ptr<sock> call_back_finished_job();
+	void call_back_schedule_job(boost::shared_ptr<sock> & S);
+	boost::shared_ptr<sock> connect_job_get();
+	void connection_add(boost::shared_ptr<sock> & S);
+	bool connection_incoming_limit();
+	bool connection_outgoing_limit();
+	void connection_remove(boost::shared_ptr<sock> & S);
 
 private:
 	/*
 	The connect() function puts sock's in the connect_job container to hand them
 	off to the main_loop_thread which will do an asynchronous connection.
 	*/
-	boost::mutex job_connect_mutex;
-	std::deque<boost::shared_ptr<sock> > job_connect;
+	boost::mutex connect_job_mutex;
+	std::deque<boost::shared_ptr<sock> > connect_job;
 
 	/*
-	When a sock needs to be passed back to the client (because it has a flag set)
-	it is put in the job container and job_cond is notified.
+	When a sock has something done to it (as indicated by the flag set). It is
+	put in this container to be given to the proactor when it calls
+	call_back_get_job().
 	*/
-	boost::mutex job_mutex;
-	boost::condition_variable_any job_cond;
-	std::deque<boost::shared_ptr<sock> > job;
+	boost::mutex schedule_job_mutex;
+	boost::condition_variable_any schedule_job_cond;
+	std::deque<boost::shared_ptr<sock> > schedule_job;
 
 	/*
 	This finished_job container is used by put() to pass a sock back to the
@@ -172,22 +164,24 @@ private:
 	boost::mutex finished_job_mutex;
 	std::deque<boost::shared_ptr<sock> > finished_job;
 
-	/* Connection counts and limits.
+	/* Connection Limits
 	Note: All these must be locked with connections_mutex.
-	_incoming_connections:
-		Number of connections remote hosts established with us.
-	_max_incoming_connections:
+	max_incoming:
 		Maximum possible incoming connections.
-	_outgoing_connections:
-		Number of connections we established with remote hosts.
-	_max_outgoing_connection:
+	max_outgoing:
 		Maximum possible outgoing connections.
+	incoming:
+		All incoming socks. Accessing non-threadsafe members of the socks in this
+		container is not thread safe.
+	outgoing:
+		All outgoing socks. Accessing non-threadsafe members of the socks in this
+		container is not thread safe.
 	*/
 	boost::mutex connections_mutex;
-	unsigned _incoming_connections;
-	unsigned _max_incoming_connections;
-	unsigned _outgoing_connections;
-	unsigned _max_outgoing_connections;
+	unsigned max_incoming;
+	unsigned max_outgoing;
+	std::set<boost::shared_ptr<sock> > incoming;
+	std::set<boost::shared_ptr<sock> > outgoing;
 };
 }//end namespace network
 #endif

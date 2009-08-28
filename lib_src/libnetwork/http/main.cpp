@@ -75,15 +75,15 @@ int main(int argc, char ** argv)
 		&failed_connect_call_back
 	);
 	//Proactor.Reactor.max_upload_rate(1024*500);
-	Proactor.max_connections(Proactor.max_connections_supported(), 0);
+	Proactor.max_connections(Proactor.connections_supported(), 0);
 
 	while(!terminate_program){
-		if(Proactor.current_download_rate() || Proactor.current_upload_rate()){
+		if(Proactor.download_rate() || Proactor.upload_rate()){
 			LOGGER << "C<" << Proactor.connections() << "> "
 			<< "IC<" << Proactor.incoming_connections() << "> "
 			<< "OC<" << Proactor.outgoing_connections() << "> "
-			<< "D<" << convert::size_SI(Proactor.current_download_rate()) << "> "
-			<< "U<" << convert::size_SI(Proactor.current_upload_rate()) << ">";
+			<< "D<" << convert::size_SI(Proactor.download_rate()) << "> "
+			<< "U<" << convert::size_SI(Proactor.upload_rate()) << ">";
 		}
 		portable_sleep::ms(1000);
 	}

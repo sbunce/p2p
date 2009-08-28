@@ -22,7 +22,7 @@ public:
 	~reactor_select();
 
 	//documentation in reactor class
-	virtual unsigned max_connections_supported();
+	virtual unsigned connections_supported();
 	virtual void start();
 	virtual void stop();
 	virtual void trigger_selfpipe();
@@ -81,12 +81,6 @@ private:
 	add_socket (version which takes network::sock):
 		Add socket to be monitored. This function is used when there is sock
 		to be associated with the socket.
-	check_connect:
-		Gets connection jobs from reactor::get_job_connect() and starts
-		asynchronous connection.
-	check_finished_job:
-		Gets finished jobs from reactor::get_finished_job() and starts monitoring
-		the sockets for activity.
 	check_timeouts:
 		Checks all monitored sockets to see if they've timed out.
 	establish_incoming:
@@ -101,6 +95,12 @@ private:
 		When a socket needs to recv() this function is called.
 	main_loop_send:
 		When a socket needs to send() this function is called.
+	process_connect_job:
+		Gets connection jobs from reactor::get_job_connect() and starts
+		asynchronous connection.
+	process_finished_job:
+		Gets finished jobs from reactor::get_finished_job() and starts monitoring
+		the sockets for activity.
 	remove_socket (version which takes socket file descriptor):
 		Stops socket from being monitored. Does not remove the Monitored element
 		associated with the socket_FD.
@@ -111,8 +111,6 @@ private:
 	*/
 	void add_socket(const int socket_FD);
 	void add_socket(boost::shared_ptr<sock> & S);
-	void check_connect();
-	void check_finished_job();
 	void check_timeouts();
 	void establish_incoming(const int listener);
 	boost::shared_ptr<sock> get_monitored(const int socket_FD);
@@ -121,6 +119,8 @@ private:
 		int & max_recv, bool & schedule_job);
 	void main_loop_send(const int socket_FD, const int max_send_per_socket,
 		int & max_send, bool & schedule_job);
+	void process_connect_job();
+	void process_finished_job();
 	void remove_socket(const int socket_FD);
 	void remove_socket(boost::shared_ptr<sock> & S);
 };

@@ -15,8 +15,8 @@ p2p_real::p2p_real():
 
 	//setup proxies for async getter/setter function calls
 	max_connections_proxy = database::table::preferences::get_max_connections();
-	if(max_connections_proxy > Proactor.max_connections_supported()){
-		max_connections_proxy = Proactor.max_connections_supported();
+	if(max_connections_proxy > Proactor.connections_supported()){
+		max_connections_proxy = Proactor.connections_supported();
 	}
 	max_download_rate_proxy = database::table::preferences::get_max_download_rate();
 	max_upload_rate_proxy = database::table::preferences::get_max_upload_rate();
@@ -46,7 +46,21 @@ void p2p_real::connect_call_back(network::sock & S)
 	S.send_call_back = boost::bind(&connection::send_call_back, ret.first->second.get(), _1);
 }
 
-void p2p_real::current_downloads(std::vector<download_status> & CD)
+void p2p_real::disconnect_call_back(network::sock & S)
+{
+	boost::mutex::scoped_lock lock(Connection_mutex);
+	if(Connection.erase(S.socket_FD) != 1){
+		LOGGER << "disconnect called for socket that never connected";
+		exit(1);
+	}
+}
+
+unsigned p2p_real::download_rate()
+{
+	return Proactor.download_rate();
+}
+
+void p2p_real::downloads(std::vector<download_status> & CD)
 {
 	CD.clear();
 
@@ -68,37 +82,6 @@ void p2p_real::current_downloads(std::vector<download_status> & CD)
 	CD.push_back(DS);
 }
 
-void p2p_real::current_uploads(std::vector<upload_status> & CU)
-{
-	CU.clear();
-
-	upload_status US;
-	US.hash = "ABC";
-	US.IP = "127.0.0.1";
-	US.size = 32768;
-	US.path = "poik.avi";
-	US.percent_complete = 50;
-	US.speed = 32768;
-	CU.push_back(US);
-
-	US.hash = "DEF";
-	US.IP = "127.0.0.1";
-	US.size = 65535;
-	US.path = "zort.avi";
-	US.percent_complete = 75;
-	US.speed = 65535;
-	CU.push_back(US);
-}
-
-void p2p_real::disconnect_call_back(network::sock & S)
-{
-	boost::mutex::scoped_lock lock(Connection_mutex);
-	if(Connection.erase(S.socket_FD) != 1){
-		LOGGER << "disconnect called for socket that never connected";
-		exit(1);
-	}
-}
-
 void p2p_real::failed_connect_call_back(network::sock & S)
 {
 	LOGGER << "failed connect to " << S.socket_FD;
@@ -116,8 +99,8 @@ static void max_connections_wrapper(unsigned max_connections_in)
 }
 void p2p_real::max_connections(unsigned connections)
 {
-	if(connections > Proactor.max_connections_supported()){
-		connections = Proactor.max_connections_supported();
+	if(connections > Proactor.connections_supported()){
+		connections = Proactor.connections_supported();
 	}
 	Proactor.max_connections(connections / 2, connections / 2);
 	max_connections_proxy = connections;
@@ -188,12 +171,29 @@ void p2p_real::remove_download(const std::string & hash)
 
 }
 
-unsigned p2p_real::download_rate()
-{
-	return Proactor.current_download_rate();
-}
-
 unsigned p2p_real::upload_rate()
 {
-	return Proactor.current_upload_rate();
+	return Proactor.upload_rate();
+}
+
+void p2p_real::uploads(std::vector<upload_status> & CU)
+{
+	CU.clear();
+
+	upload_status US;
+	US.hash = "ABC";
+	US.IP = "127.0.0.1";
+	US.size = 32768;
+	US.path = "poik.avi";
+	US.percent_complete = 50;
+	US.speed = 32768;
+	CU.push_back(US);
+
+	US.hash = "DEF";
+	US.IP = "127.0.0.1";
+	US.size = 65535;
+	US.path = "zort.avi";
+	US.percent_complete = 75;
+	US.speed = 65535;
+	CU.push_back(US);
 }

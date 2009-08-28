@@ -35,7 +35,7 @@ network::reactor_select::reactor_select(
 	add_socket(selfpipe_read);
 
 	//set default maximum connections
-	max_connections(max_connections_supported() / 2, max_connections_supported() / 2);
+	max_connections(connections_supported() / 2, connections_supported() / 2);
 }
 
 network::reactor_select::~reactor_select()
@@ -66,62 +66,6 @@ void network::reactor_select::add_socket(boost::shared_ptr<sock> & S)
 	}
 }
 
-void network::reactor_select::check_connect()
-{
-	boost::shared_ptr<sock> S;
-	while(S = get_job_connect()){
-		//check soft connection limit
-		if(outgoing_limit_reached()){
-			S->failed_connect_flag = true;
-			S->sock_error = MAX_CONNECTIONS;
-			add_job(S);
-			return;
-		}
-
-		//check hard connection limit
-		#ifdef _WIN32
-		if(master_read_FDS.fd_count >= FD_SETSIZE){
-		#else
-		if(S->socket_FD >= FD_SETSIZE){
-		#endif
-			S->failed_connect_flag = true;
-			S->sock_error = MAX_CONNECTIONS;
-			add_job(S);
-			return;
-		}
-
-		assert(S->socket_FD == -1);
-		const_cast<int &>(S->socket_FD) = wrapper::socket(*S->info);
-
-		if(S->socket_FD == -1){
-			S->failed_connect_flag = true;
-			S->sock_error = OTHER;
-			add_job(S);
-			return;
-		}
-
-		wrapper::set_non_blocking(S->socket_FD);
-		outgoing_increment();
-		if(wrapper::connect(S->socket_FD, *S->info)){
-			//socket connected right away, rare but it might happen
-			add_job(S);
-		}else{
-			//socket in progress of connecting
-			add_socket(S);
-			FD_SET(S->socket_FD, &master_write_FDS);
-			FD_SET(S->socket_FD, &connect_FDS);
-		}
-	}
-}
-
-void network::reactor_select::check_finished_job()
-{
-	boost::shared_ptr<sock> S;
-	while(S = get_finished_job()){
-		add_socket(S);
-	}
-}
-
 void network::reactor_select::check_timeouts()
 {
 	//only check timeouts once per second since that's the granularity of our timer
@@ -145,11 +89,29 @@ void network::reactor_select::check_timeouts()
 			}
 			S->sock_error = TIMEOUT;
 			remove_socket(S->socket_FD);
-			add_job(S);
+			call_back_schedule_job(S);
 		}else{
 			++iter_cur;
 		}
 	}
+}
+
+unsigned network::reactor_select::connections_supported()
+{
+	#ifdef _WIN32
+	/*
+	Subtract two for possible listeners (IPv4 and IPv6 listener). Subtract one
+	for self-pipe read.
+	*/
+	return FD_SETSIZE - 3;
+	#else
+	/*
+	Subtract two for possible listeners (some POSIX systems don't support
+	dual-stack so we subtract two to leave space). Subtract 3 for
+	stdin/stdout/stderr. Subtract two for self-pipe.
+	*/
+	return FD_SETSIZE - 7;
+	#endif
 }
 
 void network::reactor_select::establish_incoming(const int listener)
@@ -158,12 +120,12 @@ void network::reactor_select::establish_incoming(const int listener)
 	while(new_FD != -1){
 		new_FD = wrapper::accept(listener);
 		if(new_FD != -1){
-			if(incoming_limit_reached()){
+			if(connection_incoming_limit()){
 				close(new_FD);
 			}else{
-				incoming_increment();
 				boost::shared_ptr<sock> S(new sock(new_FD));
-				add_job(S);
+				connection_add(S);
+				call_back_schedule_job(S);
 			}
 		}
 	}
@@ -186,8 +148,8 @@ void network::reactor_select::main_loop()
 	while(true){
 		boost::this_thread::interruption_point();
 
-		check_connect();
-		check_finished_job();
+		process_connect_job();
+		process_finished_job();
 		check_timeouts();
 
 		/*
@@ -261,7 +223,7 @@ void network::reactor_select::main_loop()
 					if(wrapper::async_connect_succeeded(socket_FD)){
 						boost::shared_ptr<sock> S = get_monitored(socket_FD);
 						remove_socket(S);
-						add_job(S);
+						call_back_schedule_job(S);
 					}else{
 						//see if there is another address to try
 						boost::shared_ptr<sock> S = get_monitored(socket_FD);
@@ -269,11 +231,11 @@ void network::reactor_select::main_loop()
 						S->info->next();
 						if(S->info->resolved()){
 							//another address to try
-							reactor::connect(S);
+							reactor::schedule_connect(S);
 						}else{
 							//no more addresses to try, connect failed
 							S->failed_connect_flag = true;
-							add_job(S);
+							call_back_schedule_job(S);
 						}
 					}
 				}else{
@@ -329,7 +291,7 @@ void network::reactor_select::main_loop()
 			{
 				boost::shared_ptr<sock> S = get_monitored(*iter_cur);
 				remove_socket(S);
-				add_job(S);
+				call_back_schedule_job(S);
 			}
 		}
 	}
@@ -437,22 +399,59 @@ void network::reactor_select::main_loop_send(const int socket_FD,
 	}
 }
 
-unsigned network::reactor_select::max_connections_supported()
+void network::reactor_select::process_connect_job()
 {
-	#ifdef _WIN32
-	/*
-	Subtract two for possible listeners (IPv4 and IPv6 listener). Subtract one
-	for self-pipe read.
-	*/
-	return FD_SETSIZE - 3;
-	#else
-	/*
-	Subtract two for possible listeners (some POSIX systems don't support
-	dual-stack so we subtract two to leave space). Subtract 3 for
-	stdin/stdout/stderr. Subtract two for self-pipe.
-	*/
-	return FD_SETSIZE - 7;
-	#endif
+	boost::shared_ptr<sock> S;
+	while(S = connect_job_get()){
+		//check soft connection limit
+		if(connection_outgoing_limit()){
+			S->failed_connect_flag = true;
+			S->sock_error = MAX_CONNECTIONS;
+			call_back_schedule_job(S);
+			return;
+		}
+
+		//check hard connection limit
+		#ifdef _WIN32
+		if(master_read_FDS.fd_count >= FD_SETSIZE){
+		#else
+		if(S->socket_FD >= FD_SETSIZE){
+		#endif
+			S->failed_connect_flag = true;
+			S->sock_error = MAX_CONNECTIONS;
+			call_back_schedule_job(S);
+			return;
+		}
+
+		assert(S->socket_FD == -1);
+		const_cast<int &>(S->socket_FD) = wrapper::socket(*S->info);
+
+		if(S->socket_FD == -1){
+			S->failed_connect_flag = true;
+			S->sock_error = OTHER;
+			call_back_schedule_job(S);
+			return;
+		}
+
+		wrapper::set_non_blocking(S->socket_FD);
+		connection_add(S);
+		if(wrapper::connect(S->socket_FD, *S->info)){
+			//socket connected right away, rare but it might happen
+			call_back_schedule_job(S);
+		}else{
+			//socket in progress of connecting
+			add_socket(S);
+			FD_SET(S->socket_FD, &master_write_FDS);
+			FD_SET(S->socket_FD, &connect_FDS);
+		}
+	}
+}
+
+void network::reactor_select::process_finished_job()
+{
+	while(boost::shared_ptr<sock> S = call_back_finished_job()){
+		add_socket(S);
+	}
 }
 
 void network::reactor_select::remove_socket(const int socket_FD)
