@@ -489,21 +489,11 @@ void network::reactor_select::remove_socket(boost::shared_ptr<sock> & S)
 
 void network::reactor_select::start()
 {
-	boost::mutex::scoped_lock lock(start_stop_mutex);
-	if(main_loop_thread.get_id() != boost::thread::id()){
-		LOGGER << "start called on already started reactor";
-		exit(1);
-	}
 	main_loop_thread = boost::thread(boost::bind(&reactor_select::main_loop, this));
 }
 
 void network::reactor_select::stop()
 {
-	boost::mutex::scoped_lock lock(start_stop_mutex);
-	if(main_loop_thread.get_id() == boost::thread::id()){
-		LOGGER << "stop called on already stopped reactor";
-		exit(1);
-	}
 	main_loop_thread.interrupt();
 	main_loop_thread.join();
 }

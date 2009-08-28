@@ -28,9 +28,6 @@ public:
 	virtual void trigger_selfpipe();
 
 private:
-	//mutex for start/stop
-	boost::mutex start_stop_mutex;
-
 	//thread for main_loop
 	boost::thread main_loop_thread;
 
