@@ -27,8 +27,10 @@ public:
 	~proactor();
 
 	/*
-	Does asynchronous DNS resolution. Hands off DNS resolution to a thread inside
-	the proactor which does DNS resolution, then calls reactor::connect.
+	connect:
+		Does asynchronous DNS resolution. Hands off DNS resolution to a thread
+		inside the proactor which does DNS resolution, then calls
+		reactor::connect.
 	*/
 	void connect(const std::string & host, const std::string & port);
 
@@ -49,6 +51,7 @@ public:
 	unsigned max_outgoing_connections();
 	unsigned max_upload_rate();
 	void max_upload_rate(const unsigned rate);
+	void trigger_call_back(const std::string & host_or_IP);
 	unsigned upload_rate();
 
 private:

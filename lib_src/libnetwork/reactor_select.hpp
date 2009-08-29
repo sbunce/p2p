@@ -98,6 +98,9 @@ private:
 	process_finished_job:
 		Gets finished jobs from reactor::get_finished_job() and starts monitoring
 		the sockets for activity.
+	process_force:
+		If there are any socks which need to have a call back forced this function
+		will do it.
 	remove_socket (version which takes socket file descriptor):
 		Stops socket from being monitored. Does not remove the Monitored element
 		associated with the socket_FD.
@@ -118,6 +121,7 @@ private:
 		int & max_send, bool & schedule_job);
 	void process_connect_job();
 	void process_finished_job();
+	void process_force();
 	void remove_socket(const int socket_FD);
 	void remove_socket(boost::shared_ptr<sock> & S);
 };

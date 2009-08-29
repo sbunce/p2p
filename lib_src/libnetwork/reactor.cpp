@@ -64,6 +64,15 @@ void network::reactor::call_back_schedule_job(boost::shared_ptr<network::sock> &
 	schedule_job.push_back(S);
 	schedule_job_cond.notify_one();
 	}//end lock scope
+
+	/*
+	Erase sock from force_call_back (if it exists) to make sure the force call
+	back is only done once.
+	*/
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(connections_mutex);
+	force_call_back.erase(S);
+	}//end lock scope
 }
 
 void network::reactor::connection_add(boost::shared_ptr<sock> & S)
@@ -136,6 +145,18 @@ boost::shared_ptr<network::sock> network::reactor::connect_job_get()
 	}
 }
 
+bool network::reactor::force_check(boost::shared_ptr<network::sock> & S)
+{
+	boost::mutex::scoped_lock lock(connections_mutex);
+	return force_call_back.find(S) != force_call_back.end();
+}
+
+bool network::reactor::force_pending()
+{
+	boost::mutex::scoped_lock lock(connections_mutex);
+	return !force_call_back.empty();
+}
+
 unsigned network::reactor::incoming_connections()
 {
 	boost::mutex::scoped_lock lock(connections_mutex);
@@ -201,6 +222,33 @@ void network::reactor::schedule_connect(boost::shared_ptr<network::sock> & S)
 		call_back_schedule_job(S);
 	}else{
 		connect_job.push_back(S);
+		trigger_selfpipe();
+	}
+}
+
+void network::reactor::trigger_call_back(const std::string & host_or_IP)
+{
+	boost::mutex::scoped_lock lock(connections_mutex);
+	bool force = false; //set to true if a force_call_back scheduled
+	for(std::set<boost::shared_ptr<sock> >::iterator iter_cur = incoming.begin(),
+		iter_end = incoming.end(); iter_cur != iter_end; ++iter_cur)
+	{
+		if((*iter_cur)->host == host_or_IP || (*iter_cur)->IP == host_or_IP){
+			force_call_back.insert(*iter_cur);
+			force = true;
+		}
+	}
+
+	for(std::set<boost::shared_ptr<sock> >::iterator iter_cur = outgoing.begin(),
+		iter_end = outgoing.end(); iter_cur != iter_end; ++iter_cur)
+	{
+		if((*iter_cur)->host == host_or_IP || (*iter_cur)->IP == host_or_IP){
+			force_call_back.insert(*iter_cur);
+			force = true;
+		}
+	}
+
+	if(force){
 		trigger_selfpipe();
 	}
 }

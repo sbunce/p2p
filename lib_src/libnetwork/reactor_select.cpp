@@ -454,6 +454,24 @@ void network::reactor_select::process_finished_job()
 	}
 }
 
+void network::reactor_select::process_force()
+{
+	std::map<int, boost::shared_ptr<sock> >::iterator
+		iter_cur = Monitored.begin(),
+		iter_end = Monitored.end();
+	while(iter_cur != iter_end && force_pending()){
+		//only force a call back if the sock is connected, and it needs to be forced
+		if(iter_cur->second->connect_flag && force_check(iter_cur->second)){
+			iter_cur->second->recv_flag = true;
+			iter_cur->second->latest_recv = 0;
+			call_back_schedule_job(iter_cur->second);
+			Monitored.erase(iter_cur++);
+		}else{
+			++iter_cur;
+		}
+	}
+}
+
 void network::reactor_select::remove_socket(const int socket_FD)
 {
 	FD_CLR(socket_FD, &master_read_FDS);

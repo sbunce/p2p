@@ -146,6 +146,11 @@ void network::proactor::resolve()
 	}
 }
 
+void network::proactor::trigger_call_back(const std::string & host_or_IP)
+{
+	Reactor->trigger_call_back(host_or_IP);
+}
+
 unsigned network::proactor::upload_rate()
 {
 	return Reactor->upload_rate();

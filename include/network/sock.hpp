@@ -1,15 +1,23 @@
 /*
 All the reactors deal with sock's. The sock has all data that needs to be
 associated with a socket. When the sock is passed to a reactor the reactor
-monitors the socket the socket is associated with.
+monitors the socket the sock is associated with.
 
 Note: It is not thread safe to modify a sock after it has been passed to a
 reactor.
+	Passing the sock to or from the reactor is transfering ownership of
+what thread gets to modify the sock. When the sock is given to the proactor
+(by returning it from call_back_get_job) the reactor cannot modify it until the
+proactor passes it back. Likewise when the proactor passes the sock back to the
+reactor the proactor cannot modify the sock until it is returned from the
+reactor. The exception to this is the const members of the sock which may be
+read at any time by any thread.
 */
 #ifndef H_NETWORK_SOCK
 #define H_NETWORK_SOCK
 
 //include
+#include <atomic_bool.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
 #include <network/network.hpp>

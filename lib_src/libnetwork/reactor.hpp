@@ -78,6 +78,12 @@ public:
 		Returns current outgoing connection count.
 	schedule_connect:
 		Asynchronously connect to a host. This function returns immediately.
+	trigger_call_back:
+		Triggers a call back for a sock with a specified hostname or IP. If no
+		sock with the specified host is found then no call back will be done. If a
+		call back is done it will be a recv call back and
+		network::sock::latest_recv will be equal to 0. A call back will not be
+		done for a socket in progress of connecting.
 	upload_rate:
 		Returns current upload rate (bytes/second).
 	*/
@@ -96,6 +102,7 @@ public:
 	void max_upload_rate(const unsigned rate);
 	unsigned outgoing_connections();
 	void schedule_connect(boost::shared_ptr<sock> & S);
+	void trigger_call_back(const std::string & host_or_IP);
 	unsigned upload_rate();
 
 protected:
@@ -131,6 +138,10 @@ protected:
 		This is called whenever a connection attempt fails, or a connected socket
 		disconnects. This is used for connection limiting.
 		Precondition: add_connection() must have been called for sock.
+	force_pending:
+		Returns true if there exists at least one sock which need to have a call
+		back forced. If there are then force_check will be called for every sock
+		in the derived reactor to see if a call back needs to be forced.
 	*/
 	boost::shared_ptr<sock> call_back_finished_job();
 	void call_back_schedule_job(boost::shared_ptr<sock> & S);
@@ -139,6 +150,8 @@ protected:
 	bool connection_incoming_limit();
 	bool connection_outgoing_limit();
 	void connection_remove(boost::shared_ptr<sock> & S);
+	bool force_check(boost::shared_ptr<sock> & S);
+	bool force_pending();
 
 private:
 	/*
@@ -172,16 +185,24 @@ private:
 		Maximum possible outgoing connections.
 	incoming:
 		All incoming socks. Accessing non-threadsafe members of the socks in this
-		container is not thread safe.
+		container is not thread safe. The reactor doesn't necessarily have the
+		right to modify these socks at all times.
 	outgoing:
 		All outgoing socks. Accessing non-threadsafe members of the socks in this
-		container is not thread safe.
+		container is not thread safe. The reactor doesn't necessarily have the
+		right to modify these socks at all times.
+	force_call_back:
+		Contains socks which the client has requested we force a call back on.
+		Accessing non-threadsafe members of the socks in this container is not
+		thread safe. The reactor doesn't necessarily have the
+		right to modify these socks at all times.
 	*/
 	boost::mutex connections_mutex;
 	unsigned max_incoming;
 	unsigned max_outgoing;
 	std::set<boost::shared_ptr<sock> > incoming;
 	std::set<boost::shared_ptr<sock> > outgoing;
+	std::set<boost::shared_ptr<sock> > force_call_back;
 };
 }//end namespace network
 #endif

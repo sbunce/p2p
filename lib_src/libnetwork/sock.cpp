@@ -8,15 +8,17 @@ network::sock::sock(const int socket_FD_in):
 	socket_FD(socket_FD_in),
 	IP(wrapper::get_IP(socket_FD)),
 	port(wrapper::get_port(socket_FD)),
-	last_active(std::time(NULL)),
 	direction(INCOMING),
 	connect_flag(false),
 	disconnect_flag(false),
 	failed_connect_flag(false),
 	recv_flag(false),
 	send_flag(false),
+	latest_recv(0),
+	latest_send(0),
 	sock_error(NO_ERROR),
-	timeout(DEFAULT_TIMEOUT)
+	timeout(DEFAULT_TIMEOUT),
+	last_active(std::time(NULL))
 {
 
 }
@@ -27,15 +29,17 @@ network::sock::sock(boost::shared_ptr<address_info> info_in):
 	host(info->get_host()),
 	IP(wrapper::get_IP(*info)),
 	port(info->get_port()),
-	last_active(std::time(NULL)),
 	direction(OUTGOING),
 	connect_flag(false),
 	disconnect_flag(false),
 	failed_connect_flag(false),
 	recv_flag(false),
 	send_flag(false),
+	latest_recv(0),
+	latest_send(0),
 	sock_error(NO_ERROR),
-	timeout(DEFAULT_TIMEOUT)
+	timeout(DEFAULT_TIMEOUT),
+	last_active(std::time(NULL))
 {
 
 }
