@@ -215,13 +215,16 @@ unsigned network::reactor::outgoing_connections()
 
 void network::reactor::schedule_connect(boost::shared_ptr<network::sock> & S)
 {
-	boost::mutex::scoped_lock lock(connect_job_mutex);
 	if(!S->info->resolved()){
+		//DNS resolution failure, or invalid address
 		S->failed_connect_flag = true;
 		S->sock_error = FAILED_RESOLVE;
 		call_back_schedule_job(S);
 	}else{
+		{//begin lock scope
+		boost::mutex::scoped_lock lock(connect_job_mutex);
 		connect_job.push_back(S);
+		}//end lock scope
 		trigger_selfpipe();
 	}
 }

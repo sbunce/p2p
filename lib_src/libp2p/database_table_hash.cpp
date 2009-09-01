@@ -44,14 +44,14 @@ static int tree_open_call_back(boost::shared_ptr<database::table::hash::tree_inf
 	//row primary key
 	ss << response[0];
 	ss >> TI->Blob.rowid;
-	ss.str(""); ss.clear();
-	
+
 	//tree size
+	ss.str(""); ss.clear();
 	ss << response[1];
 	ss >> TI->tree_size;
-	ss.str(""); ss.clear();
 
 	//state
+	ss.str(""); ss.clear();
 	ss << response[2];
 	int temp;
 	ss >> temp;

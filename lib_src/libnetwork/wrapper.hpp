@@ -41,6 +41,10 @@ one place.
 	#include <unistd.h>
 #endif
 
+//standard
+#include <cstring>
+#include <vector>
+
 namespace network{
 namespace wrapper{
 

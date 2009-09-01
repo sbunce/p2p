@@ -16,7 +16,7 @@ network::reactor_select::reactor_select(
 	FD_ZERO(&connect_FDS);
 
 	//start listeners
-	if(port != "-1"){
+	if(port != ""){
 		wrapper::start_listeners(listener_IPv4, listener_IPv6, port);
 		if(listener_IPv4 != -1){
 			wrapper::set_non_blocking(listener_IPv4);

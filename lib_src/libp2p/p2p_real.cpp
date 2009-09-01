@@ -2,12 +2,12 @@
 
 p2p_real::p2p_real():
 	Proactor(
-		settings::P2P_PORT,
 		boost::bind(&p2p_real::connect_call_back, this, _1),
 		boost::bind(&p2p_real::disconnect_call_back, this, _1),
-		boost::bind(&p2p_real::failed_connect_call_back, this, _1)
+		boost::bind(&p2p_real::failed_connect_call_back, this, _1),
+		settings::P2P_PORT
 	),
-	Thread_Pool(boost::thread::hardware_concurrency())
+	Thread_Pool(1)
 {
 	//create directories and initialize database (if not already initialized)
 	path::create_required_directories();

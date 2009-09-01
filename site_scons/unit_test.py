@@ -12,7 +12,7 @@ def run(env):
 	for test in glob.iglob('*.cpp'):
 		env.unit_test([test])
 
-#unit test to hook in to scons
+#unit test to hook in to SCons
 def __unit_test(env, source):
 	if platform.system() == 'Windows':
 		test = env.Program(source)
@@ -20,7 +20,7 @@ def __unit_test(env, source):
 	else:
 		#give posix systems a file extension that mercurial can ignore
 		name = re.split('\.', source[0])
-		name = name[0] + '.out'
+		name = name[0]+'.out'
 		test = env.Program(name, source)
 		env.AddPostAction(test, 'cd '+os.getcwd()+' && ./'+str(test[0]))
 	return test

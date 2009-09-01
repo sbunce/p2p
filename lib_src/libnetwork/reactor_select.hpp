@@ -18,7 +18,7 @@ namespace network{
 class reactor_select : public reactor
 {
 public:
-	reactor_select(const std::string & port = "-1");
+	reactor_select(const std::string & port = "");
 	~reactor_select();
 
 	//documentation in reactor class

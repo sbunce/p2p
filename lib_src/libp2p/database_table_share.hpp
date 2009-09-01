@@ -24,6 +24,11 @@ namespace table{
 class share
 {
 public:
+	enum state{
+		DOWNLOADING, //0 - downloading, incomplete tree
+		COMPLETE     //1 - complete, hash tree complete and checked
+	};
+
 	class file_info
 	{
 	public:
@@ -31,16 +36,19 @@ public:
 		file_info(
 			const std::string & hash_in,
 			const boost::uint64_t file_size_in,
-			const std::string & path_in
+			const std::string & path_in,
+			const state State_in
 		):
 			hash(hash_in),
 			file_size(file_size_in),
-			path(path_in)
+			path(path_in),
+			State(State_in)
 		{}
 
 		std::string hash;
 		boost::uint64_t file_size;
 		std::string path;
+		state State;
 	};
 
 	/*
@@ -55,6 +63,9 @@ public:
 	lookup_path:
 		Lookup a record in the share table by it's path. An empty shared_ptr is
 		returned if no record exists.
+	resume:
+		Used on program start to retrieve file_info for all files in share where
+		state = DOWNLOADING.
 	*/
 	static void add_entry(const file_info & FI, database::pool::proxy DB = database::pool::proxy());
 	static void delete_entry(const std::string & path,
@@ -63,10 +74,9 @@ public:
 		database::pool::proxy DB = database::pool::proxy());
 	static boost::shared_ptr<file_info> lookup_path(const std::string & path,
 		database::pool::proxy DB = database::pool::proxy());
-/*
-	static void resume(std::vector<boost::shared_ptr<slot_element> > & Resume,
+	static void resume(std::vector<file_info> & Resume,
 		database::pool::proxy DB = database::pool::proxy());
-*/
+
 private:
 	share(){}
 };

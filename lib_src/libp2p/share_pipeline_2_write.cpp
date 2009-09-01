@@ -20,7 +20,7 @@ void share_pipeline_2_write::main_loop()
 		boost::this_thread::interruption_point();
 
 		//interval between writes
-		portable_sleep::ms(1000);
+		portable_sleep::ms(100);
 
 		//use temp buffer to empty the hash stage buffer ASAP
 		temp.clear();
@@ -37,7 +37,7 @@ void share_pipeline_2_write::main_loop()
 				if(iter_cur->Type == share_pipeline_job::HASH_FILE){
 					//job to add file to share table
 					database::table::share::file_info FI(iter_cur->hash,
-						iter_cur->file_size, iter_cur->path);
+						iter_cur->file_size, iter_cur->path, database::table::share::COMPLETE);
 					database::table::share::add_entry(FI, DB);
 					database::table::hash::set_state(FI.hash,
 						database::table::hash::COMPLETE, DB);

@@ -69,10 +69,10 @@ int main(int argc, char ** argv)
 	}
 
 	network::proactor Proactor(
-		"8080",
 		&connect_call_back,
 		&disconnect_call_back,
-		&failed_connect_call_back
+		&failed_connect_call_back,
+		"8080"
 	);
 	//Proactor.Reactor.max_upload_rate(1024*500);
 	Proactor.max_connections(Proactor.connections_supported(), 0);

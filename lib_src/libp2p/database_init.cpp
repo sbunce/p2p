@@ -1,7 +1,7 @@
 #include "database_init.hpp"
 
-static int check_exists_call_back(bool & exists, int columns_retrieved, char ** query_response,
-	char ** column_name)
+static int check_exists_call_back(bool & exists, int columns_retrieved,
+	char ** query_response, char ** column_name)
 {
 	exists = strcmp(query_response[0], "0") != 0;
 	return 0;
@@ -52,7 +52,7 @@ void database::init::preferences()
 		//set defaults if no preferences yet exist
 		std::stringstream ss;
 		ss << "INSERT INTO preferences VALUES(" << settings::MAX_CONNECTIONS 
-		<< ", " << settings::MAX_DOWNLOAD_RATE << ", " << settings::MAX_UPLOAD_RATE << ")";
+			<< ", " << settings::MAX_DOWNLOAD_RATE << ", " << settings::MAX_UPLOAD_RATE << ")";
 		DB->query(ss.str());
 	}
 }
@@ -66,7 +66,7 @@ void database::init::prime()
 void database::init::share()
 {
 	database::pool::proxy DB;
-	DB->query("CREATE TABLE IF NOT EXISTS share (hash TEXT, file_size TEXT, path TEXT)");
+	DB->query("CREATE TABLE IF NOT EXISTS share (hash TEXT, file_size TEXT, path TEXT, state INTEGER)");
 	DB->query("CREATE INDEX IF NOT EXISTS share_hash_index ON share (hash)");
 	DB->query("CREATE INDEX IF NOT EXISTS share_path_index ON share (path)");
 }

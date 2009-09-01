@@ -1,10 +1,12 @@
 #standard
+import platform
 import sys
 import StringIO
 
 #source: TTimo
 #http://scons.tigris.org/ds/viewMessage.do?dsForumId=1272&dsMessageId=421609
-class idBuffering:
+#This builder stops parallel build output from getting mixed together.
+class builder_buffer:
 	def buffered_spawn(self, sh, escape, cmd, args, env):
 		stderr = StringIO.StringIO()
 		stdout = StringIO.StringIO()
@@ -26,8 +28,20 @@ class idBuffering:
 			sys.stderr.write(stderr.getvalue())
 		return retval
 
+def CPU_count():
+	if platform.system() == 'Linux':
+		count = 0
+		for line in open('/proc/cpuinfo', 'r'):
+			if line.startswith('processor'):
+				count += 1
+		return count
+	else:
+		#assume only one CPU if we don't know
+		return 1
+
 #get a clean error output when running multiple jobs
 def setup(env):
-	buf = idBuffering()
-	buf.env = env
-	env['SPAWN'] = buf.buffered_spawn
+	BB = builder_buffer()
+	BB.env = env
+	env['SPAWN'] = BB.buffered_spawn
+	env.SetOption('num_jobs', CPU_count())

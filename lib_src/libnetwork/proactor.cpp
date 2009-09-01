@@ -4,10 +4,10 @@
 #include "reactor_select.hpp"
 
 network::proactor::proactor(
-	const std::string & port,
 	boost::function<void (sock & Sock)> connect_call_back_in,
 	boost::function<void (sock & Sock)> disconnect_call_back_in,
-	boost::function<void (sock & Sock)> failed_connect_call_back_in
+	boost::function<void (sock & Sock)> failed_connect_call_back_in,
+	const std::string & port
 ):
 	Reactor(new reactor_select(port)),
 	connect_call_back(connect_call_back_in),

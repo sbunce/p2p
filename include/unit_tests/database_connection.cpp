@@ -3,6 +3,7 @@
 #include <logger.hpp>
 
 //standard
+#include <cstring>
 #include <string>
 
 class test

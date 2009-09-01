@@ -10,6 +10,9 @@ appropriate call back. The proactor uses as many threads as there are CPUs.
 #include <logger.hpp>
 #include <network/network.hpp>
 
+//standard
+#include <deque>
+
 namespace network{
 
 //predeclaration for PIMPL
@@ -19,10 +22,10 @@ class proactor
 {
 public:
 	proactor(
-		const std::string & port,
 		boost::function<void (sock & Sock)> connect_call_back_in,
 		boost::function<void (sock & Sock)> disconnect_call_back_in,
-		boost::function<void (sock & Sock)> failed_connect_call_back_in
+		boost::function<void (sock & Sock)> failed_connect_call_back_in,
+		const std::string & port = "" //default to not listen on any port
 	);
 	~proactor();
 

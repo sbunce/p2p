@@ -104,10 +104,10 @@ void failed_connect_call_back(network::sock & S)
 int main()
 {
 	network::proactor Proactor(
-		"65001",
 		&connect_call_back,
 		&disconnect_call_back,
-		&failed_connect_call_back
+		&failed_connect_call_back,
+		"65001"
 	);
 
 	for(int x=0; x<32; ++x){
