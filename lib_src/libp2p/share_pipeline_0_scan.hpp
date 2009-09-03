@@ -14,7 +14,6 @@
 #include <boost/thread.hpp>
 #include <boost/tokenizer.hpp>
 #include <logger.hpp>
-#include <portable_sleep.hpp>
 
 //standard
 #include <cassert>

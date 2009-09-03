@@ -11,7 +11,7 @@ example usage:
 */
 //include
 #include <boost/cstdint.hpp>
-#include <portable_sleep.hpp>
+#include <boost/thread.hpp>
 
 //standard
 #include <cassert>
@@ -53,7 +53,7 @@ namespace timer
 			return CPU_hz;
 		}else{
 			boost::uint64_t start = TSC();
-			portable_sleep::ms(1000);
+			boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
 			boost::uint64_t end = TSC();
 			return CPU_hz = end - start;
 		}

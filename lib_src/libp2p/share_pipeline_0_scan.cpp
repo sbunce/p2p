@@ -106,7 +106,7 @@ void share_pipeline_0_scan::main_loop()
 	takes to instantiate libp2p. This delay speeds up library instantiation. This
 	is important for fast GUI startup time.
 	*/
-	portable_sleep::yield();
+	boost::this_thread::yield();
 
 	namespace fs = boost::filesystem;
 
@@ -122,7 +122,7 @@ void share_pipeline_0_scan::main_loop()
 
 		if(!fs::exists(share_path)){
 			LOGGER << "error opening share: " << share_path.string();
-			portable_sleep::ms(1000);
+			boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
 			continue;
 		}
 
@@ -137,7 +137,8 @@ void share_pipeline_0_scan::main_loop()
 				boost::this_thread::interruption_point();
 
 				//scan rate
-				portable_sleep::ms(1000 / settings::SHARE_SCAN_RATE);
+				boost::this_thread::sleep(boost::posix_time::milliseconds(
+					1000 / settings::SHARE_SCAN_RATE));
 				block_on_max_jobs();
 
 				if(fs::is_symlink(iter_cur->path().parent_path())){
@@ -162,7 +163,8 @@ void share_pipeline_0_scan::main_loop()
 		}
 
 		//scan rate also needed here in case share empty
-		portable_sleep::ms(1000 / settings::SHARE_SCAN_RATE);
+		boost::this_thread::sleep(boost::posix_time::milliseconds(
+			1000 / settings::SHARE_SCAN_RATE));
 	}
 }
 
@@ -229,7 +231,8 @@ void share_pipeline_0_scan::remove_missing_recurse(
 		bool remove = false;
 		try{
 			//scan rate
-			portable_sleep::ms(1000 / settings::SHARE_SCAN_RATE);
+			boost::this_thread::sleep(boost::posix_time::milliseconds(
+				1000 / settings::SHARE_SCAN_RATE));
 			block_on_max_jobs();
 
 			fs::path path = fs::system_complete(fs::path(file_path, fs::native));

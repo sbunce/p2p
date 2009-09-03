@@ -8,7 +8,6 @@
 #include <CLI_args.hpp>
 #include <logger.hpp>
 #include <network/network.hpp>
-#include <portable_sleep.hpp>
 
 //standard
 #include <csignal>
@@ -85,6 +84,6 @@ int main(int argc, char ** argv)
 			<< "D<" << convert::size_SI(Proactor.download_rate()) << "> "
 			<< "U<" << convert::size_SI(Proactor.upload_rate()) << ">";
 		}
-		portable_sleep::ms(1000);
+		boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
 	}
 }

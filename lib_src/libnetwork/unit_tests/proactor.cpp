@@ -4,7 +4,6 @@
 #include <boost/thread.hpp>
 #include <convert.hpp>
 #include <network/network.hpp>
-#include <portable_sleep.hpp>
 
 class connection
 {
@@ -121,7 +120,7 @@ int main()
 			<< "OC<" << Proactor.outgoing_connections() << "> "
 			<< "D<" << convert::size_SI(Proactor.download_rate()) << "> "
 			<< "U<" << convert::size_SI(Proactor.upload_rate()) << ">";
-		portable_sleep::ms(1000);
+		boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
 		hack = false;
 	}
 }

@@ -1,20 +1,28 @@
 //include
+#include <boost/thread.hpp>
 #include <p2p/p2p.hpp>
-#include <portable_sleep.hpp>
 
 //standard
 #include <csignal>
 
 namespace
 {
-	//volatile needed to stop optimizer turning while(!quit) in to while(true)
-	volatile sig_atomic_t terminate_program = 0;
+boost::mutex terminate_mutex;
+boost::condition_variable_any terminate_cond;
 
-	void signal_handler(int sig)
-	{
-		signal(sig, signal_handler);
-		terminate_program = 1;
-	}
+//volatile needed to stop optimizer turning while(!quit) in to while(true)
+volatile sig_atomic_t terminate_program = 0;
+
+void signal_handler(int sig)
+{
+	signal(sig, signal_handler);
+
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(terminate_mutex);
+	terminate_program = 1;
+	terminate_cond.notify_one();
+	}//end lock scope
+}
 }//end of unnamed namespace
 
 int main()
@@ -23,7 +31,11 @@ int main()
 	signal(SIGINT, signal_handler);
 
 	p2p P2P;
+
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(terminate_mutex);
 	while(!terminate_program){
-		portable_sleep::ms(1000);
+		terminate_cond.wait(terminate_mutex);
 	}
+	}//end lock scope
 }

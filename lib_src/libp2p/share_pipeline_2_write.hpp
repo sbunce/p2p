@@ -18,7 +18,6 @@ amount of database contention.
 //include
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
-#include <portable_sleep.hpp>
 
 //standard
 #include <vector>

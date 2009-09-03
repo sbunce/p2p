@@ -20,7 +20,7 @@ void prime_generator::main_loop()
 	takes to instantiate libp2p. This delay speeds up library instantiation. This
 	is important for fast GUI startup time.
 	*/
-	portable_sleep::yield();
+	boost::this_thread::yield();
 
 	KISS PRNG;
 	PRNG.seed();

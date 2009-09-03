@@ -53,7 +53,6 @@ Read blob:
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
 #include <logger.hpp>
-#include <portable_sleep.hpp>
 #include <sqlite3.h>
 
 namespace database{
@@ -137,7 +136,7 @@ public:
 				*/
 				sqlite3_exec(DB_handle, "ROLLBACK", NULL, NULL, NULL);
 			}else{
-				portable_sleep::ms(1);
+				boost::this_thread::yield();
 			}
 		}
 		if(sqlite3_finalize(prepared_statement) != SQLITE_OK){
@@ -187,7 +186,7 @@ public:
 		int code;
 		while((code = sqlite3_exec(DB_handle, query.c_str(), NULL, NULL, NULL)) != SQLITE_OK){
 			if(code == SQLITE_BUSY){
-				portable_sleep::ms(1);
+				boost::this_thread::yield();
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
 					<< " query: " << query;
@@ -207,7 +206,7 @@ public:
 			(void *)fun_ptr, NULL)) != SQLITE_OK)
 		{
 			if(code == SQLITE_BUSY){
-				portable_sleep::ms(1);
+				boost::this_thread::yield();
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
 					<< " query: " << query;
@@ -230,7 +229,7 @@ public:
 			static_cast<void *>(&call_back_info), NULL)) != SQLITE_OK)
 		{
 			if(code == SQLITE_BUSY){
-				portable_sleep::ms(1);
+				boost::this_thread::yield();
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
 					<< " query: " << query;
@@ -254,7 +253,7 @@ public:
 			static_cast<void *>(&call_back_info), NULL)) != SQLITE_OK)
 		{
 			if(code == SQLITE_BUSY){
-				portable_sleep::ms(1);
+				boost::this_thread::yield();
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
 					<< " query: " << query;
@@ -277,7 +276,7 @@ public:
 			static_cast<void *>(&call_back_info), NULL)) != SQLITE_OK)
 		{
 			if(code == SQLITE_BUSY){
-				portable_sleep::ms(1);
+				boost::this_thread::yield();
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
 					<< " query: " << query;
@@ -305,7 +304,7 @@ public:
 			static_cast<void *>(&call_back_info), NULL)) != SQLITE_OK)
 		{
 			if(code == SQLITE_BUSY){
-				portable_sleep::ms(1);
+				boost::this_thread::yield();
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
 					<< " query: " << query;
@@ -333,7 +332,7 @@ public:
 			static_cast<void *>(&call_back_info), NULL)) != SQLITE_OK)
 		{
 			if(code == SQLITE_BUSY){
-				portable_sleep::ms(1);
+				boost::this_thread::yield();
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
 					<< " query: " << query;
@@ -382,7 +381,7 @@ private:
 				NULL, NULL, NULL)) != SQLITE_OK)
 			{
 				if(code == SQLITE_BUSY){
-					portable_sleep::ms(1);
+					boost::this_thread::yield();
 				}else{
 					LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle);
 					exit(1);
@@ -482,7 +481,7 @@ private:
 			&blob_handle
 		)) != SQLITE_OK){
 			if(code == SQLITE_BUSY){
-				portable_sleep::ms(1);
+				boost::this_thread::yield();
 			}else{
 				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle);
 				return false;

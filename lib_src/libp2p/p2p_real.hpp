@@ -86,6 +86,9 @@ private:
 	boost::mutex Connection_mutex;
 	std::map<int, boost::shared_ptr<connection> > Connection;
 
+	//used to schedule long jobs so the GUI doesn't have to wait
+	thread_pool Thread_Pool;
+
 	/*
 	Proactor which does call backs for network activity.
 	Note: This is specified last in header because it starts threads in it's ctor
@@ -93,9 +96,6 @@ private:
 		sure the objects it uses are constructed before it uses them.
 	*/
 	network::proactor Proactor;
-
-	//used to schedule long jobs so the GUI doesn't have to wait
-	thread_pool Thread_Pool;
 
 	/*
 	connect_call_back:

@@ -44,7 +44,7 @@ void share_pipeline_1_hash::main_loop()
 	takes to instantiate libp2p. This delay speeds up library instantiation. This
 	is important for fast GUI startup time.
 	*/
-	portable_sleep::yield();
+	boost::this_thread::yield();
 
 	share_pipeline_job SPJ;
 	while(true){

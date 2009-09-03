@@ -16,7 +16,6 @@
 #include <boost/thread.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/utility.hpp>
-#include <portable_sleep.hpp>
 
 //standard
 #include <ctime>

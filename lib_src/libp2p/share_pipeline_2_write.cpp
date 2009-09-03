@@ -18,7 +18,7 @@ void share_pipeline_2_write::main_loop()
 	takes to instantiate libp2p. This delay speeds up library instantiation. This
 	is important for fast GUI startup time.
 	*/
-	portable_sleep::yield();
+	boost::this_thread::yield();
 
 	std::vector<share_pipeline_job> temp;
 	share_pipeline_job info;
@@ -26,7 +26,7 @@ void share_pipeline_2_write::main_loop()
 		boost::this_thread::interruption_point();
 
 		//interval between writes
-		portable_sleep::ms(100);
+		boost::this_thread::sleep(boost::posix_time::milliseconds(1000)); 
 
 		//use temp buffer to empty the hash stage buffer ASAP
 		temp.clear();
