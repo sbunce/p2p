@@ -10,7 +10,13 @@ share_pipeline_0_scan::share_pipeline_0_scan(
 		boost::filesystem::path(path::share(), boost::filesystem::native)
 	))
 {
+	scan_thread = boost::thread(boost::bind(&share_pipeline_0_scan::main_loop, this));
+}
 
+share_pipeline_0_scan::~share_pipeline_0_scan()
+{
+	scan_thread.interrupt();
+	scan_thread.join();
 }
 
 void share_pipeline_0_scan::block_on_max_jobs()
@@ -257,15 +263,4 @@ void share_pipeline_0_scan::remove_missing_recurse(
 			++file_iter_cur;
 		}
 	}
-}
-
-void share_pipeline_0_scan::start()
-{
-	scan_thread = boost::thread(boost::bind(&share_pipeline_0_scan::main_loop, this));
-}
-
-void share_pipeline_0_scan::stop()
-{
-	scan_thread.interrupt();
-	scan_thread.join();
 }

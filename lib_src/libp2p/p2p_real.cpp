@@ -9,10 +9,6 @@ p2p_real::p2p_real():
 	),
 	Thread_Pool(1)
 {
-	//create directories and initialize database (if not already initialized)
-	path::create_required_directories();
-	database::init::create_all();
-
 	//setup proxies for async getter/setter function calls
 	max_connections_proxy = database::table::preferences::get_max_connections();
 	if(max_connections_proxy > Proactor.connections_supported()){
@@ -84,7 +80,9 @@ void p2p_real::downloads(std::vector<download_status> & CD)
 
 void p2p_real::failed_connect_call_back(network::sock & S)
 {
-	LOGGER << "failed connect to " << S.socket_FD;
+	if(S.direction != network::DUPLICATE){
+		LOGGER << "failed connect to " << S.socket_FD;
+	}
 }
 
 unsigned p2p_real::max_connections()

@@ -138,6 +138,8 @@ protected:
 		This is called whenever a connection attempt fails, or a connected socket
 		disconnects. This is used for connection limiting.
 		Precondition: add_connection() must have been called for sock.
+	force_check:
+		Return true if the specified sock needs to have a forced call back done.
 	force_pending:
 		Returns true if there exists at least one sock which need to have a call
 		back forced. If there are then force_check will be called for every sock

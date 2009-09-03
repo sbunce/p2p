@@ -29,15 +29,7 @@ public:
 		atomic_int<boost::uint64_t> & _size_bytes_in,
 		atomic_int<boost::uint64_t> & _size_files_in
 	);
-
-	/*
-	start:
-		Starts scan_thread.
-	stop:
-		Stops scan_thread.
-	*/
-	void start();
-	void stop();
+	~share_pipeline_0_scan();
 
 	/*
 	get_job:

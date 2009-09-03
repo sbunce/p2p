@@ -52,6 +52,7 @@ enum SOCK_ERROR {
 	FAILED_RESOLVE,  //failed to resolve host
 	MAX_CONNECTIONS, //connection limit reached
 	TIMEOUT,         //socket timed out
+	DUPLICATE,       //allow_dupes = true and IP already connected
 	OTHER            //error there is no other enum for
 };
 

@@ -11,7 +11,6 @@ namespace database{
 class init
 {
 public:
-
 	/*
 	create_all:
 		Create tables that don't yet exist.
@@ -24,6 +23,7 @@ public:
 	//functions to create tables
 	static void blacklist();
 	static void hash();
+	static void host();
 	static void preferences();
 	static void prime();
 	static void share();

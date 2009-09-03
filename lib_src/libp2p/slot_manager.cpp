@@ -1,11 +1,11 @@
-#include "slot.hpp"
+#include "slot_manager.hpp"
 
-slot::slot()
+slot_manager::slot_manager()
 {
 
 }
 
-bool slot::add_incoming_slot()
+bool slot_manager::add_incoming_slot()
 {
 /*
 	if(Incoming_Slot.size() >= 256){
@@ -31,17 +31,17 @@ bool slot::add_incoming_slot()
 */
 }
 
-void slot::add_outgoing_slot(boost::shared_ptr<slot_element> SE)
+void slot_manager::add_outgoing_slot(boost::shared_ptr<slot> SE)
 {
 	Pending_Slot_Request.push_back(SE);
 }
 
-bool slot::recv(network::buffer & recv_buff)
+bool slot_manager::recv(network::buffer & recv_buff)
 {
 
 }
 
-bool slot::send(network::buffer & send_buff)
+bool slot_manager::send(network::buffer & send_buff)
 {
 //DEBUG, work on this
 

@@ -1,9 +1,10 @@
 #include "database_init.hpp"
 
 static int check_exists_call_back(bool & exists, int columns_retrieved,
-	char ** query_response, char ** column_name)
+	char ** response, char ** column_name)
 {
-	exists = strcmp(query_response[0], "0") != 0;
+	assert(response[0]);
+	exists = strcmp(response[0], "0") != 0;
 	return 0;
 }
 
@@ -17,6 +18,7 @@ void database::init::create_all()
 {
 	blacklist();
 	hash();
+	host();
 	preferences();
 	prime();
 	share();
@@ -27,6 +29,7 @@ void database::init::drop_all()
 	database::pool::proxy DB;
 	DB->query("DROP TABLE IF EXISTS blacklist");
 	DB->query("DROP TABLE IF EXISTS hash");
+	DB->query("DROP TABLE IF EXISTS host");
 	DB->query("DROP TABLE IF EXISTS preferences");
 	DB->query("DROP TABLE IF EXISTS prime");
 	DB->query("DROP TABLE IF EXISTS share");
@@ -40,6 +43,14 @@ void database::init::hash()
 	DB->query("CREATE INDEX IF NOT EXISTS hash_size_index ON hash(tree_size)");
 	DB->query("CREATE INDEX IF NOT EXISTS hash_state_index ON hash(state)");
 	DB->query("DELETE FROM hash WHERE state = 0");
+}
+
+void database::init::host()
+{
+	database::pool::proxy DB;
+	DB->query("CREATE TABLE IF NOT EXISTS host(hash TEXT, host TEXT, port TEXT)");
+	DB->query("CREATE INDEX IF NOT EXISTS host_hash_index ON host(hash)");
+	DB->query("CREATE UNIQUE INDEX IF NOT EXISTS host_hash_host_index ON host(hash, host, port)");
 }
 
 void database::init::preferences()
