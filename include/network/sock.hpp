@@ -29,37 +29,37 @@ namespace network {
 
 //used for PIMPL
 namespace wrapper {
-class address_info;
+	class address_info;
 }
 typedef wrapper::address_info address_info;
 
-/*
-Direction of a connection. An incoming connection is one a remote host
-established with us. An outgoing connection is one we establish with a remote
-host.
-*/
-enum DIRECTION {
-	INCOMING,
-	OUTGOING
-};
-
-/*
-When a socket is disconnected without the program telling it to an error code
-is given.
-*/
-enum SOCK_ERROR {
-	NO_ERROR,        //default, no error
-	FAILED_RESOLVE,  //failed to resolve host
-	MAX_CONNECTIONS, //connection limit reached
-	TIMEOUT,         //socket timed out
-	DUPLICATE,       //allow_dupes = true and IP already connected
-	OTHER            //error there is no other enum for
-};
-
 class sock
 {
-	static const int DEFAULT_TIMEOUT = 16;
+	static const int default_timeout = 16;
 public:
+	/*
+	Direction of a connection. An incoming connection is one a remote host
+	established with us. An outgoing connection is one we establish with a remote
+	host.
+	*/
+	enum direction_enum {
+		incoming,
+		outgoing
+	};
+
+	/*
+	When a socket is disconnected without the program telling it to an error code
+	is given.
+	*/
+	enum error_enum {
+		no_error,        //default, no error
+		failed_resolve,  //failed to resolve host
+		max_connections, //connection limit reached
+		timed_out,       //socket timed out
+		duplicate,       //allow_dupes = true and IP already connected
+		other_error      //error there is no other enum for
+	};
+
 	/*
 	Constructor for new incoming connection. This is generally used inside a
 	reactor when an incoming connection is established.
@@ -87,7 +87,7 @@ public:
 	const std::string host;    //name we connected to (ie "google.com")
 	const std::string IP;      //IP host resolved to
 	const std::string port;    //if listen_port == port then connection is incoming
-	const DIRECTION direction; //INCOMING or OUTGOING
+	const direction_enum direction;
 
 	/* Flags to indicate what has happended to the sock in the reactor.
 	connect_flag:
@@ -124,23 +124,23 @@ public:
 	boost::function<void (sock &)> send_call_back;
 
 	//error stored here after abnormal disconnect
-	SOCK_ERROR sock_error;
+	error_enum error;
 
 	/*
 	If the socket is in the reactor for this long it will time out. This may be
 	changed from the default value. Value is in seconds.
 	*/
-	std::time_t timeout;
+	std::time_t idle_timeout;
 
 	/*
+	timeout:
+		Returns true if the socket has timed out.
 	seen:
 		Updates last_active. Used for timeouts. Used by reactor but harmless to
 		call from outside the reactor (although this has no meaning).
-	timed_out:
-		Returns true if the socket has timed out.
 	*/
+	bool timeout();
 	void seen();
-	bool timed_out();
 
 private:
 	//last time seen (used for timeouts)

@@ -52,14 +52,18 @@ private:
 	create_header:
 		Creates a HTTP header. Content length should be the size (bytes) of the
 		document we're sending.
+	decode_chars:
+		Replace HTML encoded characters with ASCII.
+	encode_chars:
+		Replace special ASCII characters with HTML encoded characters.
 	read:
 		Appends new data on to send_buff if any exists.
 		Precondition: determine_type must have been called.
-	replace_encoded_chars:
-		Replaces stuff like %20 with ' '.
 	*/
 	std::string create_header(const unsigned content_length);
+	void decode_chars(std::string & str);
+	void encode_chars(std::string & str);
 	void read(network::sock & S);
-	void replace_encoded_chars(std::string & str);
+
 };
 #endif

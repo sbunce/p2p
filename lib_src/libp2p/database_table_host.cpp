@@ -1,5 +1,32 @@
 #include "database_table_host.hpp"
 
+//BEGIN host_info
+database::table::host::host_info::host_info(
+	const std::string & host_in,	
+	const std::string & port_in
+):
+	host(host_in),
+	port(port_in)
+{
+
+}
+
+bool database::table::host::host_info::operator == (const host_info & rval)
+{
+	return host == rval.host && port == rval.port;
+}
+
+bool database::table::host::host_info::operator != (const host_info & rval)
+{
+	return !(*this == rval);
+}
+
+bool database::table::host::host_info::operator < (const host_info & rval)
+{
+	return (host + port) < (rval.host + rval.port);
+}
+//END host_info
+
 void database::table::host::add(const std::string hash, const host_info & HI,
 	database::pool::proxy DB)
 {

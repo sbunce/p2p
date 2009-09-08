@@ -10,22 +10,14 @@ class connection
 public:
 	connection(network::sock & S)
 	{
-		if(S.direction == network::OUTGOING){
+		if(S.direction == network::sock::outgoing){
 			S.send_buff.append('x');
 		}
 	}
 
 	void recv_call_back(network::sock & S)
 	{
-		if(S.direction == network::OUTGOING){
-			if(S.recv_buff.size() != 1){
-				LOGGER; exit(1);
-			}
-			if(S.recv_buff[0] != 'y'){
-				LOGGER; exit(1);
-			}
-			S.disconnect_flag = true;
-		}else{
+		if(S.direction == network::sock::incoming){
 			if(S.recv_buff.size() != 1){
 				LOGGER; exit(1);
 			}
@@ -34,6 +26,14 @@ public:
 			}
 			S.send_buff.append('y');
 			S.recv_buff.clear();
+		}else{
+			if(S.recv_buff.size() != 1){
+				LOGGER; exit(1);
+			}
+			if(S.recv_buff[0] != 'y'){
+				LOGGER; exit(1);
+			}
+			S.disconnect_flag = true;
 		}
 	}
 
@@ -50,7 +50,7 @@ void connect_call_back(network::sock & S)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	std::string direction;
-	if(S.direction == network::INCOMING){
+	if(S.direction == network::sock::incoming){
 		direction = "in ";
 	}else{
 		direction = "out";
@@ -67,7 +67,7 @@ void disconnect_call_back(network::sock & S)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	std::string direction;
-	if(S.direction == network::INCOMING){
+	if(S.direction == network::sock::incoming){
 		direction = "in";
 	}else{
 		direction = "out";
@@ -82,15 +82,15 @@ void disconnect_call_back(network::sock & S)
 
 void failed_connect_call_back(network::sock & S)
 {
-	assert(S.sock_error != network::NO_ERROR);
+	assert(S.error != network::sock::no_error);
 	std::string reason;
-	if(S.sock_error == network::FAILED_RESOLVE){
+	if(S.error == network::sock::failed_resolve){
 		reason = "failed resolve";
-	}else if(S.sock_error == network::MAX_CONNECTIONS){
+	}else if(S.error == network::sock::max_connections){
 		reason = "max connections";
-	}else if(S.sock_error == network::TIMEOUT){
-		reason = "timeout";
-	}else if(S.sock_error == network::OTHER){
+	}else if(S.error == network::sock::timed_out){
+		reason = "timed_out";
+	}else if(S.error == network::sock::other_error){
 		reason = "other";
 	}else{
 		LOGGER << "unrecognized failure reason";

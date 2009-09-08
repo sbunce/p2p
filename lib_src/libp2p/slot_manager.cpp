@@ -29,6 +29,7 @@ bool slot_manager::add_incoming_slot()
 		.append(static_cast<unsigned char>(Incoming_Slot.size()-1));
 	return true;
 */
+	return false;
 }
 
 void slot_manager::add_outgoing_slot(boost::shared_ptr<slot> SE)
@@ -38,7 +39,9 @@ void slot_manager::add_outgoing_slot(boost::shared_ptr<slot> SE)
 
 bool slot_manager::recv(network::buffer & recv_buff)
 {
+//DEBUG, work on this
 
+	return false;
 }
 
 bool slot_manager::send(network::buffer & send_buff)

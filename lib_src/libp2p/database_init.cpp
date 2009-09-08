@@ -8,6 +8,12 @@ static int check_exists_call_back(bool & exists, int columns_retrieved,
 	return 0;
 }
 
+database::init::init()
+{
+	path::create_required_directories();
+	create_all();
+}
+
 void database::init::blacklist()
 {
 	database::pool::proxy DB;

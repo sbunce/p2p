@@ -1,7 +1,7 @@
 #include "block_request.hpp"
 
 block_request::block_request(
-	const unsigned block_count_in
+	const boost::uint32_t block_count_in
 ):
 	block_count(block_count_in),
 	local_block(block_count)

@@ -34,7 +34,7 @@ def system_include_path(env):
 	if platform.system() == 'Windows':
 		path = search.locate_dir_recurse(
 			'/Program Files/Microsoft SDKs/Windows/', 'Include')
-		if not found_dir:
+		if not path:
 			print 'error: could not locate windows headers'
 			exit(1)
 		env['CPPPATH'].append(path)
@@ -72,10 +72,10 @@ def setup(env):
 	env['LIBS'].append('network')
 	env['LIBS'].append('sqlite3')
 	env['LIBS'].append('tommath')
-	env['LIBS'].append('boost_system')
-	env['LIBS'].append('boost_filesystem')
-	env['LIBS'].append('boost_regex')
-	env['LIBS'].append('boost_thread')
+	env['LIBS'].append(boost.library('boost_system'))
+	env['LIBS'].append(boost.library('boost_filesystem'))
+	env['LIBS'].append(boost.library('boost_regex'))
+	env['LIBS'].append(boost.library('boost_thread'))
 
 	#compile flags
 	compile_flags(env)

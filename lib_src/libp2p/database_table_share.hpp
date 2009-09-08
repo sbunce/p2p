@@ -67,7 +67,8 @@ public:
 		Used on program start to retrieve file_info for all files in share where
 		state = DOWNLOADING.
 	*/
-	static void add_entry(const file_info & FI, database::pool::proxy DB = database::pool::proxy());
+	static void add_entry(const file_info & FI,
+		database::pool::proxy DB = database::pool::proxy());
 	static void delete_entry(const std::string & path,
 		database::pool::proxy DB = database::pool::proxy());
 	static boost::shared_ptr<file_info> lookup_hash(const std::string & hash,

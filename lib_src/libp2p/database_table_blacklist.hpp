@@ -28,8 +28,8 @@ public:
 		Returns true if IP is blacklisted.
 	modified:
 		Returns true if last_state_seen doesn't match the current blacklist_state.
-		Note: The int passed to this function should be initialized to zero before
-			the first call.
+		Note: To not check the blacklist the first call initialize last_state_seen
+		to zero, or not zero to check on the first call.
 		Postcondition: last_state_seen = blacklist_state.
 	*/
 	static void add(const std::string & IP,

@@ -3,7 +3,7 @@
 #define H_P2P_REAL
 
 //custom
-#include "connection.hpp"
+#include "connection_manager.hpp"
 #include "database.hpp"
 #include "hash_tree.hpp"
 #include "path.hpp"
@@ -21,24 +21,13 @@
 #include <thread_pool.hpp>
 
 //standard
-#include <cstdlib>
-#include <fstream>
 #include <string>
 #include <vector>
 
 class p2p_real : private boost::noncopyable
 {
-	//sets up all directories and database before anything else is instantiated
-	class init
-	{
-	public:
-		init()
-		{
-			path::create_required_directories();
-			database::init::create_all();
-		}
-	}Init;
-
+	//set up all directories and database before anything else
+	database::init init;
 public:
 	p2p_real();
 	~p2p_real();
@@ -63,10 +52,10 @@ public:
 
 private:
 	/*
-	The values that database::table::get_<"max_connections" | "max_download_rate"
-	| "max_upload_rate"> return are proxied here so that the database calls to
-	get or set the values in the database can be done asynchronously. This is
-	important to make these calls very responsive.
+	The values to store in the database are stored here and a job is scheduled
+	with Thread_Pool to do the actual database read/write. This allows the
+	functions which get/set these to return immediately instead of having to wait
+	for database access.
 	*/
 	atomic_int<unsigned> max_connections_proxy;
 	atomic_int<unsigned> max_download_rate_proxy;
@@ -75,38 +64,17 @@ private:
 	//indexes share
 	share Share;
 
-	/*
-	Connection state will be stored in the connection object. Also call backs
-	will be registered in connect_call_back to do call backs directly to the
-	connection objects stored in this container. The mutex locks access to this
-	container because it's possible there will be multiple threads doing call
-	backs to connect_call_back and disconnect_call_back concurrently which both
-	modify the Connection container.
-	*/
-	boost::mutex Connection_mutex;
-	std::map<int, boost::shared_ptr<connection> > Connection;
-
 	//used to schedule long jobs so the GUI doesn't have to wait
 	thread_pool Thread_Pool;
 
 	/*
-	Proactor which does call backs for network activity.
-	Note: This is specified last in header because it starts threads in it's ctor
-		which use objects in p2p_real. We specify it last because we want to make
-		sure the objects it uses are constructed before it uses them.
+	Proactor does call backs for network activity. The call backs are done to the
+	Connection_Manager.
+	Note: Proactor is specified last in header because it starts threads in it's
+		ctor which use objects in p2p_real. We specify it last because we want to
+		make sure the objects it uses are constructed before it uses them.
 	*/
+	connection_manager Connection_Manager;
 	network::proactor Proactor;
-
-	/*
-	connect_call_back:
-		Proactor calls back to this when a socket connects.
-	disconnect_call_back:
-		Proactor calls back to this when a socket normally disconnects.
-	failed_connect_call_back:
-		Proactor calls back to this when a connection fails.
-	*/
-	void connect_call_back(network::sock & S);
-	void disconnect_call_back(network::sock & S);
-	void failed_connect_call_back(network::sock & S);
 };
 #endif

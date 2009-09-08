@@ -21,7 +21,8 @@ public:
 			((groups * group_size) / 8) : ((groups * group_size) / 8 + 1),
 			'\0'
 		),
-		max_group_value(std::pow(2, group_size) - 1)
+		max_group_value(std::pow(static_cast<const double>(2),
+			static_cast<const int>(group_size)) - 1)
 	{
 		if(group_size < 1 && group_size > 7){
 			LOGGER << "group_size must be greater than 0 and less than 8";
@@ -61,18 +62,18 @@ public:
 	private:
 		proxy(
 			bitgroup_vector & BGV_in,
-			const size_t index_in
+			const unsigned index_in
 		):
 			BGV(BGV_in),
 			index(index_in)
 		{}
 
 		bitgroup_vector & BGV;
-		const size_t index;
+		const unsigned index;
 	};
 
 	//returns proxy object (see documentation for proxy)
-	proxy operator [](const size_t index)
+	proxy operator [](const unsigned index)
 	{
 		assert(index < groups);
 		return proxy(*this, index);
@@ -93,8 +94,8 @@ public:
 	//bitwise AND one bitgroup_set with another
 	bitgroup_vector & operator &= (const bitgroup_vector & rval)
 	{
-		size_t small = vec.size() < rval.vec.size() ? vec.size() : rval.vec.size();
-		for(size_t x=0; x<small; ++x){
+		unsigned smaller_size = vec.size() < rval.vec.size() ? vec.size() : rval.vec.size();
+		for(unsigned x=0; x<smaller_size; ++x){
 			vec[x] &= rval.vec[x];
 		}
 		return *this;
@@ -103,8 +104,8 @@ public:
 	//bitwise XOR one bitgroup_set with another
 	bitgroup_vector & operator ^= (const bitgroup_vector & rval)
 	{
-		size_t small = vec.size() < rval.vec.size() ? vec.size() : rval.vec.size();
-		for(size_t x=0; x<small; ++x){
+		unsigned smaller_size = vec.size() < rval.vec.size() ? vec.size() : rval.vec.size();
+		for(unsigned x=0; x<smaller_size; ++x){
 			vec[x] ^= rval.vec[x];
 		}
 		return *this;
@@ -113,8 +114,8 @@ public:
 	//bitwise OR one bitgroup_set with another
 	bitgroup_vector & operator |= (const bitgroup_vector & rval)
 	{
-		size_t small = vec.size() < rval.vec.size() ? vec.size() : rval.vec.size();
-		for(size_t x=0; x<small; ++x){
+		unsigned smaller_size = vec.size() < rval.vec.size() ? vec.size() : rval.vec.size();
+		for(unsigned x=0; x<smaller_size; ++x){
 			vec[x] |= rval.vec[x];
 		}
 		return *this;
@@ -123,7 +124,7 @@ public:
 	//bitwise NOT bitgroup_set
 	bitgroup_vector & operator ~ ()
 	{
-		for(size_t x=0; x<vec.size(); ++x){
+		for(unsigned x=0; x<vec.size(); ++x){
 			vec[x] = ~vec[x];
 		}
 		return *this;
@@ -142,7 +143,7 @@ public:
 	*/
 	void reset()
 	{
-		for(size_t x=0; x<vec.size(); ++x){
+		for(unsigned x=0; x<vec.size(); ++x){
 			vec[x] = '\0';
 		}
 	}
@@ -157,7 +158,7 @@ public:
 	Get a number from the bitgroup_set.
 	Note: it is syntactically nicer to use operator [].
 	*/
-	unsigned get_num(const size_t index)
+	unsigned get_num(const unsigned index)
 	{
 		unsigned byte_offset = index * group_size / 8;
 		unsigned bit_offset = index * group_size % 8;
@@ -189,7 +190,7 @@ public:
 	Set a number in the bitgroup_set.
 	Note: it is syntactically nicer to use operator [].
 	*/
-	void set_num(const size_t index, const unsigned num)
+	void set_num(const unsigned index, const unsigned num)
 	{
 		assert(num <= max_group_value);
 		unsigned byte_offset = index * group_size / 8;

@@ -12,13 +12,7 @@ slot_set::~slot_set()
 	resume_thread.join();
 }
 
-bool slot_set::exists(boost::shared_ptr<slot> & SE)
-{
-	boost::mutex::scoped_lock lock(Slot_mutex);
-	return Slot.find(SE->hash) != Slot.end();
-}
-
-boost::shared_ptr<slot> slot_set::get(const std::string & hash)
+boost::shared_ptr<slot> slot_set::add(const std::string & hash)
 {
 	boost::mutex::scoped_lock lock(Slot_mutex);
 	std::map<std::string, boost::shared_ptr<slot> >::iterator
@@ -54,13 +48,13 @@ void slot_set::remove(const std::string & hash)
 	Slot.erase(hash);
 }
 
-void slot_set::resume(network::proactor & Proactor)
+void slot_set::resume(network::proactor & Proactor, connection_manager & Connection_Manager)
 {
 	resume_thread = boost::thread(boost::bind(&slot_set::resume_priv, this,
-		boost::ref(Proactor)));
+		boost::ref(Proactor), boost::ref(Connection_Manager)));
 }
 
-void slot_set::resume_priv(network::proactor & Proactor)
+void slot_set::resume_priv(network::proactor & Proactor, connection_manager & Connection_Manager)
 {
 	//read all downloading file infomation
 	std::vector<database::table::share::file_info> Resume;
@@ -106,13 +100,12 @@ void slot_set::resume_priv(network::proactor & Proactor)
 		}
 		}//end lock scope
 
-		/*
-		Connect to hosts which have the file (the proactor won't connect twice if
-		it's already connected). If there is already a connection to the host
-		trigger proactor to do call back so the connection can add the
-		slot_element.
-		*/
-		//Proactor.connect("some host name", "some port");
-		//Proactor.trigger_call_back("some host name");
+		//initiate connections for file
+		if(boost::shared_ptr<std::vector<database::table::host::host_info> >
+			HI = database::table::host::lookup(SE->hash))
+		{
+			//Proactor.connect("some host name", "some port");
+			//Proactor.trigger_call_back("some host name");
+		}
 	}
 }

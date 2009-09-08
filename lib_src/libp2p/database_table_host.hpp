@@ -25,28 +25,14 @@ public:
 		host_info(
 			const std::string & host_in,	
 			const std::string & port_in
-		):
-			host(host_in),
-			port(port_in)
-		{}
+		);
 
 		std::string host;
 		std::string port;
 
-		bool operator == (const host_info & rval)
-		{
-			return host == rval.host && port == rval.port;
-		}
-
-		bool operator != (const host_info & rval)
-		{
-			return !(*this == rval);
-		}
-
-		bool operator < (const host_info & rval)
-		{
-			return (host + port) < (rval.host + rval.port);
-		}
+		bool operator == (const host_info & rval);
+		bool operator != (const host_info & rval);
+		bool operator < (const host_info & rval);
 	};
 
 	/*

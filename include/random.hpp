@@ -9,6 +9,11 @@
 
 //windows PRNG
 #ifdef _WIN32
+	/*
+	Even though this header is not relevant here it must be included before
+	wincrypt.h otherwise there will be errors.
+	*/
+	#include <ws2tcpip.h>
 	#include <wincrypt.h>
 #endif
 

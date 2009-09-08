@@ -77,7 +77,7 @@ void network::reactor::call_back_schedule_job(boost::shared_ptr<network::sock> &
 
 void network::reactor::connection_add(boost::shared_ptr<sock> & S)
 {
-	if(S->direction == INCOMING){
+	if(S->direction == sock::incoming){
 		boost::mutex::scoped_lock lock(connections_mutex);
 		std::pair<std::set<boost::shared_ptr<sock> >::iterator, bool>
 			ret = incoming.insert(S);
@@ -108,7 +108,7 @@ bool network::reactor::connection_outgoing_limit()
 
 void network::reactor::connection_remove(boost::shared_ptr<sock> & S)
 {
-	if(S->direction == INCOMING){
+	if(S->direction == sock::incoming){
 		boost::mutex::scoped_lock lock(connections_mutex);
 		if(incoming.erase(S) != 1){
 			LOGGER; exit(1);
@@ -218,7 +218,7 @@ void network::reactor::schedule_connect(boost::shared_ptr<network::sock> & S)
 	if(!S->info->resolved()){
 		//DNS resolution failure, or invalid address
 		S->failed_connect_flag = true;
-		S->sock_error = FAILED_RESOLVE;
+		S->error = sock::failed_resolve;
 		call_back_schedule_job(S);
 	}else{
 		{//begin lock scope

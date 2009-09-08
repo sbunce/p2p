@@ -138,21 +138,12 @@ static int resume_call_back(
 {
 	assert(response[0] && response[1] && response[2]);
 	database::table::share::file_info FI;
-
-	std::stringstream ss;
-
-	//hash
 	FI.hash = response[0];
-
-	//file size
+	std::stringstream ss;
 	ss << response[1];
 	ss >> FI.file_size;
-
-	//path
 	FI.path = response[2];
-
 	Resume.push_back(FI);
-
 	return 0;
 }
 

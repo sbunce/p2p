@@ -39,8 +39,7 @@ hash_tree::hash_tree(
 	}else{
 		//tree doesn't yet exist, allocate it
 		database::table::hash::tree_allocate(hash, tree_size, DB);
-		boost::shared_ptr<database::table::hash::tree_info>
-			TI = database::table::hash::tree_open(hash, DB);
+		TI = database::table::hash::tree_open(hash, DB);
 		if(TI){
 			Blob = TI->Blob;
 		}else{
@@ -340,6 +339,10 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 		return true;
 	}
 
+	//hack for windows
+	#ifdef _WIN32
+		#undef max
+	#endif
 	boost::uint64_t tree_size = file_size_to_tree_size(file_size);
 	if(tree_size > std::numeric_limits<int>::max()){
 		LOGGER << "file at location \"" << file_path << "\" would generate hash tree beyond max SQLite3 blob size";

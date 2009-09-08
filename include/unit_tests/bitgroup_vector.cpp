@@ -11,7 +11,7 @@ void assignment()
 	//try all different group sizes
 	for(unsigned x=1; x<8; ++x){
 		bitgroup_vector BGV(groups, x);
-		unsigned max = std::pow(2, x) - 1;
+		unsigned max = std::pow(static_cast<const double>(2), static_cast<const int>(x)) - 1;
 		unsigned temp = 0;
 		//set all bitgroups to known values
 		for(unsigned y=0; y<groups; ++y){

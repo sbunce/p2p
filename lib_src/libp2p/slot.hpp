@@ -2,6 +2,7 @@
 #define H_SLOT_ELEMENT
 
 //custom
+#include "database.hpp"
 #include "file.hpp"
 #include "hash_tree.hpp"
 
@@ -16,28 +17,14 @@
 class slot_set;
 class slot : private boost::noncopyable
 {
+private:
 	/*
-	A invariant of the slot_element is that it's unique (no other slot_element
-	exists with the same hash). Only allowing the slot_element_set to instantiate
-	the slot_elements makes it easy to centally enforce this invariant.
+	Each slot that exists must be unique (no other slot exists for a file with
+	the same hash). Only allowing the slot_manager to instantiate a slot makes
+	it easy to centrally enforce this.
 	*/
 	friend class slot_set;
 
-public:
-	//all access to Hash_Tree must be locked with Hash_Tree_mutex
-	boost::mutex Hash_Tree_mutex;
-	hash_tree Hash_Tree;
-
-	//all access to File must be locked with File_mutex
-	boost::mutex File_mutex;
-	file File;
-
-	//convenience references
-	const std::string & hash;
-	const boost::uint64_t & tree_size;
-	const boost::uint64_t & file_size;
-
-private:
 	slot(
 		const std::string & hash,
 		const boost::uint64_t & file_size,
@@ -50,10 +37,21 @@ private:
 		file_size(File.file_size)
 	{}
 
-	/*
-	All the hosts known to have the file.
-	*/
+	//all access to Hash_Tree must be locked with Hash_Tree_mutex
+	boost::mutex Hash_Tree_mutex;
+	hash_tree Hash_Tree;
+
+	//all access to File must be locked with File_mutex
+	boost::mutex File_mutex;
+	file File;
+
+	//all the hosts known to have the file
 	boost::mutex host_mutex;
-	std::set<std::string> host;
+	std::set<database::table::host::host_info> host;
+
+public:
+	const std::string & hash;
+	const boost::uint64_t & tree_size;
+	const boost::uint64_t & file_size;
 };
 #endif

@@ -3,6 +3,7 @@
 
 //custom
 #include "database.hpp"
+#include "path.hpp"
 
 //standard
 #include <sstream>
@@ -11,6 +12,9 @@ namespace database{
 class init
 {
 public:
+	//this ctor calls create_all()
+	init();
+
 	/*
 	create_all:
 		Create tables that don't yet exist.
@@ -27,9 +31,6 @@ public:
 	static void preferences();
 	static void prime();
 	static void share();
-
-private:
-	init(){}
 };
 }//end of namespace database
 #endif

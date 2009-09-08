@@ -79,7 +79,7 @@ void network::reactor_select::check_timeouts()
 	std::map<int, boost::shared_ptr<sock> >::iterator
 		iter_cur = Monitored.begin(), iter_end = Monitored.end();
 	while(iter_cur != iter_end){
-		if(iter_cur->second->timed_out()){
+		if(iter_cur->second->timeout()){
 			boost::shared_ptr<sock> S = iter_cur->second;
 			Monitored.erase(iter_cur++);
 			if(FD_ISSET(S->socket_FD, &connect_FDS)){
@@ -87,7 +87,7 @@ void network::reactor_select::check_timeouts()
 			}else{
 				S->disconnect_flag = true;
 			}
-			S->sock_error = TIMEOUT;
+			S->error = sock::timed_out;
 			remove_socket(S->socket_FD);
 			call_back_schedule_job(S);
 		}else{
@@ -406,7 +406,7 @@ void network::reactor_select::process_connect_job()
 		//check soft connection limit
 		if(connection_outgoing_limit()){
 			S->failed_connect_flag = true;
-			S->sock_error = MAX_CONNECTIONS;
+			S->error = sock::max_connections;
 			call_back_schedule_job(S);
 			return;
 		}
@@ -418,7 +418,7 @@ void network::reactor_select::process_connect_job()
 		if(S->socket_FD >= FD_SETSIZE){
 		#endif
 			S->failed_connect_flag = true;
-			S->sock_error = MAX_CONNECTIONS;
+			S->error = sock::max_connections;
 			call_back_schedule_job(S);
 			return;
 		}
@@ -428,7 +428,7 @@ void network::reactor_select::process_connect_job()
 
 		if(S->socket_FD == -1){
 			S->failed_connect_flag = true;
-			S->sock_error = OTHER;
+			S->error = sock::other_error;
 			call_back_schedule_job(S);
 			return;
 		}

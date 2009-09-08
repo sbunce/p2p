@@ -26,8 +26,8 @@ void http::recv_call_back(network::sock & S)
 	std::string req = S.recv_buff.str();
 	if(boost::regex_search(req.begin(), req.end(), what, expression)){
 		std::string temp = what[1];
-		replace_encoded_chars(temp);
-		//LOGGER << "req " << temp;
+		decode_chars(temp);
+		LOGGER << "req " << temp;
 		path = fs::system_complete(fs::path(web_root + temp, fs::native));
 		if(path.string().find("..") != std::string::npos){
 			//stop directory traversal
@@ -121,13 +121,14 @@ void http::read(network::sock & S)
 		try{
 			for(fs::directory_iterator iter_cur(path), iter_end; iter_cur != iter_end; ++iter_cur){
 				std::string relative_path = iter_cur->path().directory_string().substr(web_root.size());
+				encode_chars(relative_path);
+				std::string file_name = iter_cur->path().filename();
 				if(fs::is_directory(iter_cur->path())){
-					std::string dir_name =  relative_path.substr(relative_path.find_last_of('/') + 1);
-					ss << "<tr><td><a href=\"" << relative_path << "\">" << dir_name
-					<< "/</a></td><td>DIR</td></tr>";
+					ss << "<tr><td><a href=\"" << relative_path << "\">" << file_name
+						<< "/</a></td><td>DIR</td></tr>";
 				}else{
 					ss << "<tr><td><a href=\"" << relative_path << "\">" << iter_cur->path().filename()
-					<< "</a></td><td>" << convert::size_SI(fs::file_size(iter_cur->path())) << "</td></tr>";
+						<< "</a></td><td>" << convert::size_SI(fs::file_size(iter_cur->path())) << "</td></tr>";
 				}
 			}
 		}catch(std::exception & ex){
@@ -167,8 +168,18 @@ void http::read(network::sock & S)
 	}
 }
 
-void http::replace_encoded_chars(std::string & str)
+void http::decode_chars(std::string & str)
 {
+	boost::algorithm::replace_all(str, "%5B", "[");
+	boost::algorithm::replace_all(str, "%5D", "]");
 	boost::algorithm::replace_all(str, "%20", " ");
 	boost::algorithm::replace_all(str, "%27", "'");
+}
+
+void http::encode_chars(std::string & str)
+{
+	boost::algorithm::replace_all(str, "[", "%5B");
+	boost::algorithm::replace_all(str, "]", "%5D");
+	boost::algorithm::replace_all(str, " ", "%20");
+	boost::algorithm::replace_all(str, "'", "%27");
 }
