@@ -163,6 +163,26 @@ unsigned network::reactor::incoming_connections()
 	return incoming.size();
 }
 
+bool network::reactor::is_duplicate(boost::shared_ptr<sock> & S)
+{
+	boost::mutex::scoped_lock lock(connections_mutex);
+	for(std::set<boost::shared_ptr<sock> >::iterator iter_cur = incoming.begin(),
+		iter_end = incoming.end(); iter_cur != iter_end; ++iter_cur)
+	{
+		if((*iter_cur)->IP == S->IP){
+			return true;
+		}
+	}
+	for(std::set<boost::shared_ptr<sock> >::iterator iter_cur = outgoing.begin(),
+		iter_end = outgoing.end(); iter_cur != iter_end; ++iter_cur)
+	{
+		if((*iter_cur)->IP == S->IP){
+			return true;
+		}
+	}
+	return false;
+}
+
 void network::reactor::max_connections(const unsigned max_incoming_in,
 	const unsigned max_outgoing_in)
 {

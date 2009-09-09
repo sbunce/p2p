@@ -7,9 +7,10 @@ network::proactor::proactor(
 	boost::function<void (sock & Sock)> connect_call_back_in,
 	boost::function<void (sock & Sock)> disconnect_call_back_in,
 	boost::function<void (sock & Sock)> failed_connect_call_back_in,
+	const bool duplicates_allowed,
 	const std::string & port
 ):
-	Reactor(new reactor_select(port)),
+	Reactor(new reactor_select(duplicates_allowed, port)),
 	connect_call_back(connect_call_back_in),
 	disconnect_call_back(disconnect_call_back_in),
 	failed_connect_call_back(failed_connect_call_back_in)

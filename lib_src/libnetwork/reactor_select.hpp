@@ -19,6 +19,7 @@ class reactor_select : public reactor
 {
 public:
 	reactor_select(
+		const bool duplicates_allowed_in,
 		const std::string & port = ""
 	);
 	~reactor_select();
@@ -32,6 +33,9 @@ public:
 private:
 	//thread for main_loop
 	boost::thread main_loop_thread;
+
+	//if this is true then duplicate connections are allowed
+	const bool duplicates_allowed;
 
 	fd_set master_read_FDS;  //sockets to check for recv() readyness
 	fd_set master_write_FDS; //sockets to check for send() readyness

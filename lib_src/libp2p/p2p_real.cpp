@@ -5,6 +5,7 @@ p2p_real::p2p_real():
 		boost::bind(&connection_manager::connect_call_back, &Connection_Manager, _1),
 		boost::bind(&connection_manager::disconnect_call_back, &Connection_Manager, _1),
 		boost::bind(&connection_manager::failed_connect_call_back, &Connection_Manager, _1),
+		false,
 		settings::P2P_PORT
 	),
 	Thread_Pool(1)

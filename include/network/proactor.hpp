@@ -21,11 +21,16 @@ class reactor;
 class proactor
 {
 public:
+	/*
+	If duplicate_allowed is false then duplicate connections won't be allowed.
+	If no port specified then no port will be listened on.
+	*/
 	proactor(
 		boost::function<void (sock & Sock)> connect_call_back_in,
 		boost::function<void (sock & Sock)> disconnect_call_back_in,
 		boost::function<void (sock & Sock)> failed_connect_call_back_in,
-		const std::string & port = "" //default to not listen on any port
+		const bool duplicates_allowed = true,
+		const std::string & port = ""
 	);
 	~proactor();
 

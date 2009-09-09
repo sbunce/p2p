@@ -144,6 +144,8 @@ protected:
 		Returns true if there exists at least one sock which need to have a call
 		back forced. If there are then force_check will be called for every sock
 		in the derived reactor to see if a call back needs to be forced.
+	is_duplicate:
+		Returns true if the connection is a duplicate.
 	*/
 	boost::shared_ptr<sock> call_back_finished_job();
 	void call_back_schedule_job(boost::shared_ptr<sock> & S);
@@ -154,6 +156,7 @@ protected:
 	void connection_remove(boost::shared_ptr<sock> & S);
 	bool force_check(boost::shared_ptr<sock> & S);
 	bool force_pending();
+	bool is_duplicate(boost::shared_ptr<sock> & S);
 
 private:
 	/*

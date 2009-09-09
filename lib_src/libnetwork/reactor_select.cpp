@@ -1,8 +1,10 @@
 #include "reactor_select.hpp"
 
 network::reactor_select::reactor_select(
+	const bool duplicates_allowed_in,
 	const std::string & port
 ):
+	duplicates_allowed(duplicates_allowed_in),
 	begin_FD(0),
 	end_FD(1),
 	listener_IPv4(-1),
@@ -124,7 +126,12 @@ void network::reactor_select::establish_incoming(const int listener)
 				close(new_FD);
 			}else{
 				boost::shared_ptr<sock> S(new sock(new_FD));
-				connection_add(S);
+				if(!duplicates_allowed && is_duplicate(S)){
+					S->failed_connect_flag = true;
+					S->error = sock::duplicate;
+				}else{
+					connection_add(S);
+				}
 				call_back_schedule_job(S);
 			}
 		}
@@ -403,6 +410,13 @@ void network::reactor_select::process_connect_job()
 {
 	boost::shared_ptr<sock> S;
 	while(S = connect_job_get()){
+		if(!duplicates_allowed && is_duplicate(S)){
+			S->failed_connect_flag = true;
+			S->error = sock::duplicate;
+			call_back_schedule_job(S);
+			continue;
+		}
+
 		//check soft connection limit
 		if(connection_outgoing_limit()){
 			S->failed_connect_flag = true;

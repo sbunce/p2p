@@ -106,6 +106,7 @@ int main()
 		&connect_call_back,
 		&disconnect_call_back,
 		&failed_connect_call_back,
+		true,
 		"65001"
 	);
 
