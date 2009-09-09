@@ -65,6 +65,9 @@ private:
 	//indexes share
 	share Share;
 
+	//unique set of slots that belong to all the connections
+	slot_set Slot_Set;
+
 	//used to schedule long jobs so the GUI doesn't have to wait
 	thread_pool Thread_Pool;
 

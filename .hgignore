@@ -7,7 +7,9 @@ syntax: glob
 *.out
 *.pyc
 *-journal
+.sconf_temp
 bin
+config.log
 include/network/http/benchmark/URL
 include/network/http/benchmark/test_files
 lib

@@ -23,8 +23,8 @@ p2p_real::p2p_real():
 	Proactor.max_download_rate(max_download_rate_proxy);
 	Proactor.max_upload_rate(max_upload_rate_proxy);
 
-//DEBUG, test
-	Proactor.connect("127.0.0.1", settings::P2P_PORT);
+	//resume downloads and start connections needed for those downloads
+	Slot_Set.resume(Proactor);
 }
 
 p2p_real::~p2p_real()
