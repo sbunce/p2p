@@ -37,7 +37,8 @@ network::proactor::~proactor()
 void network::proactor::connect(const std::string & host, const std::string & port)
 {
 	boost::mutex::scoped_lock lock(resolve_job_mutex);
-	resolve_job.push_back(std::make_pair(host, port));
+	resolve_job.push_back(resolve_job_element(host, port,
+		resolve_job_element::new_connection));
 	resolve_job_cond.notify_one();
 }
 
@@ -131,7 +132,7 @@ void network::proactor::dispatch()
 void network::proactor::resolve()
 {
 	while(true){
-		std::pair<std::string, std::string> job;
+		resolve_job_element job;
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(resolve_job_mutex);
 		while(resolve_job.empty()){
@@ -141,15 +142,29 @@ void network::proactor::resolve()
 		resolve_job.pop_front();
 		}//end lock scope
 		boost::shared_ptr<address_info> AI(new address_info(
-			job.first.c_str(), job.second.c_str()));
-		boost::shared_ptr<sock> S(new sock(AI));
-		Reactor->schedule_connect(S);
+			job.host.c_str(), job.port.c_str()));
+
+		if(job.type == resolve_job_element::new_connection){
+			boost::shared_ptr<sock> S(new sock(AI));
+			Reactor->schedule_connect(S);
+		}else if(job.type == resolve_job_element::force_call_back){
+			if(AI->resolved()){
+				Reactor->trigger_call_back(wrapper::get_IP(*AI));
+			}
+		}else{
+			LOGGER << "unhandled case";
+			exit(1);
+		}
 	}
 }
 
-void network::proactor::trigger_call_back(const std::string & host_or_IP)
+void network::proactor::trigger_call_back(const std::string & host,
+	const std::string & port)
 {
-	Reactor->trigger_call_back(host_or_IP);
+	boost::mutex::scoped_lock lock(resolve_job_mutex);
+	resolve_job.push_back(resolve_job_element(host, port,
+		resolve_job_element::force_call_back));
+	resolve_job_cond.notify_one();
 }
 
 unsigned network::proactor::upload_rate()

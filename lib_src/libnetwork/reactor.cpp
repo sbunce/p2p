@@ -110,14 +110,10 @@ void network::reactor::connection_remove(boost::shared_ptr<sock> & S)
 {
 	if(S->direction == sock::incoming){
 		boost::mutex::scoped_lock lock(connections_mutex);
-		if(incoming.erase(S) != 1){
-			LOGGER; exit(1);
-		}
+		incoming.erase(S);
 	}else{
 		boost::mutex::scoped_lock lock(connections_mutex);
-		if(outgoing.erase(S) != 1){
-			LOGGER; exit(1);
-		}
+		outgoing.erase(S);
 	}
 }
 
@@ -249,14 +245,14 @@ void network::reactor::schedule_connect(boost::shared_ptr<network::sock> & S)
 	}
 }
 
-void network::reactor::trigger_call_back(const std::string & host_or_IP)
+void network::reactor::trigger_call_back(const std::string & IP)
 {
 	boost::mutex::scoped_lock lock(connections_mutex);
 	bool force = false; //set to true if a force_call_back scheduled
 	for(std::set<boost::shared_ptr<sock> >::iterator iter_cur = incoming.begin(),
 		iter_end = incoming.end(); iter_cur != iter_end; ++iter_cur)
 	{
-		if((*iter_cur)->host == host_or_IP || (*iter_cur)->IP == host_or_IP){
+		if((*iter_cur)->IP == IP){
 			force_call_back.insert(*iter_cur);
 			force = true;
 		}
@@ -265,7 +261,7 @@ void network::reactor::trigger_call_back(const std::string & host_or_IP)
 	for(std::set<boost::shared_ptr<sock> >::iterator iter_cur = outgoing.begin(),
 		iter_end = outgoing.end(); iter_cur != iter_end; ++iter_cur)
 	{
-		if((*iter_cur)->host == host_or_IP || (*iter_cur)->IP == host_or_IP){
+		if((*iter_cur)->host == IP){
 			force_call_back.insert(*iter_cur);
 			force = true;
 		}

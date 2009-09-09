@@ -48,13 +48,13 @@ void slot_set::remove(const std::string & hash)
 	Slot.erase(hash);
 }
 
-void slot_set::resume(network::proactor & Proactor, connection_manager & Connection_Manager)
+void slot_set::resume(network::proactor & Proactor)
 {
 	resume_thread = boost::thread(boost::bind(&slot_set::resume_priv, this,
-		boost::ref(Proactor), boost::ref(Connection_Manager)));
+		boost::ref(Proactor)));
 }
 
-void slot_set::resume_priv(network::proactor & Proactor, connection_manager & Connection_Manager)
+void slot_set::resume_priv(network::proactor & Proactor)
 {
 	//read all downloading file infomation
 	std::vector<database::table::share::file_info> Resume;
@@ -104,8 +104,13 @@ void slot_set::resume_priv(network::proactor & Proactor, connection_manager & Co
 		if(boost::shared_ptr<std::vector<database::table::host::host_info> >
 			HI = database::table::host::lookup(SE->hash))
 		{
-			//Proactor.connect("some host name", "some port");
-			//Proactor.trigger_call_back("some host name");
+			for(std::vector<database::table::host::host_info>::iterator
+				iter_cur = HI->begin(), iter_end = HI->end(); iter_cur != iter_end;
+				++iter_cur)
+			{
+				Proactor.connect(iter_cur->host, iter_cur->port);
+				Proactor.trigger_call_back(iter_cur->host, iter_cur->port);
+			}
 		}
 	}
 }

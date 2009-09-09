@@ -53,7 +53,22 @@ void disconnect_call_back(network::sock & S)
 
 void failed_connect_call_back(network::sock & S)
 {
-	LOGGER << "H<" << S.host << "> P<" << S.port << ">";
+	assert(S.error != network::sock::no_error);
+	std::string reason;
+	if(S.error == network::sock::failed_resolve){
+		reason = "failed resolve";
+	}else if(S.error == network::sock::max_connections){
+		reason = "max connections";
+	}else if(S.error == network::sock::timed_out){
+		reason = "timed_out";
+	}else if(S.error == network::sock::other_error){
+		reason = "other";
+	}else{
+		LOGGER << "unrecognized failure reason";
+		exit(1);
+	}
+	LOGGER << "H<" << S.host << "> P<" << S.port << ">" << " R<" << reason << ">";
+	exit(1);
 }
 
 int main(int argc, char ** argv)
@@ -71,10 +86,10 @@ int main(int argc, char ** argv)
 		&connect_call_back,
 		&disconnect_call_back,
 		&failed_connect_call_back,
-		false,
+		true,
 		"8080"
 	);
-	//Proactor.Reactor.max_upload_rate(1024*500);
+	//Proactor.max_upload_rate(1024*500);
 	Proactor.max_connections(Proactor.connections_supported(), 0);
 
 	while(!terminate_program){

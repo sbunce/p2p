@@ -8,6 +8,7 @@
 #include "hash_tree.hpp"
 #include "path.hpp"
 #include "prime_generator.hpp"
+#include "slot_set.hpp"
 #include "share.hpp"
 #include "settings.hpp"
 

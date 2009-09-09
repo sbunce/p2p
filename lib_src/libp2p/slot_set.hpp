@@ -2,7 +2,6 @@
 #define H_SLOT_ELEMENT_SET
 
 //custom
-#include "connection_manager.hpp"
 #include "slot.hpp"
 
 //include
@@ -36,7 +35,7 @@ public:
 	*/
 	boost::shared_ptr<slot> add(const std::string & hash);
 	void remove(const std::string & hash);
-	void resume(network::proactor & Proactor, connection_manager & Connection_Manager);
+	void resume(network::proactor & Proactor);
 
 private:
 	//handle for thread that resume() starts
@@ -71,6 +70,6 @@ private:
 		resume work.
 	*/
 	void check(boost::shared_ptr<slot> SE);
-	void resume_priv(network::proactor & Proactor, connection_manager & Connection_Manager);
+	void resume_priv(network::proactor & Proactor);
 };
 #endif

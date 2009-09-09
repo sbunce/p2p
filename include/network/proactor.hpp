@@ -12,6 +12,7 @@ appropriate call back. The proactor uses as many threads as there are CPUs.
 
 //standard
 #include <deque>
+#include <string>
 
 namespace network{
 
@@ -29,7 +30,7 @@ public:
 		boost::function<void (sock & Sock)> connect_call_back_in,
 		boost::function<void (sock & Sock)> disconnect_call_back_in,
 		boost::function<void (sock & Sock)> failed_connect_call_back_in,
-		const bool duplicates_allowed = true,
+		const bool duplicates_allowed,
 		const std::string & port = ""
 	);
 	~proactor();
@@ -59,7 +60,7 @@ public:
 	unsigned max_outgoing_connections();
 	unsigned max_upload_rate();
 	void max_upload_rate(const unsigned rate);
-	void trigger_call_back(const std::string & host_or_IP);
+	void trigger_call_back(const std::string & host, const std::string & port);
 	unsigned upload_rate();
 
 private:
@@ -81,11 +82,33 @@ private:
 	Resolve jobs queue'd by resolve().
 	Note: job_mutex locks all access to job container.
 	Note: job_cond is used to notify resolve thread when there is work.
-	std::pair<host, IP>
 	*/
+	class resolve_job_element
+	{
+	public:
+		enum type_enum {
+			new_connection,
+			force_call_back
+		};
+
+		resolve_job_element(){}
+		resolve_job_element(
+			const std::string & host_in,
+			const std::string & port_in,
+			const type_enum & type_in
+		):
+			host(host_in),
+			port(port_in),
+			type(type_in)
+		{}
+
+		std::string host;
+		std::string port;
+		type_enum type;
+	};
 	boost::mutex resolve_job_mutex;
 	boost::condition_variable_any resolve_job_cond;
-	std::deque<std::pair<std::string, std::string> > resolve_job;
+	std::deque<resolve_job_element> resolve_job;
 
 	/*
 	dispatch:

@@ -79,11 +79,11 @@ public:
 	schedule_connect:
 		Asynchronously connect to a host. This function returns immediately.
 	trigger_call_back:
-		Triggers a call back for a sock with a specified hostname or IP. If no
-		sock with the specified host is found then no call back will be done. If a
-		call back is done it will be a recv call back and
-		network::sock::latest_recv will be equal to 0. A call back will not be
-		done for a socket in progress of connecting.
+		Triggers a call back for a sock with a specified IP. If no sock with the
+		specified host is found then no call back will be done. If a call back is
+		done it will be a recv call back and network::sock::latest_recv will be
+		equal to 0. A call back will not be done for a socket in progress of
+		connecting.
 	upload_rate:
 		Returns current upload rate (bytes/second).
 	*/
@@ -102,7 +102,7 @@ public:
 	void max_upload_rate(const unsigned rate);
 	unsigned outgoing_connections();
 	void schedule_connect(boost::shared_ptr<sock> & S);
-	void trigger_call_back(const std::string & host_or_IP);
+	void trigger_call_back(const std::string & IP);
 	unsigned upload_rate();
 
 protected:
