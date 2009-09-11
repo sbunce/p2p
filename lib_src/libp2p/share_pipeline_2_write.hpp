@@ -12,6 +12,7 @@ amount of database contention.
 #define H_SHARE_PIPELINE_2_WRITE
 
 //custom
+#include "share_info.hpp"
 #include "share_pipeline_job.hpp"
 #include "share_pipeline_1_hash.hpp"
 
@@ -25,28 +26,22 @@ amount of database contention.
 class share_pipeline_2_write
 {
 public:
-	share_pipeline_2_write();
+	share_pipeline_2_write(share_info & Share_Info_in);
 	~share_pipeline_2_write();
-
-	/*
-	stop:
-		Stops all pipeline threads starting with pipeline 0 and working it's way
-		back up.
-	*/
-	boost::uint64_t size_bytes();
-	boost::uint64_t size_files();
 
 private:
 	boost::thread write_thread;
-	
+
+	//contains files in share
+	share_info & Share_Info;
+
+	//previous stage in pipeline
+	share_pipeline_1_hash Share_Pipeline_1_Hash;
+
 	/*
 	main_loop:
-		The thread which combines database writes in to transactions waits in this
-		thread.
+		Database write combining.
 	*/
 	void main_loop();
-
-	//the stage before this stage
-	share_pipeline_1_hash Share_Pipeline_1_Hash;
 };
 #endif

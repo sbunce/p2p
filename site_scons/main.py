@@ -83,9 +83,7 @@ def setup(env):
 #does static linking
 def setup_static(env):
 	environment.define_keys(env)
-	if platform.system() == 'Windows':
-		print 'TODO: static linking not setup for windows'
-	else:
+	if platform.system() != 'Windows':
 		env['LINKFLAGS'].append('-static')
 		env['LINKFLAGS'].append('-static-libgcc')
 		env['LINKFLAGS'].append('`g++ -print-file-name=libstdc++.a`')

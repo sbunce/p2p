@@ -2,6 +2,7 @@
 import glob
 
 SConscript([
+	'test_database/SConscript',
 	'unit_tests/SConscript'
 ])
 

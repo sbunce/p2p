@@ -2,6 +2,7 @@
 #define H_SHARE_PIPELINE_1_HASH
 
 //custom
+#include "share_info.hpp"
 #include "share_pipeline_job.hpp"
 #include "share_pipeline_0_scan.hpp"
 
@@ -13,33 +14,36 @@
 class share_pipeline_1_hash
 {
 public:
-	share_pipeline_1_hash();
+	share_pipeline_1_hash(share_info & Share_Info_in);
 	~share_pipeline_1_hash();
 
 	/*
-	get_job:
-		Returns true and sets info to a job if there is a job to be done. Returns
-		false and leaves info unset if there is no job. This function does not
-		block.
-
+	job:
+		Returns shared_ptr for job, or empty shared_ptr if no jobs.
 	*/
-	bool get_job(share_pipeline_job & info);
-	boost::uint64_t size_bytes();
-	boost::uint64_t size_files();
+	boost::shared_ptr<share_pipeline_job> job();
 
 private:
 	boost::thread_group Workers;
 
-	//jobs for share_pipeline_1_scan process
-	std::deque<share_pipeline_job> job;
-	boost::mutex job_mutex;
+	/*
+	job_queue:
+		Holds jobs to be returned by job(). Jobs put in this container need to
+		have an entry written in the database for the file.
+	job_mutex:
+		Locks all access to job_queue.
+	job_queue_max_cond:
+		Used to block worker threads when job limit reached.
+	*/
+	std::deque<boost::shared_ptr<share_pipeline_job> > job_queue;
+	boost::mutex job_queue_mutex;
+	boost::condition_variable_any job_queue_max_cond;
 
-	//used to block Worker threads when job limit reached
-	boost::condition_variable_any job_max_cond;
+	//contains files in share
+	share_info & Share_Info;
 
-	//the size of all files and the number of files in the share
-	atomic_int<boost::uint64_t> _size_bytes;
-	atomic_int<boost::uint64_t> _size_files;
+	//previous stage in pipeline
+	share_pipeline_0_scan Share_Pipeline_0_Scan;
 
 	/*
 	block_on_max_jobs:
@@ -49,8 +53,5 @@ private:
 	*/
 	void block_on_max_jobs();
 	void main_loop();
-
-	//the stage before this stage
-	share_pipeline_0_scan Share_Pipeline_0_Scan;
 };
 #endif

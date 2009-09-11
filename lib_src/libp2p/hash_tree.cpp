@@ -352,7 +352,7 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 	create_recurse(upside_down, rightside_up, 0, blocks_read, hash, block_buff, SHA);
 
 	if(hash.empty()){
-		//tree didn't generate (probably an I/O error)
+		//tree didn't generate
 		return false;
 	}else{
 		/*
@@ -367,21 +367,19 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 		assert(tree_size == rightside_up.tellp());
 
 		database::pool::proxy DB;
-		DB->query("BEGIN TRANSACTION");
 		if(database::table::hash::tree_open(hash, DB)){
 			//hash tree already exists
-			DB->query("END TRANSACTION");
 			return false;
 		}
 
 		//tree doesn't exist, allocate space for it
 		if(!database::table::hash::tree_allocate(hash, tree_size, DB)){
 			LOGGER << "could not allocate blob for hash tree";
-			DB->query("END TRANSACTION");
 			return false;
 		}
 
 		//copy tree from temp file to database
+		DB->query("BEGIN TRANSACTION");
 		boost::shared_ptr<database::table::hash::tree_info>
 			TI = database::table::hash::tree_open(hash, DB);
 		rightside_up.seekg(0, std::ios::beg);

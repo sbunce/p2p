@@ -7,10 +7,10 @@
 #include "hash_tree.hpp"
 #include "path.hpp"
 #include "settings.hpp"
+#include "share_info.hpp"
 #include "share_pipeline_2_write.hpp"
 
 //include
-#include <atomic_int.hpp>
 #include <boost/bind.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/thread.hpp>
@@ -19,11 +19,8 @@
 
 //standard
 #include <ctime>
-#include <deque>
-#include <fstream>
 #include <iostream>
-#include <set>
-#include <sstream>
+#include <map>
 #include <string>
 
 class share : private boost::noncopyable
@@ -33,15 +30,19 @@ public:
 	~share();
 
 	/*
-	size_bytes:
-		Returns size of shared files.
-	size_files:
-		Returns the number of shared files.
+	bytes:
+		Returns total size of shared files.
+	files:
+		Returns total number of shared files.
 	*/
-	boost::uint64_t size_bytes();
-	boost::uint64_t size_files();
+	boost::uint64_t bytes();
+	boost::uint64_t files();
 
 private:
+	//contains files in share
+	share_info Share_Info;
+
+	//last stage of pipeline
 	share_pipeline_2_write Share_Pipeline_2_Write;
 };
 #endif

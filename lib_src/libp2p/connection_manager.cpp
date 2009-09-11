@@ -7,6 +7,7 @@ connection_manager::connection_manager()
 
 void connection_manager::connect_call_back(network::sock & S)
 {
+	LOGGER << "connect " << S.IP;
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	std::pair<std::map<int, boost::shared_ptr<connection> >::iterator, bool>
 		ret = Connection.insert(std::make_pair(S.socket_FD, new connection(S)));

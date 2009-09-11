@@ -109,12 +109,12 @@ unsigned p2p_real::prime_count()
 
 boost::uint64_t p2p_real::share_size_bytes()
 {
-	return Share.size_bytes();
+	return Share.bytes();
 }
 
 boost::uint64_t p2p_real::share_size_files()
 {
-	return Share.size_files();
+	return Share.files();
 }
 
 void p2p_real::start_download(const download_info & DI)

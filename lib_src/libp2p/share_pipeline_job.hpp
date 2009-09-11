@@ -1,6 +1,9 @@
 #ifndef H_SHARE_PIPELINE_JOB
 #define H_SHARE_PIPELINE_JOB
 
+//custom
+#include "share_info.hpp"
+
 //include
 #include <boost/cstdint.hpp>
 
@@ -10,28 +13,19 @@
 class share_pipeline_job
 {
 public:
-	enum type {
-		HASH_FILE,  //file needs to be hashed
-		REMOVE_FILE //file removed
-	} Type;
-
 	share_pipeline_job(){}
-
 	share_pipeline_job(
-		const std::string & path_in,
-		const boost::uint64_t & file_size_in,
-		const type Type_in
+		const bool add_in,
+		const share_info::file & File_in
 	):
-		path(path_in),
-		file_size(file_size_in),
-		Type(Type_in)
+		add(add_in),
+		File(File_in)
 	{}
 
-	//set by share_pipeline_1 if Job_Type = HASH_FILE
-	std::string hash;
+	//true = file to be added, false = file to be removed
+	bool add;
 
-	//set by share_pipeline_0
-	boost::uint64_t file_size;
-	std::string path;
+	//if File.hash not set then file needs to be hashed
+	share_info::file File;
 };
 #endif

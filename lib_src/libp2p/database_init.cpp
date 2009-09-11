@@ -45,7 +45,7 @@ void database::init::hash()
 {
 	database::pool::proxy DB;
 	DB->query("CREATE TABLE IF NOT EXISTS hash(key INTEGER PRIMARY KEY, hash TEXT, tree_size INTEGER, tree BLOB, state INTEGER)");
-	DB->query("CREATE INDEX IF NOT EXISTS hash_hash_index ON hash(hash)");
+	DB->query("CREATE UNIQUE INDEX IF NOT EXISTS hash_hash_index ON hash(hash)");
 	DB->query("CREATE INDEX IF NOT EXISTS hash_size_index ON hash(tree_size)");
 	DB->query("CREATE INDEX IF NOT EXISTS hash_state_index ON hash(state)");
 	DB->query("DELETE FROM hash WHERE state = 0");
