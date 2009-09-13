@@ -262,7 +262,6 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 {
 	std::fstream fin(file_path.c_str(), std::ios::in | std::ios::binary);
 	if(!fin.good()){
-		LOGGER << "error opening file " << file_path;
 		return false;
 	}
 
@@ -374,12 +373,17 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 
 		//tree doesn't exist, allocate space for it
 		if(!database::table::hash::tree_allocate(hash, tree_size, DB)){
-			LOGGER << "could not allocate blob for hash tree";
+			//could not allocate blob for hash tree
 			return false;
 		}
 
-		//copy tree from temp file to database
-		DB->query("BEGIN TRANSACTION");
+		/*
+		Copy tree from temp file to database. Using a transaction here would be
+		problematic for very large hash trees. Because we're not using a
+		transaction it is possible that two threads write to a hash tree at the
+		same time. However, this is ok because they'd both be writing the same
+		data.
+		*/
 		boost::shared_ptr<database::table::hash::tree_info>
 			TI = database::table::hash::tree_open(hash, DB);
 		rightside_up.seekg(0, std::ios::beg);
@@ -387,7 +391,6 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 		while(bytes_remaining){
 			if(boost::this_thread::interruption_requested()){
 				database::table::hash::delete_tree(hash, DB);
-				DB->query("END TRANSACTION");
 				return false;
 			}
 			if(bytes_remaining > protocol::FILE_BLOCK_SIZE){
@@ -399,20 +402,17 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 			if(rightside_up.gcount() != read_size){
 				LOGGER << "error reading rightside_up file";
 				database::table::hash::delete_tree(hash, DB);
-				DB->query("END TRANSACTION");
 				return false;
 			}else{
 				if(!DB->blob_write(TI->Blob, block_buff, read_size, offset)){
 					LOGGER << "error doing incremental write to blob";
 					database::table::hash::delete_tree(hash, DB);
-					DB->query("END TRANSACTION");
 					return false;
 				}
 				offset += read_size;
 				bytes_remaining -= read_size;
 			}
 		}
-		DB->query("END TRANSACTION");
 		return true;
 	}
 }

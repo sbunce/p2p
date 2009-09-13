@@ -1,6 +1,7 @@
 #include "p2p_real.hpp"
 
 p2p_real::p2p_real():
+	Share_Scan(Shared_Files),
 	Proactor(
 		boost::bind(&connection_manager::connect_call_back, &Connection_Manager, _1),
 		boost::bind(&connection_manager::disconnect_call_back, &Connection_Manager, _1),
@@ -109,12 +110,12 @@ unsigned p2p_real::prime_count()
 
 boost::uint64_t p2p_real::share_size_bytes()
 {
-	return Share.bytes();
+	return Shared_Files.bytes();
 }
 
 boost::uint64_t p2p_real::share_size_files()
 {
-	return Share.files();
+	return Shared_Files.files();
 }
 
 void p2p_real::start_download(const download_info & DI)

@@ -8,13 +8,13 @@ large directories are removed or directories with lots of small files are added.
 Without combining the updates in to large transactions there is an unreasonable
 amount of database contention.
 */
-#ifndef H_SHARE_PIPELINE_2_WRITE
-#define H_SHARE_PIPELINE_2_WRITE
+#ifndef H_SHARE_SCAN_2_WRITE
+#define H_SHARE_SCAN_2_WRITE
 
 //custom
-#include "share_info.hpp"
-#include "share_pipeline_job.hpp"
-#include "share_pipeline_1_hash.hpp"
+#include "shared_files.hpp"
+#include "share_scan_job.hpp"
+#include "share_scan_1_hash.hpp"
 
 //include
 #include <boost/bind.hpp>
@@ -23,20 +23,20 @@ amount of database contention.
 //standard
 #include <vector>
 
-class share_pipeline_2_write
+class share_scan_2_write
 {
 public:
-	share_pipeline_2_write(share_info & Share_Info_in);
-	~share_pipeline_2_write();
+	share_scan_2_write(shared_files & Shared_Files_in);
+	~share_scan_2_write();
 
 private:
 	boost::thread write_thread;
 
 	//contains files in share
-	share_info & Share_Info;
+	shared_files & Shared_Files;
 
 	//previous stage in pipeline
-	share_pipeline_1_hash Share_Pipeline_1_Hash;
+	share_scan_1_hash Share_Scan_1_Hash;
 
 	/*
 	main_loop:

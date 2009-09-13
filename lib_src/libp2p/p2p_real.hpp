@@ -9,8 +9,9 @@
 #include "path.hpp"
 #include "prime_generator.hpp"
 #include "slot_set.hpp"
-#include "share.hpp"
+#include "share_scan.hpp"
 #include "settings.hpp"
+#include "shared_files.hpp"
 
 //include
 #include <boost/bind.hpp>
@@ -62,8 +63,14 @@ private:
 	atomic_int<unsigned> max_download_rate_proxy;
 	atomic_int<unsigned> max_upload_rate_proxy;
 
-	//indexes share
-	share Share;
+	/*
+	Shared_Files:
+		Container which holds information for all shared files.
+	Share_Scan:
+		Scans shared directories looking for new and modified files.
+	*/
+	shared_files Shared_Files;
+	share_scan Share_Scan;
 
 	//unique set of slots that belong to all the connections
 	slot_set Slot_Set;

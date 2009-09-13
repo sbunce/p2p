@@ -1,20 +1,20 @@
-#include "share_pipeline_0_scan.hpp"
+#include "share_scan_0_scan.hpp"
 
-share_pipeline_0_scan::share_pipeline_0_scan(
-	share_info & Share_Info_in
+share_scan_0_scan::share_scan_0_scan(
+	shared_files & Shared_Files_in
 ):
-	Share_Info(Share_Info_in)
+	Shared_Files(Shared_Files_in)
 {
-	scan_thread = boost::thread(boost::bind(&share_pipeline_0_scan::main_loop, this));
+	scan_thread = boost::thread(boost::bind(&share_scan_0_scan::main_loop, this));
 }
 
-share_pipeline_0_scan::~share_pipeline_0_scan()
+share_scan_0_scan::~share_scan_0_scan()
 {
 	scan_thread.interrupt();
 	scan_thread.join();
 }
 
-void share_pipeline_0_scan::block_on_max_jobs()
+void share_scan_0_scan::block_on_max_jobs()
 {
 	boost::mutex::scoped_lock lock(job_queue_mutex);
 	while(job_queue.size() >= settings::SHARE_SCAN_RATE){
@@ -22,19 +22,19 @@ void share_pipeline_0_scan::block_on_max_jobs()
 	}
 }
 
-boost::shared_ptr<share_pipeline_job> share_pipeline_0_scan::job()
+boost::shared_ptr<share_scan_job> share_scan_0_scan::job()
 {
 	boost::mutex::scoped_lock lock(job_queue_mutex);
 	while(job_queue.empty()){
 		job_queue_cond.wait(job_queue_mutex);
 	}
-	boost::shared_ptr<share_pipeline_job> SPJ = job_queue.front();
+	boost::shared_ptr<share_scan_job> SSJ = job_queue.front();
 	job_queue.pop_front();
 	job_queue_max_cond.notify_one();
-	return SPJ;
+	return SSJ;
 }
 
-int resume_call_back(share_info & Share_Info, int columns_retrieved, char ** response,
+int resume_call_back(shared_files & Shared_Files, int columns_retrieved, char ** response,
 	char ** column_name)
 {
 	assert(response[0] && response[1] && response[2]);
@@ -49,7 +49,7 @@ int resume_call_back(share_info & Share_Info, int columns_retrieved, char ** res
 	ss << response[2];
 	ss >> file_size;
 
-	Share_Info.insert_update(share_info::file(response[0], path.string(), file_size));
+	Shared_Files.insert_update(shared_files::file(response[0], path.string(), file_size));
 
 	if(boost::this_thread::interruption_requested()){
 		return 1;
@@ -58,7 +58,7 @@ int resume_call_back(share_info & Share_Info, int columns_retrieved, char ** res
 	}
 }
 
-void share_pipeline_0_scan::main_loop()
+void share_scan_0_scan::main_loop()
 {
 	//yield to other threads during prorgram start
 	boost::this_thread::yield();
@@ -66,7 +66,7 @@ void share_pipeline_0_scan::main_loop()
 	//read in existing share information from database
 	database::pool::get_proxy()->query(
 		"SELECT hash, path, file_size FROM share WHERE state = 1",
-		&resume_call_back, Share_Info);
+		&resume_call_back, Shared_Files);
 
 	boost::filesystem::path share_path(boost::filesystem::system_complete(
 		boost::filesystem::path(path::share(), boost::filesystem::native)));
@@ -89,16 +89,16 @@ void share_pipeline_0_scan::main_loop()
 					if(boost::filesystem::is_regular_file(iter_cur->status())){
 						std::string path = iter_cur->path().string();
 						boost::uint64_t file_size = boost::filesystem::file_size(path);
-						boost::shared_ptr<const share_info::file> F = Share_Info.lookup_path(path);
+						boost::shared_ptr<const shared_files::file> F = Shared_Files.lookup_path(path);
 						if(!F || F->file_size != file_size){
 							//file hasn't been seen before, or it changed size
-							boost::shared_ptr<share_pipeline_job> SPJ(
-								new share_pipeline_job(true, share_info::file("", path, file_size)));
-							Share_Info.insert_update(SPJ->File);
+							boost::shared_ptr<share_scan_job> SSJ(
+								new share_scan_job(true, shared_files::file("", path, file_size)));
+							Shared_Files.insert_update(SSJ->File);
 
 							{//begin lock scope
 							boost::mutex::scoped_lock lock(job_queue_mutex);
-							job_queue.push_back(SPJ);
+							job_queue.push_back(SSJ);
 							job_queue_cond.notify_one();
 							}//end lock scope
 						}
@@ -107,23 +107,23 @@ void share_pipeline_0_scan::main_loop()
 				}
 			}
 		}catch(std::exception & ex){
-			LOGGER << ex.what();
+			//LOGGER << ex.what();
 		}
 
 		//remove missing
-		for(share_info::const_iterator iter_cur = Share_Info.begin(),
-			iter_end = Share_Info.end(); iter_cur != iter_end; ++iter_cur)
+		for(shared_files::const_iterator iter_cur = Shared_Files.begin(),
+			iter_end = Shared_Files.end(); iter_cur != iter_end; ++iter_cur)
 		{
 			boost::this_thread::interruption_point();
 			boost::this_thread::sleep(scan_delay);
 			if(!boost::filesystem::exists(iter_cur->path)){
-				//erasing from Share_Info doesn't invalidate iterator
-				Share_Info.erase(iter_cur);
-				boost::shared_ptr<share_pipeline_job> SPJ(
-					new share_pipeline_job(false, *iter_cur));
+				//erasing from Shared_Files doesn't invalidate iterator
+				Shared_Files.erase(iter_cur);
+				boost::shared_ptr<share_scan_job> SSJ(
+					new share_scan_job(false, *iter_cur));
 				{//begin lock scope
 				boost::mutex::scoped_lock lock(job_queue_mutex);
-				job_queue.push_back(SPJ);
+				job_queue.push_back(SSJ);
 				job_queue_cond.notify_one();
 				}//end lock scope
 			}

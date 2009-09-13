@@ -1,12 +1,12 @@
-#ifndef H_SHARE_PIPELINE_0_SCAN
-#define H_SHARE_PIPELINE_0_SCAN
+#ifndef H_SHARE_SCAN_0_SCAN
+#define H_SHARE_SCAN_0_SCAN
 
 //custom
 #include "database.hpp"
 #include "path.hpp"
 #include "settings.hpp"
-#include "share_info.hpp"
-#include "share_pipeline_job.hpp"
+#include "shared_files.hpp"
+#include "share_scan_job.hpp"
 
 //include
 #include <boost/cstdint.hpp>
@@ -21,17 +21,17 @@
 #include <map>
 #include <string>
 
-class share_pipeline_0_scan : private boost::noncopyable
+class share_scan_0_scan : private boost::noncopyable
 {
 public:
-	share_pipeline_0_scan(share_info & Share_Info_in);
-	~share_pipeline_0_scan();
+	share_scan_0_scan(shared_files & Shared_Files_in);
+	~share_scan_0_scan();
 
 	/*
 	job:
 		Blocks until a job is ready.
 	*/
-	boost::shared_ptr<share_pipeline_job> job();
+	boost::shared_ptr<share_scan_job> job();
 
 private:
 	boost::thread scan_thread;
@@ -47,13 +47,13 @@ private:
 		When the job_queue reaches the max allowed size the scan_thread is blocked
 		on job_queue_max_cond. It is notified in get_job() when a job is returned.
 	*/
-	std::deque<boost::shared_ptr<share_pipeline_job> > job_queue;
+	std::deque<boost::shared_ptr<share_scan_job> > job_queue;
 	boost::mutex job_queue_mutex;
 	boost::condition_variable_any job_queue_cond;
 	boost::condition_variable_any job_queue_max_cond;
 
 	//contains files in share
-	share_info & Share_Info;
+	shared_files & Shared_Files;
 
 	/*
 	block_on_max_jobs:

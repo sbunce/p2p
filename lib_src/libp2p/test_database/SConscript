@@ -1,0 +1,2 @@
+Import('env_base')
+env_base.Program('#bin/test_database', 'test_database.cpp')

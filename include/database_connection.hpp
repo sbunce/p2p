@@ -125,23 +125,17 @@ public:
 			LOGGER << sqlite3_errmsg(DB_handle);
 			return false;
 		}
-		int code, max_tries = 32;
-		while((code = sqlite3_step(prepared_statement)) != SQLITE_DONE){
-			if(--max_tries < 0){
-				//too many ROLLBACK and retry
-				return false;
-			}else if(code == SQLITE_BUSY){
-				/*
-				The sqlite3_step documentation specifies that when SQLITE_BUSY is
-				returned a ROLLBACK must be done. The ROLLBACK may return errors but
-				they're not supposed to hurt anything or have any important meaning.
-				Without the ROLLBACK we can get stuck in this loop forever.
-				*/
-				sqlite3_exec(DB_handle, "ROLLBACK", NULL, NULL, NULL);
-				boost::this_thread::yield();
-			}else{
-				boost::this_thread::yield();
+		/*
+		We used to ROLLBACK and retry here but it turned out to be problematic
+		under heavy load.
+		*/
+		if(sqlite3_step(prepared_statement) != SQLITE_DONE){
+			LOGGER << sqlite3_errmsg(DB_handle);
+			sqlite3_exec(DB_handle, "ROLLBACK", NULL, NULL, NULL);
+			if(sqlite3_finalize(prepared_statement) != SQLITE_OK){
+				LOGGER << sqlite3_errmsg(DB_handle);
 			}
+			return false;
 		}
 		if(sqlite3_finalize(prepared_statement) != SQLITE_OK){
 			LOGGER << sqlite3_errmsg(DB_handle);
