@@ -4,7 +4,6 @@
 
 //custom
 #include "database.hpp"
-#include "hash_tree.hpp"
 #include "settings.hpp"
 
 //include
@@ -25,8 +24,8 @@ class share
 {
 public:
 	enum state{
-		DOWNLOADING, //0 - downloading, incomplete tree
-		COMPLETE     //1 - complete, hash tree complete and checked
+		downloading, //0 - downloading, incomplete tree
+		complete     //1 - complete, hash tree complete and checked
 	};
 
 	class file_info

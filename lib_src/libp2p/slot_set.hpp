@@ -2,6 +2,7 @@
 #define H_SLOT_ELEMENT_SET
 
 //custom
+#include "shared_files.hpp"
 #include "slot.hpp"
 
 //include
@@ -19,7 +20,7 @@
 class slot_set : private boost::noncopyable
 {
 public:
-	slot_set();
+	slot_set(shared_files & Shared_Files_in);
 	~slot_set();
 
 	/*
@@ -40,6 +41,8 @@ public:
 private:
 	//handle for thread that resume() starts
 	boost::thread resume_thread;
+
+	shared_files & Shared_Files;
 
 	/*
 	Hash mapped to a slot element. The slot is guaranteed to be unique. There

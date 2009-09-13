@@ -33,9 +33,9 @@ public:
 private:
 	//key exchange state
 	enum exchange {
-		INITIAL,
-		SENT_PRIME_AND_LOCAL_RESULT,
-		COMPLETE
+		initial,
+		sent_prime_and_local_result,
+		complete
 	} Exchange;
 
 	encryption Encryption;

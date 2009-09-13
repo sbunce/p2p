@@ -2,6 +2,7 @@
 #define H_SHARE_SCAN_1_HASH
 
 //custom
+#include "hash_tree.hpp"
 #include "shared_files.hpp"
 #include "share_scan_job.hpp"
 #include "share_scan_0_scan.hpp"

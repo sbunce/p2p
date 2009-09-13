@@ -11,7 +11,7 @@ void database::table::hash::delete_tree(const std::string & hash,
 void database::table::hash::set_state(const std::string & hash,
 	const state State, database::pool::proxy DB)
 {
-	assert(State >= RESERVED && State <= COMPLETE);
+	assert(State >= reserved && State <= complete);
 	std::stringstream ss;
 	ss << "UPDATE hash SET state = " << State << " WHERE hash = '"
 		<< hash << "'";
@@ -24,7 +24,7 @@ bool database::table::hash::tree_allocate(const std::string & hash,
 	if(tree_size != 0){
 		std::stringstream ss;
 		ss << "INSERT INTO hash(key, hash, state, tree_size, tree) VALUES(NULL, '"
-			<< hash << "', 0, " << tree_size << ", ?)";
+			<< hash << "', " << reserved << ", " << tree_size << ", ?)";
 		return DB->blob_allocate(ss.str(), tree_size);
 	}else{
 		return false;

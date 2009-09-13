@@ -48,7 +48,7 @@ void share_scan_1_hash::main_loop()
 		block_on_max_jobs();
 		boost::shared_ptr<share_scan_job> SPJ = Share_Scan_0_Scan.job();
 		if(SPJ->add){
-			if(hash_tree::create(SPJ->File.path, SPJ->File.file_size, SPJ->File.hash)){
+			if(hash_tree::create(SPJ->File)){
 				Shared_Files.insert_update(SPJ->File);
 				{//begin lock scope
 				boost::mutex::scoped_lock lock(job_queue_mutex);

@@ -1,18 +1,23 @@
 #ifndef H_SHARED_FILES
 #define H_SHARED_FILES
 
+//custom
+#include "database.hpp"
+
 //include
 #include <atomic_int.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
+#include <boost/utility.hpp>
+#include <database_connection.hpp>
 
 //standard
 #include <iterator>
 #include <map>
 #include <string>
 
-class shared_files
+class shared_files : private boost::noncopyable
 {
 	class file_internal;
 public:
@@ -24,25 +29,13 @@ public:
 	*/
 	class file
 	{
-		friend class shared_files;
 	public:
-		file();
-		file(
-			const std::string & hash_in,
-			const std::string & path_in,
-			const boost::uint64_t file_size_in
-		);
-		file(const file & File);
-
 		std::string hash;
 		std::string path;
 		boost::uint64_t file_size;
-
-		bool operator == (const file & rval) const;
-		bool operator != (const file & rval) const;
-
-	private:
-		file(const file_internal & FI);
+		database::blob tree_blob;
+		database::table::hash::state hash_tree_state;
+		database::table::share::state file_state;
 	};
 
 	/*
@@ -124,32 +117,15 @@ public:
 
 private:
 	/*
-	The file_internal class keeps references to the keys of Hash and Path
-	containers to save space.
-	*/
-	class file_internal
-	{
-	public:
-		file_internal(
-			const std::string & hash_in,
-			const std::string & path_in,
-			const boost::uint64_t file_size_in
-		);
-
-		const std::string & hash;  //reference to key in Hash
-		const std::string & path;  //reference to key in Path
-		boost::uint64_t file_size; //bytes
-	};
-
-	/*
 	Different ways of looking up info.
 	Note: Hash is a multimap because there might be multiple files with the same
 		hash.
-	Note: file_internal_mutex lock access to Hash, Path, and any info_internal
+	Note: internal_mutex locks access to Hash, Path, and any file object stored in
+		the Hash and Path containers.
 	*/
-	boost::recursive_mutex file_internal_mutex;
-	std::multimap<std::string, boost::shared_ptr<file_internal> > Hash;
-	std::map<std::string, boost::shared_ptr<file_internal> > Path;
+	boost::recursive_mutex internal_mutex;
+	std::multimap<std::string, boost::shared_ptr<file> > Hash;
+	std::map<std::string, boost::shared_ptr<file> > Path;
 
 	/*
 	total_bytes:

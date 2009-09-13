@@ -11,6 +11,7 @@ parts concurrently but not the same parts.
 #include "path.hpp"
 #include "protocol.hpp"
 #include "settings.hpp"
+#include "shared_files.hpp"
 
 //include
 #include <atomic_bool.hpp>
@@ -32,10 +33,7 @@ parts concurrently but not the same parts.
 class hash_tree : private boost::noncopyable
 {
 public:
-	hash_tree(
-		const std::string & hash_in,
-		const boost::uint64_t & file_size_in
-	);
+	hash_tree(const shared_files::file & File);
 
 	enum status{
 		GOOD,    //block is good
@@ -77,10 +75,9 @@ public:
 		that Block_Request can be complete and the hash_tree not complete if the
 		request for the last blocks were made, but not yet received.
 	create:
-		Create a hash tree. Returns true and sets hash if creation suceeded.
-		The expected file size should be set to the size the file is when create()
-		is called. If the file changes size while hashing the create function will
-		return false.
+		Create a hash tree. Returns true and sets File.hash and File.tree_blob if
+		creation suceeded.
+		Precondition: File.path and File.file_size must be correctly set.
 		Note: If hash tree creation suceeds the hash tree state will only be set
 			to RESERVED. If it's not changed the tree will be deleted upon next
 			program start.
@@ -98,8 +95,7 @@ public:
 	void check();
 	status check_file_block(const boost::uint64_t & file_block_num,
 		const char * block, const int & size);
-	static bool create(const std::string & file_path,
-		const boost::uint64_t & expected_file_size, std::string & hash);
+	static bool create(shared_files::file & File);
 	bool complete();
 	static boost::uint64_t file_size_to_tree_size(const boost::uint64_t & file_size);
 	status read_block(const boost::uint64_t & block_num, std::string & block);
@@ -115,7 +111,7 @@ public:
 
 private:
 	//blob handle for hash tree
-	database::blob Blob;
+	const database::blob Blob;
 
 	/*
 	If the ctor has to allocate space for a hash tree this bool will be set to

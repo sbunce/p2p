@@ -5,6 +5,7 @@
 #include "database.hpp"
 #include "file.hpp"
 #include "hash_tree.hpp"
+#include "shared_files.hpp"
 
 //include
 #include <atomic_bool.hpp>
@@ -26,15 +27,13 @@ private:
 	friend class slot_set;
 
 	slot(
-		const std::string & hash,
-		const boost::uint64_t & file_size,
-		const std::string & path_in
+		const shared_files::file & File
 	):
-		Hash_Tree(hash, file_size),
-		File(hash, file_size),
+		Hash_Tree(File),
+		File(File),
 		hash(Hash_Tree.hash),
 		tree_size(Hash_Tree.tree_size),
-		file_size(File.file_size)
+		file_size(Hash_Tree.file_size)
 	{}
 
 	//all access to Hash_Tree must be locked with Hash_Tree_mutex

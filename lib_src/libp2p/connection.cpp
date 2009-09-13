@@ -3,24 +3,24 @@
 connection::connection(network::sock & S):
 	IP(S.IP),
 	port(S.port),
-	Exchange(INITIAL),
+	Exchange(initial),
 	blacklist_state(-1)
 {
 	//if outgoing connection start key exchange by sending p and r_A
 	if(S.direction == network::sock::outgoing){
 		Encryption.send_prime_and_local_result(S.send_buff);
-		Exchange = SENT_PRIME_AND_LOCAL_RESULT;
+		Exchange = sent_prime_and_local_result;
 	}
 }
 
 void connection::recv_call_back(network::sock & S)
 {
-	if(Exchange != COMPLETE){
-		if(Exchange == SENT_PRIME_AND_LOCAL_RESULT){
+	if(Exchange != complete){
+		if(Exchange == sent_prime_and_local_result){
 			//expecting r_B
 			if(S.recv_buff.size() >= protocol::DH_KEY_SIZE){
 				Encryption.recv_remote_result(S.recv_buff);
-				Exchange = COMPLETE;
+				Exchange = complete;
 			}
 		}else{
 			//expecting p and r_A
@@ -29,7 +29,7 @@ void connection::recv_call_back(network::sock & S)
 					//remote host sent invalid prime
 					database::table::blacklist::add(S.IP);
 				}
-				Exchange = COMPLETE;
+				Exchange = complete;
 			}
 		}
 	}else{
@@ -59,7 +59,7 @@ void connection::recv_call_back(network::sock & S)
 
 void connection::send_call_back(network::sock & S)
 {
-	if(Exchange == COMPLETE){
+	if(Exchange == complete){
 		//store initial size so it is known how much to encrypt after appending
 		int initial_send_buff_size = S.send_buff.size();
 

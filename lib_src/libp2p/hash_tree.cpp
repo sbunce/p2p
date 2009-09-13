@@ -1,11 +1,10 @@
 #include "hash_tree.hpp"
 
 hash_tree::hash_tree(
-	const std::string & hash_in,
-	const boost::uint64_t & file_size_in
+	const shared_files::file & File
 ):
-	hash(hash_in),
-	file_size(file_size_in),
+	hash(File.hash),
+	file_size(File.file_size),
 	row(file_size_to_row(file_size)),
 	tree_block_count(row_to_tree_block_count(row)),
 	file_hash_offset(row_to_file_hash_offset(row)),
@@ -21,38 +20,12 @@ hash_tree::hash_tree(
 			file_size % protocol::FILE_BLOCK_SIZE
 	),
 	Block_Request(tree_block_count),
-	set_state_downloading(false),
+	Blob(File.tree_blob),
+	set_state_downloading(true),
 	block_status(tree_block_count),
 	end_of_good(0)
 {
-	database::pool::proxy DB;
-	DB->query("BEGIN TRANSACTION");
-	if(boost::shared_ptr<database::table::hash::tree_info>
-		TI = database::table::hash::tree_open(hash, DB))
-	{
-		Blob = TI->Blob;
-		if(TI->State == database::table::hash::COMPLETE){
-			//tree complete
-			end_of_good = tree_block_count;
-			Block_Request.force_complete();
-		}
-	}else{
-		//tree doesn't yet exist, allocate it
-		database::table::hash::tree_allocate(hash, tree_size, DB);
-		TI = database::table::hash::tree_open(hash, DB);
-		if(TI){
-			Blob = TI->Blob;
-		}else{
-			if(tree_size == 0){
-				//no tree for hash trees of size 0
-				Block_Request.force_complete();
-			}else{
-				LOGGER; exit(1);
-			}
-		}
-		set_state_downloading = true;
-	}
-	DB->query("END TRANSACTION");
+
 }
 
 bool hash_tree::block_info(const boost::uint64_t & block, const std::deque<boost::uint64_t> & row,
@@ -141,7 +114,7 @@ void hash_tree::check()
 	}
 
 	if(complete()){
-		database::table::hash::set_state(hash, database::table::hash::COMPLETE);
+		database::table::hash::set_state(hash, database::table::hash::complete);
 	}
 }
 
@@ -222,7 +195,7 @@ hash_tree::status hash_tree::check_incremental(boost::uint32_t & bad_block)
 	}
 
 	if(complete()){
-		database::table::hash::set_state(hash, database::table::hash::COMPLETE);
+		database::table::hash::set_state(hash, database::table::hash::complete);
 	}
 
 	return GOOD;
@@ -257,10 +230,9 @@ bool hash_tree::complete()
 	return end_of_good == tree_block_count;
 }
 
-bool hash_tree::create(const std::string & file_path, const boost::uint64_t & expected_file_size,
-	std::string & hash)
+bool hash_tree::create(shared_files::file & File)
 {
-	std::fstream fin(file_path.c_str(), std::ios::in | std::ios::binary);
+	std::fstream fin(File.path.c_str(), std::ios::in | std::ios::binary);
 	if(!fin.good()){
 		return false;
 	}
@@ -317,13 +289,13 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 
 		++blocks_read;
 		file_size += fin.gcount();
-		if(file_size > expected_file_size){
+		if(file_size > File.file_size){
 			return false;
 		}
 	}
 
 	if(fin.bad() || !fin.eof()){
-		LOGGER << "error reading file \"" << file_path << "\"";
+		LOGGER << "error reading file \"" << File.path << "\"";
 		return false;
 	}
 
@@ -332,9 +304,9 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 		return false;
 	}
 
-	//base case, the file size is <= one block
+	//base case, the file size is == one block
 	if(blocks_read == 1){
-		hash = SHA.hex_hash();
+		File.hash = SHA.hex_hash();
 		return true;
 	}
 
@@ -344,13 +316,13 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 	#endif
 	boost::uint64_t tree_size = file_size_to_tree_size(file_size);
 	if(tree_size > std::numeric_limits<int>::max()){
-		LOGGER << "file at location \"" << file_path << "\" would generate hash tree beyond max SQLite3 blob size";
+		LOGGER << "file at location \"" << File.path << "\" would generate hash tree beyond max SQLite3 blob size";
 		return false;
 	}
 
-	create_recurse(upside_down, rightside_up, 0, blocks_read, hash, block_buff, SHA);
+	create_recurse(upside_down, rightside_up, 0, blocks_read, File.hash, block_buff, SHA);
 
-	if(hash.empty()){
+	if(File.hash.empty()){
 		//tree didn't generate
 		return false;
 	}else{
@@ -365,14 +337,24 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 		*/
 		assert(tree_size == rightside_up.tellp());
 
+		/*
+		Note: There is no transaction for this section. It would be detrimental to
+		have a transaction here. The database would be tied up for too long while
+		copying a very large hash tree. Also, performance is not improved by using
+		a transaction because the blob writes are already quite large.
+
+		It is possible that the hash tree could be deleted while we are copying to
+		it. However, if this happens we return an error and the scanner tries the
+		file again later.
+		*/
 		database::pool::proxy DB;
-		if(database::table::hash::tree_open(hash, DB)){
+		if(database::table::hash::tree_open(File.hash, DB)){
 			//hash tree already exists
 			return false;
 		}
 
 		//tree doesn't exist, allocate space for it
-		if(!database::table::hash::tree_allocate(hash, tree_size, DB)){
+		if(!database::table::hash::tree_allocate(File.hash, tree_size, DB)){
 			//could not allocate blob for hash tree
 			return false;
 		}
@@ -385,12 +367,12 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 		data.
 		*/
 		boost::shared_ptr<database::table::hash::tree_info>
-			TI = database::table::hash::tree_open(hash, DB);
+			TI = database::table::hash::tree_open(File.hash, DB);
 		rightside_up.seekg(0, std::ios::beg);
 		int offset = 0, bytes_remaining = tree_size, read_size;
 		while(bytes_remaining){
 			if(boost::this_thread::interruption_requested()){
-				database::table::hash::delete_tree(hash, DB);
+				database::table::hash::delete_tree(File.hash, DB);
 				return false;
 			}
 			if(bytes_remaining > protocol::FILE_BLOCK_SIZE){
@@ -401,18 +383,19 @@ bool hash_tree::create(const std::string & file_path, const boost::uint64_t & ex
 			rightside_up.read(block_buff, read_size);
 			if(rightside_up.gcount() != read_size){
 				LOGGER << "error reading rightside_up file";
-				database::table::hash::delete_tree(hash, DB);
+				database::table::hash::delete_tree(File.hash, DB);
 				return false;
 			}else{
 				if(!DB->blob_write(TI->Blob, block_buff, read_size, offset)){
 					LOGGER << "error doing incremental write to blob";
-					database::table::hash::delete_tree(hash, DB);
+					database::table::hash::delete_tree(File.hash, DB);
 					return false;
 				}
 				offset += read_size;
 				bytes_remaining -= read_size;
 			}
 		}
+		File.tree_blob = TI->Blob;
 		return true;
 	}
 }
@@ -613,7 +596,7 @@ hash_tree::status hash_tree::write_block(const boost::uint64_t & block_num,
 {
 	//see documentation in header for set_state_downloading
 	if(set_state_downloading){
-		database::table::hash::set_state(hash, database::table::hash::DOWNLOADING);
+		database::table::hash::set_state(hash, database::table::hash::downloading);
 		set_state_downloading = false;
 	}
 

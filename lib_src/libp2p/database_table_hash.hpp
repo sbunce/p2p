@@ -19,9 +19,9 @@ class hash
 {
 public:
 	enum state{
-		RESERVED,    //0 - reserved, (deleted upon program start)
-		DOWNLOADING, //1 - downloading, incomplete tree
-		COMPLETE     //2 - complete, hash tree complete and checked
+		reserved,    //0 - reserved, (deleted upon program start)
+		downloading, //1 - downloading, incomplete tree
+		complete     //2 - complete, hash tree complete and checked
 	};
 
 	class tree_info

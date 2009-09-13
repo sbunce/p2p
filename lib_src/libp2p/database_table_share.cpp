@@ -151,12 +151,11 @@ void database::table::share::resume(std::vector<database::table::share::file_inf
 	database::pool::proxy DB)
 {
 	std::stringstream ss;
-	ss << "SELECT hash, file_size, path FROM share WHERE state = " << DOWNLOADING;
+	ss << "SELECT hash, file_size, path FROM share WHERE state = " << downloading;
 	DB->query(ss.str(), &resume_call_back, Resume);
-
 	for(std::vector<file_info>::iterator iter_cur = Resume.begin(),
 		iter_end = Resume.end(); iter_cur != iter_end; ++iter_cur)
 	{
-		iter_cur->State = DOWNLOADING;
+		iter_cur->State = downloading;
 	}
 }

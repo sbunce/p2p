@@ -27,10 +27,13 @@ void share_scan_2_write::main_loop()
 		DB->query("BEGIN TRANSACTION");
 		while(boost::shared_ptr<share_scan_job> SSJ = Share_Scan_1_Hash.job()){
 			if(SSJ->add){
+				SSJ->File.hash_tree_state = database::table::hash::complete;
+				SSJ->File.file_state = database::table::share::complete;
+				Shared_Files.insert_update(SSJ->File);
 				database::table::share::file_info FI(SSJ->File.hash, SSJ->File.file_size,
-					SSJ->File.path, database::table::share::COMPLETE);
+					SSJ->File.path, database::table::share::complete);
 				database::table::share::add_entry(FI, DB);
-				database::table::hash::set_state(FI.hash, database::table::hash::COMPLETE, DB);
+				database::table::hash::set_state(FI.hash, database::table::hash::complete, DB);
 			}else{
 				database::table::share::delete_entry(SSJ->File.path, DB);
 			}

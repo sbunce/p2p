@@ -37,19 +37,42 @@ boost::shared_ptr<share_scan_job> share_scan_0_scan::job()
 int resume_call_back(shared_files & Shared_Files, int columns_retrieved, char ** response,
 	char ** column_name)
 {
-	assert(response[0] && response[1] && response[2]);
+	assert(response[0] && response[1] && response[2] && response[4] && response[5]);
 	namespace fs = boost::filesystem;
+	shared_files::file File;
+
+	//hash
+	File.hash = response[0];
 
 	//path
-	fs::path path = fs::system_complete(fs::path(response[1], fs::native));
+	File.path = fs::system_complete(fs::path(response[1], fs::native)).string();
 
 	//file size
-	boost::uint64_t file_size;
 	std::stringstream ss;
 	ss << response[2];
-	ss >> file_size;
+	ss >> File.file_size;
 
-	Shared_Files.insert_update(shared_files::file(response[0], path.string(), file_size));
+	//tree blob
+	ss.str(""); ss.clear();
+	boost::int64_t rowid;
+	ss << response[3];
+	ss >> rowid;
+	File.tree_blob = database::blob("hash", "tree", rowid);
+
+	//hash tree state
+	ss.str(""); ss.clear();
+	int temp;
+	ss << response[4];
+	ss >> temp;
+	File.hash_tree_state = reinterpret_cast<database::table::hash::state &>(temp);
+
+	//file state
+	ss.str(""); ss.clear();
+	ss << response[5];
+	ss >> temp;
+	File.file_state = reinterpret_cast<database::table::share::state &>(temp);
+
+	Shared_Files.insert_update(File);
 
 	if(boost::this_thread::interruption_requested()){
 		return 1;
@@ -64,9 +87,10 @@ void share_scan_0_scan::main_loop()
 	boost::this_thread::yield();
 
 	//read in existing share information from database
-	database::pool::get_proxy()->query(
-		"SELECT hash, path, file_size FROM share WHERE state = 1",
-		&resume_call_back, Shared_Files);
+	std::stringstream ss;
+	ss << "SELECT share.hash, share.path, share.file_size, hash.key, hash.state, "
+		"share.state FROM share, hash WHERE share.hash = hash.hash";
+	database::pool::get_proxy()->query(ss.str(), &resume_call_back, Shared_Files);
 
 	boost::filesystem::path share_path(boost::filesystem::system_complete(
 		boost::filesystem::path(path::share(), boost::filesystem::native)));
@@ -92,8 +116,10 @@ void share_scan_0_scan::main_loop()
 						boost::shared_ptr<const shared_files::file> F = Shared_Files.lookup_path(path);
 						if(!F || F->file_size != file_size){
 							//file hasn't been seen before, or it changed size
-							boost::shared_ptr<share_scan_job> SSJ(
-								new share_scan_job(true, shared_files::file("", path, file_size)));
+							shared_files::file File;
+							File.path = path;
+							File.file_size = file_size;
+							boost::shared_ptr<share_scan_job> SSJ(new share_scan_job(true, File));
 							Shared_Files.insert_update(SSJ->File);
 
 							{//begin lock scope

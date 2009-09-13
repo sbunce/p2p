@@ -2,6 +2,7 @@
 
 p2p_real::p2p_real():
 	Share_Scan(Shared_Files),
+	Slot_Set(Shared_Files),
 	Proactor(
 		boost::bind(&connection_manager::connect_call_back, &Connection_Manager, _1),
 		boost::bind(&connection_manager::disconnect_call_back, &Connection_Manager, _1),

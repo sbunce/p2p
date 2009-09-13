@@ -1,6 +1,9 @@
 #include "slot_set.hpp"
 
-slot_set::slot_set()
+slot_set::slot_set(
+	shared_files & Shared_Files_in
+):
+	Shared_Files(Shared_Files_in)
 {
 
 }
@@ -15,6 +18,9 @@ slot_set::~slot_set()
 boost::shared_ptr<slot> slot_set::add(const std::string & hash)
 {
 	boost::mutex::scoped_lock lock(Slot_mutex);
+/*
+DEBUG, need to get file from Shared_Files
+
 	std::map<std::string, boost::shared_ptr<slot> >::iterator
 		iter = Slot.find(hash);
 	if(iter == Slot.end()){
@@ -27,10 +33,7 @@ boost::shared_ptr<slot> slot_set::add(const std::string & hash)
 				boost::shared_ptr<slot> SE(new slot(FI->hash, FI->file_size, FI->path));
 				Slot.insert(std::make_pair(SE->hash, SE));
 			}else{
-				/*
-				File is downloading. Downloading files may only be added by resume.
-				We don't return it here because it could be hash checking.
-				*/
+				//file is downloading, downloading files may only be added by resume
 				return boost::shared_ptr<slot>();
 			}
 		}else{
@@ -40,6 +43,7 @@ boost::shared_ptr<slot> slot_set::add(const std::string & hash)
 		//slot_element already exists
 		return iter->second;
 	}
+*/
 }
 
 void slot_set::remove(const std::string & hash)
@@ -65,6 +69,7 @@ void slot_set::resume_priv(network::proactor & Proactor)
 	container. We will hash check all of these and move them to the Slot_Element
 	container as they finish.
 	*/
+/*
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(Slot_mutex);
 	for(std::vector<database::table::share::file_info>::iterator iter_cur = Resume.begin(),
@@ -113,4 +118,5 @@ void slot_set::resume_priv(network::proactor & Proactor)
 			}
 		}
 	}
+*/
 }

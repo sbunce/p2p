@@ -30,19 +30,19 @@ int main()
 	{
 		if(TI_ptr->hash != TI.hash){ LOGGER; exit(1); }
 		if(TI_ptr->tree_size != TI.tree_size){ LOGGER; exit(1); }
-		if(TI_ptr->State != database::table::hash::RESERVED){ LOGGER; exit(1); }
+		if(TI_ptr->State != database::table::hash::reserved){ LOGGER; exit(1); }
 	}else{
 		LOGGER; exit(1);
 	}
 
 	//test changing the state to complete
-	database::table::hash::set_state(TI.hash, database::table::hash::COMPLETE);
+	database::table::hash::set_state(TI.hash, database::table::hash::complete);
 
 	//make sure the state is no complete
 	if(boost::shared_ptr<database::table::hash::tree_info>
 		TI_ptr = database::table::hash::tree_open(TI.hash))
 	{
-		if(TI_ptr->State != database::table::hash::COMPLETE){ LOGGER; exit(1); }
+		if(TI_ptr->State != database::table::hash::complete){ LOGGER; exit(1); }
 	}else{
 		LOGGER; exit(1);
 	}
