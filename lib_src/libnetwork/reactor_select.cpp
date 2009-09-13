@@ -37,7 +37,7 @@ network::reactor_select::reactor_select(
 	add_socket(selfpipe_read);
 
 	//set default maximum connections
-	max_connections(connections_supported() / 2, connections_supported() / 2);
+	max_connections(supported_connections() / 2, supported_connections() / 2);
 }
 
 network::reactor_select::~reactor_select()
@@ -96,24 +96,6 @@ void network::reactor_select::check_timeouts()
 			++iter_cur;
 		}
 	}
-}
-
-unsigned network::reactor_select::connections_supported()
-{
-	#ifdef _WIN32
-	/*
-	Subtract two for possible listeners (IPv4 and IPv6 listener). Subtract one
-	for self-pipe read.
-	*/
-	return FD_SETSIZE - 3;
-	#else
-	/*
-	Subtract two for possible listeners (some POSIX systems don't support
-	dual-stack so we subtract two to leave space). Subtract 3 for
-	stdin/stdout/stderr. Subtract two for self-pipe.
-	*/
-	return FD_SETSIZE - 7;
-	#endif
 }
 
 void network::reactor_select::establish_incoming(const int listener)
@@ -528,6 +510,24 @@ void network::reactor_select::stop()
 {
 	main_loop_thread.interrupt();
 	main_loop_thread.join();
+}
+
+unsigned network::reactor_select::supported_connections()
+{
+	#ifdef _WIN32
+	/*
+	Subtract two for possible listeners (IPv4 and IPv6 listener). Subtract one
+	for self-pipe read.
+	*/
+	return FD_SETSIZE - 3;
+	#else
+	/*
+	Subtract two for possible listeners (some POSIX systems don't support
+	dual-stack so we subtract two to leave space). Subtract 3 for
+	stdin/stdout/stderr. Subtract two for self-pipe.
+	*/
+	return FD_SETSIZE - 7;
+	#endif
 }
 
 void network::reactor_select::trigger_selfpipe()

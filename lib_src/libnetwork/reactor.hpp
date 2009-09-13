@@ -36,16 +36,16 @@ public:
 	virtual ~reactor();
 
 	/* Pure Virtuals
-	max_connections_supported:
-		Maximum number of connections the reactor supports.
 	start:
 		Start the reactor. Called by the ctor of the proactor.
 	stop:
 		Stop the reactor. Called by the dtor of the proactor.
+	supported_connections:
+		Maximum number of connections the reactor supports.
 	*/
-	virtual unsigned connections_supported() = 0;
 	virtual void start() = 0;
 	virtual void stop() = 0;
+	virtual unsigned supported_connections() = 0;
 
 	/*
 	call_back_get_job:

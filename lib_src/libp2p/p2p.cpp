@@ -81,6 +81,11 @@ void p2p::start_download(const download_info & DI)
 	P2P_Real->start_download(DI);
 }
 
+unsigned p2p::supported_connections()
+{
+	return P2P_Real->supported_connections();
+}
+
 unsigned p2p::upload_rate()
 {
 	return P2P_Real->upload_rate();

@@ -40,13 +40,14 @@ public:
 		The number of files shared.
 	start_download:
 		Starts a download.
+	supported_connections:
+		Maximum number of network connections supported.
 	upload_rate:
 		Returns average upload rate for everything (excluding localhost).
 	uploads:
 		Populates info with upload_info for all uploads.
 	*/
 	void downloads(std::vector<download_status> & status);
-	void uploads(std::vector<upload_status> & CU);
 	unsigned download_rate();
 	unsigned max_connections();
 	void max_connections(const unsigned connections);
@@ -60,6 +61,8 @@ public:
 	boost::uint64_t share_size_bytes();
 	boost::uint64_t share_size_files();
 	void start_download(const download_info & info);
+	unsigned supported_connections();
+	void uploads(std::vector<upload_status> & CU);
 	unsigned upload_rate();
 
 private:

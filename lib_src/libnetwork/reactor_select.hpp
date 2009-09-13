@@ -25,9 +25,9 @@ public:
 	~reactor_select();
 
 	//documentation in reactor class
-	virtual unsigned connections_supported();
 	virtual void start();
 	virtual void stop();
+	virtual unsigned supported_connections();
 	virtual void trigger_selfpipe();
 
 private:

@@ -48,7 +48,6 @@ public:
 	in reactor.hpp. The functions wrapped are named identically.
 	*/
 	unsigned connections();
-	unsigned connections_supported();
 	unsigned download_rate();
 	unsigned incoming_connections();
 	unsigned outgoing_connections();
@@ -60,6 +59,7 @@ public:
 	unsigned max_outgoing_connections();
 	unsigned max_upload_rate();
 	void max_upload_rate(const unsigned rate);
+	unsigned supported_connections();
 	void trigger_call_back(const std::string & host, const std::string & port);
 	unsigned upload_rate();
 

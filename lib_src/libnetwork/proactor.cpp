@@ -47,11 +47,6 @@ unsigned network::proactor::connections()
 	return Reactor->connections();
 }
 
-unsigned network::proactor::connections_supported()
-{
-	return Reactor->connections_supported();
-}
-
 unsigned network::proactor::download_rate()
 {
 	return Reactor->download_rate();
@@ -156,6 +151,11 @@ void network::proactor::resolve()
 			exit(1);
 		}
 	}
+}
+
+unsigned network::proactor::supported_connections()
+{
+	return Reactor->supported_connections();
 }
 
 void network::proactor::trigger_call_back(const std::string & host,

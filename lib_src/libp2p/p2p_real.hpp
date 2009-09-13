@@ -49,6 +49,7 @@ public:
 	boost::uint64_t share_size_bytes();
 	boost::uint64_t share_size_files();
 	void start_download(const download_info & DI);
+	unsigned supported_connections();
 	unsigned upload_rate();
 	void uploads(std::vector<upload_status> & CU);
 

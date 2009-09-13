@@ -13,8 +13,8 @@ p2p_real::p2p_real():
 {
 	//setup proxies for async getter/setter function calls
 	max_connections_proxy = database::table::preferences::get_max_connections();
-	if(max_connections_proxy > Proactor.connections_supported()){
-		max_connections_proxy = Proactor.connections_supported();
+	if(max_connections_proxy > Proactor.supported_connections()){
+		max_connections_proxy = Proactor.supported_connections();
 	}
 	max_download_rate_proxy = database::table::preferences::get_max_download_rate();
 	max_upload_rate_proxy = database::table::preferences::get_max_upload_rate();
@@ -56,8 +56,8 @@ static void max_connections_wrapper(unsigned max_connections_in)
 }
 void p2p_real::max_connections(unsigned connections)
 {
-	if(connections > Proactor.connections_supported()){
-		connections = Proactor.connections_supported();
+	if(connections > Proactor.supported_connections()){
+		connections = Proactor.supported_connections();
 	}
 	Proactor.max_connections(connections / 2, connections / 2);
 	max_connections_proxy = connections;
@@ -121,6 +121,11 @@ boost::uint64_t p2p_real::share_size_files()
 void p2p_real::start_download(const download_info & DI)
 {
 
+}
+
+unsigned p2p_real::supported_connections()
+{
+	return Proactor.supported_connections();
 }
 
 void p2p_real::remove_download(const std::string & hash)

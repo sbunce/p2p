@@ -183,7 +183,7 @@ void network::reactor::max_connections(const unsigned max_incoming_in,
 	const unsigned max_outgoing_in)
 {
 	boost::mutex::scoped_lock lock(connections_mutex);
-	if(max_incoming_in + max_outgoing_in > connections_supported()){
+	if(max_incoming_in + max_outgoing_in > supported_connections()){
 		LOGGER << "max_incoming + max_outgoing connections exceed implementation max";
 		exit(1);
 	}

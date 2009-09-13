@@ -16,7 +16,7 @@ window_preferences::window_preferences(
 	cancel_button = Gtk::manage(new Gtk::Button(Gtk::StockID("gtk-cancel")));
 	ok_button = Gtk::manage(new Gtk::Button(Gtk::StockID("gtk-ok")));
 	button_box = Gtk::manage(new Gtk::HButtonBox);
-	connections_hscale = Gtk::manage(new Gtk::HScale(0,settings::MAX_CONNECTIONS,1));
+	connections_hscale = Gtk::manage(new Gtk::HScale(0,P2P.supported_connections(),1));
 	fixed = Gtk::manage(new Gtk::Fixed());
 
 	//icon for top left of window
