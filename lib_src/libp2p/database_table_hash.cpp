@@ -35,10 +35,8 @@ static int tree_open_call_back(boost::shared_ptr<database::table::hash::tree_inf
 	int columns_retrieved, char ** response, char ** column_name)
 {
 	assert(response[0] && response[1] && response[2]);
-
 	TI = boost::shared_ptr<database::table::hash::tree_info>(
 		new database::table::hash::tree_info());
-
 	std::stringstream ss;
 
 	//row primary key

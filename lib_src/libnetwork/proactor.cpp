@@ -15,16 +15,7 @@ network::proactor::proactor(
 	disconnect_call_back(disconnect_call_back_in),
 	failed_connect_call_back(failed_connect_call_back_in)
 {
-	//start reactor that proactor uses
-	Reactor->start();
 
-	//start threads for doing call backs
-	for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
-		Workers.create_thread(boost::bind(&proactor::dispatch, this));
-	}
-
-	//start thread for DNS resolution
-	Workers.create_thread(boost::bind(&proactor::resolve, this));
 }
 
 network::proactor::~proactor()
@@ -151,6 +142,20 @@ void network::proactor::resolve()
 			exit(1);
 		}
 	}
+}
+
+void network::proactor::start()
+{
+	//start reactor that proactor uses
+	Reactor->start();
+
+	//start threads for doing call backs
+	for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
+		Workers.create_thread(boost::bind(&proactor::dispatch, this));
+	}
+
+	//start thread for DNS resolution
+	Workers.create_thread(boost::bind(&proactor::resolve, this));
 }
 
 unsigned network::proactor::supported_connections()

@@ -1,10 +1,10 @@
 #include "share_scan_1_hash.hpp"
 
 share_scan_1_hash::share_scan_1_hash(
-	shared_files & Shared_Files_in
+	share & Share_in
 ):
-	Shared_Files(Shared_Files_in),
-	Share_Scan_0_Scan(Shared_Files)
+	Share(Share_in),
+	Share_Scan_0_Scan(Share)
 {
 	for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
 		Workers.create_thread(boost::bind(&share_scan_1_hash::main_loop, this));
@@ -23,6 +23,11 @@ void share_scan_1_hash::block_on_max_jobs()
 	while(job_queue.size() >= settings::SHARE_SCAN_RATE){
 		job_queue_max_cond.wait(job_queue_mutex);
 	}
+}
+
+void share_scan_1_hash::block_until_resumed()
+{
+	Share_Scan_0_Scan.block_until_resumed();
 }
 
 boost::shared_ptr<share_scan_job> share_scan_1_hash::job()
@@ -48,14 +53,27 @@ void share_scan_1_hash::main_loop()
 		block_on_max_jobs();
 		boost::shared_ptr<share_scan_job> SPJ = Share_Scan_0_Scan.job();
 		if(SPJ->add){
-			if(hash_tree::create(SPJ->File)){
-				Shared_Files.insert_update(SPJ->File);
+			hash_tree::status S = hash_tree::create(SPJ->FI);
+			if(S == hash_tree::good){
+				SPJ->FI.complete = true;
+				Share.insert_update(SPJ->FI);
 				{//begin lock scope
 				boost::mutex::scoped_lock lock(job_queue_mutex);
 				job_queue.push_back(SPJ);
 				}//end lock scope
-			}else{
-				Shared_Files.erase(SPJ->File.path);
+			}else if(S == hash_tree::io_error){
+				//io_error, remove file from share so it tries to rehash later
+				Share.erase(SPJ->FI.path);
+			}else if(S == hash_tree::bad){
+				/*
+				Tree can never be created. We leave the hash for the file in share
+				set to "" so that we don't try to rehash this file again and so that
+				it doesn't count to the file or byte total for the share.
+				*/
+				LOGGER << "bad file: " << SPJ->FI.path;
+				SPJ->FI.hash = "";
+				SPJ->FI.complete = true;
+				Share.insert_update(SPJ->FI);
 			}
 		}else{
 			//file needs to be removed from database

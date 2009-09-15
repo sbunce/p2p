@@ -109,6 +109,7 @@ int main()
 		true,
 		"65001"
 	);
+	Proactor.start();
 
 	for(int x=0; x<32; ++x){
 		Proactor.connect("127.0.0.1", "65001");

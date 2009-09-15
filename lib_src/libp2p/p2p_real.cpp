@@ -1,8 +1,7 @@
 #include "p2p_real.hpp"
 
 p2p_real::p2p_real():
-	Share_Scan(Shared_Files),
-	Slot_Set(Shared_Files),
+	Share_Scan(Share),
 	Proactor(
 		boost::bind(&connection_manager::connect_call_back, &Connection_Manager, _1),
 		boost::bind(&connection_manager::disconnect_call_back, &Connection_Manager, _1),
@@ -25,14 +24,15 @@ p2p_real::p2p_real():
 	Proactor.max_download_rate(max_download_rate_proxy);
 	Proactor.max_upload_rate(max_upload_rate_proxy);
 
-	//resume downloads and start connections needed for those downloads
-	Slot_Set.resume(Proactor);
+	resume_thread = boost::thread(boost::bind(&p2p_real::resume, this));
 }
 
 p2p_real::~p2p_real()
 {
 	Thread_Pool.interrupt();
 	Thread_Pool.join();
+	resume_thread.interrupt();
+	resume_thread.join();
 }
 
 unsigned p2p_real::download_rate()
@@ -109,14 +109,20 @@ unsigned p2p_real::prime_count()
 	return prime_generator::singleton().prime_count();
 }
 
+void p2p_real::resume()
+{
+	Share_Scan.block_until_resumed();
+
+}
+
 boost::uint64_t p2p_real::share_size_bytes()
 {
-	return Shared_Files.bytes();
+	return Share.bytes();
 }
 
 boost::uint64_t p2p_real::share_size_files()
 {
-	return Shared_Files.files();
+	return Share.files();
 }
 
 void p2p_real::start_download(const download_info & DI)

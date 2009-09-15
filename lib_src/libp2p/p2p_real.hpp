@@ -8,10 +8,9 @@
 #include "hash_tree.hpp"
 #include "path.hpp"
 #include "prime_generator.hpp"
-#include "slot_set.hpp"
 #include "share_scan.hpp"
 #include "settings.hpp"
-#include "shared_files.hpp"
+#include "share.hpp"
 
 //include
 #include <boost/bind.hpp>
@@ -54,6 +53,9 @@ public:
 	void uploads(std::vector<upload_status> & CU);
 
 private:
+	//thread spawned by ctor to do actions on startup
+	boost::thread resume_thread;
+
 	/*
 	The values to store in the database are stored here and a job is scheduled
 	with Thread_Pool to do the actual database read/write. This allows the
@@ -70,11 +72,8 @@ private:
 	Share_Scan:
 		Scans shared directories looking for new and modified files.
 	*/
-	shared_files Shared_Files;
+	share Share;
 	share_scan Share_Scan;
-
-	//unique set of slots that belong to all the connections
-	slot_set Slot_Set;
 
 	//used to schedule long jobs so the GUI doesn't have to wait
 	thread_pool Thread_Pool;
@@ -88,5 +87,12 @@ private:
 	*/
 	connection_manager Connection_Manager;
 	network::proactor Proactor;
+
+	/*
+	resume:
+		Thread spawned in this function by ctor to do things needed to resume
+		downloads.
+	*/
+	void resume();
 };
 #endif

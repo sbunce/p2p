@@ -3,7 +3,7 @@
 #include "../hash_tree.hpp"
 #include "../path.hpp"
 #include "../protocol.hpp"
-#include "../shared_files.hpp"
+#include "../share.hpp"
 
 //include
 #include <logger.hpp>
@@ -12,10 +12,10 @@
 #include <algorithm>
 
 //create test files to hash if they don't already exist
-void create_test_file(const shared_files::file & File)
+void create_test_file(const file_info & FI)
 {
-	std::fstream fout(File.path.c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
-	for(int x=0; x<File.file_size; ++x){
+	std::fstream fout(FI.path.c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
+	for(int x=0; x<FI.file_size; ++x){
 		if(x % 80 == 0 && x != 0){
 			fout.put('\n');
 		}else{
@@ -28,16 +28,16 @@ void create_test_file(const shared_files::file & File)
 //create hash trees and check them
 void create_and_check(const unsigned size)
 {
-	shared_files::file File;
+	file_info FI;
 	std::stringstream ss;
 	ss << path::share() << size << "_block";
-	File.path = ss.str();
-	File.file_size = size * protocol::FILE_BLOCK_SIZE;
-	create_test_file(File);
-	if(!hash_tree::create(File)){
+	FI.path = ss.str();
+	FI.file_size = size * protocol::FILE_BLOCK_SIZE;
+	create_test_file(FI);
+	if(hash_tree::create(FI) != hash_tree::good){
 		LOGGER; exit(1);
 	}
-	hash_tree HT(File);
+	hash_tree HT(FI);
 	HT.check();
 	if(!HT.complete()){
 		LOGGER; exit(1);
@@ -54,16 +54,16 @@ void random_assemble()
 {
 	unsigned size = 1536;
 
-	shared_files::file File;
+	file_info FI;
 	std::stringstream ss;
 	ss << path::share() << size << "_block";
-	File.path = ss.str();
-	File.file_size = size * protocol::FILE_BLOCK_SIZE;
-	create_test_file(File);
-	if(!hash_tree::create(File)){
+	FI.path = ss.str();
+	FI.file_size = size * protocol::FILE_BLOCK_SIZE;
+	create_test_file(FI);
+	if(hash_tree::create(FI) != hash_tree::good){
 		LOGGER; exit(1);
 	}
-	hash_tree HT(File);
+	hash_tree HT(FI);
 	HT.check();
 	if(!HT.complete()){
 		LOGGER; exit(1);
@@ -95,7 +95,7 @@ void random_assemble()
 	}
 
 	//reassemble hash tree in random order
-	hash_tree HT_reassemble(File);
+	hash_tree HT_reassemble(FI);
 	for(boost::uint64_t x=0; x<HT.tree_block_count; ++x){
 		HT_reassemble.write_block(block_number[x], block[block_number[x]], "127.0.0.1");
 	}

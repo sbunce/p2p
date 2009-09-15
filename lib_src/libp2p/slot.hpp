@@ -4,8 +4,8 @@
 //custom
 #include "database.hpp"
 #include "file.hpp"
+#include "file_info.hpp"
 #include "hash_tree.hpp"
-#include "shared_files.hpp"
 
 //include
 #include <atomic_bool.hpp>
@@ -15,22 +15,14 @@
 //standard
 #include <string>
 
-class slot_set;
 class slot : private boost::noncopyable
 {
-private:
-	/*
-	Each slot that exists must be unique (no other slot exists for a file with
-	the same hash). Only allowing the slot_manager to instantiate a slot makes
-	it easy to centrally enforce this.
-	*/
-	friend class slot_set;
-
+public:
 	slot(
-		const shared_files::file & File
+		const file_info & FI
 	):
-		Hash_Tree(File),
-		File(File),
+		Hash_Tree(FI),
+		File(FI),
 		hash(Hash_Tree.hash),
 		tree_size(Hash_Tree.tree_size),
 		file_size(Hash_Tree.file_size)
@@ -48,7 +40,6 @@ private:
 	boost::mutex host_mutex;
 	std::set<database::table::host::host_info> host;
 
-public:
 	const std::string & hash;
 	const boost::uint64_t & tree_size;
 	const boost::uint64_t & file_size;

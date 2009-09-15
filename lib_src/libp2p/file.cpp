@@ -1,10 +1,10 @@
 #include "file.hpp"
 
 file::file(
-	const shared_files::file & File
+	const file_info & FI
 ):
-	hash(File.hash),
-	file_size(File.file_size),
+	hash(FI.hash),
+	file_size(FI.file_size),
 	Block_Request(file_size % protocol::FILE_BLOCK_SIZE == 0 ?
 		file_size / protocol::FILE_BLOCK_SIZE :
 		file_size / protocol::FILE_BLOCK_SIZE + 1

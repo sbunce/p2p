@@ -36,6 +36,13 @@ public:
 	~proactor();
 
 	/*
+	This function starts the networking in the proactor and reactor threads.
+	These threads are not started in the ctor because stuff may need to be done
+	before the networking is brought up.
+	*/
+	void start();
+
+	/*
 	connect:
 		Does asynchronous DNS resolution. Hands off DNS resolution to a thread
 		inside the proactor which does DNS resolution, then calls

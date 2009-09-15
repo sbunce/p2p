@@ -5,7 +5,7 @@
 #include "database.hpp"
 #include "path.hpp"
 #include "settings.hpp"
-#include "shared_files.hpp"
+#include "share.hpp"
 #include "share_scan_job.hpp"
 
 //include
@@ -24,13 +24,14 @@
 class share_scan_0_scan : private boost::noncopyable
 {
 public:
-	share_scan_0_scan(shared_files & Shared_Files_in);
+	share_scan_0_scan(share & Share_in);
 	~share_scan_0_scan();
 
 	/*
 	job:
 		Blocks until a job is ready.
 	*/
+	void block_until_resumed();
 	boost::shared_ptr<share_scan_job> job();
 
 private:
@@ -52,8 +53,17 @@ private:
 	boost::condition_variable_any job_queue_cond;
 	boost::condition_variable_any job_queue_max_cond;
 
+	/*
+	Used by block_until_resumed() to block until share is populated with
+	information in database.
+	Note: All access to resumed is locked with resumed_mutex.
+	*/
+	boost::mutex resumed_mutex;
+	bool resumed;
+	boost::condition_variable_any resumed_cond;
+
 	//contains files in share
-	shared_files & Shared_Files;
+	share & Share;
 
 	/*
 	block_on_max_jobs:

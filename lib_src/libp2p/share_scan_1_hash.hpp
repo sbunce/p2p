@@ -3,7 +3,7 @@
 
 //custom
 #include "hash_tree.hpp"
-#include "shared_files.hpp"
+#include "share.hpp"
 #include "share_scan_job.hpp"
 #include "share_scan_0_scan.hpp"
 
@@ -15,13 +15,14 @@
 class share_scan_1_hash
 {
 public:
-	share_scan_1_hash(shared_files & Shared_Files_in);
+	share_scan_1_hash(share & Share_in);
 	~share_scan_1_hash();
 
 	/*
 	job:
 		Returns shared_ptr for job, or empty shared_ptr if no jobs.
 	*/
+	void block_until_resumed();
 	boost::shared_ptr<share_scan_job> job();
 
 private:
@@ -41,7 +42,7 @@ private:
 	boost::condition_variable_any job_queue_max_cond;
 
 	//contains files in share
-	shared_files & Shared_Files;
+	share & Share;
 
 	//previous stage in pipeline
 	share_scan_0_scan Share_Scan_0_Scan;

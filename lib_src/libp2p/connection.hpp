@@ -3,7 +3,7 @@
 
 //custom
 #include "encryption.hpp"
-#include "shared_files.hpp"
+#include "share.hpp"
 #include "slot_manager.hpp"
 
 //include

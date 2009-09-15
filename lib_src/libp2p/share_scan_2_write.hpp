@@ -12,7 +12,7 @@ amount of database contention.
 #define H_SHARE_SCAN_2_WRITE
 
 //custom
-#include "shared_files.hpp"
+#include "share.hpp"
 #include "share_scan_job.hpp"
 #include "share_scan_1_hash.hpp"
 
@@ -26,14 +26,20 @@ amount of database contention.
 class share_scan_2_write
 {
 public:
-	share_scan_2_write(shared_files & Shared_Files_in);
+	share_scan_2_write(share & Shared_in);
 	~share_scan_2_write();
+
+	/*
+	block_until_resumed:
+		Blocks until share is fully populated with information in the database.
+	*/
+	void block_until_resumed();
 
 private:
 	boost::thread write_thread;
 
 	//contains files in share
-	shared_files & Shared_Files;
+	share & Share;
 
 	//previous stage in pipeline
 	share_scan_1_hash Share_Scan_1_Hash;

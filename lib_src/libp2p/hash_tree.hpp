@@ -8,10 +8,10 @@ parts concurrently but not the same parts.
 //custom
 #include "block_request.hpp"
 #include "database.hpp"
+#include "file_info.hpp"
 #include "path.hpp"
 #include "protocol.hpp"
 #include "settings.hpp"
-#include "shared_files.hpp"
 
 //include
 #include <atomic_bool.hpp>
@@ -33,12 +33,12 @@ parts concurrently but not the same parts.
 class hash_tree : private boost::noncopyable
 {
 public:
-	hash_tree(const shared_files::file & File);
+	hash_tree(const file_info & FI);
 
 	enum status{
-		GOOD,    //block is good
-		BAD,     //block is bad
-		IO_ERROR //error reading hash tree
+		good,    //block is good
+		bad,     //block is bad
+		io_error //error reading hash tree
 	};
 
 	/*
@@ -75,9 +75,12 @@ public:
 		that Block_Request can be complete and the hash_tree not complete if the
 		request for the last blocks were made, but not yet received.
 	create:
-		Create a hash tree. Returns true and sets File.hash and File.tree_blob if
-		creation suceeded.
-		Precondition: File.path and File.file_size must be correctly set.
+		Create a hash tree. Returns good if tree created or tree already existed.
+		Returns bad if hash tree could never be created. Returns io_error if
+		io_error occured (such as file changing size, temp files failing to read,
+		etc). When an io_error occurs the file is generally retried later.
+		Precondition: FI.path and FI.file_size must be correctly set.
+		Postcondition: FI.hash set unless io_error returned.
 		Note: If hash tree creation suceeds the hash tree state will only be set
 			to RESERVED. If it's not changed the tree will be deleted upon next
 			program start.
@@ -95,7 +98,7 @@ public:
 	void check();
 	status check_file_block(const boost::uint64_t & file_block_num,
 		const char * block, const int & size);
-	static bool create(shared_files::file & File);
+	static status create(file_info & FI);
 	bool complete();
 	static boost::uint64_t file_size_to_tree_size(const boost::uint64_t & file_size);
 	status read_block(const boost::uint64_t & block_num, std::string & block);
@@ -111,7 +114,7 @@ public:
 
 private:
 	//blob handle for hash tree
-	const database::blob Blob;
+	database::blob Blob;
 
 	/*
 	If the ctor has to allocate space for a hash tree this bool will be set to

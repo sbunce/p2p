@@ -7,7 +7,7 @@
 #include "hash_tree.hpp"
 #include "path.hpp"
 #include "settings.hpp"
-#include "shared_files.hpp"
+#include "share.hpp"
 #include "share_scan_2_write.hpp"
 
 //include
@@ -26,12 +26,17 @@
 class share_scan : private boost::noncopyable
 {
 public:
-	share_scan(shared_files & Shared_Files_in);
+	share_scan(share & Share_in);
 	~share_scan();
+
+	/*
+	block_until_resumed:
+		Blocks until share is fully populated with information in the database.
+	*/
+	void block_until_resumed();
 
 private:
 	//last stage of pipeline
 	share_scan_2_write Share_Scan_2_Write;
 };
 #endif
-

@@ -89,8 +89,8 @@ int main(int argc, char ** argv)
 		true,
 		"8080"
 	);
-	//Proactor.max_upload_rate(1024*500);
 	Proactor.max_connections(Proactor.supported_connections(), 0);
+	Proactor.start();
 
 	while(!terminate_program){
 		if(Proactor.download_rate() || Proactor.upload_rate()){

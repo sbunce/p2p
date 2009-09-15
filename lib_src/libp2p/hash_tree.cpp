@@ -1,10 +1,10 @@
 #include "hash_tree.hpp"
 
 hash_tree::hash_tree(
-	const shared_files::file & File
+	const file_info & FI
 ):
-	hash(File.hash),
-	file_size(File.file_size),
+	hash(FI.hash),
+	file_size(FI.file_size),
 	row(file_size_to_row(file_size)),
 	tree_block_count(row_to_tree_block_count(row)),
 	file_hash_offset(row_to_file_hash_offset(row)),
@@ -20,12 +20,19 @@ hash_tree::hash_tree(
 			file_size % protocol::FILE_BLOCK_SIZE
 	),
 	Block_Request(tree_block_count),
-	Blob(File.tree_blob),
 	set_state_downloading(true),
 	block_status(tree_block_count),
 	end_of_good(0)
 {
-
+	if(tree_block_count != 0){
+		boost::shared_ptr<database::table::hash::tree_info>
+			TI = database::table::hash::tree_open(hash);
+		if(TI){
+			Blob = TI->Blob;
+		}else{
+			throw std::exception();
+		}
+	}
 }
 
 bool hash_tree::block_info(const boost::uint64_t & block, const std::deque<boost::uint64_t> & row,
@@ -100,15 +107,15 @@ void hash_tree::check()
 {
 	for(boost::uint32_t x=end_of_good; x<tree_block_count; ++x){
 		status Status = check_block(x);
-		if(Status == GOOD){
+		if(Status == good){
 			Block_Request.add_block(x);
 			end_of_good = x+1;
-		}else if(Status == BAD){
+		}else if(Status == bad){
 			Block_Request.remove_block(x);
 			block_status[x] = 0;
 			LOGGER << "bad block " << x << " in tree " << hash;
 			return;
-		}else if(Status == IO_ERROR){
+		}else if(Status == io_error){
 			return;
 		}
 	}
@@ -122,7 +129,7 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 {
 	if(tree_block_count == 0){
 		//only one hash, it's the root hash and the file hash
-		return GOOD;
+		return good;
 	}
 
 	std::pair<boost::uint64_t, unsigned> info;
@@ -137,7 +144,7 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 	if(!database::pool::get_proxy()->blob_read(Blob, block_buff,
 		info.second, info.first))
 	{
-		return IO_ERROR;
+		return io_error;
 	}
 
 	//create hash for children
@@ -155,21 +162,21 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 			exit(1);
 		}
 		if(strncmp(hash_bin.data(), SHA.raw_hash(), protocol::HASH_SIZE) == 0){
-			return GOOD;
+			return good;
 		}else{
-			return BAD;
+			return bad;
 		}
 	}else{
 		if(!database::pool::get_proxy()->blob_read(Blob, block_buff,
 			protocol::HASH_SIZE, parent))
 		{
-			return IO_ERROR;
+			return io_error;
 		}
 
 		if(strncmp(block_buff, SHA.raw_hash(), protocol::HASH_SIZE) == 0){
-			return GOOD;
+			return good;
 		}else{
-			return BAD;
+			return bad;
 		}
 	}
 }
@@ -178,19 +185,19 @@ hash_tree::status hash_tree::check_incremental(boost::uint32_t & bad_block)
 {
 	for(boost::uint32_t x=end_of_good; x<tree_block_count && block_status[x]; ++x){
 		status Status = check_block(x);
-		if(Status == GOOD){
+		if(Status == good){
 			Block_Request.add_block(x);
 			end_of_good = x+1;
-		}else if(Status == BAD){
+		}else if(Status == bad){
 			Block_Request.remove_block(x);
 			block_status[x] = 0;
 			bad_block = x;
 			if(bad_block != 0){
 				LOGGER << "bad block " << x << " in tree " << hash;
 			}
-			return BAD;
-		}else if(Status == IO_ERROR){
-			return IO_ERROR;
+			return bad;
+		}else if(Status == io_error){
+			return io_error;
 		}
 	}
 
@@ -198,7 +205,7 @@ hash_tree::status hash_tree::check_incremental(boost::uint32_t & bad_block)
 		database::table::hash::set_state(hash, database::table::hash::complete);
 	}
 
-	return GOOD;
+	return good;
 }
 
 hash_tree::status hash_tree::check_file_block(const boost::uint64_t & file_block_num, const char * block, const int & size)
@@ -212,16 +219,16 @@ hash_tree::status hash_tree::check_file_block(const boost::uint64_t & file_block
 	if(!database::pool::get_proxy()->blob_read(Blob, parent_buff,
 		protocol::HASH_SIZE, file_hash_offset + file_block_num * protocol::HASH_SIZE))
 	{
-		return IO_ERROR;
+		return io_error;
 	}
 	SHA1 SHA;
 	SHA.init();
 	SHA.load(block, size);
 	SHA.end();
 	if(strncmp(parent_buff, SHA.raw_hash(), protocol::HASH_SIZE) == 0){
-		return GOOD;
+		return good;
 	}else{
-		return BAD;
+		return bad;
 	}
 }
 
@@ -230,11 +237,11 @@ bool hash_tree::complete()
 	return end_of_good == tree_block_count;
 }
 
-bool hash_tree::create(shared_files::file & File)
+hash_tree::status hash_tree::create(file_info & FI)
 {
-	std::fstream fin(File.path.c_str(), std::ios::in | std::ios::binary);
+	std::fstream fin(FI.path.c_str(), std::ios::in | std::ios::binary);
 	if(!fin.good()){
-		return false;
+		return io_error;
 	}
 
 	/*
@@ -253,13 +260,13 @@ bool hash_tree::create(shared_files::file & File)
 		std::ios::out | std::ios::trunc | std::ios::binary);
 	if(!upside_down.good()){
 		LOGGER << "error opening upside_down file";
-		return false;
+		return io_error;
 	}
 	std::fstream rightside_up(path::rightside_up().c_str(), std::ios::in |
 		std::ios::out | std::ios::trunc | std::ios::binary);
 	if(!rightside_up.good()){
 		LOGGER << "error opening rightside_up file";
-		return false;
+		return io_error;
 	}
 
 	char block_buff[protocol::FILE_BLOCK_SIZE];
@@ -270,7 +277,7 @@ bool hash_tree::create(shared_files::file & File)
 	boost::uint64_t file_size = 0;
 	while(true){
 		if(boost::this_thread::interruption_requested()){
-			return false;
+			return io_error;
 		}
 
 		fin.read(block_buff, protocol::FILE_BLOCK_SIZE);
@@ -284,30 +291,30 @@ bool hash_tree::create(shared_files::file & File)
 		upside_down.write(SHA.raw_hash(), protocol::HASH_SIZE);
 		if(!upside_down.good()){
 			LOGGER << "error writing to upside_down file";
-			return false;
+			return io_error;
 		}
 
 		++blocks_read;
 		file_size += fin.gcount();
-		if(file_size > File.file_size){
-			return false;
+		if(file_size > FI.file_size){
+			return io_error;
 		}
 	}
 
 	if(fin.bad() || !fin.eof()){
-		LOGGER << "error reading file \"" << File.path << "\"";
-		return false;
+		LOGGER << "error reading file \"" << FI.path << "\"";
+		return io_error;
 	}
 
 	if(blocks_read == 0){
 		//do not generate hash trees for empty files
-		return false;
+		return good;
 	}
 
 	//base case, the file size is == one block
 	if(blocks_read == 1){
-		File.hash = SHA.hex_hash();
-		return true;
+		FI.hash = SHA.hex_hash();
+		return good;
 	}
 
 	//hack for windows
@@ -316,15 +323,15 @@ bool hash_tree::create(shared_files::file & File)
 	#endif
 	boost::uint64_t tree_size = file_size_to_tree_size(file_size);
 	if(tree_size > std::numeric_limits<int>::max()){
-		LOGGER << "file at location \"" << File.path << "\" would generate hash tree beyond max SQLite3 blob size";
-		return false;
+		LOGGER << "file at location \"" << FI.path << "\" would generate hash tree beyond max SQLite3 blob size";
+		return bad;
 	}
 
-	create_recurse(upside_down, rightside_up, 0, blocks_read, File.hash, block_buff, SHA);
+	create_recurse(upside_down, rightside_up, 0, blocks_read, FI.hash, block_buff, SHA);
 
-	if(File.hash.empty()){
+	if(FI.hash.empty()){
 		//tree didn't generate
-		return false;
+		return io_error;
 	}else{
 		/*
 		Tree sucessfully created. Look in the database to see if the tree already
@@ -348,15 +355,15 @@ bool hash_tree::create(shared_files::file & File)
 		file again later.
 		*/
 		database::pool::proxy DB;
-		if(database::table::hash::tree_open(File.hash, DB)){
+		if(database::table::hash::tree_open(FI.hash, DB)){
 			//hash tree already exists
-			return false;
+			return good;
 		}
 
 		//tree doesn't exist, allocate space for it
-		if(!database::table::hash::tree_allocate(File.hash, tree_size, DB)){
+		if(!database::table::hash::tree_allocate(FI.hash, tree_size, DB)){
 			//could not allocate blob for hash tree
-			return false;
+			return io_error;
 		}
 
 		/*
@@ -367,13 +374,13 @@ bool hash_tree::create(shared_files::file & File)
 		data.
 		*/
 		boost::shared_ptr<database::table::hash::tree_info>
-			TI = database::table::hash::tree_open(File.hash, DB);
+			TI = database::table::hash::tree_open(FI.hash, DB);
 		rightside_up.seekg(0, std::ios::beg);
 		int offset = 0, bytes_remaining = tree_size, read_size;
 		while(bytes_remaining){
 			if(boost::this_thread::interruption_requested()){
-				database::table::hash::delete_tree(File.hash, DB);
-				return false;
+				database::table::hash::delete_tree(FI.hash, DB);
+				return io_error;
 			}
 			if(bytes_remaining > protocol::FILE_BLOCK_SIZE){
 				read_size = protocol::FILE_BLOCK_SIZE;
@@ -383,20 +390,19 @@ bool hash_tree::create(shared_files::file & File)
 			rightside_up.read(block_buff, read_size);
 			if(rightside_up.gcount() != read_size){
 				LOGGER << "error reading rightside_up file";
-				database::table::hash::delete_tree(File.hash, DB);
-				return false;
+				database::table::hash::delete_tree(FI.hash, DB);
+				return io_error;
 			}else{
 				if(!DB->blob_write(TI->Blob, block_buff, read_size, offset)){
 					LOGGER << "error doing incremental write to blob";
-					database::table::hash::delete_tree(File.hash, DB);
-					return false;
+					database::table::hash::delete_tree(FI.hash, DB);
+					return io_error;
 				}
 				offset += read_size;
 				bytes_remaining -= read_size;
 			}
 		}
-		File.tree_blob = TI->Blob;
-		return true;
+		return good;
 	}
 }
 
@@ -404,6 +410,11 @@ bool hash_tree::create_recurse(std::fstream & upside_down, std::fstream & rights
 	boost::uint64_t start_RRN, boost::uint64_t end_RRN, std::string & hash,
 	char * block_buff, SHA1 & SHA)
 {
+	/*
+	A failure of this function is indicated when hash is not set after it
+	returns. If hash is not set then there was an io_error.
+	*/
+
 	//used to store scratch locations for read/write
 	boost::uint64_t scratch_read_RRN = start_RRN; //read starts at beginning of row
 	boost::uint64_t scratch_write_RRN = end_RRN;  //write starts at end of row
@@ -552,11 +563,11 @@ hash_tree::status hash_tree::read_block(const boost::uint64_t & block_num,
 		if(!database::pool::get_proxy()->blob_read(Blob, block_buff,
 			info.second, info.first))
 		{
-			return IO_ERROR;
+			return io_error;
 		}
 		block.clear();
 		block.assign(block_buff, info.second);
-		return GOOD;
+		return good;
 	}else{
 		LOGGER << "invalid block number, programming error";
 		exit(1);
@@ -610,13 +621,13 @@ hash_tree::status hash_tree::write_block(const boost::uint64_t & block_num,
 		if(!database::pool::get_proxy()->blob_write(Blob, block.data(),
 			block.size(), info.first))
 		{
-			return IO_ERROR;
+			return io_error;
 		}
 
 		block_status[block_num] = 1;
 		boost::uint32_t bad_block;
 		status Status = check_incremental(bad_block);
-		if(Status == BAD && bad_block == block_num){
+		if(Status == bad && bad_block == block_num){
 			database::table::blacklist::add(IP);
 		}
 		return Status;
