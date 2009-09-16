@@ -1,6 +1,3 @@
-/*
-This class contains all the information needed to start a download.
-*/
 #ifndef H_FILE_INFO
 #define H_FILE_INFO
 
@@ -17,8 +14,7 @@ public:
 	file_info(
 		const std::string & hash_in,
 		const std::string & path_in,
-		const boost::uint64_t & file_size_in,
-		const bool complete_in
+		const boost::uint64_t & file_size_in
 	);
 	file_info(
 		const file_info & FI
@@ -26,6 +22,5 @@ public:
 	std::string hash;
 	std::string path;
 	boost::uint64_t file_size;
-	bool complete;
 };
 #endif

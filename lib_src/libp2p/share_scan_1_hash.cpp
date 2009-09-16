@@ -55,7 +55,6 @@ void share_scan_1_hash::main_loop()
 		if(SPJ->add){
 			hash_tree::status S = hash_tree::create(SPJ->FI);
 			if(S == hash_tree::good){
-				SPJ->FI.complete = true;
 				Share.insert_update(SPJ->FI);
 				{//begin lock scope
 				boost::mutex::scoped_lock lock(job_queue_mutex);
@@ -72,7 +71,6 @@ void share_scan_1_hash::main_loop()
 				*/
 				LOGGER << "bad file: " << SPJ->FI.path;
 				SPJ->FI.hash = "";
-				SPJ->FI.complete = true;
 				Share.insert_update(SPJ->FI);
 			}
 		}else{

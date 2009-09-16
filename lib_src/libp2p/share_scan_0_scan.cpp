@@ -46,34 +46,25 @@ boost::shared_ptr<share_scan_job> share_scan_0_scan::job()
 int resume_call_back(share & Share, int columns_retrieved, char ** response,
 	char ** column_name)
 {
-	assert(response[0] && response[1] && response[2] && response[4] && response[5]);
+	assert(response[0] && response[1] && response[2] && response[3]);
 	namespace fs = boost::filesystem;
 	file_info FI;
 	FI.hash = response[0];
-	FI.path = fs::system_complete(fs::path(response[1], fs::native)).string();
+	FI.path = response[1];
+
 	std::stringstream ss;
 	ss << response[2];
 	ss >> FI.file_size;
 
 	ss.str(""); ss.clear();
-	ss << response[4];
+	ss << response[3];
 	int temp;
-	database::table::hash::state hash_state;
 	ss >> temp;
-	hash_state = reinterpret_cast<database::table::hash::state &>(temp);
+	database::table::share::state share_state
+		= reinterpret_cast<database::table::share::state &>(temp);
 
-	ss.str(""); ss.clear();
-	ss << response[5];
-	database::table::share::state share_state;
-	ss >> temp;
-	share_state = reinterpret_cast<database::table::share::state &>(temp);
+	if(share_state != database::table::share::complete){
 
-	if(hash_state == database::table::hash::complete
-		&& share_state == database::table::share::complete)
-	{
-		FI.complete = true;
-	}else{
-		FI.complete = false;
 	}
 
 	Share.insert_update(FI);
@@ -87,12 +78,11 @@ int resume_call_back(share & Share, int columns_retrieved, char ** response,
 void share_scan_0_scan::main_loop()
 {
 	//yield to other threads during prorgram start
-	boost::this_thread::yield();
+	boost::this_thread::sleep(boost::posix_time::milliseconds(100));
 
 	//read in existing share information from database
 	std::stringstream ss;
-	ss << "SELECT share.hash, share.path, share.file_size, hash.key, hash.state, "
-		"share.state FROM share, hash WHERE share.hash = hash.hash";
+	ss << "SELECT hash, path, file_size, state FROM share";
 	database::pool::get_proxy()->query(ss.str(), &resume_call_back, Share);
 
 	{//begin lock scope
@@ -122,16 +112,11 @@ void share_scan_0_scan::main_loop()
 					if(boost::filesystem::is_regular_file(iter_cur->status())){
 						std::string path = iter_cur->path().string();
 						boost::uint64_t file_size = boost::filesystem::file_size(path);
-						share::const_iterator share_iter = Share.lookup_path(path);
-						if(share_iter == Share.end() || (share_iter->file_size != file_size
-							&& share_iter->complete))
-						{
+						share::const_file_iterator share_iter = Share.lookup_path(path);
+						if(share_iter == Share.end_file() || share_iter->file_size != file_size){
 							//file not downloading and it is new or changed size
-							file_info FI;
-							FI.path = path;
-							FI.file_size = file_size;
-							FI.complete = false;
-							boost::shared_ptr<share_scan_job> SSJ(new share_scan_job(true, FI));
+							boost::shared_ptr<share_scan_job> SSJ(new share_scan_job(true,
+								file_info("", path, file_size)));
 							Share.insert_update(SSJ->FI);
 
 							{//begin lock scope
@@ -149,14 +134,14 @@ void share_scan_0_scan::main_loop()
 		}
 
 		//remove missing
-		for(share::const_iterator iter_cur = Share.begin(), iter_end = Share.end();
-			iter_cur != iter_end; ++iter_cur)
+		for(share::const_file_iterator iter_cur = Share.begin_file(),
+			iter_end = Share.end_file(); iter_cur != iter_end; ++iter_cur)
 		{
 			boost::this_thread::interruption_point();
 			boost::this_thread::sleep(scan_delay);
 			if(!boost::filesystem::exists(iter_cur->path)){
 				//erasing from Shared_Files doesn't invalidate iterator
-				Share.erase(iter_cur);
+				Share.erase(iter_cur->path);
 				boost::shared_ptr<share_scan_job> SSJ(
 					new share_scan_job(false, *iter_cur));
 				{//begin lock scope

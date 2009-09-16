@@ -1,11 +1,11 @@
 #include "share.hpp"
 
-//BEGIN share::const_iterator
-share::const_iterator::const_iterator():
+//BEGIN share::const_file_iterator
+share::const_file_iterator::const_file_iterator():
 	Share(NULL)
 {}
 
-share::const_iterator::const_iterator(
+share::const_file_iterator::const_file_iterator(
 	share * Share_in,
 	const file_info & FI_in
 ):
@@ -13,16 +13,16 @@ share::const_iterator::const_iterator(
 	FI(FI_in)
 {}
 
-share::const_iterator & share::const_iterator::operator = (
-	const share::const_iterator & rval)
+share::const_file_iterator & share::const_file_iterator::operator = (
+	const share::const_file_iterator & rval)
 {
 	Share = rval.Share;
 	FI = rval.FI;
 	return *this;
 }
 
-bool share::const_iterator::operator == (
-	const share::const_iterator & rval) const
+bool share::const_file_iterator::operator == (
+	const share::const_file_iterator & rval) const
 {
 	if(Share == NULL && rval.Share == NULL){
 		//both are end iterators
@@ -31,32 +31,33 @@ bool share::const_iterator::operator == (
 		//only one is end iterator
 		return false;
 	}else{
-		//neither is end iterator, compare files
+		//neither is end iterator, compare paths
 		return FI.path == rval.FI.path;
 	}
 }
 
-bool share::const_iterator::operator != (const share::const_iterator & rval) const
+bool share::const_file_iterator::operator != (
+	const share::const_file_iterator & rval) const
 {
 	return !(*this == rval);
 }
 
-const file_info & share::const_iterator::operator * () const
+const file_info & share::const_file_iterator::operator * () const
 {
 	assert(Share);
 	return FI;
 }
 
-const file_info * const share::const_iterator::operator -> () const
+const file_info * const share::const_file_iterator::operator -> () const
 {
 	assert(Share);
 	return &FI;
 }
 
-share::const_iterator & share::const_iterator::operator ++ ()
+share::const_file_iterator & share::const_file_iterator::operator ++ ()
 {
 	assert(Share);
-	boost::shared_ptr<const file_info> temp = Share->next(FI.path);
+	boost::shared_ptr<const file_info> temp = Share->next_file_info(FI.path);
 	if(temp){
 		FI = *temp;
 	}else{
@@ -65,29 +66,89 @@ share::const_iterator & share::const_iterator::operator ++ ()
 	return *this;
 }
 
-share::const_iterator share::const_iterator::operator ++ (int)
+share::const_file_iterator share::const_file_iterator::operator ++ (int)
 {
 	assert(Share);
-	const_iterator temp = *this;
+	const_file_iterator temp = *this;
 	++(*this);
 	return temp;
 }
-//END share::const_iterator
+//END share::const_file_iterator
 
-//BEGIN share::file_info_internal
-share::file_info_internal::file_info_internal(
-	const std::string & hash_in,
-	const std::string & path_in,
-	const file_info & FI
+//BEGIN share::slot_iterator
+share::slot_iterator::slot_iterator():
+	Share(NULL)
+{}
+
+share::slot_iterator::slot_iterator(
+	share * Share_in,
+	const boost::shared_ptr<slot> & Slot_in
 ):
-	hash(hash_in),
-	path(path_in),
-	file_size(FI.file_size),
-	complete(FI.complete)
-{
+	Share(Share_in),
+	Slot(Slot_in)
+{}
 
+share::slot_iterator & share::slot_iterator::operator = (
+	const share::slot_iterator & rval)
+{
+	Share = rval.Share;
+	Slot = rval.Slot;
+	return *this;
 }
-//END share::file_info_internal
+
+bool share::slot_iterator::operator == (
+	const share::slot_iterator & rval) const
+{
+	if(Share == NULL && rval.Share == NULL){
+		//both are end iterators
+		return true;
+	}else if(Share == NULL || rval.Share == NULL){
+		//only one is end iterator
+		return false;
+	}else{
+		//neither is end iterator, compare paths
+		return Slot->hash == rval.Slot->hash;
+	}
+}
+
+bool share::slot_iterator::operator != (
+	const share::slot_iterator & rval) const
+{
+	return !(*this == rval);
+}
+
+slot & share::slot_iterator::operator * ()
+{
+	assert(Share);
+	return *Slot;
+}
+
+boost::shared_ptr<slot> & share::slot_iterator::operator -> ()
+{
+	assert(Share);
+	return Slot;
+}
+
+share::slot_iterator & share::slot_iterator::operator ++ ()
+{
+	assert(Share);
+	boost::shared_ptr<slot> temp = Share->next_slot(Slot->hash);
+	if(temp){
+		Slot = temp;
+	}else{
+		Share = NULL;
+	}
+	return *this;
+}
+
+share::slot_iterator share::slot_iterator::operator ++ (int)
+{
+	assert(Share);
+	slot_iterator temp = *this;
+	++(*this);
+	return temp;
+}
+//END share::slot_iterator
 
 share::share():
 	total_bytes(0),
@@ -96,13 +157,23 @@ share::share():
 
 }
 
-share::const_iterator share::begin()
+share::const_file_iterator share::begin_file()
 {
-	boost::recursive_mutex::scoped_lock lock(internal_mutex);
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	if(Path.empty()){
-		return const_iterator();
+		return const_file_iterator();
 	}else{
-		return const_iterator(this, FII_to_FI(*Path.begin()->second));
+		return const_file_iterator(this, *Path.begin()->second);
+	}
+}
+
+share::slot_iterator share::begin_slot()
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	if(Slot.empty()){
+		return slot_iterator();
+	}else{
+		return slot_iterator(this, Slot.begin()->second);
 	}
 }
 
@@ -111,22 +182,22 @@ boost::uint64_t share::bytes()
 	return total_bytes;
 }
 
-share::const_iterator share::end()
+share::const_file_iterator share::end_file()
 {
-	return const_iterator();
+	return const_file_iterator();
 }
 
-int share::erase(const const_iterator & iter)
+share::slot_iterator share::end_slot()
 {
-	return erase(iter->path);
+	return slot_iterator();
 }
 
-int share::erase(const std::string & path)
+void share::erase(const std::string & path)
 {
-	boost::recursive_mutex::scoped_lock lock(internal_mutex);
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 
 	//locate Path element
-	std::map<std::string, boost::shared_ptr<file_info_internal> >::iterator
+	std::map<std::string, boost::shared_ptr<file_info> >::iterator
 		Path_iter = Path.find(path);
 	if(Path_iter != Path.end()){
 		if(!Path_iter->second->hash.empty()){
@@ -135,8 +206,8 @@ int share::erase(const std::string & path)
 		}
 
 		//locate Hash element
-		std::pair<std::map<std::string, boost::shared_ptr<file_info_internal> >::iterator,
-			std::map<std::string, boost::shared_ptr<file_info_internal> >::iterator>
+		std::pair<std::map<std::string, boost::shared_ptr<file_info> >::iterator,
+			std::map<std::string, boost::shared_ptr<file_info> >::iterator>
 			Hash_iter_pair = Hash.equal_range(Path_iter->second->hash);
 		for(; Hash_iter_pair.first != Hash_iter_pair.second; ++Hash_iter_pair.first){
 			if(Hash_iter_pair.first->second == Path_iter->second){
@@ -147,14 +218,7 @@ int share::erase(const std::string & path)
 		}
 		//erase the Path element
 		Path.erase(Path_iter);
-		return 1;
 	}
-	return 0;
-}
-
-file_info share::FII_to_FI(const file_info_internal & FII)
-{
-	return file_info(FII.hash, FII.path, FII.file_size, FII.complete);
 }
 
 boost::uint64_t share::files()
@@ -162,37 +226,51 @@ boost::uint64_t share::files()
 	return total_files;
 }
 
+boost::shared_ptr<slot> share::get_slot(const std::string & hash)
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+
+	//check for existing slot
+	std::map<std::string, boost::shared_ptr<slot> >::iterator Slot_iter = Slot.find(hash);
+	if(Slot_iter != Slot.end()){
+		//existing slot found
+		return Slot_iter->second;
+	}
+
+	//no slot yet exists, see if file with hash exists
+	std::multimap<std::string, boost::shared_ptr<file_info> >::iterator
+		Hash_iter = Hash.find(hash);
+	if(Hash_iter == Hash.end()){
+		//no file with hash exists, cannot create slot
+		return boost::shared_ptr<slot>();
+	}else{
+		//create slot
+		std::pair<std::map<std::string, boost::shared_ptr<slot> >::iterator, bool>
+			ret = Slot.insert(std::make_pair(Hash_iter->first,
+			boost::shared_ptr<slot>(new slot(*Hash_iter->second))));
+		assert(ret.second);
+		return ret.first->second;
+	}
+}
+
 void share::insert_update(const file_info & FI)
 {
-	boost::recursive_mutex::scoped_lock lock(internal_mutex);
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 
 	//check if there is an existing element
-	std::map<std::string, boost::shared_ptr<file_info_internal> >::iterator
+	std::map<std::string, boost::shared_ptr<file_info> >::iterator
 		Path_iter = Path.find(FI.path);
 	if(Path_iter != Path.end()){
 		//previous element found, erase it
 		erase(Path_iter->second->path);
-		//Note: At this point Path_iter has been invalidated.
 	}
 
-	/*
-	Insert in to Path and Hash. But associate with empty shared_ptr because we
-	need references to the keys of Path and Hash to construct the
-	file_info_internal.
-	*/
-	std::multimap<std::string, boost::shared_ptr<file_info_internal> >::iterator
-		Hash_iter = Hash.insert(std::make_pair(FI.hash, boost::shared_ptr<file_info_internal>()));
-	std::pair<std::map<std::string, boost::shared_ptr<file_info_internal> >::iterator,
-		bool> ret = Path.insert(std::make_pair(FI.path, boost::shared_ptr<file_info_internal>()));
+	std::multimap<std::string, boost::shared_ptr<file_info> >::iterator
+		Hash_iter = Hash.insert(std::make_pair(FI.hash,
+		boost::shared_ptr<file_info>(new file_info(FI))));
+	std::pair<std::map<std::string, boost::shared_ptr<file_info> >::iterator,
+		bool> ret = Path.insert(std::make_pair(FI.path, Hash_iter->second));
 	assert(ret.second);
-
-	//construct file_info_internal now that we have needed references
-	boost::shared_ptr<file_info_internal> FII(new file_info_internal(
-		Hash_iter->first, ret.first->first, FI));
-
-	//associate Path and Hash with the file_info_internal
-	Hash_iter->second = FII;
-	ret.first->second = FII;
 
 	if(!FI.hash.empty()){
 		total_bytes += FI.file_size;
@@ -200,47 +278,51 @@ void share::insert_update(const file_info & FI)
 	}
 }
 
-share::const_iterator share::lookup_hash(const std::string & hash)
+share::const_file_iterator share::lookup_hash(const std::string & hash)
 {
-	boost::recursive_mutex::scoped_lock lock(internal_mutex);
-
-	//find any file with the hash, which one doesn't matter
-	std::multimap<std::string, boost::shared_ptr<file_info_internal> >::iterator
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	std::multimap<std::string, boost::shared_ptr<file_info> >::iterator
 		iter = Hash.find(hash);
 	if(iter == Hash.end()){
-		//no file found
-		return end();
+		return end_file();
 	}else{
-		return const_iterator(this, file_info(FII_to_FI(*iter->second)));
+		return const_file_iterator(this, file_info(*iter->second));
 	}
 }
 
-share::const_iterator share::lookup_path(const std::string & path)
+share::const_file_iterator share::lookup_path(const std::string & path)
 {
-	boost::recursive_mutex::scoped_lock lock(internal_mutex);
-
-	//find file with path
-	std::map<std::string, boost::shared_ptr<file_info_internal> >::iterator
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	std::map<std::string, boost::shared_ptr<file_info> >::iterator
 		iter = Path.find(path);
 	if(iter == Path.end()){
-		//no file found
-		return end();
+		return end_file();
 	}else{
-		return const_iterator(this, file_info(FII_to_FI(*iter->second)));
+		return const_file_iterator(this, file_info(*iter->second));
 	}
 }
 
-boost::shared_ptr<const file_info> share::next(const std::string & path)
+boost::shared_ptr<const file_info> share::next_file_info(const std::string & path)
 {
-	boost::recursive_mutex::scoped_lock lock(internal_mutex);
-
-	//find path one greater than specified path
-	std::map<std::string, boost::shared_ptr<file_info_internal> >::iterator
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	std::map<std::string, boost::shared_ptr<file_info> >::iterator
 		iter = Path.upper_bound(path);
 	if(iter == Path.end()){
-		//no file found
 		return boost::shared_ptr<file_info>();
 	}else{
-		return boost::shared_ptr<file_info>(new file_info(FII_to_FI(*iter->second)));
+		//return copy
+		return boost::shared_ptr<file_info>(new file_info(*iter->second));
+	}
+}
+
+boost::shared_ptr<slot> share::next_slot(const std::string & hash)
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	std::map<std::string, boost::shared_ptr<slot> >::iterator
+		iter = Slot.upper_bound(hash);
+	if(iter == Slot.end()){
+		return boost::shared_ptr<slot>();
+	}else{
+		return iter->second;
 	}
 }

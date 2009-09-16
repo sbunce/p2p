@@ -15,19 +15,15 @@
 //standard
 #include <string>
 
+class share;
 class slot : private boost::noncopyable
 {
+	/*
+	Slots are unique (there exists only one slot per hash). Only the share class
+	is able to instantiate a slot. This makes it easy to centrally enforce this.
+	*/
+	friend class share;
 public:
-	slot(
-		const file_info & FI
-	):
-		Hash_Tree(FI),
-		File(FI),
-		hash(Hash_Tree.hash),
-		tree_size(Hash_Tree.tree_size),
-		file_size(Hash_Tree.file_size)
-	{}
-
 	//all access to Hash_Tree must be locked with Hash_Tree_mutex
 	boost::mutex Hash_Tree_mutex;
 	hash_tree Hash_Tree;
@@ -43,5 +39,16 @@ public:
 	const std::string & hash;
 	const boost::uint64_t & tree_size;
 	const boost::uint64_t & file_size;
+
+private:
+	slot(
+		const file_info & FI
+	):
+		Hash_Tree(FI),
+		File(FI),
+		hash(Hash_Tree.hash),
+		tree_size(Hash_Tree.tree_size),
+		file_size(Hash_Tree.file_size)
+	{}
 };
 #endif

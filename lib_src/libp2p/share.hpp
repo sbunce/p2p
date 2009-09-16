@@ -21,108 +21,129 @@
 
 class share : private boost::noncopyable
 {
-	class file_info_internal;
 public:
 	share();
 
 	/*
-	Modifications to share_info don't invalidate this iterator. This iterator
-	works by passing the path of the current file to std::map::upper_bound() to
-	get the next file.
-
-	Note: This iterator is a input iterator so it is not guaranteed that
-		++a == ++b is true even if a and b are initially equal.
+	Modifications to share don't invalidate this iterator.
 	Note: This iterator is const because it allows the user access to only copies
-		of data internal to share_info.
+		of data internal to share.
 	*/
-	class const_iterator : public std::iterator<std::input_iterator_tag, file_info>
+	class const_file_iterator : public std::iterator<std::input_iterator_tag, file_info>
 	{
 		friend class share;
 	public:
-		const_iterator(); //creates end iterator
-		const_iterator & operator = (const const_iterator & rval);
-		bool operator == (const const_iterator & rval) const;
-		bool operator != (const const_iterator & rval) const;
+		const_file_iterator(); //creates end iterator
+		const_file_iterator & operator = (const const_file_iterator & rval);
+		bool operator == (const const_file_iterator & rval) const;
+		bool operator != (const const_file_iterator & rval) const;
 		const file_info & operator * () const;
 		const file_info * const operator -> () const;
-		const_iterator & operator ++ ();
-		const_iterator operator ++ (int);
+		const_file_iterator & operator ++ ();
+		const_file_iterator operator ++ (int);
 	private:
-		const_iterator(
+		const_file_iterator(
 			share * Share_in,
-			const file_info & FI
+			const file_info & FI_in
 		);
 		share * Share;
 		file_info FI;
 	};
 	//make friend so const_iterator can call share::next()
-	friend class const_iterator;
+	friend class const_file_iterator;
 
 	/*
-	begin:
-		Returns beginning const_iterator.
-	bytes:
-		Returns total number of bytes in share
-	end:
-		Returns end const iterator.
+	Modifications to share don't invalidate this iterator.
+	*/
+	class slot_iterator : public std::iterator<std::input_iterator_tag, slot>
+	{
+		friend class share;
+	public:
+		slot_iterator(); //creates end iterator
+		slot_iterator & operator = (const slot_iterator & rval);
+		bool operator == (const slot_iterator & rval) const;
+		bool operator != (const slot_iterator & rval) const;
+		slot & operator * ();
+		boost::shared_ptr<slot> & operator -> ();
+		slot_iterator & operator ++ ();
+		slot_iterator operator ++ (int);
+	private:
+		slot_iterator(
+			share * Share_in,
+			const boost::shared_ptr<slot> & Slot_in
+		);
+		share * Share;
+		boost::shared_ptr<slot> Slot;
+	};
+	//make friend so const_iterator can call share::next()
+	friend class const_slot_iterator;
+
+	/* File Related
+	begin_file:
+		Returns iterator to beginning of files.
+	end_file:
+		Returns iterator to end of files.
 	erase:
-		Remove file with specified path or iterator from share_info. Returns the
-		number of elements erased.
+		Remove file with specified path.
 		Note: The path is the only way to erase because it's guaranteed to be
 			unique.
-	files:
-		Returns total number of files in share  excluding files with an empty
-		hash.
-	insert:
+	insert_update:
 		Insert or update file if a file already exists with the same path.
 	lookup_hash:
 		Lookup file by hash. The shared_ptr will be empty if no file found.
 	lookup_path:
 		Lookup file by path. The shared_ptr will be empty if no file found.
 	*/
-	const_iterator begin();
-	boost::uint64_t bytes();
-	const_iterator end();
-	int erase(const const_iterator & iter);
-	int erase(const std::string & path);
-	boost::uint64_t files();
+	const_file_iterator begin_file();
+	const_file_iterator end_file();
+	void erase(const std::string & path);
 	void insert_update(const file_info & FI);
-	const_iterator lookup_hash(const std::string & hash);
-	const_iterator lookup_path(const std::string & path);
+	const_file_iterator lookup_hash(const std::string & hash);
+	const_file_iterator lookup_path(const std::string & path);
+
+	/* Slot Related
+	begin_slot:
+		Returns iterator to beginning of slots.
+	end_slot:
+		Returns iterator to end of slots.
+	get_slot:
+		Returns a slot for a file with specified hash. If the slot doesn't exist
+		it will be created and then returned. An empty shared_ptr will be returned
+		if a file with the specified hash doesn't exist. The same object will be
+		returned for multiple calls with the same hash.
+	*/
+	slot_iterator begin_slot();
+	slot_iterator end_slot();
+	boost::shared_ptr<slot> get_slot(const std::string & hash);
+
+	/* Info
+	bytes:
+		Returns total number of bytes in share
+	files:
+		Returns total number of files in share  excluding files with an empty
+		hash.
+	*/
+	boost::uint64_t bytes();
+	boost::uint64_t files();
 
 private:
-	/*
-	This object saves space by storing a reference to the keys of Hash and Path
-	instead of copies. The number of shared files can be very large so this is
-	a big memory saver.
-	*/
-	class file_info_internal
-	{
-	public:
-		file_info_internal(
-			const std::string & hash_in,
-			const std::string & path_in,
-			const file_info & FI
-		);
-		const std::string & hash;
-		const std::string & path;
-		const boost::uint64_t file_size;
-		const bool complete;
-	};
-
 	/*
 	Different ways of looking up info.
 	internal_mutex:
 		Locks access to everything in this section.
 	Hash:
-		Associates file hashes with file_info. This is a multimap because there
+		Hash associated with file_info. This is a multimap because there
 		might be more than one file with the same hash (duplicate files).
 	Path:
 		Associates the file path with the file info.
+	Slot:
+		Hash associated with slot. This is a regular map (not a multimap) because
+		we don't want more than one slot per hash.
 	*/
-	boost::recursive_mutex internal_mutex;
-	std::multimap<std::string, boost::shared_ptr<file_info_internal> > Hash;
-	std::map<std::string, boost::shared_ptr<file_info_internal> > Path;
+	boost::recursive_mutex Recursive_Mutex;
+	std::multimap<std::string, boost::shared_ptr<file_info> > Hash;
+	std::map<std::string, boost::shared_ptr<file_info> > Path;
+	std::map<std::string, boost::shared_ptr<slot> > Slot;
 
 	/*
 	total_bytes:
@@ -136,15 +157,16 @@ private:
 	atomic_int<boost::uint64_t> total_files;
 
 	/*
-	FII_to_FI:
-		Converts a file_info_internal to a file_info. We have this instead of
-		adding a ctor to file_info because we don't want file_info to know about
-		file_info_internal.
-	next:
+	next_file_info:
 		Uses the specified path for std::map::upper_bound(). Returns the file
-		with the next greatest path. Used to implement const_iterator increment.
+		with the next greatest path or an empty shared_ptr if there is no more.
+		This is used to implement const_file_iterator increment.
+	next_slot:
+		Uses the specified hash for std::map::upper_bound(). Returns the slot with
+		the next greatest hash or an empty shared_ptr if no more slots. This is
+		used to implement slot_iterator increment.
 	*/
-	file_info FII_to_FI(const file_info_internal & FII);
-	boost::shared_ptr<const file_info> next(const std::string & path);
+	boost::shared_ptr<const file_info> next_file_info(const std::string & path);
+	boost::shared_ptr<slot> next_slot(const std::string & hash);
 };
 #endif

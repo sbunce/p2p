@@ -50,11 +50,6 @@ unsigned p2p_real::max_connections()
 	return max_connections_proxy;
 }
 
-//boost::bind can't handle default parameter, wrapper required
-static void max_connections_wrapper(unsigned max_connections_in)
-{
-	database::table::preferences::set_max_connections(max_connections_in);
-}
 void p2p_real::max_connections(unsigned connections)
 {
 	if(connections > Proactor.supported_connections()){
@@ -62,7 +57,8 @@ void p2p_real::max_connections(unsigned connections)
 	}
 	Proactor.max_connections(connections / 2, connections / 2);
 	max_connections_proxy = connections;
-	Thread_Pool.queue(boost::bind(&max_connections_wrapper, connections));
+	Thread_Pool.queue(boost::bind(&database::table::preferences::set_max_connections,
+		connections, database::pool::get_proxy()));
 }
 
 unsigned p2p_real::max_download_rate()
@@ -70,16 +66,12 @@ unsigned p2p_real::max_download_rate()
 	return max_download_rate_proxy;
 }
 
-//boost::bind can't handle default parameter, wrapper required
-static void max_download_rate_wrapper(const unsigned rate)
-{
-	database::table::preferences::set_max_download_rate(rate);
-}
 void p2p_real::max_download_rate(const unsigned rate)
 {
 	Proactor.max_download_rate(rate);
 	max_download_rate_proxy = rate;
-	Thread_Pool.queue(boost::bind(&max_download_rate_wrapper, rate));
+	Thread_Pool.queue(boost::bind(&database::table::preferences::set_max_download_rate,
+		rate, database::pool::get_proxy()));
 }
 
 unsigned p2p_real::max_upload_rate()
@@ -87,16 +79,12 @@ unsigned p2p_real::max_upload_rate()
 	return max_upload_rate_proxy;
 }
 
-//boost::bind can't handle default parameter, wrapper required
-static void max_upload_rate_wrapper(const unsigned rate)
-{
-	database::table::preferences::set_max_upload_rate(rate);
-}
 void p2p_real::max_upload_rate(const unsigned rate)
 {
 	Proactor.max_upload_rate(rate);
 	max_upload_rate_proxy = rate;
-	Thread_Pool.queue(boost::bind(&max_upload_rate_wrapper, rate));
+	Thread_Pool.queue(boost::bind(&database::table::preferences::set_max_upload_rate,
+		rate, database::pool::get_proxy()));
 }
 
 void p2p_real::pause_download(const std::string & hash)
@@ -112,7 +100,7 @@ unsigned p2p_real::prime_count()
 void p2p_real::resume()
 {
 	Share_Scan.block_until_resumed();
-
+	LOGGER << "share scan resumed";
 }
 
 boost::uint64_t p2p_real::share_size_bytes()
