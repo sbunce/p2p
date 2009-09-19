@@ -24,6 +24,9 @@ hash_tree::hash_tree(
 	block_status(tree_block_count),
 	end_of_good(0)
 {
+//DEBUG, not a good place for database access. This object is constructed in
+//contexts where it's difficult to error check.
+
 	if(tree_block_count != 0){
 		boost::shared_ptr<database::table::hash::tree_info>
 			TI = database::table::hash::tree_open(hash);

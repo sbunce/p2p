@@ -21,6 +21,8 @@ public:
 	const std::string hash;
 	const boost::uint64_t file_size;
 	block_request Block_Request;
+
+
 private:
 
 };

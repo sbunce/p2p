@@ -278,6 +278,19 @@ void share::insert_update(const file_info & FI)
 	}
 }
 
+bool share::is_downloading(const std::string & path)
+{
+	const_file_iterator CFI = lookup_path(path);
+	if(CFI == end_file()){
+		return false;
+	}else{
+		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+		std::map<std::string, boost::shared_ptr<slot> >::iterator
+			slot_iter = Slot.find(CFI->hash);
+		return slot_iter != Slot.end();
+	}
+}
+
 share::const_file_iterator share::lookup_hash(const std::string & hash)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
@@ -324,5 +337,19 @@ boost::shared_ptr<slot> share::next_slot(const std::string & hash)
 		return boost::shared_ptr<slot>();
 	}else{
 		return iter->second;
+	}
+}
+
+void share::remove_unused_slots()
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	std::map<std::string, boost::shared_ptr<slot> >::iterator iter_cur = Slot.begin(),
+		iter_end = Slot.end();
+	while(iter_cur != iter_end){
+		if(iter_cur->second.unique() && iter_cur->second->complete()){
+			Slot.erase(iter_cur++);
+		}else{
+			++iter_cur;
+		}
 	}
 }

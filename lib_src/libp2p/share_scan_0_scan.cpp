@@ -46,33 +46,28 @@ boost::shared_ptr<share_scan_job> share_scan_0_scan::job()
 int resume_call_back(share & Share, int columns_retrieved, char ** response,
 	char ** column_name)
 {
+	if(boost::this_thread::interruption_requested()){
+		return 1;
+	}
 	assert(response[0] && response[1] && response[2] && response[3]);
 	namespace fs = boost::filesystem;
 	file_info FI;
 	FI.hash = response[0];
 	FI.path = response[1];
-
 	std::stringstream ss;
 	ss << response[2];
 	ss >> FI.file_size;
-
 	ss.str(""); ss.clear();
 	ss << response[3];
 	int temp;
 	ss >> temp;
 	database::table::share::state share_state
 		= reinterpret_cast<database::table::share::state &>(temp);
-
-	if(share_state != database::table::share::complete){
-
-	}
-
 	Share.insert_update(FI);
-	if(boost::this_thread::interruption_requested()){
-		return 1;
-	}else{
-		return 0;
+	if(share_state != database::table::share::complete){
+		Share.get_slot(FI.hash);
 	}
+	return 0;
 }
 
 void share_scan_0_scan::main_loop()
@@ -113,17 +108,18 @@ void share_scan_0_scan::main_loop()
 						std::string path = iter_cur->path().string();
 						boost::uint64_t file_size = boost::filesystem::file_size(path);
 						share::const_file_iterator share_iter = Share.lookup_path(path);
-						if(share_iter == Share.end_file() || share_iter->file_size != file_size){
-							//file not downloading and it is new or changed size
-							boost::shared_ptr<share_scan_job> SSJ(new share_scan_job(true,
-								file_info("", path, file_size)));
-							Share.insert_update(SSJ->FI);
-
-							{//begin lock scope
-							boost::mutex::scoped_lock lock(job_queue_mutex);
-							job_queue.push_back(SSJ);
-							job_queue_cond.notify_one();
-							}//end lock scope
+						if((share_iter == Share.end_file() || share_iter->file_size != file_size)
+							&& !Share.is_downloading(path))
+						{
+								//file not downloading and it is new or changed size
+								boost::shared_ptr<share_scan_job> SSJ(new share_scan_job(true,
+									file_info("", path, file_size)));
+								Share.insert_update(SSJ->FI);
+								{//begin lock scope
+								boost::mutex::scoped_lock lock(job_queue_mutex);
+								job_queue.push_back(SSJ);
+								job_queue_cond.notify_one();
+								}//end lock scope
 						}
 					}
 					++iter_cur;
@@ -140,7 +136,6 @@ void share_scan_0_scan::main_loop()
 			boost::this_thread::interruption_point();
 			boost::this_thread::sleep(scan_delay);
 			if(!boost::filesystem::exists(iter_cur->path)){
-				//erasing from Shared_Files doesn't invalidate iterator
 				Share.erase(iter_cur->path);
 				boost::shared_ptr<share_scan_job> SSJ(
 					new share_scan_job(false, *iter_cur));

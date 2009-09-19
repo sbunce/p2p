@@ -40,9 +40,20 @@ unsigned p2p_real::download_rate()
 	return Proactor.download_rate();
 }
 
-void p2p_real::downloads(std::vector<download_status> & CD)
+void p2p_real::downloads(std::vector<download_status> & Download)
 {
-	CD.clear();
+	Download.clear();
+	for(share::slot_iterator iter_cur = Share.begin_slot(), iter_end = Share.end_slot();
+		iter_cur != iter_end; ++iter_cur)
+	{
+		download_status DS;
+		DS.hash = iter_cur->hash;
+		DS.name = "foo";
+		DS.size = iter_cur->file_size;
+		DS.percent_complete = 69;
+		DS.total_speed = 0;
+		Download.push_back(DS);
+	}
 }
 
 unsigned p2p_real::max_connections()

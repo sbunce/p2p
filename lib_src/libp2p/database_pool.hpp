@@ -56,9 +56,6 @@ public:
 private:
 	pool();
 
-	//used to test preconditions
-	bool started;
-
 	/*
 	The Pool container holds available database connections. When there are no
 	available connections threads will wait on the Pool_cond. The Pool_mutex

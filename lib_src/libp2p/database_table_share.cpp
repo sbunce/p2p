@@ -5,7 +5,7 @@ void database::table::share::add_entry(const file_info & FI,
 {
 	char * path_sqlite = sqlite3_mprintf("%Q", FI.path.c_str());
 	std::stringstream ss;
-	ss << "INSERT INTO share(hash, file_size, path, state) VALUES('" << FI.hash << "', '"
+	ss << "INSERT INTO share VALUES('" << FI.hash << "', '"
 		<< FI.file_size << "', " << path_sqlite << ", " << FI.State << ")";
 	sqlite3_free(path_sqlite);
 	DB->query(ss.str());

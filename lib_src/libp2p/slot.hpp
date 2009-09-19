@@ -24,6 +24,10 @@ class slot : private boost::noncopyable
 	*/
 	friend class share;
 public:
+/*
+DEBUG, consider not having the Hash_Tree and File directly accessible.
+*/
+
 	//all access to Hash_Tree must be locked with Hash_Tree_mutex
 	boost::mutex Hash_Tree_mutex;
 	hash_tree Hash_Tree;
@@ -39,6 +43,31 @@ public:
 	const std::string & hash;
 	const boost::uint64_t & tree_size;
 	const boost::uint64_t & file_size;
+
+	/*
+	complete:
+		Returns true if both the Hash_Tree and File are complete.
+	*/
+	bool complete()
+	{
+		bool temp = true;
+		{//begin lock scope
+		boost::mutex::scoped_lock lock(Hash_Tree_mutex);
+		if(!Hash_Tree.complete()){
+			temp = false;
+		}
+		}//end lock scope
+
+/*
+		{//begin lock scope
+		boost::mutex::scoped_lock lock(File_mutex);
+		if(!File.complete()){
+			temp = false;
+		}
+		}//end lock scope
+*/
+		return temp;
+	}
 
 private:
 	slot(

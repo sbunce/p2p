@@ -7,13 +7,17 @@ connection_manager::connection_manager()
 
 void connection_manager::connect_call_back(network::sock & S)
 {
-	LOGGER << "connect " << S.IP;
-	boost::mutex::scoped_lock lock(Connection_mutex);
-	std::pair<std::map<int, boost::shared_ptr<connection> >::iterator, bool>
-		ret = Connection.insert(std::make_pair(S.socket_FD, new connection(S)));
-	assert(ret.second);
-	S.recv_call_back = boost::bind(&connection::recv_call_back, ret.first->second.get(), _1);
-	S.send_call_back = boost::bind(&connection::send_call_back, ret.first->second.get(), _1);
+	if(database::table::blacklist::is_blacklisted(S.IP)){
+		S.disconnect_flag = true;
+	}else{
+		LOGGER << "connect " << S.IP;
+		boost::mutex::scoped_lock lock(Connection_mutex);
+		std::pair<std::map<int, boost::shared_ptr<connection> >::iterator, bool>
+			ret = Connection.insert(std::make_pair(S.socket_FD, new connection(S)));
+		assert(ret.second);
+		S.recv_call_back = boost::bind(&connection::recv_call_back, ret.first->second.get(), _1);
+		S.send_call_back = boost::bind(&connection::send_call_back, ret.first->second.get(), _1);
+	}
 }
 
 void connection_manager::disconnect_call_back(network::sock & S)

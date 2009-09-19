@@ -111,10 +111,20 @@ public:
 		it will be created and then returned. An empty shared_ptr will be returned
 		if a file with the specified hash doesn't exist. The same object will be
 		returned for multiple calls with the same hash.
+	is_downloading:
+		Returns true if the file is downloading. This function is used by the
+		share scanner so it can know not to hash files which are downloading.
+	remove_unused_slots:
+		If the shared_ptr for a slot is unique and the slot it points to is
+		complete then it will be removed. This is called when slots are removed
+		from connections.
 	*/
+
 	slot_iterator begin_slot();
 	slot_iterator end_slot();
 	boost::shared_ptr<slot> get_slot(const std::string & hash);
+	bool is_downloading(const std::string & path);
+	void remove_unused_slots();
 
 	/* Info
 	bytes:
