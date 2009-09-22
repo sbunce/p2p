@@ -13,7 +13,10 @@
 class connection : private boost::noncopyable
 {
 public:
-	connection(network::sock & S);
+	connection(
+		network::sock & S,
+		share & Share_in
+	);
 
 	const std::string IP;
 	const std::string port;
@@ -45,5 +48,11 @@ private:
 
 	//manages all slot related messages
 	slot_manager Slot_Manager;
+
+	/*
+	make_requests:
+		Makes requests.
+	*/
+	void make_request(network::sock & S);
 };
 #endif

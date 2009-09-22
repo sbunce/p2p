@@ -1,5 +1,26 @@
 #include "database_table_share.hpp"
 
+//BEGIN database::table::share::file_info
+database::table::share::file_info::file_info()
+{
+
+}
+
+database::table::share::file_info::file_info(
+	const std::string & hash_in,
+	const boost::uint64_t file_size_in,
+	const std::string & path_in,
+	const state State_in
+):
+	hash(hash_in),
+	file_size(file_size_in),
+	path(path_in),
+	State(State_in)
+{
+
+}
+//END database::table::share::file_info
+
 void database::table::share::add_entry(const file_info & FI,
 	database::pool::proxy DB)
 {

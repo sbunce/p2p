@@ -1,5 +1,5 @@
-#ifndef H_SLOT_ELEMENT
-#define H_SLOT_ELEMENT
+#ifndef H_SLOT
+#define H_SLOT
 
 //custom
 #include "database.hpp"
@@ -10,10 +10,12 @@
 //include
 #include <atomic_bool.hpp>
 #include <boost/cstdint.hpp>
+#include <boost/thread.hpp>
 #include <boost/utility.hpp>
 
 //standard
 #include <string>
+#include <vector>
 
 class share;
 class slot : private boost::noncopyable
@@ -24,12 +26,26 @@ class slot : private boost::noncopyable
 	*/
 	friend class share;
 public:
-/*
-DEBUG, consider not having the Hash_Tree and File directly accessible.
-*/
+	const std::string & hash;
+	const boost::uint64_t & tree_size;
+	const boost::uint64_t & file_size;
+
+	/*
+	complete:
+		Returns true if both the Hash_Tree and File are complete.
+	*/
+	bool complete();
+
+private:
+	//the ctor will throw an exception if database access fails
+	slot(
+		const file_info & FI,
+		database::pool::proxy DB = database::pool::proxy()
+	);
 
 	//all access to Hash_Tree must be locked with Hash_Tree_mutex
 	boost::mutex Hash_Tree_mutex;
+//can these objects be made thread safe?
 	hash_tree Hash_Tree;
 
 	//all access to File must be locked with File_mutex
@@ -39,45 +55,5 @@ DEBUG, consider not having the Hash_Tree and File directly accessible.
 	//all the hosts known to have the file
 	boost::mutex host_mutex;
 	std::set<database::table::host::host_info> host;
-
-	const std::string & hash;
-	const boost::uint64_t & tree_size;
-	const boost::uint64_t & file_size;
-
-	/*
-	complete:
-		Returns true if both the Hash_Tree and File are complete.
-	*/
-	bool complete()
-	{
-		bool temp = true;
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(Hash_Tree_mutex);
-		if(!Hash_Tree.complete()){
-			temp = false;
-		}
-		}//end lock scope
-
-/*
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(File_mutex);
-		if(!File.complete()){
-			temp = false;
-		}
-		}//end lock scope
-*/
-		return temp;
-	}
-
-private:
-	slot(
-		const file_info & FI
-	):
-		Hash_Tree(FI),
-		File(FI),
-		hash(Hash_Tree.hash),
-		tree_size(Hash_Tree.tree_size),
-		file_size(Hash_Tree.file_size)
-	{}
 };
 #endif

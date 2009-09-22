@@ -425,11 +425,24 @@ This limit is imposed because it generates a hash tree of size 2147483640 bytes
 which is 7 bytes less than 2^31 (the largest size blob SQLite can hold).
 </blockquote>
 
-<b>3.0 Building</b>
+<b>3.0 libp2p Internals</b>
 <blockquote>
 </blockquote>
 
-<b>3.1 GNU/Linux</b>
+<b>3.1 Class Tags</b>
+<blockquote>
+A "class tag" is a few words put at the top of a class header which gives
+information about the class.
+<p>
+CTOR THREAD SPAWNING, The ctor spawns threads internal to the object.
+</p>
+</blockquote>
+
+<b>4.0 Building</b>
+<blockquote>
+</blockquote>
+
+<b>4.1 GNU/Linux</b>
 <blockquote>
 <p>
 There are many different GNU/Linux distributions. Most likely you can use your
@@ -438,7 +451,7 @@ gtkmm.
 </p>
 </blockquote>
 
-<b>3.2 Windows</b>
+<b>4.2 Windows</b>
 <blockquote>
 <p>
 <a href="http://www.microsoft.com/express/vc/">Visual C++ Express 2008</a><br>

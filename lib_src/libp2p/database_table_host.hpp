@@ -21,7 +21,10 @@ public:
 	class host_info
 	{
 	public:
-		host_info(){}
+		host_info();
+		host_info(
+			const host_info & H
+		);
 		host_info(
 			const std::string & host_in,	
 			const std::string & port_in
@@ -30,9 +33,9 @@ public:
 		std::string host;
 		std::string port;
 
-		bool operator == (const host_info & rval);
-		bool operator != (const host_info & rval);
-		bool operator < (const host_info & rval);
+		bool operator == (const host_info & rval) const;
+		bool operator != (const host_info & rval) const;
+		bool operator < (const host_info & rval) const;
 	};
 
 	/*

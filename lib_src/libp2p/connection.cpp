@@ -1,16 +1,29 @@
 #include "connection.hpp"
 
-connection::connection(network::sock & S):
+connection::connection(
+	network::sock & S,
+	share & Share_in
+):
 	IP(S.IP),
 	port(S.port),
 	Exchange(initial),
-	blacklist_state(-1)
+	blacklist_state(0),
+	Slot_Manager(Share_in)
 {
-	//if outgoing connection start key exchange by sending p and r_A
-	if(S.direction == network::sock::outgoing){
-		Encryption.send_prime_and_local_result(S.send_buff);
-		Exchange = sent_prime_and_local_result;
+	if(database::table::blacklist::is_blacklisted(S.IP)){
+		S.disconnect_flag = true;
+	}else{
+		//if outgoing connection start key exchange by sending p and r_A
+		if(S.direction == network::sock::outgoing){
+			Encryption.send_prime_and_local_result(S.send_buff);
+			Exchange = sent_prime_and_local_result;
+		}
 	}
+}
+
+void make_requests(network::sock & S)
+{
+
 }
 
 void connection::recv_call_back(network::sock & S)
@@ -26,27 +39,22 @@ void connection::recv_call_back(network::sock & S)
 			//expecting p and r_A
 			if(S.recv_buff.size() >= protocol::DH_KEY_SIZE * 2){
 				if(!Encryption.recv_prime_and_remote_result(S.recv_buff, S.send_buff)){
-					//remote host sent invalid prime
 					database::table::blacklist::add(S.IP);
 				}
 				Exchange = complete;
 			}
 		}
-	}else{
-		//decrypt new incoming data
+	}else if(S.latest_recv != 0){
 		Encryption.crypt_recv(S.recv_buff, S.recv_buff.size() - S.latest_recv);
-
-		//store initial size so it is known how much to encrypt after appending
 		int initial_send_buff_size = S.send_buff.size();
-
-		if(!S.recv_buff.empty() && !protocol::valid_command(S.recv_buff[0])){
+		protocol::command_type_enum CT = protocol::command_type(S.recv_buff[0]);
+		if(CT == protocol::slot_command){
+			Slot_Manager.recv(S.recv_buff);
+		}else{
 			LOGGER << "invalid command from " << S.IP;
 			database::table::blacklist::add(S.IP);
 		}
-
-//do stuff here
-
-		//encrypt from initial_send_buff_size to end of buffer
+		make_requests(S);
 		Encryption.crypt_send(S.send_buff, initial_send_buff_size);
 	}
 
@@ -60,12 +68,8 @@ void connection::recv_call_back(network::sock & S)
 void connection::send_call_back(network::sock & S)
 {
 	if(Exchange == complete){
-		//store initial size so it is known how much to encrypt after appending
 		int initial_send_buff_size = S.send_buff.size();
-
-//do stuff here
-
-		//encrypt from initial_send_buff_size to end of buffer
+		make_requests(S);
 		Encryption.crypt_send(S.send_buff, initial_send_buff_size);
 	}
 

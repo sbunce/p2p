@@ -41,7 +41,8 @@ public:
 	tree_allocate:
 		Allocates space for tree with specified hash and size. The set_state
 		function must be called for the hash tree to not be deleted on next
-		program start. An empty shared_ptr is returned if tree_size = 0.
+		program start. True returned if space could be allocated or false if there
+		is error.
 	tree_open:
 		Returns a shared_ptr with information for the tree. A empty shared_ptr is
 		returned if the tree doesn't exist.

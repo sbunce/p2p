@@ -49,8 +49,6 @@ public:
 		share * Share;
 		file_info FI;
 	};
-	//make friend so const_iterator can call share::next()
-	friend class const_file_iterator;
 
 	/*
 	Modifications to share don't invalidate this iterator.
@@ -75,8 +73,6 @@ public:
 		share * Share;
 		boost::shared_ptr<slot> Slot;
 	};
-	//make friend so const_iterator can call share::next()
-	friend class const_slot_iterator;
 
 	/* File Related
 	begin_file:
@@ -111,9 +107,20 @@ public:
 		it will be created and then returned. An empty shared_ptr will be returned
 		if a file with the specified hash doesn't exist. The same object will be
 		returned for multiple calls with the same hash.
+		Note: This function does database access.
 	is_downloading:
 		Returns true if the file is downloading. This function is used by the
 		share scanner so it can know not to hash files which are downloading.
+	slot_modified:
+		Used to check if there has been changes to the slots contained within
+		share. Possible changes are: slot removed, slot added, host added to slot.
+		This function works by comparing the last state seen to the current
+		slot_state. The slot_state is just an integer that is incremented whenever
+		a change is made.
+		Note: To return true upon the first call last_seen_state must be set != 0.
+		Note: Removing unused slots does not effect the state because no one would
+			care if those slots went missing.
+		Postcondition: last_seen_state = slot_state.
 	remove_unused_slots:
 		If the shared_ptr for a slot is unique and the slot it points to is
 		complete then it will be removed. This is called when slots are removed
@@ -122,8 +129,10 @@ public:
 
 	slot_iterator begin_slot();
 	slot_iterator end_slot();
-	boost::shared_ptr<slot> get_slot(const std::string & hash);
+	boost::shared_ptr<slot> get_slot(const std::string & hash,
+		database::pool::proxy DB = database::pool::proxy());
 	bool is_downloading(const std::string & path);
+	bool slot_modified(int & last_state_seen);
 	void remove_unused_slots();
 
 	/* Info
@@ -165,6 +174,9 @@ private:
 	*/
 	atomic_int<boost::uint64_t> total_bytes;
 	atomic_int<boost::uint64_t> total_files;
+
+	//see documentation for slot_modified
+	atomic_int<int> slot_state;
 
 	/*
 	next_file_info:

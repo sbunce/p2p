@@ -1,7 +1,8 @@
 #include "hash_tree.hpp"
 
 hash_tree::hash_tree(
-	const file_info & FI
+	const file_info & FI,
+	database::pool::proxy DB
 ):
 	hash(FI.hash),
 	file_size(FI.file_size),
@@ -24,16 +25,22 @@ hash_tree::hash_tree(
 	block_status(tree_block_count),
 	end_of_good(0)
 {
-//DEBUG, not a good place for database access. This object is constructed in
-//contexts where it's difficult to error check.
-
 	if(tree_block_count != 0){
 		boost::shared_ptr<database::table::hash::tree_info>
-			TI = database::table::hash::tree_open(hash);
+			TI = database::table::hash::tree_open(hash, DB);
 		if(TI){
 			Blob = TI->Blob;
 		}else{
-			throw std::exception();
+			if(database::table::hash::tree_allocate(hash, tree_size, DB)){
+				TI = database::table::hash::tree_open(hash, DB);
+				if(TI){
+					Blob = TI->Blob;
+				}else{
+					throw std::runtime_error("failed to open hash tree");
+				}
+			}else{
+				throw std::runtime_error("failed to allocate blob for hash tree");
+			}
 		}
 	}
 }

@@ -31,18 +31,13 @@ public:
 	class file_info
 	{
 	public:
-		file_info(){}
+		file_info();
 		file_info(
 			const std::string & hash_in,
 			const boost::uint64_t file_size_in,
 			const std::string & path_in,
 			const state State_in
-		):
-			hash(hash_in),
-			file_size(file_size_in),
-			path(path_in),
-			State(State_in)
-		{}
+		);
 
 		std::string hash;
 		boost::uint64_t file_size;

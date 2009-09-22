@@ -15,7 +15,7 @@
 class connection_manager : private boost::noncopyable
 {
 public:
-	connection_manager();
+	connection_manager(share & Share_in);
 
 	/*
 	connect_call_back:
@@ -30,6 +30,8 @@ public:
 	void failed_connect_call_back(network::sock & S);
 
 private:
+	share & Share;
+
 	/*
 	Connection state will be stored in the connection object. Also call backs
 	will be registered in connect_call_back to do call backs directly to the

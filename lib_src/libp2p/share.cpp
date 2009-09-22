@@ -152,7 +152,8 @@ share::slot_iterator share::slot_iterator::operator ++ (int)
 
 share::share():
 	total_bytes(0),
-	total_files(0)
+	total_files(0),
+	slot_state(0)
 {
 
 }
@@ -226,7 +227,8 @@ boost::uint64_t share::files()
 	return total_files;
 }
 
-boost::shared_ptr<slot> share::get_slot(const std::string & hash)
+boost::shared_ptr<slot> share::get_slot(const std::string & hash,
+	database::pool::proxy DB)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 
@@ -245,10 +247,17 @@ boost::shared_ptr<slot> share::get_slot(const std::string & hash)
 		return boost::shared_ptr<slot>();
 	}else{
 		//create slot
+		boost::shared_ptr<slot> new_slot;
+		try{
+			new_slot = boost::shared_ptr<slot>(new slot(*Hash_iter->second, DB));
+		}catch(std::exception & ex){
+			LOGGER << ex.what();
+			return boost::shared_ptr<slot>();
+		}
 		std::pair<std::map<std::string, boost::shared_ptr<slot> >::iterator, bool>
-			ret = Slot.insert(std::make_pair(Hash_iter->first,
-			boost::shared_ptr<slot>(new slot(*Hash_iter->second))));
+			ret = Slot.insert(std::make_pair(Hash_iter->first, new_slot));
 		assert(ret.second);
+		++slot_state;
 		return ret.first->second;
 	}
 }
@@ -351,5 +360,15 @@ void share::remove_unused_slots()
 		}else{
 			++iter_cur;
 		}
+	}
+}
+
+bool share::slot_modified(int & last_state_seen)
+{
+	if(last_state_seen == slot_state){
+		return false;
+	}else{
+		last_state_seen = slot_state;
+		return true;
 	}
 }

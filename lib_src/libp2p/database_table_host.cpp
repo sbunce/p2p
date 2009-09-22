@@ -1,6 +1,20 @@
 #include "database_table_host.hpp"
 
 //BEGIN host_info
+database::table::host::host_info::host_info()
+{
+
+}
+
+database::table::host::host_info::host_info(
+	const host_info & H
+):
+	host(H.host),
+	port(H.port)
+{
+
+}
+
 database::table::host::host_info::host_info(
 	const std::string & host_in,	
 	const std::string & port_in
@@ -11,17 +25,17 @@ database::table::host::host_info::host_info(
 
 }
 
-bool database::table::host::host_info::operator == (const host_info & rval)
+bool database::table::host::host_info::operator == (const host_info & rval) const
 {
 	return host == rval.host && port == rval.port;
 }
 
-bool database::table::host::host_info::operator != (const host_info & rval)
+bool database::table::host::host_info::operator != (const host_info & rval) const
 {
 	return !(*this == rval);
 }
 
-bool database::table::host::host_info::operator < (const host_info & rval)
+bool database::table::host::host_info::operator < (const host_info & rval) const
 {
 	return (host + port) < (rval.host + rval.port);
 }
@@ -48,8 +62,8 @@ static int lookup_call_back(boost::shared_ptr<std::vector<database::table::host:
 	return 0;
 }
 
-boost::shared_ptr<std::vector<database::table::host::host_info> > database::table::host::lookup(
-	const std::string & hash, database::pool::proxy DB)
+boost::shared_ptr<std::vector<database::table::host::host_info> >
+database::table::host::lookup( const std::string & hash, database::pool::proxy DB)
 {
 	std::stringstream ss;
 	ss << "SELECT host, port FROM host WHERE hash = '" << hash << "'";

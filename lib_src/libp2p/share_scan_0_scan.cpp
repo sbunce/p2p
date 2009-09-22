@@ -43,8 +43,8 @@ boost::shared_ptr<share_scan_job> share_scan_0_scan::job()
 	return SSJ;
 }
 
-int resume_call_back(share & Share, int columns_retrieved, char ** response,
-	char ** column_name)
+int share_scan_0_scan::resume_call_back(database::pool::proxy & DB,
+	int columns_retrieved, char ** response, char ** column_name)
 {
 	if(boost::this_thread::interruption_requested()){
 		return 1;
@@ -65,7 +65,7 @@ int resume_call_back(share & Share, int columns_retrieved, char ** response,
 		= reinterpret_cast<database::table::share::state &>(temp);
 	Share.insert_update(FI);
 	if(share_state != database::table::share::complete){
-		Share.get_slot(FI.hash);
+		Share.get_slot(FI.hash, DB);
 	}
 	return 0;
 }
@@ -78,7 +78,11 @@ void share_scan_0_scan::main_loop()
 	//read in existing share information from database
 	std::stringstream ss;
 	ss << "SELECT hash, path, file_size, state FROM share";
-	database::pool::get_proxy()->query(ss.str(), &resume_call_back, Share);
+
+	{//scope used to destroy DB
+	database::pool::proxy DB;
+	DB->query(ss.str(), this, &share_scan_0_scan::resume_call_back, DB);
+	}
 
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(resumed_mutex);
@@ -126,7 +130,7 @@ void share_scan_0_scan::main_loop()
 				}
 			}
 		}catch(std::exception & ex){
-			//LOGGER << ex.what();
+			LOGGER << ex.what();
 		}
 
 		//remove missing

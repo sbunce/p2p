@@ -1,6 +1,5 @@
 /*
-Thread safety of this class is like a file. You can read/write to different
-parts concurrently but not the same parts.
+The ctor will throw an exception if database access fails.
 */
 #ifndef H_HASH_TREE
 #define H_HASH_TREE
@@ -33,7 +32,10 @@ parts concurrently but not the same parts.
 class hash_tree : private boost::noncopyable
 {
 public:
-	hash_tree(const file_info & FI);
+	hash_tree(
+		const file_info & FI,
+		database::pool::proxy DB = database::pool::proxy()
+	);
 
 	enum status{
 		good,    //block is good
@@ -110,6 +112,8 @@ public:
 	tree. The check functions will call block_request::remove_block when a block
 	hash fails.
 	*/
+//DEBUG, consider not having this public.
+//This messes up the thread safety guarantee.
 	block_request Block_Request;
 
 private:

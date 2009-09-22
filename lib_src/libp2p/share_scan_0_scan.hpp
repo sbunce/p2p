@@ -70,10 +70,12 @@ private:
 		Blocks the scan thread when the job buffer is full.
 	main_loop:
 		Function scan_thread operates in.
-	remove_missing:
-		Removes missing files from File container.
+	resume_call_back:
+		Call back used for reading all files from share.
 	*/
 	void block_on_max_jobs();
 	void main_loop();
+	int resume_call_back(database::pool::proxy & DB, int columns_retrieved,
+		char ** response, char ** column_name);
 };
 #endif

@@ -1,13 +1,17 @@
 #include "slot_manager.hpp"
 
-slot_manager::slot_manager()
+slot_manager::slot_manager(
+	share & Share_in
+):
+	Share(Share_in)
 {
+	//get slots for files this server has
 
 }
 
+/*
 bool slot_manager::add_incoming_slot()
 {
-/*
 	if(Incoming_Slot.size() >= 256){
 		//violated protocol by opening too many slots
 		LOGGER << "remote host opened more than 256 slots";
@@ -28,14 +32,10 @@ bool slot_manager::add_incoming_slot()
 	send_buff.append(protocol::SLOT_ID)
 		.append(static_cast<unsigned char>(Incoming_Slot.size()-1));
 	return true;
-*/
+
 	return false;
 }
-
-void slot_manager::add_outgoing_slot(boost::shared_ptr<slot> SE)
-{
-	Pending_Slot_Request.push_back(SE);
-}
+*/
 
 bool slot_manager::recv(network::buffer & recv_buff)
 {

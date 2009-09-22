@@ -1,7 +1,8 @@
-#ifndef H_SLOT
-#define H_SLOT
+#ifndef H_SLOT_MANAGER
+#define H_SLOT_MANAGER
 
 //custom
+#include "share.hpp"
 #include "slot.hpp"
 
 //include
@@ -15,15 +16,15 @@
 class slot_manager : private boost::noncopyable
 {
 public:
-	slot_manager();
+	slot_manager(share & Share_in);
 
 	/*
-	message:
+	recv:
 		When the front of the recv_buff contains a slot related message it is
 		passed to this function which will process the message and erase it from
 		the buffer. Returns false if the host violated the protocol.
-		Precondition: !recv_buff.empty() && recv_buff[0] == slot related message
-	request:
+		Precondition: !recv_buff.empty() && recv_buff[0] = slot related message
+	send:
 		Appends a slot related message to send_buff. Returns true if send_buff had
 		request appended.
 	*/
@@ -31,6 +32,8 @@ public:
 	bool send(network::buffer & send_buff);
 
 private:
+	share & Share;
+
 	/*
 	The vector index of the element is the slot ID. This vector will always be
 	sized such that it's no bigger than the highest slot. Slots will always be
@@ -109,7 +112,7 @@ private:
 		Expected response associated with the size of the response.
 		Note: This will be empty if no response is expected.
 		*/
-		std::vector<std::pair<unsigned char, int> > Expected_Respones;
+		std::vector<std::pair<unsigned char, int> > Expected_Response;
 	};
 	std::deque<boost::shared_ptr<send_queue_element> > Send_Queue;
 
@@ -120,16 +123,5 @@ private:
 	response to know what slot the response is for.
 	*/
 	std::deque<boost::shared_ptr<send_queue_element> > Sent_Queue;
-
-	/*
-	add_incoming_slot:
-		Remote host wants to download from us. Allocate a slot for them and append
-		the response to send_buff. Returns false if protocol was violated.
-	add_outgoing_slot:
-		We want to download something from a remote host. Schedules a slot
-		request.
-	*/
-	bool add_incoming_slot();
-	void add_outgoing_slot(boost::shared_ptr<slot> SE);
 };
 #endif
