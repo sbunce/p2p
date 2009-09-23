@@ -26,15 +26,20 @@ class slot : private boost::noncopyable
 	*/
 	friend class share;
 public:
-	const std::string & hash;
-	const boost::uint64_t & tree_size;
-	const boost::uint64_t & file_size;
-
 	/*
 	complete:
 		Returns true if both the Hash_Tree and File are complete.
+	file_size:
+		Returns size of the file the slot is for.
+	hash:
+		Returns root hash of the hash tree (hex).
+	tree_size:
+		Returns the size of the hash tree for the file.
 	*/
 	bool complete();
+	const boost::uint64_t & file_size();
+	const std::string & hash();
+	const boost::uint64_t & tree_size();
 
 private:
 	//the ctor will throw an exception if database access fails
@@ -43,9 +48,13 @@ private:
 		database::pool::proxy DB = database::pool::proxy()
 	);
 
+/*
+DEBUG, use the mutex until the Hash_Tree object can be made thread safe. This
+will be more granular overall. We don't want one in-progress write on the hash
+tree to block other writes to the hash tree.
+*/
 	//all access to Hash_Tree must be locked with Hash_Tree_mutex
 	boost::mutex Hash_Tree_mutex;
-//can these objects be made thread safe?
 	hash_tree Hash_Tree;
 
 	//all access to File must be locked with File_mutex

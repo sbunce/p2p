@@ -115,15 +115,15 @@ void share_scan_0_scan::main_loop()
 						if((share_iter == Share.end_file() || share_iter->file_size != file_size)
 							&& !Share.is_downloading(path))
 						{
-								//file not downloading and it is new or changed size
-								boost::shared_ptr<share_scan_job> SSJ(new share_scan_job(true,
-									file_info("", path, file_size)));
-								Share.insert_update(SSJ->FI);
-								{//begin lock scope
-								boost::mutex::scoped_lock lock(job_queue_mutex);
-								job_queue.push_back(SSJ);
-								job_queue_cond.notify_one();
-								}//end lock scope
+							//file not downloading and it is new or changed size
+							boost::shared_ptr<share_scan_job> SSJ(new share_scan_job(true,
+								file_info("", path, file_size)));
+							Share.insert_update(SSJ->FI);
+							{//begin lock scope
+							boost::mutex::scoped_lock lock(job_queue_mutex);
+							job_queue.push_back(SSJ);
+							job_queue_cond.notify_one();
+							}//end lock scope
 						}
 					}
 					++iter_cur;

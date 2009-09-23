@@ -5,13 +5,10 @@ slot::slot(
 	database::pool::proxy DB
 ):
 	Hash_Tree(FI, DB),
-	File(FI),
-	hash(Hash_Tree.hash),
-	tree_size(Hash_Tree.tree_size),
-	file_size(Hash_Tree.file_size)
+	File(FI)
 {
 	boost::shared_ptr<std::vector<database::table::host::host_info> >
-		H = database::table::host::lookup(hash, DB);
+		H = database::table::host::lookup(Hash_Tree.hash, DB);
 	if(H){
 		host.insert(H->begin(), H->end());
 	}
@@ -36,4 +33,19 @@ bool slot::complete()
 	}//end lock scope
 */
 	return temp;
+}
+
+const boost::uint64_t & slot::file_size()
+{
+	return Hash_Tree.file_size;
+}
+
+const std::string & slot::hash()
+{
+	return Hash_Tree.hash;
+}
+
+const boost::uint64_t & slot::tree_size()
+{
+	return Hash_Tree.tree_size;
 }

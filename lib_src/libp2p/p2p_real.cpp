@@ -49,9 +49,9 @@ void p2p_real::downloads(std::vector<download_status> & Download)
 	{
 		if(!iter_cur->complete()){
 			download_status DS;
-			DS.hash = iter_cur->hash;
+			DS.hash = iter_cur->hash();
 			DS.name = "foo";
-			DS.size = iter_cur->file_size;
+			DS.size = iter_cur->file_size();
 			DS.percent_complete = 69;
 			DS.total_speed = 0;
 			Download.push_back(DS);
@@ -114,7 +114,13 @@ unsigned p2p_real::prime_count()
 void p2p_real::resume()
 {
 	Share_Scan.block_until_resumed();
+	Proactor.start();
 	LOGGER << "share scan resumed";
+	for(share::slot_iterator iter_cur = Share.begin_slot(), iter_end = Share.end_slot();
+		iter_cur != iter_end; ++iter_cur)
+	{
+
+	}
 }
 
 boost::uint64_t p2p_real::share_size_bytes()
@@ -155,9 +161,9 @@ void p2p_real::uploads(std::vector<upload_status> & Upload)
 	{
 		if(iter_cur->complete()){
 			upload_status US;
-			US.hash = iter_cur->hash;
+			US.hash = iter_cur->hash();
 			US.path = "/foo/bar";
-			US.size = iter_cur->file_size;
+			US.size = iter_cur->file_size();
 			US.percent_complete = 69;
 			US.speed = 0;
 			Upload.push_back(US);

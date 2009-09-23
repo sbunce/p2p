@@ -107,7 +107,7 @@ bool share::slot_iterator::operator == (
 		return false;
 	}else{
 		//neither is end iterator, compare paths
-		return Slot->hash == rval.Slot->hash;
+		return Slot->hash() == rval.Slot->hash();
 	}
 }
 
@@ -132,7 +132,7 @@ boost::shared_ptr<slot> & share::slot_iterator::operator -> ()
 share::slot_iterator & share::slot_iterator::operator ++ ()
 {
 	assert(Share);
-	boost::shared_ptr<slot> temp = Share->next_slot(Slot->hash);
+	boost::shared_ptr<slot> temp = Share->next_slot(Slot->hash());
 	if(temp){
 		Slot = temp;
 	}else{
@@ -206,7 +206,10 @@ void share::erase(const std::string & path)
 			--total_files;
 		}
 
-		//locate Hash element
+		/*
+		Locate Hash element. The loop is necessary because there can be multiple
+		files with the same hash.
+		*/
 		std::pair<std::map<std::string, boost::shared_ptr<file_info> >::iterator,
 			std::map<std::string, boost::shared_ptr<file_info> >::iterator>
 			Hash_iter_pair = Hash.equal_range(Path_iter->second->hash);
@@ -217,6 +220,7 @@ void share::erase(const std::string & path)
 				break;
 			}
 		}
+
 		//erase the Path element
 		Path.erase(Path_iter);
 	}
@@ -230,8 +234,17 @@ boost::uint64_t share::files()
 boost::shared_ptr<slot> share::get_slot(const std::string & hash,
 	database::pool::proxy DB)
 {
-	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	/*
+	Constructing a slot does database access so do not do it while holding a
+	lock. It is possible that multiple threads will construct identical slots,
+	but only one will be kept.
+	*/
 
+	//will hold copy of file info for hash
+	file_info FI;
+
+	{//begin lock scope
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	//check for existing slot
 	std::map<std::string, boost::shared_ptr<slot> >::iterator Slot_iter = Slot.find(hash);
 	if(Slot_iter != Slot.end()){
@@ -246,20 +259,43 @@ boost::shared_ptr<slot> share::get_slot(const std::string & hash,
 		//no file with hash exists, cannot create slot
 		return boost::shared_ptr<slot>();
 	}else{
-		//create slot
-		boost::shared_ptr<slot> new_slot;
-		try{
-			new_slot = boost::shared_ptr<slot>(new slot(*Hash_iter->second, DB));
-		}catch(std::exception & ex){
-			LOGGER << ex.what();
-			return boost::shared_ptr<slot>();
-		}
+		FI = *Hash_iter->second;
+	}
+	}//end lock scope
+
+	/*
+	At this point we construct the slot without a lock. It is possible that two
+	threads do this concurrently for the same file.
+	*/
+	boost::shared_ptr<slot> new_slot;
+	try{
+		new_slot = boost::shared_ptr<slot>(new slot(FI, DB));
+	}catch(std::exception & ex){
+		LOGGER << ex.what();
+		return boost::shared_ptr<slot>();
+	}
+
+	/*
+	Insert and return the slot. If the slot already exists it means another
+	thread inserted the slot first. In that case we discard the slot we made and
+	return the existing slot.
+	*/
+	{//begin lock scope
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	//check for existing slot (another thread might have created one)
+	std::map<std::string, boost::shared_ptr<slot> >::iterator Slot_iter = Slot.find(hash);
+	if(Slot_iter == Slot.end()){
+		//no slot exists, insert the one we made and return it
 		std::pair<std::map<std::string, boost::shared_ptr<slot> >::iterator, bool>
-			ret = Slot.insert(std::make_pair(Hash_iter->first, new_slot));
+			ret = Slot.insert(std::make_pair(hash, new_slot));
 		assert(ret.second);
 		++slot_state;
 		return ret.first->second;
+	}else{
+		//existing slot found
+		return Slot_iter->second;
 	}
+	}//end lock scope
 }
 
 void share::insert_update(const file_info & FI)
