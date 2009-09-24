@@ -18,14 +18,14 @@ window_upload::window_upload(
 	column.add(column_hash);
 	column.add(column_name);
 	column.add(column_size);
-	column.add(column_IP);
+	column.add(column_peers);
 	column.add(column_speed);
 	column.add(column_percent_complete);
 	upload_list = Gtk::ListStore::create(column);
 	upload_view->set_model(upload_list);
 	upload_view->append_column(" Name ", column_name);
 	upload_view->append_column(" Size ", column_size);
-	upload_view->append_column(" IP ", column_IP);
+	upload_view->append_column(" Peers ", column_peers);
 	upload_view->append_column(" Speed ", column_speed);
 
 	//percentage progress bar for percent_complete column
@@ -72,15 +72,17 @@ int window_upload::compare_size(const Gtk::TreeModel::iterator & lval,
 
 bool window_upload::upload_info_refresh()
 {
-	std::vector<upload_status> status;
-	P2P.uploads(status);
+	std::vector<p2p::transfer> T;
+	P2P.transfers(T);
 
-	for(std::vector<upload_status>::iterator status_iter_cur = status.begin(),
-		status_iter_end = status.end(); status_iter_cur != status_iter_end;
-		++status_iter_cur)
+	for(std::vector<p2p::transfer>::iterator T_iter_cur = T.begin(),
+		T_iter_end = T.end(); T_iter_cur != T_iter_end;
+		++T_iter_cur)
 	{
-		std::string speed = convert::size_SI(status_iter_cur->speed) + "/s";
-		std::string size = convert::size_SI(status_iter_cur->size);
+		std::stringstream ss;
+		ss << T_iter_cur->upload.size();
+		std::string speed = convert::size_SI(T_iter_cur->upload_speed) + "/s";
+		std::string size = convert::size_SI(T_iter_cur->file_size);
 
 		//update rows
 		bool entry_found = false;
@@ -91,17 +93,12 @@ bool window_upload::upload_info_refresh()
  			Gtk::TreeModel::Row row = *child_iter_cur;
 			Glib::ustring hash_retrieved;
 			row.get_value(0, hash_retrieved);
-			if(hash_retrieved == status_iter_cur->hash){
-				if(status_iter_cur->path.empty()){
-					//path is empty which indicates this upload is a hash
-					row[column_name] = status_iter_cur->hash;
-				}else{
-					row[column_name] = status_iter_cur->path.substr(status_iter_cur->path.find_last_of('/') + 1);
-				}
+			if(hash_retrieved == T_iter_cur->hash){
+				row[column_name] = T_iter_cur->name;
 				row[column_size] = size;
-				row[column_IP] = status_iter_cur->IP;
+				row[column_peers] = ss.str();
 				row[column_speed] = speed;
-				row[column_percent_complete] = status_iter_cur->percent_complete;
+				row[column_percent_complete] = T_iter_cur->percent_complete;
 				entry_found = true;
 				break;
 			}
@@ -109,22 +106,17 @@ bool window_upload::upload_info_refresh()
 
 		if(!entry_found){
 			Gtk::TreeModel::Row row = *(upload_list->append());
-			row[column_hash] = status_iter_cur->hash;
-			if(status_iter_cur->path.empty()){
-				//path is empty which indicates this upload is a hash
-				row[column_name] = status_iter_cur->hash;
-			}else{
-				row[column_name] = status_iter_cur->path.substr(status_iter_cur->path.find_last_of('/') + 1);
-			}
+			row[column_hash] = T_iter_cur->hash;
+			row[column_name] = T_iter_cur->name;
 			row[column_size] = size;
-			row[column_IP] = status_iter_cur->IP;
+			row[column_peers] = ss.str();
 			row[column_speed] = speed;
-			row[column_percent_complete] = status_iter_cur->percent_complete;
+			row[column_percent_complete] = T_iter_cur->percent_complete;
 		}
 	}
 
 	//if no upload info exists remove all remaining rows
-	if(status.size() == 0){
+	if(T.size() == 0){
 		upload_list->clear();
 	}
 
@@ -138,10 +130,10 @@ bool window_upload::upload_info_refresh()
 		row.get_value(0, hash_retrieved);
 
 		bool entry_found = false;
-		for(std::vector<upload_status>::iterator status_iter_cur = status.begin(),
-			status_iter_end = status.end(); status_iter_cur != status_iter_end; ++status_iter_cur)
+		for(std::vector<p2p::transfer>::iterator T_iter_cur = T.begin(),
+			T_iter_end = T.end(); T_iter_cur != T_iter_end; ++T_iter_cur)
 		{
-			if(hash_retrieved == status_iter_cur->hash){
+			if(hash_retrieved == T_iter_cur->hash){
 				entry_found = true;
 				break;
 			}

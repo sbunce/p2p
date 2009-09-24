@@ -18,7 +18,7 @@
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
 #include <network/network.hpp>
-#include <p2p/p2p.hpp>
+#include <p2p.hpp>
 #include <thread_pool.hpp>
 
 //standard
@@ -35,7 +35,6 @@ public:
 
 	//documentation for these in p2p.hpp
 	unsigned download_rate();
-	void downloads(std::vector<download_status> & CD);
 	unsigned max_connections();
 	void max_connections(unsigned connections);
 	unsigned max_download_rate();
@@ -47,10 +46,10 @@ public:
 	void remove_download(const std::string & hash);
 	boost::uint64_t share_size_bytes();
 	boost::uint64_t share_size_files();
-	void start_download(const download_info & DI);
+	void start_download(const p2p::download & D);
 	unsigned supported_connections();
+	void transfers(std::vector<p2p::transfer> & T);
 	unsigned upload_rate();
-	void uploads(std::vector<upload_status> & CU);
 
 private:
 	//thread spawned by ctor to do actions on startup

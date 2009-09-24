@@ -8,7 +8,7 @@
 #include <boost/utility.hpp>
 #include <gtkmm.h>
 #include <logger.hpp>
-#include <p2p/p2p.hpp>
+#include <p2p.hpp>
 
 //standard
 #include <sstream>

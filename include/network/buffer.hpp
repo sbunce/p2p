@@ -44,7 +44,7 @@ public:
 		bool operator == (const iterator & rval) const;
 		bool operator != (const iterator & rval) const;
 		unsigned char & operator * ();
-		//operator -> doesn't have to be defined because ->m is not well-defined
+		//operator -> doesn't have to be defined because ->m is not well defined
 		iterator & operator ++ ();
 		iterator operator ++ (int);
 		iterator & operator -- ();

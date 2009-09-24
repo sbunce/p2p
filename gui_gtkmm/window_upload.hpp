@@ -7,7 +7,7 @@
 //include
 #include <convert.hpp>
 #include <gtkmm.h>
-#include <p2p/p2p.hpp>
+#include <p2p.hpp>
 
 class window_upload : public Gtk::ScrolledWindow, private boost::noncopyable
 {
@@ -27,9 +27,9 @@ private:
 	//columns
 	Gtk::TreeModel::ColumnRecord column;
 	Gtk::TreeModelColumn<Glib::ustring> column_hash;
-	Gtk::TreeModelColumn<Glib::ustring> column_IP;
 	Gtk::TreeModelColumn<Glib::ustring> column_name;
 	Gtk::TreeModelColumn<Glib::ustring> column_size;
+	Gtk::TreeModelColumn<Glib::ustring> column_peers;
 	Gtk::TreeModelColumn<Glib::ustring> column_speed;
 	Gtk::TreeModelColumn<int> column_percent_complete;
 	Gtk::CellRendererProgress * cell;

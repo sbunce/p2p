@@ -7,7 +7,7 @@
 //include
 #include <boost/utility.hpp>
 #include <logger.hpp>
-#include <p2p/p2p.hpp>
+#include <p2p.hpp>
 #include <gtkmm.h>
 
 class window_about : public Gtk::Window, private boost::noncopyable

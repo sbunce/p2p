@@ -3,17 +3,12 @@
 
 //include
 #include <boost/shared_ptr.hpp>
-#include <p2p/p2p.hpp>
+#include <p2p.hpp>
 
 p2p::p2p():
 	P2P_Real(new p2p_real())
 {
 
-}
-
-void p2p::downloads(std::vector<download_status> & CD)
-{
-	P2P_Real->downloads(CD);
 }
 
 unsigned p2p::download_rate()
@@ -76,9 +71,9 @@ boost::uint64_t p2p::share_size_files()
 	return P2P_Real->share_size_files();
 }
 
-void p2p::start_download(const download_info & DI)
+void p2p::start_download(const p2p::download & D)
 {
-	P2P_Real->start_download(DI);
+	P2P_Real->start_download(D);
 }
 
 unsigned p2p::supported_connections()
@@ -86,12 +81,12 @@ unsigned p2p::supported_connections()
 	return P2P_Real->supported_connections();
 }
 
+void p2p::transfers(std::vector<p2p::transfer> & T)
+{
+	P2P_Real->transfers(T);
+}
+
 unsigned p2p::upload_rate()
 {
 	return P2P_Real->upload_rate();
-}
-
-void p2p::uploads(std::vector<upload_status> & CU)
-{
-	P2P_Real->uploads(CU);
 }

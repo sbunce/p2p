@@ -22,7 +22,7 @@ window_download::window_download(
 	column.add(column_hash);
 	column.add(column_name);
 	column.add(column_size);
-	column.add(column_servers);
+	column.add(column_peers);
 	column.add(column_speed);
 	column.add(column_percent_complete);
 	download_list = Gtk::ListStore::create(column);
@@ -30,7 +30,7 @@ window_download::window_download(
 
 	download_view->append_column(" Name ", column_name);
 	download_view->append_column(" Size ", column_size);
-	download_view->append_column(" Peers ", column_servers);
+	download_view->append_column(" Peers ", column_peers);
 	download_view->append_column(" Speed ", column_speed);
 
 	//display percentage progress bar
@@ -131,17 +131,17 @@ bool window_download::download_click(GdkEventButton * event)
 bool window_download::download_info_refresh()
 {
 	//update download info
-	std::vector<download_status> status;
-	P2P.downloads(status);
+	std::vector<p2p::transfer> T;
+	P2P.transfers(T);
 
-	for(std::vector<download_status>::iterator info_iter_cur = status.begin(),
-		info_iter_end = status.end(); info_iter_cur != info_iter_end; ++info_iter_cur)
+	for(std::vector<p2p::transfer>::iterator T_iter_cur = T.begin(),
+		T_iter_end = T.end(); T_iter_cur != T_iter_end; ++T_iter_cur)
 	{
 		//set up column
 		std::stringstream ss;
-		ss << info_iter_cur->servers.size();
-		std::string speed = convert::size_SI(info_iter_cur->total_speed) + "/s";
-		std::string size = convert::size_SI(info_iter_cur->size);
+		ss << T_iter_cur->download.size();
+		std::string speed = convert::size_SI(T_iter_cur->download_speed) + "/s";
+		std::string size = convert::size_SI(T_iter_cur->file_size);
 
 		//update rows
 		bool entry_found = false;
@@ -153,12 +153,12 @@ bool window_download::download_info_refresh()
  			Gtk::TreeModel::Row row = *child_iter_cur;
 			Glib::ustring hash_retrieved;
 			row.get_value(0, hash_retrieved);
-			if(hash_retrieved == info_iter_cur->hash){
-				row[column_name] = info_iter_cur->name;
+			if(hash_retrieved == T_iter_cur->hash){
+				row[column_name] = T_iter_cur->name;
 				row[column_size] = size;
-				row[column_servers] = ss.str();
+				row[column_peers] = ss.str();
 				row[column_speed] = speed;
-				row[column_percent_complete] = info_iter_cur->percent_complete;
+				row[column_percent_complete] = T_iter_cur->percent_complete;
 				entry_found = true;
 				break;
 			}
@@ -166,17 +166,17 @@ bool window_download::download_info_refresh()
 
 		if(!entry_found){
 			Gtk::TreeModel::Row row = *(download_list->append());
-			row[column_hash] = info_iter_cur->hash;
-			row[column_name] = info_iter_cur->name;
+			row[column_hash] = T_iter_cur->hash;
+			row[column_name] = T_iter_cur->name;
 			row[column_size] = size;
-			row[column_servers] = ss.str();
+			row[column_peers] = ss.str();
 			row[column_speed] = speed;
-			row[column_percent_complete] = info_iter_cur->percent_complete;
+			row[column_percent_complete] = T_iter_cur->percent_complete;
 		}
 	}
 
 	//if no download info exists remove all remaining rows
-	if(status.size() == 0){
+	if(T.size() == 0){
 		download_list->clear();
 	}
 
@@ -190,10 +190,10 @@ bool window_download::download_info_refresh()
 		row.get_value(0, hash_retrieved);
 
 		bool entry_found = false;
-		for(std::vector<download_status>::iterator info_iter_cur = status.begin(),
-			info_iter_end = status.end(); info_iter_cur != info_iter_end; ++info_iter_cur)
+		for(std::vector<p2p::transfer>::iterator T_iter_cur = T.begin(),
+			T_iter_end = T.end(); T_iter_cur != T_iter_end; ++T_iter_cur)
 		{
-			if(hash_retrieved == info_iter_cur->hash){
+			if(hash_retrieved == T_iter_cur->hash){
 				entry_found = true;
 				break;
 			}

@@ -14,7 +14,7 @@
 #include <boost/utility.hpp>
 #include <convert.hpp>
 #include <gtkmm.h>
-#include <p2p/p2p.hpp>
+#include <p2p.hpp>
 
 //standard
 #include <algorithm>

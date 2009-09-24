@@ -1,6 +1,6 @@
 //include
 #include <boost/thread.hpp>
-#include <p2p/p2p.hpp>
+#include <p2p.hpp>
 
 //standard
 #include <csignal>

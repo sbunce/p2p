@@ -41,24 +41,6 @@ unsigned p2p_real::download_rate()
 	return Proactor.download_rate();
 }
 
-void p2p_real::downloads(std::vector<download_status> & Download)
-{
-	Download.clear();
-	for(share::slot_iterator iter_cur = Share.begin_slot(), iter_end = Share.end_slot();
-		iter_cur != iter_end; ++iter_cur)
-	{
-		if(!iter_cur->complete()){
-			download_status DS;
-			DS.hash = iter_cur->hash();
-			DS.name = "foo";
-			DS.size = iter_cur->file_size();
-			DS.percent_complete = 69;
-			DS.total_speed = 0;
-			Download.push_back(DS);
-		}
-	}
-}
-
 unsigned p2p_real::max_connections()
 {
 	return max_connections_proxy;
@@ -133,7 +115,7 @@ boost::uint64_t p2p_real::share_size_files()
 	return Share.files();
 }
 
-void p2p_real::start_download(const download_info & DI)
+void p2p_real::start_download(const p2p::download & D)
 {
 
 }
@@ -148,25 +130,24 @@ void p2p_real::remove_download(const std::string & hash)
 
 }
 
+void p2p_real::transfers(std::vector<p2p::transfer> & T)
+{
+	T.clear();
+	for(share::slot_iterator iter_cur = Share.begin_slot(),
+		iter_end = Share.end_slot(); iter_cur != iter_end; ++iter_cur)
+	{
+		p2p::transfer transfer;
+		transfer.hash = iter_cur->hash();
+		transfer.name = "foo";
+		transfer.file_size = iter_cur->file_size();
+		transfer.percent_complete = 69;
+		transfer.upload_speed = 1024;
+		transfer.download_speed = 1024;
+		T.push_back(transfer);
+	}
+}
+
 unsigned p2p_real::upload_rate()
 {
 	return Proactor.upload_rate();
-}
-
-void p2p_real::uploads(std::vector<upload_status> & Upload)
-{
-	Upload.clear();
-	for(share::slot_iterator iter_cur = Share.begin_slot(), iter_end = Share.end_slot();
-		iter_cur != iter_end; ++iter_cur)
-	{
-		if(iter_cur->complete()){
-			upload_status US;
-			US.hash = iter_cur->hash();
-			US.path = "/foo/bar";
-			US.size = iter_cur->file_size();
-			US.percent_complete = 69;
-			US.speed = 0;
-			Upload.push_back(US);
-		}
-	}
 }
