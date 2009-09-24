@@ -5,9 +5,8 @@
 #include "settings.hpp"
 #include "statusbar_main.hpp"
 #include "window_about.hpp"
-#include "window_download.hpp"
 #include "window_preferences.hpp"
-#include "window_upload.hpp"
+#include "window_transfer.hpp"
 
 //include
 #include <boost/shared_ptr.hpp>
@@ -63,11 +62,9 @@ private:
 	//bottom bar that displays status etc
 	Gtk::Statusbar * statusbar;
 
-	/*
-	Custom classes derived from gtkmm objects.
-	*/
-	window_download * Window_Download; //stuff in download tab
-	window_upload * Window_Upload;     //stuff in upload tab
+	//stuff in download/upload tabs
+	window_transfer * Window_Download;
+	window_transfer * Window_Upload;
 
 	//types of data accepted by drag and drop
 	std::list<Gtk::TargetEntry> list_targets;

@@ -1,5 +1,5 @@
-#ifndef H_WINDOW_DOWNLOAD
-#define H_WINDOW_DOWNLOAD
+#ifndef H_WINDOW_TRANSFER
+#define H_WINDOW_TRANSFER
 
 //custom
 #include "settings.hpp"
@@ -14,22 +14,31 @@
 #include <set>
 #include <string>
 
-class window_download : public Gtk::ScrolledWindow, private boost::noncopyable
+class window_transfer : public Gtk::ScrolledWindow, private boost::noncopyable
 {
 public:
-	window_download(
+	enum type {
+		download,
+		upload
+	};
+
+	window_transfer(
 		p2p & P2P_in,
-		Gtk::Notebook * notebook_in
+		Gtk::Notebook * notebook_in,
+		const type Type_in
 	);
 
 private:
 	p2p & P2P;
 
-	//convenience pointer
-	Gtk::ScrolledWindow * window;
-
 	//the same notebook that exists in GUI
 	Gtk::Notebook * notebook;
+
+	//upload or download (some things are disabled for upload)
+	const type Type;
+
+	//convenience pointer
+	Gtk::ScrolledWindow * window;
 
 	//objects for display of downloads
 	Gtk::TreeView * download_view;
@@ -57,21 +66,18 @@ private:
 		Signaled when user clicks size or speed column to sort.
 	delete_download:
 		Removes selected download.
-	download_click:
-		Called when download_view clicked.
-	download_info_tab:
-		Sets up a download_window_download_status tab for the selected download.
-	download_info_refresh:
-		Refreshes the tree view.
-	pause_download:
+	click:
+		Called when TreeView clicked.
+	refresh:
+		Refreshes TreeView.
+	pause:
 		Pauses the selected download.
 	*/
 	int compare_size(const Gtk::TreeModel::iterator & lval,
 		const Gtk::TreeModel::iterator & rval);
 	void delete_download();
-	bool download_click(GdkEventButton * event);
-	void download_info_tab();
-	bool download_info_refresh();
-	void pause_download();
+	bool click(GdkEventButton * event);
+	bool refresh();
+	void pause();
 };
 #endif

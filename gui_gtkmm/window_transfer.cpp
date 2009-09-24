@@ -1,11 +1,13 @@
-#include "window_download.hpp"
+#include "window_transfer.hpp"
 
-window_download::window_download(
+window_transfer::window_transfer(
 	p2p & P2P_in,
-	Gtk::Notebook * notebook_in
+	Gtk::Notebook * notebook_in,
+	const type Type_in
 ):
 	P2P(P2P_in),
-	notebook(notebook_in)
+	notebook(notebook_in),
+	Type(Type_in)
 {
 	window = this;
 
@@ -45,47 +47,47 @@ window_download::window_download(
 	C->set_sort_column(1);
 	C = download_view->get_column(1); assert(C);
 	C->set_sort_column(2);
-	download_list->set_sort_func(2, sigc::mem_fun(*this, &window_download::compare_size));
+	download_list->set_sort_func(2, sigc::mem_fun(*this, &window_transfer::compare_size));
 	C = download_view->get_column(2); assert(C);
 	C->set_sort_column(3);
 	C = download_view->get_column(3); assert(C);
 	C->set_sort_column(4);
-	download_list->set_sort_func(4, sigc::mem_fun(*this, &window_download::compare_size));
+	download_list->set_sort_func(4, sigc::mem_fun(*this, &window_transfer::compare_size));
 	C = download_view->get_column(4); assert(C);
 	C->set_sort_column(5);
 
-	//menu that pops up when right click happens on download
-	downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::StockMenuElem(
-		Gtk::StockID(Gtk::Stock::MEDIA_PAUSE), sigc::mem_fun(*this,
-		&window_download::pause_download)));
-	downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::StockMenuElem(
-		Gtk::StockID(Gtk::Stock::DELETE), sigc::mem_fun(*this,
-		&window_download::delete_download)));
+	if(Type == download){
+		//menu that pops up when right click happens on download
+		downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::StockMenuElem(
+			Gtk::StockID(Gtk::Stock::MEDIA_PAUSE), sigc::mem_fun(*this,
+			&window_transfer::pause)));
+		downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::StockMenuElem(
+			Gtk::StockID(Gtk::Stock::DELETE), sigc::mem_fun(*this,
+			&window_transfer::delete_download)));
+	}
 
 	//signaled functions
-	Glib::signal_timeout().connect(sigc::mem_fun(*this,
-		&window_download::download_info_refresh), settings::GUI_TICK);
+	Glib::signal_timeout().connect(sigc::mem_fun(*this, &window_transfer::refresh),
+		settings::GUI_TICK);
 	download_view->signal_button_press_event().connect(sigc::mem_fun(*this,
-		&window_download::download_click), false);
+		&window_transfer::click), false);
 }
 
-int window_download::compare_size(const Gtk::TreeModel::iterator & lval,
+int window_transfer::compare_size(const Gtk::TreeModel::iterator & lval,
 	const Gtk::TreeModel::iterator & rval)
 {
 	Gtk::TreeModel::Row row_lval = *lval;
 	Gtk::TreeModel::Row row_rval = *rval;
-
 	std::stringstream ss;
 	ss << row_lval[column_size];
 	std::string left = ss.str();
 	ss.str(""); ss.clear();
 	ss << row_rval[column_size];
 	std::string right = ss.str();
-
 	return convert::size_SI_cmp(left, right);
 }
 
-void window_download::delete_download()
+void window_transfer::delete_download()
 {
 	Glib::RefPtr<Gtk::TreeView::Selection> refSelection = download_view->get_selection();
 	if(refSelection){
@@ -99,7 +101,7 @@ void window_download::delete_download()
 	}
 }
 
-bool window_download::download_click(GdkEventButton * event)
+bool window_transfer::click(GdkEventButton * event)
 {
 	if(event->type == GDK_BUTTON_PRESS && event->button == 1){
 		//left click
@@ -112,7 +114,7 @@ bool window_download::download_click(GdkEventButton * event)
 		}else{
 			download_view->get_selection()->unselect_all();
 		}
-	}else if(event->type == GDK_BUTTON_PRESS && event->button == 3){
+	}else if(Type == download && event->type == GDK_BUTTON_PRESS && event->button == 3){
 		//right click
 		downloads_popup_menu.popup(event->button, event->time);
 		int x, y;
@@ -128,7 +130,7 @@ bool window_download::download_click(GdkEventButton * event)
 	return true;
 }
 
-bool window_download::download_info_refresh()
+bool window_transfer::refresh()
 {
 	//update download info
 	std::vector<p2p::transfer> T;
@@ -208,7 +210,7 @@ bool window_download::download_info_refresh()
 	return true;
 }
 
-void window_download::pause_download()
+void window_transfer::pause()
 {
 	Glib::RefPtr<Gtk::TreeView::Selection> refSelection = download_view->get_selection();
 	if(refSelection){

@@ -19,8 +19,8 @@ gui::gui():
 	Gtk::Image * upload_label = Gtk::manage(new Gtk::Image(Gtk::Stock::GO_UP,
 		Gtk::ICON_SIZE_LARGE_TOOLBAR));
 
-	Window_Download = Gtk::manage(new window_download(P2P, notebook));
-	Window_Upload = Gtk::manage(new window_upload(P2P));
+	Window_Download = Gtk::manage(new window_transfer(P2P, notebook, window_transfer::download));
+	Window_Upload = Gtk::manage(new window_transfer(P2P, notebook, window_transfer::upload));
 	statusbar = Gtk::manage(new statusbar_main(P2P));
 
 	//boxes (divides the window)
