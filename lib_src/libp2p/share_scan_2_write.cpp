@@ -22,9 +22,6 @@ void share_scan_2_write::block_until_resumed()
 
 void share_scan_2_write::main_loop()
 {
-	//yield to other threads during prorgram start
-	boost::this_thread::yield();
-
 	while(true){
 		boost::this_thread::interruption_point();
 		boost::this_thread::sleep(boost::posix_time::milliseconds(1000));

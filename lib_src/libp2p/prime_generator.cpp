@@ -15,13 +15,6 @@ prime_generator::~prime_generator()
 
 void prime_generator::main_loop()
 {
-	/*
-	Thread takes a lot of CPU time to bring up. This can increase the time it
-	takes to instantiate libp2p. This delay speeds up library instantiation. This
-	is important for fast GUI startup time.
-	*/
-	boost::this_thread::yield();
-
 	KISS PRNG;
 	PRNG.seed();
 	mpint random_prime;

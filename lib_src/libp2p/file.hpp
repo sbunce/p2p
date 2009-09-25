@@ -19,10 +19,11 @@ public:
 	file(const file_info & FI);
 
 	const std::string hash;
+	const std::string path;
 	const boost::uint64_t file_size;
-	block_request Block_Request;
 
 
+	//block_request Block_Request;
 private:
 
 };

@@ -45,9 +45,6 @@ boost::shared_ptr<share_scan_job> share_scan_1_hash::job()
 
 void share_scan_1_hash::main_loop()
 {
-	//yield to other threads during prorgram start
-	boost::this_thread::yield();
-
 	while(true){
 		boost::this_thread::interruption_point();
 		block_on_max_jobs();

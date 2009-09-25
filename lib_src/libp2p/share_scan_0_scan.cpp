@@ -72,9 +72,6 @@ int share_scan_0_scan::resume_call_back(database::pool::proxy & DB,
 
 void share_scan_0_scan::main_loop()
 {
-	//yield to other threads during prorgram start
-	boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-
 	//read in existing share information from database
 	std::stringstream ss;
 	ss << "SELECT hash, path, file_size, state FROM share";

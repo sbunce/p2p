@@ -29,17 +29,29 @@ public:
 	/*
 	complete:
 		Returns true if both the Hash_Tree and File are complete.
+	download_speed:
+		Returns total download speed (bytes/second).
 	file_size:
 		Returns size of the file the slot is for.
 	hash:
 		Returns root hash of the hash tree (hex).
+	name:
+		Returns the name of the file.
+	percent_complete:
+		Returns percent complete (0-100).
 	tree_size:
 		Returns the size of the hash tree for the file.
+	upload_speed:
+		Returns total upload speed (bytes/second).
 	*/
 	bool complete();
+	unsigned download_speed();
 	const boost::uint64_t & file_size();
 	const std::string & hash();
+	std::string name();
+	unsigned percent_complete();
 	const boost::uint64_t & tree_size();
+	unsigned upload_speed();
 
 private:
 	//the ctor will throw an exception if database access fails

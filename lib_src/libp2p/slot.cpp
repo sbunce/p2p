@@ -35,6 +35,11 @@ bool slot::complete()
 	return temp;
 }
 
+unsigned slot::download_speed()
+{
+	return 1024;
+}
+
 const boost::uint64_t & slot::file_size()
 {
 	return Hash_Tree.file_size;
@@ -45,7 +50,27 @@ const std::string & slot::hash()
 	return Hash_Tree.hash;
 }
 
+std::string slot::name()
+{
+	int pos;
+	if((pos = File.path.rfind('/')) != std::string::npos){
+		return File.path.substr(pos+1);
+	}else{
+		return "";
+	}
+}
+
+unsigned slot::percent_complete()
+{
+	return 69;
+}
+
 const boost::uint64_t & slot::tree_size()
 {
 	return Hash_Tree.tree_size;
+}
+
+unsigned slot::upload_speed()
+{
+	return 1024;
 }
