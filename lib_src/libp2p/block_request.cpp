@@ -1,7 +1,7 @@
 #include "block_request.hpp"
 
 block_request::block_request(
-	const boost::uint32_t block_count_in
+	const boost::uint64_t block_count_in
 ):
 	block_count(block_count_in),
 	local_block(block_count)
@@ -9,23 +9,41 @@ block_request::block_request(
 	local_block.set();
 }
 
-void block_request::add_block(const boost::uint32_t block)
+void block_request::add_block_local(const int socket_FD, const boost::uint64_t block)
 {
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+
+	//add block
 	if(!local_block.empty()){
 		local_block[block] = 0;
 		if(local_block.none()){
 			local_block.clear();
 		}
 	}
+
+	//erase request element this block fulfils
+	std::pair<std::multimap<boost::uint64_t, request_element>::iterator,
+		std::multimap<boost::uint64_t, request_element>::iterator>
+		pair = request.equal_range(block);
+	while(pair.first != request.end() && pair.first != pair.second){
+		if(pair.first->second.socket_FD == socket_FD){
+			request.erase(pair.first);
+			break;
+		}else{
+			++pair.first;
+		}
+	}
 }
 
-void block_request::add_block(const int socket_FD, const boost::uint32_t block)
+void block_request::add_block_remote(const int socket_FD, const boost::uint64_t block)
 {
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+
 	//find bitset for remote host
-	std::map<int, boost::dynamic_bitset<> >::iterator
-		remote_iter = remote_block.find(socket_FD);
+	std::map<int, bit_field>::iterator remote_iter = remote_block.find(socket_FD);
 	assert(remote_iter != remote_block.end());
 
+	//add block
 	if(!remote_iter->second.empty()){
 		remote_iter->second[block] = 0;
 		if(remote_iter->second.none()){
@@ -34,45 +52,58 @@ void block_request::add_block(const int socket_FD, const boost::uint32_t block)
 	}
 }
 
-void block_request::add_host(const int socket_FD)
+void block_request::add_host_complete(const int socket_FD)
 {
-	remote_block.insert(std::make_pair(socket_FD, boost::dynamic_bitset<>(0)));
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+
+	//insert empty bit_field (host has all blocks)
+	std::pair<std::map<int, bit_field>::iterator, bool>
+		ret = remote_block.insert(std::make_pair(socket_FD, bit_field(0)));
+	assert(ret.second);
 }
 
-void block_request::add_host(const int socket_FD, boost::dynamic_bitset<> & BS)
+void block_request::add_host_incomplete(const int socket_FD, bit_field & BF)
 {
-	assert(BS.size() == block_count);
-	remote_block.insert(std::make_pair(socket_FD, BS));
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	assert(BF.size() == block_count);
+	std::pair<std::map<int, bit_field>::iterator, bool>
+		ret = remote_block.insert(std::make_pair(socket_FD, BF));
+	assert(ret.second);
+}
+
+boost::uint64_t block_request::bytes()
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	return block_count % 8 == 0 ? block_count / 8 : block_count / 8 + 1;
 }
 
 bool block_request::complete()
 {
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	/*
-	When the dynamic_bitset is complete is is clear()'d to save space. After it
-	has been cleared we know it is complete.
+	When the dynamic_bitset is complete it is clear()'d to save space. If a
+	bit_field is clear we know the host has all blocks.
 	*/
 	return local_block.empty();
 }
 
-void block_request::force_complete()
+bool block_request::find_next_rarest(const int socket_FD, boost::uint64_t & block)
 {
-	local_block.clear();
-}
-
-bool block_request::next(const int socket_FD, boost::uint32_t & block)
-{
-	assert(!complete());
-
 	//find bitset for remote host
-	std::map<int, boost::dynamic_bitset<> >::iterator
-		remote_iter = remote_block.find(socket_FD);
+	std::map<int, bit_field>::iterator remote_iter = remote_block.find(socket_FD);
 	assert(remote_iter != remote_block.end());
 
 	//find rarest block that we need, that remote host has
-	block = 0;
-	boost::uint32_t rare_block, rare_block_hosts = 0;
+	block = 0;                            //current block being checked (reused)
+	boost::uint64_t rare_block;           //rarest known block
+	boost::uint64_t rare_block_hosts = 0; //number of hosts that have a block
 	bool checked_zero = false;
 	while(true){
+		/*
+		Special case needed for zero since bit_field::find_next() searches greater
+		than specified number and we can't specify -1 since the parameter is
+		unsigned.
+		*/
 		if(block == 0 && !checked_zero){
 			block = local_block.find_first();
 			checked_zero = true;
@@ -80,14 +111,24 @@ bool block_request::next(const int socket_FD, boost::uint32_t & block)
 			block = local_block.find_next(block);
 		}
 
-		if(block == boost::dynamic_bitset<>::npos){
+		//stopping case, host doesn't have a block we need
+		if(block == bit_field::npos){
 			break;
 		}
 
+		if(request.find(block) != request.end()){
+			//the block has already been requested
+			continue;
+		}
+
+		//check if the remote host has the block we're checking for
 		if(remote_iter->second.empty() || remote_iter->second[block] == 0){
-			//remote host has block, check rarity
+			/*
+			Remote host has the block we need. Check it's rarity by looking to see
+			how many other hosts have the block.
+			*/
 			boost::uint32_t hosts = 0;
-			for(std::map<int, boost::dynamic_bitset<> >::iterator iter_cur = remote_block.begin(),
+			for(std::map<int, bit_field>::iterator iter_cur = remote_block.begin(),
 				iter_end = remote_block.end(); iter_cur != iter_end; ++iter_cur)
 			{
 				if(iter_cur->second.empty() || iter_cur->second[block] == 0){
@@ -96,25 +137,20 @@ bool block_request::next(const int socket_FD, boost::uint32_t & block)
 			}
 
 			if(hosts == 1){
-				//block with max rarity found
-				local_block[block] = 0;
-				if(local_block.none()){
-					local_block.clear();
-				}
+				/*
+				If a block has maximum rarity (only one host has it) there is no
+				need to search any further. We can request this block.
+				*/
 				return true;
 			}else if(hosts < rare_block_hosts || rare_block_hosts == 0){
-				//new rarest block, or no block yet found
+				//a new most-rare block found. This is a block that > 1 hosts have
 				rare_block = block;
 				rare_block_hosts = hosts;
 			}
 		}
 	}
-
 	if(rare_block_hosts != 0){
-		local_block[rare_block] = 0;
-		if(local_block.none()){
-			local_block.clear();
-		}
+		//a block was found that we need
 		block = rare_block;
 		return true;
 	}else{
@@ -123,23 +159,73 @@ bool block_request::next(const int socket_FD, boost::uint32_t & block)
 	}
 }
 
-void block_request::remove_block(const boost::uint32_t block)
+bool block_request::next_request(const int socket_FD, boost::uint64_t & block)
 {
-	if(local_block.empty()){
-		local_block.resize(block_count);
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	assert(!complete());
+
+	/*
+	Check for a timed out request to the host. If a request to the host has timed
+	out we don't want to make any additional requests because they would likely
+	time out too.
+	*/
+	for(std::multimap<boost::uint64_t, request_element>::iterator
+		iter_cur = request.begin(), iter_end = request.end(); iter_cur != iter_end;
+		++iter_cur)
+	{
+		if(iter_cur->second.socket_FD == socket_FD
+			&& std::time(NULL) - iter_cur->second.request_time > protocol::TIMEOUT)
+		{
+			return false;
+		}
 	}
-	local_block[block] = 1;
+
+	/*
+	Check to see if requests to other hosts have timed out. If they have we can
+	request the block from this host.
+	*/
+	for(std::multimap<boost::uint64_t, request_element>::iterator
+		iter_cur = request.begin(), iter_end = request.end(); iter_cur != iter_end;
+		++iter_cur)
+	{
+		if(std::time(NULL) - iter_cur->second.request_time > protocol::TIMEOUT){
+			block = iter_cur->first;
+			request.insert(std::make_pair(block, request_element(socket_FD, std::time(NULL))));
+			return true;
+		}
+	}
+
+	/*
+	At this point we know there are no timed out requests to the host and there
+	are no re-requests to do. We move on to checking for the next rarest block to
+	request from the host.
+	*/
+	if(find_next_rarest(socket_FD, block)){
+		//there is a block to request
+		request.insert(std::make_pair(block, request_element(socket_FD, std::time(NULL))));
+		return true;
+	}else{
+		//no blocks to request at this time.
+		return false;
+	}
 }
 
 void block_request::remove_host(const int socket_FD)
 {
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	if(remote_block.erase(socket_FD) != 1){
 		LOGGER << "violated precondition";
 		exit(1);
 	}
-}
 
-boost::uint32_t block_request::size()
-{
-	return block_count % 8 == 0 ? block_count / 8 : block_count / 8 + 1;
+	//erase request elements for this host
+	std::multimap<boost::uint64_t, request_element>::iterator
+		iter_cur = request.begin(), iter_end = request.end();
+	while(iter_cur != iter_end){
+		if(iter_cur->second.socket_FD == socket_FD){
+			request.erase(iter_cur++);
+		}else{
+			++iter_cur;
+		}
+	}
 }

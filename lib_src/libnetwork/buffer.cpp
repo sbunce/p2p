@@ -187,6 +187,14 @@ network::buffer & network::buffer::append(const std::string & buff_append)
 	return *this;
 }
 
+network::buffer & network::buffer::append(const bit_field & BF)
+{
+	tail_resize(BF.internal_buffer().size());
+	std::reverse_copy(BF.internal_buffer().begin(), BF.internal_buffer().end(),
+		tail_start());
+	return *this;
+}
+
 void network::buffer::allocate(size_t & var, const size_t & size)
 {
 	if(var == size){

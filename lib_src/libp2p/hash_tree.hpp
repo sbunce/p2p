@@ -1,5 +1,7 @@
 /*
 The ctor will throw an exception if database access fails.
+
+The thread safety of this class is exactly like a file.
 */
 #ifndef H_HASH_TREE
 #define H_HASH_TREE
@@ -13,8 +15,8 @@ The ctor will throw an exception if database access fails.
 #include "settings.hpp"
 
 //include
-#include <atomic_bool.hpp>
-#include <bitgroup_vector.hpp>
+#include <atomic_int.hpp>
+#include <boost/dynamic_bitset.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
@@ -92,60 +94,46 @@ public:
 		Get block from hash tree. Returns GOOD if suceeded. Returns IO_ERROR if
 		cannot read hash tree.
 	write_block:
-		Add block to hash tree, or replace block in hash tree. Returns GOOD if
-		block written sucessfully. Returns IO_ERROR if could not write block.
-		Precondition: Must have called check() to make sure the block is good.
+		Add or replace block in hash tree. Returns good if block was written,
+		io_error if block could not be written, or bad if the block hash failed.
+		The socket_FD is needed for block_request.
 	*/
 	unsigned block_size(const boost::uint64_t & block_num);
-	void check();
+	status check();
 	status check_file_block(const boost::uint64_t & file_block_num,
 		const char * block, const int & size);
 	static status create(file_info & FI);
 	bool complete();
 	static boost::uint64_t file_size_to_tree_size(const boost::uint64_t & file_size);
 	status read_block(const boost::uint64_t & block_num, std::string & block);
-	status write_block(const boost::uint64_t & block_num, const std::string & block,
-		const std::string & IP);
+	status write_block(const int socket_FD, const boost::uint64_t & block_num,
+		const std::string & block);
 
 	/*
 	This is used to determine what blocks to request when downloading the hash
 	tree. The check functions will call block_request::remove_block when a block
 	hash fails.
+	Note: The block_request keeps track of all the blocks we have, NOT blocks
+		which are known to be good. The blocks we have AND the blocks that are
+		good are the blocks which are in Block_Request AND the blocks which are
+		< end_of_good.
 	*/
-//DEBUG, consider not having this public.
-//This messes up the thread safety guarantee.
 	block_request Block_Request;
 
 private:
 	//blob handle for hash tree
-	database::blob Blob;
+	const database::blob Blob;
 
 	/*
-	If the ctor has to allocate space for a hash tree this bool will be set to
-	true to indicate that the write_block function needs to set the state of the
-	hash tree to downloading.
-	Note: A reference to the hash tree must exist somewhere in the database
-		before the write_block function is called otherwise there can be a
-		"memory leak" (unused but allocated space in the database).
-	*/
-	bool set_state_downloading;
-
-	/*
-	When the bit is 0 the block is not good, when the bit is 1 the block has been
-	written but it's not necessarily good. Only if the block is < end_of_good is
-	the hash block good.
-
-	Hashes inherently have to be checked in order. If a block is missing we can't
-	check blocks past it. The end_of_good value is how far we've been able to
-	hash check.
+	Hashes are checked in order. If a block is missing we can't check blocks past
+	it. The end_of_good value is how far we've been able to hash check.
 
 	We don't keep track of what IP sent what block so we only have access to the
 	IP of the latest block that arrived. We are still able to blacklist people
 	that send bad blocks because if someone is sending bad blocks eventually they
 	will send a block equal to the value of end_of_good and get blacklisted.
 	*/
-	boost::dynamic_bitset<> block_status;
-	boost::uint64_t end_of_good;
+	atomic_int<boost::uint64_t> end_of_good;
 
 	/*
 	block_info:
@@ -160,15 +148,6 @@ private:
 			exist.
 		Note: This function only called from check_incremental and check_full
 			which both make sure the precondition is satisfied.
-	check_incremental:
-		Checks received blocks (blocks where block_status[block_num] != 0) that
-		are contiguous (there is no block_status <= highest_good that is equal
-		to zero). Returns GOOD if whole tree good. Returns BAD and sets bad_block
-		to first bad block if tree bad. Returns IO_ERROR if error reading tree.
-		Postcondition: highest_good is set to the highest block number that hash
-			checked good.
-		Postcondition: If returns BAD then sets block_status of the bad block to
-			zero.
 	create_recurse:
 		Recursive function called by create() to recursively generate tree rows.
 	file_size_to_file_hash:
@@ -192,7 +171,6 @@ private:
 	static bool block_info(const boost::uint64_t & block, const std::deque<boost::uint64_t> & row,
 		std::pair<boost::uint64_t, unsigned> & info);
 	status check_block(const boost::uint64_t & block_num);
-	status check_incremental(boost::uint32_t & bad_block);
 	static bool create_recurse(std::fstream & upside_down, std::fstream & rightside_up,
 		boost::uint64_t start_RRN, boost::uint64_t end_RRN, std::string & hash,
 		char * block_buff, SHA1 & SHA);

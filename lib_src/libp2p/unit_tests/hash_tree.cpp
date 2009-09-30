@@ -25,35 +25,14 @@ void create_test_file(const file_info & FI)
 	fout.flush();
 }
 
-//create hash trees and check them
-void create_and_check(const unsigned size)
-{
-	file_info FI;
-	std::stringstream ss;
-	ss << path::share() << size << "_block";
-	FI.path = ss.str();
-	FI.file_size = size * protocol::FILE_BLOCK_SIZE;
-	create_test_file(FI);
-	if(hash_tree::create(FI) != hash_tree::good){
-		LOGGER; exit(1);
-	}
-	hash_tree HT(FI);
-	HT.check();
-	if(!HT.complete()){
-		LOGGER; exit(1);
-	}
-}
-
-int rand_func(int n)
-{
-    return std::rand() % n;
-}
-
 //randomly reassemble a hash tree
-void random_assemble()
+void test(const unsigned size)
 {
-	unsigned size = 1536;
+	//delete all hash trees
+	database::init::drop_all();
+	database::init::create_all();
 
+	//create hash tree and check it
 	file_info FI;
 	std::stringstream ss;
 	ss << path::share() << size << "_block";
@@ -69,44 +48,29 @@ void random_assemble()
 		LOGGER; exit(1);
 	}
 
-	//read all blocks from the source hash tree
+	//read all blocks from the hash tree in to memory
 	std::vector<std::string> block; //location in vector is block number
 	for(boost::uint32_t x=0; x<HT.tree_block_count; ++x){
-		std::string B;
-		HT.read_block(x, B);
-		block.push_back(B);
+		std::string b;
+		HT.read_block(x, b);
+		block.push_back(b);
 	}
 
-	//make a vector of all block numbers and randomize it
-	std::vector<unsigned> block_number;
-	for(unsigned x=0; x<block.size(); ++x){
-		block_number.push_back(x);
-	}
+	//delete all hash trees
+	database::init::drop_all();
+	database::init::create_all();
+
+	/*
+	Reassemble the hash tree. Exclude 50% of blocks randomly. The excluded blocks
+	are effectively corrupt blocks.
+	*/
 	std::srand(42);
-	std::random_shuffle(block_number.begin(), block_number.end(), rand_func);
-
-	//"corrupt" every other block in invertible way so we can "uncorrupt" later
-	bool alternator = false;
-	for(unsigned x=0; x<block.size(); ++x){
-		if(alternator){
-			(*block.begin())[x] = ~(*block.begin())[x];
-		}
-		alternator = !alternator;
-	}
-
-	//reassemble hash tree in random order
 	hash_tree HT_reassemble(FI);
 	for(boost::uint64_t x=0; x<HT.tree_block_count; ++x){
-		HT_reassemble.write_block(block_number[x], block[block_number[x]], "127.0.0.1");
-	}
-
-	//"uncorrupt"
-	alternator = false;
-	for(unsigned x=0; x<block.size(); ++x){
-		if(alternator){
-			(*block.begin())[x] = ~(*block.begin())[x];
+		//always exclude first block for the small tests
+		if(x != 0 && std::rand() % 2 != 0){
+			HT_reassemble.write_block(0, x, block[x]);
 		}
-		alternator = !alternator;
 	}
 
 	//should not be complete since we corrupted a block
@@ -114,14 +78,14 @@ void random_assemble()
 		LOGGER; exit(1);
 	}
 
-	//replace the corrupted block, add one host that has all blocks
-	HT_reassemble.Block_Request.add_host(0);
+	//replace the corrupted blocks, add one host that has all blocks
+	HT_reassemble.Block_Request.add_host_complete(0);
 	while(!HT_reassemble.complete()){
-		boost::uint32_t num;
-		if(!HT_reassemble.Block_Request.next(0, num)){
+		boost::uint64_t num;
+		if(!HT_reassemble.Block_Request.next_request(0, num)){
 			LOGGER; exit(1);
 		}
-		HT_reassemble.write_block(num, block[num], "127.0.0.1");
+		HT_reassemble.write_block(0, num, block[num]);
 	}
 
 	//now the tree should be complete
@@ -134,21 +98,15 @@ int main()
 {
 	//setup database and make sure hash table clear
 	path::unit_test_override("hash_tree.db");
-	database::init::drop_all();
-	database::init::create_all();
-
-	//create required directories for the shared files and temp files
 	path::create_required_directories();
 
-	create_and_check(1);
-	create_and_check(2);
-	create_and_check(3);
-	create_and_check(4);
-	create_and_check(256);
-	create_and_check(257);
-	create_and_check(1024);
-
-	random_assemble();
+	test(2);
+	test(3);
+	test(4);
+	test(256);
+	test(257);
+	test(1024);
+	test(1536);
 
 	//remove temporary files
 	path::remove_temporary_hash_tree_files();

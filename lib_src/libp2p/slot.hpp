@@ -26,6 +26,7 @@ class slot : private boost::noncopyable
 	*/
 	friend class share;
 public:
+
 	/*
 	complete:
 		Returns true if both the Hash_Tree and File are complete.

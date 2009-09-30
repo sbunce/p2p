@@ -21,20 +21,19 @@ hash_tree::hash_tree(
 			file_size % protocol::FILE_BLOCK_SIZE
 	),
 	Block_Request(tree_block_count),
-	set_state_downloading(true),
-	block_status(tree_block_count),
 	end_of_good(0)
 {
 	if(tree_block_count != 0){
 		boost::shared_ptr<database::table::hash::tree_info>
 			TI = database::table::hash::tree_open(hash, DB);
 		if(TI){
-			Blob = TI->Blob;
+			const_cast<database::blob &>(Blob) = TI->Blob;
 		}else{
 			if(database::table::hash::tree_allocate(hash, tree_size, DB)){
+				database::table::hash::set_state(hash, database::table::hash::downloading);
 				TI = database::table::hash::tree_open(hash, DB);
 				if(TI){
-					Blob = TI->Blob;
+					const_cast<database::blob &>(Blob) = TI->Blob;
 				}else{
 					throw std::runtime_error("failed to open hash tree");
 				}
@@ -45,15 +44,16 @@ hash_tree::hash_tree(
 	}
 }
 
-bool hash_tree::block_info(const boost::uint64_t & block, const std::deque<boost::uint64_t> & row,
-	std::pair<boost::uint64_t, unsigned> & info)
+bool hash_tree::block_info(const boost::uint64_t & block,
+	const std::deque<boost::uint64_t> & row, std::pair<boost::uint64_t, unsigned> & info)
 {
 	boost::uint64_t throw_away;
 	return block_info(block, row, info, throw_away);
 }
 
-bool hash_tree::block_info(const boost::uint64_t & block, const std::deque<boost::uint64_t> & row,
-	std::pair<boost::uint64_t, unsigned> & info, boost::uint64_t & parent)
+bool hash_tree::block_info(const boost::uint64_t & block,
+	const std::deque<boost::uint64_t> & row, std::pair<boost::uint64_t, unsigned> & info,
+	boost::uint64_t & parent)
 {
 	boost::uint64_t offset = 0;          //hash offset from beginning of file to start of row
 	boost::uint64_t block_count = 0;     //total block count in all previous rows
@@ -113,28 +113,6 @@ unsigned hash_tree::block_size(const boost::uint64_t & block_num)
 	}
 }
 
-void hash_tree::check()
-{
-	for(boost::uint32_t x=end_of_good; x<tree_block_count; ++x){
-		status Status = check_block(x);
-		if(Status == good){
-			Block_Request.add_block(x);
-			end_of_good = x+1;
-		}else if(Status == bad){
-			Block_Request.remove_block(x);
-			block_status[x] = 0;
-			LOGGER << "bad block " << x << " in tree " << hash;
-			return;
-		}else if(Status == io_error){
-			return;
-		}
-	}
-
-	if(complete()){
-		database::table::hash::set_state(hash, database::table::hash::complete);
-	}
-}
-
 hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 {
 	if(tree_block_count == 0){
@@ -171,7 +149,7 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 			LOGGER << "invalid hex";
 			exit(1);
 		}
-		if(strncmp(hash_bin.data(), SHA.raw_hash(), protocol::HASH_SIZE) == 0){
+		if(memcmp(hash_bin.data(), SHA.raw_hash(), protocol::HASH_SIZE) == 0){
 			return good;
 		}else{
 			return bad;
@@ -183,7 +161,7 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 			return io_error;
 		}
 
-		if(strncmp(block_buff, SHA.raw_hash(), protocol::HASH_SIZE) == 0){
+		if(memcmp(block_buff, SHA.raw_hash(), protocol::HASH_SIZE) == 0){
 			return good;
 		}else{
 			return bad;
@@ -191,20 +169,13 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 	}
 }
 
-hash_tree::status hash_tree::check_incremental(boost::uint32_t & bad_block)
+hash_tree::status hash_tree::check()
 {
-	for(boost::uint32_t x=end_of_good; x<tree_block_count && block_status[x]; ++x){
+	for(boost::uint32_t x=end_of_good; x<tree_block_count; ++x){
 		status Status = check_block(x);
 		if(Status == good){
-			Block_Request.add_block(x);
 			end_of_good = x+1;
 		}else if(Status == bad){
-			Block_Request.remove_block(x);
-			block_status[x] = 0;
-			bad_block = x;
-			if(bad_block != 0){
-				LOGGER << "bad block " << x << " in tree " << hash;
-			}
 			return bad;
 		}else if(Status == io_error){
 			return io_error;
@@ -218,7 +189,8 @@ hash_tree::status hash_tree::check_incremental(boost::uint32_t & bad_block)
 	return good;
 }
 
-hash_tree::status hash_tree::check_file_block(const boost::uint64_t & file_block_num, const char * block, const int & size)
+hash_tree::status hash_tree::check_file_block(const boost::uint64_t & file_block_num,
+	const char * block, const int & size)
 {
 	if(!complete()){
 		LOGGER << "precondition violated";
@@ -235,7 +207,7 @@ hash_tree::status hash_tree::check_file_block(const boost::uint64_t & file_block
 	SHA.init();
 	SHA.load(block, size);
 	SHA.end();
-	if(strncmp(parent_buff, SHA.raw_hash(), protocol::HASH_SIZE) == 0){
+	if(memcmp(parent_buff, SHA.raw_hash(), protocol::HASH_SIZE) == 0){
 		return good;
 	}else{
 		return bad;
@@ -523,7 +495,8 @@ boost::uint64_t hash_tree::file_hash_to_tree_hash(boost::uint64_t row_hash_count
 	return start_hash + file_hash_to_tree_hash(row_hash_count);
 }
 
-boost::uint64_t hash_tree::file_hash_to_tree_hash(boost::uint64_t row_hash, std::deque<boost::uint64_t> & row)
+boost::uint64_t hash_tree::file_hash_to_tree_hash(boost::uint64_t row_hash,
+	std::deque<boost::uint64_t> & row)
 {
 	boost::uint64_t start_hash = row_hash;
 	if(row_hash == 1){
@@ -584,7 +557,8 @@ hash_tree::status hash_tree::read_block(const boost::uint64_t & block_num,
 	}
 }
 
-boost::uint64_t hash_tree::row_to_tree_block_count(const std::deque<boost::uint64_t> & row)
+boost::uint64_t hash_tree::row_to_tree_block_count(
+	const std::deque<boost::uint64_t> & row)
 {
 	boost::uint64_t block_count = 0;
 	for(int x=0; x<row.size(); ++x){
@@ -597,7 +571,8 @@ boost::uint64_t hash_tree::row_to_tree_block_count(const std::deque<boost::uint6
 	return block_count;
 }
 
-boost::uint64_t hash_tree::row_to_file_hash_offset(const std::deque<boost::uint64_t> & row)
+boost::uint64_t hash_tree::row_to_file_hash_offset(
+	const std::deque<boost::uint64_t> & row)
 {
 	boost::uint64_t file_hash_offset = 0;
 	if(row.size() == 0){
@@ -612,37 +587,45 @@ boost::uint64_t hash_tree::row_to_file_hash_offset(const std::deque<boost::uint6
 	return file_hash_offset;
 }
 
-hash_tree::status hash_tree::write_block(const boost::uint64_t & block_num,
-	const std::string & block, const std::string & IP)
+hash_tree::status hash_tree::write_block(const int socket_FD,
+	const boost::uint64_t & block_num, const std::string & block)
 {
-	//see documentation in header for set_state_downloading
-	if(set_state_downloading){
-		database::table::hash::set_state(hash, database::table::hash::downloading);
-		set_state_downloading = false;
-	}
-
 	std::pair<boost::uint64_t, unsigned> info;
 	if(block_info(block_num, row, info)){
 		if(info.second != block.size()){
-			//incorrect block size
-			LOGGER << "incorrect block size, programming error";
+			LOGGER << "programming error, invalid block size";
 			exit(1);
 		}
+
 		if(!database::pool::get_proxy()->blob_write(Blob, block.data(),
 			block.size(), info.first))
 		{
 			return io_error;
 		}
 
-		block_status[block_num] = 1;
-		boost::uint32_t bad_block;
-		status Status = check_incremental(bad_block);
-		if(Status == bad && bad_block == block_num){
-			database::table::blacklist::add(IP);
+		status Status = check();
+		if(Status == io_error){
+			return io_error;
+		}else{
+			/*
+			The hash tree is checked linearly. Cases:
+			1. Tree is good < block we just wrote. Block we wrote is bad.
+			   end_of_good == block_num. Return bad. The host that sent this bad
+				block will be disconnected.
+			2. Tree is not good up until block we wrote. end_of_good < block_num.
+			   We cannot know if the current block is good or not. Return good.
+			*/
+			if(end_of_good == block_num){
+				//case 1
+				return bad;
+			}else{
+				//case 2
+				Block_Request.add_block_local(socket_FD, block_num);
+				return good;
+			}
 		}
-		return Status;
 	}else{
-		LOGGER << "programmer error";
+		LOGGER << "programmer error, invalid block num";
 		exit(1);
 	}
 }

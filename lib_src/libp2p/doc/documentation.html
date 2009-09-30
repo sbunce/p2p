@@ -175,10 +175,10 @@ Name: REQUEST_BLOCK_HASH_TREE
 Base10: 1
 Description: Request a block from a hash tree.
 
-+---+---+---+---+---+---+
-| C | S |       B       |
-+---+---+---+---+---+---+
-  0   1   2   3   4   5
++---+---+---+---+---+---+---+---+---+---+
+| C | S |             B                 |
++---+---+---+---+---+---+---+---+---+---+
+  0   1   2   3   4   5   6   7   8   9
 
 C = command, S = slot ID, B = block number
 
@@ -196,10 +196,10 @@ Name: REQUEST_BLOCK_FILE
 Base10: 2
 Description: Request a block from a file.
 
-+---+---+---+---+---+---+
-| C | S |       B       |
-+---+---+---+---+---+---+
-  0   1   2   3   4   5
++---+---+---+---+---+---+---+---+---+---+
+| C | S |             B                 |
++---+---+---+---+---+---+---+---+---+---+
+  0   1   2   3   4   5   6   7   8   9
 
 C = command, S = slot ID, B = block number
 
@@ -313,10 +313,10 @@ Base10: 8
 Description: Sent to inform a host that a new hash tree block is available. This
 is sent to all hosts that have a open slot for a file.
 
-+---+---+---+---+---+---+
-| C | S |       B       |
-+---+---+---+---+---+---+
-  0   1   2   3   4   5
++---+---+---+---+---+---+---+---+---+---+
+| C | S |             B                 |
++---+---+---+---+---+---+---+---+---+---+
+  0   1   2   3   4   5   6   7   8   9
 
 C = command, B = block number
 </pre>
@@ -331,10 +331,10 @@ Base10: 9
 Description: Sent to inform a host that a new file block is available. This is
 sent to all hosts that have a open slot for a file.
 
-+---+---+---+---+---+---+
-| C | S |       B       |
-+---+---+---+---+---+---+
-  0   1   2   3   4   5
++---+---+---+---+---+---+---+---+---+---+
+| C | S |             B                 |
++---+---+---+---+---+---+---+---+---+---+
+  0   1   2   3   4   5   6   7   8   9
 
 C = command, B = block number
 </pre>
@@ -420,29 +420,15 @@ building must be simulated to determine how many bytes are in each hash block.
 
 <b>2.7 Limits</b>
 <blockquote>
-The maximum file size supported is 1097364142080 bytes (slightly less than 1tB).
-This limit is imposed because it generates a hash tree of size 2147483640 bytes
-which is 7 bytes less than 2^31 (the largest size blob SQLite can hold).
+Max file limits have yet to be determined. SQLite blob sizes are limited to
+2^31 - 1. The planned maximum file size is going to be 2^64.
 </blockquote>
 
-<b>3.0 libp2p Internals</b>
+<b>3.0 Building</b>
 <blockquote>
 </blockquote>
 
-<b>3.1 Class Tags</b>
-<blockquote>
-A "class tag" is a few words put at the top of a class header which gives
-information about the class.
-<p>
-CTOR THREAD SPAWNING, The ctor spawns threads internal to the object.
-</p>
-</blockquote>
-
-<b>4.0 Building</b>
-<blockquote>
-</blockquote>
-
-<b>4.1 GNU/Linux</b>
+<b>3.1 GNU/Linux</b>
 <blockquote>
 <p>
 There are many different GNU/Linux distributions. Most likely you can use your
@@ -451,7 +437,7 @@ gtkmm.
 </p>
 </blockquote>
 
-<b>4.2 Windows</b>
+<b>3.2 Windows</b>
 <blockquote>
 <p>
 <a href="http://www.microsoft.com/express/vc/">Visual C++ Express 2008</a><br>

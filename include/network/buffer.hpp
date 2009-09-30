@@ -13,6 +13,7 @@ over a network.
 #define H_NETWORK_BUFFER
 
 //include
+#include <bit_field.hpp>
 #include <logger.hpp>
 
 //standard
@@ -75,8 +76,11 @@ public:
 
 	/*
 	append:
-		Appends 1 byte. Appends size bytes from buff_append. Appends a
-		std::string.
+		Different functions to append things.
+		One char.
+		Specified number of chars from unsigned char array.
+		A std::string.
+		A bit_field (appended in big-endian).
 	begin:
 		Returns iterator to first unsigned char of buffer.
 	clear:
@@ -111,6 +115,7 @@ public:
 	buffer & append(const unsigned char char_append);
 	buffer & append(const unsigned char * buff_append, const size_t size);
 	buffer & append(const std::string & buff_append);
+	buffer & append(const bit_field & BF);
 	iterator begin();
 	void clear();
 	unsigned char * data();

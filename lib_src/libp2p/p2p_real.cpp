@@ -98,11 +98,16 @@ void p2p_real::resume()
 	Share_Scan.block_until_resumed();
 	Proactor.start();
 	LOGGER << "share scan resumed";
+
+	//test connection
+	Proactor.connect("topaz", settings::P2P_PORT);
+/*
 	for(share::slot_iterator iter_cur = Share.begin_slot(), iter_end = Share.end_slot();
 		iter_cur != iter_end; ++iter_cur)
 	{
 
 	}
+*/
 }
 
 boost::uint64_t p2p_real::share_size_bytes()

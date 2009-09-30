@@ -4,6 +4,8 @@
 namespace protocol
 {
 /*
+TIMEOUT:
+	Number of second before a unreceived block is requested from another host.
 DH_KEY_SIZE:
 	Size of the key to be exchanged with Diffie-Hellman-Merkle key exchange
 	(bytes).
@@ -11,6 +13,7 @@ PIPELINE_SIZE:
 	Maximum possible size of the pipeline.
 	Note: must be >= 2.
 */
+const unsigned TIMEOUT = 16;
 const unsigned DH_KEY_SIZE = 16;
 const unsigned PIPELINE_SIZE = 16;
 
@@ -46,12 +49,12 @@ const unsigned BLOCK_SIZE = FILE_BLOCK_SIZE + 1;
 //largest possible message
 const unsigned MAX_MESSAGE_SIZE = BLOCK_SIZE;
 
-enum command_type_enum {
+enum type {
 	slot_command,
 	invalid
 };
 
-static command_type_enum command_type(unsigned char command)
+static type command_type(unsigned char command)
 {
 	if(command == REQUEST_SLOT ||
 		command == CLOSE_SLOT ||
