@@ -34,7 +34,7 @@ public:
 		file_info();
 		file_info(
 			const std::string & hash_in,
-			const boost::uint64_t file_size_in,
+			const boost::uint64_t & file_size_in,
 			const std::string & path_in,
 			const state State_in
 		);

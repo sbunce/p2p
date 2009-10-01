@@ -11,6 +11,7 @@
 //include
 #include <boost/cstdint.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/ref.hpp>
 #include <boost/thread.hpp>
 #include <boost/tokenizer.hpp>
 #include <logger.hpp>
@@ -75,7 +76,7 @@ private:
 	*/
 	void block_on_max_jobs();
 	void main_loop();
-	int resume_call_back(database::pool::proxy & DB, int columns_retrieved,
-		char ** response, char ** column_name);
+	int resume_call_back(boost::reference_wrapper<database::pool::proxy> DB,
+		int columns_retrieved, char ** response, char ** column_name);
 };
 #endif

@@ -8,6 +8,7 @@
 #include "settings.hpp"
 
 //include
+#include <boost/ref.hpp>
 #include <boost/thread.hpp>
 
 //standard

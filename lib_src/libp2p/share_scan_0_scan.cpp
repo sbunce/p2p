@@ -43,7 +43,8 @@ boost::shared_ptr<share_scan_job> share_scan_0_scan::job()
 	return SSJ;
 }
 
-int share_scan_0_scan::resume_call_back(database::pool::proxy & DB,
+int share_scan_0_scan::resume_call_back(
+	boost::reference_wrapper<database::pool::proxy> DB,
 	int columns_retrieved, char ** response, char ** column_name)
 {
 	if(boost::this_thread::interruption_requested()){
@@ -65,7 +66,7 @@ int share_scan_0_scan::resume_call_back(database::pool::proxy & DB,
 		= reinterpret_cast<database::table::share::state &>(temp);
 	Share.insert_update(FI);
 	if(share_state != database::table::share::complete){
-		Share.get_slot(FI.hash, DB);
+		Share.get_slot(FI.hash, DB.get());
 	}
 	return 0;
 }
@@ -78,7 +79,7 @@ void share_scan_0_scan::main_loop()
 
 	{//scope used to destroy DB
 	database::pool::proxy DB;
-	DB->query(ss.str(), this, &share_scan_0_scan::resume_call_back, DB);
+	DB->query(ss.str(), this, &share_scan_0_scan::resume_call_back, boost::ref(DB));
 	}
 
 	{//begin lock scope

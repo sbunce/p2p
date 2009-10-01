@@ -31,29 +31,30 @@ bool database::table::hash::tree_allocate(const std::string & hash,
 	}
 }
 
-static int tree_open_call_back(boost::shared_ptr<database::table::hash::tree_info> & TI,
+static int tree_open_call_back(
+	boost::reference_wrapper<boost::shared_ptr<database::table::hash::tree_info> > TI,
 	int columns_retrieved, char ** response, char ** column_name)
 {
 	assert(response[0] && response[1] && response[2]);
-	TI = boost::shared_ptr<database::table::hash::tree_info>(
+	TI.get() = boost::shared_ptr<database::table::hash::tree_info>(
 		new database::table::hash::tree_info());
 	std::stringstream ss;
 
 	//row primary key
 	ss << response[0];
-	ss >> TI->Blob.rowid;
+	ss >> TI.get()->Blob.rowid;
 
 	//tree size
 	ss.str(""); ss.clear();
 	ss << response[1];
-	ss >> TI->tree_size;
+	ss >> TI.get()->tree_size;
 
 	//state
 	ss.str(""); ss.clear();
 	ss << response[2];
 	int temp;
 	ss >> temp;
-	TI->State = reinterpret_cast<database::table::hash::state &>(temp);
+	TI.get()->State = reinterpret_cast<database::table::hash::state &>(temp);
 
 	return 0;
 }
@@ -64,7 +65,7 @@ boost::shared_ptr<database::table::hash::tree_info> database::table::hash::tree_
 	boost::shared_ptr<tree_info> TI;
 	std::stringstream ss;
 	ss << "SELECT key, tree_size, state FROM hash WHERE hash = '" << hash << "'";
-	DB->query(ss.str(), &tree_open_call_back, TI);
+	DB->query(ss.str(), &tree_open_call_back, boost::ref(TI));
 	if(TI){
 		TI->hash = hash;
 		TI->Blob.table = "hash";

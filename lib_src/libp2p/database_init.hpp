@@ -5,6 +5,9 @@
 #include "database.hpp"
 #include "path.hpp"
 
+//include
+#include <boost/ref.hpp>
+
 //standard
 #include <sstream>
 

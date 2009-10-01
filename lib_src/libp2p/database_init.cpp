@@ -1,10 +1,10 @@
 #include "database_init.hpp"
 
-static int check_exists_call_back(bool & exists, int columns_retrieved,
-	char ** response, char ** column_name)
+static int check_exists_call_back(boost::reference_wrapper<bool> exists,
+	int columns_retrieved, char ** response, char ** column_name)
 {
 	assert(response[0]);
-	exists = strcmp(response[0], "0") != 0;
+	exists.get() = (strcmp(response[0], "0") != 0);
 	return 0;
 }
 
@@ -64,7 +64,7 @@ void database::init::preferences()
 	database::pool::proxy DB;
 	DB->query("CREATE TABLE IF NOT EXISTS preferences (max_connections INTEGER, max_download_rate INTEGER, max_upload_rate INTEGER)");
 	bool exists = false;
-	DB->query("SELECT count(1) FROM preferences", &check_exists_call_back, exists);
+	DB->query("SELECT count(1) FROM preferences", &check_exists_call_back, boost::ref(exists));
 	if(!exists){
 		//set defaults if no preferences yet exist
 		std::stringstream ss;

@@ -8,7 +8,7 @@ database::table::share::file_info::file_info()
 
 database::table::share::file_info::file_info(
 	const std::string & hash_in,
-	const boost::uint64_t file_size_in,
+	const boost::uint64_t & file_size_in,
 	const std::string & path_in,
 	const state State_in
 ):
@@ -33,32 +33,34 @@ void database::table::share::add_entry(const file_info & FI,
 }
 
 //this checks to see if any records with specified hash and size exist
-static int delete_entry_call_back_chain_2(bool & exists, int columns_retrieved,
-	char ** response, char ** column_name)
+static int delete_entry_call_back_chain_2(boost::reference_wrapper<bool> exists,
+	int columns_retrieved, char ** response, char ** column_name)
 {
-	exists = true;
+	exists.get() = true;
 	return 0;
 }
 
 //this gets the hash and file size that corresponds to a path
-static int delete_entry_call_back_chain_1(std::pair<char *, database::pool::proxy *> & info,
+static int delete_entry_call_back_chain_1(
+	boost::reference_wrapper<std::pair<char *, database::pool::proxy *> > info,
 	int columns_retrieved, char ** response, char ** column_name)
 {
 	assert(response[0]);
 
 	//delete the record
 	std::stringstream ss;
-	ss << "DELETE FROM share WHERE path = " << info.first;
-	(*info.second)->query(ss.str());
+	ss << "DELETE FROM share WHERE path = " << info.get().first;
+	(*info.get().second)->query(ss.str());
 
 	//check if any records remain with hash
 	ss.str(""); ss.clear();
 	ss << "SELECT 1 FROM share WHERE hash = '" << response[0] << "' LIMIT 1";
 	bool exists = false;
-	(*info.second)->query(ss.str(), &delete_entry_call_back_chain_2, exists);
+	(*info.get().second)->query(ss.str(), &delete_entry_call_back_chain_2,
+		boost::ref(exists));
 	if(!exists){
 		//last file with this hash removed, delete the hash tree
-		database::table::hash::delete_tree(response[0], *info.second);
+		database::table::hash::delete_tree(response[0], *info.get().second);
 	}
 	return 0;
 }
@@ -70,32 +72,33 @@ void database::table::share::delete_entry(const std::string & path,
 	std::pair<char *, database::pool::proxy *> info(sqlite3_path, &DB);
 	std::stringstream ss;
 	ss << "SELECT hash FROM share WHERE path = " << sqlite3_path << " LIMIT 1";
-	DB->query(ss.str(), &delete_entry_call_back_chain_1, info);
+	DB->query(ss.str(), &delete_entry_call_back_chain_1, boost::ref(info));
 	sqlite3_free(sqlite3_path);
 }
 
-static int lookup_hash_call_back(boost::shared_ptr<database::table::share::file_info> & FI,
+static int lookup_hash_call_back(
+	boost::reference_wrapper<boost::shared_ptr<database::table::share::file_info> > FI,
 	int columns_retrieved, char ** response, char ** column_name)
 {
 	assert(response[0] && response[1] && response[2]);
-	FI = boost::shared_ptr<database::table::share::file_info>(
+	FI.get() = boost::shared_ptr<database::table::share::file_info>(
 		new database::table::share::file_info());
 
 	std::stringstream ss;
 
 	//file_size
 	ss << response[0];
-	ss >> FI->file_size;
+	ss >> FI.get()->file_size;
 
 	//path
-	FI->path = response[1];
+	FI.get()->path = response[1];
 
 	//state
 	ss.str(""); ss.clear();
 	ss << response[2];
 	int temp;
 	ss >> temp;
-	FI->State = reinterpret_cast<database::table::share::state &>(temp);
+	FI.get()->State = reinterpret_cast<database::table::share::state &>(temp);
 
 	return 0;
 }
@@ -106,7 +109,7 @@ boost::shared_ptr<database::table::share::file_info> database::table::share::loo
 	boost::shared_ptr<file_info> FI;
 	std::stringstream ss;
 	ss << "SELECT file_size, path, state FROM share WHERE hash = '" << hash << "' LIMIT 1";
-	DB->query(ss.str(), &lookup_hash_call_back, FI);
+	DB->query(ss.str(), &lookup_hash_call_back, boost::ref(FI));
 	if(FI){
 		FI->hash = hash;
 	}
@@ -114,27 +117,27 @@ boost::shared_ptr<database::table::share::file_info> database::table::share::loo
 }
 
 static int lookup_path_call_back(
-	boost::shared_ptr<database::table::share::file_info> & FI,
+	boost::reference_wrapper<boost::shared_ptr<database::table::share::file_info> > FI,
 	int columns_retrieved, char ** response, char ** column_name)
 {
 	assert(response[0] && response[1]);
-	FI = boost::shared_ptr<database::table::share::file_info>(
+	FI.get() = boost::shared_ptr<database::table::share::file_info>(
 		new database::table::share::file_info());
 
 	std::stringstream ss;
 
 	//hash
-	FI->hash = response[0];
+	FI.get()->hash = response[0];
 
 	//file size
 	ss << response[1];
-	ss >> FI->file_size;
+	ss >> FI.get()->file_size;
 
 	//state
 	ss << response[2];
 	int temp;
 	ss >> temp;
-	FI->State = reinterpret_cast<database::table::share::state &>(temp);
+	FI.get()->State = reinterpret_cast<database::table::share::state &>(temp);
 
 	return 0;
 }
@@ -145,7 +148,7 @@ boost::shared_ptr<database::table::share::file_info> database::table::share::loo
 	boost::shared_ptr<file_info> FI;
 	char * query = sqlite3_mprintf(
 		"SELECT hash, file_size, state FROM share WHERE path = %Q LIMIT 1", path.c_str());
-	DB->query(query, &lookup_path_call_back, FI);
+	DB->query(query, &lookup_path_call_back, boost::ref(FI));
 	sqlite3_free(query);
 	if(FI){
 		FI->path = path;
@@ -154,7 +157,7 @@ boost::shared_ptr<database::table::share::file_info> database::table::share::loo
 }
 
 static int resume_call_back(
-	std::vector<database::table::share::file_info> & Resume,
+	boost::reference_wrapper<std::vector<database::table::share::file_info> > Resume,
 	int columns_retrieved, char ** response, char ** column_name)
 {
 	assert(response[0] && response[1] && response[2]);
@@ -164,16 +167,17 @@ static int resume_call_back(
 	ss << response[1];
 	ss >> FI.file_size;
 	FI.path = response[2];
-	Resume.push_back(FI);
+	Resume.get().push_back(FI);
 	return 0;
 }
 
-void database::table::share::resume(std::vector<database::table::share::file_info> & Resume,
+void database::table::share::resume(
+	std::vector<database::table::share::file_info> & Resume,
 	database::pool::proxy DB)
 {
 	std::stringstream ss;
 	ss << "SELECT hash, file_size, path FROM share WHERE state = " << downloading;
-	DB->query(ss.str(), &resume_call_back, Resume);
+	DB->query(ss.str(), &resume_call_back, boost::ref(Resume));
 	for(std::vector<file_info>::iterator iter_cur = Resume.begin(),
 		iter_end = Resume.end(); iter_cur != iter_end; ++iter_cur)
 	{
