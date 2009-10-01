@@ -67,6 +67,10 @@ public:
 		we stop downloading the file from them. Any unfulfilled requests are
 		immediately rerequested.
 		Precondition: host must have been previously added.
+	rerequest_block:
+		This function is called when we receive a bad block but we don't know who
+		it is from. When this happens we need to "re"request the block from any
+		host. This function is commonly called when reassembling a hash tree.
 	*/
 	void add_block_local(const int socket_FD, const boost::uint64_t block);
 	void add_block_remote(const int socket_FD, const boost::uint64_t block);
@@ -76,6 +80,7 @@ public:
 	bool complete();
 	bool next_request(const int socket_FD, boost::uint64_t & block);
 	void remove_host(const int socket_FD);
+	void rerequest_block(const boost::uint64_t block);
 
 private:
 	//locks access to all data members

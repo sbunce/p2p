@@ -7,6 +7,7 @@ slot_manager::slot_manager(
 {
 	//get slots for files this server has
 
+LOGGER << "woot";
 }
 
 /*

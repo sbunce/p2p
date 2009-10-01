@@ -58,7 +58,6 @@ private:
 	/*
 	slot_counter:
 		Slots are serviced in a round-robin fashion by servicing
-		slot_counter++ % Outgoing_Slot.size().
 	pending_block_requests:
 		How many block requests are in the Send_Queue. This will not exceed
 		protocol::PIPELINE_SIZE.

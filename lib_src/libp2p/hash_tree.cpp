@@ -176,6 +176,13 @@ hash_tree::status hash_tree::check()
 		if(Status == good){
 			end_of_good = x+1;
 		}else if(Status == bad){
+			/*
+			We don't store who sent blocks so we can't know which host sent a bad
+			block unless the block it sent is equal to end_of_good (see
+			documentation in write_block()). We will "re"request this block from
+			any host.
+			*/
+			Block_Request.rerequest_block(x);
 			return bad;
 		}else if(Status == io_error){
 			return io_error;

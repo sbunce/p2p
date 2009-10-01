@@ -100,14 +100,22 @@ void p2p_real::resume()
 	LOGGER << "share scan resumed";
 
 	//test connection
-	Proactor.connect("topaz", settings::P2P_PORT);
-/*
+	//Proactor.connect("topaz", settings::P2P_PORT);
+
+	//get host_info for all hosts we need to connect to
+	std::set<database::table::host::host_info> all_host;
 	for(share::slot_iterator iter_cur = Share.begin_slot(), iter_end = Share.end_slot();
 		iter_cur != iter_end; ++iter_cur)
 	{
-
+		iter_cur->merge_host(all_host);
 	}
-*/
+
+	//connect to all hosts
+	for(std::set<database::table::host::host_info>::iterator iter_cur = all_host.begin(),
+		iter_end = all_host.end(); iter_cur != iter_end; ++iter_cur)
+	{
+		Proactor.connect(iter_cur->host, iter_cur->port);
+	}
 }
 
 boost::uint64_t p2p_real::share_size_bytes()

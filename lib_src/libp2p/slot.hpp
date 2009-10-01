@@ -27,7 +27,7 @@ class slot : private boost::noncopyable
 	friend class share;
 public:
 
-	/*
+	/* Slot Info Functions
 	complete:
 		Returns true if both the Hash_Tree and File are complete.
 	download_speed:
@@ -36,6 +36,8 @@ public:
 		Returns size of the file the slot is for.
 	hash:
 		Returns root hash of the hash tree (hex).
+	merge_host:
+		Inserts all host_info in host in to host_in.
 	name:
 		Returns the name of the file.
 	percent_complete:
@@ -49,6 +51,7 @@ public:
 	unsigned download_speed();
 	const boost::uint64_t & file_size();
 	const std::string & hash();
+	void merge_host(std::set<database::table::host::host_info> & host_in);
 	std::string name();
 	unsigned percent_complete();
 	const boost::uint64_t & tree_size();
@@ -61,17 +64,10 @@ private:
 		database::pool::proxy DB = database::pool::proxy()
 	);
 
-/*
-DEBUG, use the mutex until the Hash_Tree object can be made thread safe. This
-will be more granular overall. We don't want one in-progress write on the hash
-tree to block other writes to the hash tree.
-*/
 	//all access to Hash_Tree must be locked with Hash_Tree_mutex
-	boost::mutex Hash_Tree_mutex;
 	hash_tree Hash_Tree;
 
 	//all access to File must be locked with File_mutex
-	boost::mutex File_mutex;
 	file File;
 
 	//all the hosts known to have the file

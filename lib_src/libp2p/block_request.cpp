@@ -229,3 +229,9 @@ void block_request::remove_host(const int socket_FD)
 		}
 	}
 }
+
+void block_request::rerequest_block(const boost::uint64_t block)
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	request.erase(block);
+}
