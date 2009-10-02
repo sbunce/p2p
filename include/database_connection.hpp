@@ -20,9 +20,8 @@ With function call back with object:
 Regular call back:
 	int call_back(int columns, char ** response, char ** column_name);
 
-Call back with object (can be value or reference):
+Call back with object:
 	int call_back(std::string str, int columns, char ** response, char ** column_name);
-	int call_back(std::string & str, int columns, char ** response, char ** column_name);
 
 ************************** Blobs: **********************************************
 Create table with blob field:
@@ -50,8 +49,8 @@ Read blob:
 
 //include
 #include <atomic_int.hpp>
-#include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/thread.hpp>
 #include <logger.hpp>
 #include <sqlite3.h>
 
@@ -106,8 +105,12 @@ public:
 		}
 	}
 
-	//pre-allocate space for blob so that incremental read/write may happen
-	bool blob_allocate(const std::string & query, const int & size)
+	/*
+	Pre-allocate space for blob so that incremental read/write may happen. Return
+	false if allocation failed.
+	Note: It is not uncommon for this to fail under heavy database load.
+	*/
+	bool blob_allocate(const std::string & query, const int size)
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 		connect();
@@ -125,10 +128,6 @@ public:
 			LOGGER << sqlite3_errmsg(DB_handle);
 			return false;
 		}
-		/*
-		We used to ROLLBACK and retry here but it turned out to be problematic
-		under heavy load.
-		*/
 		if(sqlite3_step(prepared_statement) != SQLITE_DONE){
 			LOGGER << sqlite3_errmsg(DB_handle);
 			sqlite3_exec(DB_handle, "ROLLBACK", NULL, NULL, NULL);
@@ -144,7 +143,16 @@ public:
 		return true;
 	}
 
-	//read data from blob, returns true if success else false
+	/*
+	Read data from blob. Returns true if success else false.
+	buff:
+		Pointer to memory where bytes can be stored. This must be at least as big
+		as size.
+	size:
+		Size of data to read in to buff.
+	offset:
+		Offset (bytes) in to the blob to start reading.
+	*/
 	bool blob_read(const blob & Blob, char * const buff, const int size, const int offset)
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
@@ -160,7 +168,10 @@ public:
 		return blob_close(blob_handle);
 	}
 
-	//write data to blob, returns true if success else false
+	/*
+	Write data to blob. Returns true if success else false.
+	See documentation for blob_write to find out what the parameters do.
+	*/
 	bool blob_write(const blob & Blob, const char * const buff, const int size, const int offset)
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
@@ -169,7 +180,9 @@ public:
 		if(!blob_open(Blob, true, blob_handle)){
 			return false;
 		}
-		if(sqlite3_blob_write(blob_handle, static_cast<const void *>(buff), size, offset) != SQLITE_OK){
+		if(sqlite3_blob_write(blob_handle, static_cast<const void *>(buff), size,
+			offset) != SQLITE_OK)
+		{
 			LOGGER << sqlite3_errmsg(DB_handle);
 			return false;
 		}
@@ -262,20 +275,17 @@ public:
 
 	//query with member function call back and object
 	template <typename T, typename T_obj>
-	int query(const std::string & query, T * t, int (T::*memfun_ptr)(T_obj, int, char **, char **), T_obj T_Obj)
+	int query(const std::string & query, T * t, int (T::*memfun_ptr)(T_obj, int, char **, char **),
+		T_obj T_Obj)
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 		connect();
-		/*
-		std::pair<std::pair<object with func, func signature>, object> >
-		A boost::tuple would be nice here but I want to leave this stdlib only.
-		*/
 		std::pair<std::pair<T*, int (T::*)(T_obj, int, char **, char **)>, T_obj*>
-			call_back_info(std::make_pair(t, memfun_ptr), &T_Obj);
+			info(std::make_pair(t, memfun_ptr), &T_Obj);
 		int code;
 		while((code = sqlite3_exec(DB_handle, query.c_str(),
 			memfun_with_object_call_back_wrapper<T, T_obj>,
-			static_cast<void *>(&call_back_info), NULL)) != SQLITE_OK)
+			static_cast<void *>(&info), NULL)) != SQLITE_OK)
 		{
 			if(code == SQLITE_BUSY){
 				boost::this_thread::yield();
@@ -289,16 +299,14 @@ public:
 	}
 
 private:
-	//this info is locked with Recursive_Mutex
-	sqlite3 * DB_handle;
-	bool connected;
-	std::string path;
-
 	/*
-	Recursive_Mutex for all public functions. A recursive mutex is used because a
-	thread might want to do a query inside a call back.
+	Recursive_Mutex locks access to all data members and insures that only one
+	database operation at a time happens.
 	*/
 	boost::recursive_mutex Recursive_Mutex;
+	sqlite3 * DB_handle;
+	bool connected;      //used for lazy connect
+	std::string path;    //used for lazy connect
 
 	/*
 	The connection object is lazy. It only connects to the database when a query
@@ -307,6 +315,7 @@ private:
 	*/
 	void connect()
 	{
+		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 		if(!connected){
 			if(sqlite3_open_v2(path.c_str(), &DB_handle,
 				SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX,
@@ -324,7 +333,7 @@ private:
 
 			//move free pages to EOF and truncate at every commit
 			int code;
-			while((code = sqlite3_exec(DB_handle, "PRAGMA auto_vacuum = full;" ,
+			while((code = sqlite3_exec(DB_handle, "PRAGMA auto_vacuum = full;",
 				NULL, NULL, NULL)) != SQLITE_OK)
 			{
 				if(code == SQLITE_BUSY){
@@ -335,76 +344,90 @@ private:
 				}
 			}
 			connected = true;
-			path.clear(); //save space
+
+			//this is no longer used, save space by clearing it
+			path.clear();
 		}
 	}
 
-	//call backs for query functions
-	static int fun_call_back_wrapper(void * obj_ptr, int columns, char ** response,
+	/* Call Back Wrappers
+	Wrappers are needed because a function with a C-signature is needed for
+	SQLite to do a call back. A static function has a C-signature.
+	*/
+	//function call back
+	static int fun_call_back_wrapper(void * ptr, int columns, char ** response,
 		char ** column_name)
 	{
-		int (*fun_ptr)(int, char **, char **) = (int (*)(int, char **, char **))obj_ptr;
+		int (*fun_ptr)(int, char **, char **)
+			= reinterpret_cast<int (*)(int, char **, char **)>(ptr);
 		return fun_ptr(columns, response, column_name);
 	}
+
+	//function call back with object passed to call back
 	template <typename T>
-	static int fun_with_object_call_back_wrapper(void * obj_ptr, int columns,
+	static int fun_with_object_call_back_wrapper(void * ptr, int columns,
 		char ** response, char ** column_name)
 	{
-		std::pair<int (*)(T, int, char **, char **), T*>
-			* call_back_info = (std::pair<int (*)(T, int, char **, char **), T*> *)obj_ptr;
-		int (*fun_ptr)(T, int, char **, char **) = (int (*)(T, int, char **, char **))call_back_info->first;
-		return fun_ptr(*(call_back_info->second), columns, response, column_name);
+		std::pair<int (*)(T, int, char **, char **), T*> *
+			info = reinterpret_cast<std::pair<int (*)(T, int, char **, char **), T*> *>(ptr);
+		int (*fun_ptr)(T, int, char **, char **) = info->first;
+		T * obj = info->second; //object to pass to function
+		return fun_ptr(*obj, columns, response, column_name);
 	}
 
+	//member function call back
 	template <typename T>
-	static int memfun_call_back_wrapper(void * obj_ptr, int columns, char ** response,
+	static int memfun_call_back_wrapper(void * ptr, int columns, char ** response,
 		char ** column_name)
 	{
-		std::pair<T*, int (T::*)(int, char **, char **)>
-			* call_back_info = (std::pair<T*, int (T::*)(int, char **, char **)> *)obj_ptr;
-		return ((*call_back_info->first).*(call_back_info->second))(columns, response, column_name);
+		std::pair<T*, int (T::*)(int, char **, char **)> *
+			info = reinterpret_cast<std::pair<T*, int (T::*)(int, char **, char **)> *>(ptr);
+		T * obj = info->first; //object which has member function to call
+		int (T::*mem_fun_ptr)(int, char **, char **) = info->second;
+		return (obj->*mem_fun_ptr)(columns, response, column_name);
 	}
 
+	//member function call back with object passed to call back
 	template <typename T, typename T_obj>
-	static int memfun_with_object_call_back_wrapper(void * obj_ptr, int columns,
+	static int memfun_with_object_call_back_wrapper(void * ptr, int columns,
 		char ** response, char ** column_name)
 	{
-		std::pair<std::pair<T*, int (T::*)(T_obj, int, char **, char **)>, T_obj*>
-			* call_back_info = (std::pair<std::pair<T*, int (T::*)(T_obj, int, char **, char **)>, T_obj*> *)obj_ptr;
-		return ((*call_back_info->first.first).*(call_back_info->first.second))
-			(*(call_back_info->second), columns, response, column_name);
+		std::pair<std::pair<T*, int (T::*)(T_obj, int, char **, char **)>, T_obj*> *
+			info = reinterpret_cast<std::pair<std::pair<T*,
+			int (T::*)(T_obj, int, char **, char **)>, T_obj*> *>(ptr);
+		T * obj = info->first.first; //object which has member function to call
+		int (T::*mem_fun_ptr)(T_obj, int, char **, char **) = info->first.second;
+		T_obj * t_obj = info->second; //object to pass to member function
+		return (obj->*mem_fun_ptr)(*t_obj, columns, response, column_name);
 	}
 
-	/*
-	Close a blob pointed to by blob handle.
-	Precondition: Recursive_Mutex must be locked.
-	*/
+	//close_blob
 	bool blob_close(sqlite3_blob * blob_handle)
 	{
-		if(sqlite3_blob_close(blob_handle) != SQLITE_OK){
+		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+		if(sqlite3_blob_close(blob_handle) == SQLITE_OK){
+			return true;
+		}else{
 			LOGGER << "sqlite error: " << sqlite3_errmsg(DB_handle);
 			return false;
 		}
-		return true;
 	}
 
-	/*
-	Opens a blob with the info contained in Blob.
-	Precondition: Recursive_Mutex must be locked.
-	*/
+	//open blob
 	bool blob_open(const blob & Blob, const bool & writeable, sqlite3_blob *& blob_handle)
 	{
+		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 		assert(!Blob.column.empty());
 		assert(!Blob.table.empty());
 		assert(Blob.rowid > 0);
 		int code;
 		while((code = sqlite3_blob_open(
 			DB_handle,
-			"main",              //symbolic DB name ("main" is default)
+			"main",               //DB name ("main" is default)
 			Blob.table.c_str(),
 			Blob.column.c_str(),
-			Blob.rowid,          //row ID (primary key) of row with blob
-			(int)writeable,      //0 = read only, non-zero = read/write
+			Blob.rowid,           //row ID (primary key)
+			reinterpret_cast<const int &>(writeable), //0 = read only, non-zero = read/write
 			&blob_handle
 		)) != SQLITE_OK){
 			if(code == SQLITE_BUSY){
