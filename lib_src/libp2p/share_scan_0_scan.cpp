@@ -52,15 +52,11 @@ int share_scan_0_scan::resume_call_back(
 		return 1;
 	}
 	try{
-LOGGER;
 		file_info FI;
 		FI.hash = response[0];
 		FI.path = response[1];
-LOGGER << response[2];
 		FI.file_size = boost::lexical_cast<boost::uint64_t>(response[2]);
-LOGGER;
 		FI.last_write_time = boost::lexical_cast<std::time_t>(response[3]);
-LOGGER;
 		int temp = boost::lexical_cast<int>(response[4]);
 		database::table::share::state state = reinterpret_cast<database::table::share::state &>(temp);
 		Share.insert_update(FI);

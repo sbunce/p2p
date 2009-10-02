@@ -108,39 +108,67 @@ public:
 	/*
 	Pre-allocate space for blob so that incremental read/write may happen. Return
 	false if allocation failed.
-	Note: It is not uncommon for this to fail under heavy database load.
 	*/
 	bool blob_allocate(const std::string & query, const int size)
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 		connect();
-		sqlite3_stmt * prepared_statement;
-		if(sqlite3_prepare_v2(
-			DB_handle,
-			query.c_str(),
-			query.size(),
-			&prepared_statement,
-			0 //not needed unless multiple statements
-		) != SQLITE_OK){
-			LOGGER << sqlite3_errmsg(DB_handle);
-		}
-		if(sqlite3_bind_zeroblob(prepared_statement, 1, size) != SQLITE_OK){
-			LOGGER << sqlite3_errmsg(DB_handle);
-			return false;
-		}
-		if(sqlite3_step(prepared_statement) != SQLITE_DONE){
-			LOGGER << sqlite3_errmsg(DB_handle);
-			sqlite3_exec(DB_handle, "ROLLBACK", NULL, NULL, NULL);
-			if(sqlite3_finalize(prepared_statement) != SQLITE_OK){
-				LOGGER << sqlite3_errmsg(DB_handle);
+		while(true){
+			/*
+			Go back to the beginning of the process whenever a SQLITE_BUSY is
+			received. Only return false if there is an error. It proved to be
+			problematic (acted like infinite loop) when we tried to roll back the
+			sqlite3_step() only and retry.
+			*/
+			int ret;
+			sqlite3_stmt * prepared_statement;
+			ret = sqlite3_prepare_v2(
+				DB_handle,
+				query.c_str(),
+				query.size(),
+				&prepared_statement,
+				0 //not needed unless multiple statements
+			);
+			if(ret == SQLITE_BUSY){
+				if(sqlite3_finalize(prepared_statement) != SQLITE_OK){
+					LOGGER << sqlite3_errmsg(DB_handle);
+				}
+				boost::this_thread::yield();
+				continue;
+			}else if(ret != SQLITE_OK){
+				if(sqlite3_finalize(prepared_statement) != SQLITE_OK){
+					LOGGER << sqlite3_errmsg(DB_handle);
+				}
+				return false;
 			}
-			return false;
+
+			ret = sqlite3_bind_zeroblob(prepared_statement, 1, size);
+			if(ret == SQLITE_BUSY){
+				if(sqlite3_finalize(prepared_statement) != SQLITE_OK){
+					LOGGER << sqlite3_errmsg(DB_handle);
+				}
+				boost::this_thread::yield();
+				continue;
+			}else if(ret != SQLITE_OK){
+				if(sqlite3_finalize(prepared_statement) != SQLITE_OK){
+					LOGGER << sqlite3_errmsg(DB_handle);
+				}
+				return false;
+			}
+
+			ret = sqlite3_step(prepared_statement);
+			if(ret == SQLITE_DONE){
+				return true;
+			}else if(ret == SQLITE_BUSY){
+				if(sqlite3_finalize(prepared_statement) != SQLITE_OK){
+					LOGGER << sqlite3_errmsg(DB_handle);
+				}
+				boost::this_thread::yield();
+				continue;
+			}else{
+				return false;
+			}
 		}
-		if(sqlite3_finalize(prepared_statement) != SQLITE_OK){
-			LOGGER << sqlite3_errmsg(DB_handle);
-			return false;
-		}
-		return true;
 	}
 
 	/*

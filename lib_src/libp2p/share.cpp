@@ -269,15 +269,11 @@ boost::shared_ptr<slot> share::get_slot(const std::string & hash,
 	Under heavy database contention blob allocation sometimes fails.
 	*/
 	boost::shared_ptr<slot> new_slot;
-	int retries = 4;
-	while(retries--){
-		try{
-			new_slot = boost::shared_ptr<slot>(new slot(FI, DB));
-			break;
-		}catch(std::exception & ex){
-			LOGGER << ex.what();
-			boost::this_thread::yield();
-		}
+	try{
+		new_slot = boost::shared_ptr<slot>(new slot(FI, DB));
+	}catch(std::exception & ex){
+		LOGGER << ex.what();
+		boost::this_thread::yield();
 	}
 
 	//slot creation failed
