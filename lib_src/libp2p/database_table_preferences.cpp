@@ -5,41 +5,41 @@ Needed for all the get_* functions which get a unsigned int.
 std::pair<true if number retrieved, number>
 */
 static int get_unsigned_call_back(
-	boost::reference_wrapper<std::pair<bool, unsigned> > number,
+	boost::reference_wrapper<unsigned> number,
 	int columns_retrieved, char ** response, char ** column_name)
 {
-	assert(response[0]);
-	number.get().first = true;
-	std::stringstream ss(response[0]);
-	ss >> number.get().second;
+	assert(columns_retrieved == 1);
+	try{
+		number.get() = boost::lexical_cast<unsigned>(response[0]);
+	}catch(const std::exception & e){
+		LOGGER << e.what();
+		exit(1);
+	}
 	return 0;
 }
 
 unsigned database::table::preferences::get_max_download_rate(database::pool::proxy DB)
 {
-	std::pair<bool, unsigned> download_rate(false, 0);
+	unsigned download_rate;
 	DB->query("SELECT max_download_rate FROM preferences", &get_unsigned_call_back,
 		boost::ref(download_rate));
-	assert(download_rate.first);
-	return download_rate.second;
+	return download_rate;
 }
 
 unsigned database::table::preferences::get_max_connections(database::pool::proxy DB)
 {
-	std::pair<bool, unsigned> server_connections(false, 0);
+	unsigned server_connections;
 	DB->query("SELECT max_connections FROM preferences", &get_unsigned_call_back,
 		boost::ref(server_connections));
-	assert(server_connections.first);
-	return server_connections.second;
+	return server_connections;
 }
 
 unsigned database::table::preferences::get_max_upload_rate(database::pool::proxy DB)
 {
-	std::pair<bool, unsigned> upload_rate(false, 0);
+	unsigned upload_rate;
 	DB->query("SELECT max_upload_rate FROM preferences", &get_unsigned_call_back,
 		boost::ref(upload_rate));
-	assert(upload_rate.first);
-	return upload_rate.second;
+	return upload_rate;
 }
 
 void database::table::preferences::set_max_download_rate(const unsigned rate,

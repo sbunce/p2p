@@ -54,8 +54,12 @@ static int lookup_call_back(
 	boost::reference_wrapper<boost::shared_ptr<std::vector<database::table::host::host_info> > > host,
 	int columns_retrieved, char ** response, char ** column_name)
 {
-	assert(response[0] && response[1]);
+	assert(columns_retrieved == 2);
 	if(!host.get()){
+		/*
+		This function will be called multiple times or no times. If the vector
+		hasn't already been created then create it.
+		*/
 		host.get() = boost::shared_ptr<std::vector<database::table::host::host_info> >(
 			new std::vector<database::table::host::host_info>());
 	}

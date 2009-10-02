@@ -30,7 +30,7 @@ hash_tree::hash_tree(
 			const_cast<database::blob &>(Blob) = TI->Blob;
 		}else{
 			if(database::table::hash::tree_allocate(hash, tree_size, DB)){
-				database::table::hash::set_state(hash, database::table::hash::downloading);
+				database::table::hash::set_state(hash, database::table::hash::downloading, DB);
 				TI = database::table::hash::tree_open(hash, DB);
 				if(TI){
 					const_cast<database::blob &>(Blob) = TI->Blob;

@@ -1,13 +1,5 @@
 #include "database_init.hpp"
 
-static int check_exists_call_back(boost::reference_wrapper<bool> exists,
-	int columns_retrieved, char ** response, char ** column_name)
-{
-	assert(response[0]);
-	exists.get() = (strcmp(response[0], "0") != 0);
-	return 0;
-}
-
 database::init::init()
 {
 	path::create_required_directories();
@@ -61,17 +53,18 @@ void database::init::host()
 
 void database::init::preferences()
 {
+	/*
+	The INTEGER PRIMARY KEY is used to keep it so there is only ever one row in
+	the preferences table. Every time we insert we specify 1 as the key and
+	ignore if there is an error. The PRIMARY KEY is unique so if we try to insert
+	the row twice we get an error (which we ignore).
+	*/
 	database::pool::proxy DB;
-	DB->query("CREATE TABLE IF NOT EXISTS preferences (max_connections INTEGER, max_download_rate INTEGER, max_upload_rate INTEGER)");
-	bool exists = false;
-	DB->query("SELECT count(1) FROM preferences", &check_exists_call_back, boost::ref(exists));
-	if(!exists){
-		//set defaults if no preferences yet exist
-		std::stringstream ss;
-		ss << "INSERT INTO preferences VALUES(" << settings::MAX_CONNECTIONS 
-			<< ", " << settings::MAX_DOWNLOAD_RATE << ", " << settings::MAX_UPLOAD_RATE << ")";
-		DB->query(ss.str());
-	}
+	DB->query("CREATE TABLE IF NOT EXISTS preferences (key INTEGER PRIMARY KEY, max_connections INTEGER, max_download_rate INTEGER, max_upload_rate INTEGER)");
+	std::stringstream ss;
+	ss << "INSERT OR IGNORE INTO preferences VALUES(1, " << settings::MAX_CONNECTIONS 
+		<< ", " << settings::MAX_DOWNLOAD_RATE << ", " << settings::MAX_UPLOAD_RATE << ")";
+	DB->query(ss.str());
 }
 
 void database::init::prime()

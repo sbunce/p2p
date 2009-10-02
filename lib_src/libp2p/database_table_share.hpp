@@ -8,6 +8,7 @@
 
 //include
 #include <atomic_bool.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/tuple/tuple.hpp>
 
@@ -57,9 +58,6 @@ public:
 	lookup_path:
 		Lookup a record in the share table by it's path. An empty shared_ptr is
 		returned if no record exists.
-	resume:
-		Used on program start to retrieve file_info for all files in share where
-		state = DOWNLOADING.
 	*/
 	static void add_entry(const file_info & FI,
 		database::pool::proxy DB = database::pool::proxy());
@@ -68,8 +66,6 @@ public:
 	static boost::shared_ptr<file_info> lookup_hash(const std::string & hash,
 		database::pool::proxy DB = database::pool::proxy());
 	static boost::shared_ptr<file_info> lookup_path(const std::string & path,
-		database::pool::proxy DB = database::pool::proxy());
-	static void resume(std::vector<file_info> & Resume,
 		database::pool::proxy DB = database::pool::proxy());
 
 private:

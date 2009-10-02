@@ -1,4 +1,3 @@
-//THREADSAFE
 #ifndef H_DATABASE_TABLE_HASH
 #define H_DATABASE_TABLE_HASH
 
@@ -8,6 +7,7 @@
 #include "settings.hpp"
 
 //include
+#include <boost/lexical_cast.hpp>
 #include <boost/ref.hpp>
 #include <boost/thread.hpp>
 
@@ -52,7 +52,7 @@ public:
 		database::pool::proxy DB = database::pool::proxy());
 	static void set_state(const std::string & hash, const state State,
 		database::pool::proxy DB = database::pool::proxy());
-	static bool tree_allocate(const std::string & hash, const int tree_size,
+	static bool tree_allocate(const std::string & hash, const boost::uint64_t & tree_size,
 		database::pool::proxy DB = database::pool::proxy());
 	static boost::shared_ptr<tree_info> tree_open(const std::string & hash,
 		database::pool::proxy DB = database::pool::proxy());

@@ -13,21 +13,23 @@ void database::table::hash::set_state(const std::string & hash,
 {
 	assert(State >= reserved && State <= complete);
 	std::stringstream ss;
-	ss << "UPDATE hash SET state = " << State << " WHERE hash = '"
-		<< hash << "'";
+	ss << "UPDATE hash SET state = " << State << " WHERE hash = '" << hash << "'";
 	DB->query(ss.str());
 }
 
 bool database::table::hash::tree_allocate(const std::string & hash,
-	const int tree_size, database::pool::proxy DB)
+	const boost::uint64_t & tree_size, database::pool::proxy DB)
 {
-	if(tree_size != 0){
+	if(tree_size > 2147483647ULL){
+		LOGGER << "tree too large for sqlite to support";
+		return false;
+	}else if(tree_size == 0){
+		return false;
+	}else{
 		std::stringstream ss;
 		ss << "INSERT INTO hash(key, hash, state, tree_size, tree) VALUES(NULL, '"
 			<< hash << "', " << reserved << ", " << tree_size << ", ?)";
 		return DB->blob_allocate(ss.str(), tree_size);
-	}else{
-		return false;
 	}
 }
 
@@ -35,27 +37,18 @@ static int tree_open_call_back(
 	boost::reference_wrapper<boost::shared_ptr<database::table::hash::tree_info> > TI,
 	int columns_retrieved, char ** response, char ** column_name)
 {
-	assert(response[0] && response[1] && response[2]);
+	assert(columns_retrieved == 3);
 	TI.get() = boost::shared_ptr<database::table::hash::tree_info>(
 		new database::table::hash::tree_info());
-	std::stringstream ss;
-
-	//row primary key
-	ss << response[0];
-	ss >> TI.get()->Blob.rowid;
-
-	//tree size
-	ss.str(""); ss.clear();
-	ss << response[1];
-	ss >> TI.get()->tree_size;
-
-	//state
-	ss.str(""); ss.clear();
-	ss << response[2];
-	int temp;
-	ss >> temp;
-	TI.get()->State = reinterpret_cast<database::table::hash::state &>(temp);
-
+	try{
+		TI.get()->Blob.rowid = boost::lexical_cast<boost::int64_t>(response[0]);
+		TI.get()->tree_size = boost::lexical_cast<boost::uint64_t>(response[1]);
+		int state = boost::lexical_cast<int>(response[2]);
+		TI.get()->State = reinterpret_cast<database::table::hash::state &>(state);
+	}catch(const std::exception & e){
+		LOGGER << e.what();
+		TI.get() = boost::shared_ptr<database::table::hash::tree_info>();
+	}
 	return 0;
 }
 
@@ -64,7 +57,8 @@ boost::shared_ptr<database::table::hash::tree_info> database::table::hash::tree_
 {
 	boost::shared_ptr<tree_info> TI;
 	std::stringstream ss;
-	ss << "SELECT key, tree_size, state FROM hash WHERE hash = '" << hash << "'";
+	ss << "SELECT key, tree_size, state FROM hash WHERE hash = '" << hash
+		<< "' LIMIT 1";
 	DB->query(ss.str(), &tree_open_call_back, boost::ref(TI));
 	if(TI){
 		TI->hash = hash;
