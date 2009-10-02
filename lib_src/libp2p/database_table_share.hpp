@@ -4,6 +4,7 @@
 
 //custom
 #include "database.hpp"
+#include "file_info.hpp"
 #include "settings.hpp"
 
 //include
@@ -34,15 +35,14 @@ public:
 	public:
 		file_info();
 		file_info(
-			const std::string & hash_in,
-			const boost::uint64_t & file_size_in,
-			const std::string & path_in,
+			const ::file_info & FI,
 			const state State_in
 		);
 
 		std::string hash;
-		boost::uint64_t file_size;
 		std::string path;
+		boost::uint64_t file_size;
+		std::time_t last_write_time;
 		state State;
 	};
 

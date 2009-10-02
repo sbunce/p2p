@@ -11,6 +11,7 @@
 //include
 #include <boost/cstdint.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/ref.hpp>
 #include <boost/thread.hpp>
 #include <boost/tokenizer.hpp>

@@ -9,8 +9,8 @@ int main()
 	share Share;
 
 	//test files
-	file_info FI_1("ABC", "/foo", 123);
-	file_info FI_2("DEF", "/foo/bar", 123);
+	file_info FI_1("ABC", "/foo", 123, 123);
+	file_info FI_2("DEF", "/foo/bar", 123, 123);
 
 	Share.insert_update(FI_1);
 	Share.insert_update(FI_2);

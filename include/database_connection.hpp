@@ -311,7 +311,6 @@ private:
 	/*
 	The connection object is lazy. It only connects to the database when a query
 	is done. This function connects to the database.
-	Precondition: Recursive_Mutex must be locked.
 	*/
 	void connect()
 	{

@@ -76,7 +76,7 @@ void database::init::prime()
 void database::init::share()
 {
 	database::pool::proxy DB;
-	DB->query("CREATE TABLE IF NOT EXISTS share (hash TEXT, file_size TEXT, path TEXT, state INTEGER)");
+	DB->query("CREATE TABLE IF NOT EXISTS share (hash TEXT, path TEXT, file_size TEXT, last_write_time TEXT, state INTEGER)");
 	DB->query("CREATE INDEX IF NOT EXISTS share_hash_index ON share (hash)");
 	DB->query("CREATE INDEX IF NOT EXISTS share_path_index ON share (path)");
 }

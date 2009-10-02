@@ -47,26 +47,28 @@ int share_scan_0_scan::resume_call_back(
 	boost::reference_wrapper<database::pool::proxy> DB,
 	int columns_retrieved, char ** response, char ** column_name)
 {
+	assert(columns_retrieved == 5);
 	if(boost::this_thread::interruption_requested()){
 		return 1;
 	}
-	assert(response[0] && response[1] && response[2] && response[3]);
-	namespace fs = boost::filesystem;
-	file_info FI;
-	FI.hash = response[0];
-	FI.path = response[1];
-	std::stringstream ss;
-	ss << response[2];
-	ss >> FI.file_size;
-	ss.str(""); ss.clear();
-	ss << response[3];
-	int temp;
-	ss >> temp;
-	database::table::share::state share_state
-		= reinterpret_cast<database::table::share::state &>(temp);
-	Share.insert_update(FI);
-	if(share_state != database::table::share::complete){
-		Share.get_slot(FI.hash, DB.get());
+	try{
+LOGGER;
+		file_info FI;
+		FI.hash = response[0];
+		FI.path = response[1];
+LOGGER << response[2];
+		FI.file_size = boost::lexical_cast<boost::uint64_t>(response[2]);
+LOGGER;
+		FI.last_write_time = boost::lexical_cast<std::time_t>(response[3]);
+LOGGER;
+		int temp = boost::lexical_cast<int>(response[4]);
+		database::table::share::state state = reinterpret_cast<database::table::share::state &>(temp);
+		Share.insert_update(FI);
+		if(state != database::table::share::complete){
+			Share.get_slot(FI.hash, DB.get());
+		}
+	}catch(const std::exception & e){
+		LOGGER << e.what();
 	}
 	return 0;
 }
@@ -75,7 +77,7 @@ void share_scan_0_scan::main_loop()
 {
 	//read in existing share information from database
 	std::stringstream ss;
-	ss << "SELECT hash, path, file_size, state FROM share";
+	ss << "SELECT hash, path, file_size, last_write_time, state FROM share";
 
 	{//scope used to destroy DB
 	database::pool::proxy DB;
@@ -109,13 +111,25 @@ void share_scan_0_scan::main_loop()
 					if(boost::filesystem::is_regular_file(iter_cur->status())){
 						std::string path = iter_cur->path().string();
 						boost::uint64_t file_size = boost::filesystem::file_size(path);
+						std::time_t last_write_time = boost::filesystem::last_write_time(iter_cur->path());
 						share::const_file_iterator share_iter = Share.lookup_path(path);
-						if((share_iter == Share.end_file() || share_iter->file_size != file_size)
-							&& !Share.is_downloading(path))
-						{
-							//file not downloading and it is new or changed size
+						if(share_iter == Share.end_file()){
+							//file has not been seen before
 							boost::shared_ptr<share_scan_job> SSJ(new share_scan_job(true,
-								file_info("", path, file_size)));
+								file_info("", path, file_size, last_write_time)));
+							Share.insert_update(SSJ->FI);
+							{//begin lock scope
+							boost::mutex::scoped_lock lock(job_queue_mutex);
+							job_queue.push_back(SSJ);
+							job_queue_cond.notify_one();
+							}//end lock scope
+						}else if(!Share.is_downloading(path)
+							&& (share_iter->file_size != file_size
+							|| share_iter->last_write_time != last_write_time))
+						{
+							//file modified
+							boost::shared_ptr<share_scan_job> SSJ(new share_scan_job(true,
+								file_info("", path, file_size, last_write_time)));
 							Share.insert_update(SSJ->FI);
 							{//begin lock scope
 							boost::mutex::scoped_lock lock(job_queue_mutex);
