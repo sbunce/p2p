@@ -179,6 +179,14 @@ private:
 	atomic_int<int> slot_state;
 
 	/*
+	Used by get_slot() to stop two threads from creating identical slots at the
+	same time.
+	*/
+	boost::mutex get_slot_memoize_mutex;
+	boost::condition_variable_any get_slot_memoize_cond;
+	std::set<std::string> get_slot_memoize;
+
+	/*
 	next_file_info:
 		Uses the specified path for std::map::upper_bound(). Returns the file
 		with the next greatest path or an empty shared_ptr if there is no more.

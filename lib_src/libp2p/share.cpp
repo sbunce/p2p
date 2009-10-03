@@ -234,13 +234,16 @@ boost::uint64_t share::files()
 boost::shared_ptr<slot> share::get_slot(const std::string & hash,
 	database::pool::proxy DB)
 {
-	/*
-	Constructing a slot does database access so do not do it while holding a
-	lock. It is possible that multiple threads will construct identical slots,
-	but only one will be kept.
-	*/
+	//block multiple threads from creating the same slot concurrently
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(get_slot_memoize_mutex);
+	while(get_slot_memoize.find(hash) != get_slot_memoize.end()){
+		get_slot_memoize_cond.wait(get_slot_memoize_mutex);
+	}
+	get_slot_memoize.insert(hash);
+	}//end lock scope
 
-	//will hold copy of file info for hash
+	//holds file_info if found
 	file_info FI;
 
 	{//begin lock scope
@@ -249,6 +252,7 @@ boost::shared_ptr<slot> share::get_slot(const std::string & hash,
 	std::map<std::string, boost::shared_ptr<slot> >::iterator Slot_iter = Slot.find(hash);
 	if(Slot_iter != Slot.end()){
 		//existing slot found
+		get_slot_memoize_cond.notify_all();
 		return Slot_iter->second;
 	}
 
@@ -257,6 +261,7 @@ boost::shared_ptr<slot> share::get_slot(const std::string & hash,
 		Hash_iter = Hash.find(hash);
 	if(Hash_iter == Hash.end()){
 		//no file with hash exists, cannot create slot
+		get_slot_memoize_cond.notify_all();
 		return boost::shared_ptr<slot>();
 	}else{
 		FI = *Hash_iter->second;
@@ -264,43 +269,26 @@ boost::shared_ptr<slot> share::get_slot(const std::string & hash,
 	}//end lock scope
 
 	/*
-	At this point we construct the slot without a lock. It is possible that two
-	threads do this concurrently for the same file. Retry if there is a failure.
-	Under heavy database contention blob allocation sometimes fails.
+	Construct slot without a lock. There is no chance we will concurrently
+	construct the same slot twice because of the memoization.
 	*/
 	boost::shared_ptr<slot> new_slot;
 	try{
 		new_slot = boost::shared_ptr<slot>(new slot(FI, DB));
 	}catch(std::exception & ex){
 		LOGGER << ex.what();
-		boost::this_thread::yield();
-	}
-
-	//slot creation failed
-	if(!new_slot){
+		get_slot_memoize_cond.notify_all();
 		return boost::shared_ptr<slot>();
 	}
 
-	/*
-	Insert and return the slot. If the slot already exists it means another
-	thread inserted the slot first. In that case we discard the slot we made and
-	return the existing slot.
-	*/
+	//insert and return the created slot
 	{//begin lock scope
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	//check for existing slot (another thread might have created one)
-	std::map<std::string, boost::shared_ptr<slot> >::iterator Slot_iter = Slot.find(hash);
-	if(Slot_iter == Slot.end()){
-		//no slot exists, insert the one we made and return it
-		std::pair<std::map<std::string, boost::shared_ptr<slot> >::iterator, bool>
-			ret = Slot.insert(std::make_pair(hash, new_slot));
-		assert(ret.second);
-		++slot_state;
-		return ret.first->second;
-	}else{
-		//existing slot found
-		return Slot_iter->second;
-	}
+	std::pair<std::map<std::string, boost::shared_ptr<slot> >::iterator, bool>
+		ret = Slot.insert(std::make_pair(hash, new_slot));
+	++slot_state;
+	get_slot_memoize_cond.notify_all();
+	return ret.first->second;
 	}//end lock scope
 }
 
