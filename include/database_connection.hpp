@@ -130,39 +130,29 @@ public:
 				0 //not needed unless multiple statements
 			);
 			if(ret == SQLITE_BUSY){
-				if(sqlite3_finalize(prepared_statement) != SQLITE_OK){
-					LOGGER << sqlite3_errmsg(DB_handle);
-				}
+				sqlite3_finalize(prepared_statement);
 				boost::this_thread::yield();
 				continue;
 			}else if(ret != SQLITE_OK){
-				if(sqlite3_finalize(prepared_statement) != SQLITE_OK){
-					LOGGER << sqlite3_errmsg(DB_handle);
-				}
+				sqlite3_finalize(prepared_statement);
 				return false;
 			}
 
 			ret = sqlite3_bind_zeroblob(prepared_statement, 1, size);
 			if(ret == SQLITE_BUSY){
-				if(sqlite3_finalize(prepared_statement) != SQLITE_OK){
-					LOGGER << sqlite3_errmsg(DB_handle);
-				}
+				sqlite3_finalize(prepared_statement);
 				boost::this_thread::yield();
 				continue;
 			}else if(ret != SQLITE_OK){
-				if(sqlite3_finalize(prepared_statement) != SQLITE_OK){
-					LOGGER << sqlite3_errmsg(DB_handle);
-				}
+				sqlite3_finalize(prepared_statement);
 				return false;
 			}
 
 			ret = sqlite3_step(prepared_statement);
+			sqlite3_finalize(prepared_statement);
 			if(ret == SQLITE_DONE){
 				return true;
 			}else if(ret == SQLITE_BUSY){
-				if(sqlite3_finalize(prepared_statement) != SQLITE_OK){
-					LOGGER << sqlite3_errmsg(DB_handle);
-				}
 				boost::this_thread::yield();
 				continue;
 			}else{

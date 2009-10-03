@@ -22,18 +22,28 @@ void share_scan_2_write::block_until_resumed()
 
 void share_scan_2_write::main_loop()
 {
+	bool skip_sleep = false;
 	while(true){
 		boost::this_thread::interruption_point();
-		boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+		if(skip_sleep){
+			skip_sleep = false;
+		}else{
+			boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+		}
 		database::pool::proxy DB;
 		DB->query("BEGIN TRANSACTION");
-		while(boost::shared_ptr<share_scan_job> SSJ = Share_Scan_1_Hash.job()){
-			if(SSJ->add){
-				database::table::share::file_info FI(SSJ->FI, database::table::share::complete);
-				database::table::share::add_entry(FI, DB);
-				database::table::hash::set_state(FI.hash, database::table::hash::complete, DB);
+		int count = 0;
+		while(boost::shared_ptr<file_info> FI = Share_Scan_1_Hash.job()){
+			if(FI->file_size == 0){
+				database::table::share::delete_entry(FI->path, DB);
 			}else{
-				database::table::share::delete_entry(SSJ->FI.path, DB);
+				database::table::share::add_entry(
+					database::table::share::file_info(*FI, database::table::share::complete), DB);
+				database::table::hash::set_state(FI->hash, database::table::hash::complete, DB);
+			}
+			if(++count > 64){
+				skip_sleep = true;
+				break;
 			}
 		}
 		DB->query("END TRANSACTION");

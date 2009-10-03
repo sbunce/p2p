@@ -20,9 +20,8 @@ const unsigned MAX_DOWNLOAD_RATE = std::numeric_limits<unsigned>::max(); //B/s
 const unsigned MAX_UPLOAD_RATE = std::numeric_limits<unsigned>::max();   //B/s
 
 //hard settings, not changable at runtime
-const int SHARE_SCAN_RATE = 100;     //share scan rate (files/second)
-const int PRIME_CACHE = 128;         //number of primes to keep in prime cache
-const std::string P2P_PORT = "6969"; //port client connects to and server receives on
-const int DATABASE_POOL_SIZE = 8;    //size of database connection pool
+const int PRIME_CACHE = 128;             //number of primes to keep in prime cache
+const std::string P2P_PORT = "6969";     //port client connects to and server receives on
+const int DATABASE_POOL_SIZE = 8;        //size of database connection pool
 }//end of namespace settings
 #endif

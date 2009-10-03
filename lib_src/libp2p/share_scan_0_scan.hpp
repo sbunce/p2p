@@ -31,10 +31,11 @@ public:
 
 	/*
 	job:
-		Blocks until a job is ready.
+		Blocks until job can be returned. If the file_size of the returned job is
+		0 then the job is to remove the file.
 	*/
 	void block_until_resumed();
-	boost::shared_ptr<share_scan_job> job();
+	boost::shared_ptr<file_info> job();
 
 private:
 	boost::thread scan_thread;
@@ -50,7 +51,7 @@ private:
 		When the job_queue reaches the max allowed size the scan_thread is blocked
 		on job_queue_max_cond. It is notified in get_job() when a job is returned.
 	*/
-	std::deque<boost::shared_ptr<share_scan_job> > job_queue;
+	std::deque<boost::shared_ptr<file_info> > job_queue;
 	boost::mutex job_queue_mutex;
 	boost::condition_variable_any job_queue_cond;
 	boost::condition_variable_any job_queue_max_cond;

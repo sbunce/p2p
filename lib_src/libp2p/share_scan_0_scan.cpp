@@ -18,7 +18,7 @@ share_scan_0_scan::~share_scan_0_scan()
 void share_scan_0_scan::block_on_max_jobs()
 {
 	boost::mutex::scoped_lock lock(job_queue_mutex);
-	while(job_queue.size() >= settings::SHARE_SCAN_RATE){
+	while(job_queue.size() >= 256){
 		job_queue_max_cond.wait(job_queue_mutex);
 	}
 }
@@ -31,16 +31,16 @@ void share_scan_0_scan::block_until_resumed()
 	}
 }
 
-boost::shared_ptr<share_scan_job> share_scan_0_scan::job()
+boost::shared_ptr<file_info> share_scan_0_scan::job()
 {
 	boost::mutex::scoped_lock lock(job_queue_mutex);
 	while(job_queue.empty()){
 		job_queue_cond.wait(job_queue_mutex);
 	}
-	boost::shared_ptr<share_scan_job> SSJ = job_queue.front();
+	boost::shared_ptr<file_info> FI = job_queue.front();
 	job_queue.pop_front();
 	job_queue_max_cond.notify_one();
-	return SSJ;
+	return FI;
 }
 
 int share_scan_0_scan::resume_call_back(
@@ -88,7 +88,13 @@ void share_scan_0_scan::main_loop()
 
 	boost::filesystem::path share_path(boost::filesystem::system_complete(
 		boost::filesystem::path(path::share(), boost::filesystem::native)));
-	boost::posix_time::milliseconds scan_delay(1000 / settings::SHARE_SCAN_RATE);
+	boost::posix_time::milliseconds scan_delay(20);
+
+	/*
+	If a new file is found we don't sleep before we iterate to the next file.
+	This takes advantage of the fact that new files are often added in groups.
+	*/
+	bool skip_sleep = false;
 
 	while(true){
 		boost::this_thread::interruption_point();
@@ -98,7 +104,11 @@ void share_scan_0_scan::main_loop()
 			boost::filesystem::recursive_directory_iterator iter_cur(share_path), iter_end;
 			while(iter_cur != iter_end){
 				boost::this_thread::interruption_point();
-				boost::this_thread::sleep(scan_delay);
+				if(skip_sleep){
+					skip_sleep = false;
+				}else{
+					boost::this_thread::sleep(scan_delay);
+				}
 				block_on_max_jobs();
 				if(boost::filesystem::is_symlink(iter_cur->path().parent_path())){
 					//traversed to symlink directory, go back up and skip
@@ -109,29 +119,20 @@ void share_scan_0_scan::main_loop()
 						boost::uint64_t file_size = boost::filesystem::file_size(path);
 						std::time_t last_write_time = boost::filesystem::last_write_time(iter_cur->path());
 						share::const_file_iterator share_iter = Share.lookup_path(path);
-						if(share_iter == Share.end_file()){
-							//file has not been seen before
-							boost::shared_ptr<share_scan_job> SSJ(new share_scan_job(true,
-								file_info("", path, file_size, last_write_time)));
-							Share.insert_update(SSJ->FI);
-							{//begin lock scope
-							boost::mutex::scoped_lock lock(job_queue_mutex);
-							job_queue.push_back(SSJ);
-							job_queue_cond.notify_one();
-							}//end lock scope
-						}else if(!Share.is_downloading(path)
-							&& (share_iter->file_size != file_size
-							|| share_iter->last_write_time != last_write_time))
+						if(share_iter == Share.end_file()
+							|| (!Share.is_downloading(path) && (share_iter->file_size != file_size
+							|| share_iter->last_write_time != last_write_time)))
 						{
-							//file modified
-							boost::shared_ptr<share_scan_job> SSJ(new share_scan_job(true,
-								file_info("", path, file_size, last_write_time)));
-							Share.insert_update(SSJ->FI);
+							//new file, or modified file
+							boost::shared_ptr<file_info> FI(new file_info("", path,
+								file_size, last_write_time));
+							Share.insert_update(*FI);
 							{//begin lock scope
 							boost::mutex::scoped_lock lock(job_queue_mutex);
-							job_queue.push_back(SSJ);
+							job_queue.push_back(FI);
 							job_queue_cond.notify_one();
 							}//end lock scope
+							skip_sleep = true;
 						}
 					}
 					++iter_cur;
@@ -146,16 +147,22 @@ void share_scan_0_scan::main_loop()
 			iter_end = Share.end_file(); iter_cur != iter_end; ++iter_cur)
 		{
 			boost::this_thread::interruption_point();
-			boost::this_thread::sleep(scan_delay);
+			if(skip_sleep){
+				skip_sleep = false;
+			}else{
+				boost::this_thread::sleep(scan_delay);
+			}
+			block_on_max_jobs();
 			if(!boost::filesystem::exists(iter_cur->path)){
 				Share.erase(iter_cur->path);
-				boost::shared_ptr<share_scan_job> SSJ(
-					new share_scan_job(false, *iter_cur));
 				{//begin lock scope
 				boost::mutex::scoped_lock lock(job_queue_mutex);
-				job_queue.push_back(SSJ);
+				boost::shared_ptr<file_info> FI(new file_info(*iter_cur));
+				FI->file_size = 0;
+				job_queue.push_back(FI);
 				job_queue_cond.notify_one();
 				}//end lock scope
+				skip_sleep = true;
 			}
 		}
 	}

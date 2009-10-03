@@ -13,6 +13,9 @@
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
 
+//standard
+#include <deque>
+
 class share_scan_1_hash
 {
 public:
@@ -21,10 +24,12 @@ public:
 
 	/*
 	job:
-		Returns shared_ptr for job, or empty shared_ptr if no jobs.
+		Returns file_info if there is a job. Returns empty shared_ptr if there is
+		no job.
+		Note: This function doesn't block.
 	*/
 	void block_until_resumed();
-	boost::shared_ptr<share_scan_job> job();
+	boost::shared_ptr<file_info> job();
 
 private:
 	boost::thread_group Workers;
@@ -38,9 +43,16 @@ private:
 	job_queue_max_cond:
 		Used to block worker threads when job limit reached.
 	*/
-	std::deque<boost::shared_ptr<share_scan_job> > job_queue;
+	std::deque<boost::shared_ptr<file_info> > job_queue;
 	boost::mutex job_queue_mutex;
 	boost::condition_variable_any job_queue_max_cond;
+
+	/*
+	Stores the paths of files that are currently hashing. This is used so that
+	one file never gets hashed by multiple threads.
+	*/
+	boost::mutex memoize_mutex;
+	std::set<std::string> memoize;
 
 	//contains files in share
 	share & Share;

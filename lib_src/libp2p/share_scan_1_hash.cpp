@@ -20,7 +20,7 @@ share_scan_1_hash::~share_scan_1_hash()
 void share_scan_1_hash::block_on_max_jobs()
 {
 	boost::mutex::scoped_lock lock(job_queue_mutex);
-	while(job_queue.size() >= settings::SHARE_SCAN_RATE){
+	while(job_queue.size() >= 256){
 		job_queue_max_cond.wait(job_queue_mutex);
 	}
 }
@@ -30,16 +30,16 @@ void share_scan_1_hash::block_until_resumed()
 	Share_Scan_0_Scan.block_until_resumed();
 }
 
-boost::shared_ptr<share_scan_job> share_scan_1_hash::job()
+boost::shared_ptr<file_info> share_scan_1_hash::job()
 {
 	boost::mutex::scoped_lock lock(job_queue_mutex);
 	if(job_queue.empty()){
-		return boost::shared_ptr<share_scan_job>();
+		return boost::shared_ptr<file_info>();
 	}else{
-		boost::shared_ptr<share_scan_job> SPJ = job_queue.front();
+		boost::shared_ptr<file_info> FI = job_queue.front();
 		job_queue.pop_front();
 		job_queue_max_cond.notify_all();
-		return SPJ;
+		return FI;
 	}
 }
 
@@ -48,32 +48,41 @@ void share_scan_1_hash::main_loop()
 	while(true){
 		boost::this_thread::interruption_point();
 		block_on_max_jobs();
-		boost::shared_ptr<share_scan_job> SPJ = Share_Scan_0_Scan.job();
-		if(SPJ->add){
-			hash_tree::status S = hash_tree::create(SPJ->FI);
+		boost::shared_ptr<file_info> FI = Share_Scan_0_Scan.job();
+		std::string path = FI->path;
+
+		//memoize the paths so that threads don't concurrently hash the same file
+		{//begin lock scope
+		boost::mutex::scoped_lock lock(memoize_mutex);
+		std::pair<std::set<std::string>::iterator, bool> ret = memoize.insert(path);
+		if(ret.second == false){
+			//file is already hashing
+			continue;
+		}
+		}//end lock scope
+
+		if(FI->file_size != 0){
+			hash_tree::status S = hash_tree::create(*FI);
 			if(S == hash_tree::good){
-				Share.insert_update(SPJ->FI);
+				Share.insert_update(*FI);
 				{//begin lock scope
 				boost::mutex::scoped_lock lock(job_queue_mutex);
-				job_queue.push_back(SPJ);
+				job_queue.push_back(FI);
 				}//end lock scope
-			}else if(S == hash_tree::io_error){
-				//io_error, remove file from share so it tries to rehash later
-				Share.erase(SPJ->FI.path);
-			}else if(S == hash_tree::bad){
-				/*
-				Tree can never be created. We leave the hash for the file in share
-				set to "" so that we don't try to rehash this file again and so that
-				it doesn't count to the file or byte total for the share.
-				*/
-				LOGGER << "bad file: " << SPJ->FI.path;
-				SPJ->FI.hash = "";
-				Share.insert_update(SPJ->FI);
+			}else{
+				//error hashing, remove it and retry later
+				Share.erase(FI->path);
 			}
 		}else{
 			//file needs to be removed from database
 			boost::mutex::scoped_lock lock(job_queue_mutex);
-			job_queue.push_back(SPJ);
+			job_queue.push_back(FI);
 		}
+
+		//unmemoize the file
+		{//begin lock scope
+		boost::mutex::scoped_lock lock(memoize_mutex);
+		memoize.erase(path);
+		}//end lock scope
 	}
 }
