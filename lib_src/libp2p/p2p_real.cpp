@@ -110,7 +110,7 @@ void p2p_real::resume()
 		iter_cur->merge_host(all_host);
 	}
 
-	//connect to all hosts
+	//connect to all hosts that have files we need
 	for(std::set<database::table::host::host_info>::iterator iter_cur = all_host.begin(),
 		iter_end = all_host.end(); iter_cur != iter_end; ++iter_cur)
 	{

@@ -21,8 +21,27 @@ concurrently.
 
 <b>2.0 Protocol</b>
 <blockquote>
+<p>
+Summary:
+<br>
 The protocol is symmetric with the exception of the key exchange. Any message
-can go in either direction. All numbers are encoded in big-endian.
+can go in either direction. All numbers are encoded in big-endian. The protocol
+is entirely binary.
+</p>
+<p>
+VLI (Variable Length Integer):
+<br>
+VLIs are used to save space. VLIs are used when we know the maximum value the integer
+must hold. We know the maximum block number of a file so we can use VLIs
+when requesting blocks. VLIs are a minimum of 1 byte and a maximum of 8 bytes.
+</p>
+<p>
+Hash vs Root Hash:
+<br>
+The hash is a hash of the file size (big-endian) followed by the root hash
+(20 byte SHA1 hash). Refer to the hash tree section for documentation on the
+root hash.
+</p>
 </blockquote>
 
 <b>2.1 Key Exchange</b>
@@ -91,8 +110,8 @@ Both sides now have all information needed to calculate the secret key.
 The secret key is used to seed two KISS (created by George Marsaglia) PRNGs. One
 PRNG is for sending and one is for receiving. Note that the KISS PRNG is not
 cryptographically secure but this is okay because the goal is obfuscation and
-not security. Key exchanges without a PKI (public key infrastructure) is
-inherently insecure.
+not security. Key exchanges without a PKI (public key infrastructure) are
+inherently insecure (vulnerable to man-in-the-middle).
 </p>
 
 <pre>
@@ -134,15 +153,15 @@ Base10: 0
 Description: Request a slot for downloading a hash tree and file.
 
 +---+---+---+---+---+---+---+---+
-| C |             R             |
+| C |             H             |
 +---+---+---+---+---+---+---+---+
   0   1   2   3      ...     20
 
-C = command, R = root hash (binary)
+C = command, H = hash
 
 Possible Responses:
 SLOT_ID
-SLOT_ID_WITH_BITFIELD
+SLOT_ID_WITH_BIT_FIELD
 REQUEST_SLOT_FAILED (the server does not have the file)
 </pre>
 </fieldset>
@@ -152,7 +171,7 @@ REQUEST_SLOT_FAILED (the server does not have the file)
 <fieldset>
 <pre>
 Name: REQUEST_SLOT_FAILED
-Base10: 0
+Base10: 1
 Description: Server does not have requested file.
 Postcondition: Slot is not opened.
 
@@ -172,15 +191,15 @@ Possible Responses: None
 <fieldset>
 <pre>
 Name: REQUEST_BLOCK_HASH_TREE
-Base10: 1
+Base10: 2
 Description: Request a block from a hash tree.
 
-+---+---+---+---+---+---+---+---+---+---+
-| C | S |             B                 |
-+---+---+---+---+---+---+---+---+---+---+
-  0   1   2   3   4   5   6   7   8   9
++---+---+---+---+---+---+
+| C | S |       B       |
++---+---+---+---+---+---+
+  0   1   2    ...    n
 
-C = command, S = slot ID, B = block number
+C = command, S = slot ID, B = block number (VLI)
 
 Possible Responses:
 BLOCK
@@ -193,15 +212,15 @@ ERROR (the server no longer has the file)
 <fieldset>
 <pre>
 Name: REQUEST_BLOCK_FILE
-Base10: 2
+Base10: 3
 Description: Request a block from a file.
 
-+---+---+---+---+---+---+---+---+---+---+
-| C | S |             B                 |
-+---+---+---+---+---+---+---+---+---+---+
-  0   1   2   3   4   5   6   7   8   9
++---+---+---+---+---+---+
+| C | S |       B       |
++---+---+---+---+---+---+
+  0   1   2    ...    n
 
-C = command, S = slot ID, B = block number
+C = command, S = slot ID, B = block number (VLI)
 
 Possible Responses:
 BLOCK
@@ -214,7 +233,7 @@ ERROR (the server no longer has the file)
 <fieldset>
 <pre>
 Name: CLOSE_SLOT
-Base10: 3
+Base10: 4
 Description: This is done after a hash tree or file is finished downloading.
 
 +---+---+
@@ -222,7 +241,7 @@ Description: This is done after a hash tree or file is finished downloading.
 +---+---+
   0   1
 
-C = command, B = block number
+C = command, S = slot number
 </pre>
 </fieldset>
 
@@ -230,9 +249,11 @@ C = command, B = block number
 
 <fieldset>
 <pre>
-Name: ERROR
-Base10: 4
-Description: ERROR has different meaning in different contexts.
+Name: FILE_REMOVED
+Base10: 5
+Description: Host no longer has the file. When this is received a CLOSE_SLOT
+should be sent to close the slot. We don't close the slot after sending
+FILE_REMOVED because there could be requests in the pipeline.
 
 +---+
 | C |
@@ -248,40 +269,47 @@ C = command
 <fieldset>
 <pre>
 Name: SLOT_ID
-Base10: 5
-Description: Sent in response to REQUEST_SLOT. The slot ID is needed to request
-hash tree or file blocks. The host has all the blocks for the file. There are
-256 different possible slots.
-
-+---+---+
-| C | S |
-+---+---+
-  0   1
-
-C = command, S = slot ID
-</pre>
-</fieldset>
-
-<br>
-
-<fieldset>
-<pre>
-Name: SLOT_ID_WITH_BITFIELD
 Base10: 6
-Description: Sent in response to a REQUEST_SLOT_FILE or a REQUEST_SLOT_HASH. The
-slot ID is needed to request hash tree or file blocks. The bitfield
-contains bits which symbolize blocks. Bits that are 0 indicate blocks that a
-host has. There are 256 different possible slots.
+Description: Sent in response to REQUEST_SLOT. The slot ID is needed to request
+hash tree and file blocks.
 
-+---+---+---+---+---+
-| C | S |     B     |
-+---+---+---+---+---+
-  0   1   3  ...  n
++---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+   +---+---+---+
+| C | S |             F                 |       R       | E | + |     K     |
++---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+   +---+---+---+
+  0   1   2   3   4   5   6   7   8   9  10    ...   29  30      31  ...  n
 
-C = command, S = slot ID, B = bitfield of blocks
+C = command, S = slot ID, F = file size, R = root hash, E = extention,
+K = optional bit field
 
-Bitfield Length:
-	(file_size % 8 == 0) ? file_size / 8 : file_size / 8 + 1
+The extension specifier indicates if there will be bit fields immediately
+following this message. It also indicates the state of the hash tree and file.
+
+Extension Specifiers:
+
+Base10: 0
+Description: Hash tree complete, file complete. No bit field extension.
+
+Base10: 1
+Description: Hash tree complete, file partial. Bit field for file will follow.
+The host will send HAVE_FILE_BLOCK messages when it receives new file blocks.
+
+Base10: 2
+Description: Hash tree complete, file has no blocks. No bit field extension. The
+host will send HAVE_FILE_BLOCK messages when it receives new file blocks.
+
+Base10: 3
+Description: Hash tree partial, file has no blocks. Bit field for hash tree will
+follow. The host will send HAVE_HASH_TREE_BLOCK when it receives hash tree
+blocks and HAVE_FILE_BLOCK when it receives file blocks. However no
+HAVE_FILE_BLOCK messages will be sent until the host has completed the hash
+tree.
+
+Base10: 4
+Description: Hash tree has no blocks, file has no blocks. No bit field
+extension. The host will send HAVE_HASH_TREE_BLOCK when it receives hash tree
+blocks and HAVE_FILE_BLOCK when it receives file blocks. However no
+HAVE_FILE_BLOCK messages will be sent until the host has completed the hash
+tree.
 </pre>
 </fieldset>
 
@@ -290,7 +318,7 @@ Bitfield Length:
 <fieldset>
 <pre>
 Name: BLOCK
-Base10: 7
+Base10: 8
 Description: Either a hash tree block or file block. The hash tree blocks vary
 in size. The file blocks are fixed size except the last block which will be
 shorter.
@@ -300,7 +328,11 @@ shorter.
 +---+---+---+---+---+---+---+---+
   0   1   2   3      ...    10240
 
-C = command, B = block number
+C = command, B = block (maximum size of 10240)
+
+Note: The block size will be highly variable for hash tree blocks because they
+do not span two rows in a tree. All file blocks will be 10240 bytes except for
+the last block.
 </pre>
 </fieldset>
 
@@ -309,16 +341,16 @@ C = command, B = block number
 <fieldset>
 <pre>
 Name: HAVE_HASH_TREE_BLOCK
-Base10: 8
+Base10: 9
 Description: Sent to inform a host that a new hash tree block is available. This
 is sent to all hosts that have a open slot for a file.
 
-+---+---+---+---+---+---+---+---+---+---+
-| C | S |             B                 |
-+---+---+---+---+---+---+---+---+---+---+
-  0   1   2   3   4   5   6   7   8   9
++---+---+---+---+---+---+
+| C | S |       B       |
++---+---+---+---+---+---+
+  0   1   2    ...    n
 
-C = command, B = block number
+C = command, B = block number (VLI)
 </pre>
 </fieldset>
 
@@ -327,16 +359,16 @@ C = command, B = block number
 <fieldset>
 <pre>
 Name: HAVE_FILE_BLOCK
-Base10: 9
+Base10: 10
 Description: Sent to inform a host that a new file block is available. This is
 sent to all hosts that have a open slot for a file.
 
-+---+---+---+---+---+---+---+---+---+---+
-| C | S |             B                 |
-+---+---+---+---+---+---+---+---+---+---+
-  0   1   2   3   4   5   6   7   8   9
++---+---+---+---+---+---+
+| C | S |       B       |
++---+---+---+---+---+---+
+  0   1   2    ...    n
 
-C = command, B = block number
+C = command, B = block number (VLI)
 </pre>
 </fieldset>
 </blockquote>
@@ -392,36 +424,31 @@ case: C > 1 && M > 1
 
 <p>
 Merkle Hash Trees are used to distribute downloading of hash data needed to
-verify the integrity of file blocks. The hash "function" used to generate the
+verify the integrity of file blocks. The hash function used to generate the
 tree is SHA1.
 </p>
 
 <p>
 The bottom row of the tree consists of hashes for every 10240 bytes of the file
 (however the last block may be shorter). Every row above the bottom row consists
-of hashes for blocks of 512 hashes in the row below it (the last hash may be
-for less than 512 child hashes).
+of hashes for blocks of 512 hashes (may be less if there isn't 512 hashes left
+in the child row).
 </p>
 
 <p>
-When the row generation process generates a row of one hash the file size
-(encoded in big endian) is prepended to that hash, then that is hashed to
-produce the hash the files will be tracked by.
-</p>
-
-<p>
-The hash tree is addressible by hash blocks. Hash block 0 is the root hash
-of the tree with the file size prepended. Hash block 1 is the group of hashes
-in the second row that the root hash is a hash for. The hash blocks are not
-relative record numbers so to know the size of each block when downloading tree
-building must be simulated to determine how many bytes are in each hash block.
+The hash on the top of the tree is the root hash. The file size (8 byte
+big-endian) with the root hash appended are then hashed together to get the hash
+the file is tracked by.
 </p>
 </blockquote>
 
 <b>2.7 Limits</b>
 <blockquote>
-Max file limits have yet to be determined. SQLite blob sizes are limited to
-2^31 - 1. The planned maximum file size is going to be 2^64.
+The maximum file size is 2^64 bytes.
+
+Hash trees are currently stored in SQLite. SQLite blobs are limited to
+2^31 - 1 bytes. Files which would generate hash trees larger than this won't be
+hashed until this limitation can be addressed.
 </blockquote>
 
 <b>3.0 Building</b>

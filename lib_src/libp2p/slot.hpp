@@ -37,7 +37,7 @@ public:
 	hash:
 		Returns root hash of the hash tree (hex).
 	merge_host:
-		Inserts all host_info in host in to host_in.
+		Inserts all hosts known to have this file in to host_in.
 	name:
 		Returns the name of the file.
 	percent_complete:
