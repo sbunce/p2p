@@ -15,12 +15,10 @@
 void create_test_file(const file_info & FI)
 {
 	std::fstream fout(FI.path.c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
-	for(int x=0; x<FI.file_size; ++x){
-		if(x % 80 == 0 && x != 0){
-			fout.put('\n');
-		}else{
-			fout.put('0');
-		}
+	std::srand(42);
+	for(boost::uint64_t x=0; x<FI.file_size; ++x){
+		char ch = (char)std::rand() % 255;
+		fout.put(ch);
 	}
 	fout.flush();
 }
@@ -32,21 +30,20 @@ void test(const unsigned size)
 	database::init::drop_all();
 	database::init::create_all();
 
-	//create hash tree and check it
+	//setup test file
 	file_info FI;
 	std::stringstream ss;
 	ss << path::share() << size << "_block";
 	FI.path = ss.str();
 	FI.file_size = size * protocol::FILE_BLOCK_SIZE;
 	create_test_file(FI);
-	if(hash_tree::create(FI) != hash_tree::good){
-		LOGGER; exit(1);
-	}
+
+	//create hash tree and check it
 	hash_tree HT(FI);
-	HT.check();
-	if(!HT.complete()){
+	if(HT.create() != hash_tree::good){
 		LOGGER; exit(1);
 	}
+	FI.hash = HT.hash;
 
 	//read all blocks from the hash tree in to memory
 	std::vector<std::string> block; //location in vector is block number
@@ -81,11 +78,11 @@ void test(const unsigned size)
 	//replace the corrupted blocks, add one host that has all blocks
 	HT_reassemble.Block_Request.add_host_complete(0);
 	while(!HT_reassemble.complete()){
-		boost::uint64_t num;
-		if(!HT_reassemble.Block_Request.next_request(0, num)){
+		boost::uint64_t block_num;
+		if(!HT_reassemble.Block_Request.next_request(0, block_num)){
 			LOGGER; exit(1);
 		}
-		HT_reassemble.write_block(0, num, block[num]);
+		HT_reassemble.write_block(0, block_num, block[block_num]);
 	}
 
 	//now the tree should be complete

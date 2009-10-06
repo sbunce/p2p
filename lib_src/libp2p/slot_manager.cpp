@@ -9,7 +9,7 @@ slot_manager::slot_manager(
 	for(share::slot_iterator iter_cur = Share.begin_slot(), iter_end = Share.end_slot();
 		iter_cur != iter_end; ++iter_cur)
 	{
-
+		//Pending_Slot_Request.push_back(
 	}
 }
 

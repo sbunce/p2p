@@ -5,6 +5,7 @@ hash_tree::hash_tree(
 	database::pool::proxy DB
 ):
 	hash(FI.hash),
+	path(FI.path),
 	file_size(FI.file_size),
 	row(file_size_to_row(file_size)),
 	tree_block_count(row_to_tree_block_count(row)),
@@ -23,12 +24,14 @@ hash_tree::hash_tree(
 	Block_Request(tree_block_count),
 	end_of_good(0)
 {
-	if(tree_block_count != 0){
+	if(hash != ""){
 		boost::shared_ptr<database::table::hash::tree_info>
 			TI = database::table::hash::tree_open(hash, DB);
 		if(TI){
+			//opened existing hash tree
 			const_cast<database::blob &>(Blob) = TI->Blob;
 		}else{
+			//allocate space to reconstruct hash tree
 			if(database::table::hash::tree_allocate(hash, tree_size, DB)){
 				database::table::hash::set_state(hash, database::table::hash::downloading, DB);
 				TI = database::table::hash::tree_open(hash, DB);
@@ -65,37 +68,25 @@ bool hash_tree::block_info(const boost::uint64_t & block,
 			row_block_count = row[x] / protocol::HASH_BLOCK_SIZE + 1;
 		}
 
+		//check if block we're looking for is in row
 		if(block_count + row_block_count > block){
-			//end of row greater than block we're looking for, block exists in row
 			info.first = offset + (block - block_count) * protocol::HASH_BLOCK_SIZE;
 
-			//hashes between offset and end of current row
-			boost::uint64_t delta = offset + row[x] - info.first;
-
 			//determine size of block
+			boost::uint64_t delta = offset + row[x] - info.first;
 			if(delta > protocol::HASH_BLOCK_SIZE){
-				//full hash block
 				info.second = protocol::HASH_BLOCK_SIZE;
 			}else{
-				//partial hash block
 				info.second = delta;
 			}
-
-			//locate parent
-			if(x != 0){
-				//only set parent if not on first row (parent of first row is root hash)
-				parent = offset - row[x-1] //start of previous row
-					+ block - block_count;  //hash offset in to previous row is block offset in to current row
-			}
+			parent = offset - row[x-1] + block - block_count;
 
 			//convert to bytes
 			info.first = info.first * protocol::HASH_SIZE;
 			info.second = info.second * protocol::HASH_SIZE;
 			parent = parent * protocol::HASH_SIZE;
-
 			return true;
 		}
-
 		block_count += row_block_count;
 		offset += row[x];
 	}
@@ -115,53 +106,48 @@ unsigned hash_tree::block_size(const boost::uint64_t & block_num)
 
 hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 {
-	if(tree_block_count == 0){
-		//only one hash, it's the root hash and the file hash
-		return good;
-	}
-
-	std::pair<boost::uint64_t, unsigned> info;
-	boost::uint64_t parent;
-	if(!block_info(block_num, row, info, parent)){
-		//invalid block sent to block_info
-		LOGGER << "programmer error\n";
-		exit(1);
-	}
-
-	char block_buff[protocol::FILE_BLOCK_SIZE];
-	if(!database::pool::get_proxy()->blob_read(Blob, block_buff,
-		info.second, info.first))
-	{
-		return io_error;
-	}
-
-	//create hash for children
 	SHA1 SHA;
-	SHA.init();
-	SHA.load(block_buff, info.second);
-	SHA.end();
+	char buff[protocol::FILE_BLOCK_SIZE];
 
-	//check child hash
 	if(block_num == 0){
-		//first row has to be checked against root hash
-		std::string hash_bin = convert::hex_to_bin(hash);
-		if(hash_bin.empty()){
-			LOGGER << "invalid hex";
-			exit(1);
+		//special requirements to check root hash, see header documentation for hash
+		if(!database::pool::get_proxy()->blob_read(Blob, buff, protocol::HASH_SIZE, 0)){
+			return io_error;
 		}
-		if(memcmp(hash_bin.data(), SHA.raw_hash(), protocol::HASH_SIZE) == 0){
+		std::memmove(buff + 8, buff, protocol::HASH_SIZE);
+		std::memcpy(buff, convert::encode(file_size).data(), 8);
+		SHA.init();
+		SHA.load(buff, protocol::HASH_SIZE + 8);
+		SHA.end();
+		if(SHA.hex_hash() == hash){
 			return good;
 		}else{
 			return bad;
 		}
 	}else{
-		if(!database::pool::get_proxy()->blob_read(Blob, block_buff,
-			protocol::HASH_SIZE, parent))
-		{
+		std::pair<boost::uint64_t, unsigned> info;
+		boost::uint64_t parent;
+		if(!block_info(block_num, row, info, parent)){
+			//invalid block sent to block_info
+			LOGGER << "programmer error\n";
+			exit(1);
+		}
+
+		//read children
+		if(!database::pool::get_proxy()->blob_read(Blob, buff, info.second, info.first)){
 			return io_error;
 		}
 
-		if(memcmp(block_buff, SHA.raw_hash(), protocol::HASH_SIZE) == 0){
+		//create hash for children
+		SHA.init();
+		SHA.load(buff, info.second);
+		SHA.end();
+
+		//verify parent hash is a hash of the children
+		if(!database::pool::get_proxy()->blob_read(Blob, buff, protocol::HASH_SIZE, parent)){
+			return io_error;
+		}
+		if(std::memcmp(buff, SHA.raw_hash(), protocol::HASH_SIZE) == 0){
 			return good;
 		}else{
 			return bad;
@@ -226,295 +212,157 @@ bool hash_tree::complete()
 	return end_of_good == tree_block_count;
 }
 
-hash_tree::status hash_tree::create(file_info & FI)
+hash_tree::status hash_tree::create()
 {
-	std::fstream fin(FI.path.c_str(), std::ios::in | std::ios::binary);
-	if(!fin.good()){
+	//assert the hash tree has not yet been created
+	assert(hash == "");
+
+	//open file to generate hash tree for
+	std::fstream file(path.c_str(), std::ios::in | std::ios::binary);
+	if(!file.good()){
+		LOGGER << "error opening file";
 		return io_error;
 	}
 
 	/*
-	Scratch files for building the tree.
-
-	The "upside_down" file contains the tree as it's initially built, with the
-	file hashes at the beginning of the file. This is not convenient for later
-	use because the file would need to be read backwards. Because of this the
-	tree is reversed, copied from the upside_down file to the rightside_up
-	file in such a way that the second row is at the start of the file.
-
-	Note: The root hash is not included in the file because that would be
-	      redundant information and a waste of space.
+	Open temp file to write hash tree to. A temp file is used to avoid database
+	contention.
 	*/
-	std::fstream upside_down(path::upside_down().c_str(), std::ios::in |
+	std::fstream temp(path::hash_tree_temp().c_str(), std::ios::in |
 		std::ios::out | std::ios::trunc | std::ios::binary);
-	if(!upside_down.good()){
-		LOGGER << "error opening upside_down file";
-		return io_error;
-	}
-	std::fstream rightside_up(path::rightside_up().c_str(), std::ios::in |
-		std::ios::out | std::ios::trunc | std::ios::binary);
-	if(!rightside_up.good()){
-		LOGGER << "error opening rightside_up file";
+	if(!temp.good()){
+		LOGGER << "error opening temp file";
 		return io_error;
 	}
 
-	char block_buff[protocol::FILE_BLOCK_SIZE];
+	char buff[protocol::FILE_BLOCK_SIZE];
 	SHA1 SHA;
 
-	//create all file block hashes
-	boost::uint64_t blocks_read = 0;
-	boost::uint64_t file_size = 0;
-	while(true){
+	//do file hashes
+	for(boost::uint64_t x=0; x<row.back(); ++x){
 		if(boost::this_thread::interruption_requested()){
 			return io_error;
 		}
-
-		fin.read(block_buff, protocol::FILE_BLOCK_SIZE);
-		if(fin.gcount() == 0){
-			break;
+		file.read(buff, protocol::FILE_BLOCK_SIZE);
+		if(file.gcount() == 0){
+			LOGGER << "error reading file";
+			return io_error;
 		}
-
 		SHA.init();
-		SHA.load(block_buff, fin.gcount());
+		SHA.load(buff, file.gcount());
 		SHA.end();
-		upside_down.write(SHA.raw_hash(), protocol::HASH_SIZE);
-		if(!upside_down.good()){
-			LOGGER << "error writing to upside_down file";
-			return io_error;
-		}
-
-		++blocks_read;
-		file_size += fin.gcount();
-		if(file_size > FI.file_size){
+		temp.seekp(file_hash_offset + x * protocol::HASH_SIZE, std::ios::beg);
+		temp.write(SHA.raw_hash(), protocol::HASH_SIZE);
+		if(!temp.good()){
+			LOGGER << "error writing temp file";
 			return io_error;
 		}
 	}
 
-	if(fin.bad() || !fin.eof()){
-		LOGGER << "error reading file \"" << FI.path << "\"";
-		return io_error;
-	}
-
-	if(blocks_read == 0){
-		//do not generate hash trees for empty files
-		return good;
-	}
-
-	//base case, the file size is == one block
-	if(blocks_read == 1){
-		FI.hash = SHA.hex_hash();
-		return good;
-	}
-
-	//hack for windows
-	#ifdef _WIN32
-		#undef max
-	#endif
-	boost::uint64_t tree_size = file_size_to_tree_size(file_size);
-	if(tree_size > std::numeric_limits<int>::max()){
-		LOGGER << "file at location \"" << FI.path << "\" would generate hash tree beyond max SQLite3 blob size";
-		return bad;
-	}
-
-	create_recurse(upside_down, rightside_up, 0, blocks_read, FI.hash, block_buff, SHA);
-
-	if(FI.hash.empty()){
-		//tree didn't generate
-		return io_error;
-	}else{
-		/*
-		Tree sucessfully created. Look in the database to see if the tree already
-		exists in the hash table. If it does there's no reason to replace it with
-		the tree just generated.
-
-		Note: The state of the hash tree is only set to reserved after this
-		finishes. If the state is not set to complete then the tree will be
-		deleted on next program start. (think garbage collection)
-		*/
-		assert(tree_size == rightside_up.tellp());
-
-		/*
-		Note: There is no transaction for this section. It would be detrimental to
-		have a transaction here. The database would be tied up for too long while
-		copying a very large hash tree. Also, performance is not improved by using
-		a transaction because the blob writes are already quite large.
-
-		It is possible that the hash tree could be deleted while we are copying to
-		it. However, if this happens we return an error and the scanner tries the
-		file again later.
-		*/
-		database::pool::proxy DB;
-		if(database::table::hash::tree_open(FI.hash, DB)){
-			//hash tree already exists
-			return good;
+	//do all other tree hashes
+	for(boost::uint64_t x=tree_block_count - 1; x>0; --x){
+		std::pair<boost::uint64_t, unsigned> info;
+		boost::uint64_t parent;
+		if(!block_info(x, row, info, parent)){
+			LOGGER << "programmer error";
+			exit(1);
 		}
-
-		//tree doesn't exist, allocate space for it
-		if(!database::table::hash::tree_allocate(FI.hash, tree_size, DB)){
-			//could not allocate blob for hash tree
+		temp.seekg(info.first, std::ios::beg);
+		temp.read(buff, info.second);
+		if(temp.gcount() != info.second){
+			LOGGER << "error reading temp file";
 			return io_error;
 		}
-
-		/*
-		Copy tree from temp file to database. Using a transaction here would be
-		problematic for very large hash trees. Because we're not using a
-		transaction it is possible that two threads write to a hash tree at the
-		same time. However, this is ok because they'd both be writing the same
-		data.
-		*/
-		boost::shared_ptr<database::table::hash::tree_info>
-			TI = database::table::hash::tree_open(FI.hash, DB);
-		rightside_up.seekg(0, std::ios::beg);
-		int offset = 0, bytes_remaining = tree_size, read_size;
-		while(bytes_remaining){
-			if(boost::this_thread::interruption_requested()){
-				database::table::hash::delete_tree(FI.hash, DB);
-				return io_error;
-			}
-			if(bytes_remaining > protocol::FILE_BLOCK_SIZE){
-				read_size = protocol::FILE_BLOCK_SIZE;
-			}else{
-				read_size = bytes_remaining;
-			}
-			rightside_up.read(block_buff, read_size);
-			if(rightside_up.gcount() != read_size){
-				LOGGER << "error reading rightside_up file";
-				database::table::hash::delete_tree(FI.hash, DB);
-				return io_error;
-			}else{
-				if(!DB->blob_write(TI->Blob, block_buff, read_size, offset)){
-					LOGGER << "error doing incremental write to blob";
-					database::table::hash::delete_tree(FI.hash, DB);
-					return io_error;
-				}
-				offset += read_size;
-				bytes_remaining -= read_size;
-			}
+		SHA.init();
+		SHA.load(buff, info.second);
+		SHA.end();
+		temp.seekp(parent, std::ios::beg);
+		temp.write(SHA.raw_hash(), protocol::HASH_SIZE);
+		if(!temp.good()){
+			LOGGER << "error writing temp file";
+			return io_error;
 		}
-		return good;
 	}
-}
 
-bool hash_tree::create_recurse(std::fstream & upside_down, std::fstream & rightside_up,
-	boost::uint64_t start_RRN, boost::uint64_t end_RRN, std::string & hash,
-	char * block_buff, SHA1 & SHA)
-{
+	//calculate hash
+	std::memcpy(buff, convert::encode(file_size).data(), 8);
+	std::memcpy(buff + 8, SHA.raw_hash(), protocol::HASH_SIZE);
+	SHA.init();
+	SHA.load(buff, protocol::HASH_SIZE + 8);
+	SHA.end();
+	const_cast<std::string &>(hash) = SHA.hex_hash();
+
 	/*
-	A failure of this function is indicated when hash is not set after it
-	returns. If hash is not set then there was an io_error.
+	Copy hash tree in to database. No transaction is used because it this can
+	tie up the database for too long when copying a large hash tree. The
+	writes are already quite large so a transaction doesn't make much
+	performance difference.
 	*/
 
-	//used to store scratch locations for read/write
-	boost::uint64_t scratch_read_RRN = start_RRN; //read starts at beginning of row
-	boost::uint64_t scratch_write_RRN = end_RRN;  //write starts at end of row
-
-	//stopping case, if one hash passed in it is the root hash
-	if(end_RRN - start_RRN == 1){
-		return true;
+	//check if tree already exists
+	if(database::table::hash::tree_open(hash)){
+		return good;
 	}
 
-	//loop through hashes in the lower row and create the next highest row
-	while(scratch_read_RRN < end_RRN){
+	//tree doesn't exist, allocate space for it
+	if(!database::table::hash::tree_allocate(hash, tree_size)){
+		LOGGER << "error allocating space for hash tree";
+		return io_error;
+	}
+
+	//copy tree to database using large buffer for performance
+	boost::shared_ptr<database::table::hash::tree_info>
+		TI = database::table::hash::tree_open(hash);
+
+	//set blob to one we just created
+	const_cast<database::blob &>(Blob) = TI->Blob;
+
+	temp.seekg(0, std::ios::beg);
+	boost::uint64_t offset = 0, bytes_remaining = tree_size, read_size;
+	while(bytes_remaining){
 		if(boost::this_thread::interruption_requested()){
-			return false;
+			database::table::hash::delete_tree(hash);
+			return io_error;
 		}
-
-		//hash child nodes
-		int block_buff_size = 0;
-		if(end_RRN - scratch_read_RRN < protocol::HASH_BLOCK_SIZE){
-			//not enough hashes for full hash block
-			upside_down.seekg(scratch_read_RRN * protocol::HASH_SIZE, std::ios::beg);
-			upside_down.read(block_buff, (end_RRN - scratch_read_RRN) * protocol::HASH_SIZE);
-			if(!upside_down.good()){
-				LOGGER << "error reading scratch file";
-				return false;
-			}
-			block_buff_size = (end_RRN - scratch_read_RRN) * protocol::HASH_SIZE;
+		if(bytes_remaining > protocol::FILE_BLOCK_SIZE){
+			read_size = protocol::FILE_BLOCK_SIZE;
 		}else{
-			//enough hashes for full hash block
-			upside_down.seekg(scratch_read_RRN * protocol::HASH_SIZE, std::ios::beg);
-			upside_down.read(block_buff, protocol::HASH_BLOCK_SIZE * protocol::HASH_SIZE);
-			if(!upside_down.good()){
-				LOGGER << "error reading scratch file";
-				return false;
+			read_size = bytes_remaining;
+		}
+		temp.read(buff, read_size);
+		if(temp.gcount() != read_size){
+			LOGGER << "error reading temp file";
+			database::table::hash::delete_tree(hash);
+			return io_error;
+		}else{
+			if(!database::pool::get_proxy()->blob_write(Blob, buff, read_size, offset)){
+				LOGGER << "error doing incremental write to blob";
+				database::table::hash::delete_tree(hash);
+				return io_error;
 			}
-			block_buff_size = protocol::HASH_BLOCK_SIZE * protocol::HASH_SIZE;
-		}
-
-		//create hash
-		SHA.init();
-		SHA.load(block_buff, block_buff_size);
-		SHA.end();
-		scratch_read_RRN += block_buff_size / protocol::HASH_SIZE;
-
-		//write resulting hash
-		upside_down.seekp(scratch_write_RRN * protocol::HASH_SIZE, std::ios::beg);
-		upside_down.write(SHA.raw_hash(), protocol::HASH_SIZE);
-		if(!upside_down.good()){
-			LOGGER << "error writing scratch file";
-			return false;
-		}
-		++scratch_write_RRN;
-
-		if(block_buff_size < protocol::HASH_BLOCK_SIZE * protocol::HASH_SIZE){
-			//last child node read incomplete, row finished
-			break;
+			offset += read_size;
+			bytes_remaining -= read_size;
 		}
 	}
 
-	//recurse
-	if(!create_recurse(upside_down, rightside_up, end_RRN, scratch_write_RRN, hash,
-		block_buff, SHA))
-	{
-		return false;
-	}
+	//set tree complete
+	end_of_good = tree_block_count;
 
-	//writing the final hash tree is done depth first
-	if(scratch_write_RRN - end_RRN == 1){
-		//this is the recursive call with the root hash
-		hash = SHA.hex_hash();
-	}
-
-	//write hashes that were passed to this function
-	for(int x=start_RRN; x<end_RRN; ++x){
-		upside_down.seekg(x * protocol::HASH_SIZE, std::ios::beg);
-		upside_down.read(block_buff, protocol::HASH_SIZE);
-		if(!upside_down.good()){
-			LOGGER << "error reading scratch file";
-			return false;
-		}
-		rightside_up.write(block_buff, protocol::HASH_SIZE);
-	}
-	return true; 
-}
-
-boost::uint64_t hash_tree::file_hash_to_tree_hash(boost::uint64_t row_hash_count)
-{
-	boost::uint64_t start_hash = row_hash_count;
-	if(row_hash_count == 1){
-		//root hash not included in hash tree
-		return 0;
-	}else if(row_hash_count % protocol::HASH_BLOCK_SIZE == 0){
-		row_hash_count = start_hash / protocol::HASH_BLOCK_SIZE;
-	}else{
-		row_hash_count = start_hash / protocol::HASH_BLOCK_SIZE + 1;
-	}
-	return start_hash + file_hash_to_tree_hash(row_hash_count);
+	return good;
 }
 
 boost::uint64_t hash_tree::file_hash_to_tree_hash(boost::uint64_t row_hash,
 	std::deque<boost::uint64_t> & row)
 {
 	boost::uint64_t start_hash = row_hash;
+	row.push_front(row_hash);
 	if(row_hash == 1){
-		//root hash not included in hash tree
-		return 0;
+		return 1;
 	}else if(row_hash % protocol::HASH_BLOCK_SIZE == 0){
 		row_hash = start_hash / protocol::HASH_BLOCK_SIZE;
 	}else{
 		row_hash = start_hash / protocol::HASH_BLOCK_SIZE + 1;
 	}
-	row.push_front(start_hash);
 	return start_hash + file_hash_to_tree_hash(row_hash, row);
 }
 
@@ -540,23 +388,24 @@ boost::uint64_t hash_tree::file_size_to_tree_size(const boost::uint64_t & file_s
 	if(file_size == 0){
 		return 0;
 	}else{
-		return protocol::HASH_SIZE * file_hash_to_tree_hash(file_size_to_file_hash(file_size));
+		std::deque<boost::uint64_t> throw_away;
+		return protocol::HASH_SIZE * file_hash_to_tree_hash(file_size_to_file_hash(file_size), throw_away);
 	}
 }
 
 hash_tree::status hash_tree::read_block(const boost::uint64_t & block_num,
 	std::string & block)
 {
-	char block_buff[protocol::FILE_BLOCK_SIZE];
+	char buff[protocol::FILE_BLOCK_SIZE];
 	std::pair<boost::uint64_t, unsigned> info;
 	if(block_info(block_num, row, info)){
-		if(!database::pool::get_proxy()->blob_read(Blob, block_buff,
-			info.second, info.first))
+		if(!database::pool::get_proxy()->blob_read(Blob, buff, info.second,
+			info.first))
 		{
 			return io_error;
 		}
 		block.clear();
-		block.assign(block_buff, info.second);
+		block.assign(buff, info.second);
 		return good;
 	}else{
 		LOGGER << "invalid block number, programming error";
@@ -587,7 +436,7 @@ boost::uint64_t hash_tree::row_to_file_hash_offset(
 		return file_hash_offset;
 	}
 
-	//add up the size (bytes) of all rows until reaching the beginning of the last row
+	//add up size (bytes) of rows until reaching the last row
 	for(int x=0; x<row.size()-1; ++x){
 		file_hash_offset += row[x] * protocol::HASH_SIZE;
 	}
@@ -603,13 +452,11 @@ hash_tree::status hash_tree::write_block(const int socket_FD,
 			LOGGER << "programming error, invalid block size";
 			exit(1);
 		}
-
 		if(!database::pool::get_proxy()->blob_write(Blob, block.data(),
 			block.size(), info.first))
 		{
 			return io_error;
 		}
-
 		status Status = check();
 		if(Status == io_error){
 			return io_error;

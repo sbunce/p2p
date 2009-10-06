@@ -29,16 +29,12 @@ public:
 	/* Files
 	database:
 		Path to database.
-	rightside_up:
-		Location of scratch file for rightside_up hash tree. The thread id is
-		appended so different threads will get directed to different files.
-	upside_down:
-		Location of scratch file for upside_down hash tree. The thread id is
-		appended so different threads will get directed to different files.
+	hash_tree_temp:
+		Temporary location of hash tree. The thread id is appended so different
+		threads will get directed to different files.
 	*/
 	static std::string database();
-	static std::string rightside_up();
-	static std::string upside_down();
+	static std::string hash_tree_temp();
 
 	/* Directories
 	download:

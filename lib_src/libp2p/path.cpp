@@ -59,6 +59,14 @@ std::string path::download()
 	return program_directory() + "download/";
 }
 
+std::string path::hash_tree_temp()
+{
+	boost::call_once(init, once_flag);
+	std::stringstream ss;
+	ss << program_directory() << "temp/hash_tree_" << boost::this_thread::get_id();
+	return ss.str();
+}
+
 std::string & path::program_directory()
 {
 	static std::string * _program_directory = new std::string();
@@ -76,9 +84,7 @@ void path::remove_temporary_hash_tree_files()
 			for(fs::directory_iterator iter_cur(path), iter_end; iter_cur != iter_end;
 				++iter_cur)
 			{
-				if(iter_cur->path().filename().find("rightside_up_", 0) == 0
-					|| iter_cur->path().filename().find("upside_down_", 0) == 0)
-				{
+				if(iter_cur->path().filename().find("hash_tree_", 0) == 0){
 					fs::remove(iter_cur->path());
 				}
 			}
@@ -86,15 +92,6 @@ void path::remove_temporary_hash_tree_files()
 			LOGGER << ex.what();
 		}
 	}
-}
-
-
-std::string path::rightside_up()
-{
-	boost::call_once(init, once_flag);
-	std::stringstream ss;
-	ss << program_directory() << "temp/rightside_up_" << boost::this_thread::get_id();
-	return ss.str();
 }
 
 std::string path::share()
@@ -114,12 +111,4 @@ void path::unit_test_override(const std::string & DB_path)
 	boost::call_once(init, once_flag);
 	program_directory() = "";
 	database_name() = DB_path;
-}
-
-std::string path::upside_down()
-{
-	boost::call_once(init, once_flag);
-	std::stringstream ss;
-	ss << program_directory() << "temp/upside_down_" << boost::this_thread::get_id();
-	return ss.str();
 }

@@ -34,6 +34,10 @@ The thread safety of this class is exactly like a file.
 class hash_tree : private boost::noncopyable
 {
 public:
+	/*
+	If FI.hash is empty then create must be called. Until then then the hash_tree
+	won't be connected to any blob in the database.
+	*/
 	hash_tree(
 		const file_info & FI,
 		database::pool::proxy DB = database::pool::proxy()
@@ -46,10 +50,12 @@ public:
 	};
 
 	/*
-	The order of these is important since they're used in the ctor initializer
-	list and a lot of them have dependencies.
+	Hash the file is tracked by. This created by taking the file size (8 byte big
+	endian), appending the root hash to it, and creating a hash.
 	*/
-	const std::string hash;                     //root hash (hex)
+	const std::string hash;
+
+	const std::string path;                     //path to file the hash tree is for
 	const boost::uint64_t file_size;            //size of file hash tree is for
 	const std::deque<boost::uint64_t> row;      //number of hashes in each row
 	const boost::uint64_t tree_block_count;     //hash block count
@@ -88,8 +94,6 @@ public:
 		Note: If hash tree creation suceeds the hash tree state will only be set
 			to RESERVED. If it's not changed the tree will be deleted upon next
 			program start.
-	file_size_to_tree_size:
-		Given a file_size, returns tree size (bytes).
 	read_block:
 		Get block from hash tree. Returns GOOD if suceeded. Returns IO_ERROR if
 		cannot read hash tree.
@@ -102,9 +106,8 @@ public:
 	status check();
 	status check_file_block(const boost::uint64_t & file_block_num,
 		const char * block, const int & size);
-	static status create(file_info & FI);
+	status create();
 	bool complete();
-	static boost::uint64_t file_size_to_tree_size(const boost::uint64_t & file_size);
 	status read_block(const boost::uint64_t & block_num, std::string & block);
 	status write_block(const int socket_FD, const boost::uint64_t & block_num,
 		const std::string & block);
@@ -136,30 +139,34 @@ private:
 	atomic_int<boost::uint64_t> end_of_good;
 
 	/*
-	block_info:
-		Requires a block number, and row info. Sets info.first to byte offset
-		to start of hash block and info.second to hash block length. Parent is
-		set to offset to start of parent hash.
-		Note: If block is 0 then parent won't be set.
-		Note: A version that doesn't set parent is available.
 	check_block:
 		Checks a hash tree block.
 		Precondition: the parent of this block must be valid and the block must
 			exist.
-		Note: This function only called from check_incremental and check_full
-			which both make sure the precondition is satisfied.
-	create_recurse:
-		Recursive function called by create() to recursively generate tree rows.
+		Note: This function is only called from check_incremental which makes sure
+		the precondition is satisfied.
+	*/
+	status check_block(const boost::uint64_t & block_num);
+
+	/*
+	These functions are static to make it clear that none of them depend on
+	non-static member variables. Most of these functions are called in the
+	initializer list of the ctor.
+
+	block_info:
+		Requires a block number, and row info. Sets info.first to byte offset
+		to start of hash block and info.second to hash block length. Parent is
+		set to offset of start of parent hash.
+		Note: If block is 0 then parent won't be set.
+		Note: A version that doesn't set parent is available.
 	file_size_to_file_hash:
 		Given file size (size of actual file, not hash tree), returns the
 		number of file hashes (bottom row of tree).
+	file_size_to_tree_size:
+		Given a file_size, returns tree size (bytes).
 	file_hash_to_tree_hash:
-		Given the file hash count (bottom row of tree), returns the number of
-		hashes in the whole hash tree.
-		Note: A second version that gives row info is available.
-	file_size_to_tree_hash:
-		Given the file hash count (bottom row of tree), returns how many hashes
-		are in the whole hash tree.
+		Given the file hash count returns the number of hashes in tree. Populates
+		row with how many hashes are in each row of the tree.
 	row_to_block_count:
 		Given tree row information, returns hash block count (total number of
 		hash blocks in tree).
@@ -170,12 +177,8 @@ private:
 		std::pair<boost::uint64_t, unsigned> & info, boost::uint64_t & parent);
 	static bool block_info(const boost::uint64_t & block, const std::deque<boost::uint64_t> & row,
 		std::pair<boost::uint64_t, unsigned> & info);
-	status check_block(const boost::uint64_t & block_num);
-	static bool create_recurse(std::fstream & upside_down, std::fstream & rightside_up,
-		boost::uint64_t start_RRN, boost::uint64_t end_RRN, std::string & hash,
-		char * block_buff, SHA1 & SHA);
 	static boost::uint64_t file_size_to_file_hash(boost::uint64_t file_size);
-	static boost::uint64_t file_hash_to_tree_hash(boost::uint64_t row_hash_count);
+	static boost::uint64_t file_size_to_tree_size(const boost::uint64_t & file_size);
 	static boost::uint64_t file_hash_to_tree_hash(boost::uint64_t row_hash, std::deque<boost::uint64_t> & row);
 	static std::deque<boost::uint64_t> file_size_to_row(const boost::uint64_t & file_size);
 	static boost::uint64_t row_to_tree_block_count(const std::deque<boost::uint64_t> & row);

@@ -62,7 +62,9 @@ void share_scan_1_hash::main_loop()
 		}//end lock scope
 
 		if(FI->file_size != 0){
-			hash_tree::status S = hash_tree::create(*FI);
+			hash_tree HT(*FI);
+			hash_tree::status S = HT.create();
+			FI->hash = HT.hash;
 			if(S == hash_tree::good){
 				Share.insert_update(*FI);
 				{//begin lock scope
