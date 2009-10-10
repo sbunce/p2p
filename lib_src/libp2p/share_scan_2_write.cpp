@@ -41,7 +41,7 @@ void share_scan_2_write::main_loop()
 					database::table::share::file_info(*FI, database::table::share::complete), DB);
 				database::table::hash::set_state(FI->hash, database::table::hash::complete, DB);
 			}
-			if(++count > 64){
+			if(++count > settings::SHARE_BUFFER_SIZE){
 				skip_sleep = true;
 				break;
 			}

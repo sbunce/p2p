@@ -18,7 +18,7 @@ share_scan_0_scan::~share_scan_0_scan()
 void share_scan_0_scan::block_on_max_jobs()
 {
 	boost::mutex::scoped_lock lock(job_queue_mutex);
-	while(job_queue.size() >= 256){
+	while(job_queue.size() >= settings::SHARE_BUFFER_SIZE){
 		job_queue_max_cond.wait(job_queue_mutex);
 	}
 }

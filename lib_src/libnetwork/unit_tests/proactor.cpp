@@ -10,14 +10,14 @@ class connection
 public:
 	connection(network::sock & S)
 	{
-		if(S.direction == network::sock::outgoing){
+		if(S.Direction == network::sock::outgoing){
 			S.send_buff.append('x');
 		}
 	}
 
 	void recv_call_back(network::sock & S)
 	{
-		if(S.direction == network::sock::incoming){
+		if(S.Direction == network::sock::incoming){
 			if(S.recv_buff.size() != 1){
 				LOGGER; exit(1);
 			}
@@ -50,7 +50,7 @@ void connect_call_back(network::sock & S)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	std::string direction;
-	if(S.direction == network::sock::incoming){
+	if(S.Direction == network::sock::incoming){
 		direction = "in ";
 	}else{
 		direction = "out";
@@ -67,7 +67,7 @@ void disconnect_call_back(network::sock & S)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	std::string direction;
-	if(S.direction == network::sock::incoming){
+	if(S.Direction == network::sock::incoming){
 		direction = "in";
 	}else{
 		direction = "out";
@@ -82,15 +82,15 @@ void disconnect_call_back(network::sock & S)
 
 void failed_connect_call_back(network::sock & S)
 {
-	assert(S.error != network::sock::no_error);
+	assert(S.Error != network::sock::no_error);
 	std::string reason;
-	if(S.error == network::sock::failed_resolve){
+	if(S.Error == network::sock::failed_resolve){
 		reason = "failed resolve";
-	}else if(S.error == network::sock::max_connections){
+	}else if(S.Error == network::sock::max_connections){
 		reason = "max connections";
-	}else if(S.error == network::sock::timed_out){
+	}else if(S.Error == network::sock::timed_out){
 		reason = "timed_out";
-	}else if(S.error == network::sock::other_error){
+	}else if(S.Error == network::sock::other_error){
 		reason = "other";
 	}else{
 		LOGGER << "unrecognized failure reason";

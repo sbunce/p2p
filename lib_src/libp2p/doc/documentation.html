@@ -203,7 +203,7 @@ C = command, S = slot ID, B = block number (VLI)
 
 Possible Responses:
 BLOCK
-ERROR (the server no longer has the file)
+FILE_REMOVED
 </pre>
 </fieldset>
 
@@ -224,7 +224,7 @@ C = command, S = slot ID, B = block number (VLI)
 
 Possible Responses:
 BLOCK
-ERROR (the server no longer has the file)
+FILE_REMOVED
 </pre>
 </fieldset>
 
@@ -273,43 +273,97 @@ Base10: 6
 Description: Sent in response to REQUEST_SLOT. The slot ID is needed to request
 hash tree and file blocks.
 
-+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+   +---+---+---+
-| C | S |             F                 |       R       | E | + |     K     |
-+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+   +---+---+---+
-  0   1   2   3   4   5   6   7   8   9  10    ...   29  30      31  ...  n
++---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+| C | S | K |             F                 |       R       |
++---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+  0   1   2   3   4   5   6   7   8   9  10  11    ...   30
 
-C = command, S = slot ID, F = file size, R = root hash, E = extention,
-K = optional bit field
+C = command, S = slot ID, K = status, F = file size, R = root hash
 
-The extension specifier indicates if there will be bit fields immediately
-following this message. It also indicates the state of the hash tree and file.
-
-Extension Specifiers:
+Status:
 
 Base10: 0
-Description: Hash tree complete, file complete. No bit field extension.
+Description: Hash tree complete, file complete.
 
 Base10: 1
-Description: Hash tree complete, file partial. Bit field for file will follow.
-The host will send HAVE_FILE_BLOCK messages when it receives new file blocks.
+Description: Hash tree complete, file incomplete.
 
-Base10: 2
-Description: Hash tree complete, file has no blocks. No bit field extension. The
-host will send HAVE_FILE_BLOCK messages when it receives new file blocks.
+Note: The possibility of the hash tree being incomplete and the file being
+complete is excluded because if someone has the file they will have the hash
+tree.
 
 Base10: 3
-Description: Hash tree partial, file has no blocks. Bit field for hash tree will
-follow. The host will send HAVE_HASH_TREE_BLOCK when it receives hash tree
-blocks and HAVE_FILE_BLOCK when it receives file blocks. However no
-HAVE_FILE_BLOCK messages will be sent until the host has completed the hash
-tree.
+Description: Hash tree incomplete, file has no blocks.
 
-Base10: 4
-Description: Hash tree has no blocks, file has no blocks. No bit field
-extension. The host will send HAVE_HASH_TREE_BLOCK when it receives hash tree
-blocks and HAVE_FILE_BLOCK when it receives file blocks. However no
-HAVE_FILE_BLOCK messages will be sent until the host has completed the hash
-tree.
+Note:
+SUBSCRIBE_HASH_TREE_CHANGES and SUBSCRIBE_FILE_CHANGES can be used to get bit
+fields for exactly what blocks the host has, and to be updated when it gets new
+blocks.
+</pre>
+</fieldset>
+
+<br>
+
+<fieldset>
+<pre>
+Name: SUBSCRIBE_HASH_TREE_CHANGES
+Base10: 7
+Description: 
+
++---+---+
+| C | S |
++---+---+
+  0   1
+
+C = command, S = slot ID
+
+Possible Responses:
+BIT_FIELD
+FILE_REMOVED
+</pre>
+</fieldset>
+
+<br>
+
+<fieldset>
+<pre>
+Name: SUBSCRIBE_FILE_CHANGES
+Base10: 8
+Description: 
+
++---+---+
+| C | S |
++---+---+
+  0   1
+
+C = command, S = slot ID
+
+Possible Responses:
+BIT_FIELD
+FILE_REMOVED
+</pre>
+</fieldset>
+
+<br>
+
+<fieldset>
+<pre>
+Name: BIT_FIELD
+Base10: 9
+Description: Bit field that represents what blocks the host has. This may be
+hash tree or file blocks depending on if this message is in response to
+SUBSCRIBE_HASH_TREE_CHANGES or SUBSCRIBE_FILE_CHANGES. The bit field is big
+endian so byte 1 will contain the highest number blocks. A 0 bit represents a
+block that the host has, a 1 bit represents a block that the host needs.
+
++---+---+---+---+---+
+| C |       B       |
++---+---+---+---+---+
+  0   1    ...    n
+
+C = command, B = bit field
+
+Note: The file size must be known to calculate how long the bit field will be.
 </pre>
 </fieldset>
 
@@ -318,7 +372,7 @@ tree.
 <fieldset>
 <pre>
 Name: BLOCK
-Base10: 8
+Base10: 10
 Description: Either a hash tree block or file block. The hash tree blocks vary
 in size. The file blocks are fixed size except the last block which will be
 shorter.
@@ -341,7 +395,7 @@ the last block.
 <fieldset>
 <pre>
 Name: HAVE_HASH_TREE_BLOCK
-Base10: 9
+Base10: 11
 Description: Sent to inform a host that a new hash tree block is available. This
 is sent to all hosts that have a open slot for a file.
 
@@ -359,7 +413,7 @@ C = command, B = block number (VLI)
 <fieldset>
 <pre>
 Name: HAVE_FILE_BLOCK
-Base10: 10
+Base10: 12
 Description: Sent to inform a host that a new file block is available. This is
 sent to all hosts that have a open slot for a file.
 

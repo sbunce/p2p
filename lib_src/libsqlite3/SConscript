@@ -20,8 +20,9 @@ env_sqlite['CPPDEFINES'].append('SQLITE_OMIT_LOAD_EXTENSION');
 env_sqlite['CPPDEFINES'].append('SQLITE_MAX_LENGTH=2147483647');
 
 #enable up-arrow for previous commands (readline support)
-env_sqlite['LIBS'].append('readline');
-env_sqlite['CPPDEFINES'].append('HAVE_READLINE=1');
+if platform.system() != 'Windows':
+	env_sqlite['LIBS'].append('readline');
+	env_sqlite['CPPDEFINES'].append('HAVE_READLINE=1');
 
 env_sqlite.StaticLibrary('#lib/sqlite3', 'sqlite3.c')
 env_sqlite.Program('#bin/sqlite3', 'shell.c')

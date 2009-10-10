@@ -8,7 +8,7 @@ network::sock::sock(const int socket_FD_in):
 	socket_FD(socket_FD_in),
 	IP(wrapper::get_IP(socket_FD)),
 	port(wrapper::get_port(socket_FD)),
-	direction(incoming),
+	Direction(incoming),
 	connect_flag(false),
 	disconnect_flag(false),
 	failed_connect_flag(false),
@@ -16,8 +16,8 @@ network::sock::sock(const int socket_FD_in):
 	send_flag(false),
 	latest_recv(0),
 	latest_send(0),
-	error(no_error),
-	idle_timeout(default_timeout),
+	Error(no_error),
+	idle_timeout(16),
 	last_active(std::time(NULL))
 {
 
@@ -29,7 +29,7 @@ network::sock::sock(boost::shared_ptr<address_info> info_in):
 	host(info->get_host()),
 	IP(wrapper::get_IP(*info)),
 	port(info->get_port()),
-	direction(outgoing),
+	Direction(outgoing),
 	connect_flag(false),
 	disconnect_flag(false),
 	failed_connect_flag(false),
@@ -37,8 +37,8 @@ network::sock::sock(boost::shared_ptr<address_info> info_in):
 	send_flag(false),
 	latest_recv(0),
 	latest_send(0),
-	error(no_error),
-	idle_timeout(default_timeout),
+	Error(no_error),
+	idle_timeout(16),
 	last_active(std::time(NULL))
 {
 

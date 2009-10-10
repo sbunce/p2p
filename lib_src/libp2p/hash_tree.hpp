@@ -1,7 +1,6 @@
 /*
-The ctor will throw an exception if database access fails.
-
-The thread safety of this class is exactly like a file.
+The ctor will throw an exception if database access fails. The thread safety of
+this class is exactly like a file.
 */
 #ifndef H_HASH_TREE
 #define H_HASH_TREE
@@ -177,7 +176,7 @@ private:
 		std::pair<boost::uint64_t, unsigned> & info, boost::uint64_t & parent);
 	static bool block_info(const boost::uint64_t & block, const std::deque<boost::uint64_t> & row,
 		std::pair<boost::uint64_t, unsigned> & info);
-	static boost::uint64_t file_size_to_file_hash(boost::uint64_t file_size);
+	static boost::uint64_t file_size_to_file_hash(const boost::uint64_t & file_size);
 	static boost::uint64_t file_size_to_tree_size(const boost::uint64_t & file_size);
 	static boost::uint64_t file_hash_to_tree_hash(boost::uint64_t row_hash, std::deque<boost::uint64_t> & row);
 	static std::deque<boost::uint64_t> file_size_to_row(const boost::uint64_t & file_size);

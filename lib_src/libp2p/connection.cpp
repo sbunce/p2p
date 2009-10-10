@@ -16,7 +16,7 @@ connection::connection(
 		S.send_call_back = boost::bind(&connection::key_exchange_send_call_back, this, _1);
 
 		//if outgoing connection start key exchange by sending p and r_A
-		if(S.direction == network::sock::outgoing){
+		if(S.Direction == network::sock::outgoing){
 			Encryption.send_prime_and_local_result(S.send_buff);
 		}
 	}
@@ -24,7 +24,7 @@ connection::connection(
 
 void connection::key_exchange_recv_call_back(network::sock & S)
 {
-	if(S.direction == network::sock::outgoing){
+	if(S.Direction == network::sock::outgoing){
 		//expecting r_B
 		if(S.recv_buff.size() >= protocol::DH_KEY_SIZE){
 			//remote result received, key exchange done
@@ -69,16 +69,6 @@ void connection::recv_call_back(network::sock & S)
 		//save initial send_buff size so we know how much was appended
 		int initial_send_buff_size = S.send_buff.size();
 
-/*
-		protocol::type Type = protocol::command_type(S.recv_buff[0]);
-		if(Type == protocol::slot_command){
-			Slot_Manager.recv(S.recv_buff);
-		}else{
-			LOGGER << "invalid command from " << S.IP;
-			database::table::blacklist::add(S.IP);
-		}
-*/
-
 //DEBUG, test code
 //LOGGER << S.recv_buff.str();
 
@@ -108,6 +98,7 @@ if(S.direction == network::sock::outgoing){
 	}
 }
 */
+
 	//encrypt what was appended to send_buff
 	Encryption.crypt_send(S.send_buff, initial_send_buff_size);
 

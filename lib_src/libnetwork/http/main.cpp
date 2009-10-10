@@ -53,15 +53,15 @@ void disconnect_call_back(network::sock & S)
 
 void failed_connect_call_back(network::sock & S)
 {
-	assert(S.error != network::sock::no_error);
+	assert(S.Error != network::sock::no_error);
 	std::string reason;
-	if(S.error == network::sock::failed_resolve){
+	if(S.Error == network::sock::failed_resolve){
 		reason = "failed resolve";
-	}else if(S.error == network::sock::max_connections){
+	}else if(S.Error == network::sock::max_connections){
 		reason = "max connections";
-	}else if(S.error == network::sock::timed_out){
+	}else if(S.Error == network::sock::timed_out){
 		reason = "timed_out";
-	}else if(S.error == network::sock::other_error){
+	}else if(S.Error == network::sock::other_error){
 		reason = "other";
 	}else{
 		LOGGER << "unrecognized failure reason";

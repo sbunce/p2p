@@ -35,14 +35,13 @@ typedef wrapper::address_info address_info;
 
 class sock
 {
-	static const int default_timeout = 16;
 public:
 	/*
 	Direction of a connection. An incoming connection is one a remote host
 	established with us. An outgoing connection is one we establish with a remote
 	host.
 	*/
-	enum direction_enum {
+	enum direction {
 		incoming,
 		outgoing
 	};
@@ -51,7 +50,7 @@ public:
 	When a socket is disconnected without the program telling it to an error code
 	is given.
 	*/
-	enum error_enum {
+	enum error {
 		no_error,        //default, no error
 		failed_resolve,  //failed to resolve host
 		max_connections, //connection limit reached
@@ -60,34 +59,18 @@ public:
 		other_error      //error there is no other enum for
 	};
 
-	/*
-	Constructor for new incoming connection. This is generally used inside a
-	reactor when an incoming connection is established.
-	*/
-	sock(const int socket_FD_in);
-
-	/*
-	Constructor for establishing a new connection. This needs to be created to
-	be given to the reactor. Which will in turn connect to the host.
-	*/
-	sock(boost::shared_ptr<address_info> info_in);
-
+	sock(const int socket_FD_in);                  //incoming connection ctor
+	sock(boost::shared_ptr<address_info> info_in); //outgoing connection ctor
 	~sock();
 
-	//info for who we're connected to
+	//info for host we're connected to
 	boost::shared_ptr<address_info> info;
 
-	/*
-	File descriptor for network connection. If the second ctor is used this is
-	set to -1. The reactor will const_cast this and set it when connecting. The
-	const acts as a safety cover here.
-	*/
-	const int socket_FD;
-
+	const int socket_FD;       //network socket, useful to use as index
 	const std::string host;    //name we connected to (ie "google.com")
 	const std::string IP;      //IP host resolved to
-	const std::string port;    //if listen_port == port then connection is incoming
-	const direction_enum direction;
+	const std::string port;
+	const direction Direction;
 
 	/* Flags to indicate what has happended to the sock in the reactor.
 	connect_flag:
@@ -113,10 +96,8 @@ public:
 	buffer recv_buff;
 	buffer send_buff;
 
-	//how many bytes were added to recv_buff last recv() call
+	//number of bytes in last send/recv
 	int latest_recv;
-
-	//how many bytes were added to send_buff last send() call
 	int latest_send;
 
 	//call backs used by the proactor
@@ -124,11 +105,11 @@ public:
 	boost::function<void (sock &)> send_call_back;
 
 	//error stored here after abnormal disconnect
-	error_enum error;
+	error Error;
 
 	/*
 	If the socket is in the reactor for this long it will time out. This may be
-	changed from the default value. Value is in seconds.
+	changed from the default value.
 	*/
 	std::time_t idle_timeout;
 

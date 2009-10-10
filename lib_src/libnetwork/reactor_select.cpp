@@ -89,7 +89,7 @@ void network::reactor_select::check_timeouts()
 			}else{
 				S->disconnect_flag = true;
 			}
-			S->error = sock::timed_out;
+			S->Error = sock::timed_out;
 			remove_socket(S->socket_FD);
 			call_back_schedule_job(S);
 		}else{
@@ -110,7 +110,7 @@ void network::reactor_select::establish_incoming(const int listener)
 				boost::shared_ptr<sock> S(new sock(new_FD));
 				if(!duplicates_allowed && is_duplicate(S)){
 					S->failed_connect_flag = true;
-					S->error = sock::duplicate;
+					S->Error = sock::duplicate;
 				}else{
 					connection_add(S);
 				}
@@ -394,7 +394,7 @@ void network::reactor_select::process_connect_job()
 	while(S = connect_job_get()){
 		if(!duplicates_allowed && is_duplicate(S)){
 			S->failed_connect_flag = true;
-			S->error = sock::duplicate;
+			S->Error = sock::duplicate;
 			call_back_schedule_job(S);
 			continue;
 		}
@@ -402,7 +402,7 @@ void network::reactor_select::process_connect_job()
 		//check soft connection limit
 		if(connection_outgoing_limit()){
 			S->failed_connect_flag = true;
-			S->error = sock::max_connections;
+			S->Error = sock::max_connections;
 			call_back_schedule_job(S);
 			return;
 		}
@@ -414,7 +414,7 @@ void network::reactor_select::process_connect_job()
 		if(S->socket_FD >= FD_SETSIZE){
 		#endif
 			S->failed_connect_flag = true;
-			S->error = sock::max_connections;
+			S->Error = sock::max_connections;
 			call_back_schedule_job(S);
 			return;
 		}
@@ -424,7 +424,7 @@ void network::reactor_select::process_connect_job()
 
 		if(S->socket_FD == -1){
 			S->failed_connect_flag = true;
-			S->error = sock::other_error;
+			S->Error = sock::other_error;
 			call_back_schedule_job(S);
 			return;
 		}

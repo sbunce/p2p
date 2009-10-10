@@ -21,7 +21,7 @@ hash_tree::hash_tree(
 			protocol::FILE_BLOCK_SIZE :
 			file_size % protocol::FILE_BLOCK_SIZE
 	),
-	Block_Request(tree_block_count),
+	Block_Request(hash == "" ? 0 : tree_block_count),
 	end_of_good(0)
 {
 	if(hash != ""){
@@ -58,6 +58,10 @@ bool hash_tree::block_info(const boost::uint64_t & block,
 	const std::deque<boost::uint64_t> & row, std::pair<boost::uint64_t, unsigned> & info,
 	boost::uint64_t & parent)
 {
+	/*
+	For simplicity this function operates on RRNs until just before it is done
+	when it converts to bytes.
+	*/
 	boost::uint64_t offset = 0;          //hash offset from beginning of file to start of row
 	boost::uint64_t block_count = 0;     //total block count in all previous rows
 	boost::uint64_t row_block_count = 0; //total block count in current row
@@ -79,12 +83,16 @@ bool hash_tree::block_info(const boost::uint64_t & block,
 			}else{
 				info.second = delta;
 			}
-			parent = offset - row[x-1] + block - block_count;
+
+			if(x != 0){
+				//if not the root hash there is a parent
+				parent = offset - row[x-1] + block - block_count;
+			}
 
 			//convert to bytes
+			parent = parent * protocol::HASH_SIZE;
 			info.first = info.first * protocol::HASH_SIZE;
 			info.second = info.second * protocol::HASH_SIZE;
-			parent = parent * protocol::HASH_SIZE;
 			return true;
 		}
 		block_count += row_block_count;
@@ -366,7 +374,7 @@ boost::uint64_t hash_tree::file_hash_to_tree_hash(boost::uint64_t row_hash,
 	return start_hash + file_hash_to_tree_hash(row_hash, row);
 }
 
-boost::uint64_t hash_tree::file_size_to_file_hash(boost::uint64_t file_size)
+boost::uint64_t hash_tree::file_size_to_file_hash(const boost::uint64_t & file_size)
 {
 	boost::uint64_t hash_count = file_size / protocol::FILE_BLOCK_SIZE;
 	if(file_size % protocol::FILE_BLOCK_SIZE != 0){

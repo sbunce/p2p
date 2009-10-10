@@ -210,8 +210,8 @@ void share::erase(const std::string & path)
 		Locate Hash element. The loop is necessary because there can be multiple
 		files with the same hash.
 		*/
-		std::pair<std::map<std::string, boost::shared_ptr<file_info> >::iterator,
-			std::map<std::string, boost::shared_ptr<file_info> >::iterator>
+		std::pair<std::multimap<std::string, boost::shared_ptr<file_info> >::iterator,
+			std::multimap<std::string, boost::shared_ptr<file_info> >::iterator>
 			Hash_iter_pair = Hash.equal_range(Path_iter->second->hash);
 		for(; Hash_iter_pair.first != Hash_iter_pair.second; ++Hash_iter_pair.first){
 			if(Hash_iter_pair.first->second == Path_iter->second){

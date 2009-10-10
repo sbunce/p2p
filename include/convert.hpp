@@ -93,7 +93,7 @@ static std::string bin_to_hex(const std::string & bin)
 }
 
 //convert bytes to reasonable SI unit, example 1024 -> 1kB
-static std::string size_SI(boost::uint64_t bytes)
+static std::string size_SI(const boost::uint64_t & bytes)
 {
 	std::ostringstream oss;
 	if(bytes < 1024){
