@@ -1,10 +1,3 @@
-/*
-Making sure the BSD sockets interface is portable accross systems takes a lot of
-care. Using the regular BSD sockets interface can also be complicated and hence
-error prone. The network::wrapper namespace addresses both of these concerns by
-simplifying the interface, and putting all system specific network functions in
-one place.
-*/
 #ifndef H_NETWORK_WRAPPER
 #define H_NETWORK_WRAPPER
 
@@ -13,8 +6,8 @@ one place.
 
 //networking
 #ifdef _WIN32
-	#define MSG_NOSIGNAL 0  //disable SIGPIPE on send() to disconnected socket
-	#define FD_SETSIZE 1024 //max number of sockets in fd_set
+	#define MSG_NOSIGNAL 0   //disable SIGPIPE on send() to disconnected socket
+	#define FD_SETSIZE 65536 //max number of sockets in fd_set
 	#include <ws2tcpip.h>
 
 	//int used in place of socklen_t on windows
@@ -49,12 +42,13 @@ namespace network{
 namespace wrapper{
 
 /*
+DEBUG, rename this object to endpoint_iterator. Copy all the addr_info in to
+a std::vector in the ctor then free it in the ctor. This could also be moved
+to it's own class if all the wrapper functions just take addrinfo.
+
 Wraps getaddr info. Frees memory when destroyed.
-Note: typedef'd to network::address_info because address_info so common to
-	use. However it is a wrapper so it belongs in network::wrapper namespace
-	also.
 */
-class address_info : private boost::noncopyable
+class address_info : private boost::noncopyable //get rid of noncopyable
 {
 public:
 	/*
@@ -65,7 +59,7 @@ public:
 	It can be AF_INET (IPv4), AF_INET6 (IPv6), or AF_UNSPEC (IPv4 or IPv6).
 	*/
 	address_info(
-		const char * host_in,
+		const char * host_in, //should be std::strings
 		const char * port_in,
 		const int ai_family = AF_UNSPEC
 	):
@@ -130,6 +124,7 @@ public:
 	Traverses to the next addrinfo in the list. After calling this the
 	resolved() function should be called to see if at the end of the list.
 	*/
+//DEBUG should be operator ++
 	void next()
 	{
 		assert(res_current != NULL);
@@ -141,12 +136,28 @@ public:
 	Note: If addrinfo struct can't be filled then this will return false
 		right after instantiation.
 	*/
+//get rid of this, check if end iterator
 	bool resolved() const
 	{
 		return res_current != NULL;
 	}
 
 private:
+
+	/*
+	Holds addrinfo. We copy each addrinfo in the list created by getaddrinfo in
+	to these to make them easier to manage.
+	*/
+	class info
+	{
+	public:
+		addrinfo AI;
+
+		//the ai_cannonname and ai_addr pointers in AI point to these
+		char ai_canonname;
+		sockaddr ai_addr;
+	};
+
 	/*
 	The addrinfo struct is a linked list. The pointer to the next link is
 	the member pointer ai_next. The list will be more than one element long
@@ -159,6 +170,7 @@ private:
 	addrinfo * res_begin;
 	addrinfo * res_current;
 
+//DEBUG, make these const
 	//host name and port (empty if wasn't specified)
 	std::string host;
 	std::string port;
@@ -327,9 +339,7 @@ static std::string get_port(const int socket_FD)
 
 /*
 This takes care of "address already in use" errors that can happen when
-trying to bind to a port. The error can happen when a listener is setup,
-and the program crashes. The next time the program starts the OS hasn't
-deallocated the port so it won't let you bind to it.
+trying to bind to a port.
 */
 static void reuse_port(const int socket_FD)
 {
@@ -469,7 +479,8 @@ started the socket_FD will be set to -1. If neither listener can be started
 then the program will be terminated. If a dualstack socket is started then
 both listeners will be equal.
 */
-static void start_listeners(int & listener_IPv4, int & listener_IPv6, const std::string & port)
+static void start_listeners(int & listener_IPv4, int & listener_IPv6,
+	const std::string & port)
 {
 	#ifdef _WIN32
 	listener_IPv4 = wrapper::start_listener_IPv4(port);
@@ -506,6 +517,5 @@ static void stop_networking()
 }
 
 }//end of namespace wrapper
-typedef wrapper::address_info address_info;
 }//end of namespace network
 #endif

@@ -1,8 +1,10 @@
 #include "http.hpp"
 
 http::http(
+	network::proactor & Proactor_in,
 	const std::string & web_root_in
 ):
+	Proactor(Proactor_in),
 	web_root(web_root_in),
 	State(UNDETERMINED),
 	index(0)
@@ -10,16 +12,13 @@ http::http(
 	std::srand(time(NULL));
 }
 
-void http::recv_call_back(network::sock & S)
+void http::recv_call_back(network::connection_info & CI, network::buffer & recv_buf)
 {
 	namespace fs = boost::filesystem;
-
-	if(S.recv_buff.size() > 1024 || State != UNDETERMINED){
-		//request size limit exceeded or second request made
-		S.disconnect_flag = true;
-		return;
-	}
-
+	network::buffer B("123ABC");
+	Proactor.write(CI.socket_FD, B);
+	Proactor.disconnect_on_empty(CI.socket_FD);
+/*
 	//sub-expression 1 is the request path
 	boost::regex expression("GET\\s([^\\s]*)(\\s|\\r|\\n)");
 	boost::match_results<std::string::iterator> what;
@@ -51,19 +50,9 @@ void http::recv_call_back(network::sock & S)
 		}
 		read(S);
 	}
+*/
 }
-
-void http::send_call_back(network::sock & S)
-{
-	if(S.send_buff.size() < MTU){
-		read(S);
-	}
-	if(S.send_buff.empty()){
-		//buffer empty after reading means we're done sending
-		S.disconnect_flag = true;
-	}
-}
-
+/*
 std::string http::create_header(const unsigned content_length)
 {
 	std::string header;
@@ -71,12 +60,13 @@ std::string http::create_header(const unsigned content_length)
 	header += "Date: Mon, 01 Jan 1970 01:00:00 GMT\r\n";
 	header += "Server: test 123\r\n";
 	header += "Last-Modified: Mon, 01 Jan 1970 01:00:00 GMT\r\n";
-
+*/
 	/*
 	Etag is a hash of the page to determine if the client should use a page in
 	their cache. We set it to a random string to make the client always get the
 	new version.
 	*/
+/*
 	header += "Etag: \"";
 	for(int x=0; x<18; ++x){
 		header += (char)((std::rand() % 10) + 48); //random '0' to '9'
@@ -93,25 +83,29 @@ std::string http::create_header(const unsigned content_length)
 
 	//indicate we will close connection after send done
 	header += "Connection: close\r\n";
-
+*/
 	/*
 	Content type is the mime type of the document. If this is not included the
 	client has to figure out what to do with the document.
 	*/
+/*
 	//header += "Content-State: text/html; charset=UTF-8\r\n";
 
 	//header must end with blank line
 	header += "\r\n";
 	return header;
 }
-
-void http::read(network::sock & S)
+*/
+/*
+//DEBUG, replace all these stupid states by changing the call back ptr
+void http::read(const int socket_FD)
 {
 	namespace fs = boost::filesystem;
 	assert(State != UNDETERMINED);
 	if(State == INVALID){
-		S.send_buff.append("404");
-		State = DONE;
+		network::buffer B("404");
+		Proactor.write(socket_FD, B);
+//DEBUG, add disconnect code here
 	}else if(State == DIRECTORY){
 		std::stringstream ss;
 		ss <<
@@ -136,34 +130,37 @@ void http::read(network::sock & S)
 		}
 		ss << "</table></body>";
 		std::string header = create_header(ss.str().size());
-		std::string buff = header + ss.str();
-		S.send_buff.append(buff);
-		State = DONE;
+		network::buffer B;
+		B.append(header).append(ss.str());
+		Proactor.write(socket_FD, B);
+//DEBUG, add disconnect code here
 	}else if(State == FILE){
+		network::buffer B;
 		if(index == 0){
 			boost::uint64_t size;
 			try{
 				size = boost::filesystem::file_size(path);
 			}catch(std::exception & ex){
 				LOGGER << "exception: " << ex.what();
-				State = DONE;
+//DEBUG, add disconnect code here
 				return;
 			}
 			std::string header = create_header(size);
-			S.send_buff.append(header.c_str());
+			B.append(header);
 		}
 		std::fstream fin(path.string().c_str(), std::ios::in | std::ios::binary);
 		if(fin.is_open()){
 			fin.seekg(index, std::ios::beg);
-			S.send_buff.tail_reserve(MTU);
-			fin.read(reinterpret_cast<char *>(S.send_buff.tail_start()), S.send_buff.tail_size());
-			S.send_buff.tail_resize(fin.gcount());
+			B.tail_reserve(MTU);
+			fin.read(reinterpret_cast<char *>(B.tail_start()), B.tail_size());
+			B.tail_resize(fin.gcount());
 			index += fin.gcount();
+			Proactor.write(socket_FD, B);
 			if(fin.eof()){
-				State == DONE;
+//DEBUG, add disconnect code here
 			}
 		}else{
-			State == DONE;
+//DEBUG, add disconnect code here
 		}
 	}
 }
@@ -183,3 +180,4 @@ void http::encode_chars(std::string & str)
 	boost::algorithm::replace_all(str, " ", "%20");
 	boost::algorithm::replace_all(str, "'", "%27");
 }
+*/

@@ -8,6 +8,7 @@ connection_manager::connection_manager(
 
 }
 
+/*
 void connection_manager::connect_call_back(network::sock & S)
 {
 	LOGGER << "connect " << S.IP << " " << S.port;
@@ -31,3 +32,4 @@ void connection_manager::failed_connect_call_back(network::sock & S)
 {
 	LOGGER << "failed connect " << S.IP << " " << S.port;
 }
+*/

@@ -139,6 +139,7 @@ private:
 		std::copy(IC.b, IC.b + sizeof(IC), load_buffer.end() - 8);
 		#endif
 	}
+
 	void process(const int & chunk_start)
 	{
 		//break 512bit chunk in to 16, 32 bit pieces

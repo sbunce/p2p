@@ -1,3 +1,4 @@
 SConscript([
+	'network/SConscript',
 	'unit_tests/SConscript'
 ])

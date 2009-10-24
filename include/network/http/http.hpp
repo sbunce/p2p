@@ -19,24 +19,22 @@
 
 class http : private boost::noncopyable
 {
-public:
 	static const int MTU = 16384;
+public:
+	http(network::proactor & Proactor_in, const std::string & web_root_in);
 
-	http(const std::string & web_root_in);
-
-	//call backs for network
-	void recv_call_back(network::sock & S);
-	void send_call_back(network::sock & S);
+	//initial
+	void recv_call_back(network::connection_info & CI, network::buffer & recv_buf);
 
 private:
-	std::string web_root;
+	network::proactor & Proactor;
+	const std::string web_root;
 
 	enum{
 		UNDETERMINED,
 		INVALID,
 		DIRECTORY,
-		FILE,
-		DONE
+		FILE
 	} State;
 
 	//path to file or directory requested
@@ -60,10 +58,12 @@ private:
 		Appends new data on to send_buff if any exists.
 		Precondition: determine_type must have been called.
 	*/
+/*
 	std::string create_header(const unsigned content_length);
 	void decode_chars(std::string & str);
 	void encode_chars(std::string & str);
-	void read(network::sock & S);
+	void read(const int socket_FD);
+*/
 
 };
 #endif

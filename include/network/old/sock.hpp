@@ -26,13 +26,6 @@ read at any time by any thread.
 #include <string>
 
 namespace network {
-
-//used for PIMPL
-namespace wrapper {
-	class address_info;
-}
-typedef wrapper::address_info address_info;
-
 class sock
 {
 public:
@@ -60,11 +53,11 @@ public:
 	};
 
 	sock(const int socket_FD_in);                  //incoming connection ctor
-	sock(boost::shared_ptr<address_info> info_in); //outgoing connection ctor
+	sock(boost::shared_ptr<wrapper::address_info> info_in); //outgoing connection ctor
 	~sock();
 
 	//info for host we're connected to
-	boost::shared_ptr<address_info> info;
+	boost::shared_ptr<wrapper::address_info> info;
 
 	const int socket_FD;       //network socket, useful to use as index
 	const std::string host;    //name we connected to (ie "google.com")
@@ -72,7 +65,8 @@ public:
 	const std::string port;
 	const direction Direction;
 
-	/* Flags to indicate what has happended to the sock in the reactor.
+	/* Flags to indicate what has happended to the sock in the reactor. These are
+	used by the proactor to call the appropriate call back handlers.
 	connect_flag:
 		When false a connect job needs to be done. When true a connect job
 		has already been done. The reactor sets this to true.

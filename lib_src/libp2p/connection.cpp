@@ -1,17 +1,19 @@
 #include "connection.hpp"
 
 connection::connection(
-	network::sock & S,
+	//network::sock & S,
 	share & Share_in
 ):
-	IP(S.IP),
-	port(S.port),
+	IP("TODO"/*S.IP*/),
+	port("TODO"/*S.port*/),
 	blacklist_state(0),
 	Slot_Manager(Share_in)
 {
+/*
 	if(database::table::blacklist::is_blacklisted(S.IP)){
-		S.disconnect_flag = true;
+		//S.disconnect_flag = true;
 	}else{
+
 		S.recv_call_back = boost::bind(&connection::key_exchange_recv_call_back, this, _1);
 		S.send_call_back = boost::bind(&connection::key_exchange_send_call_back, this, _1);
 
@@ -20,10 +22,12 @@ connection::connection(
 			Encryption.send_prime_and_local_result(S.send_buff);
 		}
 	}
+*/
 }
 
-void connection::key_exchange_recv_call_back(network::sock & S)
+void connection::key_exchange_recv_call_back(/*network::sock & S*/)
 {
+/*
 	if(S.Direction == network::sock::outgoing){
 		//expecting r_B
 		if(S.recv_buff.size() >= protocol::DH_KEY_SIZE){
@@ -52,15 +56,17 @@ void connection::key_exchange_recv_call_back(network::sock & S)
 			}
 		}
 	}
+*/
 }
 
-void connection::key_exchange_send_call_back(network::sock & S)
+void connection::key_exchange_send_call_back(/*network::sock & S*/)
 {
 	//nothing to do after sending for key exchange
 }
 
-void connection::recv_call_back(network::sock & S)
+void connection::recv_call_back(/*network::sock & S*/)
 {
+/*
 	//latest_recv is zero when a call back has been forced
 	if(S.latest_recv != 0){
 		//decrypt incoming data
@@ -75,18 +81,18 @@ void connection::recv_call_back(network::sock & S)
 		//encrypt what was appended to send_buff
 		Encryption.crypt_send(S.send_buff, initial_send_buff_size);
 	}
-
+*/
 	if(database::table::blacklist::modified(blacklist_state)
 		&& database::table::blacklist::is_blacklisted(IP))
 	{
-		S.disconnect_flag = true;
+		//S.disconnect_flag = true;
 	}
 }
 
-void connection::send_call_back(network::sock & S)
+void connection::send_call_back(/*network::sock & S*/)
 {
 	//save initial send_buff size so we know how much was appended
-	int initial_send_buff_size = S.send_buff.size();
+//	int initial_send_buff_size = S.send_buff.size();
 
 /*
 //DEBUG, test code
@@ -100,11 +106,11 @@ if(S.direction == network::sock::outgoing){
 */
 
 	//encrypt what was appended to send_buff
-	Encryption.crypt_send(S.send_buff, initial_send_buff_size);
+	//Encryption.crypt_send(S.send_buff, initial_send_buff_size);
 
 	if(database::table::blacklist::modified(blacklist_state)
 		&& database::table::blacklist::is_blacklisted(IP))
 	{
-		S.disconnect_flag = true;
+		//S.disconnect_flag = true;
 	}
 }

@@ -17,7 +17,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
-#include <network/network.hpp>
+//#include <network/network.hpp>
 #include <p2p.hpp>
 #include <thread_pool.hpp>
 
@@ -84,8 +84,8 @@ private:
 		ctor which use objects in p2p_real. We specify it last because we want to
 		make sure the objects it uses are constructed before it uses them.
 	*/
-	connection_manager Connection_Manager;
-	network::proactor Proactor;
+	//connection_manager Connection_Manager;
+	//network::proactor Proactor;
 
 	/*
 	resume:

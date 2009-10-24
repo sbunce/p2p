@@ -11,6 +11,7 @@
 #include <ctime>
 #include <deque>
 
+namespace network{
 class speed_calculator : private boost::noncopyable
 {
 public:
@@ -107,4 +108,5 @@ private:
 		average_speed /= AVERAGE;
 	}
 };
+}
 #endif

@@ -1,10 +1,7 @@
 #include <network/network.hpp>
 
-//used for PIMPL
-#include "wrapper.hpp"
-
 network::sock::sock(const int socket_FD_in):
-	info(new address_info()),
+	info(new wrapper::address_info()),
 	socket_FD(socket_FD_in),
 	IP(wrapper::get_IP(socket_FD)),
 	port(wrapper::get_port(socket_FD)),
@@ -23,7 +20,7 @@ network::sock::sock(const int socket_FD_in):
 
 }
 
-network::sock::sock(boost::shared_ptr<address_info> info_in):
+network::sock::sock(boost::shared_ptr<wrapper::address_info> info_in):
 	info(info_in),
 	socket_FD(-1),
 	host(info->get_host()),

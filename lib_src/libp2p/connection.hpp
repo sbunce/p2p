@@ -14,7 +14,7 @@ class connection : private boost::noncopyable
 {
 public:
 	connection(
-		network::sock & S,
+		//network::sock & S,
 		share & Share_in
 	);
 
@@ -31,10 +31,10 @@ public:
 	send_call_back:
 		The send call back used after key exchange complete.
 	*/
-	void key_exchange_recv_call_back(network::sock & S);
-	void key_exchange_send_call_back(network::sock & S);
-	void recv_call_back(network::sock & S);
-	void send_call_back(network::sock & S);
+	void key_exchange_recv_call_back(/*network::sock & S*/);
+	void key_exchange_send_call_back(/*network::sock & S*/);
+	void recv_call_back(/*network::sock & S*/);
+	void send_call_back(/*network::sock & S*/);
 
 private:
 	encryption Encryption;

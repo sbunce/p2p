@@ -11,7 +11,6 @@ the reactor with the proactor.
 
 //custom
 #include "rate_limit.hpp"
-#include "wrapper.hpp"
 
 //include
 #include <boost/shared_ptr.hpp>
@@ -26,9 +25,9 @@ class reactor : private boost::noncopyable
 {
 public:
 	/*
-	Maximum size sent in one shot. The actual hardware MTU will likely be less.
-	On the internet the MTU will probably be around 1500. This maximum size was
-	chosen because some LANs go up to 2^14 with "jumbo frames".
+	Maximum size sent in one shot. This value has nothing to do with the actual
+	network MTU. This just makes sure we provide enough data so that the OS can
+	send large frames if it wants.
 	*/
 	static const int MTU = 16384;
 

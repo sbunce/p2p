@@ -25,10 +25,11 @@ public:
 	failed_connect_call_back:
 		Proactor does call back on this function when a connection attempt fails.
 	*/
+/*
 	void connect_call_back(network::sock & S);
 	void disconnect_call_back(network::sock & S);
 	void failed_connect_call_back(network::sock & S);
-
+*/
 private:
 	share & Share;
 

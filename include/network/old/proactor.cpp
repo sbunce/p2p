@@ -127,7 +127,7 @@ void network::proactor::resolve()
 		job = resolve_job.front();
 		resolve_job.pop_front();
 		}//end lock scope
-		boost::shared_ptr<address_info> AI(new address_info(
+		boost::shared_ptr<wrapper::address_info> AI(new wrapper::address_info(
 			job.host.c_str(), job.port.c_str()));
 
 		if(job.type == resolve_job_element::new_connection){

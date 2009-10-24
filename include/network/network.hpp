@@ -1,4 +1,8 @@
-//includes the entire network namespace
 #include "buffer.hpp"
+#include "connection_info.hpp"
+#include "endpoint.hpp"
+#include "listener.hpp"
+#include "nstream.hpp"
+#include "protocol.hpp"
 #include "proactor.hpp"
-#include "sock.hpp"
+#include "system_include.hpp"

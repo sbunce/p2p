@@ -7,4 +7,3 @@ SConscript([
 ])
 
 Import('env_base')
-env_base.StaticLibrary('#lib/network', glob.glob('*.cpp'))

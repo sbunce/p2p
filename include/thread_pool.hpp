@@ -7,10 +7,9 @@
 #include <boost/thread.hpp>
 
 //standard
-#include <deque>
 #include <iostream>
 #include <limits>
-#include <vector>
+#include <deque>
 
 class thread_pool
 {
@@ -23,34 +22,41 @@ public:
 		}
 	}
 
+	//erases all pending jobs
+	void clear()
+	{
+		boost::mutex::scoped_lock lock(job_mutex);
+		job.clear();
+	}
+
 	/*
 	queue:
-		Add call back job for the thread pool. Example:
+		Add call back job for the thread pool.
+	Example:
 		member function:                TP.queue(boost::bind(&A::test, &a));
 		member function with parameter: TP.queue(boost::bind(&A::test, &a, "test"));
 		function:                       TP.queue(&test);
 		function with parameter:        TP.queue(boost::bind(test, "test"));
 	*/
-	void queue(const boost::function0<void> & CB)
+	void queue(const boost::function<void ()> & func)
 	{
-		boost::mutex::scoped_lock lock(call_back_mutex);
-		call_back.push_back(CB);
-		call_back_cond.notify_one();
+		boost::mutex::scoped_lock lock(job_mutex);
+		job.push_back(func);
+		job_cond.notify_one();
 	}
 
-	//causes threads to terminate after job queue empties out
-	void interrupt()
+	/*
+	Triggers all threads to terminate when the job queue is empty. Blocks until
+	all threads have terminated.
+	Note: Call clear() if the jobs aren't important and can be discarded.
+	*/
+	void interrupt_join()
 	{
 		{//begin lock scope
-		boost::mutex::scoped_lock lock(call_back_mutex);
+		boost::mutex::scoped_lock lock(job_mutex);
 		stop_threads = true;
 		}//end lock scope
-		call_back_cond.notify_all();
-	}
-
-	//blocks until threads have terminated
-	void join()
-	{
+		job_cond.notify_all();
 		Workers.join_all();
 	}
 
@@ -58,34 +64,33 @@ private:
 	boost::thread_group Workers;
 
 	//used by queue_job to transfer jobs to threads in conumer
-	std::deque<boost::function0<void> > call_back;
-	boost::condition_variable_any call_back_cond;
-	boost::mutex call_back_mutex;
+	boost::mutex job_mutex;
+	boost::condition_variable_any job_cond;
+	std::deque<boost::function<void ()> > job;
 
 	/*
 	Triggers worker threads to exit after finishing jobs.
-	Note: Must be locked with queue_mutex.
+	Note: Must be locked with job_mutex.
 	*/
 	bool stop_threads;
 
 	//threads wait here for jobs
 	void dispatcher()
 	{
-		boost::function0<void> CB;
+		boost::function<void ()> func;
 		while(true){
 			{//begin lock scope
-			boost::mutex::scoped_lock lock(call_back_mutex);
-			while(call_back.empty()){
+			boost::mutex::scoped_lock lock(job_mutex);
+			while(job.empty()){
 				if(stop_threads){
-					//only stop thread when there are no more jobs
 					return;
 				}
-				call_back_cond.wait(call_back_mutex);
+				job_cond.wait(job_mutex);
 			}
-			CB = call_back.front();
-			call_back.pop_front();
+			func = job.front();
+			job.pop_front();
 			}//end lock scope
-			CB();
+			func();
 		}
 	}
 };
