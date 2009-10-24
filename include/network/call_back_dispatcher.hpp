@@ -36,41 +36,53 @@ public:
 		Workers.join_all();
 	}
 
-	//schedule call back for connect
+	/*
+	Schedule call back for connect.
+	Precondition: No other call back must have been scheduled before the connect
+		call back.
+	*/
 	void connect(const boost::shared_ptr<connection_info> & CI)
 	{
 		boost::mutex::scoped_lock lock(job_mutex);
-		job.push_front(std::make_pair(CI->socket_FD, boost::bind(
+		job.push_front(std::make_pair(CI->connection_ID, boost::bind(
 			&call_back_dispatcher::connect_call_back_wrapper, this, CI)));
 		job_cond.notify_one();
 	}
 
-	//schedule call back for recv
+	/*
+	Schedule call back for recv.
+	Precondition: The connect call back must have been scheduled.
+	*/
 	void recv(const boost::shared_ptr<connection_info> & CI,
 		const boost::shared_ptr<buffer> & recv_buf)
 	{
 		boost::mutex::scoped_lock lock(job_mutex);
-		job.push_back(std::make_pair(CI->socket_FD, boost::bind(
+		job.push_back(std::make_pair(CI->connection_ID, boost::bind(
 			&call_back_dispatcher::recv_call_back_wrapper, this, CI, recv_buf)));
 		job_cond.notify_one();
 	}
 
-	//schedule call back for send_buf size decrease
+	/*
+	Schedule call back for send_buf size decrease.
+	Precondition: The connect call back must have been scheduled.
+	*/
 	void send(const boost::shared_ptr<connection_info> & CI, const int send_buf_size)
 	{
 		boost::mutex::scoped_lock lock(job_mutex);
-		if(CI->send_call_back){
-			job.push_back(std::make_pair(CI->socket_FD, boost::bind(
-				&call_back_dispatcher::send_call_back_wrapper, this, CI, send_buf_size)));
-			job_cond.notify_one();
-		}
+		job.push_back(std::make_pair(CI->connection_ID, boost::bind(
+			&call_back_dispatcher::send_call_back_wrapper, this, CI, send_buf_size)));
+		job_cond.notify_one();
 	}
 
-	//schedule call back for disconnect
+	/*
+	Schedule call back for disconnect, or failed to connect. If scheduling a job
+	for a disconnect then a connect call back must have been scheduled first.
+	Postcondition: No other jobs for the connection should be scheduled.
+	*/
 	void disconnect(const boost::shared_ptr<connection_info> & CI)
 	{
 		boost::mutex::scoped_lock lock(job_mutex);
-		job.push_back(std::make_pair(CI->socket_FD, boost::bind(
+		job.push_back(std::make_pair(CI->connection_ID, boost::bind(
 			&call_back_dispatcher::disconnect_call_back_wrapper, this, CI)));
 		job_cond.notify_one();
 	}
@@ -84,7 +96,7 @@ private:
 	const boost::function<void (connection_info &)> disconnect_call_back;
 
 	/*
-	Used by call_back_dispatch to memoize the socket_FD for each call back in
+	Used by call_back_dispatch to memoize the connection_ID for each call back in
 	progress so that it can stop multiple call backs for the same socket from
 	occuring concurrently.
 	Note: memoize_mutex must lock all access to container.
@@ -95,7 +107,9 @@ private:
 	std::set<int> memoize;
 
 	/*
-	Call backs to be done by dispatch().
+	Call backs to be done by dispatch(). The connect_job container holds connect
+	call back jobs. The other_job container holds send call back and disconnect
+	call back jobs.
 
 	There are some invariants to the call back system.
 	1. Only one call back for a socket is done concurrently.
@@ -103,10 +117,9 @@ private:
 	3. The last call back for a socket must be the disconnect call back.
 
 	The memoize system takes care of invariant 1.
-	Invariant 2 is insured by always pushing connect call back jobs on the front
-		of the call_back_job container.
-	Invariant 3 is insured by always pushing disconnect call back jobs on the
-		back of the call_back_job container.
+	Invariant 2 is insured by always pushing connect jobs on the the front of the
+		job container.
+	Invariant 3 is insured by requiring that disconnect jobs be scheduled last.
 	*/
 	boost::mutex job_mutex;
 	boost::condition_variable_any job_cond;
@@ -116,47 +129,44 @@ private:
 	void dispatch()
 	{
 		std::pair<int, boost::function<void ()> > temp;
-
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(job_mutex);
-		while(job.empty()){
-			job_cond.wait(job_mutex);
-		}
-		temp = job.front();
-		job.pop_front();
-		}//end lock scope
-
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(memoize_mutex);
 		while(true){
-			std::pair<std::set<int>::iterator, bool> ret = memoize.insert(temp.first);
-			if(ret.second){
-				break;
-			}else{
-				//call back for socket is currently running
-				memoize_cond.wait(memoize_mutex);
+			{//begin lock scope
+			boost::mutex::scoped_lock lock(job_mutex);
+			while(job.empty()){
+				job_cond.wait(job_mutex);
 			}
+			temp = job.front();
+			job.pop_front();
+			}//end lock scope
+
+			{//begin lock scope
+			boost::mutex::scoped_lock lock(memoize_mutex);
+			while(true){
+				std::pair<std::set<int>::iterator, bool> ret = memoize.insert(temp.first);
+				if(ret.second){
+					break;
+				}else{
+					//call back for socket is currently running
+					memoize_cond.wait(memoize_mutex);
+				}
+			}
+			}//end lock scope
+
+			//run call back
+			temp.second();
+
+			{//begin lock scope
+			boost::mutex::scoped_lock lock(memoize_mutex);
+			memoize.erase(temp.first);
+			}//end lock scope
+			memoize_cond.notify_all();
 		}
-		}//end lock scope
-
-		//run call back
-		temp.second();
-
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(memoize_mutex);
-		memoize.erase(temp.first);
-		}//end lock scope
-		memoize_cond.notify_all();
 	}
 
 	//wrapper for connect call back to dereference shared_ptr
 	void connect_call_back_wrapper(boost::shared_ptr<connection_info> CI)
 	{
 		connect_call_back(*CI);
-		if(!CI->recv_call_back){
-			LOGGER << "recv_call_back must be set during connect call back";
-			exit(1);
-		}
 	}
 
 	//wrapper for connect call back to dereference shared_ptr
@@ -172,7 +182,9 @@ private:
 	*/
 	void recv_call_back_wrapper(boost::shared_ptr<connection_info> CI, boost::shared_ptr<buffer> recv_buf)
 	{
-		CI->recv_call_back(*CI, *recv_buf);
+		if(CI->recv_call_back){
+			CI->recv_call_back(*CI, *recv_buf);
+		}
 	}
 
 	/*
@@ -182,7 +194,9 @@ private:
 	*/
 	void send_call_back_wrapper(boost::shared_ptr<connection_info> CI, const int send_buf_size)
 	{
-		CI->send_call_back(*CI, send_buf_size);
+		if(CI->send_call_back){
+			CI->send_call_back(*CI, send_buf_size);
+		}
 	}
 };
 }

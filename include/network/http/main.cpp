@@ -45,7 +45,7 @@ void connect_call_back(network::connection_info & CI)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	std::pair<std::map<int, boost::shared_ptr<http> >::iterator, bool>
-		ret = Connection.insert(std::make_pair(CI.socket_FD, new http(Proactor, web_root)));
+		ret = Connection.insert(std::make_pair(CI.connection_ID, new http(Proactor, web_root)));
 	assert(ret.second);
 	CI.recv_call_back = boost::bind(&http::recv_call_back, ret.first->second.get(), _1, _2);
 }
@@ -53,7 +53,7 @@ void connect_call_back(network::connection_info & CI)
 void disconnect_call_back(network::connection_info & CI)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
-	Connection.erase(CI.socket_FD);
+	Connection.erase(CI.connection_ID);
 }
 
 int main(int argc, char ** argv)

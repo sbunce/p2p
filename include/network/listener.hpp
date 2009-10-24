@@ -47,7 +47,6 @@ public:
 		ai.ai_addrlen = sizeof(sockaddr_storage);
 		int new_socket = ::accept(socket_FD, ai.ai_addr, &ai.ai_addrlen);
 		if(new_socket == -1){
-			LOGGER << errno;
 			_error = errno;
 			return boost::shared_ptr<nstream>();
 		}

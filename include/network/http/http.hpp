@@ -23,27 +23,18 @@ class http : private boost::noncopyable
 public:
 	http(network::proactor & Proactor_in, const std::string & web_root_in);
 
-	//initial
+	//initial call back
 	void recv_call_back(network::connection_info & CI, network::buffer & recv_buf);
 
 private:
 	network::proactor & Proactor;
 	const std::string web_root;
 
-	enum{
-		UNDETERMINED,
-		INVALID,
-		DIRECTORY,
-		FILE
-	} State;
+	//request stored here
+	network::buffer request;
 
-	//path to file or directory requested
+	//if file requested path and index to end of data sent stored here
 	boost::filesystem::path path;
-
-	/*
-	If file requested this will hold a index of where we are in the file. This is
-	needed so we don't have to read the entire file in to memory before sending.
-	*/
 	boost::uint64_t index;
 
 	/*
@@ -54,16 +45,16 @@ private:
 		Replace HTML encoded characters with ASCII.
 	encode_chars:
 		Replace special ASCII characters with HTML encoded characters.
-	read:
-		Appends new data on to send_buff if any exists.
-		Precondition: determine_type must have been called.
+	file_send_call_back:
+		Send call back used to send a file. Refills the send_buf with data from
+		the file when it gets low.
+	read_directory:
+		Appends directory listing to network::buffer.
 	*/
-/*
-	std::string create_header(const unsigned content_length);
+	std::string create_header(const boost::uint64_t & content_length);
 	void decode_chars(std::string & str);
 	void encode_chars(std::string & str);
-	void read(const int socket_FD);
-*/
-
+	void file_send_call_back(network::connection_info & CI, int send_buf_size);
+	void read_directory(network::connection_info & CI);
 };
 #endif

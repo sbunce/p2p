@@ -10,6 +10,7 @@
 #include "select_interrupter.hpp"
 
 //include
+#include <atomic_int.hpp>
 #include <boost/shared_ptr.hpp>
 #include <thread_pool.hpp>
 
@@ -35,7 +36,8 @@ public:
 		Call_Back_Dispatcher(connect_call_back, disconnect_call_back),
 		begin_FD(0),
 		end_FD(1),
-		Resolve_TP(8)
+		Resolve_TP(8),
+		latest_ID(0)
 	{
 		FD_ZERO(&read_FDS);
 		FD_ZERO(&write_FDS);
@@ -74,30 +76,30 @@ public:
 		Resolve_TP.queue(boost::bind(&proactor::resolve, this, host, port, P));
 	}
 
-	void disconnect(const int socket_FD)
+	void disconnect(const int connection_ID)
 	{
 		boost::mutex::scoped_lock lock(network_thread_call_mutex);
 		network_thread_call.push_back(boost::bind(&proactor::disconnect, this,
-			socket_FD, false));
+			connection_ID, false));
 	}
 
-	void disconnect_on_empty(const int socket_FD)
+	void disconnect_on_empty(const int connection_ID)
 	{
 		boost::mutex::scoped_lock lock(network_thread_call_mutex);
 		network_thread_call.push_back(boost::bind(&proactor::disconnect, this,
-			socket_FD, true));
+			connection_ID, true));
 	}
 
 	/*
 	Async write data to specified socket. Buffer will be appended to send_buf
 	for specified socket.
 	*/
-	void write(const int socket_FD, buffer & send_buf)
+	void write(const int connection_ID, buffer & send_buf)
 	{
 		boost::mutex::scoped_lock lock(network_thread_call_mutex);
 		//copy to heap allocated buffer to save copy when passing as parameter
 		network_thread_call.push_back(boost::bind(&proactor::append_send_buf, this,
-			socket_FD, boost::shared_ptr<buffer>(new buffer(send_buf))));
+			connection_ID, boost::shared_ptr<buffer>(new buffer(send_buf))));
 		Select_Interrupter.trigger();
 	}
 
@@ -138,11 +140,6 @@ private:
 	class state : private boost::noncopyable
 	{
 	public:
-/*
-The socket needs a unique identifier for the call back memoize. If a socket disconnects
-and another socket connects with the same socket_FD there can be problems.
-*/
-
 		state(
 			const bool connected_in,
 			const std::set<endpoint> & E_in,
@@ -182,8 +179,17 @@ and another socket connects with the same socket_FD there can be problems.
 		buffer send_buf;
 	};
 
-	//state associated with all connected sockets
-	std::map<int, boost::shared_ptr<state> > State;
+	//socket_FD associated with socket state
+	std::map<int, boost::shared_ptr<state> > Socket;
+
+	//connection_ID associated with socket state
+	std::map<int, boost::shared_ptr<state> > ID; 
+
+	/*
+	Connection IDs are gotten like this:
+		int connection_ID = ++latest_ID;
+	*/
+	atomic_int<int> latest_ID;
 
 	/*
 	When a thread that is not the network_thread needs to modify data that
@@ -194,7 +200,10 @@ and another socket connects with the same socket_FD there can be problems.
 	boost::mutex network_thread_call_mutex;
 	std::deque<boost::function<void ()> > network_thread_call;
 
-	//add socket and state
+	/*
+	Add socket. P.first must be set to socket_FD.
+	Precondition: N and CI must not be empty shared_ptrs.
+	*/
 	void add_socket(std::pair<int, boost::shared_ptr<state> > P)
 	{
 		assert(P.first != -1);
@@ -204,6 +213,8 @@ and another socket connects with the same socket_FD there can be problems.
 			end_FD = P.first + 1;
 		}
 		if(P.second){
+			assert(P.second->N);
+			assert(P.second->CI);
 			if(P.second->connected){
 				FD_SET(P.first, &read_FDS);
 			}else{
@@ -211,7 +222,10 @@ and another socket connects with the same socket_FD there can be problems.
 				FD_SET(P.first, &write_FDS);
 			}
 			std::pair<std::map<int, boost::shared_ptr<state> >::iterator, bool>
-				ret = State.insert(P);
+				ret = Socket.insert(P);
+			assert(ret.second);
+			P.first = P.second->CI->connection_ID;
+			ret = ID.insert(P);
 			assert(ret.second);
 		}else{
 			/*
@@ -222,41 +236,63 @@ and another socket connects with the same socket_FD there can be problems.
 		}
 	}
 
-	void append_send_buf(const int socket_FD, boost::shared_ptr<buffer> B)
+	void append_send_buf(const int connection_ID, boost::shared_ptr<buffer> B)
 	{
-		std::pair<int, boost::shared_ptr<state> > P = get_state(socket_FD);
+		std::pair<int, boost::shared_ptr<state> > P = lookup_ID(connection_ID);
 		if(P.second){
 			P.second->send_buf.append(*B);
-			FD_SET(socket_FD, &write_FDS);
+			FD_SET(P.second->CI->socket_FD, &write_FDS);
 		}
 	}
 
 	//disconnect socket, or schedule disconnect when send_buf empty
-	void disconnect(const int socket_FD, const bool on_empty)
+	void disconnect(const int connection_ID, const bool on_empty)
 	{
-		std::pair<int, boost::shared_ptr<state> > P = get_state(socket_FD);
+		std::pair<int, boost::shared_ptr<state> > P = lookup_ID(connection_ID);
 		if(P.second){
 			if(on_empty){
-				P.second->disconnect_on_empty = true;
+				//disconnect when send_buf empty
+				if(P.second->send_buf.empty()){
+					remove_socket(P.second->CI->socket_FD);
+					Call_Back_Dispatcher.disconnect(P.second->CI);
+				}else{
+					P.second->disconnect_on_empty = true;
+				}
 			}else{
-				remove_socket(socket_FD);
+				//disconnect regardless of whether send_buf empty
+				remove_socket(P.second->CI->socket_FD);
+				Call_Back_Dispatcher.disconnect(P.second->CI);
 			}
 		}
 	}
 
 	//return state associated with the socket
-	std::pair<int, boost::shared_ptr<state> > get_state(const int socket_FD)
+	std::pair<int, boost::shared_ptr<state> > lookup_socket(const int socket_FD)
 	{
 		std::map<int, boost::shared_ptr<state> >::iterator
-			iter = State.find(socket_FD);
-		if(iter == State.end()){
+			iter = Socket.find(socket_FD);
+		if(iter == Socket.end()){
 			return std::pair<int, boost::shared_ptr<state> >();
 		}else{
 			return *iter;
 		}
 	}
 
-	//called when a async connecting socket becomes writeable
+	std::pair<int, boost::shared_ptr<state> > lookup_ID(const int connection_ID)
+	{
+		std::map<int, boost::shared_ptr<state> >::iterator
+			iter = ID.find(connection_ID);
+		if(iter == ID.end()){
+			return std::pair<int, boost::shared_ptr<state> >();
+		}else{
+			return *iter;
+		}
+	}
+
+	/*
+	Called when a async connecting socket becomes writeable. P.first must be
+	socket_FD.
+	*/
 	void handle_async_connection(std::pair<int, boost::shared_ptr<state> > P)
 	{
 		assert(P.first != -1);
@@ -277,8 +313,9 @@ and another socket connects with the same socket_FD there can be problems.
 				//try next endpoint
 				P.second->N->open_async(*P.second->E.begin());
 				P.first = P.second->N->socket();
+				//recreate connection_info with updated IP
 				P.second->CI = boost::shared_ptr<connection_info>(new connection_info(
-					P.first, P.second->CI->host, P.second->E.begin()->IP(),
+					++latest_ID, P.first, P.second->CI->host, P.second->E.begin()->IP(),
 					P.second->CI->port, P.second->CI->Protocol));
 				if(P.first == -1){
 					//couldn't allocate socket
@@ -337,7 +374,7 @@ rate limiter.
 					//handle incoming connections
 					while(boost::shared_ptr<nstream> N = Listener->accept()){
 						boost::shared_ptr<connection_info> CI(new connection_info(
-							N->socket(), "", Listener->accept_endpoint().IP(),
+							++latest_ID, N->socket(), "", Listener->accept_endpoint().IP(),
 							Listener->accept_endpoint().port(), tcp));
 						std::pair<int, boost::shared_ptr<state> > P(N->socket(),
 							boost::shared_ptr<state>(new state(true, std::set<endpoint>(), N, CI)));
@@ -363,7 +400,7 @@ rate limiter.
 
 				//handle all writes
 				while(!need_write.empty()){
-					std::pair<int, boost::shared_ptr<state> > P = get_state(need_write.front());
+					std::pair<int, boost::shared_ptr<state> > P = lookup_socket(need_write.front());
 					if(!P.second->connected){
 						handle_async_connection(P);
 					}else{
@@ -395,7 +432,7 @@ rate limiter.
 
 				//handle all reads
 				while(!need_read.empty()){
-					std::pair<int, boost::shared_ptr<state> > P = get_state(need_read.front());
+					std::pair<int, boost::shared_ptr<state> > P = lookup_socket(need_read.front());
 					if(P.second){
 						//n_bytes initially set to max read, then set to how much read
 						int n_bytes = Rate_Limit.available_download(need_read.size());
@@ -455,7 +492,11 @@ rate limiter.
 				break;
 			}
 		}
-		State.erase(socket_FD);
+		std::pair<int, boost::shared_ptr<state> > P = lookup_socket(socket_FD);
+		if(P.second){
+			Socket.erase(socket_FD);
+			ID.erase(P.second->CI->connection_ID);
+		}
 	}
 
 	/*
@@ -471,14 +512,14 @@ rate limiter.
 		std::set<endpoint> E = get_endpoint(host, port, Protocol);
 		if(E.empty()){
 			//host did not resolve
-			boost::shared_ptr<connection_info> CI(new connection_info(-1, host, "",
-				port, Protocol));
+			boost::shared_ptr<connection_info> CI(new connection_info(++latest_ID,
+				-1, host, "", port, Protocol));
 			Call_Back_Dispatcher.disconnect(CI);
 		}else{
 			//host resolved, proceed to connection
 			boost::shared_ptr<nstream> N(new nstream());
 			bool connected = N->open_async(*E.begin());
-			boost::shared_ptr<connection_info> CI(new connection_info(N->socket(),
+			boost::shared_ptr<connection_info> CI(new connection_info(++latest_ID, N->socket(),
 				host, E.begin()->IP(), port, Protocol));
 			std::pair<int, boost::shared_ptr<state> > P(N->socket(),
 				boost::shared_ptr<state>(new state(connected, E, N, CI)));

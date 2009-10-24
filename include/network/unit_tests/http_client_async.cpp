@@ -22,7 +22,7 @@ void connect_call_back(network::connection_info & CI)
 		"Connection: close\r\n\r\n"
 	);
 
-	P.write(CI.socket_FD, B);	
+	P.write(CI.connection_ID, B);	
 }
 
 void recv_call_back(network::connection_info & CI, network::buffer & recv_buf)
