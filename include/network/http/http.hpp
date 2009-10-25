@@ -24,14 +24,11 @@ public:
 	http(network::proactor & Proactor_in, const std::string & web_root_in);
 
 	//initial call back
-	void recv_call_back(network::connection_info & CI, network::buffer & recv_buf);
+	void recv_call_back(network::connection_info & CI);
 
 private:
 	network::proactor & Proactor;
 	const std::string web_root;
-
-	//request stored here
-	network::buffer request;
 
 	//if file requested path and index to end of data sent stored here
 	boost::filesystem::path path;
@@ -54,7 +51,7 @@ private:
 	std::string create_header(const boost::uint64_t & content_length);
 	void decode_chars(std::string & str);
 	void encode_chars(std::string & str);
-	void file_send_call_back(network::connection_info & CI, int send_buf_size);
+	void file_send_call_back(network::connection_info & CI);
 	void read_directory(network::connection_info & CI);
 };
 #endif

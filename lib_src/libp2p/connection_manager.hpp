@@ -15,31 +15,25 @@
 class connection_manager : private boost::noncopyable
 {
 public:
-	connection_manager(share & Share_in);
+	connection_manager(network::proactor & Proactor_in, share & Share_in);
 
 	/*
 	connect_call_back:
-		Proactor does call back on this function when new connection.
+		Proactor does call back when there is a new connection.
 	disconnect_call_back:
-		Proactor does call back on this function when disconnect.
-	failed_connect_call_back:
-		Proactor does call back on this function when a connection attempt fails.
+		Proactor does call back when new connection failed, or when existing
+		connection closed.
 	*/
-/*
-	void connect_call_back(network::sock & S);
-	void disconnect_call_back(network::sock & S);
-	void failed_connect_call_back(network::sock & S);
-*/
+	void connect_call_back(network::connection_info & CI);
+	void disconnect_call_back(network::connection_info & CI);
+
 private:
+	network::proactor & Proactor;
 	share & Share;
 
 	/*
-	Connection state will be stored in the connection object. Also call backs
-	will be registered in connect_call_back to do call backs directly to the
-	connection objects stored in this container. The mutex locks access to this
-	container because it's possible there will be multiple threads doing call
-	backs to connect_call_back and disconnect_call_back concurrently which both
-	modify the Connection container.
+	Connection maps the connection_ID to the state associated with the
+	connection. Connection_mutex locks all modification to the container.
 	*/
 	boost::mutex Connection_mutex;
 	std::map<int, boost::shared_ptr<connection> > Connection;

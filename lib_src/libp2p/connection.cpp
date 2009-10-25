@@ -1,116 +1,116 @@
 #include "connection.hpp"
 
 connection::connection(
-	//network::sock & S,
-	share & Share_in
+	network::proactor & Proactor_in,
+	share & Share_in,
+	network::connection_info & CI
 ):
-	IP("TODO"/*S.IP*/),
-	port("TODO"/*S.port*/),
+	Proactor(Proactor_in),
+	Share(Share_in),
 	blacklist_state(0),
 	Slot_Manager(Share_in)
 {
-/*
-	if(database::table::blacklist::is_blacklisted(S.IP)){
-		//S.disconnect_flag = true;
+	if(database::table::blacklist::is_blacklisted(CI.IP)){
+		Proactor.disconnect(CI.connection_ID);
 	}else{
-
-		S.recv_call_back = boost::bind(&connection::key_exchange_recv_call_back, this, _1);
-		S.send_call_back = boost::bind(&connection::key_exchange_send_call_back, this, _1);
-
 		//if outgoing connection start key exchange by sending p and r_A
-		if(S.Direction == network::sock::outgoing){
-			Encryption.send_prime_and_local_result(S.send_buff);
+		if(CI.direction == network::outgoing){
+			network::buffer send_buf;
+			Encryption.send_prime_and_local_result(send_buf);
+			Proactor.write(CI.connection_ID, send_buf);
 		}
+		CI.recv_call_back = boost::bind(&connection::key_exchange_recv_call_back, this, _1);
 	}
-*/
 }
 
-void connection::key_exchange_recv_call_back(/*network::sock & S*/)
+void connection::key_exchange_recv_call_back(network::connection_info & CI)
 {
-/*
-	if(S.Direction == network::sock::outgoing){
+	if(CI.direction == network::outgoing){
 		//expecting r_B
-		if(S.recv_buff.size() >= protocol::DH_KEY_SIZE){
+		if(CI.recv_buf.size() >= protocol::DH_KEY_SIZE){
 			//remote result received, key exchange done
-			Encryption.recv_remote_result(S.recv_buff);
-			S.recv_call_back = boost::bind(&connection::recv_call_back, this, _1);
-			S.send_call_back = boost::bind(&connection::send_call_back, this, _1);
+			Encryption.recv_remote_result(CI.recv_buf);
+			CI.recv_call_back = boost::bind(&connection::recv_call_back, this, _1);
+			CI.send_call_back = boost::bind(&connection::send_call_back, this, _1);
 
 			//call new send call back to send initial requests
-			S.send_call_back(S);
+			CI.send_call_back(CI);
 		}
 	}else{
 		//expecting p and r_A
-		if(S.recv_buff.size() >= protocol::DH_KEY_SIZE * 2){
-			if(Encryption.recv_prime_and_remote_result(S.recv_buff, S.send_buff)){
+		if(CI.recv_buf.size() >= protocol::DH_KEY_SIZE * 2){
+			network::buffer send_buf;
+			if(Encryption.recv_prime_and_remote_result(CI.recv_buf, send_buf)){
+				//send r_B
+				Proactor.write(CI.connection_ID, send_buf);
+
 				//valid prime received, key exhange done
-				S.recv_call_back = boost::bind(&connection::recv_call_back, this, _1);
-				S.send_call_back = boost::bind(&connection::send_call_back, this, _1);
+				CI.recv_call_back = boost::bind(&connection::recv_call_back, this, _1);
+				CI.send_call_back = boost::bind(&connection::send_call_back, this, _1);
 
 				//call new send call back to send initial requests
-				S.send_call_back(S);
+				CI.send_call_back(CI);
 			}else{
 				//invalid prime, blacklist IP
-				database::table::blacklist::add(S.IP);
-				S.disconnect_flag = true;
+				database::table::blacklist::add(CI.IP);
+				Proactor.disconnect(CI.connection_ID);
+				CI.recv_call_back.clear();
+				CI.send_call_back.clear();
 			}
 		}
 	}
-*/
 }
 
-void connection::key_exchange_send_call_back(/*network::sock & S*/)
+void connection::recv_call_back(network::connection_info & CI)
 {
-	//nothing to do after sending for key exchange
-}
+	//decrypt incoming data
+	Encryption.crypt_recv(CI.recv_buf, CI.recv_buf.size() - CI.latest_recv);
 
-void connection::recv_call_back(/*network::sock & S*/)
-{
-/*
-	//latest_recv is zero when a call back has been forced
-	if(S.latest_recv != 0){
-		//decrypt incoming data
-		Encryption.crypt_recv(S.recv_buff, S.recv_buff.size() - S.latest_recv);
+	network::buffer send_buf;
 
-		//save initial send_buff size so we know how much was appended
-		int initial_send_buff_size = S.send_buff.size();
+	//DEBUG, BEGIN TEST CODE
+	LOGGER << CI.recv_buf.str();
+	//DEBUG, END TEST CODE
 
-//DEBUG, test code
-//LOGGER << S.recv_buff.str();
-
-		//encrypt what was appended to send_buff
-		Encryption.crypt_send(S.send_buff, initial_send_buff_size);
+	if(!send_buf.empty()){
+		Encryption.crypt_send(send_buf);
+		Proactor.write(CI.connection_ID, send_buf);
 	}
-*/
+
 	if(database::table::blacklist::modified(blacklist_state)
-		&& database::table::blacklist::is_blacklisted(IP))
+		&& database::table::blacklist::is_blacklisted(CI.IP))
 	{
-		//S.disconnect_flag = true;
+		Proactor.disconnect(CI.connection_ID);
+		CI.recv_call_back.clear();
+		CI.send_call_back.clear();
 	}
 }
 
-void connection::send_call_back(/*network::sock & S*/)
+void connection::send_call_back(network::connection_info & CI)
 {
-	//save initial send_buff size so we know how much was appended
-//	int initial_send_buff_size = S.send_buff.size();
+	network::buffer send_buf;
 
-/*
-//DEBUG, test code
-if(S.direction == network::sock::outgoing){
-	static bool sent = false;
-	if(!sent){
-		S.send_buff.append("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-		sent = true;
+	//DEBUG, BEGIN TEST CODE
+	if(CI.direction == network::outgoing){
+		static bool sent = false;
+		if(!sent){
+			send_buf.append("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+			sent = true;
+		}
 	}
-}
-*/
+	//DEBUG, END TEST CODE
 
 	//encrypt what was appended to send_buff
-	//Encryption.crypt_send(S.send_buff, initial_send_buff_size);
+	if(!send_buf.empty()){
+		Encryption.crypt_send(send_buf);
+		Proactor.write(CI.connection_ID, send_buf);
+	}
 
 	if(database::table::blacklist::modified(blacklist_state)
-		&& database::table::blacklist::is_blacklisted(IP))
+		&& database::table::blacklist::is_blacklisted(CI.IP))
 	{
-		//S.disconnect_flag = true;
+		Proactor.disconnect(CI.connection_ID);
+		CI.recv_call_back.clear();
+		CI.send_call_back.clear();
 	}
 }

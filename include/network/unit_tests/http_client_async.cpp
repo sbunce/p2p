@@ -2,8 +2,8 @@
 #include <network/network.hpp>
 
 void connect_call_back(network::connection_info &);
-void recv_call_back(network::connection_info &, network::buffer &);
-void send_call_back(network::connection_info &, int);
+void recv_call_back(network::connection_info &);
+void send_call_back(network::connection_info &);
 void disconnect_call_back(network::connection_info &);
 
 network::proactor P(
@@ -25,14 +25,14 @@ void connect_call_back(network::connection_info & CI)
 	P.write(CI.connection_ID, B);	
 }
 
-void recv_call_back(network::connection_info & CI, network::buffer & recv_buf)
+void recv_call_back(network::connection_info & CI)
 {
-	LOGGER << "read size: " << recv_buf.size();
+	LOGGER << "read size: " << CI.recv_buf.size();
 }
 
-void send_call_back(network::connection_info & CI, int send_buf_size)
+void send_call_back(network::connection_info & CI)
 {
-	LOGGER << "send buf size: " << send_buf_size;
+	LOGGER << "send buf size: " << CI.send_buf_size;
 }
 
 void disconnect_call_back(network::connection_info & CI)

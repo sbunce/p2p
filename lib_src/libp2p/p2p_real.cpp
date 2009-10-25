@@ -2,16 +2,12 @@
 
 p2p_real::p2p_real():
 	Share_Scan(Share),
-	//Connection_Manager(Share),
-/*
 	Proactor(
 		boost::bind(&connection_manager::connect_call_back, &Connection_Manager, _1),
 		boost::bind(&connection_manager::disconnect_call_back, &Connection_Manager, _1),
-		boost::bind(&connection_manager::failed_connect_call_back, &Connection_Manager, _1),
-		false,
 		settings::P2P_PORT
 	),
-*/
+	Connection_Manager(Proactor, Share),
 	Thread_Pool(1)
 {
 	//setup proxies for async getter/setter function calls
@@ -34,8 +30,7 @@ p2p_real::p2p_real():
 
 p2p_real::~p2p_real()
 {
-	Thread_Pool.interrupt();
-	Thread_Pool.join();
+	Thread_Pool.interrupt_join();
 	resume_thread.interrupt();
 	resume_thread.join();
 }
@@ -103,7 +98,6 @@ unsigned p2p_real::prime_count()
 void p2p_real::resume()
 {
 	Share_Scan.block_until_resumed();
-/*
 	Proactor.start();
 
 	//get host_info for all hosts we need to connect to
@@ -118,9 +112,8 @@ void p2p_real::resume()
 	for(std::set<database::table::host::host_info>::iterator iter_cur = all_host.begin(),
 		iter_end = all_host.end(); iter_cur != iter_end; ++iter_cur)
 	{
-		Proactor.connect(iter_cur->host, iter_cur->port);
+		Proactor.connect(iter_cur->host, iter_cur->port, network::tcp);
 	}
-*/
 }
 
 boost::uint64_t p2p_real::share_size_bytes()

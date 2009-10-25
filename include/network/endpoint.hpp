@@ -51,7 +51,7 @@ public:
 		return buf;
 	}
 
-	protocol type() const
+	sock_type type() const
 	{
 		if(ai.ai_socktype == SOCK_STREAM){
 			return tcp;
@@ -91,7 +91,7 @@ Returns set of possible endpoints for the specified host and port. The
 std::set is used because the getaddrinfo function can return duplicates.
 */
 static std::set<endpoint> get_endpoint(const std::string & host,
-	const std::string & port, const protocol P)
+	const std::string & port, const sock_type type)
 {
 	std::set<endpoint> E;
 	if(port.empty() || host.size() > 255 || port.size() > 33){
@@ -100,7 +100,7 @@ static std::set<endpoint> get_endpoint(const std::string & host,
 	addrinfo hints;
 	std::memset(&hints, 0, sizeof(addrinfo));
 	hints.ai_family = AF_UNSPEC;
-	if(P == tcp){
+	if(type == tcp){
 		hints.ai_socktype = SOCK_STREAM;
 	}else{
 		hints.ai_socktype = SOCK_DGRAM;

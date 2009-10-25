@@ -24,30 +24,49 @@ public:
 		const std::string & host_in,
 		const std::string & IP_in,
 		const std::string & port_in,
-		const protocol Protocol_in
+		const sock_type type_in,
+		const dir direction_in
 	):
 		connection_ID(connection_ID_in),
 		socket_FD(socket_FD_in),
 		host(host_in),
 		IP(IP_in),
 		port(port_in),
-		Protocol(Protocol_in)
+		type(type_in),
+		direction(direction_in),
+		latest_recv(0),
+		send_buf_size(0)
 	{}
 
 	const int connection_ID; //unique identifier for connection
 	const std::string host;  //unresolved host name
 	const std::string IP;    //resolved host name
 	const std::string port;  //port on remote host
-	const protocol Protocol; //tcp or udp
-
-	//must be set by connect call back
-	boost::function<void (connection_info &, buffer &)> recv_call_back;
+	const sock_type type;
+	const dir direction;
 
 	/*
-	This can be set to get a call back when the send_buf size decreases.
-	Note: This is optional.
+	The recv_call_back must be set in the connect call back to recieve incoming
+	data. If the recv_call_back is not set during the connect call back then
+	incoming data will be discarded.
 	*/
-	boost::function<void (connection_info &, int)> send_call_back;
+	boost::function<void (connection_info &)> recv_call_back;
+	boost::function<void (connection_info &)> send_call_back;
+
+	/*
+	recv'd data will be appended to this buffer before recv_call_back called. The
+	number of bytes appended are stored in latest_recv.
+	*/
+	buffer recv_buf;
+	int latest_recv;
+
+	/*
+	The size of the send_buf only accessible to the proactor. This value can be
+	really old if checked during the recv_call_back. This value is most up to
+	date when checked during the send_call_back. If the send_call_back is set
+	then a call back will happen whenever this value decreases.
+	*/
+	int send_buf_size;
 
 private:
 	//socket file descriptor only used internally to proactor

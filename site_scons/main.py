@@ -68,7 +68,7 @@ def setup(env):
 
 	#libraries to link
 	system_libraries(env)
-	#env['LIBS'].append('p2p')
+	env['LIBS'].append('p2p')
 	env['LIBS'].append('sqlite3')
 	env['LIBS'].append('tommath')
 	env['LIBS'].append(boost.library('boost_system'))

@@ -84,8 +84,8 @@ private:
 		ctor which use objects in p2p_real. We specify it last because we want to
 		make sure the objects it uses are constructed before it uses them.
 	*/
-	//connection_manager Connection_Manager;
-	//network::proactor Proactor;
+	network::proactor Proactor;
+	connection_manager Connection_Manager;
 
 	/*
 	resume:

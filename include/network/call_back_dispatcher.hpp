@@ -50,6 +50,19 @@ public:
 	}
 
 	/*
+	Schedule call back for disconnect, or failed to connect. If scheduling a job
+	for a disconnect then a connect call back must have been scheduled first.
+	Postcondition: No other jobs for the connection should be scheduled.
+	*/
+	void disconnect(const boost::shared_ptr<connection_info> & CI)
+	{
+		boost::mutex::scoped_lock lock(job_mutex);
+		job.push_back(std::make_pair(CI->connection_ID, boost::bind(
+			&call_back_dispatcher::disconnect_call_back_wrapper, this, CI)));
+		job_cond.notify_one();
+	}
+
+	/*
 	Schedule call back for recv.
 	Precondition: The connect call back must have been scheduled.
 	*/
@@ -71,19 +84,6 @@ public:
 		boost::mutex::scoped_lock lock(job_mutex);
 		job.push_back(std::make_pair(CI->connection_ID, boost::bind(
 			&call_back_dispatcher::send_call_back_wrapper, this, CI, send_buf_size)));
-		job_cond.notify_one();
-	}
-
-	/*
-	Schedule call back for disconnect, or failed to connect. If scheduling a job
-	for a disconnect then a connect call back must have been scheduled first.
-	Postcondition: No other jobs for the connection should be scheduled.
-	*/
-	void disconnect(const boost::shared_ptr<connection_info> & CI)
-	{
-		boost::mutex::scoped_lock lock(job_mutex);
-		job.push_back(std::make_pair(CI->connection_ID, boost::bind(
-			&call_back_dispatcher::disconnect_call_back_wrapper, this, CI)));
 		job_cond.notify_one();
 	}
 
@@ -183,7 +183,9 @@ private:
 	void recv_call_back_wrapper(boost::shared_ptr<connection_info> CI, boost::shared_ptr<buffer> recv_buf)
 	{
 		if(CI->recv_call_back){
-			CI->recv_call_back(*CI, *recv_buf);
+			CI->recv_buf.append(*recv_buf);
+			CI->latest_recv = recv_buf->size();
+			CI->recv_call_back(*CI);
 		}
 	}
 
@@ -194,8 +196,9 @@ private:
 	*/
 	void send_call_back_wrapper(boost::shared_ptr<connection_info> CI, const int send_buf_size)
 	{
+		CI->send_buf_size = send_buf_size;
 		if(CI->send_call_back){
-			CI->send_call_back(*CI, send_buf_size);
+			CI->send_call_back(*CI);
 		}
 	}
 };

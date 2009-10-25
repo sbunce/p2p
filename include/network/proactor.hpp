@@ -71,9 +71,9 @@ public:
 	of disconnect call back if connection fails.
 	*/
 	void connect(const std::string & host, const std::string & port,
-		const protocol P)
+		const sock_type type)
 	{
-		Resolve_TP.queue(boost::bind(&proactor::resolve, this, host, port, P));
+		Resolve_TP.queue(boost::bind(&proactor::resolve, this, host, port, type));
 	}
 
 	void disconnect(const int connection_ID)
@@ -313,10 +313,10 @@ private:
 				//try next endpoint
 				P.second->N->open_async(*P.second->E.begin());
 				P.first = P.second->N->socket();
-				//recreate connection_info with updated IP
+				//recreate connection_info with new IP
 				P.second->CI = boost::shared_ptr<connection_info>(new connection_info(
 					++latest_ID, P.first, P.second->CI->host, P.second->E.begin()->IP(),
-					P.second->CI->port, P.second->CI->Protocol));
+					P.second->CI->port, P.second->CI->type, outgoing));
 				if(P.first == -1){
 					//couldn't allocate socket
 					remove_socket(P.first);
@@ -375,7 +375,7 @@ rate limiter.
 					while(boost::shared_ptr<nstream> N = Listener->accept()){
 						boost::shared_ptr<connection_info> CI(new connection_info(
 							++latest_ID, N->socket(), "", Listener->accept_endpoint().IP(),
-							Listener->accept_endpoint().port(), tcp));
+							Listener->accept_endpoint().port(), tcp, incoming));
 						std::pair<int, boost::shared_ptr<state> > P(N->socket(),
 							boost::shared_ptr<state>(new state(true, std::set<endpoint>(), N, CI)));
 						add_socket(P);
@@ -506,21 +506,21 @@ rate limiter.
 		network_thread_call (after locking network_thread_call_mutex).
 	*/
 	void resolve(const std::string & host, const std::string & port,
-		const protocol Protocol)
+		const sock_type type)
 	{
 		//std::pair<int, boost::shared_ptr<state> > P(-1, boost::shared_ptr<state>(new state()));
-		std::set<endpoint> E = get_endpoint(host, port, Protocol);
+		std::set<endpoint> E = get_endpoint(host, port, type);
 		if(E.empty()){
 			//host did not resolve
 			boost::shared_ptr<connection_info> CI(new connection_info(++latest_ID,
-				-1, host, "", port, Protocol));
+				-1, host, "", port, type, outgoing));
 			Call_Back_Dispatcher.disconnect(CI);
 		}else{
 			//host resolved, proceed to connection
 			boost::shared_ptr<nstream> N(new nstream());
 			bool connected = N->open_async(*E.begin());
 			boost::shared_ptr<connection_info> CI(new connection_info(++latest_ID, N->socket(),
-				host, E.begin()->IP(), port, Protocol));
+				host, E.begin()->IP(), port, type, outgoing));
 			std::pair<int, boost::shared_ptr<state> > P(N->socket(),
 				boost::shared_ptr<state>(new state(connected, E, N, CI)));
 			if(connected){

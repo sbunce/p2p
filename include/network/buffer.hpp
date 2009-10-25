@@ -342,23 +342,9 @@ public:
 		}
 	}
 
-	bool operator != (const buffer & Buffer)
+	bool operator != (const buffer & Buffer) const
 	{
 		return !(*this == Buffer);
-	}
-
-	bool operator == (const std::string & str) const
-	{
-		if(bytes != str.size()){
-			return false;
-		}else{
-			return std::memcmp(buf, str.data(), bytes) == 0;
-		}
-	}
-
-	bool operator != (const std::string & str) const
-	{
-		return !(*this == str);
 	}
 
 private:

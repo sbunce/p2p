@@ -66,9 +66,6 @@ void share_scan_1_hash::main_loop()
 			hash_tree::status S = HT.create();
 			FI->hash = HT.hash;
 			if(S == hash_tree::good){
-
-exit(1);
-
 				Share.insert_update(*FI);
 				{//begin lock scope
 				boost::mutex::scoped_lock lock(job_queue_mutex);

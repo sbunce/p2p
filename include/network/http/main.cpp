@@ -47,7 +47,7 @@ void connect_call_back(network::connection_info & CI)
 	std::pair<std::map<int, boost::shared_ptr<http> >::iterator, bool>
 		ret = Connection.insert(std::make_pair(CI.connection_ID, new http(Proactor, web_root)));
 	assert(ret.second);
-	CI.recv_call_back = boost::bind(&http::recv_call_back, ret.first->second.get(), _1, _2);
+	CI.recv_call_back = boost::bind(&http::recv_call_back, ret.first->second.get(), _1);
 }
 
 void disconnect_call_back(network::connection_info & CI)

@@ -14,35 +14,28 @@ class connection : private boost::noncopyable
 {
 public:
 	connection(
-		//network::sock & S,
-		share & Share_in
+		network::proactor & Proactor_in,
+		share & Share_in,
+		network::connection_info & CI
 	);
-
-	const std::string IP;
-	const std::string port;
 
 	/*
 	key_exchange_recv_call_back:
 		The recv call back used during key exchange.
-	key_exchange_send_call_back:
-		The send call back used during key exchange.
 	recv_call_back:
 		The recv call back used after key exchange complete.
 	send_call_back:
 		The send call back used after key exchange complete.
 	*/
-	void key_exchange_recv_call_back(/*network::sock & S*/);
-	void key_exchange_send_call_back(/*network::sock & S*/);
-	void recv_call_back(/*network::sock & S*/);
-	void send_call_back(/*network::sock & S*/);
+	void key_exchange_recv_call_back(network::connection_info & CI);
+	void recv_call_back(network::connection_info & CI);
+	void send_call_back(network::connection_info & CI);
 
 private:
+	network::proactor & Proactor;
+	share & Share;
 	encryption Encryption;
-
-	//see documentation in database::table::blacklist
 	int blacklist_state;
-
-	//manages all slot related messages
 	slot_manager Slot_Manager;
 };
 #endif

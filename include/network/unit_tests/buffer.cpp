@@ -48,7 +48,7 @@ int main()
 	if(B1 != B2){
 		LOGGER; exit(1);
 	}
-	if(B1 != "ABC"){
+	if(B1.str() != "ABC"){
 		LOGGER; exit(1);
 	}
 }

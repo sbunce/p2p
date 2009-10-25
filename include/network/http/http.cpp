@@ -11,13 +11,12 @@ http::http(
 	std::srand(time(NULL));
 }
 
-void http::recv_call_back(network::connection_info & CI, network::buffer & recv_buf)
+void http::recv_call_back(network::connection_info & CI)
 {
 	namespace fs = boost::filesystem;
-	request.append(recv_buf);
 
 	//check if exceeded max request size
-	if(request.size() > 1024){
+	if(CI.recv_buf.size() > 1024){
 		Proactor.disconnect(CI.connection_ID);
 		return;
 	}
@@ -25,7 +24,7 @@ void http::recv_call_back(network::connection_info & CI, network::buffer & recv_
 	//sub-expression 1 is the request path
 	boost::regex expression("GET\\s([^\\s]*)(\\s|\\r|\\n)");
 	boost::match_results<std::string::iterator> what;
-	std::string req = request.str();
+	std::string req = CI.recv_buf.str();
 	if(boost::regex_search(req.begin(), req.end(), what, expression)){
 		std::string temp = what[1];
 		decode_chars(temp);
@@ -39,13 +38,14 @@ void http::recv_call_back(network::connection_info & CI, network::buffer & recv_
 			if(fs::exists(path)){
 				if(fs::is_directory(path)){
 					//check if there is a index file in the directory
-					fs::path temp = fs::system_complete(fs::path(path.string() + "/index.html", fs::native));
+					fs::path temp = fs::system_complete(fs::path(path.string()
+						+ "/index.html", fs::native));
 					if(fs::exists(temp)){
 						//serve the index file
 						path = temp;
 						CI.recv_call_back.clear();
-						CI.send_call_back = boost::bind(&http::file_send_call_back, this, _1, _2);
-						CI.send_call_back(CI, 0);
+						CI.send_call_back = boost::bind(&http::file_send_call_back, this, _1);
+						CI.send_call_back(CI);
 					}else{
 						//serve directory listing
 						CI.recv_call_back.clear();
@@ -54,8 +54,8 @@ void http::recv_call_back(network::connection_info & CI, network::buffer & recv_
 				}else{
 					//serve file
 					CI.recv_call_back.clear();
-					CI.send_call_back = boost::bind(&http::file_send_call_back, this, _1, _2);
-					CI.send_call_back(CI, 0);
+					CI.send_call_back = boost::bind(&http::file_send_call_back, this, _1);
+					CI.send_call_back(CI);
 				}
 			}else{
 				//file at request path doesn't exist
@@ -124,13 +124,12 @@ void http::encode_chars(std::string & str)
 	boost::algorithm::replace_all(str, "'", "%27");
 }
 
-void http::file_send_call_back(network::connection_info & CI, int send_buf_size)
+void http::file_send_call_back(network::connection_info & CI)
 {
 	network::buffer B;
 	if(index == 0){
 		//prepare header
 		boost::uint64_t size;
-LOGGER << path;
 		try{
 			size = boost::filesystem::file_size(path);
 		}catch(std::exception & ex){
@@ -139,12 +138,10 @@ LOGGER << path;
 			Proactor.disconnect(CI.connection_ID);
 			return;
 		}
-LOGGER << size;
 		std::string header = create_header(size);
-LOGGER << header;
 		B.append(header);
 	}
-	if(index == 0 || send_buf_size < MTU){
+	if(index == 0 || CI.send_buf_size < MTU){
 		std::fstream fin(path.string().c_str(), std::ios::in | std::ios::binary);
 		if(fin.is_open()){
 			fin.seekg(index, std::ios::beg);
