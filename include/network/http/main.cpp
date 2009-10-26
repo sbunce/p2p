@@ -70,15 +70,11 @@ int main(int argc, char ** argv)
 	Proactor.start();
 
 	while(!terminate_program){
-/*
 		if(Proactor.download_rate() || Proactor.upload_rate()){
-			LOGGER << "C<" << Proactor.connections() << "> "
-			<< "IC<" << Proactor.incoming_connections() << "> "
-			<< "OC<" << Proactor.outgoing_connections() << "> "
+			LOGGER
 			<< "D<" << convert::size_SI(Proactor.download_rate()) << "> "
 			<< "U<" << convert::size_SI(Proactor.upload_rate()) << ">";
 		}
-*/
 		boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
 	}
 }

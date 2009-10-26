@@ -186,7 +186,8 @@ private:
 			E(E_in),
 			N(N_in),
 			CI(CI_in),
-			disconnect_on_empty(false)
+			disconnect_on_empty(false),
+			last_seen(std::time(NULL))
 		{}
 
 		/*
@@ -213,6 +214,24 @@ private:
 		bool disconnect_on_empty;
 
 		buffer send_buf;
+
+		//returns true if socket timed out
+		bool timed_out()
+		{
+			return std::time(NULL) - last_seen > 16;
+		}
+
+		/*
+		Updates the last seen time used when checking timeouts. This is called
+		whenever there is activity on the socket.
+		*/
+		void touch()
+		{
+			last_seen = std::time(NULL);
+		}
+
+	private:
+		std::time_t last_seen;
 	};
 
 	//socket_FD associated with socket state
@@ -281,6 +300,20 @@ private:
 		}
 	}
 
+	//disconnect sockets which have timed out
+	void check_timeouts()
+	{
+		for(int socket_FD = begin_FD; socket_FD < end_FD; ++socket_FD){
+			if(FD_ISSET(socket_FD, &read_FDS) || FD_ISSET(socket_FD, &write_FDS)){
+				std::pair<int, boost::shared_ptr<state> > P = lookup_socket(socket_FD);
+				if(P.second && P.second->timed_out()){
+					remove_socket(socket_FD);
+					Call_Back_Dispatcher.disconnect(P.second->CI);
+				}
+			}
+		}
+	}
+
 	//disconnect socket, or schedule disconnect when send_buf empty
 	void disconnect(const int connection_ID, const bool on_empty)
 	{
@@ -332,6 +365,7 @@ private:
 	void handle_async_connection(std::pair<int, boost::shared_ptr<state> > P)
 	{
 		assert(P.first != -1);
+		P.second->touch();
 		if(P.second->N->is_open_async()){
 			FD_SET(P.first, &read_FDS);  //monitor socket for incoming data
 			FD_CLR(P.first, &write_FDS); //send_buf will be empty after connect
@@ -367,10 +401,16 @@ private:
 	//networking threads works in this function
 	void network_loop()
 	{
+		std::time_t last_check_timeouts(std::time(NULL));
 		fd_set tmp_read_FDS;
 		fd_set tmp_write_FDS;
 		while(true){
 			boost::this_thread::interruption_point();
+			if(last_check_timeouts != std::time(NULL)){
+				//only check time outs once per second
+				check_timeouts();
+				last_check_timeouts = std::time(NULL);
+			}
 			process_network_thread_call();
 
 			//only check for reads and writes when there is available download/upload
@@ -385,15 +425,10 @@ private:
 				tmp_write_FDS = write_FDS;
 			}
 
+			//timeout needed because rate limiter won't always let us send/recv data
 			timeval tv;
-/*
-DEBUG, need finer control over how long this sleeps based on granularity of
-rate limiter.
-
-//the granularity function should return how many times per second
-1000000 / Rate_Limit.granularity();
-*/
 			tv.tv_sec = 0; tv.tv_usec = 1000000 / 100;
+
 			int service = select(end_FD, &tmp_read_FDS, &tmp_write_FDS, NULL, &tv);
 			if(service == -1){
 				//ignore interrupt signal, profilers can cause this
@@ -437,6 +472,7 @@ rate limiter.
 				//handle all writes
 				while(!need_write.empty()){
 					std::pair<int, boost::shared_ptr<state> > P = lookup_socket(need_write.front());
+					P.second->touch();
 					if(!P.second->connected){
 						handle_async_connection(P);
 					}else{
@@ -469,6 +505,7 @@ rate limiter.
 				//handle all reads
 				while(!need_read.empty()){
 					std::pair<int, boost::shared_ptr<state> > P = lookup_socket(need_read.front());
+					P.second->touch();
 					if(P.second){
 						//n_bytes initially set to max read, then set to how much read
 						int n_bytes = Rate_Limit.available_download(need_read.size());
