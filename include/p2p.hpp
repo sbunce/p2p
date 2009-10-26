@@ -73,8 +73,6 @@ public:
 		The number of files shared.
 	start_download:
 		Starts a download.
-	supported_connections:
-		Maximum number of network connections supported.
 	transfers:
 		Clears T and populates it with transfer information.
 	upload_rate:
@@ -93,7 +91,6 @@ public:
 	boost::uint64_t share_size_bytes();
 	boost::uint64_t share_size_files();
 	void start_download(const p2p::download & D);
-	unsigned supported_connections();
 	void transfers(std::vector<p2p::transfer> & T);
 	unsigned upload_rate();
 

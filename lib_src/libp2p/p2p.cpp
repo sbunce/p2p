@@ -76,11 +76,6 @@ void p2p::start_download(const p2p::download & D)
 	P2P_Real->start_download(D);
 }
 
-unsigned p2p::supported_connections()
-{
-	return P2P_Real->supported_connections();
-}
-
 void p2p::transfers(std::vector<p2p::transfer> & T)
 {
 	P2P_Real->transfers(T);

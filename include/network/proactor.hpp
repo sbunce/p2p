@@ -90,6 +90,36 @@ public:
 			connection_ID, true));
 	}
 
+	//returns download rate (averaged over a few seconds)
+	unsigned download_rate()
+	{
+		return Rate_Limit.download();
+	}
+
+	//returns maximum allowed download rate
+	unsigned max_download_rate()
+	{
+		return Rate_Limit.max_download();
+	}
+
+	//sets maximum allowed download rate
+	void max_download_rate(const unsigned rate)
+	{
+		Rate_Limit.max_download(rate);
+	}
+
+	//returns maximum allowed upload rate
+	unsigned max_upload_rate()
+	{
+		return Rate_Limit.max_upload();
+	}
+
+	//sets maximum allowed upload rate
+	void max_upload_rate(const unsigned rate)
+	{
+		Rate_Limit.max_upload(rate);
+	}
+
 	/*
 	Async write data to specified socket. Buffer will be appended to send_buf
 	for specified socket.
@@ -107,6 +137,12 @@ public:
 	void start()
 	{
 		network_thread = boost::thread(boost::bind(&proactor::network_loop, this));
+	}
+
+	//returns upload rate (averaged over a few seconds)
+	unsigned upload_rate()
+	{
+		return Rate_Limit.upload();
 	}
 
 private:
