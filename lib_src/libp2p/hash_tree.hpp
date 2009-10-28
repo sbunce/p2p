@@ -43,9 +43,10 @@ public:
 	);
 
 	enum status{
-		good,    //block is good
-		bad,     //block is bad
-		io_error //error reading hash tree
+		good,     //block is good
+		bad,      //block is bad
+		io_error, //error reading hash tree
+		copying   //file may be copying (it is increasing in size)
 	};
 
 	/*

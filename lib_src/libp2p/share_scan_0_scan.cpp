@@ -116,14 +116,9 @@ void share_scan_0_scan::main_loop()
 						boost::uint64_t file_size = boost::filesystem::file_size(path);
 						std::time_t last_write_time = boost::filesystem::last_write_time(iter_cur->path());
 						share::const_file_iterator share_iter = share::singleton().lookup_path(path);
-						/*
-						Hash file if it doesn't exist in share, is not downloading,
-						and it hasn't been modified in the last 20 seconds. The reason
-						for the 20 second delay is so that copying files aren't hashed.
-						*/
-						if(share_iter != share::singleton().end_file()
-							&& !share::singleton().is_downloading(path)
-							&& last_write_time - share_iter->last_write_time > 20)
+						if(share_iter == share::singleton().end_file()
+							|| (!share::singleton().is_downloading(path) && (share_iter->file_size != file_size
+							|| share_iter->last_write_time != last_write_time)))
 						{
 							//new file, or modified file
 							boost::shared_ptr<file_info> FI(new file_info("", path,

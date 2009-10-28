@@ -247,7 +247,22 @@ hash_tree::status hash_tree::create()
 	SHA1 SHA;
 
 	//do file hashes
+	std::time_t T(0);
 	for(boost::uint64_t x=0; x<row.back(); ++x){
+		//check once per second to make sure file not copying
+		if(std::time(NULL) != T){
+			try{
+				if(file_size < boost::filesystem::file_size(path)){
+					LOGGER << "copying file " << path;
+					return copying;
+				}
+				T = std::time(NULL);
+			}catch(const std::exception & e){
+				LOGGER << "error reading file";
+				return io_error;
+			}
+		}
+
 		if(boost::this_thread::interruption_requested()){
 			return io_error;
 		}

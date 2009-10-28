@@ -48,11 +48,11 @@ private:
 	boost::condition_variable_any job_queue_max_cond;
 
 	/*
-	Stores the paths of files that are currently hashing. This is used so that
-	one file never gets hashed by multiple threads.
+	Stores the paths of files that are currently hashing associated with a
+	time. If the time != 0 then the element won't be unmemoized until >= time.
 	*/
 	boost::mutex memoize_mutex;
-	std::set<std::string> memoize;
+	std::map<std::string, std::time_t> memoize;
 
 	//previous stage in pipeline
 	share_scan_0_scan Share_Scan_0_Scan;
