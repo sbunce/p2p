@@ -29,6 +29,7 @@ class p2p_real : private boost::noncopyable
 {
 	//set up all directories and database before anything else
 	database::init init;
+
 public:
 	p2p_real();
 	~p2p_real();
@@ -65,12 +66,9 @@ private:
 	atomic_int<unsigned> max_upload_rate_proxy;
 
 	/*
-	Shared_Files:
-		Container which holds information for all shared files.
 	Share_Scan:
 		Scans shared directories looking for new and modified files.
 	*/
-	share Share;
 	share_scan Share_Scan;
 
 	//used to schedule long jobs so the GUI doesn't have to wait

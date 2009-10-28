@@ -13,16 +13,17 @@
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
 #include <database_connection.hpp>
+#include <singleton.hpp>
 
 //standard
 #include <iterator>
 #include <map>
 #include <string>
 
-class share : private boost::noncopyable
+class share : public singleton_base<share>
 {
+	friend class singleton_base<share>;
 public:
-	share();
 
 	/*
 	Modifications to share don't invalidate this iterator.
@@ -146,6 +147,8 @@ public:
 	boost::uint64_t files();
 
 private:
+	share();
+
 	/*
 	Different ways of looking up info.
 	internal_mutex:

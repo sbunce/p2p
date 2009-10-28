@@ -15,7 +15,6 @@ class connection : private boost::noncopyable
 public:
 	connection(
 		network::proactor & Proactor_in,
-		share & Share_in,
 		network::connection_info & CI
 	);
 
@@ -33,7 +32,6 @@ public:
 
 private:
 	network::proactor & Proactor;
-	share & Share;
 	encryption Encryption;
 	int blacklist_state;
 	slot_manager Slot_Manager;

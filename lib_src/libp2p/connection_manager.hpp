@@ -15,7 +15,7 @@
 class connection_manager : private boost::noncopyable
 {
 public:
-	connection_manager(network::proactor & Proactor_in, share & Share_in);
+	connection_manager(network::proactor & Proactor_in);
 
 	/*
 	connect_call_back:
@@ -29,7 +29,6 @@ public:
 
 private:
 	network::proactor & Proactor;
-	share & Share;
 
 	/*
 	Connection maps the connection_ID to the state associated with the

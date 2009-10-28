@@ -34,9 +34,9 @@ public:
 		const std::string & listen_port = "-1"
 	):
 		Call_Back_Dispatcher(connect_call_back, disconnect_call_back),
+		Resolve_TP(8),
 		begin_FD(0),
 		end_FD(1),
-		Resolve_TP(8),
 		latest_ID(0)
 	{
 		FD_ZERO(&read_FDS);
@@ -56,11 +56,6 @@ public:
 	{
 		Resolve_TP.clear();
 		Resolve_TP.interrupt_join();
-
-		/*
-		After interrupting the network_thread we trigger select to return so it
-		can get to the interruption point ASAP.
-		*/
 		network_thread.interrupt();
 		Select_Interrupter.trigger();
 		network_thread.join();
@@ -127,7 +122,6 @@ public:
 	void write(const int connection_ID, buffer & send_buf)
 	{
 		boost::mutex::scoped_lock lock(network_thread_call_mutex);
-		//copy to heap allocated buffer to save copy when passing as parameter
 		network_thread_call.push_back(boost::bind(&proactor::append_send_buf, this,
 			connection_ID, boost::shared_ptr<buffer>(new buffer(send_buf))));
 		Select_Interrupter.trigger();
@@ -146,31 +140,22 @@ public:
 	}
 
 private:
-	//networking thread
 	boost::thread network_thread;
-
 	call_back_dispatcher Call_Back_Dispatcher;
 	select_interrupter Select_Interrupter;
+	rate_limit Rate_Limit;
 
+	//used for async DNS resolution, calls proactor::resolve()
+	thread_pool Resolve_TP;
+
+	//stuff needed for select()
 	fd_set read_FDS;  //set of sockets that need to read
 	fd_set write_FDS; //set of sockets that need to write
 	int begin_FD;     //first socket
 	int end_FD;       //one past last socket
 
-	/*
-	If shared_ptr not empty then listener is active. We don't use a dual stack
-	listener because not all OS's support it.
-	*/
+	//listener socket (empty if no listener)
 	boost::shared_ptr<listener> Listener;
-
-	//controls rates
-	rate_limit Rate_Limit;
-
-	/*
-	Thread pool for DNS resolution. There aren't any portable mechanisms for
-	doing this without multiple threads.
-	*/
-	thread_pool Resolve_TP;
 
 	//all state associated with the socket
 	class state : private boost::noncopyable
@@ -190,29 +175,18 @@ private:
 			last_seen(std::time(NULL))
 		{}
 
-		/*
-		When this is false the nstream is in progress of connecting. This will be
-		set to true when the nstream connects.
-		*/
-		bool connected;
+		bool connected;               //false if async connect in progress
+		std::set<endpoint> E;         //endpoints to connect to (E.begin() tried first)
+		boost::shared_ptr<nstream> N; //the connection
 
 		/*
-		Endpoints to try to connect to. If connected = false then we are currently
-		trying to connect to E.begin(). This container is cleared when we connect.
-		*/
-		std::set<endpoint> E;
-
-		boost::shared_ptr<nstream> N;
-
-		/*
-		Connection info passed to call backs. Once this is instantiated it should
-		not be modified except by the call backs.
+		Connection info passed to call backs.
+		Note: Once this is instantiated it should not be modified except by the
+			call backs.
 		*/
 		boost::shared_ptr<connection_info> CI;
 
-		//if true the nstream will be disconnected when the send_buf becomes empty
-		bool disconnect_on_empty;
-
+		bool disconnect_on_empty; //if true disconnect when send_buf becomes empty
 		buffer send_buf;
 
 		//returns true if socket timed out
@@ -241,7 +215,7 @@ private:
 	std::map<int, boost::shared_ptr<state> > ID; 
 
 	/*
-	Connection IDs are gotten like this:
+	Used to get keys for the ID map. The key should be gotten like this:
 		int connection_ID = ++latest_ID;
 	*/
 	atomic_int<int> latest_ID;
@@ -335,7 +309,7 @@ private:
 		}
 	}
 
-	//return state associated with the socket
+	//return state associated with the socket file descriptor
 	std::pair<int, boost::shared_ptr<state> > lookup_socket(const int socket_FD)
 	{
 		std::map<int, boost::shared_ptr<state> >::iterator
@@ -347,6 +321,7 @@ private:
 		}
 	}
 
+	//return state associated with connection ID
 	std::pair<int, boost::shared_ptr<state> > lookup_ID(const int connection_ID)
 	{
 		std::map<int, boost::shared_ptr<state> >::iterator
@@ -438,6 +413,7 @@ private:
 			}else if(service != 0){
 				if(FD_ISSET(Select_Interrupter.socket(), &tmp_read_FDS)){
 					Select_Interrupter.reset();
+					FD_CLR(Select_Interrupter.socket(), &tmp_read_FDS);
 					--service;
 				}
 
@@ -452,6 +428,7 @@ private:
 						add_socket(P);
 						Call_Back_Dispatcher.connect(P.second->CI);
 					}
+					FD_CLR(Listener->socket(), &tmp_read_FDS);
 					--service;
 				}
 

@@ -1,9 +1,6 @@
 #include "share_scan.hpp"
 
-share_scan::share_scan(
-	share & Share_in
-):
-	Share_Scan_2_Write(Share_in)
+share_scan::share_scan()
 {
 
 }

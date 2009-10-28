@@ -26,7 +26,7 @@
 class share_scan : private boost::noncopyable
 {
 public:
-	share_scan(share & Share_in);
+	share_scan();
 	~share_scan();
 
 	/*

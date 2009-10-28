@@ -26,7 +26,7 @@
 class share_scan_0_scan : private boost::noncopyable
 {
 public:
-	share_scan_0_scan(share & Share_in);
+	share_scan_0_scan();
 	~share_scan_0_scan();
 
 	/*
@@ -64,9 +64,6 @@ private:
 	boost::mutex resumed_mutex;
 	bool resumed;
 	boost::condition_variable_any resumed_cond;
-
-	//contains files in share
-	share & Share;
 
 	/*
 	block_on_max_jobs:

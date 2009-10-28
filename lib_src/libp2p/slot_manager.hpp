@@ -16,7 +16,7 @@
 class slot_manager : private boost::noncopyable
 {
 public:
-	slot_manager(share & Share_in);
+	slot_manager();
 
 	/*
 	recv:
@@ -32,8 +32,6 @@ public:
 	bool send(network::buffer & send_buff);
 
 private:
-	share & Share;
-
 	/*
 	The vector index of the element is the slot ID. This vector will always be
 	sized such that it's no bigger than the highest slot. Slots will always be

@@ -1,10 +1,7 @@
 #include "share_scan_0_scan.hpp"
 
-share_scan_0_scan::share_scan_0_scan(
-	share & Share_in
-):
-	resumed(false),
-	Share(Share_in)
+share_scan_0_scan::share_scan_0_scan():
+	resumed(false)
 {
 	scan_thread = boost::thread(boost::bind(&share_scan_0_scan::main_loop, this));
 }
@@ -59,9 +56,9 @@ int share_scan_0_scan::resume_call_back(
 		FI.last_write_time = boost::lexical_cast<std::time_t>(response[3]);
 		int temp = boost::lexical_cast<int>(response[4]);
 		database::table::share::state state = reinterpret_cast<database::table::share::state &>(temp);
-		Share.insert_update(FI);
+		share::singleton().insert_update(FI);
 		if(state != database::table::share::complete){
-			Share.get_slot(FI.hash, DB.get());
+			share::singleton().get_slot(FI.hash, DB.get());
 		}
 	}catch(const std::exception & e){
 		LOGGER << e.what();
@@ -118,15 +115,20 @@ void share_scan_0_scan::main_loop()
 						std::string path = iter_cur->path().string();
 						boost::uint64_t file_size = boost::filesystem::file_size(path);
 						std::time_t last_write_time = boost::filesystem::last_write_time(iter_cur->path());
-						share::const_file_iterator share_iter = Share.lookup_path(path);
-						if(share_iter == Share.end_file()
-							|| (!Share.is_downloading(path) && (share_iter->file_size != file_size
-							|| share_iter->last_write_time != last_write_time)))
+						share::const_file_iterator share_iter = share::singleton().lookup_path(path);
+						/*
+						Hash file if it doesn't exist in share, is not downloading,
+						and it hasn't been modified in the last 20 seconds. The reason
+						for the 20 second delay is so that copying files aren't hashed.
+						*/
+						if(share_iter != share::singleton().end_file()
+							&& !share::singleton().is_downloading(path)
+							&& last_write_time - share_iter->last_write_time > 20)
 						{
 							//new file, or modified file
 							boost::shared_ptr<file_info> FI(new file_info("", path,
 								file_size, last_write_time));
-							Share.insert_update(*FI);
+							share::singleton().insert_update(*FI);
 							{//begin lock scope
 							boost::mutex::scoped_lock lock(job_queue_mutex);
 							job_queue.push_back(FI);
@@ -143,8 +145,8 @@ void share_scan_0_scan::main_loop()
 		}
 
 		//remove missing
-		for(share::const_file_iterator iter_cur = Share.begin_file(),
-			iter_end = Share.end_file(); iter_cur != iter_end; ++iter_cur)
+		for(share::const_file_iterator iter_cur = share::singleton().begin_file(),
+			iter_end = share::singleton().end_file(); iter_cur != iter_end; ++iter_cur)
 		{
 			boost::this_thread::interruption_point();
 			if(skip_sleep){
@@ -154,7 +156,7 @@ void share_scan_0_scan::main_loop()
 			}
 			block_on_max_jobs();
 			if(!boost::filesystem::exists(iter_cur->path)){
-				Share.erase(iter_cur->path);
+				share::singleton().erase(iter_cur->path);
 				{//begin lock scope
 				boost::mutex::scoped_lock lock(job_queue_mutex);
 				boost::shared_ptr<file_info> FI(new file_info(*iter_cur));

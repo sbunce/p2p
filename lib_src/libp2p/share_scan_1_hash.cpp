@@ -1,10 +1,6 @@
 #include "share_scan_1_hash.hpp"
 
-share_scan_1_hash::share_scan_1_hash(
-	share & Share_in
-):
-	Share(Share_in),
-	Share_Scan_0_Scan(Share)
+share_scan_1_hash::share_scan_1_hash()
 {
 	for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
 		Workers.create_thread(boost::bind(&share_scan_1_hash::main_loop, this));
@@ -66,14 +62,14 @@ void share_scan_1_hash::main_loop()
 			hash_tree::status S = HT.create();
 			FI->hash = HT.hash;
 			if(S == hash_tree::good){
-				Share.insert_update(*FI);
+				share::singleton().insert_update(*FI);
 				{//begin lock scope
 				boost::mutex::scoped_lock lock(job_queue_mutex);
 				job_queue.push_back(FI);
 				}//end lock scope
 			}else{
 				//error hashing, remove it and retry later
-				Share.erase(FI->path);
+				share::singleton().erase(FI->path);
 			}
 		}else{
 			//file needs to be removed from database

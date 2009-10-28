@@ -1,13 +1,12 @@
 #include "p2p_real.hpp"
 
 p2p_real::p2p_real():
-	Share_Scan(Share),
 	Proactor(
 		boost::bind(&connection_manager::connect_call_back, &Connection_Manager, _1),
 		boost::bind(&connection_manager::disconnect_call_back, &Connection_Manager, _1),
 		settings::P2P_PORT
 	),
-	Connection_Manager(Proactor, Share),
+	Connection_Manager(Proactor),
 	Thread_Pool(1)
 {
 	//setup proxies for async getter/setter function calls
@@ -91,8 +90,8 @@ void p2p_real::resume()
 
 	//get host_info for all hosts we need to connect to
 	std::set<database::table::host::host_info> all_host;
-	for(share::slot_iterator iter_cur = Share.begin_slot(), iter_end = Share.end_slot();
-		iter_cur != iter_end; ++iter_cur)
+	for(share::slot_iterator iter_cur = share::singleton().begin_slot(),
+		iter_end = share::singleton().end_slot(); iter_cur != iter_end; ++iter_cur)
 	{
 		iter_cur->merge_host(all_host);
 	}
@@ -107,12 +106,12 @@ void p2p_real::resume()
 
 boost::uint64_t p2p_real::share_size_bytes()
 {
-	return Share.bytes();
+	return share::singleton().bytes();
 }
 
 boost::uint64_t p2p_real::share_size_files()
 {
-	return Share.files();
+	return share::singleton().files();
 }
 
 void p2p_real::start_download(const p2p::download & D)
@@ -128,8 +127,8 @@ void p2p_real::remove_download(const std::string & hash)
 void p2p_real::transfers(std::vector<p2p::transfer> & T)
 {
 	T.clear();
-	for(share::slot_iterator iter_cur = Share.begin_slot(),
-		iter_end = Share.end_slot(); iter_cur != iter_end; ++iter_cur)
+	for(share::slot_iterator iter_cur = share::singleton().begin_slot(),
+		iter_end = share::singleton().end_slot(); iter_cur != iter_end; ++iter_cur)
 	{
 		p2p::transfer transfer;
 		transfer.hash = iter_cur->hash();

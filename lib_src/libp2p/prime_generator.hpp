@@ -21,11 +21,6 @@
 #include <iostream>
 #include <vector>
 
-//windows PRNG
-#ifdef WIN32
-	#include <wincrypt.h>
-#endif
-
 class prime_generator : public singleton_base<prime_generator>
 {
 	friend class singleton_base<prime_generator>;

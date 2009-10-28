@@ -2,13 +2,10 @@
 
 connection::connection(
 	network::proactor & Proactor_in,
-	share & Share_in,
 	network::connection_info & CI
 ):
 	Proactor(Proactor_in),
-	Share(Share_in),
-	blacklist_state(0),
-	Slot_Manager(Share_in)
+	blacklist_state(0)
 {
 	if(database::table::blacklist::is_blacklisted(CI.IP)){
 		Proactor.disconnect(CI.connection_ID);

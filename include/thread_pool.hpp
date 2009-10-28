@@ -9,7 +9,7 @@
 //standard
 #include <iostream>
 #include <limits>
-#include <deque>
+#include <queue>
 
 class thread_pool
 {
@@ -25,24 +25,28 @@ public:
 	//erases all pending jobs
 	void clear()
 	{
-		boost::mutex::scoped_lock lock(job_mutex);
-		job.clear();
+		boost::mutex::scoped_lock lock(job_queue_mutex);
+		while(!job_queue.empty()){
+			job_queue.pop();
+		}
 	}
 
 	/*
 	queue:
-		Add call back job for the thread pool.
+		Add call back job for the thread pool. An optional priority may be specified.
+		If none is specified the lowest priority is assigned.
 	Example:
 		member function:                TP.queue(boost::bind(&A::test, &a));
 		member function with parameter: TP.queue(boost::bind(&A::test, &a, "test"));
 		function:                       TP.queue(&test);
 		function with parameter:        TP.queue(boost::bind(test, "test"));
 	*/
-	void queue(const boost::function<void ()> & func)
+	void queue(const boost::function<void ()> & func,
+		const int priority = std::numeric_limits<int>::min())
 	{
-		boost::mutex::scoped_lock lock(job_mutex);
-		job.push_back(func);
-		job_cond.notify_one();
+		boost::mutex::scoped_lock lock(job_queue_mutex);
+		job_queue.push(job(func, priority));
+		job_queue_cond.notify_one();
 	}
 
 	/*
@@ -53,20 +57,55 @@ public:
 	void interrupt_join()
 	{
 		{//begin lock scope
-		boost::mutex::scoped_lock lock(job_mutex);
+		boost::mutex::scoped_lock lock(job_queue_mutex);
 		stop_threads = true;
 		}//end lock scope
-		job_cond.notify_all();
+		job_queue_cond.notify_all();
 		Workers.join_all();
 	}
 
 private:
 	boost::thread_group Workers;
 
+	class job
+	{
+	public:
+		job(){}
+
+		job(const boost::function<void ()> & func_in, const int priority_in):
+			func(func_in), priority(priority_in)
+		{}
+
+		job(const job & Job):
+			func(Job.func), priority(Job.priority)
+		{}
+
+		void run()
+		{
+			func();
+		}
+
+		job & operator = (const job & rval)
+		{
+			func = rval.func;
+			priority = rval.priority;
+			return *this;
+		}
+
+		bool operator < (const job & rval) const
+		{
+			return priority < rval.priority;
+		}
+
+	private:
+		boost::function<void ()> func;
+		int priority;
+	};
+
 	//used by queue_job to transfer jobs to threads in conumer
-	boost::mutex job_mutex;
-	boost::condition_variable_any job_cond;
-	std::deque<boost::function<void ()> > job;
+	boost::mutex job_queue_mutex;
+	boost::condition_variable_any job_queue_cond;
+	std::priority_queue<job> job_queue;
 
 	/*
 	Triggers worker threads to exit after finishing jobs.
@@ -77,20 +116,20 @@ private:
 	//threads wait here for jobs
 	void dispatcher()
 	{
-		boost::function<void ()> func;
+		job Job;
 		while(true){
 			{//begin lock scope
-			boost::mutex::scoped_lock lock(job_mutex);
-			while(job.empty()){
+			boost::mutex::scoped_lock lock(job_queue_mutex);
+			while(job_queue.empty()){
 				if(stop_threads){
 					return;
 				}
-				job_cond.wait(job_mutex);
+				job_queue_cond.wait(job_queue_mutex);
 			}
-			func = job.front();
-			job.pop_front();
+			Job = job_queue.top();
+			job_queue.pop();
 			}//end lock scope
-			func();
+			Job.run();
 		}
 	}
 };

@@ -1,13 +1,10 @@
 #include "slot_manager.hpp"
 
-slot_manager::slot_manager(
-	share & Share_in
-):
-	Share(Share_in)
+slot_manager::slot_manager()
 {
 	//get slots for files this server has
-	for(share::slot_iterator iter_cur = Share.begin_slot(), iter_end = Share.end_slot();
-		iter_cur != iter_end; ++iter_cur)
+	for(share::slot_iterator iter_cur = share::singleton().begin_slot(),
+		iter_end = share::singleton().end_slot(); iter_cur != iter_end; ++iter_cur)
 	{
 		//Pending_Slot_Request.push_back(
 	}

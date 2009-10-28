@@ -1,10 +1,6 @@
 #include "share_scan_2_write.hpp"
 
-share_scan_2_write::share_scan_2_write(
-	share & Share_in
-):
-	Share(Share_in),
-	Share_Scan_1_Hash(Share)
+share_scan_2_write::share_scan_2_write()
 {
 	write_thread = boost::thread(boost::bind(&share_scan_2_write::main_loop, this));
 }

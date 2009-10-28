@@ -16,10 +16,10 @@
 //standard
 #include <deque>
 
-class share_scan_1_hash
+class share_scan_1_hash : private boost::noncopyable
 {
 public:
-	share_scan_1_hash(share & Share_in);
+	share_scan_1_hash();
 	~share_scan_1_hash();
 
 	/*
@@ -53,9 +53,6 @@ private:
 	*/
 	boost::mutex memoize_mutex;
 	std::set<std::string> memoize;
-
-	//contains files in share
-	share & Share;
 
 	//previous stage in pipeline
 	share_scan_0_scan Share_Scan_0_Scan;

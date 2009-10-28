@@ -23,10 +23,10 @@ amount of database contention.
 //standard
 #include <vector>
 
-class share_scan_2_write
+class share_scan_2_write : private boost::noncopyable
 {
 public:
-	share_scan_2_write(share & Shared_in);
+	share_scan_2_write();
 	~share_scan_2_write();
 
 	/*
@@ -37,9 +37,6 @@ public:
 
 private:
 	boost::thread write_thread;
-
-	//contains files in share
-	share & Share;
 
 	//previous stage in pipeline
 	share_scan_1_hash Share_Scan_1_Hash;

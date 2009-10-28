@@ -43,7 +43,7 @@ void disconnect_call_back(network::connection_info & CI)
 int main()
 {
 	//disable test
-	//return 0;
+	return 0;
 
 	P.start();
 	P.connect("seth.dnsdojo.net", "80", network::tcp);
