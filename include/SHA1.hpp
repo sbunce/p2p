@@ -17,6 +17,38 @@ class SHA1
 public:
 	SHA1(){}
 
+	class hash
+	{
+		friend class SHA1;
+	public:
+		static const int bin_size = 20;
+		static const int hex_size = 40;
+
+		//returns raw hash
+		const char * bin() const
+		{
+			return raw;
+		}
+
+		//returns hash encoded in hex
+		std::string hex() const
+		{
+			static const char * const hex = "0123456789ABCDEF";
+			std::string hash;
+			for(int x=0; x<20; ++x){
+				hash += hex[static_cast<int>((raw[x] >> 4) & 15)];
+				hash += hex[static_cast<int>(raw[x] & 15)];
+			}
+			return hash;
+		}
+
+	private:
+		char raw[20];
+	};
+
+	//holds latest generated hash
+	hash Hash;
+
 	/* Data Loading Functions
 	init:
 		Must be called before loading data.
@@ -67,40 +99,14 @@ public:
 
 		//create the final hash by concatenating the h's
 		for(int x=0; x<5; ++x){
-			raw[x*4+3] = h[x].b[0];
-			raw[x*4+2] = h[x].b[1];
-			raw[x*4+1] = h[x].b[2];
-			raw[x*4+0] = h[x].b[3];
+			Hash.raw[x*4+3] = h[x].b[0];
+			Hash.raw[x*4+2] = h[x].b[1];
+			Hash.raw[x*4+1] = h[x].b[2];
+			Hash.raw[x*4+0] = h[x].b[3];
 		}
-	}
-
-	/*
-	Precondition: Must have hashed some data and called end().
-	hex_hash:
-		Returns hash in hex.
-	raw_hash:
-		Returns hash in binary.
-	*/
-	std::string hex_hash()
-	{
-		static const char * const hex = "0123456789ABCDEF";
-		std::string hash;
-		for(int x=0; x<20; ++x){
-			hash += hex[static_cast<int>((raw[x] >> 4) & 15)];
-			hash += hex[static_cast<int>(raw[x] & 15)];
-		}
-		return hash;
-	}
-
-	const char * raw_hash()
-	{
-		return raw;
 	}
 
 private:
-	//holds lastest generated raw hash
-	char raw[20];
-
 	//used by load()
 	boost::uint64_t loaded_bytes; //total bytes input
 	std::string load_buffer;      //holds data input
@@ -165,7 +171,6 @@ private:
 		c = h[2].n;
 		d = h[3].n;
 		e = h[4].n;
-
 		for(int x=0; x<80; ++x){
 			boost::uint32_t f, k;
 			if(0 <= x && x <= 19){
@@ -181,7 +186,6 @@ private:
 				f = b ^ c ^ d;
 				k = 0xCA62C1D6;
 			}
-
 			boost::uint32_t temp = rotate_left(a, 5) + f + e + k + w[x].n;
 			e = d;
 			d = c;
@@ -189,7 +193,6 @@ private:
 			b = a;
 			a = temp;
 		}
-
 		h[0].n += a;
 		h[1].n += b;
 		h[2].n += c;

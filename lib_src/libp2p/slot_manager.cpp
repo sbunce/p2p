@@ -91,6 +91,7 @@ void slot_manager::send_slot_ID(std::pair<unsigned char, boost::shared_ptr<slot>
 
 ///////////////
 //DEBUG, need to store root_hash in file_info within share.
+//Need to develope the hash object at this point.
 
 	Send_Queue.push_back(M);
 }

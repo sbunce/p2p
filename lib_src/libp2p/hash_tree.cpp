@@ -127,7 +127,7 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 		SHA.init();
 		SHA.load(buff, protocol::BIN_HASH_SIZE + 8);
 		SHA.end();
-		if(SHA.hex_hash() == hash){
+		if(SHA.Hash.hex() == hash){
 			return good;
 		}else{
 			return bad;
@@ -152,10 +152,10 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 		SHA.end();
 
 		//verify parent hash is a hash of the children
-		if(!database::pool::get_proxy()->blob_read(Blob, buff, protocol::BIN_HASH_SIZE, parent)){
+		if(!database::pool::get_proxy()->blob_read(Blob, buff, SHA1::hash::bin_size, parent)){
 			return io_error;
 		}
-		if(std::memcmp(buff, SHA.raw_hash(), protocol::BIN_HASH_SIZE) == 0){
+		if(std::memcmp(buff, SHA.Hash.bin(), SHA1::hash::bin_size) == 0){
 			return good;
 		}else{
 			return bad;
@@ -198,9 +198,9 @@ hash_tree::status hash_tree::check_file_block(const boost::uint64_t & file_block
 		exit(1);
 	}
 
-	char parent_buff[protocol::BIN_HASH_SIZE];
+	char parent_buff[SHA1::hash::bin_size];
 	if(!database::pool::get_proxy()->blob_read(Blob, parent_buff,
-		protocol::BIN_HASH_SIZE, file_hash_offset + file_block_num * protocol::BIN_HASH_SIZE))
+		SHA1::hash::bin_size, file_hash_offset + file_block_num * SHA1::hash::bin_size))
 	{
 		return io_error;
 	}
@@ -208,7 +208,7 @@ hash_tree::status hash_tree::check_file_block(const boost::uint64_t & file_block
 	SHA.init();
 	SHA.load(block, size);
 	SHA.end();
-	if(memcmp(parent_buff, SHA.raw_hash(), protocol::BIN_HASH_SIZE) == 0){
+	if(memcmp(parent_buff, SHA.Hash.bin(), SHA1::hash::bin_size) == 0){
 		return good;
 	}else{
 		return bad;
@@ -274,8 +274,8 @@ hash_tree::status hash_tree::create()
 		SHA.init();
 		SHA.load(buff, file.gcount());
 		SHA.end();
-		temp.seekp(file_hash_offset + x * protocol::BIN_HASH_SIZE, std::ios::beg);
-		temp.write(SHA.raw_hash(), protocol::BIN_HASH_SIZE);
+		temp.seekp(file_hash_offset + x * SHA1::hash::bin_size, std::ios::beg);
+		temp.write(SHA.Hash.bin(), SHA1::hash::bin_size);
 		if(!temp.good()){
 			LOGGER << "error writing temp file";
 			return io_error;
@@ -300,7 +300,7 @@ hash_tree::status hash_tree::create()
 		SHA.load(buff, info.second);
 		SHA.end();
 		temp.seekp(parent, std::ios::beg);
-		temp.write(SHA.raw_hash(), protocol::BIN_HASH_SIZE);
+		temp.write(SHA.Hash.bin(), SHA1::hash::bin_size);
 		if(!temp.good()){
 			LOGGER << "error writing temp file";
 			return io_error;
@@ -309,11 +309,11 @@ hash_tree::status hash_tree::create()
 
 	//calculate hash
 	std::memcpy(buff, convert::encode(file_size).data(), 8);
-	std::memcpy(buff + 8, SHA.raw_hash(), protocol::BIN_HASH_SIZE);
+	std::memcpy(buff + 8, SHA.Hash.bin(), SHA1::hash::bin_size);
 	SHA.init();
-	SHA.load(buff, protocol::BIN_HASH_SIZE + 8);
+	SHA.load(buff, SHA1::hash::bin_size + 8);
 	SHA.end();
-	const_cast<std::string &>(hash) = SHA.hex_hash();
+	const_cast<std::string &>(hash) = SHA.Hash.hex();
 
 	/*
 	Copy hash tree in to database. No transaction is used because it this can

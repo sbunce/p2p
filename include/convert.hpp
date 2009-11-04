@@ -127,14 +127,14 @@ static std::string hex_to_bin(std::string hex)
 //converts a binary string to hex
 static std::string bin_to_hex(const std::string & bin)
 {
-	const char * const HEX = "0123456789ABCDEF";
-	std::string hex;
+	const char * const hex = "0123456789ABCDEF";
+	std::string temp;
 	int size = bin.size();
 	for(int x=0; x<size; ++x){
-		hex += HEX[static_cast<int>((bin[x] >> 4) & 15)];
-		hex += HEX[static_cast<int>(bin[x] & 15)];
+		temp += hex[static_cast<int>((bin[x] >> 4) & 15)];
+		temp += hex[static_cast<int>(bin[x] & 15)];
 	}
-	return hex;
+	return temp;
 }
 
 //convert bytes to reasonable SI unit, example 1024 -> 1kB
