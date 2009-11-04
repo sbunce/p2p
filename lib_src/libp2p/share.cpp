@@ -106,8 +106,8 @@ bool share::slot_iterator::operator == (
 		//only one is end iterator
 		return false;
 	}else{
-		//neither is end iterator, compare paths
-		return Slot->hash() == rval.Slot->hash();
+		//neither is end iterator, compare hashes
+		return Slot->Hash_Tree.hash == rval.Slot->Hash_Tree.hash;
 	}
 }
 
@@ -132,7 +132,7 @@ boost::shared_ptr<slot> & share::slot_iterator::operator -> ()
 share::slot_iterator & share::slot_iterator::operator ++ ()
 {
 	assert(Share);
-	boost::shared_ptr<slot> temp = Share->next_slot(Slot->hash());
+	boost::shared_ptr<slot> temp = Share->next_slot(Slot->Hash_Tree.hash);
 	if(temp){
 		Slot = temp;
 	}else{
@@ -148,6 +148,12 @@ share::slot_iterator share::slot_iterator::operator ++ (int)
 	++(*this);
 	return temp;
 }
+
+boost::shared_ptr<slot> share::slot_iterator::get()
+{
+	return Slot;
+}
+
 //END share::slot_iterator
 
 share::share():

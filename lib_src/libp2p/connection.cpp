@@ -5,6 +5,7 @@ connection::connection(
 	network::connection_info & CI
 ):
 	Proactor(Proactor_in),
+	Slot_Manager(CI),
 	blacklist_state(0)
 {
 	if(database::table::blacklist::is_blacklisted(CI.IP)){
@@ -65,9 +66,23 @@ void connection::recv_call_back(network::connection_info & CI)
 
 	network::buffer send_buf;
 
+/*
 	//DEBUG, BEGIN TEST CODE
 	LOGGER << CI.recv_buf.str();
 	//DEBUG, END TEST CODE
+*/
+
+	//process messages in buffer
+	while(true){
+		if(slot_manager::is_slot_command(CI.recv_buf[0])){
+			if(!Slot_Manager.recv(CI)){
+				break;
+			}
+		}else{
+			database::table::blacklist::add(CI.IP);
+			break;
+		}
+	}
 
 	if(!send_buf.empty()){
 		Encryption.crypt_send(send_buf);
@@ -87,6 +102,7 @@ void connection::send_call_back(network::connection_info & CI)
 {
 	network::buffer send_buf;
 
+/*
 	//DEBUG, BEGIN TEST CODE
 	if(CI.direction == network::outgoing){
 		static bool sent = false;
@@ -96,6 +112,9 @@ void connection::send_call_back(network::connection_info & CI)
 		}
 	}
 	//DEBUG, END TEST CODE
+*/
+
+	Slot_Manager.send(send_buf);
 
 	//encrypt what was appended to send_buff
 	if(!send_buf.empty()){

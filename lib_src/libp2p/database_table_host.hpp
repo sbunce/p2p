@@ -26,11 +26,11 @@ public:
 			const host_info & H
 		);
 		host_info(
-			const std::string & host_in,	
+			const std::string & IP_in,	
 			const std::string & port_in
 		);
 
-		std::string host;
+		std::string IP;
 		std::string port;
 
 		bool operator == (const host_info & rval) const;

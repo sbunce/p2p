@@ -100,7 +100,7 @@ void p2p_real::resume()
 	for(std::set<database::table::host::host_info>::iterator iter_cur = all_host.begin(),
 		iter_end = all_host.end(); iter_cur != iter_end; ++iter_cur)
 	{
-		Proactor.connect(iter_cur->host, iter_cur->port, network::tcp);
+		Proactor.connect(iter_cur->IP, iter_cur->port, network::tcp);
 	}
 }
 
@@ -131,12 +131,12 @@ void p2p_real::transfers(std::vector<p2p::transfer> & T)
 		iter_end = share::singleton().end_slot(); iter_cur != iter_end; ++iter_cur)
 	{
 		p2p::transfer transfer;
-		transfer.hash = iter_cur->hash();
-		transfer.name = iter_cur->name();
-		transfer.file_size = iter_cur->file_size();
-		transfer.percent_complete = iter_cur->percent_complete();
-		transfer.upload_speed = iter_cur->upload_speed();
-		transfer.download_speed = iter_cur->download_speed();
+		transfer.hash = iter_cur->Hash_Tree.hash;
+		transfer.name = iter_cur->File.name();
+		transfer.file_size = iter_cur->File.file_size;
+		transfer.percent_complete = 69;
+		transfer.upload_speed = 0;
+		transfer.download_speed = 0;
 		T.push_back(transfer);
 	}
 }

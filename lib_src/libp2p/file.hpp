@@ -18,12 +18,27 @@ class file : private boost::noncopyable
 public:
 	file(const file_info & FI);
 
-	const std::string hash;
-	const std::string path;
-	const boost::uint64_t file_size;
+	const std::string path;                //full path to downloading file
+	const boost::uint64_t file_size;       //complete size of downloading file
+	const boost::uint64_t block_count;     //number of file blocks
+	const boost::uint64_t last_block_size; //size of last block in file
 
+	/*
+	block_size:
+		Returns size of the specified file block.
+		Precondition: block_num < block_count
+	complete:
+		Returns true if the file is complete.
+	name:
+		Returns file name.
+	*/
+	unsigned block_size(const boost::uint64_t & block_num);
+	bool complete();
+	std::string name();
 
-	//block_request Block_Request;
+	//used for requesting blocks, also keeps track of all blocks we have
+	block_request Block_Request;
+
 private:
 
 };

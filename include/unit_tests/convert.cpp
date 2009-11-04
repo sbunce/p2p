@@ -12,6 +12,20 @@ int main()
 		LOGGER; exit(1);
 	}
 
+	//encode_VLI/decode_VLI
+	if(convert::VLI_size(1) != 1){
+		LOGGER; exit(1);
+	}
+	if(convert::VLI_size(255) != 1){
+		LOGGER; exit(1);
+	}
+	if(convert::VLI_size(256) != 2){
+		LOGGER; exit(1);
+	}
+	if(convert::decode_VLI(convert::encode_VLI(10, 11)) != 10){
+		LOGGER; exit(1);
+	}
+
 	//hex_to_bin -> bin_to_hex
 	std::string hex = "0123456789ABCDEF";
 	if(convert::bin_to_hex(convert::hex_to_bin(hex)) != hex){

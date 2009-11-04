@@ -116,10 +116,9 @@ public:
 	This is used to determine what blocks to request when downloading the hash
 	tree. The check functions will call block_request::remove_block when a block
 	hash fails.
-	Note: The block_request keeps track of all the blocks we have, NOT blocks
-		which are known to be good. The blocks we have AND the blocks that are
-		good are the blocks which are in Block_Request AND the blocks which are
-		< end_of_good.
+	Note: The block_request keeps track of all the blocks we have, not blocks
+		which are known to be good. For a block to be good it must be in
+		Block_Request and the block number must be < end_of_good.
 	*/
 	block_request Block_Request;
 

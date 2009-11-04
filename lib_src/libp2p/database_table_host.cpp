@@ -9,17 +9,17 @@ database::table::host::host_info::host_info()
 database::table::host::host_info::host_info(
 	const host_info & H
 ):
-	host(H.host),
+	IP(H.IP),
 	port(H.port)
 {
 
 }
 
 database::table::host::host_info::host_info(
-	const std::string & host_in,	
+	const std::string & IP_in,	
 	const std::string & port_in
 ):
-	host(host_in),
+	IP(IP_in),
 	port(port_in)
 {
 
@@ -27,7 +27,7 @@ database::table::host::host_info::host_info(
 
 bool database::table::host::host_info::operator == (const host_info & rval) const
 {
-	return host == rval.host && port == rval.port;
+	return IP == rval.IP && port == rval.port;
 }
 
 bool database::table::host::host_info::operator != (const host_info & rval) const
@@ -37,7 +37,7 @@ bool database::table::host::host_info::operator != (const host_info & rval) cons
 
 bool database::table::host::host_info::operator < (const host_info & rval) const
 {
-	return (host + port) < (rval.host + rval.port);
+	return (IP + port) < (rval.IP + rval.port);
 }
 //END host_info
 
@@ -45,7 +45,7 @@ void database::table::host::add(const std::string hash, const host_info & HI,
 	database::pool::proxy DB)
 {
 	std::stringstream ss;
-	ss << "INSERT OR IGNORE INTO host VALUES('" << hash << "', '" << HI.host
+	ss << "INSERT OR IGNORE INTO host VALUES('" << hash << "', '" << HI.IP
 		<< "', '" << HI.port << "')";
 	DB->query(ss.str());
 }
@@ -71,7 +71,7 @@ boost::shared_ptr<std::vector<database::table::host::host_info> >
 database::table::host::lookup( const std::string & hash, database::pool::proxy DB)
 {
 	std::stringstream ss;
-	ss << "SELECT host, port FROM host WHERE hash = '" << hash << "'";
+	ss << "SELECT IP, port FROM host WHERE hash = '" << hash << "'";
 	boost::shared_ptr<std::vector<host_info> > host;
 	DB->query(ss.str(), &lookup_call_back, boost::ref(host));
 	return host;

@@ -9,7 +9,7 @@ block_request::block_request(
 	local_block.set();
 }
 
-void block_request::add_block_local(const int socket_FD, const boost::uint64_t block)
+void block_request::add_block_local(const int connection_ID, const boost::uint64_t block)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 
@@ -26,7 +26,7 @@ void block_request::add_block_local(const int socket_FD, const boost::uint64_t b
 		std::multimap<boost::uint64_t, request_element>::iterator>
 		pair = request.equal_range(block);
 	while(pair.first != request.end() && pair.first != pair.second){
-		if(pair.first->second.socket_FD == socket_FD){
+		if(pair.first->second.connection_ID == connection_ID){
 			request.erase(pair.first);
 			break;
 		}else{
@@ -35,12 +35,12 @@ void block_request::add_block_local(const int socket_FD, const boost::uint64_t b
 	}
 }
 
-void block_request::add_block_remote(const int socket_FD, const boost::uint64_t block)
+void block_request::add_block_remote(const int connection_ID, const boost::uint64_t block)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 
 	//find bitset for remote host
-	std::map<int, bit_field>::iterator remote_iter = remote_block.find(socket_FD);
+	std::map<int, bit_field>::iterator remote_iter = remote_block.find(connection_ID);
 	assert(remote_iter != remote_block.end());
 
 	//add block
@@ -52,22 +52,22 @@ void block_request::add_block_remote(const int socket_FD, const boost::uint64_t 
 	}
 }
 
-void block_request::add_host_complete(const int socket_FD)
+void block_request::add_host_complete(const int connection_ID)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 
 	//insert empty bit_field (host has all blocks)
 	std::pair<std::map<int, bit_field>::iterator, bool>
-		ret = remote_block.insert(std::make_pair(socket_FD, bit_field(0)));
+		ret = remote_block.insert(std::make_pair(connection_ID, bit_field(0)));
 	assert(ret.second);
 }
 
-void block_request::add_host_incomplete(const int socket_FD, bit_field & BF)
+void block_request::add_host_incomplete(const int connection_ID, bit_field & BF)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	assert(BF.size() == block_count);
 	std::pair<std::map<int, bit_field>::iterator, bool>
-		ret = remote_block.insert(std::make_pair(socket_FD, BF));
+		ret = remote_block.insert(std::make_pair(connection_ID, BF));
 	assert(ret.second);
 }
 
@@ -87,10 +87,10 @@ bool block_request::complete()
 	return local_block.empty();
 }
 
-bool block_request::find_next_rarest(const int socket_FD, boost::uint64_t & block)
+bool block_request::find_next_rarest(const int connection_ID, boost::uint64_t & block)
 {
 	//find bitset for remote host
-	std::map<int, bit_field>::iterator remote_iter = remote_block.find(socket_FD);
+	std::map<int, bit_field>::iterator remote_iter = remote_block.find(connection_ID);
 	assert(remote_iter != remote_block.end());
 
 	//find rarest block that we need, that remote host has
@@ -159,7 +159,7 @@ bool block_request::find_next_rarest(const int socket_FD, boost::uint64_t & bloc
 	}
 }
 
-bool block_request::next_request(const int socket_FD, boost::uint64_t & block)
+bool block_request::next_request(const int connection_ID, boost::uint64_t & block)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	assert(!complete());
@@ -173,7 +173,7 @@ bool block_request::next_request(const int socket_FD, boost::uint64_t & block)
 		iter_cur = request.begin(), iter_end = request.end(); iter_cur != iter_end;
 		++iter_cur)
 	{
-		if(iter_cur->second.socket_FD == socket_FD
+		if(iter_cur->second.connection_ID == connection_ID
 			&& std::time(NULL) - iter_cur->second.request_time > protocol::TIMEOUT)
 		{
 			return false;
@@ -190,7 +190,7 @@ bool block_request::next_request(const int socket_FD, boost::uint64_t & block)
 	{
 		if(std::time(NULL) - iter_cur->second.request_time > protocol::TIMEOUT){
 			block = iter_cur->first;
-			request.insert(std::make_pair(block, request_element(socket_FD, std::time(NULL))));
+			request.insert(std::make_pair(block, request_element(connection_ID, std::time(NULL))));
 			return true;
 		}
 	}
@@ -200,9 +200,9 @@ bool block_request::next_request(const int socket_FD, boost::uint64_t & block)
 	are no re-requests to do. We move on to checking for the next rarest block to
 	request from the host.
 	*/
-	if(find_next_rarest(socket_FD, block)){
+	if(find_next_rarest(connection_ID, block)){
 		//there is a block to request
-		request.insert(std::make_pair(block, request_element(socket_FD, std::time(NULL))));
+		request.insert(std::make_pair(block, request_element(connection_ID, std::time(NULL))));
 		return true;
 	}else{
 		//no blocks to request at this time.
@@ -210,10 +210,10 @@ bool block_request::next_request(const int socket_FD, boost::uint64_t & block)
 	}
 }
 
-void block_request::remove_host(const int socket_FD)
+void block_request::remove_host(const int connection_ID)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	if(remote_block.erase(socket_FD) != 1){
+	if(remote_block.erase(connection_ID) != 1){
 		LOGGER << "violated precondition";
 		exit(1);
 	}
@@ -222,7 +222,7 @@ void block_request::remove_host(const int socket_FD)
 	std::multimap<boost::uint64_t, request_element>::iterator
 		iter_cur = request.begin(), iter_end = request.end();
 	while(iter_cur != iter_end){
-		if(iter_cur->second.socket_FD == socket_FD){
+		if(iter_cur->second.connection_ID == connection_ID){
 			request.erase(iter_cur++);
 		}else{
 			++iter_cur;

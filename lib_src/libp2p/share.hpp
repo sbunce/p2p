@@ -66,6 +66,9 @@ public:
 		boost::shared_ptr<slot> & operator -> ();
 		slot_iterator & operator ++ ();
 		slot_iterator operator ++ (int);
+
+		//returns the wrappers shared_ptr
+		boost::shared_ptr<slot> get();
 	private:
 		slot_iterator(
 			share * Share_in,
@@ -127,7 +130,6 @@ public:
 		complete then it will be removed. This is called when slots are removed
 		from connections.
 	*/
-
 	slot_iterator begin_slot();
 	slot_iterator end_slot();
 	boost::shared_ptr<slot> get_slot(const std::string & hash,
@@ -151,7 +153,7 @@ private:
 
 	/*
 	Different ways of looking up info.
-	internal_mutex:
+	Recursive_Mutex:
 		Locks access to everything in this section.
 	Hash:
 		Hash associated with file_info. This is a multimap because there

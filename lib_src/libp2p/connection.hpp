@@ -33,7 +33,7 @@ public:
 private:
 	network::proactor & Proactor;
 	encryption Encryption;
-	int blacklist_state;
 	slot_manager Slot_Manager;
+	int blacklist_state;
 };
 #endif

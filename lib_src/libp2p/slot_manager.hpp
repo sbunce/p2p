@@ -8,6 +8,7 @@
 //include
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
+#include <convert.hpp>
 #include <network/network.hpp>
 
 //standard
@@ -16,35 +17,47 @@
 class slot_manager : private boost::noncopyable
 {
 public:
-	slot_manager();
+	slot_manager(network::connection_info & CI);
 
 	/*
+	is_slot_command:
+		Returns true if specified command is a slot related command.
 	recv:
-		When the front of the recv_buff contains a slot related message it is
-		passed to this function which will process the message and erase it from
-		the buffer. Returns false if the host violated the protocol.
-		Precondition: !recv_buff.empty() && recv_buff[0] = slot related message
+		Processes slot related message on front of CI.recv_buf. Returns true and
+		removes the message from the buffer if a complete message was received.
+		Returns false if there was only a partial message in CI.recv_buf.
+		Precondition: !CI.recv_buf.empty() && is_slot_command(CI.recv_buf[0]) = true
 	send:
-		Appends a slot related message to send_buff. Returns true if send_buff had
-		request appended.
+		Called by connection every time the send_call_back is called. This may or
+		may not append data to send_buf.
 	*/
-	bool recv(network::buffer & recv_buff);
-	bool send(network::buffer & send_buff);
+	static bool is_slot_command(const unsigned char command);
+	bool recv(network::connection_info & CI);
+	void send(network::buffer & send_buf);
 
 private:
+	const int connection_ID;
+	const std::string IP;
+	const std::string port;
+
+	//used to detect when slot within share modified
+	int share_slot_state;
+
 	/*
-	The vector index of the element is the slot ID. This vector will always be
-	sized such that it's no bigger than the highest slot. Slots will always be
-	assigned lowest first to save memory. If a slot is closed and there is a
-	higher slot still open the slot closed is set to an empty shared_ptr.
+	The slot ID mapped to a slot. The Outgoing_Slot container holds slots we have
+	opened with the remote host. The Incoming_Slot container holds slots the
+	remote host has opened with us.
+
+	If the Incoming_Slot container has an empty shared_ptr it means the slot was
+	closed and we should return FILE_REMOVED for any requests until we get a
+	CLOSE_SLOT at which point we can remove the Incoming_Slot element.
 	*/
-	std::vector<boost::shared_ptr<slot> > Outgoing_Slot;
-	std::vector<boost::shared_ptr<slot> > Incoming_Slot;
+	std::map<unsigned char, boost::shared_ptr<slot> > Outgoing_Slot;
+	std::map<unsigned char, boost::shared_ptr<slot> > Incoming_Slot;
 
 	/*
 	Pending_Slot_Request:
-		Contains slots for which a slot request hasn't yet been made. Slot
-		elements may get backed up if there are 256 slots open.
+		Slots which need to be opened with the remote host.
 	Slot_Request:
 		Slot elements for which we've requested a slot are pushed on the back of
 		this. When a response arrives it will be for the element on the front of
@@ -54,71 +67,59 @@ private:
 	std::deque<boost::shared_ptr<slot> > Slot_Request;
 
 	/*
-	slot_counter:
-		Slots are serviced in a round-robin fashion by servicing
-	pending_block_requests:
-		How many block requests are in the Send_Queue. This will not exceed
-		protocol::PIPELINE_SIZE.
+	Set of all slots in all containers in this class. Used when synchronizing
+	slots with the share.
 	*/
-	unsigned slot_counter;
-	unsigned pending_block_requests;
+	std::set<boost::shared_ptr<slot> > Known_Slot;
 
-	/*
-	When a message needs to be sent it is inserted in to the Send_Queue. Some
-	messages are prioritized by being inserted closer to the front of the queue.
-
-	Priority:
-		The commands are also priorities. The higher the command number the higher
-	the priority.
-
-	Explanation of Priority:
-		Establishing a slot to download is prioritized above all else because we
-	want to get the download running ASAP. Sending the SLOT_ID to a remote host
-	is prioritized next because we want uploads to get started ASAP.
-		The requests for blocks are prioritized above sending hash_tree and file
-	blocks to avoid a starvation problem that can happen when two hosts with
-	asymmetric connections download from eachother concurrently. This starvation
-	problem happens without prioritization because requests for new data from the
-	remote end get stuck behind sending the huge hash_tree and file blocks.
-
-	Insertion Algorithm:
-	1. Insert message at the end of the deque.
-	2. If message at current location - 1 is lower priority then swap. If current
-	   location is beginning, or location - 1 is equal or greater priority then
-	   stop.
-	3. goto 2
-	*/
-	class send_queue_element
+	//when a message needs to be sent it is inserted in to the Send_Queue
+	class message
 	{
 	public:
-		/*
-		The slot_element which expects the response.
-		Note: This may be empty if the slot_element was removed before a response
-			was received.
-		*/
-		boost::shared_ptr<slot> SE;
+		//slot which expects response, empty if no response expected
+		boost::shared_ptr<slot> Slot;
 
 		/*
-		The bytes to send.
-		Note: All but the first byte of this (the command) is cleared when
-			send_queue_element put in Sent_Queue to save memory.
+		Request to send.
+		Note: When a block request is sent we need to know if it is for a hash
+		tree block or file block so we know where to send the block when it
+		arrives. To determine this we look at the first byte in send_buf.
 		*/
-		network::buffer send_buff;
+		network::buffer send_buf;
 
-		/*
-		Expected response associated with the size of the response.
-		Note: This will be empty if no response is expected.
-		*/
-		std::vector<std::pair<unsigned char, int> > Expected_Response;
+		//possible responses expected (command associated with size of message)
+		std::vector<std::pair<unsigned char, int> > expected_response;
 	};
-	std::deque<boost::shared_ptr<send_queue_element> > Send_Queue;
+	std::deque<boost::shared_ptr<message> > Send_Queue;
 
 	/*
-	When a Send_Queue element gets used by the send() function the slot_element
-	is pushed on the back of the Sent_Queue IFF a response is expected. The
-	recv() function looks at the front of the Sent_Queue when receiving a
-	response to know what slot the response is for.
+	When a message is sent that expects a response it is pushed on to the back of
+	this. When a response to a slot related message is recieved it is always to
+	the element on the front of this queue.
 	*/
-	std::deque<boost::shared_ptr<send_queue_element> > Sent_Queue;
+	std::deque<boost::shared_ptr<message> > Sent_Queue;
+
+	/*
+	sync_slots:
+		Sync slots in the share with slots in the slot_manager. This is useful for
+		when a slot becomes associated with a new host, or when a totally new slot
+		is added.
+	*/
+	void sync_slots();
+
+	/* Receive Functions
+
+	*/
+
+	/* Send Functions
+	There functions are all named after the commands they send. Refer to the
+	protocol documentation to know what these do.
+	*/
+	void send_close_slot(const unsigned char slot_ID);
+	void send_request_slot(const std::string & hash);
+	void send_request_slot_failed();
+	void send_request_block(std::pair<unsigned char, boost::shared_ptr<slot> > & P);
+	void send_file_removed();
+	void send_slot_ID(std::pair<unsigned char, boost::shared_ptr<slot> > & P);
 };
 #endif

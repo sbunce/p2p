@@ -46,9 +46,9 @@ void database::init::hash()
 void database::init::host()
 {
 	database::pool::proxy DB;
-	DB->query("CREATE TABLE IF NOT EXISTS host(hash TEXT, host TEXT, port TEXT)");
+	DB->query("CREATE TABLE IF NOT EXISTS host(hash TEXT, IP TEXT, port TEXT)");
 	DB->query("CREATE INDEX IF NOT EXISTS host_hash_index ON host(hash)");
-	DB->query("CREATE UNIQUE INDEX IF NOT EXISTS host_index ON host(hash, host, port)");
+	DB->query("CREATE UNIQUE INDEX IF NOT EXISTS host_index ON host(hash, IP, port)");
 }
 
 void database::init::preferences()

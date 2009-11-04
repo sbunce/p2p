@@ -32,6 +32,28 @@ static std::string encode(const T & num)
 	return std::string(NB.b, sizeof(T));
 }
 
+/*
+Returns num encoded in big-endian. However only returns enough bytes to hold
+range of numbers [0, end). We call this a VLI (variable length interger).
+Note: This only works with unsigned integers.
+*/
+static std::string encode_VLI(const boost::uint64_t & num,
+	const boost::uint64_t & end)
+{
+	assert(num < end);
+	//determine index of first used byte for max
+	int index = 0;
+	std::string temp = encode(end);
+	for(; index<temp.size(); ++index){
+		if(temp[index] != 0){
+			break;
+		}
+	}
+	//return bytes for value
+	temp = encode(num);
+	return temp.substr(index);
+}
+
 //decode number encoded in big-endian
 template<class T>
 static T decode(const std::string & encoded)
@@ -47,6 +69,29 @@ static T decode(const std::string & encoded)
 	std::copy(encoded.data(), encoded.data()+sizeof(T), NB.b);
 	#endif
 	return NB.n;
+}
+
+//decode VLI
+static boost::uint64_t decode_VLI(std::string encoded)
+{
+	assert(encoded.size() > 0 && encoded.size() <= 8);
+	//prepend zero bytes if needed
+	encoded = std::string(8 - encoded.size(), '\0') + encoded;
+	return decode<boost::uint64_t>(encoded);
+}
+
+//returns the size of string encode_VLI would return given the specified end
+static unsigned VLI_size(const boost::uint64_t & end)
+{
+	assert(end > 0);
+	unsigned index = 0;
+	std::string temp = encode(end);
+	for(; index<temp.size(); ++index){
+		if(temp[index] != 0){
+			return temp.size() - index;
+		}
+	}
+	LOGGER; exit(1);
 }
 
 /*

@@ -23,17 +23,6 @@ This class is threadsafe.
 #include <map>
 #include <set>
 
-/*
-There is no different between a requested block and a received block currently.
-This will cause problems when we send someone our bit_field.
-
-There has to be more info kept track of. We have to keep track of what blocks
-were requested.
-
-add_block_local should work normally, but next_request should not modify the
-underlying bit_field, it should add the block number to the set.
-*/
-
 class block_request : private boost::noncopyable
 {
 public:
@@ -72,14 +61,14 @@ public:
 		it is from. When this happens we need to "re"request the block from any
 		host. This function is commonly called when reassembling a hash tree.
 	*/
-	void add_block_local(const int socket_FD, const boost::uint64_t block);
-	void add_block_remote(const int socket_FD, const boost::uint64_t block);
-	void add_host_complete(const int socket_FD);
-	void add_host_incomplete(const int socket_FD, bit_field & BF);
+	void add_block_local(const int connection_ID, const boost::uint64_t block);
+	void add_block_remote(const int connection_ID, const boost::uint64_t block);
+	void add_host_complete(const int connection_ID);
+	void add_host_incomplete(const int connection_ID, bit_field & BF);
 	boost::uint64_t bytes();
 	bool complete();
-	bool next_request(const int socket_FD, boost::uint64_t & block);
-	void remove_host(const int socket_FD);
+	bool next_request(const int connection_ID, boost::uint64_t & block);
+	void remove_host(const int connection_ID);
 	void rerequest_block(const boost::uint64_t block);
 
 private:
@@ -98,34 +87,34 @@ private:
 
 	/*
 	This is used to rerequest blocks that haven't been received after a certain
-	time. The socket_FD is needed so that we don't make a re-request to a host
+	time. The connection_ID is needed so that we don't make a re-request to a host
 	which 
 	*/
 	class request_element
 	{
 	public:
 		request_element(
-			const int socket_FD_in,
+			const int connection_ID_in,
 			const std::time_t request_time_in
 		):
-			socket_FD(socket_FD_in),
+			connection_ID(connection_ID_in),
 			request_time(request_time_in)
 		{}
 
-		const int socket_FD;            //socket request was made to
+		const int connection_ID;            //socket request was made to
 		const std::time_t request_time; //time request was made
 	};
 	std::multimap<boost::uint64_t, request_element> request;
 
-	//socket_FD associated with bitset representing blocks remote host has
+	//connection_ID associated with bitset representing blocks remote host has
 	std::map<int, bit_field> remote_block;
 
 	/*
 	find_next_rarest:
 		Finds the next rarest block to request from the host with the specified
-		socket_FD. This is called by next_request() after checking for timed out
+		connection_ID. This is called by next_request() after checking for timed out
 		requests to re-request.
 	*/
-	bool find_next_rarest(const int socket_FD, boost::uint64_t & block);
+	bool find_next_rarest(const int connection_ID, boost::uint64_t & block);
 };
 #endif

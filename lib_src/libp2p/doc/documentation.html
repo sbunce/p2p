@@ -161,7 +161,6 @@ C = command, H = hash
 
 Possible Responses:
 SLOT_ID
-SLOT_ID_WITH_BIT_FIELD
 REQUEST_SLOT_FAILED (the server does not have the file)
 </pre>
 </fieldset>
@@ -200,6 +199,8 @@ Description: Request a block from a hash tree.
   0   1   2    ...    n
 
 C = command, S = slot ID, B = block number (VLI)
+
+Note: B is sized such that it can hold the maximum tree block number.
 
 Possible Responses:
 BLOCK
