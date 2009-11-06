@@ -13,23 +13,22 @@ bool database::table::hash_tree::add(const std::string & hash,
 	}
 }
 
-static int lookup_call_back(
-	boost::shared_ptr<database::table::hash_tree::info> * Info,
-	int columns_retrieved, char ** response, char ** column_name)
+static int lookup_call_back(int columns, char ** response, char ** column_name,
+	boost::shared_ptr<database::table::hash_tree::info> & Info)
 {
-	assert(columns_retrieved == 2);
+	assert(columns == 2);
 	assert(std::strcmp(column_name[0], "key") == 0);
 	assert(std::strcmp(column_name[1], "state") == 0);
 
-	*Info = boost::shared_ptr<database::table::hash_tree::info>(
+	Info = boost::shared_ptr<database::table::hash_tree::info>(
 		new database::table::hash_tree::info());
 	try{
-		(*Info)->Blob.rowid = boost::lexical_cast<boost::int64_t>(response[0]);
+		Info->Blob.rowid = boost::lexical_cast<boost::int64_t>(response[0]);
 		int temp = boost::lexical_cast<int>(response[1]);
-		(*Info)->tree_state = reinterpret_cast<database::table::hash_tree::state &>(temp);
+		Info->tree_state = reinterpret_cast<database::table::hash_tree::state &>(temp);
 	}catch(const std::exception & e){
 		LOGGER << e.what();
-		*Info = boost::shared_ptr<database::table::hash_tree::info>();
+		Info = boost::shared_ptr<database::table::hash_tree::info>();
 	}
 	return 0;
 }
@@ -40,7 +39,7 @@ boost::shared_ptr<database::table::hash_tree::info> database::table::hash_tree::
 	boost::shared_ptr<info> Info;
 	std::stringstream ss;
 	ss << "SELECT key, state FROM hash_tree WHERE hash = '" << hash << "' LIMIT 1";
-	DB->query(ss.str(), &lookup_call_back, &Info);
+	DB->query(ss.str(), boost::bind(&lookup_call_back, _1, _2, _3, boost::ref(Info)));
 	if(Info){
 		Info->hash = hash;
 		Info->Blob.table = "hash_tree";

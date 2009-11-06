@@ -10,57 +10,11 @@ void database::table::share::add(const info & Info,
 	DB->query(ss.str());
 }
 
-//this checks to see if any records with specified hash and size exist
-static int remove_call_back_2(bool * exists, int columns_retrieved,
-	char ** response, char ** column_name)
-{
-	*exists = true;
-	return 0;
-}
-
-
-//this gets the hash and file size that corresponds to a path
-static int remove_call_back_1(
-	std::pair<std::string &, database::pool::proxy &> * info,
-	int columns_retrieved, char ** response, char ** column_name)
-{
-	assert(columns_retrieved == 1);
-	assert(std::strcmp(column_name[0], "hash") == 0);
-
-	//delete the record
-	std::stringstream ss;
-	ss << "DELETE FROM share WHERE path = '" << info->first << "'";
-	info->second->query(ss.str());
-
-	//check if any files with hash still exist
-	ss.str(""); ss.clear();
-	ss << "SELECT 1 FROM share WHERE hash = '" << response[0] << "' LIMIT 1";
-	bool exists = false;
-	info->second->query(ss.str(), &remove_call_back_2, &exists);
-	if(!exists){
-		//last file with this hash removed, delete the hash tree
-		ss.str(""); ss.clear();
-		ss << "DELETE FROM hash WHERE hash = '" << response[0] << "'";
-		info->second->query(ss.str());
-	}
-	return 0;
-}
-
-void database::table::share::remove(const std::string & path,
-	database::pool::proxy DB)
-{
-	std::string path_escaped = database::escape(path);
-	std::pair<std::string &, database::pool::proxy &> info(path_escaped, DB);
-	std::stringstream ss;
-	ss << "SELECT hash FROM share WHERE path = '" << path_escaped << "' LIMIT 1";
-	DB->query(ss.str(), &remove_call_back_1, &info);
-}
-
 //Note: throws exception if bad data
-static void unmarshal_info(database::table::share::info & Info,
-	int columns_retrieved, char ** response, char ** column_name)
+static void unmarshal_info(int columns, char ** response, char ** column_name,
+	database::table::share::info & Info)
 {
-	assert(columns_retrieved == 5);
+	assert(columns == 5);
 	assert(std::strcmp(column_name[0], "hash") == 0);
 	assert(std::strcmp(column_name[1], "path") == 0);
 	assert(std::strcmp(column_name[2], "file_size") == 0);
@@ -75,17 +29,16 @@ static void unmarshal_info(database::table::share::info & Info,
 	Info.file_state = reinterpret_cast<database::table::share::state &>(temp);
 }
 
-static int lookup_hash_call_back(
-	boost::shared_ptr<database::table::share::info> * Info,
-	int columns_retrieved, char ** response, char ** column_name)
+static int lookup_hash_call_back(int columns, char ** response, char ** column_name,
+	boost::shared_ptr<database::table::share::info> & Info)
 {
-	*Info = boost::shared_ptr<database::table::share::info>(
+	Info = boost::shared_ptr<database::table::share::info>(
 		new database::table::share::info());
 	try{
-		unmarshal_info(**Info, columns_retrieved, response, column_name);
+		unmarshal_info(columns, response, column_name, *Info);
 	}catch(const std::exception & e){
 		LOGGER << e.what();
-		*Info = boost::shared_ptr<database::table::share::info>();
+		Info = boost::shared_ptr<database::table::share::info>();
 	}
 	return 0;
 }
@@ -97,17 +50,61 @@ boost::shared_ptr<database::table::share::info> database::table::share::lookup(
 	ss << "SELECT hash, path, file_size, last_write_time, state FROM share WHERE hash = '"
 		<< hash << "' LIMIT 1";
 	boost::shared_ptr<info> Info;
-	DB->query(ss.str(), &lookup_hash_call_back, &Info);
+	DB->query(ss.str(), boost::bind(&lookup_hash_call_back, _1, _2, _3, boost::ref(Info)));
 	return Info;
 }
 
-static int resume_call_back(std::deque<database::table::share::info> * info_container,
-	int columns_retrieved, char ** response, char ** column_name)
+//this checks to see if any records with specified hash and size exist
+static int remove_call_back_2(int columns_retrieved,
+	char ** response, char ** column_name, bool & exists)
+{
+	exists = true;
+	return 0;
+}
+
+//this gets the hash and file size that corresponds to a path
+static int remove_call_back_1(int columns, char ** response, char ** column_name,
+	std::string & path_escaped, database::pool::proxy & DB)
+{
+	assert(columns == 1);
+	assert(std::strcmp(column_name[0], "hash") == 0);
+
+	//delete the record
+	std::stringstream ss;
+	ss << "DELETE FROM share WHERE path = '" << path_escaped << "'";
+	DB->query(ss.str());
+
+	//check if any files with hash still exist
+	ss.str(""); ss.clear();
+	ss << "SELECT 1 FROM share WHERE hash = '" << response[0] << "' LIMIT 1";
+	bool exists = false;
+	DB->query(ss.str(), boost::bind(&remove_call_back_2, _1, _2, _3, boost::ref(exists)));
+	if(!exists){
+		//last file with this hash removed, delete the hash tree
+		ss.str(""); ss.clear();
+		ss << "DELETE FROM hash WHERE hash = '" << response[0] << "'";
+		DB->query(ss.str());
+	}
+	return 0;
+}
+
+void database::table::share::remove(const std::string & path,
+	database::pool::proxy DB)
+{
+	std::string path_escaped = database::escape(path);
+	std::stringstream ss;
+	ss << "SELECT hash FROM share WHERE path = '" << path_escaped << "' LIMIT 1";
+	DB->query(ss.str(), boost::bind(&remove_call_back_1, _1, _2, _3,
+		boost::ref(path_escaped), boost::ref(DB)));
+}
+
+static int resume_call_back(int columns, char ** response, char ** column_name,
+	std::deque<database::table::share::info> & info_container)
 {
 	try{
 		database::table::share::info Info;
-		unmarshal_info(Info, columns_retrieved, response, column_name);
-		info_container->push_back(Info);
+		unmarshal_info(columns, response, column_name, Info);
+		info_container.push_back(Info);
 	}catch(const std::exception & e){
 		LOGGER << e.what();
 	}
@@ -119,6 +116,6 @@ std::deque<database::table::share::info> database::table::share::resume(
 {
 	std::deque<info> info_container;
 	DB->query("SELECT hash, path, file_size, last_write_time, state FROM share",
-		&resume_call_back, &info_container);
+		boost::bind(&resume_call_back, _1, _2, _3, boost::ref(info_container)));
 	return info_container;
 }

@@ -22,10 +22,10 @@ void database::table::blacklist::init()
 	blacklist_state();
 }
 
-static int is_blacklisted_call_back(boost::reference_wrapper<bool> found,
-	int columns, char ** response, char ** column_name)
+static int is_blacklisted_call_back(int columns, char ** response,
+	char ** column_name, bool & found)
 {
-	found.get() = true;
+	found = true;
 	return 0;
 }
 
@@ -36,7 +36,7 @@ bool database::table::blacklist::is_blacklisted(const std::string & IP,
 	bool found = false;
 	std::stringstream ss;
 	ss << "SELECT 1 FROM blacklist WHERE IP = '" << IP << "'";
-	DB->query(ss.str(), &is_blacklisted_call_back, boost::ref(found));
+	DB->query(ss.str(), boost::bind(&is_blacklisted_call_back, _1, _2, _3, boost::ref(found)));
 	return found;
 }
 
