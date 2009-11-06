@@ -9,6 +9,7 @@
 #include <boost/shared_ptr.hpp>
 
 //standard
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -18,37 +19,17 @@ namespace table{
 class host
 {
 public:
-	class host_info
-	{
-	public:
-		host_info();
-		host_info(
-			const host_info & H
-		);
-		host_info(
-			const std::string & IP_in,	
-			const std::string & port_in
-		);
-
-		std::string IP;
-		std::string port;
-
-		bool operator == (const host_info & rval) const;
-		bool operator != (const host_info & rval) const;
-		bool operator < (const host_info & rval) const;
-	};
-
 	/*
 	add:
-		Associate a host with a hash. This is done when we know that a host has a
-		file with the specified hash.
+		Add source for file with specified hash
+		std::pair<IP, port>
 	lookup:
-		Returns all the IPs associated with the hash. Returns an empty shared
-		pointer if no records found.
+		Returns all hosts associated with the hash.
+		std::set<std::pair<IP, port> >
 	*/
-	static void add(const std::string hash, const host_info & HI,
+	static void add(const std::string hash, const std::pair<std::string, std::string> & host,
 		database::pool::proxy DB = database::pool::proxy());
-	static boost::shared_ptr<std::vector<host_info> > lookup(
+	static std::set<std::pair<std::string, std::string> > lookup(
 		const std::string & hash, database::pool::proxy DB = database::pool::proxy());
 
 private:

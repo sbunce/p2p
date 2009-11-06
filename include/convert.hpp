@@ -96,45 +96,57 @@ static unsigned VLI_size(const boost::uint64_t & end)
 
 /*
 Returns binary version of hex string encoded in big-endian. Returns empty string
-if invalid hex string.
-Examples of Invalid:
-	""       //empty
-	"123ABG" //'G' not in hex
-	"123"    //string_size % 2 != 0
+if invalid hex string. The following types of strings are invalid.
+1. Empty string.
+2. String with lower case hex chars (all hex chars must be upper case).
+3. String with length not multiple of 2.
 */
-static std::string hex_to_bin(std::string hex)
+static std::string hex_to_bin(const char * hex, const int size)
 {
 	std::string bin;
-	if(hex.empty() || hex.size() % 2 != 0){
+
+	//check for invalid size
+	if(size == 0 || size % 2 != 0){
 		return bin;
 	}
-	for(int x=0; x<hex.size(); x+=2){
-		hex[x] = std::toupper(hex[x]);
-		hex[x+1] = std::toupper(hex[x+1]);
+
+	for(int x=0; x<size; x+=2){
+		//make sure hex characters are valid
 		if(!(hex[x] >= '0' && hex[x] <= '9' || hex[x] >= 'A' && hex[x] <= 'F')
 			|| !(hex[x+1] >= '0' && hex[x+1] <= '9' || hex[x+1] >= 'A' && hex[x+1] <= 'F'))
 		{
 			bin.clear();
 			return bin;
 		}
-		char ch;
-		ch = (hex[x] >= 'A' ? hex[x] - 'A' + 10 : hex[x] - '0') << 4;
+
+		//convert
+		char ch = (hex[x] >= 'A' ? hex[x] - 'A' + 10 : hex[x] - '0') << 4;
 		bin += ch + (hex[x+1] >= 'A' ? hex[x+1] - 'A' + 10 : hex[x+1] - '0');
 	}
 	return bin;
 }
 
+static std::string hex_to_bin(const std::string & hex)
+{
+	return hex_to_bin(hex.data(), hex.size());
+}
+
 //converts a binary string to hex
-static std::string bin_to_hex(const std::string & bin)
+static std::string bin_to_hex(const char * bin, const int size)
 {
 	const char * const hex = "0123456789ABCDEF";
 	std::string temp;
-	int size = bin.size();
 	for(int x=0; x<size; ++x){
 		temp += hex[static_cast<int>((bin[x] >> 4) & 15)];
 		temp += hex[static_cast<int>(bin[x] & 15)];
 	}
 	return temp;
+}
+
+//converts a binary string to hex
+static std::string bin_to_hex(const std::string & bin)
+{
+	return bin_to_hex(bin.data(), bin.size());
 }
 
 //convert bytes to reasonable SI unit, example 1024 -> 1kB

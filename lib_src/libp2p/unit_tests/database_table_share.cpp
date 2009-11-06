@@ -8,51 +8,40 @@ int main()
 	database::init::drop_all();
 	database::init::create_all();
 
-	//test file info
-	database::table::share::file_info FI;
-	FI.hash = "ABC";
-	FI.file_size = 123;
-	FI.path = "DEF";
+	//test info
+	database::table::share::info SI;
+	SI.hash = "ABC";
+	SI.path = "/foo/bar";
+	SI.file_size = 123;
+	SI.last_write_time = 123;
+	SI.file_state = database::table::share::downloading;
 
 	//file not yet added, lookups shouldn't work
-	if(database::table::share::lookup_hash(FI.hash)){
-		LOGGER; exit(1);
-	}
-	if(database::table::share::lookup_path(FI.path)){
+	if(database::table::share::lookup(SI.hash)){
 		LOGGER; exit(1);
 	}
 
 	//add file
-	database::table::share::add_entry(FI);
+	database::table::share::add(SI);
 
 	//make sure lookups work
-	if(boost::shared_ptr<database::table::share::file_info>
-		FI_ptr = database::table::share::lookup_hash(FI.hash))
+	if(boost::shared_ptr<database::table::share::info>
+		lookup_SI = database::table::share::lookup(SI.hash))
 	{
-		if(FI_ptr->hash != FI.hash){ LOGGER; exit(1); }
-		if(FI_ptr->file_size != FI.file_size){ LOGGER; exit(1); }
-		if(FI_ptr->path != FI.path){ LOGGER; exit(1); }
-	}else{
-		LOGGER; exit(1);
-	}
-	if(boost::shared_ptr<database::table::share::file_info>
-		FI_ptr = database::table::share::lookup_path(FI.path))
-	{
-		if(FI_ptr->hash != FI.hash){ LOGGER; exit(1); }
-		if(FI_ptr->file_size != FI.file_size){ LOGGER; exit(1); }
-		if(FI_ptr->path != FI.path){ LOGGER; exit(1); }
+		if(lookup_SI->hash != SI.hash){ LOGGER; exit(1); }
+		if(lookup_SI->path != SI.path){ LOGGER; exit(1); }
+		if(lookup_SI->file_size != SI.file_size){ LOGGER; exit(1); }
+		if(lookup_SI->last_write_time != SI.last_write_time){ LOGGER; exit(1); }
+		if(lookup_SI->file_state != SI.file_state){ LOGGER; exit(1); }
 	}else{
 		LOGGER; exit(1);
 	}
 
-	//delete file
-	database::table::share::delete_entry(FI.path);
+	//remove file
+	database::table::share::remove(SI.path);
 
 	//file was deleted, make sure lookups don't work
-	if(database::table::share::lookup_hash(FI.hash)){
-		LOGGER; exit(1);
-	}
-	if(database::table::share::lookup_path(FI.path)){
+	if(database::table::share::lookup(SI.hash)){
 		LOGGER; exit(1);
 	}
 }

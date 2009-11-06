@@ -7,11 +7,7 @@ slot::slot(
 	Hash_Tree(FI, DB),
 	File(FI)
 {
-	boost::shared_ptr<std::vector<database::table::host::host_info> >
-		H = database::table::host::lookup(Hash_Tree.hash, DB);
-	if(H){
-		host.insert(H->begin(), H->end());
-	}
+	host = database::table::host::lookup(FI.hash, DB);
 }
 
 bool slot::complete()
@@ -22,10 +18,10 @@ bool slot::complete()
 bool slot::has_file(const std::string & IP, const std::string & port)
 {
 	boost::mutex::scoped_lock lock(host_mutex);
-	return host.find(database::table::host::host_info(IP, port)) != host.end();
+	return host.find(std::make_pair(IP, port)) != host.end();
 }
 
-void slot::merge_host(std::set<database::table::host::host_info> & host_in)
+void slot::merge_host(std::set<std::pair<std::string, std::string> > & host_in)
 {
 	boost::mutex::scoped_lock lock(host_mutex);
 	host_in.insert(host.begin(), host.end());

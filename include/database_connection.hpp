@@ -55,6 +55,16 @@ Read blob:
 #include <sqlite3.h>
 
 namespace database{
+
+//function to return std::string with control characters escaped
+static std::string escape(const std::string & str)
+{
+	char * sqlite3_path = sqlite3_mprintf("%q", str.c_str());
+	std::string temp(sqlite3_path);
+	sqlite3_free(sqlite3_path);
+	return temp;
+}
+
 //object needed for reading/writing a blob
 class blob
 {
@@ -131,6 +141,7 @@ public:
 			);
 			if(ret == SQLITE_BUSY){
 				sqlite3_finalize(prepared_statement);
+std::cout << ".";
 				boost::this_thread::yield();
 				continue;
 			}else if(ret != SQLITE_OK){
@@ -142,6 +153,7 @@ public:
 			if(ret == SQLITE_BUSY){
 				sqlite3_finalize(prepared_statement);
 				boost::this_thread::yield();
+std::cout << ".";
 				continue;
 			}else if(ret != SQLITE_OK){
 				sqlite3_finalize(prepared_statement);
@@ -154,6 +166,7 @@ public:
 				return true;
 			}else if(ret == SQLITE_BUSY){
 				boost::this_thread::yield();
+std::cout << ".";
 				continue;
 			}else{
 				return false;
@@ -187,10 +200,23 @@ public:
 	}
 
 	/*
+	Sets size to size of specified blob. Returns false if failed to open blob.
+	*/
+	bool blob_size(const blob & Blob, boost::uint64_t & size)
+	{
+		sqlite3_blob * blob_handle;
+		if(!blob_open(Blob, false, blob_handle)){
+			return false;
+		}
+		size = sqlite3_blob_bytes(blob_handle);
+		return blob_close(blob_handle);
+	}
+
+	/*
 	Write data to blob. Returns true if success else false.
 	See documentation for blob_write to find out what the parameters do.
 	*/
-	bool blob_write(const blob & Blob, const char * const buff, const int size, const int offset)
+	bool blob_write(const blob & Blob, const char * const buf, const int size, const int offset)
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 		connect();
@@ -198,7 +224,7 @@ public:
 		if(!blob_open(Blob, true, blob_handle)){
 			return false;
 		}
-		if(sqlite3_blob_write(blob_handle, static_cast<const void *>(buff), size,
+		if(sqlite3_blob_write(blob_handle, static_cast<const void *>(buf), size,
 			offset) != SQLITE_OK)
 		{
 			LOGGER << sqlite3_errmsg(DB_handle);

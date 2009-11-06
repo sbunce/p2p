@@ -14,6 +14,7 @@
 #include <boost/tuple/tuple.hpp>
 
 //standard
+#include <deque>
 #include <fstream>
 #include <set>
 #include <sstream>
@@ -26,47 +27,48 @@ class share
 {
 public:
 	enum state{
-		downloading, //0 - downloading, incomplete tree
-		complete     //1 - complete, hash tree complete and checked
+		downloading, //tree or file incomplete
+		complete     //tree or file complete (all blocks hash checked good)
 	};
 
-	class file_info
+	class info
 	{
 	public:
-		file_info();
-		file_info(
-			const ::file_info & FI,
-			const state State_in
-		);
+		info(){}
+
+		info(const file_info & FI, const state file_state_in):
+			hash(FI.hash),
+			path(FI.path),
+			file_size(FI.file_size),
+			last_write_time(FI.last_write_time),
+			file_state(file_state_in)
+		{}
 
 		std::string hash;
 		std::string path;
 		boost::uint64_t file_size;
 		std::time_t last_write_time;
-		state State;
+		state file_state;
 	};
 
 	/*
-	add_entry:
-		Add entry to the DB.
-	delete_entry:
-		Removes entry from database. Removes hash tree if there are no more
-		references to it.
-	lookup_hash:
-		Lookup a record in the share table by it's hash. An empty shared_ptr is
-		returned if no record exists.
-	lookup_path:
-		Lookup a record in the share table by it's path. An empty shared_ptr is
-		returned if no record exists.
+	add:
+		Add info to share table.
+	lookup:
+		Returns info that corresponds to hash. Returns empty shared_ptr if there
+		is no info.
+	remove:
+		Removes record for file with specified path.
+	resume:
+		Returns all info in the share table.
 	*/
-	static void add_entry(const file_info & FI,
+	static void add(const info & FI,
 		database::pool::proxy DB = database::pool::proxy());
-	static void delete_entry(const std::string & path,
+	static boost::shared_ptr<info> lookup(const std::string & hash,
 		database::pool::proxy DB = database::pool::proxy());
-	static boost::shared_ptr<file_info> lookup_hash(const std::string & hash,
+	static void remove(const std::string & path,
 		database::pool::proxy DB = database::pool::proxy());
-	static boost::shared_ptr<file_info> lookup_path(const std::string & path,
-		database::pool::proxy DB = database::pool::proxy());
+	static std::deque<info> resume(database::pool::proxy DB = database::pool::proxy());
 
 private:
 	share(){}

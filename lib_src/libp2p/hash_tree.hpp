@@ -50,8 +50,9 @@ public:
 	};
 
 	/*
-	Hash the file is tracked by. This created by taking the file size (8 byte big
-	endian), appending the root hash to it, and creating a hash.
+	hash:
+		What the file is tracked by. This created by taking the file size (8 byte
+		big endian), appending the root hash to it, and creating a 
 	*/
 	const std::string hash;
 

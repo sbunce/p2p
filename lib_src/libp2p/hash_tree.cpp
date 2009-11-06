@@ -21,22 +21,22 @@ hash_tree::hash_tree(
 			protocol::FILE_BLOCK_SIZE :
 			file_size % protocol::FILE_BLOCK_SIZE
 	),
-	Block_Request(hash == "" ? 0 : tree_block_count),
+	Block_Request(hash.empty() ? 0 : tree_block_count),
 	end_of_good(0)
 {
-	if(hash != ""){
-		boost::shared_ptr<database::table::hash::tree_info>
-			TI = database::table::hash::tree_open(hash, DB);
-		if(TI){
+	if(!hash.empty()){
+		boost::shared_ptr<database::table::hash_tree::info>
+			Info = database::table::hash_tree::lookup(hash, DB);
+		if(Info){
 			//opened existing hash tree
-			const_cast<database::blob &>(Blob) = TI->Blob;
+			const_cast<database::blob &>(Blob) = Info->Blob;
 		}else{
 			//allocate space to reconstruct hash tree
-			if(database::table::hash::tree_allocate(hash, tree_size, DB)){
-				database::table::hash::set_state(hash, database::table::hash::downloading, DB);
-				TI = database::table::hash::tree_open(hash, DB);
-				if(TI){
-					const_cast<database::blob &>(Blob) = TI->Blob;
+			if(database::table::hash_tree::add(hash, tree_size, DB)){
+				database::table::hash_tree::set_state(hash, database::table::hash_tree::downloading, DB);
+				Info = database::table::hash_tree::lookup(hash, DB);
+				if(Info){
+					const_cast<database::blob &>(Blob) = Info->Blob;
 				}else{
 					throw std::runtime_error("failed to open hash tree");
 				}
@@ -127,7 +127,7 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 		SHA.init();
 		SHA.load(buff, protocol::BIN_HASH_SIZE + 8);
 		SHA.end();
-		if(SHA.Hash.hex() == hash){
+		if(SHA.hex() == hash){
 			return good;
 		}else{
 			return bad;
@@ -152,10 +152,10 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 		SHA.end();
 
 		//verify parent hash is a hash of the children
-		if(!database::pool::get_proxy()->blob_read(Blob, buff, SHA1::hash::bin_size, parent)){
+		if(!database::pool::get_proxy()->blob_read(Blob, buff, SHA1::bin_size, parent)){
 			return io_error;
 		}
-		if(std::memcmp(buff, SHA.Hash.bin(), SHA1::hash::bin_size) == 0){
+		if(std::memcmp(buff, SHA.bin(), SHA1::bin_size) == 0){
 			return good;
 		}else{
 			return bad;
@@ -184,7 +184,7 @@ hash_tree::status hash_tree::check()
 	}
 
 	if(complete()){
-		database::table::hash::set_state(hash, database::table::hash::complete);
+		database::table::hash_tree::set_state(hash, database::table::hash_tree::complete);
 	}
 
 	return good;
@@ -198,9 +198,9 @@ hash_tree::status hash_tree::check_file_block(const boost::uint64_t & file_block
 		exit(1);
 	}
 
-	char parent_buff[SHA1::hash::bin_size];
+	char parent_buff[SHA1::bin_size];
 	if(!database::pool::get_proxy()->blob_read(Blob, parent_buff,
-		SHA1::hash::bin_size, file_hash_offset + file_block_num * SHA1::hash::bin_size))
+		SHA1::bin_size, file_hash_offset + file_block_num * SHA1::bin_size))
 	{
 		return io_error;
 	}
@@ -208,7 +208,7 @@ hash_tree::status hash_tree::check_file_block(const boost::uint64_t & file_block
 	SHA.init();
 	SHA.load(block, size);
 	SHA.end();
-	if(memcmp(parent_buff, SHA.Hash.bin(), SHA1::hash::bin_size) == 0){
+	if(memcmp(parent_buff, SHA.bin(), SHA1::bin_size) == 0){
 		return good;
 	}else{
 		return bad;
@@ -274,8 +274,8 @@ hash_tree::status hash_tree::create()
 		SHA.init();
 		SHA.load(buff, file.gcount());
 		SHA.end();
-		temp.seekp(file_hash_offset + x * SHA1::hash::bin_size, std::ios::beg);
-		temp.write(SHA.Hash.bin(), SHA1::hash::bin_size);
+		temp.seekp(file_hash_offset + x * SHA1::bin_size, std::ios::beg);
+		temp.write(SHA.bin(), SHA1::bin_size);
 		if(!temp.good()){
 			LOGGER << "error writing temp file";
 			return io_error;
@@ -300,7 +300,7 @@ hash_tree::status hash_tree::create()
 		SHA.load(buff, info.second);
 		SHA.end();
 		temp.seekp(parent, std::ios::beg);
-		temp.write(SHA.Hash.bin(), SHA1::hash::bin_size);
+		temp.write(SHA.bin(), SHA1::bin_size);
 		if(!temp.good()){
 			LOGGER << "error writing temp file";
 			return io_error;
@@ -309,11 +309,11 @@ hash_tree::status hash_tree::create()
 
 	//calculate hash
 	std::memcpy(buff, convert::encode(file_size).data(), 8);
-	std::memcpy(buff + 8, SHA.Hash.bin(), SHA1::hash::bin_size);
+	std::memcpy(buff + 8, SHA.bin(), SHA1::bin_size);
 	SHA.init();
-	SHA.load(buff, SHA1::hash::bin_size + 8);
+	SHA.load(buff, SHA1::bin_size + 8);
 	SHA.end();
-	const_cast<std::string &>(hash) = SHA.Hash.hex();
+	const_cast<std::string &>(hash) = SHA.hex();
 
 	/*
 	Copy hash tree in to database. No transaction is used because it this can
@@ -323,28 +323,28 @@ hash_tree::status hash_tree::create()
 	*/
 
 	//check if tree already exists
-	if(database::table::hash::tree_open(hash)){
+	if(database::table::hash_tree::lookup(hash)){
 		return good;
 	}
 
 	//tree doesn't exist, allocate space for it
-	if(!database::table::hash::tree_allocate(hash, tree_size)){
-		LOGGER << "error allocating space for hash tree";
+	if(!database::table::hash_tree::add(hash, tree_size)){
+		LOGGER << "error adding hash tree";
 		return io_error;
 	}
 
 	//copy tree to database using large buffer for performance
-	boost::shared_ptr<database::table::hash::tree_info>
-		TI = database::table::hash::tree_open(hash);
+	boost::shared_ptr<database::table::hash_tree::info>
+		Info = database::table::hash_tree::lookup(hash);
 
 	//set blob to one we just created
-	const_cast<database::blob &>(Blob) = TI->Blob;
+	const_cast<database::blob &>(Blob) = Info->Blob;
 
 	temp.seekg(0, std::ios::beg);
 	boost::uint64_t offset = 0, bytes_remaining = tree_size, read_size;
 	while(bytes_remaining){
 		if(boost::this_thread::interruption_requested()){
-			database::table::hash::delete_tree(hash);
+			database::table::hash_tree::remove(hash);
 			return io_error;
 		}
 		if(bytes_remaining > protocol::FILE_BLOCK_SIZE){
@@ -355,12 +355,12 @@ hash_tree::status hash_tree::create()
 		temp.read(buff, read_size);
 		if(temp.gcount() != read_size){
 			LOGGER << "error reading temp file";
-			database::table::hash::delete_tree(hash);
+			database::table::hash_tree::remove(hash);
 			return io_error;
 		}else{
 			if(!database::pool::get_proxy()->blob_write(Blob, buff, read_size, offset)){
 				LOGGER << "error doing incremental write to blob";
-				database::table::hash::delete_tree(hash);
+				database::table::hash_tree::remove(hash);
 				return io_error;
 			}
 			offset += read_size;

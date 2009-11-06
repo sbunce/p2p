@@ -26,9 +26,12 @@ public:
 	"get"|"set"_max_connections:
 		How many connections allowed.
 	*/
-	static unsigned get_max_download_rate(database::pool::proxy DB = database::pool::proxy());
-	static unsigned get_max_connections(database::pool::proxy DB = database::pool::proxy());
-	static unsigned get_max_upload_rate(database::pool::proxy DB = database::pool::proxy());
+	static unsigned get_max_download_rate(
+		database::pool::proxy DB = database::pool::proxy());
+	static unsigned get_max_connections(
+		database::pool::proxy DB = database::pool::proxy());
+	static unsigned get_max_upload_rate(
+		database::pool::proxy DB = database::pool::proxy());
 	static void set_max_download_rate(const unsigned rate,
 		database::pool::proxy DB = database::pool::proxy());
 	static void set_max_connections(const unsigned connections,

@@ -8,7 +8,7 @@
 #include "hash_tree.hpp"
 #include "path.hpp"
 #include "prime_generator.hpp"
-#include "share_scan.hpp"
+#include "share_scanner.hpp"
 #include "settings.hpp"
 #include "share.hpp"
 
@@ -69,7 +69,7 @@ private:
 	Share_Scan:
 		Scans shared directories looking for new and modified files.
 	*/
-	share_scan Share_Scan;
+	share_scanner Share_Scanner;
 
 	//used to schedule long jobs so the GUI doesn't have to wait
 	thread_pool Thread_Pool;

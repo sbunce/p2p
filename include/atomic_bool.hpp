@@ -45,7 +45,7 @@ public:
 	}
 
 	//conditional (?, ())
-	operator bool ()
+	operator bool () const
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
 		return wrapped_bool;

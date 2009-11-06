@@ -23,14 +23,6 @@ public:
 	*/
 	static void create_all();
 	static void drop_all();
-
-	//functions to create tables
-	static void blacklist();
-	static void hash();
-	static void host();
-	static void preferences();
-	static void prime();
-	static void share();
 };
 }//end of namespace database
 #endif

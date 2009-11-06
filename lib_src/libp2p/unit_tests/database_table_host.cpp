@@ -8,46 +8,34 @@ int main()
 	database::init::drop_all();
 	database::init::create_all();
 
-	std::string test_hash = "ABC";
-	database::table::host::host_info test_HI_0("123", "456");
-	database::table::host::host_info test_HI_1("321", "654");
+	std::string hash = "ABC";
+	std::pair<std::string, std::string> host_0("123", "456");
+	std::pair<std::string, std::string> host_1("321", "654");
+
+	std::set<std::pair<std::string, std::string> > all;
 
 	//table empty, should not be able to look up hosts
-	if(boost::shared_ptr<std::vector<database::table::host::host_info> >
-		H = database::table::host::lookup(test_hash))
-	{
+	all = database::table::host::lookup(hash);
+	if(!all.empty()){
 		LOGGER; exit(1);
 	}
 
 	//add the same record twice (it should then only exist in table once)
-	database::table::host::add(test_hash, test_HI_0);
-	database::table::host::add(test_hash, test_HI_0);
+	database::table::host::add(hash, host_0);
+	database::table::host::add(hash, host_0);
 
 	//look up all hosts for test_hash (there should be 1)
-	if(boost::shared_ptr<std::vector<database::table::host::host_info> >
-		H = database::table::host::lookup(test_hash))
-	{
-		if(H->size() != 1){
-			LOGGER; exit(1);
-		}
-		if(*H->begin() != test_HI_0){
-			LOGGER; exit(1);
-		}
-	}else{
+	all = database::table::host::lookup(hash);
+	if(all.size() != 1){
 		LOGGER; exit(1);
 	}
 
 	//insert new host for hash
-	database::table::host::add(test_hash, test_HI_1);
+	database::table::host::add(hash, host_1);
 
 	//look up all hosts for test_hash (there should be 2)
-	if(boost::shared_ptr<std::vector<database::table::host::host_info> >
-		H = database::table::host::lookup(test_hash))
-	{
-		if(H->size() != 2){
-			LOGGER; exit(1);
-		}
-	}else{
+	all = database::table::host::lookup(hash);
+	if(all.size() != 2){
 		LOGGER; exit(1);
 	}
 }

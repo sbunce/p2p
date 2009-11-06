@@ -5,9 +5,11 @@
 //include
 #include <boost/cstdint.hpp>
 #include <boost/detail/endian.hpp>
+#include <convert.hpp>
 
 //standard
 #include <algorithm>
+#include <cstring>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -17,46 +19,47 @@ class SHA1
 public:
 	SHA1(){}
 
-	class hash
+	//size of hash in different forms
+	static const int bin_size = 20;
+	static const int hex_size = 40;
+
+	//returns generated hash
+	const char * bin()
 	{
-		friend class SHA1;
-	public:
-		static const int bin_size = 20;
-		static const int hex_size = 40;
+		return raw.data();
+	}
 
-		//returns raw hash
-		const char * bin() const
-		{
-			return raw;
+	//must be called after all data loaded
+	void end()
+	{
+		//append trailing 1 bit and size
+		append_tail();
+
+		//process remaining chunks
+		int ready_chunks = load_buffer.size() / 64;
+		for(int x=0; x<ready_chunks; ++x){
+			process(x*64);
 		}
+		//erase processed chunks
+		load_buffer.erase(0,ready_chunks*64);
 
-		//returns hash encoded in hex
-		std::string hex() const
-		{
-			static const char * const hex = "0123456789ABCDEF";
-			std::string hash;
-			for(int x=0; x<20; ++x){
-				hash += hex[static_cast<int>((raw[x] >> 4) & 15)];
-				hash += hex[static_cast<int>(raw[x] & 15)];
-			}
-			return hash;
+		//create the final hash by concatenating the h's
+		raw.resize(bin_size);
+		for(int x=0; x<5; ++x){
+			raw[x*4+3] = h[x].b[0];
+			raw[x*4+2] = h[x].b[1];
+			raw[x*4+1] = h[x].b[2];
+			raw[x*4+0] = h[x].b[3];
 		}
+	}
 
-	private:
-		char raw[20];
-	};
+	//returns generated hash encoded in hex
+	std::string hex()
+	{
+		return convert::bin_to_hex(raw);
+	}
 
-	//holds latest generated hash
-	hash Hash;
-
-	/* Data Loading Functions
-	init:
-		Must be called before loading data.
-	load:
-		Load data in chunks.
-	end:
-		Must be called before retrieving the hash with hex_hash or raw_hash.
-	*/
+	//must be called before loading data
 	void init()
 	{
 		h[0].n = 0x67452301;
@@ -68,6 +71,7 @@ public:
 		load_buffer.clear();
 	}
 
+	//incremental loading of data
 	void load(const char * data, int len)
 	{
 		//update buffer
@@ -84,29 +88,10 @@ public:
 		}
 	}
 
-	void end()
-	{
-		//append trailing 1 bit and size
-		append_tail();
-
-		//process remaining chunks
-		int ready_chunks = load_buffer.size() / 64;
-		for(int x=0; x<ready_chunks; ++x){
-			process(x*64);
-		}
-		//erase processed chunks
-		load_buffer.erase(0,ready_chunks*64);
-
-		//create the final hash by concatenating the h's
-		for(int x=0; x<5; ++x){
-			Hash.raw[x*4+3] = h[x].b[0];
-			Hash.raw[x*4+2] = h[x].b[1];
-			Hash.raw[x*4+1] = h[x].b[2];
-			Hash.raw[x*4+0] = h[x].b[3];
-		}
-	}
-
 private:
+	//holds binary hash
+	std::string raw;
+
 	//used by load()
 	boost::uint64_t loaded_bytes; //total bytes input
 	std::string load_buffer;      //holds data input

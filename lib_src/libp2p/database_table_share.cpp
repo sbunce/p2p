@@ -1,144 +1,124 @@
 #include "database_table_share.hpp"
 
-//BEGIN database::table::share::file_info
-database::table::share::file_info::file_info()
-{
-
-}
-
-database::table::share::file_info::file_info(
-	const ::file_info & FI,
-	const state State_in
-):
-	hash(FI.hash),
-	path(FI.path),
-	file_size(FI.file_size),
-	last_write_time(FI.last_write_time),
-	State(State_in)
-{
-
-}
-//END database::table::share::file_info
-
-void database::table::share::add_entry(const file_info & FI,
+void database::table::share::add(const info & Info,
 	database::pool::proxy DB)
 {
-	char * path_sqlite = sqlite3_mprintf("%q", FI.path.c_str());
 	std::stringstream ss;
-	ss << "INSERT INTO share VALUES('" << FI.hash << "', '"
-		<< path_sqlite << "', '" << FI.file_size << "', '" << FI.last_write_time
-		<< "', " << FI.State << ")";
-	sqlite3_free(path_sqlite);
+	ss << "INSERT INTO share(hash, path, file_size, last_write_time, state) VALUES('"
+		<< Info.hash << "', '" << database::escape(Info.path) << "', '" << Info.file_size
+		<< "', '" << Info.last_write_time << "', " << Info.file_state << ")";
 	DB->query(ss.str());
 }
 
 //this checks to see if any records with specified hash and size exist
-static int delete_entry_call_back_chain_2(boost::reference_wrapper<bool> exists,
-	int columns_retrieved, char ** response, char ** column_name)
+static int remove_call_back_2(bool * exists, int columns_retrieved,
+	char ** response, char ** column_name)
 {
-	exists.get() = true;
+	*exists = true;
 	return 0;
 }
 
+
 //this gets the hash and file size that corresponds to a path
-static int delete_entry_call_back_chain_1(
-	boost::reference_wrapper<std::pair<char *, database::pool::proxy *> > info,
+static int remove_call_back_1(
+	std::pair<std::string &, database::pool::proxy &> * info,
 	int columns_retrieved, char ** response, char ** column_name)
 {
 	assert(columns_retrieved == 1);
+	assert(std::strcmp(column_name[0], "hash") == 0);
 
 	//delete the record
 	std::stringstream ss;
-	ss << "DELETE FROM share WHERE path = '" << info.get().first << "'";
-	(*info.get().second)->query(ss.str());
+	ss << "DELETE FROM share WHERE path = '" << info->first << "'";
+	info->second->query(ss.str());
 
 	//check if any files with hash still exist
 	ss.str(""); ss.clear();
 	ss << "SELECT 1 FROM share WHERE hash = '" << response[0] << "' LIMIT 1";
 	bool exists = false;
-	(*info.get().second)->query(ss.str(), &delete_entry_call_back_chain_2,
-		boost::ref(exists));
+	info->second->query(ss.str(), &remove_call_back_2, &exists);
 	if(!exists){
 		//last file with this hash removed, delete the hash tree
-		database::table::hash::delete_tree(response[0], *info.get().second);
+		ss.str(""); ss.clear();
+		ss << "DELETE FROM hash WHERE hash = '" << response[0] << "'";
+		info->second->query(ss.str());
 	}
 	return 0;
 }
 
-void database::table::share::delete_entry(const std::string & path,
+void database::table::share::remove(const std::string & path,
 	database::pool::proxy DB)
 {
-	char * sqlite3_path = sqlite3_mprintf("%q", path.c_str());
-	std::pair<char *, database::pool::proxy *> info(sqlite3_path, &DB);
+	std::string path_escaped = database::escape(path);
+	std::pair<std::string &, database::pool::proxy &> info(path_escaped, DB);
 	std::stringstream ss;
-	ss << "SELECT hash FROM share WHERE path = '" << sqlite3_path << "' LIMIT 1";
-	DB->query(ss.str(), &delete_entry_call_back_chain_1, boost::ref(info));
-	sqlite3_free(sqlite3_path);
+	ss << "SELECT hash FROM share WHERE path = '" << path_escaped << "' LIMIT 1";
+	DB->query(ss.str(), &remove_call_back_1, &info);
+}
+
+//Note: throws exception if bad data
+static void unmarshal_info(database::table::share::info & Info,
+	int columns_retrieved, char ** response, char ** column_name)
+{
+	assert(columns_retrieved == 5);
+	assert(std::strcmp(column_name[0], "hash") == 0);
+	assert(std::strcmp(column_name[1], "path") == 0);
+	assert(std::strcmp(column_name[2], "file_size") == 0);
+	assert(std::strcmp(column_name[3], "last_write_time") == 0);
+	assert(std::strcmp(column_name[4], "state") == 0);
+
+	Info.hash = response[0];
+	Info.path = response[1];
+	Info.file_size = boost::lexical_cast<boost::uint64_t>(response[2]);
+	Info.last_write_time = boost::lexical_cast<std::time_t>(response[3]);
+	int temp = boost::lexical_cast<int>(response[4]);
+	Info.file_state = reinterpret_cast<database::table::share::state &>(temp);
 }
 
 static int lookup_hash_call_back(
-	boost::reference_wrapper<boost::shared_ptr<database::table::share::file_info> > FI,
+	boost::shared_ptr<database::table::share::info> * Info,
 	int columns_retrieved, char ** response, char ** column_name)
 {
-	assert(columns_retrieved == 3);
-	FI.get() = boost::shared_ptr<database::table::share::file_info>(
-		new database::table::share::file_info());
+	*Info = boost::shared_ptr<database::table::share::info>(
+		new database::table::share::info());
 	try{
-		FI.get()->file_size = boost::lexical_cast<boost::uint64_t>(response[0]);
-		FI.get()->path = response[1];
-		int state = boost::lexical_cast<int>(response[2]);
-		FI.get()->State = reinterpret_cast<database::table::share::state &>(state);
+		unmarshal_info(**Info, columns_retrieved, response, column_name);
 	}catch(const std::exception & e){
 		LOGGER << e.what();
-		FI.get() = boost::shared_ptr<database::table::share::file_info>();
+		*Info = boost::shared_ptr<database::table::share::info>();
 	}
 	return 0;
 }
 
-boost::shared_ptr<database::table::share::file_info> database::table::share::lookup_hash(
+boost::shared_ptr<database::table::share::info> database::table::share::lookup(
 	const std::string & hash, database::pool::proxy DB)
 {
-	boost::shared_ptr<file_info> FI;
 	std::stringstream ss;
-	ss << "SELECT file_size, path, state FROM share WHERE hash = '" << hash << "' LIMIT 1";
-	DB->query(ss.str(), &lookup_hash_call_back, boost::ref(FI));
-	if(FI){
-		FI->hash = hash;
-	}
-	return FI;
+	ss << "SELECT hash, path, file_size, last_write_time, state FROM share WHERE hash = '"
+		<< hash << "' LIMIT 1";
+	boost::shared_ptr<info> Info;
+	DB->query(ss.str(), &lookup_hash_call_back, &Info);
+	return Info;
 }
 
-static int lookup_path_call_back(
-	boost::reference_wrapper<boost::shared_ptr<database::table::share::file_info> > FI,
+static int resume_call_back(std::deque<database::table::share::info> * info_container,
 	int columns_retrieved, char ** response, char ** column_name)
 {
-	assert(columns_retrieved == 3);
-	FI.get() = boost::shared_ptr<database::table::share::file_info>(
-		new database::table::share::file_info());
 	try{
-		FI.get()->hash = response[0];
-		FI.get()->file_size = boost::lexical_cast<boost::uint64_t>(response[1]);
-		int state = boost::lexical_cast<int>(response[2]);
-		FI.get()->State = reinterpret_cast<database::table::share::state &>(state);
+		database::table::share::info Info;
+		unmarshal_info(Info, columns_retrieved, response, column_name);
+		info_container->push_back(Info);
 	}catch(const std::exception & e){
 		LOGGER << e.what();
-		FI.get() = boost::shared_ptr<database::table::share::file_info>();
 	}
 	return 0;
 }
 
-boost::shared_ptr<database::table::share::file_info> database::table::share::lookup_path(
-	const std::string & path, database::pool::proxy DB)
+std::deque<database::table::share::info> database::table::share::resume(
+	database::pool::proxy DB)
 {
-	char * path_sqlite = sqlite3_mprintf("%q", path.c_str());
-	std::stringstream ss;
-	ss << "SELECT hash, file_size, state FROM share WHERE path = '" << path_sqlite
-		<< "' LIMIT 1";
-	sqlite3_free(path_sqlite);
-	boost::shared_ptr<file_info> FI;
-	DB->query(ss.str(), &lookup_path_call_back, boost::ref(FI));
-	if(FI){
-		FI->path = path;
-	}
-	return FI;
+	std::deque<info> info_container;
+	DB->query("SELECT hash, path, file_size, last_write_time, state FROM share",
+		&resume_call_back, &info_container);
+	return info_container;
 }

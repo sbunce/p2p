@@ -85,11 +85,11 @@ unsigned p2p_real::prime_count()
 
 void p2p_real::resume()
 {
-	Share_Scan.block_until_resumed();
+	Share_Scanner.block_until_resumed();
 	Proactor.start();
 
 	//get host_info for all hosts we need to connect to
-	std::set<database::table::host::host_info> all_host;
+	std::set<std::pair<std::string, std::string> > all_host;
 	for(share::slot_iterator iter_cur = share::singleton().begin_slot(),
 		iter_end = share::singleton().end_slot(); iter_cur != iter_end; ++iter_cur)
 	{
@@ -97,10 +97,10 @@ void p2p_real::resume()
 	}
 
 	//connect to all hosts that have files we need
-	for(std::set<database::table::host::host_info>::iterator iter_cur = all_host.begin(),
+	for(std::set<std::pair<std::string, std::string> >::iterator iter_cur = all_host.begin(),
 		iter_end = all_host.end(); iter_cur != iter_end; ++iter_cur)
 	{
-		Proactor.connect(iter_cur->IP, iter_cur->port, network::tcp);
+		Proactor.connect(iter_cur->first, iter_cur->second, network::tcp);
 	}
 }
 

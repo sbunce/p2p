@@ -57,10 +57,7 @@ void test(const unsigned size)
 	database::init::drop_all();
 	database::init::create_all();
 
-	/*
-	Reassemble the hash tree. Exclude 50% of blocks randomly. The excluded blocks
-	are effectively corrupt blocks.
-	*/
+	//random reassemble with 50% corrupt blocks
 	std::srand(42);
 	hash_tree HT_reassemble(FI);
 	for(boost::uint64_t x=0; x<HT.tree_block_count; ++x){

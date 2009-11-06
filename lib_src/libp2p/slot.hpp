@@ -41,7 +41,7 @@ public:
 	*/
 	bool complete();
 	bool has_file(const std::string & IP, const std::string & port);
-	void merge_host(std::set<database::table::host::host_info> & host_in);
+	void merge_host(std::set<std::pair<std::string, std::string> > & host_in);
 
 private:
 	//the ctor will throw an exception if database access fails
@@ -52,6 +52,6 @@ private:
 
 	//all the hosts known to have the file
 	boost::mutex host_mutex;
-	std::set<database::table::host::host_info> host;
+	std::set<std::pair<std::string, std::string> > host;
 };
 #endif

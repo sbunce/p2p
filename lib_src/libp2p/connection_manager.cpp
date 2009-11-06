@@ -10,6 +10,10 @@ connection_manager::connection_manager(
 
 void connection_manager::connect_call_back(network::connection_info & CI)
 {
+/* DEBUG
+If direction is incoming and the IP is already connected we must reject the
+connection because it may be a duplicate.
+*/
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	LOGGER << "connect " << CI.IP << " " << CI.port;
 	std::pair<std::map<int, boost::shared_ptr<connection> >::iterator, bool>
