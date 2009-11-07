@@ -33,7 +33,8 @@ hash_tree::hash_tree(
 		}else{
 			//allocate space to reconstruct hash tree
 			if(database::table::hash_tree::add(hash, tree_size, DB)){
-				database::table::hash_tree::set_state(hash, database::table::hash_tree::downloading, DB);
+				database::table::hash_tree::set_state(hash,
+					database::table::hash_tree::downloading, DB);
 				Info = database::table::hash_tree::lookup(hash, DB);
 				if(Info){
 					const_cast<database::blob &>(Blob) = Info->Blob;

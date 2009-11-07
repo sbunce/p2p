@@ -1,3 +1,41 @@
+/*
+************************** Open: ***********************************************
+ database::connection DB("database");
+
+************************** Query: **********************************************
+The call back must have this signature:
+	int call_back(int columns, char ** response, char ** column_name);
+
+boost::bind can be used to do call backs to member functions:
+	DB.query("SELECT ...", boost::bind(&Obj, &obj::func, _1, _2, _3));
+
+boost::bind can also be used to bind extra parameters to the call back:
+	int call_back(int columns, char ** response, char ** column_name
+		int & extra);
+	DB.query("SELECT ...", boost::bind(&call_back, _1, _2, _3, boost::ref(extra)));
+	Note: boost::ref must be used to pass the reference.
+
+************************** Blobs: **********************************************
+Create table with blob field:
+	DB.query("CREATE TABLE test(blob BLOB)");
+
+Allocate blob of a specified size:
+	boost::int64_t rowid = DB.blob_allocate("INSERT INTO test(blob) VALUES(?)", 1);
+
+Resizing blob is not possible, but you can replace a blob:
+	boost::int64_t rowid = DB.blob_allocate("UPDATE test SET test_blob = ?", 2);
+
+Open a blob:
+	database::blob Blob("test", "test_blob", rowid);
+
+Write blob:
+	const char * write_buff = "ABC";
+	DB.blob_write(Blob, write_buff, 4, 0);
+
+Read blob:
+	char read_buff[4];
+	DB.blob_read(Blob, read_buff, 4, 0);
+*/
 #ifndef H_DATABASE_CONNECTION
 #define H_DATABASE_CONNECTION
 

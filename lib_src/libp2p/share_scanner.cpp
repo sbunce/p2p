@@ -3,13 +3,8 @@
 share_scanner::share_scanner():
 	resumed(false)
 {
-	//start scan_loop worker
+	//this thread spawns workers that hash files when it finishes resume
 	Workers.create_thread(boost::bind(&share_scanner::scan_loop, this));
-
-	//start hash_loop workers
-	for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
-		Workers.create_thread(boost::bind(&share_scanner::hash_loop, this));
-	}
 }
 
 share_scanner::~share_scanner()
@@ -108,6 +103,11 @@ void share_scanner::scan_loop()
 		resume.pop_front();
 	}
 
+	//start workers to hash files
+	for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
+		Workers.create_thread(boost::bind(&share_scanner::hash_loop, this));
+	}
+
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(resumed_mutex);
 	resumed = true;
@@ -177,7 +177,7 @@ void share_scanner::scan_loop()
 			LOGGER << ex.what();
 		}
 
-		//remove missing
+		//remove missing files
 		for(share::const_file_iterator iter_cur = share::singleton().begin_file(),
 			iter_end = share::singleton().end_file(); iter_cur != iter_end; ++iter_cur)
 		{
@@ -187,7 +187,6 @@ void share_scanner::scan_loop()
 			}else{
 				boost::this_thread::sleep(scan_delay);
 			}
-
 			if(!boost::filesystem::exists(iter_cur->path)){
 				share::singleton().erase(iter_cur->path);
 				database::table::share::remove(iter_cur->path);

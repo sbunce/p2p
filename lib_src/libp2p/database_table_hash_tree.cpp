@@ -19,7 +19,6 @@ static int lookup_call_back(int columns, char ** response, char ** column_name,
 	assert(columns == 2);
 	assert(std::strcmp(column_name[0], "key") == 0);
 	assert(std::strcmp(column_name[1], "state") == 0);
-
 	Info = boost::shared_ptr<database::table::hash_tree::info>(
 		new database::table::hash_tree::info());
 	try{

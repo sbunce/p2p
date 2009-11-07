@@ -31,10 +31,12 @@ private:
 	network::proactor & Proactor;
 
 	/*
-	Connection maps the connection_ID to the state associated with the
-	connection. Connection_mutex locks all modification to the container.
+	IP set used to insure connections are unique. Connection maps the
+	connection_ID to the state associated with the connection. Mutex locks all
+	modification of IP and Connection containers.
 	*/
-	boost::mutex Connection_mutex;
+	boost::mutex Mutex;
+	std::set<std::string> IP;
 	std::map<int, boost::shared_ptr<connection> > Connection;
 };
 #endif

@@ -23,9 +23,8 @@ public:
 	is_slot_command:
 		Returns true if specified command is a slot related command.
 	recv:
-		Processes slot related message on front of CI.recv_buf. Returns true and
-		removes the message from the buffer if a complete message was received.
-		Returns false if there was only a partial message in CI.recv_buf.
+		Removes/processes one message on front of CI.recv_buf. Returns false if
+		there is an incomplete message on front of recv_buf.
 		Precondition: !CI.recv_buf.empty() && is_slot_command(CI.recv_buf[0]) = true
 	send:
 		Called by connection every time the send_call_back is called. This may or
@@ -111,9 +110,8 @@ private:
 
 	*/
 
-	/* Send Functions
-	There functions are all named after the commands they send. Refer to the
-	protocol documentation to know what these do.
+	/* Send Functions (named after commands)
+	send_close_slot:
 	*/
 	void send_close_slot(const unsigned char slot_ID);
 	void send_request_slot(const std::string & hash);
