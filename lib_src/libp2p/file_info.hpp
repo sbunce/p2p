@@ -4,7 +4,6 @@
 //include
 #include <boost/cstdint.hpp>
 #include <database_connection.hpp>
-#include <SHA1.hpp>
 
 //standard
 #include <ctime>
@@ -34,9 +33,15 @@ public:
 		last_write_time(FI.last_write_time)
 	{}
 
-	std::string hash;            //hash file is tracked by
-	std::string path;            //full path to file
-	boost::uint64_t file_size;   //size of file (bytes)
-	std::time_t last_write_time; //file modification date
+	std::string hash;
+	std::string path;
+	boost::uint64_t file_size;
+	std::time_t last_write_time;
+
+/* IDEA
+If this is not set then the hash_tree does database access. If it is set we use
+it so no database access needs to be done.
+*/
+	database::blob Blob;
 };
 #endif

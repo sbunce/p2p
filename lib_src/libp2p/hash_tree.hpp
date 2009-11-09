@@ -49,9 +49,13 @@ public:
 		copying   //file may be copying (it is increasing in size)
 	};
 
+	//info provided by file_info
 	const std::string hash;                     //hash the file is tracked by
 	const std::string path;                     //path to file the hash tree is for
 	const boost::uint64_t file_size;            //size of file hash tree is for
+	const database::blob Blob;                  //blob handle for hash tree in database
+
+	//info generated based on file_info
 	const std::deque<boost::uint64_t> row;      //number of hashes in each row
 	const boost::uint64_t tree_block_count;     //hash block count
 	const boost::uint64_t file_hash_offset;     //offset (bytes) to start of file hashes
@@ -118,9 +122,6 @@ public:
 	block_request Block_Request;
 
 private:
-	//blob handle for hash tree
-	const database::blob Blob;
-
 	/*
 	Hashes are checked in order. If a block is missing we can't check blocks past
 	it. The end_of_good value is how far we've been able to hash check.

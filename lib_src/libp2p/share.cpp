@@ -25,13 +25,10 @@ bool share::const_file_iterator::operator == (
 	const share::const_file_iterator & rval) const
 {
 	if(Share == NULL && rval.Share == NULL){
-		//both are end iterators
 		return true;
 	}else if(Share == NULL || rval.Share == NULL){
-		//only one is end iterator
 		return false;
 	}else{
-		//neither is end iterator, compare paths
 		return FI.path == rval.FI.path;
 	}
 }
@@ -100,13 +97,10 @@ bool share::slot_iterator::operator == (
 	const share::slot_iterator & rval) const
 {
 	if(Share == NULL && rval.Share == NULL){
-		//both are end iterators
 		return true;
 	}else if(Share == NULL || rval.Share == NULL){
-		//only one is end iterator
 		return false;
 	}else{
-		//neither is end iterator, compare hashes
 		return Slot->Hash_Tree.hash == rval.Slot->Hash_Tree.hash;
 	}
 }
@@ -153,12 +147,11 @@ boost::shared_ptr<slot> share::slot_iterator::get()
 {
 	return Slot;
 }
-
 //END share::slot_iterator
 
 share::share():
-	total_bytes(0),
-	total_files(0),
+	_bytes(0),
+	_files(0),
 	slot_state(0)
 {
 
@@ -177,6 +170,7 @@ share::const_file_iterator share::begin_file()
 share::slot_iterator share::begin_slot()
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	remove_unused_slots();
 	if(Slot.empty()){
 		return slot_iterator();
 	}else{
@@ -186,7 +180,7 @@ share::slot_iterator share::begin_slot()
 
 boost::uint64_t share::bytes()
 {
-	return total_bytes;
+	return _bytes;
 }
 
 share::const_file_iterator share::end_file()
@@ -202,141 +196,37 @@ share::slot_iterator share::end_slot()
 void share::erase(const std::string & path)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-
-	//locate Path element
 	std::map<std::string, boost::shared_ptr<file_info> >::iterator
 		Path_iter = Path.find(path);
 	if(Path_iter != Path.end()){
 		if(!Path_iter->second->hash.empty()){
-			total_bytes -= Path_iter->second->file_size;
-			--total_files;
+			_bytes -= Path_iter->second->file_size;
+			--_files;
 		}
-
-		/*
-		Locate Hash element. The loop is necessary because there can be multiple
-		files with the same hash.
-		*/
 		std::pair<std::multimap<std::string, boost::shared_ptr<file_info> >::iterator,
 			std::multimap<std::string, boost::shared_ptr<file_info> >::iterator>
 			Hash_iter_pair = Hash.equal_range(Path_iter->second->hash);
 		for(; Hash_iter_pair.first != Hash_iter_pair.second; ++Hash_iter_pair.first){
 			if(Hash_iter_pair.first->second == Path_iter->second){
-				//found element in Hash container for this file, erase it
 				Hash.erase(Hash_iter_pair.first);
 				break;
 			}
 		}
-
-		//erase the Path element
 		Path.erase(Path_iter);
 	}
 }
 
+void share::erase(const_file_iterator CFI)
+{
+	erase(CFI->path);
+}
+
 boost::uint64_t share::files()
 {
-	return total_files;
+	return _files;
 }
 
-boost::shared_ptr<slot> share::get_slot(const std::string & hash,
-	database::pool::proxy DB)
-{
-	//block multiple threads from creating the same slot concurrently
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(get_slot_memoize_mutex);
-	while(get_slot_memoize.find(hash) != get_slot_memoize.end()){
-		get_slot_memoize_cond.wait(get_slot_memoize_mutex);
-	}
-	get_slot_memoize.insert(hash);
-	}//end lock scope
-
-	//holds file_info if found
-	file_info FI;
-
-	{//begin lock scope
-	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	//check for existing slot
-	std::map<std::string, boost::shared_ptr<slot> >::iterator Slot_iter = Slot.find(hash);
-	if(Slot_iter != Slot.end()){
-		//existing slot found
-		get_slot_memoize_cond.notify_all();
-		return Slot_iter->second;
-	}
-
-	//no slot yet exists, see if file with hash exists
-	std::multimap<std::string, boost::shared_ptr<file_info> >::iterator
-		Hash_iter = Hash.find(hash);
-	if(Hash_iter == Hash.end()){
-		//no file with hash exists, cannot create slot
-		get_slot_memoize_cond.notify_all();
-		return boost::shared_ptr<slot>();
-	}else{
-		FI = *Hash_iter->second;
-	}
-	}//end lock scope
-
-	/*
-	Construct slot without a lock. There is no chance we will concurrently
-	construct the same slot twice because of the memoization.
-	*/
-	boost::shared_ptr<slot> new_slot;
-	try{
-		new_slot = boost::shared_ptr<slot>(new slot(FI, DB));
-	}catch(std::exception & ex){
-		LOGGER << ex.what();
-		get_slot_memoize_cond.notify_all();
-		return boost::shared_ptr<slot>();
-	}
-
-	//insert and return the created slot
-	{//begin lock scope
-	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	std::pair<std::map<std::string, boost::shared_ptr<slot> >::iterator, bool>
-		ret = Slot.insert(std::make_pair(hash, new_slot));
-	++slot_state;
-	get_slot_memoize_cond.notify_all();
-	return ret.first->second;
-	}//end lock scope
-}
-
-void share::insert_update(const file_info & FI)
-{
-	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-
-	//check if there is an existing element
-	std::map<std::string, boost::shared_ptr<file_info> >::iterator
-		Path_iter = Path.find(FI.path);
-	if(Path_iter != Path.end()){
-		//previous element found, erase it
-		erase(Path_iter->second->path);
-	}
-
-	std::multimap<std::string, boost::shared_ptr<file_info> >::iterator
-		Hash_iter = Hash.insert(std::make_pair(FI.hash,
-		boost::shared_ptr<file_info>(new file_info(FI))));
-	std::pair<std::map<std::string, boost::shared_ptr<file_info> >::iterator,
-		bool> ret = Path.insert(std::make_pair(FI.path, Hash_iter->second));
-	assert(ret.second);
-
-	if(!FI.hash.empty()){
-		total_bytes += FI.file_size;
-		++total_files;
-	}
-}
-
-bool share::is_downloading(const std::string & path)
-{
-	const_file_iterator CFI = lookup_path(path);
-	if(CFI == end_file()){
-		return false;
-	}else{
-		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-		std::map<std::string, boost::shared_ptr<slot> >::iterator
-			slot_iter = Slot.find(CFI->hash);
-		return slot_iter != Slot.end();
-	}
-}
-
-share::const_file_iterator share::lookup_hash(const std::string & hash)
+share::const_file_iterator share::find_hash(const std::string & hash)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	std::multimap<std::string, boost::shared_ptr<file_info> >::iterator
@@ -348,7 +238,7 @@ share::const_file_iterator share::lookup_hash(const std::string & hash)
 	}
 }
 
-share::const_file_iterator share::lookup_path(const std::string & path)
+share::const_file_iterator share::find_path(const std::string & path)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	std::map<std::string, boost::shared_ptr<file_info> >::iterator
@@ -357,6 +247,74 @@ share::const_file_iterator share::lookup_path(const std::string & path)
 		return end_file();
 	}else{
 		return const_file_iterator(this, file_info(*iter->second));
+	}
+}
+
+share::slot_iterator share::find_slot(const std::string & hash)
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+
+	//return existing slot if it exists
+	std::map<std::string, boost::shared_ptr<slot> >::iterator
+		Slot_iter = Slot.find(hash);
+	if(Slot_iter != Slot.end()){
+		return slot_iterator(this, Slot_iter->second);
+	}
+
+	//get file_info to create new slot, if it exists
+	std::multimap<std::string, boost::shared_ptr<file_info> >::iterator
+		Hash_iter = Hash.find(hash);
+	if(Hash_iter == Hash.end()){
+		return end_slot();
+	}
+
+	//create slot
+	boost::shared_ptr<slot> new_slot;
+	try{
+		new_slot = boost::shared_ptr<slot>(new slot(*Hash_iter->second));
+		//save blob info so next time slot opened database access is avoided
+		Hash_iter->second->Blob = new_slot->Hash_Tree.Blob;
+	}catch(std::exception & ex){
+		LOGGER << ex.what();
+		return end_slot();
+	}
+	std::pair<std::map<std::string, boost::shared_ptr<slot> >::iterator, bool>
+		ret = Slot.insert(std::make_pair(hash, new_slot));
+	++slot_state;
+	return slot_iterator(this, ret.first->second);
+}
+
+std::pair<share::const_file_iterator, bool> share::insert(const file_info & FI)
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	const_file_iterator CFI = find_path(FI.path);
+	if(CFI == end_file()){
+		//insert new element
+		std::multimap<std::string, boost::shared_ptr<file_info> >::iterator
+			Hash_iter = Hash.insert(std::make_pair(FI.hash,
+			boost::shared_ptr<file_info>(new file_info(FI))));
+		std::pair<std::map<std::string, boost::shared_ptr<file_info> >::iterator,
+			bool> ret = Path.insert(std::make_pair(FI.path, Hash_iter->second));
+		assert(ret.second);
+		_bytes += FI.file_size;
+		++_files;
+		return std::make_pair(const_file_iterator(this, FI), true);
+	}else{
+		//existing element found
+		return std::make_pair(CFI, false);
+	}
+}
+
+bool share::is_downloading(const std::string & path)
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	const_file_iterator CFI = find_path(path);
+	if(CFI == end_file()){
+		return false;
+	}else{
+		std::map<std::string, boost::shared_ptr<slot> >::iterator
+			slot_iter = Slot.find(CFI->hash);
+		return slot_iter != Slot.end() && !slot_iter->second->complete();
 	}
 }
 
@@ -387,7 +345,6 @@ boost::shared_ptr<slot> share::next_slot(const std::string & hash)
 
 void share::remove_unused_slots()
 {
-	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	std::map<std::string, boost::shared_ptr<slot> >::iterator iter_cur = Slot.begin(),
 		iter_end = Slot.end();
 	while(iter_cur != iter_end){

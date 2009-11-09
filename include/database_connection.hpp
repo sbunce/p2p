@@ -62,9 +62,9 @@ static std::string escape(const std::string & str)
 class blob
 {
 public:
-	//a read or write to a blob constructed with this will fail
+	//construct invalid blob
 	blob():
-		rowid(0) //indicates blob is invalid
+		rowid(0)
 	{}
 
 	blob(
@@ -84,9 +84,7 @@ public:
 
 	std::string table;
 	std::string column;
-
-	//primary key of row (starts at 1)
-	boost::int64_t rowid;
+	boost::int64_t rowid; //0 if invalid
 };
 
 class connection : private boost::noncopyable

@@ -7,6 +7,7 @@ hash_tree::hash_tree(
 	hash(FI.hash),
 	path(FI.path),
 	file_size(FI.file_size),
+	Blob(FI.Blob),
 	row(file_size_to_row(file_size)),
 	tree_block_count(row_to_tree_block_count(row)),
 	file_hash_offset(row_to_file_hash_offset(row)),
@@ -24,25 +25,29 @@ hash_tree::hash_tree(
 	Block_Request(hash.empty() ? 0 : tree_block_count),
 	end_of_good(0)
 {
-	if(!hash.empty()){
-		boost::shared_ptr<database::table::hash_tree::info>
-			Info = database::table::hash_tree::lookup(hash, DB);
-		if(Info){
+	//go to database if valid blob not provided
+	if(Blob.rowid == 0){
+		boost::shared_ptr<database::table::hash_tree::info> info;
+		//if no hash, then no need to check because hash tree will be created
+		if(!hash.empty()){
+			info = database::table::hash_tree::lookup(hash, DB);
+		}
+		if(info){
 			//opened existing hash tree
-			const_cast<database::blob &>(Blob) = Info->Blob;
+			const_cast<database::blob &>(Blob) = info->Blob;
 		}else{
 			//allocate space to reconstruct hash tree
 			if(database::table::hash_tree::add(hash, tree_size, DB)){
 				database::table::hash_tree::set_state(hash,
 					database::table::hash_tree::downloading, DB);
-				Info = database::table::hash_tree::lookup(hash, DB);
-				if(Info){
-					const_cast<database::blob &>(Blob) = Info->Blob;
+				info = database::table::hash_tree::lookup(hash, DB);
+				if(info){
+					const_cast<database::blob &>(Blob) = info->Blob;
 				}else{
-					throw std::runtime_error("failed to open hash tree");
+					throw std::runtime_error("failed hash tree open");
 				}
 			}else{
-				throw std::runtime_error("failed to allocate blob for hash tree");
+				throw std::runtime_error("failed hash tree allocate");
 			}
 		}
 	}

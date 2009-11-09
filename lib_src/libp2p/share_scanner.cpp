@@ -64,7 +64,7 @@ void share_scanner::hash_loop()
 		hash_tree::status Status = HT.create();
 		FI.hash = HT.hash;
 		if(Status == hash_tree::good){
-			share::singleton().insert_update(FI);
+			share::singleton().insert(FI);
 			database::table::share::add(database::table::share::info(FI,
 				database::table::share::complete));
 			database::table::hash_tree::set_state(FI.hash,
@@ -96,9 +96,10 @@ void share_scanner::scan_loop()
 	while(!resume.empty()){
 		file_info FI(resume.front().hash, resume.front().path, resume.front().file_size,
 			resume.front().last_write_time);
-		share::singleton().insert_update(FI);
+		share::singleton().insert(FI);
 		if(resume.front().file_state == database::table::share::downloading){
-			share::singleton().get_slot(FI.hash);
+			//this triggers share to create the slot
+			share::singleton().find_slot(FI.hash);
 		}
 		resume.pop_front();
 	}
@@ -154,19 +155,15 @@ void share_scanner::scan_loop()
 						std::string path = iter_cur->path().string();
 						boost::uint64_t file_size = boost::filesystem::file_size(path);
 						std::time_t last_write_time = boost::filesystem::last_write_time(iter_cur->path());
-						share::const_file_iterator share_iter = share::singleton().lookup_path(path);
+						share::const_file_iterator share_iter = share::singleton().find_path(path);
 						if(share_iter == share::singleton().end_file()
 							|| (!share::singleton().is_downloading(path) && (share_iter->file_size != file_size
 							|| share_iter->last_write_time != last_write_time)))
 						{
 							//new file, or modified file
-							file_info FI("", path, file_size, last_write_time);
-							share::singleton().insert_update(FI);
-							{//begin lock scope
 							boost::mutex::scoped_lock lock(job_queue_mutex);
-							job_queue.push_back(FI);
+							job_queue.push_back(file_info("", path, file_size, last_write_time));
 							job_queue_cond.notify_one();
-							}//end lock scope
 							skip_sleep = true;
 						}
 					}

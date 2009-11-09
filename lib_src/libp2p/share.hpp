@@ -51,9 +51,7 @@ public:
 		file_info FI;
 	};
 
-	/*
-	Modifications to share don't invalidate this iterator.
-	*/
+	//modifications to share don't invalidate this iterator
 	class slot_iterator : public std::iterator<std::input_iterator_tag, slot>
 	{
 		friend class share;
@@ -67,7 +65,7 @@ public:
 		slot_iterator & operator ++ ();
 		slot_iterator operator ++ (int);
 
-		//returns the wrappers shared_ptr
+		//returns the shared_ptr the iterator wraps
 		boost::shared_ptr<slot> get();
 	private:
 		slot_iterator(
@@ -84,9 +82,7 @@ public:
 	end_file:
 		Returns iterator to end of files.
 	erase:
-		Remove file with specified path.
-		Note: The path is the only way to erase because it's guaranteed to be
-			unique.
+		Remove file by path or iterator.
 	insert_update:
 		Insert or update file if a file already exists with the same path.
 	lookup_hash:
@@ -97,46 +93,35 @@ public:
 	const_file_iterator begin_file();
 	const_file_iterator end_file();
 	void erase(const std::string & path);
-	void insert_update(const file_info & FI);
-	const_file_iterator lookup_hash(const std::string & hash);
-	const_file_iterator lookup_path(const std::string & path);
+	void erase(const_file_iterator CFI);
+	std::pair<const_file_iterator, bool> insert(const file_info & FI);
+	const_file_iterator find_hash(const std::string & hash);
+	const_file_iterator find_path(const std::string & path);
 
 	/* Slot Related
 	begin_slot:
 		Returns iterator to beginning of slots.
 	end_slot:
 		Returns iterator to end of slots.
-	get_slot:
-		Returns a slot for a file with specified hash. If the slot doesn't exist
-		it will be created and then returned. An empty shared_ptr will be returned
-		if a file with the specified hash doesn't exist. The same object will be
-		returned for multiple calls with the same hash.
-		Note: This function does database access.
+	find_slot:
+		Returns slot_iterator for specified hash. Returns end iterator if file
+		with specified hash not in share.
 	is_downloading:
-		Returns true if the file is downloading. This function is used by the
-		share scanner so it can know not to hash files which are downloading.
+		Returns true if slot exists and it's incomplete. This function is used by
+		the share scanner so it can know not to hash downloading files even though
+		their size and modification dates are changing.
 	slot_modified:
-		Used to check if there has been changes to the slots contained within
-		share. Possible changes are: slot removed, slot added, host added to slot.
-		This function works by comparing the last state seen to the current
-		slot_state. The slot_state is just an integer that is incremented whenever
-		a change is made.
+		Returns true if last_seen_state doesn't match the current state. The state
+		is an integer internal to the share which gets incremented whenever a slot
+		is added or removed.
 		Note: To return true upon the first call last_seen_state must be set != 0.
-		Note: Removing unused slots does not effect the state because no one would
-			care if those slots went missing.
 		Postcondition: last_seen_state = slot_state.
-	remove_unused_slots:
-		If the shared_ptr for a slot is unique and the slot it points to is
-		complete then it will be removed. This is called when slots are removed
-		from connections.
 	*/
 	slot_iterator begin_slot();
 	slot_iterator end_slot();
-	boost::shared_ptr<slot> get_slot(const std::string & hash,
-		database::pool::proxy DB = database::pool::proxy());
+	slot_iterator find_slot(const std::string & hash);
 	bool is_downloading(const std::string & path);
 	bool slot_modified(int & last_state_seen);
-	void remove_unused_slots();
 
 	/* Info
 	bytes:
@@ -170,26 +155,18 @@ private:
 	std::map<std::string, boost::shared_ptr<slot> > Slot;
 
 	/*
-	total_bytes:
+	_bytes:
 		The sum of the size of all files in share_info.
-	total_files:
+	_files:
 		The number of hashed file in share.
 	Note: Files with a empty hash don't count toward either of these totals.
 		Files without a hash have not finished hashing and aren't shared.
 	*/
-	atomic_int<boost::uint64_t> total_bytes;
-	atomic_int<boost::uint64_t> total_files;
+	atomic_int<boost::uint64_t> _bytes;
+	atomic_int<boost::uint64_t> _files;
 
 	//see documentation for slot_modified
 	atomic_int<int> slot_state;
-
-	/*
-	Used by get_slot() to stop two threads from creating identical slots at the
-	same time.
-	*/
-	boost::mutex get_slot_memoize_mutex;
-	boost::condition_variable_any get_slot_memoize_cond;
-	std::set<std::string> get_slot_memoize;
 
 	/*
 	next_file_info:
@@ -200,8 +177,12 @@ private:
 		Uses the specified hash for std::map::upper_bound(). Returns the slot with
 		the next greatest hash or an empty shared_ptr if no more slots. This is
 		used to implement slot_iterator increment.
+	remove_unused_slots:
+		If the shared_ptr for a slot is unique and the slot it points to is
+		complete then it will be removed. This is called by begin_slot().
 	*/
 	boost::shared_ptr<const file_info> next_file_info(const std::string & path);
 	boost::shared_ptr<slot> next_slot(const std::string & hash);
+	void remove_unused_slots();
 };
 #endif

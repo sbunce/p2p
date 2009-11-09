@@ -206,5 +206,4 @@ void slot_manager::sync_slots()
 			Known_Slot.insert(iter_cur.get());
 		}
 	}
-	share::singleton().remove_unused_slots();
 }
