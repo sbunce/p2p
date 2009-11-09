@@ -184,7 +184,7 @@ void share_scanner::scan_loop()
 			}else{
 				boost::this_thread::sleep(scan_delay);
 			}
-			if(!boost::filesystem::exists(iter_cur->path)){
+			if(!boost::filesystem::exists(iter_cur->path.get())){
 				share::singleton().erase(iter_cur->path);
 				database::table::share::remove(iter_cur->path);
 				skip_sleep = true;

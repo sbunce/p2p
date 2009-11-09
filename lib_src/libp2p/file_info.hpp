@@ -3,6 +3,7 @@
 
 //include
 #include <boost/cstdint.hpp>
+#include <boost/flyweight.hpp>
 #include <database_connection.hpp>
 
 //standard
@@ -33,15 +34,10 @@ public:
 		last_write_time(FI.last_write_time)
 	{}
 
-	std::string hash;
-	std::string path;
+	boost::flyweights::flyweight<std::string> hash;
+	boost::flyweights::flyweight<std::string> path;
 	boost::uint64_t file_size;
 	std::time_t last_write_time;
-
-/* IDEA
-If this is not set then the hash_tree does database access. If it is set we use
-it so no database access needs to be done.
-*/
 	database::blob Blob;
 };
 #endif

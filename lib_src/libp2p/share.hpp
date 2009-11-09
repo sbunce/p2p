@@ -9,6 +9,7 @@
 //include
 #include <atomic_int.hpp>
 #include <boost/cstdint.hpp>
+#include <boost/flyweight.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
@@ -24,6 +25,7 @@ class share : public singleton_base<share>
 {
 	friend class singleton_base<share>;
 public:
+	typedef boost::flyweights::flyweight<std::string> flyweight_string;
 
 	/*
 	Modifications to share don't invalidate this iterator.
@@ -114,7 +116,7 @@ public:
 		Returns true if last_seen_state doesn't match the current state. The state
 		is an integer internal to the share which gets incremented whenever a slot
 		is added or removed.
-		Note: To return true upon the first call last_seen_state must be set != 0.
+		Note: To return true upon the first call last_seen_state must be set to -1.
 		Postcondition: last_seen_state = slot_state.
 	*/
 	slot_iterator begin_slot();
@@ -150,9 +152,9 @@ private:
 		we don't want more than one slot per hash.
 	*/
 	boost::recursive_mutex Recursive_Mutex;
-	std::multimap<std::string, boost::shared_ptr<file_info> > Hash;
-	std::map<std::string, boost::shared_ptr<file_info> > Path;
-	std::map<std::string, boost::shared_ptr<slot> > Slot;
+	std::multimap<flyweight_string, boost::shared_ptr<file_info> > Hash;
+	std::map<flyweight_string, boost::shared_ptr<file_info> > Path;
+	std::map<flyweight_string, boost::shared_ptr<slot> > Slot;
 
 	/*
 	_bytes:

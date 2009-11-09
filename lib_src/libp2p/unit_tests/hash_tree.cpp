@@ -14,7 +14,8 @@
 //create test files to hash if they don't already exist
 void create_test_file(const file_info & FI)
 {
-	std::fstream fout(FI.path.c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
+	std::fstream fout(FI.path.get().c_str(), std::ios::out | std::ios::binary
+		| std::ios::trunc);
 	std::srand(42);
 	for(boost::uint64_t x=0; x<FI.file_size; ++x){
 		char ch = (char)std::rand() % 255;

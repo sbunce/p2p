@@ -85,6 +85,7 @@ void slot_manager::send_file_removed()
 	Send_Queue.push_back(M);
 }
 
+//DEBUG, pair request and response in to one function
 void slot_manager::send_slot_ID(std::pair<unsigned char, boost::shared_ptr<slot> > & P)
 {
 	boost::shared_ptr<message> M(new message());
