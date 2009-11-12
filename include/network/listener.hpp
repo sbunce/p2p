@@ -50,8 +50,7 @@ public:
 			_error = errno;
 			return boost::shared_ptr<nstream>();
 		}
-		E = boost::shared_ptr<endpoint>(new endpoint(&ai));
-		boost::shared_ptr<nstream> N(new nstream(new_socket, *E));
+		boost::shared_ptr<nstream> N(new nstream(new_socket));
 		return N;
 	}
 

@@ -289,12 +289,11 @@ Description: Hash tree complete, file complete.
 Base10: 1
 Description: Hash tree complete, file incomplete.
 
-Note: The possibility of the hash tree being incomplete and the file being
-complete is excluded because if someone has the file they will have the hash
-tree.
+Base10: 2
+Description: Hash tree incomplete, file complete.
 
 Base10: 3
-Description: Hash tree incomplete, file has no blocks.
+Description: Hash tree incomplete, file incomplete.
 
 Note:
 SUBSCRIBE_HASH_TREE_CHANGES and SUBSCRIBE_FILE_CHANGES can be used to get bit
@@ -309,7 +308,7 @@ blocks.
 <pre>
 Name: SUBSCRIBE_HASH_TREE_CHANGES
 Base10: 7
-Description: 
+Description: Request BIT_FIELD representing what hash tree blocks the host has.
 
 +---+---+
 | C | S |
@@ -320,6 +319,7 @@ C = command, S = slot ID
 
 Possible Responses:
 BIT_FIELD
+BIT_FIELD_COMPLETE
 FILE_REMOVED
 </pre>
 </fieldset>
@@ -330,7 +330,7 @@ FILE_REMOVED
 <pre>
 Name: SUBSCRIBE_FILE_CHANGES
 Base10: 8
-Description: 
+Description: Request BIT_FIELD representing what file blocks the host has.
 
 +---+---+
 | C | S |
@@ -341,6 +341,7 @@ C = command, S = slot ID
 
 Possible Responses:
 BIT_FIELD
+BIT_FIELD_COMPLETE
 FILE_REMOVED
 </pre>
 </fieldset>
@@ -365,6 +366,24 @@ block that the host has, a 1 bit represents a block that the host needs.
 C = command, B = bit field
 
 Note: The file size must be known to calculate how long the bit field will be.
+</pre>
+</fieldset>
+
+<br>
+
+<fieldset>
+<pre>
+Name: BIT_FIELD_COMPLETE
+Base10: 9
+Description: Sent in response to SUBSCRIBE_HASH_TREE_CHANGES when hash tree
+complete. Sent in response to SUBSCRIBE_FILE_CHANGES when file complete.
+
++---+
+| C |
++---+
+  0
+
+C = command
 </pre>
 </fieldset>
 

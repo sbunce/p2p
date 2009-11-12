@@ -5,7 +5,7 @@ connection::connection(
 	network::connection_info & CI
 ):
 	Proactor(Proactor_in),
-	Slot_Manager(CI),
+	Slot_Manager(Proactor_in, CI),
 	blacklist_state(0)
 {
 	if(database::table::blacklist::is_blacklisted(CI.IP)){
@@ -114,7 +114,7 @@ void connection::send_call_back(network::connection_info & CI)
 	//DEBUG, END TEST CODE
 */
 
-	Slot_Manager.send(send_buf);
+	//Slot_Manager.send(send_buf);
 
 	//encrypt what was appended to send_buff
 	if(!send_buf.empty()){

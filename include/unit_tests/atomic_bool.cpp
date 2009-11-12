@@ -5,26 +5,22 @@
 //standard
 #include <sstream>
 
+int fail(0);
+
 void assignment()
 {
-	atomic_bool x, y;
-
-	//=
-	x = false; y = true;
-	x = y;
+	atomic_bool x = false;
+	x = true;
 	if(x != true){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 }
 
-void conditional()
+void emulate()
 {
-	atomic_bool x;
-
-	//()
-	x = false;
+	atomic_bool x = false;
 	if(x){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 }
 
@@ -34,18 +30,18 @@ void stream()
 	std::stringstream ss;
 	ss << x;
 	if(ss.str() != "0"){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
-
 	ss >> x;
 	if(x){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 }
 
 int main()
 {
 	assignment();
-	conditional();
+	function_call();
 	stream();
+	return fail;
 }

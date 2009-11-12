@@ -14,10 +14,14 @@
 //standard
 #include <vector>
 
+/* DEBUG
+Add reference to proactor in this class so it can send directly in response to
+received messages.
+*/
 class slot_manager : private boost::noncopyable
 {
 public:
-	slot_manager(network::connection_info & CI);
+	slot_manager(network::proactor & Proactor_in, network::connection_info & CI);
 
 	/*
 	is_slot_command:
@@ -26,15 +30,12 @@ public:
 		Removes/processes one message on front of CI.recv_buf. Returns false if
 		there is an incomplete message on front of recv_buf.
 		Precondition: !CI.recv_buf.empty() && is_slot_command(CI.recv_buf[0]) = true
-	send:
-		Called by connection every time the send_call_back is called. This may or
-		may not append data to send_buf.
 	*/
 	static bool is_slot_command(const unsigned char command);
 	bool recv(network::connection_info & CI);
-	void send(network::buffer & send_buf);
 
 private:
+	network::proactor & Proactor;
 	const int connection_ID;
 	const std::string IP;
 	const std::string port;
@@ -43,13 +44,10 @@ private:
 	int share_slot_state;
 
 	/*
-	The slot ID mapped to a slot. The Outgoing_Slot container holds slots we have
-	opened with the remote host. The Incoming_Slot container holds slots the
-	remote host has opened with us.
-
-	If the Incoming_Slot container has an empty shared_ptr it means the slot was
-	closed and we should return FILE_REMOVED for any requests until we get a
-	CLOSE_SLOT at which point we can remove the Incoming_Slot element.
+	Outgoing_Slot holds slots we have opened with the remote host.
+	Incoming_Slot container holds slots the remote host has opened with us.
+	Note: Index in vector is slot ID.
+	Note: If there is an empty shared_ptr it means the slot ID is available.
 	*/
 	std::map<unsigned char, boost::shared_ptr<slot> > Outgoing_Slot;
 	std::map<unsigned char, boost::shared_ptr<slot> > Incoming_Slot;
@@ -71,11 +69,11 @@ private:
 	*/
 	std::set<boost::shared_ptr<slot> > Known_Slot;
 
-	//when a message needs to be sent it is inserted in to the Send_Queue
+	//messages that expect a response
 	class message
 	{
 	public:
-		//slot which expects response, empty if no response expected
+		//slot which expects response, empty if response should be ignored
 		boost::shared_ptr<slot> Slot;
 
 		/*
@@ -109,15 +107,18 @@ private:
 	/* Receive Functions
 
 	*/
+	bool recv_request_slot(network::connection_info & CI);
 
 	/* Send Functions (named after commands)
 	send_close_slot:
 	*/
+
 	void send_close_slot(const unsigned char slot_ID);
+/*
 	void send_request_slot(const std::string & hash);
 	void send_request_slot_failed();
 	void send_request_block(std::pair<unsigned char, boost::shared_ptr<slot> > & P);
 	void send_file_removed();
-	void send_slot_ID(std::pair<unsigned char, boost::shared_ptr<slot> > & P);
+*/
 };
 #endif

@@ -19,6 +19,10 @@ int main()
 	if(!N.is_open()){
 		LOGGER << N.error(); exit(1);
 	}
+	LOGGER << "local IP:    " << N.local_IP();
+	LOGGER << "local port:  " << N.local_port();
+	LOGGER << "remote IP:   " << N.remote_IP();
+	LOGGER << "remote port: " << N.remote_port();
 	network::buffer B(
 		"GET / HTTP/1.1\r\n"
 		"Connection: close\r\n\r\n"
@@ -28,8 +32,5 @@ int main()
 		LOGGER << N.error(); exit(1);
 	}
 	while(N.recv(B) > 0);
-	if(!N.is_open()){
-		LOGGER << N.error(); exit(1);
-	}
-	std::cout << "recv buff size: " << B.size() << "\n";
+	LOGGER << "recv buff size: " << B.size();
 }

@@ -40,8 +40,8 @@ public:
 
 	const int connection_ID; //unique identifier for connection
 	const std::string host;  //unresolved host name
-	const std::string IP;    //resolved host name
-	const std::string port;  //port on remote host
+	const std::string IP;    //remote IP
+	const std::string port;  //remote port
 	const sock_type type;
 	const dir direction;
 

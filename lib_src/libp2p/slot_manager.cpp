@@ -1,6 +1,10 @@
 #include "slot_manager.hpp"
 
-slot_manager::slot_manager(network::connection_info & CI):
+slot_manager::slot_manager(
+	network::proactor & Proactor_in,
+	network::connection_info & CI
+):
+	Proactor(Proactor_in),
 	connection_ID(CI.connection_ID),
 	IP(CI.IP),
 	port(CI.port),
@@ -14,15 +18,75 @@ bool slot_manager::is_slot_command(const unsigned char command)
 	return command <= 12;
 }
 
-bool slot_manager::recv(network::connection_info & CI)
+bool slot_manager::slot_manager::recv(network::connection_info & CI)
 {
 	assert(!CI.recv_buf.empty() && is_slot_command(CI.recv_buf[0]));
-
+	while(true){
+		if(CI.recv_buf[0] == protocol::REQUEST_SLOT
+			&& CI.recv_buf.size() >= protocol::REQUEST_SLOT_SIZE)
+		{
+			if(!recv_request_slot(CI)){
+				database::table::blacklist::add(CI.IP);
+				break;
+			}
+			CI.recv_buf.erase(0, protocol::REQUEST_SLOT_SIZE);
+		}else{
+			break;
+		}
+	}
 }
 
-void slot_manager::send(network::buffer & send_buf)
+bool slot_manager::recv_request_slot(network::connection_info & CI)
 {
-	
+	if(Incoming_Slot.size() > 256){
+		LOGGER << "exceeded max slots, " << CI.IP << " " << CI.port;
+		return false;
+	}
+
+	//get slot
+	std::string hash = convert::bin_to_hex(std::string(
+		reinterpret_cast<const char *>(CI.recv_buf.data()), SHA1::bin_size));
+	share::slot_iterator slot_iter = share::singleton().find_slot(hash);
+	if(slot_iter == share::singleton().end_slot()){
+		network::buffer send_buf;
+		send_buf.append(protocol::REQUEST_SLOT_FAILED);
+		Proactor.write(CI.connection_ID, send_buf);
+		return true;
+	}
+
+	//find available slot ID
+	unsigned slot_ID = 0;
+	for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
+		iter_cur = Incoming_Slot.begin(), iter_end = Incoming_Slot.end();
+		iter_cur != iter_end; ++iter_cur)
+	{
+		if(iter_cur->first != slot_ID){
+			break;
+		}
+		++slot_ID;
+	}
+
+	unsigned status;
+	if(slot_iter->Hash_Tree.complete() && slot_iter->File.complete()){
+		status = 0;
+	}else if(slot_iter->Hash_Tree.complete() && !slot_iter->File.complete()){
+		status = 1;
+	}else if(!slot_iter->Hash_Tree.complete() && slot_iter->File.complete()){
+		status = 2;
+	}else if(!slot_iter->Hash_Tree.complete() && !slot_iter->File.complete()){
+		status = 3;
+	}
+/*
+	//send slot ID
+	network::buffer send_buf;
+	send_buf
+		.append(protocol::SLOT_ID)
+		.append(reinterpret_cast<unsigned char>(slot_ID))
+		.append(
+
+	Send_Queue.push_back(M);
+*/
+	return true;
 }
 
 void slot_manager::send_close_slot(const unsigned char slot_ID)
@@ -31,7 +95,7 @@ void slot_manager::send_close_slot(const unsigned char slot_ID)
 	M->send_buf.append(protocol::CLOSE_SLOT).append(slot_ID);
 	Send_Queue.push_back(M);
 }
-
+/*
 void slot_manager::send_request_slot(const std::string & hash)
 {
 	boost::shared_ptr<message> M(new message());
@@ -84,17 +148,7 @@ void slot_manager::send_file_removed()
 	M->send_buf.append(protocol::FILE_REMOVED);
 	Send_Queue.push_back(M);
 }
-
-//DEBUG, pair request and response in to one function
-void slot_manager::send_slot_ID(std::pair<unsigned char, boost::shared_ptr<slot> > & P)
-{
-	boost::shared_ptr<message> M(new message());
-
-///////////////
-
-
-	Send_Queue.push_back(M);
-}
+*/
 
 void slot_manager::sync_slots()
 {

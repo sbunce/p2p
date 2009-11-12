@@ -1,5 +1,6 @@
 #site_scons
 import boost
+import colorizer
 import environment
 import search
 import parallel_build
