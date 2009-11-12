@@ -4,6 +4,8 @@
 //include
 #include <logger.hpp>
 
+int fail(0);
+
 int main()
 {
 	//test files
@@ -19,50 +21,51 @@ int main()
 	iter = share::singleton().find_hash(FI_1.hash);
 	if(iter != share::singleton().end_file()){
 		if(iter->path != FI_1.path){
-			LOGGER; exit(1);
+			LOGGER; ++fail;
 		}
 	}else{
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//lookup file_1 by path
 	iter = share::singleton().find_path(FI_1.path);
 	if(iter != share::singleton().end_file()){
 		if(iter->path != FI_1.path){
-			LOGGER; exit(1);
+			LOGGER; ++fail;
 		}
 	}else{
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//lookup file_2 by hash
 	iter = share::singleton().find_hash(FI_2.hash);
 	if(iter != share::singleton().end_file()){
 		if(iter->path != FI_2.path){
-			LOGGER; exit(1);
+			LOGGER; ++fail;
 		}
 	}else{
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//lookup file_2 by path
 	iter = share::singleton().find_path(FI_2.path);
 	if(iter != share::singleton().end_file()){
 		if(iter->path != FI_2.path){
-			LOGGER; exit(1);
+			LOGGER; ++fail;
 		}
 	}else{
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//test const_iterator
 	share::const_file_iterator iter_cur = share::singleton().begin_file(),
 		iter_end = share::singleton().end_file();
 	if(iter_cur->path != FI_1.path){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 	++iter_cur;
 	if(iter_cur->path != FI_2.path){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
+	return fail;
 }

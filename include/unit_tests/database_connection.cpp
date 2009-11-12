@@ -6,6 +6,8 @@
 #include <cstring>
 #include <string>
 
+int fail(0);
+
 int call_back(int columns, char ** response, char ** column_name)
 {
 	if(std::strcmp(response[0], "abc") != 0){
@@ -19,13 +21,14 @@ int main()
 	database::connection DB("database_connection.db");
 	DB.query("DROP TABLE IF EXISTS sqlite3_wrapper");
 	if(DB.query("CREATE TABLE sqlite3_wrapper(test_text TEXT)") != SQLITE_OK){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 	if(DB.query("INSERT INTO sqlite3_wrapper(test_text) VALUES ('abc')") != SQLITE_OK){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 	//function call back
 	if(DB.query("SELECT test_text FROM sqlite3_wrapper", &call_back) != SQLITE_OK){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
+	return fail;
 }

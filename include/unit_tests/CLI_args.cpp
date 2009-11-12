@@ -2,6 +2,8 @@
 #include <CLI_args.hpp>
 #include <logger.hpp>
 
+int fail(0);
+
 int main()
 {
 	char * argv[3];
@@ -16,24 +18,25 @@ int main()
 
 	//check_bool()
 	if(!CLI_Args.check_bool("-b")){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//get_string()
 	std::string str;
 	if(!CLI_Args.get_string("--x", str)){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 	if(str != "123"){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//get_uint()
 	unsigned uint;
 	if(!CLI_Args.get_uint("--x", uint)){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 	if(uint != 123){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
+	return fail;
 }

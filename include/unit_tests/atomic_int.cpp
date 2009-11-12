@@ -4,7 +4,8 @@
 //standard
 #include <limits>
 
-//assignment (=)
+int fail(0);
+
 void assignment()
 {
 	atomic_int<int> x, y;
@@ -14,45 +15,18 @@ void assignment()
 	y = 1;
 	x = y;
 	if(x != 1){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	x = 0;
 	z = 1;
 	x = z;
 	if(x != 1){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 }
 
-//increment/decrement (++, --)
-void increment_decrement()
-{
-	atomic_int<int> x;
-
-	//++
-	x = 0;
-	if(++x != 1){
-		LOGGER; exit(1);
-	}
-	x = 0;
-	if(x++ != 0){
-		LOGGER; exit(1);
-	}
-
-	//--
-	x = 1;
-	if(--x != 0){
-		LOGGER; exit(1);
-	}
-	x = 1;
-	if(x-- != 1){
-		LOGGER; exit(1);
-	}
-}
-
-//conditional (?)
-void conditional()
+void emulate()
 {
 	atomic_int<int> x, y, z;
 
@@ -60,17 +34,42 @@ void conditional()
 	x = 1; y = 2; z = 3;
 	x = x ? y : z;
 	if(x != 2){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//()
 	x = 0;
 	if(x){
-		LOGGER; exit(1);	
+		LOGGER; ++fail;	
 	}
 }
 
-//compound assignment (+=, -=, *=, /=, %=, >>=, <<=, &=, ^=, |=)
+void increment_decrement()
+{
+	atomic_int<int> x;
+
+	//++
+	x = 0;
+	if(++x != 1){
+		LOGGER; ++fail;
+	}
+	x = 0;
+	if(x++ != 0){
+		LOGGER; ++fail;
+	}
+
+	//--
+	x = 1;
+	if(--x != 0){
+		LOGGER; ++fail;
+	}
+	x = 1;
+	if(x-- != 1){
+		LOGGER; ++fail;
+	}
+}
+
+
 void compound_assignment()
 {
 	atomic_int<int> x;
@@ -80,110 +79,110 @@ void compound_assignment()
 	x = 1;
 	x += x;
 	if(x != 2){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 	x = 1; y = 1;
 	x += y;
 	if(x != 2){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//-=
 	x = 1;
 	x -= x;
 	if(x != 0){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 	x = 1; y = 1;
 	x -= y;
 	if(x != 0){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//*=
 	x = 1;
 	x *= x;
 	if(x != 1){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 	x = 1; y = 1;
 	x *= y;
 	if(x != 1){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	///=
 	x = 2;
 	x /= x;
 	if(x != 1){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 	x = 2; y = 2;
 	x /= y;
 	if(x != 1){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//%=
 	x = 2;
 	x %= x;
 	if(x != 0){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 	x = 2; y = 2;
 	x %= y;
 	if(x != 0){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//>>=
 	x = 2;
 	x >>= 1;
 	if(x != 1){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//<<=
 	x = 1;
 	x <<= 1;
 	if(x != 2){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//&=
 	atomic_int<unsigned> q(std::numeric_limits<unsigned>::max()), p(0u);
 	q &= p;
 	if(q != 0u){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 	q = std::numeric_limits<unsigned>::max();;
 	q &= 0u;
 	if(q != 0u){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//^=
 	x = 1;
 	x ^= x;
 	if(x != 0){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 	x = 1;
 	x ^= 1;
 	if(x != 0){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//|=
 	x = 1;
 	x |= x;
 	if(x != 1){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 	x = 1;
 	x |= 1;
 	if(x != 1){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 }
 
@@ -193,20 +192,21 @@ void stream()
 	std::stringstream ss;
 	ss << x;
 	if(ss.str() != "1"){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	ss >> x;
 	if(x != 1){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 }
 
 int main()
 {
 	assignment();
+	emulate();
 	increment_decrement();
-	conditional();
 	compound_assignment();
 	stream();
+	return fail;
 }

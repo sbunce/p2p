@@ -2,6 +2,8 @@
 #include "../encryption.hpp"
 #include "../settings.hpp"
 
+int fail(0);
+
 //copies one buffer to another, simulates sending over network
 void send(network::buffer & source, network::buffer & destination)
 {
@@ -30,7 +32,7 @@ int main()
 
 	//Host_B receives prime and remote_result. Host_B sends local_result.
 	if(!Host_B_Encryption.recv_prime_and_remote_result(Host_B_recv_buff, Host_B_send_buff)){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 	send(Host_B_send_buff, Host_A_recv_buff);
 
@@ -53,7 +55,7 @@ int main()
 	send(Host_A_send_buff, Host_B_recv_buff);
 	Host_B_Encryption.crypt_recv(Host_B_recv_buff);
 	if(Host_B_recv_buff != message){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//test sending a message from Host_B to Host_A
@@ -62,6 +64,7 @@ int main()
 	send(Host_B_send_buff, Host_A_recv_buff);
 	Host_A_Encryption.crypt_recv(Host_A_recv_buff);
 	if(Host_A_recv_buff != message){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
+	return fail;
 }

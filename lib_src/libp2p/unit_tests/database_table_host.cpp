@@ -1,6 +1,8 @@
 //custom
 #include "../database.hpp"
 
+int fail(0);
+
 int main()
 {
 	//setup database and make sure blacklist table clear
@@ -17,7 +19,7 @@ int main()
 	//table empty, should not be able to look up hosts
 	all = database::table::host::lookup(hash);
 	if(!all.empty()){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//add the same record twice (it should then only exist in table once)
@@ -27,7 +29,7 @@ int main()
 	//look up all hosts for test_hash (there should be 1)
 	all = database::table::host::lookup(hash);
 	if(all.size() != 1){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//insert new host for hash
@@ -36,6 +38,7 @@ int main()
 	//look up all hosts for test_hash (there should be 2)
 	all = database::table::host::lookup(hash);
 	if(all.size() != 2){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
+	return fail;
 }

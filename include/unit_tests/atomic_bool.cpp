@@ -41,7 +41,7 @@ void stream()
 int main()
 {
 	assignment();
-	function_call();
+	emulate();
 	stream();
 	return fail;
 }

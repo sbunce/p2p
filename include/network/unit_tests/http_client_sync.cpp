@@ -1,6 +1,8 @@
 //include
 #include <network/network.hpp>
 
+int fail(0);
+
 int main()
 {
 	//disable test
@@ -17,7 +19,7 @@ int main()
 		}
 	}
 	if(!N.is_open()){
-		LOGGER << N.error(); exit(1);
+		LOGGER << N.error(); ++fail;
 	}
 	LOGGER << "local IP:    " << N.local_IP();
 	LOGGER << "local port:  " << N.local_port();
@@ -29,8 +31,9 @@ int main()
 	);
 	while(!B.empty() && N.send(B) > 0);
 	if(!N.is_open()){
-		LOGGER << N.error(); exit(1);
+		LOGGER << N.error(); ++fail;
 	}
 	while(N.recv(B) > 0);
 	LOGGER << "recv buff size: " << B.size();
+	return fail;
 }

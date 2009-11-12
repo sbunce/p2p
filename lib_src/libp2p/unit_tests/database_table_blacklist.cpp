@@ -1,6 +1,8 @@
 //custom
 #include "../database.hpp"
 
+int fail(0);
+
 int main()
 {
 	//setup database and make sure blacklist table clear
@@ -18,22 +20,23 @@ int main()
 
 	//the blacklist should not be modified by default
 	if(database::table::blacklist::modified(state)){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//after adding an IP the blacklist should be modified
 	database::table::blacklist::add("1.1.1.1");
 	if(!database::table::blacklist::modified(state)){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//the IP we added should be now blacklisted
 	if(!database::table::blacklist::is_blacklisted("1.1.1.1")){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//we didn't add this IP, it shouldn't be blacklisted
 	if(database::table::blacklist::is_blacklisted("2.2.2.2")){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
+	return fail;
 }

@@ -1,6 +1,8 @@
 //custom
 #include "../database.hpp"
 
+int fail(0);
+
 int main()
 {
 	//setup database and make sure share table clear
@@ -18,7 +20,7 @@ int main()
 
 	//file not yet added, lookups shouldn't work
 	if(database::table::share::lookup(SI.hash)){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//add file
@@ -28,13 +30,13 @@ int main()
 	if(boost::shared_ptr<database::table::share::info>
 		lookup_SI = database::table::share::lookup(SI.hash))
 	{
-		if(lookup_SI->hash != SI.hash){ LOGGER; exit(1); }
-		if(lookup_SI->path != SI.path){ LOGGER; exit(1); }
-		if(lookup_SI->file_size != SI.file_size){ LOGGER; exit(1); }
-		if(lookup_SI->last_write_time != SI.last_write_time){ LOGGER; exit(1); }
-		if(lookup_SI->file_state != SI.file_state){ LOGGER; exit(1); }
+		if(lookup_SI->hash != SI.hash){ LOGGER; ++fail; }
+		if(lookup_SI->path != SI.path){ LOGGER; ++fail; }
+		if(lookup_SI->file_size != SI.file_size){ LOGGER; ++fail; }
+		if(lookup_SI->last_write_time != SI.last_write_time){ LOGGER; ++fail; }
+		if(lookup_SI->file_state != SI.file_state){ LOGGER; ++fail; }
 	}else{
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//remove file
@@ -42,6 +44,7 @@ int main()
 
 	//file was deleted, make sure lookups don't work
 	if(database::table::share::lookup(SI.hash)){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
+	return fail;
 }

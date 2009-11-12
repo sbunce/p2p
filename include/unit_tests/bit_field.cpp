@@ -4,6 +4,8 @@
 //standard
 #include <cmath>
 
+int fail(0);
+
 void assignment()
 {
 	unsigned groups = 1024;
@@ -30,17 +32,17 @@ void named_functions()
 
 	//size function
 	if(BF.size() != 1){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//reset function
 	BF[0] = 1;
 	if(BF[0] != 1){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 	BF.reset();
 	if(BF[0] == 1){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 }
 
@@ -51,48 +53,48 @@ void operators()
 
 	//==
 	if(!(BF_0 == BF_1)){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//!=
 	if(BF_0 != BF_1){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//&=
 	BF_0 &= BF_1;
 	if(BF_0[0] != 0){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//^=
 	BF_0 ^= BF_1;
 	if(BF_0[0] != 0){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//|=
 	BF_0 |= BF_1;
 	if(BF_0[0] != 0){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//~
 	~BF_0;
 	if(BF_0[0] != 1){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//=
 	BF_0 = BF_1;
 	if(BF_0[0] != 0){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//bitgroup_vector::proxy assignment test
 	BF_0[0] = BF_0[1] = 1;
 	if(BF_0[0] != 1 || BF_0[1] != 1){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 }
 
@@ -101,4 +103,5 @@ int main()
 	assignment();
 	named_functions();
 	operators();
+	return fail;
 }

@@ -11,6 +11,8 @@
 //standard
 #include <algorithm>
 
+int fail(0);
+
 //create test files to hash if they don't already exist
 void create_test_file(const file_info & FI)
 {
@@ -42,7 +44,7 @@ void test(const unsigned size)
 	//create hash tree and check it
 	hash_tree HT(FI);
 	if(HT.create() != hash_tree::good){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 	FI.hash = HT.hash;
 
@@ -70,7 +72,7 @@ void test(const unsigned size)
 
 	//should not be complete since we corrupted a block
 	if(HT_reassemble.complete()){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 
 	//replace the corrupted blocks, add one host that has all blocks
@@ -78,14 +80,14 @@ void test(const unsigned size)
 	while(!HT_reassemble.complete()){
 		boost::uint64_t block_num;
 		if(!HT_reassemble.Block_Request.next_request(0, block_num)){
-			LOGGER; exit(1);
+			LOGGER; ++fail;
 		}
 		HT_reassemble.write_block(0, block_num, block[block_num]);
 	}
 
 	//now the tree should be complete
 	if(!HT_reassemble.complete()){
-		LOGGER; exit(1);
+		LOGGER; ++fail;
 	}
 }
 
@@ -105,4 +107,5 @@ int main()
 
 	//remove temporary files
 	path::remove_temporary_hash_tree_files();
+	return fail;
 }

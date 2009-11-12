@@ -4,6 +4,8 @@
 //standard
 #include <cstdlib>
 
+int fail(0);
+
 void all_complete()
 {
 	boost::uint64_t block_count = 128;
@@ -22,7 +24,7 @@ void all_complete()
 		if(BR.next_request(temp, block)){
 			BR.add_block_local(temp, block);
 		}else{
-			LOGGER; exit(1);
+			LOGGER; ++fail;
 		}
 	}
 }
@@ -71,4 +73,5 @@ int main()
 {
 	all_complete();
 	all_partial();
+	return fail;
 }
