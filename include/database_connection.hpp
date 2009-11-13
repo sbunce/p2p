@@ -229,15 +229,12 @@ public:
 		connect();
 		int code;
 		while((code = sqlite3_exec(DB_handle, query.c_str(), call_back_wrapper,
-			(void *)&func, NULL)) != SQLITE_OK)
+			(void *)&func, NULL)) == SQLITE_BUSY)
 		{
-			if(code == SQLITE_BUSY){
-				boost::this_thread::yield();
-			}else{
-				LOGGER << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle)
-					<< " query: " << query;
-				exit(1);
-			}
+			boost::this_thread::yield();
+		}
+		if(code != SQLITE_OK){
+			LOGGER << sqlite3_errmsg(DB_handle) << ", query \"" << query << "\"";
 		}
 		return code;
 	}

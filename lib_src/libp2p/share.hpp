@@ -29,8 +29,6 @@ class share : public singleton_base<share>
 public:
 	typedef boost::flyweights::flyweight<std::string> flyweight_string;
 
-	~share();
-
 	/*
 	Modifications to share don't invalidate this iterator.
 	Note: This iterator is const because it allows the user access to only copies
@@ -183,16 +181,6 @@ private:
 
 	//see documentation for slot_modified
 	atomic_int<int> slot_state;
-
-	//used by the resume functions
-	boost::thread resume_thread;
-	boost::mutex resume_mutex;
-	boost::condition_variable_any resume_cond;
-	enum resume_state_enum{
-		resume_not_started,
-		resume_in_progress,
-		resume_complete
-	} resume_state;
 
 	/*
 	next_file_info:

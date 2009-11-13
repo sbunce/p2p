@@ -152,15 +152,9 @@ boost::shared_ptr<slot> share::slot_iterator::get()
 share::share():
 	_bytes(0),
 	_files(0),
-	slot_state(0),
-	resume_state(resume_not_started)
+	slot_state(0)
 {
 
-}
-
-share::~share()
-{
-	resume_thread.join();
 }
 
 share::const_file_iterator share::begin_file()
@@ -360,48 +354,6 @@ void share::remove_unused_slots()
 			++iter_cur;
 		}
 	}
-}
-
-void share::resume()
-{
-	boost::mutex::scoped_lock lock(resume_mutex);
-	if(resume_state == resume_not_started){
-		resume_state = resume_in_progress;
-		resume_thread = boost::thread(boost::bind(&share::resume_priv, this));
-	}
-}
-
-void share::resume_block()
-{
-	boost::mutex::scoped_lock lock(resume_mutex);
-	while(resume_state != resume_complete){
-		resume_cond.wait(resume_mutex);
-	}
-}
-
-void share::resume_priv()
-{
-	/*
-	A new database connection is used that won't be returned to the pool. This is
-	done to avoid static initialization order problems with the database pool.
-	*/
-	std::deque<database::table::share::info> resume = database::table::share::resume(
-		database::pool::get(true));
-	while(!resume.empty()){
-		file_info FI(resume.front().hash, resume.front().path, resume.front().file_size,
-			resume.front().last_write_time);
-		insert(FI);
-		if(resume.front().file_state == database::table::share::downloading){
-			//trigger slot creation for downloading file
-			find_slot(FI.hash);
-		}
-		resume.pop_front();
-	}
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(resume_mutex);
-	resume_state = resume_complete;
-	resume_cond.notify_all();
-	}//end lock scope
 }
 
 bool share::slot_modified(int & last_state_seen)

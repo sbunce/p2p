@@ -7,18 +7,11 @@ p2p_real::p2p_real():
 		settings::P2P_PORT
 	),
 	Connection_Manager(Proactor),
-	Thread_Pool(1)
+	Thread_Pool(1),
+	max_connections_proxy(0),
+	max_download_rate_proxy(0),
+	max_upload_rate_proxy(0)
 {
-	//setup proxies for async getter/setter function calls
-	max_connections_proxy = database::table::preferences::get_max_connections();
-	max_download_rate_proxy = database::table::preferences::get_max_download_rate();
-	max_upload_rate_proxy = database::table::preferences::get_max_upload_rate();
-
-	//set preferences with the proactor
-	Proactor.max_download_rate(max_download_rate_proxy);
-	Proactor.max_upload_rate(max_upload_rate_proxy);
-
-	share::singleton().resume();
 	resume_thread = boost::thread(boost::bind(&p2p_real::resume, this));
 }
 
@@ -86,8 +79,37 @@ unsigned p2p_real::prime_count()
 
 void p2p_real::resume()
 {
-	share::singleton().resume_block();
-	Proactor.start();
+	//delay helps GUI have responsive startup
+	boost::this_thread::yield();
+
+	//setup proxies
+	max_connections_proxy = database::table::preferences::get_max_connections();
+	max_download_rate_proxy = database::table::preferences::get_max_download_rate();
+	max_upload_rate_proxy = database::table::preferences::get_max_upload_rate();
+
+	//set prefs with proactor
+	Proactor.max_download_rate(max_download_rate_proxy);
+	Proactor.max_upload_rate(max_upload_rate_proxy);
+
+	//repopulate share from database
+	std::deque<database::table::share::info> resume = database::table::share::resume();
+	while(!resume.empty()){
+		file_info FI(
+			resume.front().hash,
+			resume.front().path,
+			resume.front().file_size,
+			resume.front().last_write_time
+		);
+		share::singleton().insert(FI);
+		if(resume.front().file_state == database::table::share::downloading){
+			//trigger slot creation for downloading file
+			share::singleton().find_slot(FI.hash);
+		}
+		resume.pop_front();
+	}
+
+	//start share scanning after share repopulated
+	Share_Scanner.start();
 
 	//get host_info for all hosts we need to connect to
 	std::set<std::pair<std::string, std::string> > all_host;
@@ -103,6 +125,9 @@ void p2p_real::resume()
 	{
 		Proactor.connect(iter_cur->first, iter_cur->second, network::tcp);
 	}
+
+	//bring up networking
+	Proactor.start();
 }
 
 boost::uint64_t p2p_real::share_size_bytes()

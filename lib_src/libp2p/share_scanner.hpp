@@ -28,6 +28,12 @@ public:
 	share_scanner();
 	~share_scanner();
 
+	/*
+	start:
+		Starts threads to scan share and hash files.
+	*/
+	void start();
+
 private:
 	boost::thread_group Workers;
 

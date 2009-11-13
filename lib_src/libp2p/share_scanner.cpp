@@ -2,8 +2,7 @@
 
 share_scanner::share_scanner()
 {
-	//this thread spawns workers that hash files when it finishes resume
-	Workers.create_thread(boost::bind(&share_scanner::scan_loop, this));
+
 }
 
 share_scanner::~share_scanner()
@@ -82,13 +81,6 @@ void share_scanner::hash_loop()
 
 void share_scanner::scan_loop()
 {
-	share::singleton().resume_block();
-
-	//start workers to hash files
-	for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
-		Workers.create_thread(boost::bind(&share_scanner::hash_loop, this));
-	}
-
 	boost::filesystem::path share_path(boost::filesystem::system_complete(
 		boost::filesystem::path(path::share(), boost::filesystem::native)));
 	boost::posix_time::milliseconds scan_delay(20);
@@ -100,7 +92,6 @@ void share_scanner::scan_loop()
 	bool skip_sleep = false;
 
 	while(true){
-		boost::this_thread::interruption_point();
 		boost::this_thread::sleep(scan_delay);
 		try{
 			//scan share
@@ -164,5 +155,13 @@ void share_scanner::scan_loop()
 				skip_sleep = true;
 			}
 		}
+	}
+}
+
+void share_scanner::start()
+{
+	Workers.create_thread(boost::bind(&share_scanner::scan_loop, this));
+	for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
+		Workers.create_thread(boost::bind(&share_scanner::hash_loop, this));
 	}
 }

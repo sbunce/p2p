@@ -55,14 +55,14 @@ private:
 	boost::thread resume_thread;
 
 	/*
-	The values to store in the database are stored here and a job is scheduled
-	with Thread_Pool to do the actual database read/write. This allows the
-	functions which get/set these to return immediately instead of having to wait
-	for database access.
+	Proactor does call backs for network activity. The call backs are done to the
+	Connection_Manager.
+	Note: Proactor is specified last in header because it starts threads in it's
+		ctor which use objects in p2p_real. We specify it last because we want to
+		make sure the objects it uses are constructed before it uses them.
 	*/
-	atomic_int<unsigned> max_connections_proxy;
-	atomic_int<unsigned> max_download_rate_proxy;
-	atomic_int<unsigned> max_upload_rate_proxy;
+	network::proactor Proactor;
+	connection_manager Connection_Manager;
 
 	/*
 	Share_Scan:
@@ -74,14 +74,14 @@ private:
 	thread_pool Thread_Pool;
 
 	/*
-	Proactor does call backs for network activity. The call backs are done to the
-	Connection_Manager.
-	Note: Proactor is specified last in header because it starts threads in it's
-		ctor which use objects in p2p_real. We specify it last because we want to
-		make sure the objects it uses are constructed before it uses them.
+	The values to store in the database are stored here and a job is scheduled
+	with Thread_Pool to do the actual database read/write. This allows the
+	functions which get/set these to return immediately instead of having to wait
+	for database access.
 	*/
-	network::proactor Proactor;
-	connection_manager Connection_Manager;
+	atomic_int<unsigned> max_connections_proxy;
+	atomic_int<unsigned> max_download_rate_proxy;
+	atomic_int<unsigned> max_upload_rate_proxy;
 
 	/*
 	resume:
