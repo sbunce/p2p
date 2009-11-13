@@ -17,7 +17,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
-//#include <network/network.hpp>
+#include <network/network.hpp>
 #include <p2p.hpp>
 #include <thread_pool.hpp>
 
@@ -29,7 +29,6 @@ class p2p_real : private boost::noncopyable
 {
 	//set up all directories and database before anything else
 	database::init init;
-
 public:
 	p2p_real();
 	~p2p_real();

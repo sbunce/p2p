@@ -7,7 +7,7 @@ The call back must have this signature:
 	int call_back(int columns, char ** response, char ** column_name);
 
 boost::bind can be used to do call backs to member functions:
-	DB.query("SELECT ...", boost::bind(&Obj, &obj::func, _1, _2, _3));
+	DB.query("SELECT ...", boost::bind(&obj::func, &Obj, _1, _2, _3));
 
 boost::bind can also be used to bind extra parameters to the call back:
 	int call_back(int columns, char ** response, char ** column_name

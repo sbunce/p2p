@@ -8,10 +8,12 @@
 
 //include
 #include <atomic_int.hpp>
+#include <boost/bind.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/flyweight.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
+#include <boost/thread/once.hpp>
 #include <boost/utility.hpp>
 #include <database_connection.hpp>
 #include <singleton.hpp>
@@ -26,6 +28,8 @@ class share : public singleton_base<share>
 	friend class singleton_base<share>;
 public:
 	typedef boost::flyweights::flyweight<std::string> flyweight_string;
+
+	~share();
 
 	/*
 	Modifications to share don't invalidate this iterator.
@@ -135,6 +139,16 @@ public:
 	boost::uint64_t bytes();
 	boost::uint64_t files();
 
+	/*
+	resume:
+		Restores share information from database.
+		Note: This function does not block. Call resume_block to be blocked.
+	resume_block:
+		Blocks until the share has been fully restored from database.
+	*/
+	void resume();
+	void resume_block();
+
 private:
 	share();
 
@@ -170,6 +184,16 @@ private:
 	//see documentation for slot_modified
 	atomic_int<int> slot_state;
 
+	//used by the resume functions
+	boost::thread resume_thread;
+	boost::mutex resume_mutex;
+	boost::condition_variable_any resume_cond;
+	enum resume_state_enum{
+		resume_not_started,
+		resume_in_progress,
+		resume_complete
+	} resume_state;
+
 	/*
 	next_file_info:
 		Uses the specified path for std::map::upper_bound(). Returns the file
@@ -182,9 +206,12 @@ private:
 	remove_unused_slots:
 		If the shared_ptr for a slot is unique and the slot it points to is
 		complete then it will be removed. This is called by begin_slot().
+	resume_priv:
+		Contains logic to do resume from database.
 	*/
 	boost::shared_ptr<const file_info> next_file_info(const std::string & path);
 	boost::shared_ptr<slot> next_slot(const std::string & hash);
 	void remove_unused_slots();
+	void resume_priv();
 };
 #endif

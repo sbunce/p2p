@@ -1,7 +1,6 @@
 #include "share_scanner.hpp"
 
-share_scanner::share_scanner():
-	resumed(false)
+share_scanner::share_scanner()
 {
 	//this thread spawns workers that hash files when it finishes resume
 	Workers.create_thread(boost::bind(&share_scanner::scan_loop, this));
@@ -11,14 +10,6 @@ share_scanner::~share_scanner()
 {
 	Workers.interrupt_all();
 	Workers.join_all();
-}
-
-void share_scanner::block_until_resumed()
-{
-	boost::mutex::scoped_lock lock(resumed_mutex);
-	while(!resumed){
-		resumed_cond.wait(resumed_mutex);
-	}
 }
 
 void share_scanner::hash_loop()
@@ -91,29 +82,12 @@ void share_scanner::hash_loop()
 
 void share_scanner::scan_loop()
 {
-	//read in existing share information from database
-	std::deque<database::table::share::info> resume = database::table::share::resume();
-	while(!resume.empty()){
-		file_info FI(resume.front().hash, resume.front().path, resume.front().file_size,
-			resume.front().last_write_time);
-		share::singleton().insert(FI);
-		if(resume.front().file_state == database::table::share::downloading){
-			//this triggers share to create the slot
-			share::singleton().find_slot(FI.hash);
-		}
-		resume.pop_front();
-	}
+	share::singleton().resume_block();
 
 	//start workers to hash files
 	for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
 		Workers.create_thread(boost::bind(&share_scanner::hash_loop, this));
 	}
-
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(resumed_mutex);
-	resumed = true;
-	resumed_cond.notify_all();
-	}//end lock scope
 
 	boost::filesystem::path share_path(boost::filesystem::system_complete(
 		boost::filesystem::path(path::share(), boost::filesystem::native)));

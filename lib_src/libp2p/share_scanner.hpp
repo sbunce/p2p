@@ -28,12 +28,6 @@ public:
 	share_scanner();
 	~share_scanner();
 
-	/*
-	block_until_resumed:
-		Blocks until the share has been fully repopulated.
-	*/
-	void block_until_resumed();
-
 private:
 	boost::thread_group Workers;
 
@@ -59,15 +53,6 @@ private:
 	boost::condition_variable_any job_queue_cond;
 	boost::condition_variable_any job_queue_max_cond;
 	std::deque<file_info> job_queue;
-
-	/*
-	Used by block_until_resumed() to block until share is populated with
-	information in database.
-	Note: All access to resumed is locked with resumed_mutex.
-	*/
-	boost::mutex resumed_mutex;
-	bool resumed;
-	boost::condition_variable_any resumed_cond;
 
 	/*
 	hash_loop:

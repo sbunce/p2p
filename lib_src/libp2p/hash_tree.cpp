@@ -125,7 +125,7 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 
 	if(block_num == 0){
 		//special requirements to check root hash, see header documentation for hash
-		if(!database::pool::get_proxy()->blob_read(Blob, buff, protocol::BIN_HASH_SIZE, 0)){
+		if(!database::pool::get()->blob_read(Blob, buff, protocol::BIN_HASH_SIZE, 0)){
 			return io_error;
 		}
 		std::memmove(buff + 8, buff, protocol::BIN_HASH_SIZE);
@@ -148,7 +148,7 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 		}
 
 		//read children
-		if(!database::pool::get_proxy()->blob_read(Blob, buff, info.second, info.first)){
+		if(!database::pool::get()->blob_read(Blob, buff, info.second, info.first)){
 			return io_error;
 		}
 
@@ -158,7 +158,7 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 		SHA.end();
 
 		//verify parent hash is a hash of the children
-		if(!database::pool::get_proxy()->blob_read(Blob, buff, SHA1::bin_size, parent)){
+		if(!database::pool::get()->blob_read(Blob, buff, SHA1::bin_size, parent)){
 			return io_error;
 		}
 		if(std::memcmp(buff, SHA.bin(), SHA1::bin_size) == 0){
@@ -205,7 +205,7 @@ hash_tree::status hash_tree::check_file_block(const boost::uint64_t & file_block
 	}
 
 	char parent_buff[SHA1::bin_size];
-	if(!database::pool::get_proxy()->blob_read(Blob, parent_buff,
+	if(!database::pool::get()->blob_read(Blob, parent_buff,
 		SHA1::bin_size, file_hash_offset + file_block_num * SHA1::bin_size))
 	{
 		return io_error;
@@ -364,7 +364,7 @@ hash_tree::status hash_tree::create()
 			database::table::hash_tree::remove(hash);
 			return io_error;
 		}else{
-			if(!database::pool::get_proxy()->blob_write(Blob, buff, read_size, offset)){
+			if(!database::pool::get()->blob_write(Blob, buff, read_size, offset)){
 				LOGGER << "error doing incremental write to blob";
 				database::table::hash_tree::remove(hash);
 				return io_error;
@@ -428,9 +428,7 @@ hash_tree::status hash_tree::read_block(const boost::uint64_t & block_num,
 	char buff[protocol::FILE_BLOCK_SIZE];
 	std::pair<boost::uint64_t, unsigned> info;
 	if(block_info(block_num, row, info)){
-		if(!database::pool::get_proxy()->blob_read(Blob, buff, info.second,
-			info.first))
-		{
+		if(!database::pool::get()->blob_read(Blob, buff, info.second, info.first)){
 			return io_error;
 		}
 		block.clear();
@@ -481,8 +479,8 @@ hash_tree::status hash_tree::write_block(const int socket_FD,
 			LOGGER << "programming error, invalid block size";
 			exit(1);
 		}
-		if(!database::pool::get_proxy()->blob_write(Blob, block.data(),
-			block.size(), info.first))
+		if(!database::pool::get()->blob_write(Blob, block.data(), block.size(),
+			info.first))
 		{
 			return io_error;
 		}

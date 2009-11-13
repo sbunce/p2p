@@ -21,37 +21,40 @@ public:
 	~pool(){}
 
 	/*
-	The proxy automatically returns the connection to the pool when the last copy
-	of the proxy is destroyed. The proxy object should be kept for as little time
-	as possible.
+	The proxy automatically returns the connection to the pool when the last
+	reference to it goes out of scope.
+
 	*/
 	class proxy
 	{
 	public:
-		proxy():
-			Connection(singleton().get()),
-			This(this, boost::bind(&proxy::deleter, this, Connection))
-		{}
-		boost::shared_ptr<connection> & operator -> (){ return Connection; }
+		/*
+		If new_connection = true then a new connection will be created. This new
+		connection will not be returned to the pool.
+		*/
+		proxy(const bool new_connection = false);
+
+		/*
+		Exposing the shared_ptr with this operator makes it impossible for the
+		shared_ptr to be copied. This is what we want since it reduces errors.
+		*/
+		boost::shared_ptr<connection> & operator -> ();
+
 	private:
 		boost::shared_ptr<connection> Connection;
 		boost::shared_ptr<proxy> This;
-		void deleter(boost::shared_ptr<connection> Connection)
-		{
-			singleton().put(Connection);
-		}
+
+		//when new_connection = false this deleter returns the connection to pool
+		void deleter(boost::shared_ptr<connection> Connection);
 	};
 
 	/*
-	get_proxy:
-		This should be used when a single database call needs to be done. The
-		advantage of this is that the connection will be returned after the
-		expression rather than having to wait for the block to end. This is
-		important because it returns the database connection to the pool ASAP.
-		Example:
-			database::pool::get_proxy()->query("SELECT foo FROM bar");
+	get:
+		Conveniance function for when a single database call needs to be done. The
+		advantage of using this is that the connection is returned after the
+		expression is evaluated.
 	*/
-	static proxy get_proxy();
+	static proxy get(const bool new_connection = false);
 
 private:
 	pool();
@@ -66,13 +69,13 @@ private:
 	std::stack<boost::shared_ptr<connection> > Pool;
 
 	/*
-	get:
-		Blocks until connection available to return.
-	put:
-		Function to return a connection to the pool.
+	pool_get:
+		Blocks until connection can be returned.
+	pool_put:
+		Function to return connection to pool.
 	*/
-	boost::shared_ptr<connection> get();
-	void put(boost::shared_ptr<connection> & Connection);
+	boost::shared_ptr<connection> pool_get();
+	void pool_put(boost::shared_ptr<connection> & Connection);
 };
 }//end namespace database
 #endif
