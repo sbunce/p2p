@@ -309,6 +309,8 @@ blocks.
 Name: SUBSCRIBE_HASH_TREE_CHANGES
 Base10: 7
 Description: Request BIT_FIELD representing what hash tree blocks the host has.
+Also subscribe to HAVE_HASH_TREE_BLOCK whenever the remote host receives a new
+block.
 
 +---+---+
 | C | S |
@@ -330,7 +332,9 @@ FILE_REMOVED
 <pre>
 Name: SUBSCRIBE_FILE_CHANGES
 Base10: 8
-Description: Request BIT_FIELD representing what file blocks the host has.
+Description: Request BIT_FIELD representing what file blocks the host has. Also
+subscribe to HAVE_FILE_BLOCK whenever the remote host receives a new
+block.
 
 +---+---+
 | C | S |

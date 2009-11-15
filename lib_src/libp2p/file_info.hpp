@@ -18,7 +18,7 @@ public:
 	file_info(
 		const std::string & hash_in,
 		const std::string & path_in,
-		const boost::uint64_t & file_size_in,
+		const boost::uint64_t file_size_in,
 		const std::time_t last_write_time_in
 	):
 		hash(hash_in),
@@ -38,6 +38,5 @@ public:
 	boost::flyweights::flyweight<std::string> path;
 	boost::uint64_t file_size;
 	std::time_t last_write_time;
-	database::blob Blob;
 };
 #endif

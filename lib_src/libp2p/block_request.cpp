@@ -55,7 +55,6 @@ void block_request::add_block_remote(const int connection_ID, const boost::uint6
 void block_request::add_host_complete(const int connection_ID)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-
 	//insert empty bit_field (host has all blocks)
 	std::pair<std::map<int, bit_field>::iterator, bool>
 		ret = remote_block.insert(std::make_pair(connection_ID, bit_field(0)));
@@ -87,11 +86,25 @@ bool block_request::complete()
 	return local_block.empty();
 }
 
+bool block_request::have_block(const boost::uint64_t block)
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	assert(block < block_count);
+	if(complete()){
+		return true;
+	}else{
+		return local_block[block] == 0;
+	}
+}
+
 bool block_request::find_next_rarest(const int connection_ID, boost::uint64_t & block)
 {
 	//find bitset for remote host
 	std::map<int, bit_field>::iterator remote_iter = remote_block.find(connection_ID);
-	assert(remote_iter != remote_block.end());
+	if(remote_iter == remote_block.end()){
+		//we are waiting on a bit_field from the remote host most likely
+		return false;
+	}
 
 	//find rarest block that we need, that remote host has
 	block = 0;                            //current block being checked (reused)
@@ -162,7 +175,9 @@ bool block_request::find_next_rarest(const int connection_ID, boost::uint64_t & 
 bool block_request::next_request(const int connection_ID, boost::uint64_t & block)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	assert(!complete());
+	if(complete()){
+		return false;
+	}
 
 	/*
 	Check for a timed out request to the host. If a request to the host has timed
@@ -213,10 +228,7 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 void block_request::remove_host(const int connection_ID)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	if(remote_block.erase(connection_ID) != 1){
-		LOGGER << "violated precondition";
-		exit(1);
-	}
+	remote_block.erase(connection_ID);
 
 	//erase request elements for this host
 	std::multimap<boost::uint64_t, request_element>::iterator

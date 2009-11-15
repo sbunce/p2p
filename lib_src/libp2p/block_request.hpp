@@ -31,7 +31,9 @@ public:
 	/*
 	add_block_local:
 		Adds a block that we have that does not need to be requested. This is
-		called when we hash check a file and discover that a block is good.
+		called when we hash check and discover that a block is good.
+		Note: If the block is not from anyone, for example if it hash checked good
+			during resume, then use -1 as the connection_ID.
 	add_block_remote:
 		Adds a block that a remote host has. This is called when a remote host
 		tells us it got a new block.
@@ -46,10 +48,12 @@ public:
 		Returns the size of the bit_field (bytes).
 	complete:
 		Returns true if we have all blocks.
+	have_block:
+		Returns true if we have the specified block.
 	next_request:
 		Returns true and sets block to the number of the next block we need to
 		request from the remote host. If returns false then the remote host has no
-		blocks we need or we are waiting on some of the last blocks.
+		blocks we need or we are waiting on a bit_field from the host.
 		Precondition: !complete()
 	remove_host:
 		Removes bit_field for host. This is done when a host disconnects or when
@@ -67,6 +71,7 @@ public:
 	void add_host_incomplete(const int connection_ID, bit_field & BF);
 	boost::uint64_t bytes();
 	bool complete();
+	bool have_block(const boost::uint64_t block);
 	bool next_request(const int connection_ID, boost::uint64_t & block);
 	void remove_host(const int connection_ID);
 	void rerequest_block(const boost::uint64_t block);
@@ -81,7 +86,7 @@ private:
 	/*
 	Bits set to 1 represent blocks we need to request. Bits set to 0 represent
 	blocks we have. If the container is empty it's the same as all bits being set
-	to 0. This is done to save memory.
+	to 0 (this is done to save memory).
 	*/
 	bit_field local_block;
 
@@ -101,7 +106,12 @@ private:
 			request_time(request_time_in)
 		{}
 
-		const int connection_ID;            //socket request was made to
+		request_element(const request_element & RE):
+			connection_ID(RE.connection_ID),
+			request_time(RE.request_time)
+		{}
+
+		const int connection_ID;        //socket request was made to
 		const std::time_t request_time; //time request was made
 	};
 	std::multimap<boost::uint64_t, request_element> request;

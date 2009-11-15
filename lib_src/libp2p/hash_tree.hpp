@@ -49,6 +49,7 @@ public:
 		copying   //file may be copying (it is increasing in size)
 	};
 
+//DEBUG, consider replacing this with file_info since it holds all this stuff anyways
 	//info provided by file_info
 	const std::string hash;                     //hash the file is tracked by
 	const std::string path;                     //path to file the hash tree is for
@@ -99,7 +100,7 @@ public:
 	write_block:
 		Add or replace block in hash tree. Returns good if block was written,
 		io_error if block could not be written, or bad if the block hash failed.
-		The socket_FD is needed for block_request.
+		The connection_ID is needed for block_request.
 	*/
 	unsigned block_size(const boost::uint64_t & block_num);
 	status check();
@@ -108,7 +109,7 @@ public:
 	status create();
 	bool complete();
 	status read_block(const boost::uint64_t & block_num, std::string & block);
-	status write_block(const int socket_FD, const boost::uint64_t & block_num,
+	status write_block(const int connection_ID, const boost::uint64_t & block_num,
 		const std::string & block);
 
 	/*

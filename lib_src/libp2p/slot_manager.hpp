@@ -14,14 +14,11 @@
 //standard
 #include <vector>
 
-/* DEBUG
-Add reference to proactor in this class so it can send directly in response to
-received messages.
-*/
+
 class slot_manager : private boost::noncopyable
 {
 public:
-	slot_manager(network::proactor & Proactor_in, network::connection_info & CI);
+	slot_manager(network::connection_info & CI);
 
 	/*
 	is_slot_command:
@@ -35,11 +32,6 @@ public:
 	bool recv(network::connection_info & CI);
 
 private:
-	network::proactor & Proactor;
-	const int connection_ID;
-	const std::string IP;
-	const std::string port;
-
 	//used to detect when slot within share modified
 	int share_slot_state;
 
@@ -63,29 +55,18 @@ private:
 	std::deque<boost::shared_ptr<slot> > Pending_Slot_Request;
 	std::deque<boost::shared_ptr<slot> > Slot_Request;
 
-	/*
-	Set of all slots in all containers in this class. Used when synchronizing
-	slots with the share.
-	*/
+	//set of all slots that exist somewhere in this class
 	std::set<boost::shared_ptr<slot> > Known_Slot;
 
 	//messages that expect a response
 	class message
 	{
 	public:
-		//slot which expects response, empty if response should be ignored
-		boost::shared_ptr<slot> Slot;
+		boost::shared_ptr<slot> Slot; //slot that expects response (may be empty)
+		network::buffer send_buf;     //message to send
 
-		/*
-		Request to send.
-		Note: When a block request is sent we need to know if it is for a hash
-		tree block or file block so we know where to send the block when it
-		arrives. To determine this we look at the first byte in send_buf.
-		*/
-		network::buffer send_buf;
-
-		//possible responses expected (command associated with size of message)
-		std::vector<std::pair<unsigned char, int> > expected_response;
+		//possible responses expected (command associated with expected size)
+		std::vector<std::pair<unsigned char, unsigned> > expected_response;
 	};
 	std::deque<boost::shared_ptr<message> > Send_Queue;
 
@@ -102,23 +83,8 @@ private:
 		when a slot becomes associated with a new host, or when a totally new slot
 		is added.
 	*/
-	void sync_slots();
-
-	/* Receive Functions
-
-	*/
 	bool recv_request_slot(network::connection_info & CI);
-
-	/* Send Functions (named after commands)
-	send_close_slot:
-	*/
-
 	void send_close_slot(const unsigned char slot_ID);
-/*
-	void send_request_slot(const std::string & hash);
-	void send_request_slot_failed();
-	void send_request_block(std::pair<unsigned char, boost::shared_ptr<slot> > & P);
-	void send_file_removed();
-*/
+	void sync_slots(network::connection_info & CI);
 };
 #endif

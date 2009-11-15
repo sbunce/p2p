@@ -101,7 +101,7 @@ bool share::slot_iterator::operator == (
 	}else if(Share == NULL || rval.Share == NULL){
 		return false;
 	}else{
-		return Slot->Hash_Tree.hash == rval.Slot->Hash_Tree.hash;
+		return Slot->hash() == rval.Slot->hash();
 	}
 }
 
@@ -126,7 +126,7 @@ boost::shared_ptr<slot> & share::slot_iterator::operator -> ()
 share::slot_iterator & share::slot_iterator::operator ++ ()
 {
 	assert(Share);
-	boost::shared_ptr<slot> temp = Share->next_slot(Slot->Hash_Tree.hash);
+	boost::shared_ptr<slot> temp = Share->next_slot(Slot->hash());
 	if(temp){
 		Slot = temp;
 	}else{
@@ -272,8 +272,6 @@ share::slot_iterator share::find_slot(const std::string & hash)
 	boost::shared_ptr<slot> new_slot;
 	try{
 		new_slot = boost::shared_ptr<slot>(new slot(*Hash_iter->second));
-		//save blob info so next time slot opened database access is avoided
-		Hash_iter->second->Blob = new_slot->Hash_Tree.Blob;
 	}catch(std::exception & ex){
 		LOGGER << ex.what();
 		return end_slot();

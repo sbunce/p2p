@@ -22,8 +22,8 @@ class hash_tree
 public:
 	enum state{
 		reserved,    //record reserved but not used (delete on next program start)
-		downloading, //tree or file incomplete
-		complete     //tree or file complete (all blocks hash checked good)
+		downloading, //tree incomplete
+		complete     //tree complete (all blocks hash checked good)
 	};
 
 	class info

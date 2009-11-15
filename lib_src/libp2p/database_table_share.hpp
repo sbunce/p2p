@@ -27,15 +27,14 @@ class share
 {
 public:
 	enum state{
-		downloading, //tree or file incomplete
-		complete     //tree or file complete (all blocks hash checked good)
+		downloading, //file incomplete
+		complete     //file complete (all blocks hash checked good)
 	};
 
 	class info
 	{
 	public:
 		info(){}
-
 		info(const file_info & FI, const state file_state_in):
 			hash(FI.hash),
 			path(FI.path),
@@ -43,7 +42,6 @@ public:
 			last_write_time(FI.last_write_time),
 			file_state(file_state_in)
 		{}
-
 		std::string hash;
 		std::string path;
 		boost::uint64_t file_size;

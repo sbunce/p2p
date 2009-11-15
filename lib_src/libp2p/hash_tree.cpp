@@ -7,7 +7,6 @@ hash_tree::hash_tree(
 	hash(FI.hash),
 	path(FI.path),
 	file_size(FI.file_size),
-	Blob(FI.Blob),
 	row(file_size_to_row(file_size)),
 	tree_block_count(row_to_tree_block_count(row)),
 	file_hash_offset(row_to_file_hash_offset(row)),
@@ -25,30 +24,34 @@ hash_tree::hash_tree(
 	Block_Request(hash.empty() ? 0 : tree_block_count),
 	end_of_good(0)
 {
-	//go to database if valid blob not provided
-	if(Blob.rowid == 0){
-		boost::shared_ptr<database::table::hash_tree::info> info;
-		//if no hash, then no need to check because hash tree will be created
-		if(!hash.empty()){
-			info = database::table::hash_tree::lookup(hash, DB);
+	boost::shared_ptr<database::table::hash_tree::info> info;
+	//if no hash, then no need to check because hash tree will be created
+	if(!hash.empty()){
+		info = database::table::hash_tree::lookup(hash, DB);
+	}
+	if(info){
+		//opened existing hash tree
+		boost::uint64_t size;
+		if(!database::pool::get()->blob_size(info->Blob, size)){
+			throw std::runtime_error("error checking tree size");
 		}
-		if(info){
-			//opened existing hash tree
+		//only open tree if the size is what we expect
+		if(tree_size == size){
 			const_cast<database::blob &>(Blob) = info->Blob;
-		}else{
-			//allocate space to reconstruct hash tree
-			if(database::table::hash_tree::add(hash, tree_size, DB)){
-				database::table::hash_tree::set_state(hash,
-					database::table::hash_tree::downloading, DB);
-				info = database::table::hash_tree::lookup(hash, DB);
-				if(info){
-					const_cast<database::blob &>(Blob) = info->Blob;
-				}else{
-					throw std::runtime_error("failed hash tree open");
-				}
+		}
+	}else{
+		//allocate space to reconstruct hash tree
+		if(database::table::hash_tree::add(hash, tree_size, DB)){
+			database::table::hash_tree::set_state(hash,
+				database::table::hash_tree::downloading, DB);
+			info = database::table::hash_tree::lookup(hash, DB);
+			if(info){
+				const_cast<database::blob &>(Blob) = info->Blob;
 			}else{
-				throw std::runtime_error("failed hash tree allocate");
+				throw std::runtime_error("failed hash tree open");
 			}
+		}else{
+			throw std::runtime_error("failed hash tree allocate");
 		}
 	}
 }
@@ -188,22 +191,16 @@ hash_tree::status hash_tree::check()
 			return io_error;
 		}
 	}
-
 	if(complete()){
 		database::table::hash_tree::set_state(hash, database::table::hash_tree::complete);
 	}
-
 	return good;
 }
 
 hash_tree::status hash_tree::check_file_block(const boost::uint64_t & file_block_num,
 	const char * block, const int & size)
 {
-	if(!complete()){
-		LOGGER << "precondition violated";
-		exit(1);
-	}
-
+	assert(complete());
 	char parent_buff[SHA1::bin_size];
 	if(!database::pool::get()->blob_read(Blob, parent_buff,
 		SHA1::bin_size, file_hash_offset + file_block_num * SHA1::bin_size))
@@ -214,7 +211,7 @@ hash_tree::status hash_tree::check_file_block(const boost::uint64_t & file_block
 	SHA.init();
 	SHA.load(block, size);
 	SHA.end();
-	if(memcmp(parent_buff, SHA.bin(), SHA1::bin_size) == 0){
+	if(std::memcmp(parent_buff, SHA.bin(), SHA1::bin_size) == 0){
 		return good;
 	}else{
 		return bad;
@@ -470,15 +467,17 @@ boost::uint64_t hash_tree::row_to_file_hash_offset(
 	return file_hash_offset;
 }
 
-hash_tree::status hash_tree::write_block(const int socket_FD,
+hash_tree::status hash_tree::write_block(const int connection_ID,
 	const boost::uint64_t & block_num, const std::string & block)
 {
 	std::pair<boost::uint64_t, unsigned> info;
 	if(block_info(block_num, row, info)){
-		if(info.second != block.size()){
-			LOGGER << "programming error, invalid block size";
-			exit(1);
-		}
+		assert(info.second == block.size());
+		/*
+		Add block as if it were good. If it's not then the check() function will
+		rerequest the block.
+		*/
+		Block_Request.add_block_local(connection_ID, block_num);
 		if(!database::pool::get()->blob_write(Blob, block.data(), block.size(),
 			info.first))
 		{
@@ -488,25 +487,23 @@ hash_tree::status hash_tree::write_block(const int socket_FD,
 		if(Status == io_error){
 			return io_error;
 		}else{
-			/*
-			The hash tree is checked linearly. Cases:
-			1. Tree is good < block we just wrote. Block we wrote is bad.
-			   end_of_good == block_num. Return bad. The host that sent this bad
-				block will be disconnected.
-			2. Tree is not good up until block we wrote. end_of_good < block_num.
-			   We cannot know if the current block is good or not. Return good.
-			*/
 			if(end_of_good == block_num){
-				//case 1
+				/*
+				We can only know if a block is bad if it's one past the highest good
+				block in the tree.
+				*/
 				return bad;
 			}else{
-				//case 2
-				Block_Request.add_block_local(socket_FD, block_num);
+				/*
+				We cannot know if this block is good or bad so we assume it's good.
+				The check() function will rerequest the block later if it turns out
+				to be bad.
+				*/
 				return good;
 			}
 		}
 	}else{
-		LOGGER << "programmer error, invalid block num";
+		LOGGER << "invalid block number";
 		exit(1);
 	}
 }

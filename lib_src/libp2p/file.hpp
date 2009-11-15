@@ -29,12 +29,9 @@ public:
 		Precondition: block_num < block_count
 	complete:
 		Returns true if the file is complete.
-	name:
-		Returns file name.
 	*/
 	unsigned block_size(const boost::uint64_t & block_num);
 	bool complete();
-	std::string name();
 
 	//used for requesting blocks, also keeps track of all blocks we have
 	block_request Block_Request;

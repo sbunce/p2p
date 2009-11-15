@@ -1,16 +1,11 @@
 #include "slot_manager.hpp"
 
 slot_manager::slot_manager(
-	network::proactor & Proactor_in,
 	network::connection_info & CI
 ):
-	Proactor(Proactor_in),
-	connection_ID(CI.connection_ID),
-	IP(CI.IP),
-	port(CI.port),
 	share_slot_state(0)
 {
-	sync_slots();
+	sync_slots(CI);
 }
 
 bool slot_manager::is_slot_command(const unsigned char command)
@@ -47,12 +42,17 @@ bool slot_manager::recv_request_slot(network::connection_info & CI)
 	std::string hash = convert::bin_to_hex(std::string(
 		reinterpret_cast<const char *>(CI.recv_buf.data()), SHA1::bin_size));
 	share::slot_iterator slot_iter = share::singleton().find_slot(hash);
-	if(slot_iter == share::singleton().end_slot()){
-		network::buffer send_buf;
-		send_buf.append(protocol::REQUEST_SLOT_FAILED);
-		Proactor.write(CI.connection_ID, send_buf);
+	if(slot_iter == share::singleton().end_slot()
+		|| !slot_iter->available())
+	{
+		boost::shared_ptr<message> M(new message());
+		M->send_buf.append(protocol::REQUEST_SLOT_FAILED);
+		Send_Queue.push_back(M);
 		return true;
 	}
+
+	//get root hash
+	
 
 	//find available slot ID
 	unsigned slot_ID = 0;
@@ -65,19 +65,9 @@ bool slot_manager::recv_request_slot(network::connection_info & CI)
 		}
 		++slot_ID;
 	}
-
-	unsigned status;
-	if(slot_iter->Hash_Tree.complete() && slot_iter->File.complete()){
-		status = 0;
-	}else if(slot_iter->Hash_Tree.complete() && !slot_iter->File.complete()){
-		status = 1;
-	}else if(!slot_iter->Hash_Tree.complete() && slot_iter->File.complete()){
-		status = 2;
-	}else if(!slot_iter->Hash_Tree.complete() && !slot_iter->File.complete()){
-		status = 3;
-	}
 /*
 	//send slot ID
+	boost::shared_ptr<message> M(new message());
 	network::buffer send_buf;
 	send_buf
 		.append(protocol::SLOT_ID)
@@ -95,62 +85,8 @@ void slot_manager::send_close_slot(const unsigned char slot_ID)
 	M->send_buf.append(protocol::CLOSE_SLOT).append(slot_ID);
 	Send_Queue.push_back(M);
 }
-/*
-void slot_manager::send_request_slot(const std::string & hash)
-{
-	boost::shared_ptr<message> M(new message());
-	M->send_buf.append(protocol::REQUEST_SLOT).append(convert::hex_to_bin(hash));
-	M->expected_response.push_back(std::make_pair(protocol::SLOT_ID,
-		protocol::SLOT_ID_SIZE));
-	M->expected_response.push_back(std::make_pair(protocol::REQUEST_SLOT_FAILED,
-		protocol::REQUEST_SLOT_FAILED_SIZE));
-	Send_Queue.push_back(M);
-}
 
-void slot_manager::send_request_slot_failed()
-{
-	boost::shared_ptr<message> M(new message());
-	M->send_buf.append(protocol::REQUEST_SLOT_FAILED);
-	Send_Queue.push_back(M);
-}
-
-void slot_manager::send_request_block(
-	std::pair<unsigned char, boost::shared_ptr<slot> > & P)
-{
-	//request hash tree blocks first
-	boost::uint64_t block;
-	if(P.second->Hash_Tree.Block_Request.next_request(connection_ID, block)){
-		boost::shared_ptr<message> M(new message());
-		M->Slot = P.second;
-		M->send_buf.append(protocol::REQUEST_BLOCK_HASH_TREE).append(P.first)
-			.append(convert::encode_VLI(block, P.second->Hash_Tree.tree_block_count));
-		M->expected_response.push_back(std::make_pair(protocol::BLOCK,
-			protocol::BLOCK_SIZE(P.second->Hash_Tree.block_size(block))));
-		M->expected_response.push_back(std::make_pair(protocol::FILE_REMOVED,
-			protocol::FILE_REMOVED_SIZE));
-		Send_Queue.push_back(M);
-	}else if(P.second->File.Block_Request.next_request(connection_ID, block)){
-		boost::shared_ptr<message> M(new message());
-		M->Slot = P.second;
-		M->send_buf.append(protocol::REQUEST_BLOCK_FILE).append(P.first)
-			.append(convert::encode_VLI(block, P.second->File.block_count));
-		M->expected_response.push_back(std::make_pair(protocol::BLOCK,
-			protocol::BLOCK_SIZE(P.second->File.block_size(block))));
-		M->expected_response.push_back(std::make_pair(protocol::FILE_REMOVED,
-			protocol::FILE_REMOVED_SIZE));
-		Send_Queue.push_back(M);
-	}
-}
-
-void slot_manager::send_file_removed()
-{
-	boost::shared_ptr<message> M(new message());
-	M->send_buf.append(protocol::FILE_REMOVED);
-	Send_Queue.push_back(M);
-}
-*/
-
-void slot_manager::sync_slots()
+void slot_manager::sync_slots(network::connection_info & CI)
 {
 	//only sync with share if slot has been modified
 	if(!share::singleton().slot_modified(share_slot_state)){
@@ -163,7 +99,7 @@ void slot_manager::sync_slots()
 		//true if slot exists in this slot_manager
 		bool known = Known_Slot.find(iter_cur.get()) != Known_Slot.end();
 		//true if this IP/port has file the slot is for
-		bool has_file = iter_cur->has_file(IP, port);
+		bool has_file = iter_cur->has_file(CI.IP, CI.port);
 
 		if(known && !has_file){
 			//this host was removed as a source for the file
@@ -256,7 +192,6 @@ void slot_manager::sync_slots()
 
 		if(!known && has_file && !iter_cur->complete()){
 			//file needs to be downloaded
-			LOGGER << "opening slot " << iter_cur->File.name() << " to " << IP << ":" << port;
 			Pending_Slot_Request.push_back(iter_cur.get());
 			Known_Slot.insert(iter_cur.get());
 		}

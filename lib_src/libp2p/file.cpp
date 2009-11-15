@@ -38,13 +38,3 @@ bool file::complete()
 {
 	return false;
 }
-
-std::string file::name()
-{
-	int pos;
-	if((pos = path.rfind('/')) != std::string::npos){
-		return path.substr(pos+1);
-	}else{
-		return "";
-	}
-}

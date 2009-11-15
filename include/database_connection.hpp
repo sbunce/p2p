@@ -317,9 +317,6 @@ private:
 	bool blob_open(const blob & Blob, const bool & writeable, sqlite3_blob *& blob_handle)
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-		assert(!Blob.column.empty());
-		assert(!Blob.table.empty());
-		assert(Blob.rowid > 0);
 		int code;
 		while((code = sqlite3_blob_open(
 			DB_handle,

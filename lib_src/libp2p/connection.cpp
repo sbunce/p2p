@@ -5,7 +5,7 @@ connection::connection(
 	network::connection_info & CI
 ):
 	Proactor(Proactor_in),
-	Slot_Manager(Proactor_in, CI),
+	Slot_Manager(CI),
 	blacklist_state(0)
 {
 	if(database::table::blacklist::is_blacklisted(CI.IP)){

@@ -102,7 +102,7 @@ static int resume_call_back(int columns, char ** response, char ** column_name,
 	std::deque<database::table::share::info> & info_container)
 {
 	if(boost::this_thread::interruption_requested()){
-		//query can take a long time, give a chance to end early
+		//resume query can take a long time, give a chance to end early
 		return -1;
 	}
 	try{

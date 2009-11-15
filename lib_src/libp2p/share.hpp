@@ -137,16 +137,6 @@ public:
 	boost::uint64_t bytes();
 	boost::uint64_t files();
 
-	/*
-	resume:
-		Restores share information from database.
-		Note: This function does not block. Call resume_block to be blocked.
-	resume_block:
-		Blocks until the share has been fully restored from database.
-	*/
-	void resume();
-	void resume_block();
-
 private:
 	share();
 

@@ -108,6 +108,13 @@ void p2p_real::resume()
 		resume.pop_front();
 	}
 
+	//hash check resumed downloads
+	for(share::slot_iterator iter_cur = share::singleton().begin_slot(),
+		iter_end = share::singleton().end_slot(); iter_cur != iter_end; ++iter_cur)
+	{
+		iter_cur->check();
+	}
+
 	//start share scanning after share repopulated
 	Share_Scanner.start();
 
@@ -157,12 +164,12 @@ void p2p_real::transfers(std::vector<p2p::transfer> & T)
 		iter_end = share::singleton().end_slot(); iter_cur != iter_end; ++iter_cur)
 	{
 		p2p::transfer transfer;
-		transfer.hash = iter_cur->Hash_Tree.hash;
-		transfer.name = iter_cur->File.name();
-		transfer.file_size = iter_cur->File.file_size;
-		transfer.percent_complete = 69;
-		transfer.upload_speed = 0;
-		transfer.download_speed = 0;
+		transfer.hash = iter_cur->hash();
+		transfer.name = iter_cur->name();
+		transfer.file_size = iter_cur->file_size();
+		transfer.percent_complete = iter_cur->percent_complete();
+		transfer.upload_speed = iter_cur->upload_speed();
+		transfer.download_speed = iter_cur->download_speed();
 		T.push_back(transfer);
 	}
 }
