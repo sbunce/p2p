@@ -51,6 +51,7 @@ public:
 			return boost::shared_ptr<nstream>();
 		}
 		boost::shared_ptr<nstream> N(new nstream(new_socket));
+		E = boost::shared_ptr<endpoint>(new endpoint(&ai));
 		return N;
 	}
 

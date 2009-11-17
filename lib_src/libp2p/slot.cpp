@@ -11,11 +11,6 @@ slot::slot(
 	host = database::table::host::lookup(FI.hash);
 }
 
-bool slot::available()
-{
-	return Hash_Tree && File;
-}
-
 void slot::check()
 {
 /*
@@ -77,25 +72,55 @@ unsigned slot::percent_complete()
 	return 69;
 }
 
-void set_missing(const std::string & root_hash, const boost::uint64_t file_size)
+//DEBUG, this should take Send_Queue ref as parameter?
+bool slot::recv(const network::buffer & recv_buf)
 {
 
 }
 
-unsigned char slot::status()
+bool slot::slot_ID(network::buffer & send_buf, const unsigned char slot_num)
 {
-	assert(available());
-	unsigned char temp;
-	if(Hash_Tree->complete() && File->complete()){
-		temp = 0;
-	}else if(Hash_Tree->complete() && !File->complete()){
-		temp = 1;
-	}else if(!Hash_Tree->complete() && File->complete()){
-		temp = 2;
-	}else if(!Hash_Tree->complete() && !File->complete()){
-		temp = 3;
+	assert(send_buf.empty());
+	if(!Hash_Tree || !File){
+		return false;
 	}
-	return temp;
+
+	unsigned char status;
+	if(Hash_Tree->complete() && File->complete()){
+		status = 0;
+	}else if(Hash_Tree->complete() && !File->complete()){
+		status = 1;
+	}else if(!Hash_Tree->complete() && File->complete()){
+		status = 2;
+	}else if(!Hash_Tree->complete() && !File->complete()){
+		status = 3;
+	}
+	
+	send_buf.append(protocol::SLOT_ID)
+		.append(slot_num)
+		.append(status)
+		.append(convert::encode(file_size()));
+	send_buf.reserve(SHA1::bin_size);
+	send_buf.resize(SHA1::bin_size);
+	if(!database::pool::get()->blob_read(Hash_Tree->blob,
+		reinterpret_cast<char *>(send_buf.tail_start()), SHA1::bin_size, 0))
+	{
+		LOGGER << "error reading hash tree";
+		return false;
+	}
+
+	//make sure file size and root hash are valid
+	SHA1 SHA;
+	SHA.init();
+	SHA.load(reinterpret_cast<const char *>(send_buf.data()) + 3,
+		8 + SHA1::bin_size);
+	SHA.end();
+	if(SHA.hex() == hash()){
+		return true;
+	}else{
+		LOGGER << "failed hash check";
+		return false;
+	}
 }
 
 unsigned slot::upload_speed()

@@ -32,7 +32,7 @@ public:
 		std::string hash;
 		boost::uint64_t tree_size;
 		state tree_state;
-		database::blob Blob;
+		database::blob blob;
 	};
 
 	/*

@@ -66,7 +66,7 @@ int main(int argc, char ** argv)
 		LOGGER << "web root not specified";
 		exit(1);
 	}
-	Proactor.max_upload_rate(1024*32);
+	//Proactor.max_upload_rate(1024*32);
 	Proactor.start();
 
 	while(!terminate_program){

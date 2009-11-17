@@ -20,10 +20,7 @@ bool slot_manager::slot_manager::recv(network::connection_info & CI)
 		if(CI.recv_buf[0] == protocol::REQUEST_SLOT
 			&& CI.recv_buf.size() >= protocol::REQUEST_SLOT_SIZE)
 		{
-			if(!recv_request_slot(CI)){
-				database::table::blacklist::add(CI.IP);
-				break;
-			}
+			recv_request_slot(CI);
 			CI.recv_buf.erase(0, protocol::REQUEST_SLOT_SIZE);
 		}else{
 			break;
@@ -31,58 +28,45 @@ bool slot_manager::slot_manager::recv(network::connection_info & CI)
 	}
 }
 
-bool slot_manager::recv_request_slot(network::connection_info & CI)
+void slot_manager::recv_request_slot(network::connection_info & CI)
 {
 	if(Incoming_Slot.size() > 256){
-		LOGGER << "exceeded max slots, " << CI.IP << " " << CI.port;
-		return false;
+		database::table::blacklist::add(CI.IP);
+		return;
 	}
-
-	//get slot
 	std::string hash = convert::bin_to_hex(std::string(
-		reinterpret_cast<const char *>(CI.recv_buf.data()), SHA1::bin_size));
+		reinterpret_cast<const char *>(CI.recv_buf.data()+1), SHA1::bin_size));
 	share::slot_iterator slot_iter = share::singleton().find_slot(hash);
-	if(slot_iter == share::singleton().end_slot()
-		|| !slot_iter->available())
-	{
-		boost::shared_ptr<message> M(new message());
-		M->send_buf.append(protocol::REQUEST_SLOT_FAILED);
-		Send_Queue.push_back(M);
-		return true;
+	if(slot_iter == share::singleton().end_slot()){
+		send_request_slot_failed();
+		return;
 	}
-
-	//get root hash
-	
-
-	//find available slot ID
-	unsigned slot_ID = 0;
+	unsigned char slot_num = 0;
 	for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter_cur = Incoming_Slot.begin(), iter_end = Incoming_Slot.end();
 		iter_cur != iter_end; ++iter_cur)
 	{
-		if(iter_cur->first != slot_ID){
+		if(iter_cur->first != slot_num){
 			break;
 		}
-		++slot_ID;
+		++slot_num;
 	}
-/*
-	//send slot ID
 	boost::shared_ptr<message> M(new message());
-	network::buffer send_buf;
-	send_buf
-		.append(protocol::SLOT_ID)
-		.append(reinterpret_cast<unsigned char>(slot_ID))
-		.append(
-
-	Send_Queue.push_back(M);
-*/
-	return true;
+	slot_iter->slot_ID(M->send_buf, slot_num);
+	return;
 }
 
 void slot_manager::send_close_slot(const unsigned char slot_ID)
 {
 	boost::shared_ptr<message> M(new message());
 	M->send_buf.append(protocol::CLOSE_SLOT).append(slot_ID);
+	Send_Queue.push_back(M);
+}
+
+void slot_manager::send_request_slot_failed()
+{
+	boost::shared_ptr<message> M(new message());
+	M->send_buf.append(protocol::REQUEST_SLOT_FAILED);
 	Send_Queue.push_back(M);
 }
 

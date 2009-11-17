@@ -271,15 +271,15 @@ C = command
 <pre>
 Name: SLOT_ID
 Base10: 6
-Description: Sent in response to REQUEST_SLOT. The slot ID is needed to request
-hash tree and file blocks.
+Description: Sent in response to REQUEST_SLOT. The slot number is needed to
+request hash tree and file blocks.
 
 +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
 | C | S | K |             F                 |       R       |
 +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
   0   1   2   3   4   5   6   7   8   9  10  11    ...   30
 
-C = command, S = slot ID, K = status, F = file size, R = root hash
+C = command, S = slot number, K = status, F = file size, R = root hash
 
 Status:
 

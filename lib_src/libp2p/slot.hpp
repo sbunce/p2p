@@ -57,29 +57,23 @@ public:
 	void check();
 
 	/* Slot Manager (functions slot_manager uses)
-	available:
-		Returns false if we don't yet have the root hash and file size for the
-		file. Returns true if we can open the slot.
 	complete:
 		Returns true if both the Hash_Tree and File are complete.
 	has_file:
 		Returns true if the host has the file associated with this slot.
 	merge_host:
 		Inserts all hosts known to have this file in to host_in.
-	set_missing:
-		Sets the root hash and file size (these are gotten when doing a slot
-		request). If the hash_tree and file are instantiated by this function if
-		they aren't already.
-	status:
-		Returns the status byte for a SLOT_ID message (see protocol doc).
-		Precondition: available() = true
+	recv:
+		Receive a slot related message. Returns false if host violated protocol.
+	slot_ID:
+		Returns true and appends SLOT_ID message to send_buf. Returns false if
+		slot could not be opened.
 	*/
-	bool available();
 	bool complete();
 	bool has_file(const std::string & IP, const std::string & port);
 	void merge_host(std::set<std::pair<std::string, std::string> > & host_in);
-	void set_missing(const std::string & root_hash, const boost::uint64_t file_size);
-	unsigned char status();
+	bool recv(const network::buffer & recv_buf);
+	bool slot_ID(network::buffer & send_buf, const unsigned char slot_num);
 
 private:
 	//the ctor will throw an exception if database access fails
@@ -88,7 +82,12 @@ private:
 	//before hash_tree and file instantiated info stored here
 	file_info FI;
 
-	//instantiated when we have root hash and file size
+	/*
+	Hash_Tree and File instantiated by ctor or set_missing() (if we don't yet
+	have the root hash and file size). The set_missing_mutex used to make sure
+	we don't instantiate multiple times concurrently.
+	*/
+	boost::mutex set_missing_mutex;
 	boost::shared_ptr<hash_tree> Hash_Tree;
 	boost::shared_ptr<file> File;
 

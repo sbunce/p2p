@@ -49,12 +49,11 @@ public:
 		copying   //file may be copying (it is increasing in size)
 	};
 
-//DEBUG, consider replacing this with file_info since it holds all this stuff anyways
 	//info provided by file_info
 	const std::string hash;                     //hash the file is tracked by
 	const std::string path;                     //path to file the hash tree is for
 	const boost::uint64_t file_size;            //size of file hash tree is for
-	const database::blob Blob;                  //blob handle for hash tree in database
+	const database::blob blob;                  //blob handle for hash tree in database
 
 	//info generated based on file_info
 	const std::deque<boost::uint64_t> row;      //number of hashes in each row

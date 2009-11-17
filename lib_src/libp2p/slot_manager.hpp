@@ -78,13 +78,20 @@ private:
 	std::deque<boost::shared_ptr<message> > Sent_Queue;
 
 	/*
+	recv_request_slot:
+		Process incoming REQUEST_SLOT.
+	send_close_slot:
+		Send CLOSE_SLOT for specified slot_ID.
+	send_request_slot_failed:
+		Send REQUEST_SLOT_FAILED.
 	sync_slots:
 		Sync slots in the share with slots in the slot_manager. This is useful for
 		when a slot becomes associated with a new host, or when a totally new slot
 		is added.
 	*/
-	bool recv_request_slot(network::connection_info & CI);
+	void recv_request_slot(network::connection_info & CI);
 	void send_close_slot(const unsigned char slot_ID);
+	void send_request_slot_failed();
 	void sync_slots(network::connection_info & CI);
 };
 #endif

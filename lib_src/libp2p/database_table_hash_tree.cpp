@@ -22,7 +22,7 @@ static int lookup_call_back(int columns, char ** response, char ** column_name,
 	Info = boost::shared_ptr<database::table::hash_tree::info>(
 		new database::table::hash_tree::info());
 	try{
-		Info->Blob.rowid = boost::lexical_cast<boost::int64_t>(response[0]);
+		Info->blob.rowid = boost::lexical_cast<boost::int64_t>(response[0]);
 		int temp = boost::lexical_cast<int>(response[1]);
 		Info->tree_state = reinterpret_cast<database::table::hash_tree::state &>(temp);
 	}catch(const std::exception & e){
@@ -41,12 +41,12 @@ boost::shared_ptr<database::table::hash_tree::info> database::table::hash_tree::
 	DB->query(ss.str(), boost::bind(&lookup_call_back, _1, _2, _3, boost::ref(Info)));
 	if(Info){
 		Info->hash = hash;
-		Info->Blob.table = "hash_tree";
-		Info->Blob.column = "tree";
+		Info->blob.table = "hash_tree";
+		Info->blob.column = "tree";
 	}else{
 		return boost::shared_ptr<info>();
 	}
-	if(DB->blob_size(Info->Blob, Info->tree_size)){
+	if(DB->blob_size(Info->blob, Info->tree_size)){
 		return Info;
 	}else{
 		return boost::shared_ptr<info>();

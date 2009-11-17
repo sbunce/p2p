@@ -482,8 +482,8 @@ private:
 				//handle all reads
 				while(!need_read.empty()){
 					std::pair<int, boost::shared_ptr<state> > P = lookup_socket(need_read.front());
-					P.second->touch();
 					if(P.second){
+						P.second->touch();
 						//n_bytes initially set to max read, then set to how much read
 						int n_bytes = Rate_Limit.available_download(need_read.size());
 						if(n_bytes == 0){

@@ -10,6 +10,7 @@
 
 //standard
 #include <deque>
+#include <list>
 
 namespace network{
 class call_back_dispatcher : private boost::noncopyable
@@ -96,17 +97,6 @@ private:
 	const boost::function<void (connection_info &)> disconnect_call_back;
 
 	/*
-	Used by call_back_dispatch to memoize the connection_ID for each call back in
-	progress so that it can stop multiple call backs for the same socket from
-	occuring concurrently.
-	Note: memoize_mutex must lock all access to container.
-	Note: memoize_cond notified when call back completed.
-	*/
-	boost::mutex memoize_mutex;
-	boost::condition_variable_any memoize_cond;
-	std::set<int> memoize;
-
-	/*
 	Call backs to be done by dispatch(). The connect_job container holds connect
 	call back jobs. The other_job container holds send call back and disconnect
 	call back jobs.
@@ -121,9 +111,10 @@ private:
 		job container.
 	Invariant 3 is insured by requiring that disconnect jobs be scheduled last.
 	*/
-	boost::mutex job_mutex;
+	boost::mutex job_mutex; //locks everything in this section
 	boost::condition_variable_any job_cond;
-	std::deque<std::pair<int, boost::function<void ()> > > job;
+	std::list<std::pair<int, boost::function<void ()> > > job;
+	std::set<int> memoize;  //used to memoize connection_ID
 
 	//worker threads which do call backs reside in this function
 	void dispatch()
@@ -132,34 +123,32 @@ private:
 		while(true){
 			{//begin lock scope
 			boost::mutex::scoped_lock lock(job_mutex);
-			while(job.empty()){
+			while(true){
+				for(std::list<std::pair<int, boost::function<void ()> > >::iterator
+					iter_cur = job.begin(), iter_end = job.end(); iter_cur != iter_end;
+					++iter_cur)
+				{
+					std::pair<std::set<int>::iterator, bool>
+						ret = memoize.insert(iter_cur->first);
+					if(ret.second){
+						temp = *iter_cur;
+						job.erase(iter_cur);
+						goto run_dispatch;
+					}
+				}
 				job_cond.wait(job_mutex);
 			}
-			temp = job.front();
-			job.pop_front();
 			}//end lock scope
-
-			{//begin lock scope
-			boost::mutex::scoped_lock lock(memoize_mutex);
-			while(true){
-				std::pair<std::set<int>::iterator, bool> ret = memoize.insert(temp.first);
-				if(ret.second){
-					break;
-				}else{
-					//call back for socket is currently running
-					memoize_cond.wait(memoize_mutex);
-				}
-			}
-			}//end lock scope
+			run_dispatch:
 
 			//run call back
 			temp.second();
 
 			{//begin lock scope
-			boost::mutex::scoped_lock lock(memoize_mutex);
+			boost::mutex::scoped_lock lock(job_mutex);
 			memoize.erase(temp.first);
 			}//end lock scope
-			memoize_cond.notify_all();
+			job_cond.notify_all();
 		}
 	}
 
