@@ -9,7 +9,6 @@
 #include <boost/utility.hpp>
 
 //standard
-#include <deque>
 #include <list>
 
 namespace network{

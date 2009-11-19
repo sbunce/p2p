@@ -2,6 +2,7 @@
 #define H_SLOT_MANAGER
 
 //custom
+#include "send_queue.hpp"
 #include "share.hpp"
 #include "slot.hpp"
 
@@ -18,7 +19,10 @@
 class slot_manager : private boost::noncopyable
 {
 public:
-	slot_manager(network::connection_info & CI);
+	slot_manager(
+		send_queue & Send_Queue_in,
+		network::connection_info & CI
+	);
 
 	/*
 	is_slot_command:
@@ -27,11 +31,16 @@ public:
 		Removes/processes one message on front of CI.recv_buf. Returns false if
 		there is an incomplete message on front of recv_buf.
 		Precondition: !CI.recv_buf.empty() && is_slot_command(CI.recv_buf[0]) = true
+	send:
+		Opens slots. Generate requests.
 	*/
 	static bool is_slot_command(const unsigned char command);
 	bool recv(network::connection_info & CI);
+	void send();
 
 private:
+	send_queue & Send_Queue;
+
 	//used to detect when slot within share modified
 	int share_slot_state;
 
@@ -52,30 +61,11 @@ private:
 		this. When a response arrives it will be for the element on the front of
 		this.
 	*/
-	std::deque<boost::shared_ptr<slot> > Pending_Slot_Request;
-	std::deque<boost::shared_ptr<slot> > Slot_Request;
+	std::list<boost::shared_ptr<slot> > Pending_Slot_Request;
+	std::list<boost::shared_ptr<slot> > Slot_Request;
 
 	//set of all slots that exist somewhere in this class
 	std::set<boost::shared_ptr<slot> > Known_Slot;
-
-	//messages that expect a response
-	class message
-	{
-	public:
-		boost::shared_ptr<slot> Slot; //slot that expects response (may be empty)
-		network::buffer send_buf;     //message to send
-
-		//possible responses expected (command associated with expected size)
-		std::vector<std::pair<unsigned char, unsigned> > expected_response;
-	};
-	std::deque<boost::shared_ptr<message> > Send_Queue;
-
-	/*
-	When a message is sent that expects a response it is pushed on to the back of
-	this. When a response to a slot related message is recieved it is always to
-	the element on the front of this queue.
-	*/
-	std::deque<boost::shared_ptr<message> > Sent_Queue;
 
 	/*
 	recv_request_slot:

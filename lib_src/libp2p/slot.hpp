@@ -27,6 +27,15 @@ class slot : private boost::noncopyable
 	friend class share;
 
 public:
+	//message to send over the network
+	class message
+	{
+	public:
+		boost::shared_ptr<slot> Slot; //slot that expects response (may be empty)
+		network::buffer send_buf;     //bytes to send
+		//possible responses (command paired with expected size)
+		std::vector<std::pair<unsigned char, unsigned> > expected_response;
+	};
 
 	/* Info (info to return to GUI)
 	download_speed:
@@ -66,21 +75,18 @@ public:
 	recv:
 		Receive a slot related message. Returns false if host violated protocol.
 	slot_ID:
-		Returns true and appends SLOT_ID message to send_buf. Returns false if
-		slot could not be opened.
+		Returns true and appends SLOT_ID message to M->send_buf. Returns false if
+		slot can't be opened.
 	*/
 	bool complete();
 	bool has_file(const std::string & IP, const std::string & port);
 	void merge_host(std::set<std::pair<std::string, std::string> > & host_in);
 	bool recv(const network::buffer & recv_buf);
-	bool slot_ID(network::buffer & send_buf, const unsigned char slot_num);
+	bool slot_ID(boost::shared_ptr<message> & M, const unsigned char slot_num);
 
 private:
 	//the ctor will throw an exception if database access fails
-	slot(const file_info & FI_in);
-
-	//before hash_tree and file instantiated info stored here
-	file_info FI;
+	slot(const file_info & FI);
 
 	/*
 	Hash_Tree and File instantiated by ctor or set_missing() (if we don't yet
@@ -88,8 +94,8 @@ private:
 	we don't instantiate multiple times concurrently.
 	*/
 	boost::mutex set_missing_mutex;
-	boost::shared_ptr<hash_tree> Hash_Tree;
-	boost::shared_ptr<file> File;
+	hash_tree Hash_Tree;
+	file File;
 
 	//all the hosts known to have the file
 	boost::mutex host_mutex;

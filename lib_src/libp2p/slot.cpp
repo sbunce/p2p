@@ -1,13 +1,11 @@
 #include "slot.hpp"
 
 slot::slot(
-	const file_info & FI_in
+	const file_info & FI
 ):
-	FI(FI_in)
+	Hash_Tree(FI),
+	File(FI)
 {
-//DEBUG, check to see if hash tree and file can be instantiated
-
-//	if(FI.hash
 	host = database::table::host::lookup(FI.hash);
 }
 
@@ -23,11 +21,7 @@ void slot::check()
 
 bool slot::complete()
 {
-	if(Hash_Tree && File){
-		return Hash_Tree->complete() && File->complete();
-	}else{
-		return false;
-	}
+	return Hash_Tree.complete() && File.complete();
 }
 
 unsigned slot::download_speed()
@@ -37,7 +31,7 @@ unsigned slot::download_speed()
 
 boost::uint64_t slot::file_size()
 {
-	return FI.file_size;
+	return File.file_size;
 }
 
 bool slot::has_file(const std::string & IP, const std::string & port)
@@ -48,7 +42,7 @@ bool slot::has_file(const std::string & IP, const std::string & port)
 
 const std::string & slot::hash()
 {
-	return FI.hash;
+	return Hash_Tree.hash;
 }
 
 void slot::merge_host(std::set<std::pair<std::string, std::string> > & host_in)
@@ -60,8 +54,8 @@ void slot::merge_host(std::set<std::pair<std::string, std::string> > & host_in)
 std::string slot::name()
 {
 	int pos;
-	if((pos = FI.path.get().rfind('/')) != std::string::npos){
-		return FI.path.get().substr(pos+1);
+	if((pos = File.path.rfind('/')) != std::string::npos){
+		return File.path.substr(pos+1);
 	}else{
 		return "";
 	}
@@ -72,50 +66,42 @@ unsigned slot::percent_complete()
 	return 69;
 }
 
-//DEBUG, this should take Send_Queue ref as parameter?
 bool slot::recv(const network::buffer & recv_buf)
 {
 
 }
 
-bool slot::slot_ID(network::buffer & send_buf, const unsigned char slot_num)
+bool slot::slot_ID(boost::shared_ptr<message> & M, const unsigned char slot_num)
 {
-	assert(send_buf.empty());
-	if(!Hash_Tree || !File){
-		return false;
-	}
-
 	unsigned char status;
-	if(Hash_Tree->complete() && File->complete()){
+	if(Hash_Tree.complete() && File.complete()){
 		status = 0;
-	}else if(Hash_Tree->complete() && !File->complete()){
+	}else if(Hash_Tree.complete() && !File.complete()){
 		status = 1;
-	}else if(!Hash_Tree->complete() && File->complete()){
+	}else if(!Hash_Tree.complete() && File.complete()){
 		status = 2;
-	}else if(!Hash_Tree->complete() && !File->complete()){
+	}else if(!Hash_Tree.complete() && !File.complete()){
 		status = 3;
 	}
-	
-	send_buf.append(protocol::SLOT_ID)
+	M->send_buf.append(protocol::SLOT_ID)
 		.append(slot_num)
 		.append(status)
 		.append(convert::encode(file_size()));
-	send_buf.reserve(SHA1::bin_size);
-	send_buf.resize(SHA1::bin_size);
-	if(!database::pool::get()->blob_read(Hash_Tree->blob,
-		reinterpret_cast<char *>(send_buf.tail_start()), SHA1::bin_size, 0))
+	M->send_buf.tail_reserve(SHA1::bin_size);
+	if(!database::pool::get()->blob_read(Hash_Tree.blob,
+		reinterpret_cast<char *>(M->send_buf.tail_start()), SHA1::bin_size, 0))
 	{
 		LOGGER << "error reading hash tree";
 		return false;
 	}
-
-	//make sure file size and root hash are valid
+	M->send_buf.tail_resize(SHA1::bin_size);
 	SHA1 SHA;
 	SHA.init();
-	SHA.load(reinterpret_cast<const char *>(send_buf.data()) + 3,
+	SHA.load(reinterpret_cast<const char *>(M->send_buf.data()) + 3,
 		8 + SHA1::bin_size);
 	SHA.end();
 	if(SHA.hex() == hash()){
+		LOGGER << "opened slot for " << name();
 		return true;
 	}else{
 		LOGGER << "failed hash check";
@@ -129,17 +115,6 @@ unsigned slot::upload_speed()
 }
 
 /*
-void slot_manager::send_request_slot(const std::string & hash)
-{
-	boost::shared_ptr<message> M(new message());
-	M->send_buf.append(protocol::REQUEST_SLOT).append(convert::hex_to_bin(hash));
-	M->expected_response.push_back(std::make_pair(protocol::SLOT_ID,
-		protocol::SLOT_ID_SIZE));
-	M->expected_response.push_back(std::make_pair(protocol::REQUEST_SLOT_FAILED,
-		protocol::REQUEST_SLOT_FAILED_SIZE));
-	Send_Queue.push_back(M);
-}
-
 void slot_manager::send_request_slot_failed()
 {
 	boost::shared_ptr<message> M(new message());

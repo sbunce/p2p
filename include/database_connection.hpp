@@ -192,6 +192,8 @@ public:
 	*/
 	bool blob_size(const blob & Blob, boost::uint64_t & size)
 	{
+		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+		connect();
 		sqlite3_blob * blob_handle;
 		if(!blob_open(Blob, false, blob_handle)){
 			return false;
@@ -314,7 +316,7 @@ private:
 	}
 
 	//open blob
-	bool blob_open(const blob & Blob, const bool & writeable, sqlite3_blob *& blob_handle)
+	bool blob_open(const blob & Blob, const bool writeable, sqlite3_blob *& blob_handle)
 	{
 		boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 		int code;

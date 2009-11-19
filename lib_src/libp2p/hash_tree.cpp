@@ -24,34 +24,34 @@ hash_tree::hash_tree(
 	Block_Request(hash.empty() ? 0 : tree_block_count),
 	end_of_good(0)
 {
-	boost::shared_ptr<database::table::hash_tree::info> info;
 	//if no hash, then no need to check because hash tree will be created
 	if(!hash.empty()){
-		info = database::table::hash_tree::lookup(hash, DB);
-	}
-	if(info){
-		//opened existing hash tree
-		boost::uint64_t size;
-		if(!database::pool::get()->blob_size(info->blob, size)){
-			throw std::runtime_error("error checking tree size");
-		}
-		//only open tree if the size is what we expect
-		if(tree_size == size){
-			const_cast<database::blob &>(blob) = info->blob;
-		}
-	}else{
-		//allocate space to reconstruct hash tree
-		if(database::table::hash_tree::add(hash, tree_size, DB)){
-			database::table::hash_tree::set_state(hash,
-				database::table::hash_tree::downloading, DB);
+		boost::shared_ptr<database::table::hash_tree::info>
 			info = database::table::hash_tree::lookup(hash, DB);
-			if(info){
+		if(info){
+			//opened existing hash tree
+			boost::uint64_t size;
+			if(!database::pool::get()->blob_size(info->blob, size)){
+				throw std::runtime_error("error checking tree size");
+			}
+			//only open tree if the size is what we expect
+			if(tree_size == size){
 				const_cast<database::blob &>(blob) = info->blob;
-			}else{
-				throw std::runtime_error("failed hash tree open");
 			}
 		}else{
-			throw std::runtime_error("failed hash tree allocate");
+			//allocate space to reconstruct hash tree
+			if(database::table::hash_tree::add(hash, tree_size, DB)){
+				database::table::hash_tree::set_state(hash,
+					database::table::hash_tree::downloading, DB);
+				info = database::table::hash_tree::lookup(hash, DB);
+				if(info){
+					const_cast<database::blob &>(blob) = info->blob;
+				}else{
+					throw std::runtime_error("failed hash tree open");
+				}
+			}else{
+				throw std::runtime_error("failed hash tree allocate");
+			}
 		}
 	}
 }

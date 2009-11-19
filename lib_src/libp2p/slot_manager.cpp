@@ -1,8 +1,10 @@
 #include "slot_manager.hpp"
 
 slot_manager::slot_manager(
+	send_queue & Send_Queue_in,
 	network::connection_info & CI
 ):
+	Send_Queue(Send_Queue_in),
 	share_slot_state(0)
 {
 	sync_slots(CI);
@@ -13,18 +15,30 @@ bool slot_manager::is_slot_command(const unsigned char command)
 	return command <= 12;
 }
 
-bool slot_manager::slot_manager::recv(network::connection_info & CI)
+bool slot_manager::recv(network::connection_info & CI)
 {
 	assert(!CI.recv_buf.empty() && is_slot_command(CI.recv_buf[0]));
-	while(true){
-		if(CI.recv_buf[0] == protocol::REQUEST_SLOT
-			&& CI.recv_buf.size() >= protocol::REQUEST_SLOT_SIZE)
-		{
-			recv_request_slot(CI);
-			CI.recv_buf.erase(0, protocol::REQUEST_SLOT_SIZE);
-		}else{
-			break;
-		}
+	if(CI.recv_buf[0] == protocol::REQUEST_SLOT
+		&& CI.recv_buf.size() >= protocol::REQUEST_SLOT_SIZE)
+	{
+		recv_request_slot(CI);
+		CI.recv_buf.erase(0, protocol::REQUEST_SLOT_SIZE);
+	}
+}
+
+void slot_manager::send()
+{
+	while(!Pending_Slot_Request.empty() && Outgoing_Slot.size() < 256){
+		boost::shared_ptr<slot::message> M(new slot::message());
+		M->send_buf.append(protocol::REQUEST_SLOT)
+			.append(convert::hex_to_bin(Pending_Slot_Request.front()->hash()));
+		M->expected_response.push_back(std::make_pair(protocol::SLOT_ID,
+			protocol::SLOT_ID_SIZE));
+		M->expected_response.push_back(std::make_pair(protocol::REQUEST_SLOT_FAILED,
+			protocol::REQUEST_SLOT_FAILED_SIZE));
+		Send_Queue.insert(M);
+		Slot_Request.push_back(Pending_Slot_Request.front());
+		Pending_Slot_Request.pop_front();
 	}
 }
 
@@ -36,8 +50,10 @@ void slot_manager::recv_request_slot(network::connection_info & CI)
 	}
 	std::string hash = convert::bin_to_hex(std::string(
 		reinterpret_cast<const char *>(CI.recv_buf.data()+1), SHA1::bin_size));
+	LOGGER << CI.IP << " " << CI.port << " requested " << hash;
 	share::slot_iterator slot_iter = share::singleton().find_slot(hash);
 	if(slot_iter == share::singleton().end_slot()){
+		LOGGER << "request slot failed";
 		send_request_slot_failed();
 		return;
 	}
@@ -51,23 +67,29 @@ void slot_manager::recv_request_slot(network::connection_info & CI)
 		}
 		++slot_num;
 	}
-	boost::shared_ptr<message> M(new message());
-	slot_iter->slot_ID(M->send_buf, slot_num);
-	return;
+	boost::shared_ptr<slot::message> M(new slot::message());
+	if(slot_iter->slot_ID(M, slot_num)){
+		LOGGER << CI.IP << " " << CI.port << " opened " << slot_iter->name();
+		Incoming_Slot.insert(std::make_pair(slot_num, slot_iter.get()));
+		Send_Queue.insert(M);
+	}else{
+		LOGGER << "request slot failed";
+		send_request_slot_failed();
+	}
 }
 
 void slot_manager::send_close_slot(const unsigned char slot_ID)
 {
-	boost::shared_ptr<message> M(new message());
+	boost::shared_ptr<slot::message> M(new slot::message());
 	M->send_buf.append(protocol::CLOSE_SLOT).append(slot_ID);
-	Send_Queue.push_back(M);
+	Send_Queue.insert(M);
 }
 
 void slot_manager::send_request_slot_failed()
 {
-	boost::shared_ptr<message> M(new message());
+	boost::shared_ptr<slot::message> M(new slot::message());
 	M->send_buf.append(protocol::REQUEST_SLOT_FAILED);
-	Send_Queue.push_back(M);
+	Send_Queue.insert(M);
 }
 
 void slot_manager::sync_slots(network::connection_info & CI)
@@ -102,9 +124,6 @@ void slot_manager::sync_slots(network::connection_info & CI)
 			}
 			/* Step 2
 			Send CLOSE_SLOT for Outgoing_Slot, remove element.
-			Note: The CLOSE_SLOT message put in the Send_Queue won't be removed by
-				step 6 since it doesn't expect a response (Slot shared_ptr in
-				message empty).
 			*/
 			for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 				OS_iter_cur = Outgoing_Slot.begin(), OS_iter_end = Outgoing_Slot.end();
@@ -119,7 +138,7 @@ void slot_manager::sync_slots(network::connection_info & CI)
 			/* Step 3
 			Remove element in Pending_Slot_Request so slot request is not made.
 			*/
-			for(std::deque<boost::shared_ptr<slot> >::iterator
+			for(std::list<boost::shared_ptr<slot> >::iterator
 				PSR_iter_cur = Pending_Slot_Request.begin(), PSR_iter_end = Pending_Slot_Request.end();
 				PSR_iter_cur != PSR_iter_end; ++PSR_iter_cur)
 			{
@@ -133,7 +152,7 @@ void slot_manager::sync_slots(network::connection_info & CI)
 			a SLOT_ID we will send a CLOSE_SLOT. If the remote host responds with a
 			REQUEST_SLOT_FAILED we do nothing.
 			*/
-			for(std::deque<boost::shared_ptr<slot> >::iterator
+			for(std::list<boost::shared_ptr<slot> >::iterator
 				SR_iter_cur = Slot_Request.begin(), SR_iter_end = Slot_Request.end();
 				SR_iter_cur != SR_iter_end; ++SR_iter_cur)
 			{
@@ -142,35 +161,7 @@ void slot_manager::sync_slots(network::connection_info & CI)
 					break;
 				}
 			}
-			/* Step 5
-			Remove elements in Send_Queue to stop pending requests for the slot.
-			*/
-			for(std::deque<boost::shared_ptr<message> >::iterator
-				SQ_iter_cur = Send_Queue.begin(), SQ_iter_end = Send_Queue.end();
-				SQ_iter_cur != SQ_iter_end;)
-			{
-				if((*SQ_iter_cur)->Slot == iter_cur.get()){
-					Send_Queue.erase(SQ_iter_cur);
-					//iterators invalidated after erase
-					SQ_iter_cur = Send_Queue.begin();
-					SQ_iter_end = Send_Queue.end();
-				}else{
-					++SQ_iter_cur;
-				}
-			}
-			/* Step 6
-			Set elements in Sent_Queue to empty so we ignore responses for the
-			closed slot.
-			*/
-			for(std::deque<boost::shared_ptr<message> >::iterator
-				SQ_iter_cur = Sent_Queue.begin(), SQ_iter_end = Sent_Queue.end();
-				SQ_iter_cur != SQ_iter_end; ++SQ_iter_cur)
-			{
-				if((*SQ_iter_cur)->Slot == iter_cur.get()){
-					(*SQ_iter_cur)->Slot = boost::shared_ptr<slot>();
-				}
-			}
-			//Step 7
+			//Step 5
 			Known_Slot.erase(iter_cur.get());
 		}
 

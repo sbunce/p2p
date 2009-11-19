@@ -294,7 +294,6 @@ public:
 			int n_bytes = ::send(socket_FD, reinterpret_cast<char *>(B.data()),
 				max_transfer, MSG_NOSIGNAL);
 			if(n_bytes == -1){
-				LOGGER << errno;
 				_error = errno;
 			}else if(n_bytes == 0){
 				close();

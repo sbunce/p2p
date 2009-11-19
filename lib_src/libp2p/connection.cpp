@@ -5,7 +5,7 @@ connection::connection(
 	network::connection_info & CI
 ):
 	Proactor(Proactor_in),
-	Slot_Manager(CI),
+	Slot_Manager(Send_Queue, CI),
 	blacklist_state(0)
 {
 	if(database::table::blacklist::is_blacklisted(CI.IP)){
@@ -64,16 +64,8 @@ void connection::recv_call_back(network::connection_info & CI)
 	//decrypt incoming data
 	Encryption.crypt_recv(CI.recv_buf, CI.recv_buf.size() - CI.latest_recv);
 
-	network::buffer send_buf;
-
-/*
-	//DEBUG, BEGIN TEST CODE
-	LOGGER << CI.recv_buf.str();
-	//DEBUG, END TEST CODE
-*/
-
 	//process messages in buffer
-	while(true){
+	while(!CI.recv_buf.empty()){
 		if(slot_manager::is_slot_command(CI.recv_buf[0])){
 			if(!Slot_Manager.recv(CI)){
 				break;
@@ -82,11 +74,6 @@ void connection::recv_call_back(network::connection_info & CI)
 			database::table::blacklist::add(CI.IP);
 			break;
 		}
-	}
-
-	if(!send_buf.empty()){
-		Encryption.crypt_send(send_buf);
-		Proactor.write(CI.connection_ID, send_buf);
 	}
 
 	if(database::table::blacklist::modified(blacklist_state)
@@ -100,26 +87,16 @@ void connection::recv_call_back(network::connection_info & CI)
 
 void connection::send_call_back(network::connection_info & CI)
 {
-	network::buffer send_buf;
+	//open slots, generate requests
+	Slot_Manager.send();
 
-/*
-	//DEBUG, BEGIN TEST CODE
-	if(CI.direction == network::outgoing){
-		static bool sent = false;
-		if(!sent){
-			send_buf.append("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			sent = true;
+	if(CI.send_buf_size == 0){
+		if(boost::shared_ptr<slot::message> M = Send_Queue.send()){
+//DEBUG, encrypt send_buf that will remain in memory?
+LOGGER << "sending";
+			Encryption.crypt_send(M->send_buf);
+			Proactor.write(CI.connection_ID, M->send_buf);
 		}
-	}
-	//DEBUG, END TEST CODE
-*/
-
-	//Slot_Manager.send(send_buf);
-
-	//encrypt what was appended to send_buff
-	if(!send_buf.empty()){
-		Encryption.crypt_send(send_buf);
-		Proactor.write(CI.connection_ID, send_buf);
 	}
 
 	if(database::table::blacklist::modified(blacklist_state)
