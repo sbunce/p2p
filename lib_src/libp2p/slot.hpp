@@ -3,6 +3,7 @@
 
 //custom
 #include "database.hpp"
+#include "exchange.hpp"
 #include "file.hpp"
 #include "file_info.hpp"
 #include "hash_tree.hpp"
@@ -27,16 +28,6 @@ class slot : private boost::noncopyable
 	friend class share;
 
 public:
-	//message to send over the network
-	class message
-	{
-	public:
-		boost::shared_ptr<slot> Slot; //slot that expects response (may be empty)
-		network::buffer send_buf;     //bytes to send
-		//possible responses (command paired with expected size)
-		std::vector<std::pair<unsigned char, unsigned> > expected_response;
-	};
-
 	/* Info (info to return to GUI)
 	download_speed:
 		Returns download speed (bytes/second).
@@ -68,21 +59,17 @@ public:
 	/* Slot Manager (functions slot_manager uses)
 	complete:
 		Returns true if both the Hash_Tree and File are complete.
+	create_REQUEST_SLOT:
+		Creates a REQUEST_SLOT message with the given slot_num.
 	has_file:
 		Returns true if the host has the file associated with this slot.
 	merge_host:
 		Inserts all hosts known to have this file in to host_in.
-	recv:
-		Receive a slot related message. Returns false if host violated protocol.
-	slot_ID:
-		Returns true and appends SLOT_ID message to M->send_buf. Returns false if
-		slot can't be opened.
 	*/
 	bool complete();
+	boost::shared_ptr<exchange::message> create_REQUEST_SLOT(const unsigned char slot_num);
 	bool has_file(const std::string & IP, const std::string & port);
 	void merge_host(std::set<std::pair<std::string, std::string> > & host_in);
-	bool recv(const network::buffer & recv_buf);
-	bool slot_ID(boost::shared_ptr<message> & M, const unsigned char slot_num);
 
 private:
 	//the ctor will throw an exception if database access fails

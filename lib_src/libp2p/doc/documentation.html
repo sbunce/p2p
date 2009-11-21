@@ -378,7 +378,7 @@ Note: The file size must be known to calculate how long the bit field will be.
 <fieldset>
 <pre>
 Name: BIT_FIELD_COMPLETE
-Base10: 9
+Base10: 10
 Description: Sent in response to SUBSCRIBE_HASH_TREE_CHANGES when hash tree
 complete. Sent in response to SUBSCRIBE_FILE_CHANGES when file complete.
 
@@ -396,7 +396,7 @@ C = command
 <fieldset>
 <pre>
 Name: BLOCK
-Base10: 10
+Base10: 11
 Description: Either a hash tree block or file block. The hash tree blocks vary
 in size. The file blocks are fixed size except the last block which will be
 shorter.
@@ -419,7 +419,7 @@ the last block.
 <fieldset>
 <pre>
 Name: HAVE_HASH_TREE_BLOCK
-Base10: 11
+Base10: 12
 Description: Sent to inform a host that a new hash tree block is available. This
 is sent to all hosts that have a open slot for a file.
 
@@ -437,7 +437,7 @@ C = command, B = block number (VLI)
 <fieldset>
 <pre>
 Name: HAVE_FILE_BLOCK
-Base10: 12
+Base10: 13
 Description: Sent to inform a host that a new file block is available. This is
 sent to all hosts that have a open slot for a file.
 

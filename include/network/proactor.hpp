@@ -121,10 +121,12 @@ public:
 	*/
 	void write(const int connection_ID, buffer & send_buf)
 	{
-		boost::mutex::scoped_lock lock(network_thread_call_mutex);
-		network_thread_call.push_back(boost::bind(&proactor::append_send_buf, this,
-			connection_ID, boost::shared_ptr<buffer>(new buffer(send_buf))));
-		Select_Interrupter.trigger();
+		if(!send_buf.empty()){
+			boost::mutex::scoped_lock lock(network_thread_call_mutex);
+			network_thread_call.push_back(boost::bind(&proactor::append_send_buf, this,
+				connection_ID, boost::shared_ptr<buffer>(new buffer(send_buf))));
+			Select_Interrupter.trigger();
+		}
 	}
 
 	//start networking thread

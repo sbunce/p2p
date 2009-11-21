@@ -5,7 +5,7 @@ connection::connection(
 	network::connection_info & CI
 ):
 	Proactor(Proactor_in),
-	Slot_Manager(Send_Queue, CI),
+	Slot_Manager(Exchange, CI),
 	blacklist_state(0)
 {
 	if(database::table::blacklist::is_blacklisted(CI.IP)){
@@ -49,7 +49,7 @@ void connection::key_exchange_recv_call_back(network::connection_info & CI)
 				//call new send call back to send initial requests
 				CI.send_call_back(CI);
 			}else{
-				//invalid prime, blacklist IP
+				//invalid prime
 				database::table::blacklist::add(CI.IP);
 				Proactor.disconnect(CI.connection_ID);
 				CI.recv_call_back.clear();
@@ -61,21 +61,20 @@ void connection::key_exchange_recv_call_back(network::connection_info & CI)
 
 void connection::recv_call_back(network::connection_info & CI)
 {
-	//decrypt incoming data
 	Encryption.crypt_recv(CI.recv_buf, CI.recv_buf.size() - CI.latest_recv);
-
-	//process messages in buffer
-	while(!CI.recv_buf.empty()){
-		if(slot_manager::is_slot_command(CI.recv_buf[0])){
-			if(!Slot_Manager.recv(CI)){
+	while(boost::shared_ptr<exchange::message> M = Exchange.recv(CI)){
+		if(M->recv_buf[0] == protocol::REQUEST_SLOT){
+			if(!Slot_Manager.recv_REQUEST_SLOT(M)){
+				database::table::blacklist::add(CI.IP);
 				break;
 			}
-		}else{
-			database::table::blacklist::add(CI.IP);
-			break;
+		}else if(M->recv_buf[0] == protocol::REQUEST_SLOT_FAILED){
+			if(!Slot_Manager.recv_REQUEST_SLOT_FAILED(M)){
+				database::table::blacklist::add(CI.IP);
+				break;
+			}
 		}
 	}
-
 	if(database::table::blacklist::modified(blacklist_state)
 		&& database::table::blacklist::is_blacklisted(CI.IP))
 	{
@@ -87,18 +86,12 @@ void connection::recv_call_back(network::connection_info & CI)
 
 void connection::send_call_back(network::connection_info & CI)
 {
-	//open slots, generate requests
-	Slot_Manager.send();
-
+	Slot_Manager.tick();
 	if(CI.send_buf_size == 0){
-		if(boost::shared_ptr<slot::message> M = Send_Queue.send()){
-//DEBUG, encrypt send_buf that will remain in memory?
-LOGGER << "sending";
-			Encryption.crypt_send(M->send_buf);
-			Proactor.write(CI.connection_ID, M->send_buf);
-		}
+		network::buffer send_buf = Exchange.send();
+		Encryption.crypt_send(send_buf);
+		Proactor.write(CI.connection_ID, send_buf);
 	}
-
 	if(database::table::blacklist::modified(blacklist_state)
 		&& database::table::blacklist::is_blacklisted(CI.IP))
 	{

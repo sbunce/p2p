@@ -3,7 +3,7 @@
 
 //custom
 #include "encryption.hpp"
-#include "send_queue.hpp"
+#include "exchange.hpp"
 #include "share.hpp"
 #include "slot_manager.hpp"
 
@@ -33,14 +33,8 @@ public:
 
 private:
 	network::proactor & Proactor;
-
-	//does Diffie-Hellman-Merkle key exchange
 	encryption Encryption;
-
-	//messages to send are gotten from here
-	send_queue Send_Queue;
-
-	//handles all slot related messages
+	exchange Exchange;
 	slot_manager Slot_Manager;
 
 	//allows us to determine if the blacklist has changed

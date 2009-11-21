@@ -40,17 +40,19 @@ static unsigned BIT_FIELD_SIZE(const unsigned bit_field_size)
 {
 	return 1 + bit_field_size;
 }
-const unsigned char BLOCK = static_cast<unsigned char>(10);
+const unsigned char BIT_FIELD_COMPLETE = static_cast<unsigned char>(10);
+static unsigned BIT_FIELD_COMPLETE_SIZE = 1;
+const unsigned char BLOCK = static_cast<unsigned char>(11);
 static unsigned BLOCK_SIZE(const unsigned block_size)
 {
 	return 1 + block_size;
 }
-const unsigned char HAVE_HASH_TREE_BLOCK = static_cast<unsigned char>(11);
+const unsigned char HAVE_HASH_TREE_BLOCK = static_cast<unsigned char>(12);
 static unsigned HAVE_HASH_TREE_BLOCK_SIZE(const unsigned VLI_size)
 {
 	return 2 + VLI_size;
 }
-const unsigned char HAVE_FILE_BLOCK = static_cast<unsigned char>(12);
+const unsigned char HAVE_FILE_BLOCK = static_cast<unsigned char>(13);
 static unsigned HAVE_FILE_BLOCK_SIZE(const unsigned VLI_size)
 {
 	return 2 + VLI_size;
