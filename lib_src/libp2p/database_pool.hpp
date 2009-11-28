@@ -23,16 +23,11 @@ public:
 	/*
 	The proxy automatically returns the connection to the pool when the last
 	reference to it goes out of scope.
-
 	*/
 	class proxy
 	{
 	public:
-		/*
-		If new_connection = true then a new connection will be created. This new
-		connection will not be returned to the pool.
-		*/
-		proxy(const bool new_connection = false);
+		proxy();
 
 		/*
 		Exposing the shared_ptr with this operator makes it impossible for the
@@ -54,7 +49,7 @@ public:
 		advantage of using this is that the connection is returned after the
 		expression is evaluated.
 	*/
-	static proxy get(const bool new_connection = false);
+	static proxy get();
 
 private:
 	pool();

@@ -1,15 +1,11 @@
 #include "database_pool.hpp"
 
 //BEGIN pool::proxy
-database::pool::proxy::proxy(const bool new_connection)
+database::pool::proxy::proxy():
+	Connection(singleton().pool_get()),
+	This(this, boost::bind(&proxy::deleter, this, Connection))
 {
-	if(new_connection){
-		Connection = boost::shared_ptr<connection>(new connection(path::database()));
-	}else{
-		Connection = boost::shared_ptr<connection>(singleton().pool_get());
-		This = boost::shared_ptr<proxy>(this, boost::bind(&proxy::deleter,
-			this, Connection));
-	}
+
 }
 
 boost::shared_ptr<database::connection> & database::pool::proxy::operator -> ()
@@ -41,9 +37,9 @@ boost::shared_ptr<database::connection> database::pool::pool_get()
 	return Connection;
 }
 
-database::pool::proxy database::pool::get(const bool new_connection)
+database::pool::proxy database::pool::get()
 {
-	return proxy(new_connection);
+	return proxy();
 }
 
 void database::pool::pool_put(boost::shared_ptr<database::connection> & Connection)

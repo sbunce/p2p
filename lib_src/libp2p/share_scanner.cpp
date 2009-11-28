@@ -55,8 +55,8 @@ void share_scanner::hash_loop()
 		FI.hash = HT.hash;
 		if(Status == hash_tree::good){
 			share::singleton().insert(FI);
-			database::table::share::add(database::table::share::info(FI,
-				database::table::share::complete));
+			database::table::share::add(database::table::share::info(FI.hash, FI.path,
+				FI.file_size, FI.last_write_time, database::table::share::complete));
 			database::table::hash_tree::set_state(FI.hash,
 				database::table::hash_tree::complete);
 		}else{

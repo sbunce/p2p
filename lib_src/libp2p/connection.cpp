@@ -4,6 +4,7 @@ connection::connection(
 	network::proactor & Proactor_in,
 	network::connection_info & CI
 ):
+	IP(CI.IP),
 	Proactor(Proactor_in),
 	Slot_Manager(Exchange, CI),
 	blacklist_state(0)
@@ -23,6 +24,7 @@ connection::connection(
 
 void connection::key_exchange_recv_call_back(network::connection_info & CI)
 {
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	if(CI.direction == network::outgoing){
 		//expecting r_B
 		if(CI.recv_buf.size() >= protocol::DH_KEY_SIZE){
@@ -61,6 +63,7 @@ void connection::key_exchange_recv_call_back(network::connection_info & CI)
 
 void connection::recv_call_back(network::connection_info & CI)
 {
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	Encryption.crypt_recv(CI.recv_buf, CI.recv_buf.size() - CI.latest_recv);
 	while(boost::shared_ptr<exchange::message> M = Exchange.recv(CI)){
 		if(M->recv_buf[0] == protocol::REQUEST_SLOT){
@@ -86,6 +89,7 @@ void connection::recv_call_back(network::connection_info & CI)
 
 void connection::send_call_back(network::connection_info & CI)
 {
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	Slot_Manager.tick();
 	if(CI.send_buf_size == 0){
 		network::buffer send_buf = Exchange.send();

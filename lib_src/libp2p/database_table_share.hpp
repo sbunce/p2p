@@ -4,7 +4,6 @@
 
 //custom
 #include "database.hpp"
-#include "file_info.hpp"
 #include "settings.hpp"
 
 //include
@@ -35,11 +34,17 @@ public:
 	{
 	public:
 		info(){}
-		info(const file_info & FI, const state file_state_in):
-			hash(FI.hash),
-			path(FI.path),
-			file_size(FI.file_size),
-			last_write_time(FI.last_write_time),
+		info(
+			const std::string & hash_in,
+			const std::string & path_in,
+			const boost::uint64_t file_size_in,
+			const std::time_t last_write_time_in,
+			const state file_state_in
+		):
+			hash(hash_in),
+			path(path_in),
+			file_size(file_size_in),
+			last_write_time(last_write_time_in),
 			file_state(file_state_in)
 		{}
 		std::string hash;

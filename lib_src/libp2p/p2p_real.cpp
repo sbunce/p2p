@@ -108,6 +108,9 @@ void p2p_real::resume()
 		resume.pop_front();
 	}
 
+	//start scanning share
+	Share_Scanner.start();
+
 	//hash check resumed downloads
 	for(share::slot_iterator iter_cur = share::singleton().begin_slot(),
 		iter_end = share::singleton().end_slot(); iter_cur != iter_end; ++iter_cur)
@@ -115,20 +118,20 @@ void p2p_real::resume()
 		iter_cur->check();
 	}
 
-	//start share scanning after share repopulated
-	Share_Scanner.start();
-
-	//get host_info for all hosts we need to connect to
+	//connect to peers with files we need
 	std::set<std::pair<std::string, std::string> > all_host;
 	for(share::slot_iterator iter_cur = share::singleton().begin_slot(),
 		iter_end = share::singleton().end_slot(); iter_cur != iter_end; ++iter_cur)
 	{
-		iter_cur->merge_host(all_host);
+		if(!iter_cur->complete()){
+			std::set<std::pair<std::string, std::string> >
+				temp = database::table::host::lookup(iter_cur->hash());
+			all_host.insert(temp.begin(), temp.end());
+		}
 	}
-
-	//connect to all hosts that have files we need
-	for(std::set<std::pair<std::string, std::string> >::iterator iter_cur = all_host.begin(),
-		iter_end = all_host.end(); iter_cur != iter_end; ++iter_cur)
+	for(std::set<std::pair<std::string, std::string> >::iterator
+		iter_cur = all_host.begin(), iter_end = all_host.end(); iter_cur != iter_end;
+		++iter_cur)
 	{
 		Proactor.connect(iter_cur->first, iter_cur->second, network::tcp);
 	}

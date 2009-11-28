@@ -32,23 +32,10 @@ public:
 		stored here.
 		std::pair<command, size of response>
 		*/
+//DEBUG, use this on SUBSCRIBE_* requests
+//have exchange memorize the values
 		std::vector<std::pair<unsigned char, unsigned> > expected_response;
 	};
-
-	/*
-	The HAVE_HASH_TREE_BLOCK and HAVE_FILE_BLOCK SLOT_ID messages have VLIs in
-	them but they are not in direct response to a command. To know the size of
-	the VLI we memorize it when we see a SLOT_ID message.
-	*/
-//DEBUG, require slot_manager to register VLI_sizes
-	class VLI_size_element
-	{
-	public:
-		//size of VLIs (bytes)
-		unsigned hash_tree_VLI_size;
-		unsigned file_VLI_size;
-	};
-	std::map<unsigned char, VLI_size_element> VLI_size;
 
 	/*
 	recv:

@@ -6,7 +6,7 @@ slot::slot(
 	Hash_Tree(FI),
 	File(FI)
 {
-	host = database::table::host::lookup(FI.hash);
+
 }
 
 void slot::check()
@@ -72,21 +72,9 @@ boost::uint64_t slot::file_size()
 	return File.file_size;
 }
 
-bool slot::has_file(const std::string & IP, const std::string & port)
-{
-	boost::mutex::scoped_lock lock(host_mutex);
-	return host.find(std::make_pair(IP, port)) != host.end();
-}
-
 const std::string & slot::hash()
 {
 	return Hash_Tree.hash;
-}
-
-void slot::merge_host(std::set<std::pair<std::string, std::string> > & host_in)
-{
-	boost::mutex::scoped_lock lock(host_mutex);
-	host_in.insert(host.begin(), host.end());
 }
 
 std::string slot::name()
@@ -110,13 +98,6 @@ unsigned slot::upload_speed()
 }
 
 /*
-void slot_manager::send_request_slot_failed()
-{
-	boost::shared_ptr<message> M(new message());
-	M->send_buf.append(protocol::REQUEST_SLOT_FAILED);
-	Send_Queue.push_back(M);
-}
-
 void slot_manager::send_request_block(
 	std::pair<unsigned char, boost::shared_ptr<slot> > & P)
 {
@@ -144,12 +125,5 @@ void slot_manager::send_request_block(
 			protocol::FILE_REMOVED_SIZE));
 		Send_Queue.push_back(M);
 	}
-}
-
-void slot_manager::send_file_removed()
-{
-	boost::shared_ptr<message> M(new message());
-	M->send_buf.append(protocol::FILE_REMOVED);
-	Send_Queue.push_back(M);
 }
 */

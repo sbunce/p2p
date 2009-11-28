@@ -17,7 +17,7 @@ class connection_manager : private boost::noncopyable
 public:
 	connection_manager(network::proactor & Proactor_in);
 
-	/*
+	/* Fixed call backs registered with proactor ctor.
 	connect_call_back:
 		Proactor does call back when there is a new connection.
 	disconnect_call_back:
@@ -30,13 +30,14 @@ public:
 private:
 	network::proactor & Proactor;
 
+	//thread that resides in connect_loop()
+	boost::thread connect_loop_thread;
+
 	/*
-	IP set used to insure connections are unique. Connection maps the
-	connection_ID to the state associated with the connection. Mutex locks all
-	modification of IP and Connection containers.
+	The connection_ID associated with a connection (the state each connection
+	needs). The Connection_mutex locks all access to the Connection container.
 	*/
-	boost::mutex Mutex;
-	std::set<std::string> IP;
+	boost::mutex Connection_mutex;
 	std::map<int, boost::shared_ptr<connection> > Connection;
 };
 #endif

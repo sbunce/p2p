@@ -8,6 +8,7 @@
 
 //standard
 #include <ctime>
+#include <set>
 #include <string>
 
 class file_info

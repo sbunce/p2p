@@ -21,6 +21,7 @@
 //standard
 #include <iterator>
 #include <map>
+#include <set>
 #include <string>
 
 class share : public singleton_base<share>
@@ -125,11 +126,10 @@ public:
 	slot_iterator end_slot();
 	slot_iterator find_slot(const std::string & hash);
 	bool is_downloading(const std::string & path);
-	bool slot_modified(int & last_state_seen);
 
 	/* Info
 	bytes:
-		Returns total number of bytes in share
+		Returns total number of bytes in share.
 	files:
 		Returns total number of files in share  excluding files with an empty
 		hash.
@@ -168,9 +168,6 @@ private:
 	*/
 	atomic_int<boost::uint64_t> _bytes;
 	atomic_int<boost::uint64_t> _files;
-
-	//see documentation for slot_modified
-	atomic_int<int> slot_state;
 
 	/*
 	next_file_info:

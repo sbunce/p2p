@@ -28,7 +28,7 @@ class slot : private boost::noncopyable
 	friend class share;
 
 public:
-	/* Info (info to return to GUI)
+	/* Info
 	download_speed:
 		Returns download speed (bytes/second).
 	file_size:
@@ -49,43 +49,27 @@ public:
 	unsigned percent_complete();
 	unsigned upload_speed();
 
-	/* Resume (used in p2p_real to resume downloads)
+	/* Resume
 	check:
 		Hash checks the hash tree and the file if the hash tree is complete.
 		Note: This function takes a long time to run.
 	*/
 	void check();
 
-	/* Slot Manager (functions slot_manager uses)
+	/* Slot Manager
 	complete:
 		Returns true if both the Hash_Tree and File are complete.
 	create_REQUEST_SLOT:
 		Creates a REQUEST_SLOT message with the given slot_num.
-	has_file:
-		Returns true if the host has the file associated with this slot.
-	merge_host:
-		Inserts all hosts known to have this file in to host_in.
 	*/
 	bool complete();
 	boost::shared_ptr<exchange::message> create_REQUEST_SLOT(const unsigned char slot_num);
-	bool has_file(const std::string & IP, const std::string & port);
-	void merge_host(std::set<std::pair<std::string, std::string> > & host_in);
 
 private:
 	//the ctor will throw an exception if database access fails
 	slot(const file_info & FI);
 
-	/*
-	Hash_Tree and File instantiated by ctor or set_missing() (if we don't yet
-	have the root hash and file size). The set_missing_mutex used to make sure
-	we don't instantiate multiple times concurrently.
-	*/
-	boost::mutex set_missing_mutex;
 	hash_tree Hash_Tree;
 	file File;
-
-	//all the hosts known to have the file
-	boost::mutex host_mutex;
-	std::set<std::pair<std::string, std::string> > host;
 };
 #endif

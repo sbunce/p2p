@@ -151,8 +151,7 @@ boost::shared_ptr<slot> share::slot_iterator::get()
 
 share::share():
 	_bytes(0),
-	_files(0),
-	slot_state(0)
+	_files(0)
 {
 
 }
@@ -278,7 +277,6 @@ share::slot_iterator share::find_slot(const std::string & hash)
 	}
 	std::pair<std::map<flyweight_string, boost::shared_ptr<slot> >::iterator, bool>
 		ret = Slot.insert(std::make_pair(hash, new_slot));
-	++slot_state;
 	return slot_iterator(this, ret.first->second);
 }
 
@@ -351,15 +349,5 @@ void share::remove_unused_slots()
 		}else{
 			++iter_cur;
 		}
-	}
-}
-
-bool share::slot_modified(int & last_state_seen)
-{
-	if(last_state_seen == slot_state){
-		return false;
-	}else{
-		last_state_seen = slot_state;
-		return true;
 	}
 }

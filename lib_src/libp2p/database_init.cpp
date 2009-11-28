@@ -17,12 +17,10 @@ void database::init::create_all()
 	DB->query("CREATE TABLE IF NOT EXISTS hash_tree(key INTEGER PRIMARY KEY, hash TEXT, "
 		"state INTEGER, tree BLOB)");
 	DB->query("CREATE UNIQUE INDEX IF NOT EXISTS hash_tree_hash_index ON hash_tree(hash)");
-	DB->query("CREATE INDEX IF NOT EXISTS hash_tree_state_index ON hash_tree(state)");
 	DB->query("DELETE FROM hash_tree WHERE state = 0");
 
 	//host
 	DB->query("CREATE TABLE IF NOT EXISTS host(hash TEXT, IP TEXT, port TEXT)");
-	DB->query("CREATE INDEX IF NOT EXISTS host_hash_index ON host(hash)");
 	DB->query("CREATE UNIQUE INDEX IF NOT EXISTS host_index ON host(hash, IP, port)");
 
 	//preferences
@@ -44,6 +42,9 @@ void database::init::create_all()
 		"file_size TEXT, last_write_time TEXT, state INTEGER)");
 	DB->query("CREATE INDEX IF NOT EXISTS share_hash_index ON share (hash)");
 	DB->query("CREATE INDEX IF NOT EXISTS share_path_index ON share (path)");
+	DB->query("CREATE TRIGGER IF NOT EXISTS share_trigger AFTER DELETE ON share "
+		"BEGIN DELETE FROM hash_tree WHERE hash = OLD.hash AND NOT EXISTS "
+		"(SELECT 1 FROM share WHERE hash = OLD.hash); END;");
 }
 
 void database::init::drop_all()
