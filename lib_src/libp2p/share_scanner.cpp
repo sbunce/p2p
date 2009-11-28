@@ -50,18 +50,22 @@ void share_scanner::hash_loop()
 		}
 		}//end lock scope
 
-		hash_tree HT(FI);
-		hash_tree::status Status = HT.create();
-		FI.hash = HT.hash;
-		if(Status == hash_tree::good){
-			share::singleton().insert(FI);
-			database::table::share::add(database::table::share::info(FI.hash, FI.path,
-				FI.file_size, FI.last_write_time, database::table::share::complete));
-			database::table::hash_tree::set_state(FI.hash,
-				database::table::hash_tree::complete);
-		}else{
-			//error hashing, retry later
-			share::singleton().erase(FI.path);
+		hash_tree::status Status = hash_tree::good;
+		if(share::singleton().find_path(FI.path) == share::singleton().end_file()){
+			hash_tree HT(FI);
+			Status = HT.create();
+			FI.hash = HT.hash;
+			if(Status == hash_tree::good){
+				share::singleton().insert(FI);
+				database::table::share::add(database::table::share::info(FI.hash, FI.path,
+					FI.file_size, FI.last_write_time, database::table::share::complete));
+				database::table::hash_tree::set_state(FI.hash,
+					database::table::hash_tree::complete);
+			}else{
+				//error hashing, retry later
+				LOGGER << "error hashing file " << FI.path;
+				share::singleton().erase(FI.path);
+			}
 		}
 
 		//unmemoize the file
