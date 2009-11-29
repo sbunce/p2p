@@ -24,10 +24,7 @@ public:
 	//void open(const std::string & hash);
 
 private:
-	/*
-	Locks all access to any data members. This lock is used for call backs as
-	well as public functions.
-	*/
+	//locks all entry points in to the object (including call backs)
 	boost::recursive_mutex Recursive_Mutex;
 
 	network::proactor & Proactor;
@@ -35,19 +32,32 @@ private:
 	exchange Exchange;
 	slot_manager Slot_Manager;
 
+	//peer_ID of remote host
+	std::string peer_ID;
+
 	//allows us to determine if the blacklist has changed
 	int blacklist_state;
 
 	/* Proactor Call Backs
 	key_exchange_recv_call_back:
-		The recv call back used during key exchange.
+		Used for key exchange. This is the first call back used.
+	initial_recv_call_back:
+		Receives initial messages sent after key exchange.
 	recv_call_back:
-		The recv call back used after key exchange complete.
+		The last recv call back used. Handles commands.
 	send_call_back:
-		The send call back used after key exchange complete.
+		The last send call back used. Handles sending new requests when send_buf
+		empties out.
 	*/
 	void key_exchange_recv_call_back(network::connection_info & CI);
+	void initial_recv_call_back(network::connection_info & CI);
 	void recv_call_back(network::connection_info & CI);
 	void send_call_back(network::connection_info & CI);
+
+	/*
+	send_initial:
+		Sends initial messages after key exchange done.
+	*/
+	void send_initial(network::connection_info & CI);
 };
 #endif

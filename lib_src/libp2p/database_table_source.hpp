@@ -1,5 +1,5 @@
-#ifndef H_DATABASE_TABLE_PEER
-#define H_DATABASE_TABLE_PEER
+#ifndef H_DATABASE_TABLE_SOURCE
+#define H_DATABASE_TABLE_SOURCE
 
 //custom
 #include "database.hpp"
@@ -11,17 +11,16 @@
 #include <set>
 #include <sstream>
 #include <string>
-#include <vector>
 
 namespace database{
 namespace table{
-class peer
+class source
 {
 public:
 
 
 private:
-	peer(){}
+	source(){}
 };
 }//end of namespace table
 }//end of namespace database

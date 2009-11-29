@@ -1,4 +1,3 @@
-//THREADSAFE
 #ifndef H_DATABASE_TABLE_PREFS
 #define H_DATABASE_TABLE_PREFS
 
@@ -18,19 +17,23 @@ namespace table{
 class prefs
 {
 public:
-	/*
+	/* get_<name of key>
 	"get"|"set"_download_rate:
 		Maximum download rate (bytes).
 	"get"|"set"_upload_rate:
 		Maximum upload rate (bytes).
 	"get"|"set"_max_connections:
 		How many connections allowed.
+	get_peer_ID:
+		Returns peer_ID.
 	*/
 	static unsigned get_max_download_rate(
 		database::pool::proxy DB = database::pool::proxy());
 	static unsigned get_max_connections(
 		database::pool::proxy DB = database::pool::proxy());
 	static unsigned get_max_upload_rate(
+		database::pool::proxy DB = database::pool::proxy());
+	static std::string get_peer_ID(
 		database::pool::proxy DB = database::pool::proxy());
 	static void set_max_download_rate(const unsigned rate,
 		database::pool::proxy DB = database::pool::proxy());

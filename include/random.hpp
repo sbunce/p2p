@@ -17,12 +17,12 @@
 	#include <wincrypt.h>
 #endif
 
-static int portable_urandom(unsigned char * buff, int size, void * data)
+static int portable_urandom(unsigned char * buf, int size, void * data)
 {
 #ifdef _WIN32
 	HCRYPTPROV hProvider = 0;
 	if(CryptAcquireContextW(&hProvider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)){
-		if(CryptGenRandom(hProvider, size, buff)){
+		if(CryptGenRandom(hProvider, size, buf)){
 			CryptReleaseContext(hProvider, 0); 
 		}else{
 			LOGGER << "error generating random number";
@@ -35,7 +35,7 @@ static int portable_urandom(unsigned char * buff, int size, void * data)
 	char ch;
 	for(int x=0; x<size; ++x){
 		fin.get(ch);
-		*buff++ = static_cast<unsigned char>(ch);
+		*buf++ = static_cast<unsigned char>(ch);
 	}
 #endif
 	return size;

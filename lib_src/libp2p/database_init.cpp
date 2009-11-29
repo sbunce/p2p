@@ -28,6 +28,7 @@ void database::init::create_all()
 	//prefs
 	DB->query("CREATE TABLE IF NOT EXISTS prefs(key TEXT, value TEXT)");
 	DB->query("CREATE UNIQUE INDEX IF NOT EXISTS prefs_key_index ON prefs(key)");
+	//set default if key doesn't exist
 	std::stringstream ss;
 	ss << "INSERT OR IGNORE INTO prefs VALUES('max_connections', '"
 		<< settings::MAX_CONNECTIONS << "')";
@@ -39,6 +40,14 @@ void database::init::create_all()
 	ss.str(""); ss.clear();
 	ss << "INSERT OR IGNORE INTO prefs VALUES('max_upload_rate', '"
 		<< settings::MAX_UPLOAD_RATE << "')";
+	DB->query(ss.str());
+	//generate our peer_ID
+	unsigned char buf[SHA1::bin_size];
+	portable_urandom(buf, SHA1::bin_size, NULL);
+	ss.str(""); ss.clear();
+	ss << "INSERT OR IGNORE INTO prefs VALUES('peer_ID', '"
+		<< convert::bin_to_hex(reinterpret_cast<const char *>(buf), SHA1::bin_size)
+		<< "')";
 	DB->query(ss.str());
 
 	//share

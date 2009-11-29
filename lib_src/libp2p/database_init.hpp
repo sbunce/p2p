@@ -5,6 +5,11 @@
 #include "database.hpp"
 #include "path.hpp"
 
+//include
+#include <convert.hpp>
+#include <random.hpp>
+#include <SHA1.hpp>
+
 //standard
 #include <sstream>
 

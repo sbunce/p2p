@@ -28,9 +28,6 @@ void connection_manager::connect_call_back(network::connection_info & CI)
 		new connection(Proactor, CI)));
 	assert(ret.second);
 	}//end lock scope
-
-	//figure out what files needed from host
-	//std::
 }
 
 void connection_manager::disconnect_call_back(network::connection_info & CI)

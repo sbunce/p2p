@@ -20,15 +20,8 @@ int main()
 {
 	database::connection DB("database_connection.db");
 	DB.query("DROP TABLE IF EXISTS sqlite3_wrapper");
-	if(DB.query("CREATE TABLE sqlite3_wrapper(test_text TEXT)") != SQLITE_OK){
-		LOGGER; ++fail;
-	}
-	if(DB.query("INSERT INTO sqlite3_wrapper(test_text) VALUES ('abc')") != SQLITE_OK){
-		LOGGER; ++fail;
-	}
-	//function call back
-	if(DB.query("SELECT test_text FROM sqlite3_wrapper", &call_back) != SQLITE_OK){
-		LOGGER; ++fail;
-	}
+	DB.query("CREATE TABLE sqlite3_wrapper(test_text TEXT)");
+	DB.query("INSERT INTO sqlite3_wrapper(test_text) VALUES ('abc')");
+	DB.query("SELECT test_text FROM sqlite3_wrapper", &call_back);
 	return fail;
 }
