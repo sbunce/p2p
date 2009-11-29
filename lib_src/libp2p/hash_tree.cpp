@@ -26,8 +26,8 @@ hash_tree::hash_tree(
 {
 	//if no hash, then no need to check because hash tree will be created
 	if(!hash.empty()){
-		boost::shared_ptr<database::table::hash_tree::info>
-			info = database::table::hash_tree::lookup(hash, DB);
+		boost::shared_ptr<database::table::hash::info>
+			info = database::table::hash::find(hash, DB);
 		if(info){
 			//opened existing hash tree
 			boost::uint64_t size;
@@ -40,10 +40,10 @@ hash_tree::hash_tree(
 			}
 		}else{
 			//allocate space to reconstruct hash tree
-			if(database::table::hash_tree::add(hash, tree_size, DB)){
-				database::table::hash_tree::set_state(hash,
-					database::table::hash_tree::downloading, DB);
-				info = database::table::hash_tree::lookup(hash, DB);
+			if(database::table::hash::add(hash, tree_size, DB)){
+				database::table::hash::set_state(hash,
+					database::table::hash::downloading, DB);
+				info = database::table::hash::find(hash, DB);
 				if(info){
 					const_cast<database::blob &>(blob) = info->blob;
 				}else{
@@ -56,14 +56,14 @@ hash_tree::hash_tree(
 	}
 }
 
-bool hash_tree::block_info(const boost::uint64_t & block,
+bool hash_tree::block_info(const boost::uint64_t block,
 	const std::deque<boost::uint64_t> & row, std::pair<boost::uint64_t, unsigned> & info)
 {
 	boost::uint64_t throw_away;
 	return block_info(block, row, info, throw_away);
 }
 
-bool hash_tree::block_info(const boost::uint64_t & block,
+bool hash_tree::block_info(const boost::uint64_t block,
 	const std::deque<boost::uint64_t> & row, std::pair<boost::uint64_t, unsigned> & info,
 	boost::uint64_t & parent)
 {
@@ -110,7 +110,7 @@ bool hash_tree::block_info(const boost::uint64_t & block,
 	return false;
 }
 
-unsigned hash_tree::block_size(const boost::uint64_t & block_num)
+unsigned hash_tree::block_size(const boost::uint64_t block_num)
 {
 	std::pair<boost::uint64_t, unsigned> info;
 	if(block_info(block_num, row, info)){
@@ -121,7 +121,32 @@ unsigned hash_tree::block_size(const boost::uint64_t & block_num)
 	}
 }
 
-hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
+hash_tree::status hash_tree::check()
+{
+	for(boost::uint32_t x=end_of_good; x<tree_block_count; ++x){
+		status Status = check_block(x);
+		if(Status == good){
+			end_of_good = x+1;
+		}else if(Status == bad){
+			/*
+			We don't store who sent blocks so we can't know which host sent a bad
+			block unless the block it sent is equal to end_of_good (see
+			documentation in write_block()). We will "re"request this block from
+			any host.
+			*/
+			Block_Request.rerequest_block(x);
+			return bad;
+		}else if(Status == io_error){
+			return io_error;
+		}
+	}
+	if(complete()){
+		database::table::hash::set_state(hash, database::table::hash::complete);
+	}
+	return good;
+}
+
+hash_tree::status hash_tree::check_block(const boost::uint64_t block_num)
 {
 	SHA1 SHA;
 	char buff[protocol::FILE_BLOCK_SIZE];
@@ -172,33 +197,8 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t & block_num)
 	}
 }
 
-hash_tree::status hash_tree::check()
-{
-	for(boost::uint32_t x=end_of_good; x<tree_block_count; ++x){
-		status Status = check_block(x);
-		if(Status == good){
-			end_of_good = x+1;
-		}else if(Status == bad){
-			/*
-			We don't store who sent blocks so we can't know which host sent a bad
-			block unless the block it sent is equal to end_of_good (see
-			documentation in write_block()). We will "re"request this block from
-			any host.
-			*/
-			Block_Request.rerequest_block(x);
-			return bad;
-		}else if(Status == io_error){
-			return io_error;
-		}
-	}
-	if(complete()){
-		database::table::hash_tree::set_state(hash, database::table::hash_tree::complete);
-	}
-	return good;
-}
-
-hash_tree::status hash_tree::check_file_block(const boost::uint64_t & file_block_num,
-	const char * block, const int & size)
+hash_tree::status hash_tree::check_file_block(const boost::uint64_t file_block_num,
+	const char * block, const int size)
 {
 	assert(complete());
 	char parent_buff[SHA1::bin_size];
@@ -326,19 +326,19 @@ hash_tree::status hash_tree::create()
 	*/
 
 	//check if tree already exists
-	if(database::table::hash_tree::lookup(hash)){
+	if(database::table::hash::find(hash)){
 		return good;
 	}
 
 	//tree doesn't exist, allocate space for it
-	if(!database::table::hash_tree::add(hash, tree_size)){
+	if(!database::table::hash::add(hash, tree_size)){
 		LOGGER << "error adding hash tree";
 		return io_error;
 	}
 
 	//copy tree to database using large buffer for performance
-	boost::shared_ptr<database::table::hash_tree::info>
-		Info = database::table::hash_tree::lookup(hash);
+	boost::shared_ptr<database::table::hash::info>
+		Info = database::table::hash::find(hash);
 
 	//set blob to one we just created
 	const_cast<database::blob &>(blob) = Info->blob;
@@ -347,7 +347,7 @@ hash_tree::status hash_tree::create()
 	boost::uint64_t offset = 0, bytes_remaining = tree_size, read_size;
 	while(bytes_remaining){
 		if(boost::this_thread::interruption_requested()){
-			database::table::hash_tree::remove(hash);
+			database::table::hash::remove(hash);
 			return io_error;
 		}
 		if(bytes_remaining > protocol::FILE_BLOCK_SIZE){
@@ -358,12 +358,12 @@ hash_tree::status hash_tree::create()
 		temp.read(buff, read_size);
 		if(temp.gcount() != read_size){
 			LOGGER << "error reading temp file";
-			database::table::hash_tree::remove(hash);
+			database::table::hash::remove(hash);
 			return io_error;
 		}else{
 			if(!database::pool::get()->blob_write(blob, buff, read_size, offset)){
 				LOGGER << "error doing incremental write to blob";
-				database::table::hash_tree::remove(hash);
+				database::table::hash::remove(hash);
 				return io_error;
 			}
 			offset += read_size;
@@ -392,7 +392,7 @@ boost::uint64_t hash_tree::file_hash_to_tree_hash(boost::uint64_t row_hash,
 	return start_hash + file_hash_to_tree_hash(row_hash, row);
 }
 
-boost::uint64_t hash_tree::file_size_to_file_hash(const boost::uint64_t & file_size)
+boost::uint64_t hash_tree::file_size_to_file_hash(const boost::uint64_t file_size)
 {
 	boost::uint64_t hash_count = file_size / protocol::FILE_BLOCK_SIZE;
 	if(file_size % protocol::FILE_BLOCK_SIZE != 0){
@@ -402,14 +402,14 @@ boost::uint64_t hash_tree::file_size_to_file_hash(const boost::uint64_t & file_s
 	return hash_count;
 }
 
-std::deque<boost::uint64_t> hash_tree::file_size_to_row(const boost::uint64_t & file_size)
+std::deque<boost::uint64_t> hash_tree::file_size_to_row(const boost::uint64_t file_size)
 {
 	std::deque<boost::uint64_t> row;
 	file_hash_to_tree_hash(file_size_to_file_hash(file_size), row);
 	return row;
 }
 
-boost::uint64_t hash_tree::file_size_to_tree_size(const boost::uint64_t & file_size)
+boost::uint64_t hash_tree::file_size_to_tree_size(const boost::uint64_t file_size)
 {
 	if(file_size == 0){
 		return 0;
@@ -419,7 +419,7 @@ boost::uint64_t hash_tree::file_size_to_tree_size(const boost::uint64_t & file_s
 	}
 }
 
-hash_tree::status hash_tree::read_block(const boost::uint64_t & block_num,
+hash_tree::status hash_tree::read_block(const boost::uint64_t block_num,
 	std::string & block)
 {
 	char buff[protocol::FILE_BLOCK_SIZE];
@@ -468,7 +468,7 @@ boost::uint64_t hash_tree::row_to_file_hash_offset(
 }
 
 hash_tree::status hash_tree::write_block(const int connection_ID,
-	const boost::uint64_t & block_num, const std::string & block)
+	const boost::uint64_t block_num, const std::string & block)
 {
 	std::pair<boost::uint64_t, unsigned> info;
 	if(block_info(block_num, row, info)){

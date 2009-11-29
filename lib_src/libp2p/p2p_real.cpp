@@ -37,7 +37,7 @@ void p2p_real::max_connections(unsigned connections)
 //DEBUG, add support for this
 	//Proactor.max_connections(connections / 2, connections / 2);
 	max_connections_proxy = connections;
-	Thread_Pool.queue(boost::bind(&database::table::preferences::set_max_connections,
+	Thread_Pool.queue(boost::bind(&database::table::prefs::set_max_connections,
 		connections, database::pool::get()));
 }
 
@@ -50,7 +50,7 @@ void p2p_real::max_download_rate(const unsigned rate)
 {
 	Proactor.max_download_rate(rate);
 	max_download_rate_proxy = rate;
-	Thread_Pool.queue(boost::bind(&database::table::preferences::set_max_download_rate,
+	Thread_Pool.queue(boost::bind(&database::table::prefs::set_max_download_rate,
 		rate, database::pool::get()));
 }
 
@@ -63,7 +63,7 @@ void p2p_real::max_upload_rate(const unsigned rate)
 {
 	Proactor.max_upload_rate(rate);
 	max_upload_rate_proxy = rate;
-	Thread_Pool.queue(boost::bind(&database::table::preferences::set_max_upload_rate,
+	Thread_Pool.queue(boost::bind(&database::table::prefs::set_max_upload_rate,
 		rate, database::pool::get()));
 }
 
@@ -83,9 +83,9 @@ void p2p_real::resume()
 	boost::this_thread::yield();
 
 	//setup proxies
-	max_connections_proxy = database::table::preferences::get_max_connections();
-	max_download_rate_proxy = database::table::preferences::get_max_download_rate();
-	max_upload_rate_proxy = database::table::preferences::get_max_upload_rate();
+	max_connections_proxy = database::table::prefs::get_max_connections();
+	max_download_rate_proxy = database::table::prefs::get_max_download_rate();
+	max_upload_rate_proxy = database::table::prefs::get_max_upload_rate();
 
 	//set prefs with proactor
 	Proactor.max_download_rate(max_download_rate_proxy);
@@ -118,6 +118,7 @@ void p2p_real::resume()
 		iter_cur->check();
 	}
 
+/*
 	//connect to peers with files we need
 	std::set<std::pair<std::string, std::string> > all_host;
 	for(share::slot_iterator iter_cur = share::singleton().begin_slot(),
@@ -135,7 +136,7 @@ void p2p_real::resume()
 	{
 		Proactor.connect(iter_cur->first, iter_cur->second, network::tcp);
 	}
-
+*/
 	//bring up networking
 	Proactor.start();
 }

@@ -19,7 +19,7 @@ int main()
 	SI.file_state = database::table::share::downloading;
 
 	//file not yet added, lookups shouldn't work
-	if(database::table::share::lookup(SI.hash)){
+	if(database::table::share::find(SI.hash)){
 		LOGGER; ++fail;
 	}
 
@@ -28,7 +28,7 @@ int main()
 
 	//make sure lookups work
 	if(boost::shared_ptr<database::table::share::info>
-		lookup_SI = database::table::share::lookup(SI.hash))
+		lookup_SI = database::table::share::find(SI.hash))
 	{
 		if(lookup_SI->hash != SI.hash){ LOGGER; ++fail; }
 		if(lookup_SI->path != SI.path){ LOGGER; ++fail; }
@@ -43,7 +43,7 @@ int main()
 	database::table::share::remove(SI.path);
 
 	//file was deleted, make sure lookups don't work
-	if(database::table::share::lookup(SI.hash)){
+	if(database::table::share::find(SI.hash)){
 		LOGGER; ++fail;
 	}
 	return fail;

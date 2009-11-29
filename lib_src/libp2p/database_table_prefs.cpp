@@ -1,4 +1,4 @@
-#include "database_table_preferences.hpp"
+#include "database_table_prefs.hpp"
 
 //needed for all the get_* functions which get a unsigned int
 static int get_unsigned_call_back(int columns, char ** response,
@@ -14,50 +14,53 @@ static int get_unsigned_call_back(int columns, char ** response,
 	return 0;
 }
 
-unsigned database::table::preferences::get_max_download_rate(database::pool::proxy DB)
+unsigned database::table::prefs::get_max_download_rate(database::pool::proxy DB)
 {
 	unsigned download_rate;
-	DB->query("SELECT max_download_rate FROM preferences",
+	DB->query("SELECT value FROM prefs WHERE key = 'max_download_rate'",
 		boost::bind(&get_unsigned_call_back, _1, _2, _3, boost::ref(download_rate)));
 	return download_rate;
 }
 
-unsigned database::table::preferences::get_max_connections(database::pool::proxy DB)
+unsigned database::table::prefs::get_max_connections(database::pool::proxy DB)
 {
 	unsigned server_connections;
-	DB->query("SELECT max_connections FROM preferences",
+	DB->query("SELECT value FROM prefs WHERE key = 'max_connections'",
 		boost::bind(&get_unsigned_call_back, _1, _2, _3, boost::ref(server_connections)));
 	return server_connections;
 }
 
-unsigned database::table::preferences::get_max_upload_rate(database::pool::proxy DB)
+unsigned database::table::prefs::get_max_upload_rate(database::pool::proxy DB)
 {
 	unsigned upload_rate;
-	DB->query("SELECT max_upload_rate FROM preferences",
+	DB->query("SELECT value FROM prefs WHERE key = 'max_upload_rate'",
 		boost::bind(&get_unsigned_call_back, _1, _2, _3, boost::ref(upload_rate)));
 	return upload_rate;
 }
 
-void database::table::preferences::set_max_download_rate(const unsigned rate,
+void database::table::prefs::set_max_download_rate(const unsigned rate,
 	database::pool::proxy DB)
 {
 	std::stringstream ss;
-	ss << "UPDATE preferences SET max_download_rate = " << rate;
+	ss << "UPDATE prefs SET value = '" << rate
+		<< "' WHERE key = 'max_download_rate'";
 	DB->query(ss.str());
 }
 
-void database::table::preferences::set_max_connections(const unsigned connections,
+void database::table::prefs::set_max_connections(const unsigned connections,
 	database::pool::proxy DB)
 {
 	std::stringstream ss;
-	ss << "UPDATE preferences SET max_connections = " << connections;
+	ss << "UPDATE prefs SET value = '" << connections
+		<< "' WHERE key = 'max_connections'";
 	DB->query(ss.str());
 }
 
-void database::table::preferences::set_max_upload_rate(const unsigned rate,
+void database::table::prefs::set_max_upload_rate(const unsigned rate,
 	database::pool::proxy DB)
 {
 	std::stringstream ss;
-	ss << "UPDATE preferences SET max_upload_rate = " << rate;
+	ss << "UPDATE prefs SET value = '" << rate
+		<< "' WHERE key = 'max_upload_rate'";
 	DB->query(ss.str());
 }

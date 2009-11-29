@@ -90,9 +90,9 @@ public:
 		Remove file by path or iterator.
 	insert_update:
 		Insert or update file if a file already exists with the same path.
-	lookup_hash:
+	find_hash:
 		Lookup file by hash. The shared_ptr will be empty if no file found.
-	lookup_path:
+	find_path:
 		Lookup file by path. The shared_ptr will be empty if no file found.
 	*/
 	const_file_iterator begin_file();

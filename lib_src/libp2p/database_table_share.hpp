@@ -67,7 +67,7 @@ public:
 	*/
 	static void add(const info & FI,
 		database::pool::proxy DB = database::pool::proxy());
-	static boost::shared_ptr<info> lookup(const std::string & hash,
+	static boost::shared_ptr<info> find(const std::string & hash,
 		database::pool::proxy DB = database::pool::proxy());
 	static void remove(const std::string & path,
 		database::pool::proxy DB = database::pool::proxy());

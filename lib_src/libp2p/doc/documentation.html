@@ -143,7 +143,28 @@ PRNG of Host_B and vise versa.
 </p>
 </blockquote>
 
-<b>2.2 Commands</b>
+<b>2.2 Initial Messages</b>
+<blockquote>
+<p>
+After key exchange the following messages are sent by both sides.
+</p>
+<br>
+
+<fieldset>
+<pre>
+Message 0: Peer Identifier
+Description: Randomly generated 20 byte number. This number identifies the host
+on the DHT.
+
++---+---+---+---+---+---+---+---+
+|               H               |
++---+---+---+---+---+---+---+---+
+  0   1   2   3      ...     20
+</pre>
+</fieldset>
+</blockquote>
+
+<b>2.3 Commands</b>
 <blockquote>
 
 <fieldset>

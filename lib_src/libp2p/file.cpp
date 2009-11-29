@@ -23,7 +23,7 @@ file::file(
 
 }
 
-unsigned file::block_size(const boost::uint64_t & block_num)
+unsigned file::block_size(const boost::uint64_t block_num)
 {
 	assert(block_num < block_count);
 	if(block_num == block_count - 1){

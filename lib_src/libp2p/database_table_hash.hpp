@@ -17,7 +17,7 @@
 
 namespace database{
 namespace table{
-class hash_tree
+class hash
 {
 public:
 	enum state{
@@ -40,7 +40,7 @@ public:
 		Allocates blob of specified size for hash tree. The set_state function
 		must be called for the hash tree to not be deleted on next program start.
 		False returned if error allocating space.
-	lookup:
+	find:
 		Returns a shared_ptr with information for the tree. Empty shared_ptr is
 		returned if the tree doesn't exist.
 	remove:
@@ -48,16 +48,16 @@ public:
 	set_state:
 		Sets the state of the hash tree.
 	*/
-	static bool add(const std::string & hash, const boost::uint64_t & tree_size,
+	static bool add(const std::string & hash, const boost::uint64_t tree_size,
 		database::pool::proxy DB = database::pool::proxy());
-	static boost::shared_ptr<info> lookup(const std::string & hash,
+	static boost::shared_ptr<info> find(const std::string & hash,
 		database::pool::proxy DB = database::pool::proxy());
 	static void remove(const std::string & hash,
 		database::pool::proxy DB = database::pool::proxy());
 	static void set_state(const std::string & hash, const state tree_state,
 		database::pool::proxy DB = database::pool::proxy());
 private:
-	hash_tree(){}
+	hash(){}
 };
 }//end of namespace table
 }//end of namespace database

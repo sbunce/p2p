@@ -11,30 +11,34 @@ void database::init::create_all()
 	database::pool::proxy DB;
 
 	//blacklist
-	DB->query("CREATE TABLE IF NOT EXISTS blacklist (IP TEXT UNIQUE)");
+	DB->query("CREATE TABLE IF NOT EXISTS blacklist(IP TEXT)");
+	DB->query("CREATE UNIQUE INDEX IF NOT EXISTS blacklist_index ON blacklist(IP)");
 
-	//hash_tree
-	DB->query("CREATE TABLE IF NOT EXISTS hash_tree(key INTEGER PRIMARY KEY, hash TEXT, "
+	//hash
+	DB->query("CREATE TABLE IF NOT EXISTS hash(key INTEGER PRIMARY KEY, hash TEXT, "
 		"state INTEGER, tree BLOB)");
-	DB->query("CREATE UNIQUE INDEX IF NOT EXISTS hash_tree_hash_index ON hash_tree(hash)");
-	DB->query("DELETE FROM hash_tree WHERE state = 0");
+	DB->query("CREATE UNIQUE INDEX IF NOT EXISTS hash_hash_index ON hash(hash)");
+	DB->query("DELETE FROM hash WHERE state = 0");
 
-	//host
-	DB->query("CREATE TABLE IF NOT EXISTS host(hash TEXT, IP TEXT, port TEXT)");
-	DB->query("CREATE UNIQUE INDEX IF NOT EXISTS host_index ON host(hash, IP, port)");
+	//peer
+	DB->query("CREATE TABLE IF NOT EXISTS peer(ID TEXT, IP TEXT, port TEXT)");
+	DB->query("CREATE UNIQUE INDEX IF NOT EXISTS peer_index ON peer(ID, IP, port)");
+	DB->query("CREATE INDEX IF NOT EXISTS peer_ID_index ON peer(ID)");
 
-	//preferences
-	/*
-	The INTEGER PRIMARY KEY is used to keep it so there is only ever one row in
-	the preferences table. Every time we insert we specify 1 as the key and
-	ignore if there is an error. The PRIMARY KEY is unique so if we try to insert
-	the row twice we get an error (which we ignore).
-	*/
-	DB->query("CREATE TABLE IF NOT EXISTS preferences (key INTEGER PRIMARY KEY, "
-		"max_connections INTEGER, max_download_rate INTEGER, max_upload_rate INTEGER)");
+	//prefs
+	DB->query("CREATE TABLE IF NOT EXISTS prefs(key TEXT, value TEXT)");
+	DB->query("CREATE UNIQUE INDEX IF NOT EXISTS prefs_key_index ON prefs(key)");
 	std::stringstream ss;
-	ss << "INSERT OR IGNORE INTO preferences VALUES(1, " << settings::MAX_CONNECTIONS 
-		<< ", " << settings::MAX_DOWNLOAD_RATE << ", " << settings::MAX_UPLOAD_RATE << ")";
+	ss << "INSERT OR IGNORE INTO prefs VALUES('max_connections', '"
+		<< settings::MAX_CONNECTIONS << "')";
+	DB->query(ss.str());
+	ss.str(""); ss.clear();
+	ss << "INSERT OR IGNORE INTO prefs VALUES('max_download_rate', '"
+		<< settings::MAX_DOWNLOAD_RATE << "')";
+	DB->query(ss.str());
+	ss.str(""); ss.clear();
+	ss << "INSERT OR IGNORE INTO prefs VALUES('max_upload_rate', '"
+		<< settings::MAX_UPLOAD_RATE << "')";
 	DB->query(ss.str());
 
 	//share
@@ -43,16 +47,24 @@ void database::init::create_all()
 	DB->query("CREATE INDEX IF NOT EXISTS share_hash_index ON share (hash)");
 	DB->query("CREATE INDEX IF NOT EXISTS share_path_index ON share (path)");
 	DB->query("CREATE TRIGGER IF NOT EXISTS share_trigger AFTER DELETE ON share "
-		"BEGIN DELETE FROM hash_tree WHERE hash = OLD.hash AND NOT EXISTS "
-		"(SELECT 1 FROM share WHERE hash = OLD.hash); END;");
+		"BEGIN DELETE FROM hash WHERE hash = OLD.hash AND NOT EXISTS "
+		"(SELECT 1 FROM share WHERE hash = OLD.hash); END");
+
+	//source
+	DB->query("CREATE TABLE IF NOT EXISTS source(ID TEXT, hash TEXT)");
+	DB->query("CREATE UNIQUE INDEX IF NOT EXISTS source_index ON source(ID, hash)");
+	DB->query("CREATE INDEX IF NOT EXISTS source_ID_index ON source(ID)");
+	DB->query("CREATE INDEX IF NOT EXISTS source_hash_index ON source(hash)");
 }
 
 void database::init::drop_all()
 {
 	database::pool::proxy DB;
 	DB->query("DROP TABLE IF EXISTS blacklist");
-	DB->query("DROP TABLE IF EXISTS hash_tree");
+	DB->query("DROP TABLE IF EXISTS hash");
 	DB->query("DROP TABLE IF EXISTS host");
-	DB->query("DROP TABLE IF EXISTS preferences");
+	DB->query("DROP TABLE IF EXISTS peer");
+	DB->query("DROP TABLE IF EXISTS prefs");
 	DB->query("DROP TABLE IF EXISTS share");
+	DB->query("DROP TABLE IF EXISTS source");
 }

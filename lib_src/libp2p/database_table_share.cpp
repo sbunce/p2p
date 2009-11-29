@@ -20,7 +20,6 @@ static void unmarshal_info(int columns, char ** response, char ** column_name,
 	assert(std::strcmp(column_name[2], "file_size") == 0);
 	assert(std::strcmp(column_name[3], "last_write_time") == 0);
 	assert(std::strcmp(column_name[4], "state") == 0);
-
 	Info.hash = response[0];
 	Info.path = response[1];
 	Info.file_size = boost::lexical_cast<boost::uint64_t>(response[2]);
@@ -29,7 +28,7 @@ static void unmarshal_info(int columns, char ** response, char ** column_name,
 	Info.file_state = reinterpret_cast<database::table::share::state &>(temp);
 }
 
-static int lookup_hash_call_back(int columns, char ** response, char ** column_name,
+static int find_hash_call_back(int columns, char ** response, char ** column_name,
 	boost::shared_ptr<database::table::share::info> & Info)
 {
 	Info = boost::shared_ptr<database::table::share::info>(
@@ -43,14 +42,14 @@ static int lookup_hash_call_back(int columns, char ** response, char ** column_n
 	return 0;
 }
 
-boost::shared_ptr<database::table::share::info> database::table::share::lookup(
+boost::shared_ptr<database::table::share::info> database::table::share::find(
 	const std::string & hash, database::pool::proxy DB)
 {
 	std::stringstream ss;
 	ss << "SELECT hash, path, file_size, last_write_time, state FROM share WHERE hash = '"
 		<< hash << "' LIMIT 1";
 	boost::shared_ptr<info> Info;
-	DB->query(ss.str(), boost::bind(&lookup_hash_call_back, _1, _2, _3, boost::ref(Info)));
+	DB->query(ss.str(), boost::bind(&find_hash_call_back, _1, _2, _3, boost::ref(Info)));
 	return Info;
 }
 

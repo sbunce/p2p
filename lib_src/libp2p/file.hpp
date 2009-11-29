@@ -30,7 +30,7 @@ public:
 	complete:
 		Returns true if the file is complete.
 	*/
-	unsigned block_size(const boost::uint64_t & block_num);
+	unsigned block_size(const boost::uint64_t block_num);
 	bool complete();
 
 	//used for requesting blocks, also keeps track of all blocks we have

@@ -1,6 +1,6 @@
 //THREADSAFE
-#ifndef H_DATABASE_TABLE_PREFERENCES
-#define H_DATABASE_TABLE_PREFERENCES
+#ifndef H_DATABASE_TABLE_PREFS
+#define H_DATABASE_TABLE_PREFS
 
 //custom
 #include "database.hpp"
@@ -15,7 +15,7 @@
 
 namespace database{
 namespace table{
-class preferences
+class prefs
 {
 public:
 	/*
@@ -40,7 +40,7 @@ public:
 		database::pool::proxy DB = database::pool::proxy());
 
 private:
-	preferences(){}
+	prefs(){}
 };
 }//end of namespace table
 }//end of namespace database

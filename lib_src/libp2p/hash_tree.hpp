@@ -101,14 +101,14 @@ public:
 		io_error if block could not be written, or bad if the block hash failed.
 		The connection_ID is needed for block_request.
 	*/
-	unsigned block_size(const boost::uint64_t & block_num);
+	unsigned block_size(const boost::uint64_t block_num);
 	status check();
-	status check_file_block(const boost::uint64_t & file_block_num,
-		const char * block, const int & size);
+	status check_file_block(const boost::uint64_t file_block_num,
+		const char * block, const int size);
 	status create();
 	bool complete();
-	status read_block(const boost::uint64_t & block_num, std::string & block);
-	status write_block(const int connection_ID, const boost::uint64_t & block_num,
+	status read_block(const boost::uint64_t block_num, std::string & block);
+	status write_block(const int connection_ID, const boost::uint64_t block_num,
 		const std::string & block);
 
 	/*
@@ -141,7 +141,7 @@ private:
 		Note: This function is only called from check_incremental which makes sure
 		the precondition is satisfied.
 	*/
-	status check_block(const boost::uint64_t & block_num);
+	status check_block(const boost::uint64_t block_num);
 
 	/*
 	These functions are static to make it clear that none of them depend on
@@ -168,14 +168,14 @@ private:
 	row_to_file_hash_offset:
 		Returns the byte offset to the start of the file hashes.
 	*/
-	static bool block_info(const boost::uint64_t & block, const std::deque<boost::uint64_t> & row,
+	static bool block_info(const boost::uint64_t block, const std::deque<boost::uint64_t> & row,
 		std::pair<boost::uint64_t, unsigned> & info, boost::uint64_t & parent);
-	static bool block_info(const boost::uint64_t & block, const std::deque<boost::uint64_t> & row,
+	static bool block_info(const boost::uint64_t block, const std::deque<boost::uint64_t> & row,
 		std::pair<boost::uint64_t, unsigned> & info);
-	static boost::uint64_t file_size_to_file_hash(const boost::uint64_t & file_size);
-	static boost::uint64_t file_size_to_tree_size(const boost::uint64_t & file_size);
+	static boost::uint64_t file_size_to_file_hash(const boost::uint64_t file_size);
+	static boost::uint64_t file_size_to_tree_size(const boost::uint64_t file_size);
 	static boost::uint64_t file_hash_to_tree_hash(boost::uint64_t row_hash, std::deque<boost::uint64_t> & row);
-	static std::deque<boost::uint64_t> file_size_to_row(const boost::uint64_t & file_size);
+	static std::deque<boost::uint64_t> file_size_to_row(const boost::uint64_t file_size);
 	static boost::uint64_t row_to_tree_block_count(const std::deque<boost::uint64_t> & row);
 	static boost::uint64_t row_to_file_hash_offset(const std::deque<boost::uint64_t> & row);
 };

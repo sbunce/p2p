@@ -59,8 +59,8 @@ void share_scanner::hash_loop()
 				share::singleton().insert(FI);
 				database::table::share::add(database::table::share::info(FI.hash, FI.path,
 					FI.file_size, FI.last_write_time, database::table::share::complete));
-				database::table::hash_tree::set_state(FI.hash,
-					database::table::hash_tree::complete);
+				database::table::hash::set_state(FI.hash,
+					database::table::hash::complete);
 			}else{
 				//error hashing, retry later
 				LOGGER << "error hashing file " << FI.path;
