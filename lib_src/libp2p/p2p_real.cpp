@@ -118,25 +118,16 @@ void p2p_real::resume()
 		iter_cur->check();
 	}
 
-/*
-	//connect to peers with files we need
-	std::set<std::pair<std::string, std::string> > all_host;
-	for(share::slot_iterator iter_cur = share::singleton().begin_slot(),
-		iter_end = share::singleton().end_slot(); iter_cur != iter_end; ++iter_cur)
-	{
-		if(!iter_cur->complete()){
-			std::set<std::pair<std::string, std::string> >
-				temp = database::table::host::lookup(iter_cur->hash());
-			all_host.insert(temp.begin(), temp.end());
-		}
-	}
+	//connect to peers that have files we need
+	std::set<std::pair<std::string, std::string> >
+		peers = database::table::join::resume_peers();
 	for(std::set<std::pair<std::string, std::string> >::iterator
-		iter_cur = all_host.begin(), iter_end = all_host.end(); iter_cur != iter_end;
+		iter_cur = peers.begin(), iter_end = peers.end(); iter_cur != iter_end;
 		++iter_cur)
 	{
 		Proactor.connect(iter_cur->first, iter_cur->second, network::tcp);
 	}
-*/
+
 	//bring up networking
 	Proactor.start();
 }

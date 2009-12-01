@@ -115,12 +115,6 @@ public:
 		Returns true if slot exists and it's incomplete. This function is used by
 		the share scanner so it can know not to hash downloading files even though
 		their size and modification dates are changing.
-	slot_modified:
-		Returns true if last_seen_state doesn't match the current state. The state
-		is an integer internal to the share which gets incremented whenever a slot
-		is added or removed.
-		Note: To return true upon the first call last_seen_state must be set to -1.
-		Postcondition: last_seen_state = slot_state.
 	*/
 	slot_iterator begin_slot();
 	slot_iterator end_slot();

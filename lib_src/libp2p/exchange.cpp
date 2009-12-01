@@ -6,6 +6,7 @@ static boost::shared_ptr<exchange::message> non_response(
 	if(CI.recv_buf.size() >= size){
 		boost::shared_ptr<exchange::message> M(new exchange::message());
 		M->recv_buf.append(CI.recv_buf.data(), size);
+		CI.recv_buf.erase(0, size);
 		return M;
 	}else{
 		return boost::shared_ptr<exchange::message>();
@@ -33,14 +34,14 @@ boost::shared_ptr<exchange::message> exchange::recv(network::connection_info & C
 		The slot_manager makes sure slot open. The slot makes sure we are
 		subscribed to hash tree changes.
 		*/
-LOGGER; exit(1);
+LOGGER << "stub"; exit(1);
 		//return non_response(CI, protocol::HAVE_HASH_TREE_BLOCK_SIZE);
 	}else if(CI.recv_buf[0] == protocol::HAVE_FILE_BLOCK){
 		/*
 		The slot_manager makes sure slot open. The slot makes sure we are
 		subscribed to file changes.
 		*/
-LOGGER; exit(1);
+LOGGER << "stub"; exit(1);
 		//return non_response(CI, protocol::HAVE_FILE_BLOCK_SIZE);
 	}else if(CI.recv_buf[0] == protocol::REQUEST_SLOT_FAILED
 		|| CI.recv_buf[0] == protocol::REQUEST_BLOCK_HASH_TREE

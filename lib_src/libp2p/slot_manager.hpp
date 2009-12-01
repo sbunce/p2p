@@ -32,10 +32,10 @@ public:
 	bool recv_REQUEST_SLOT_FAILED(boost::shared_ptr<exchange::message> & M);
 
 	/*
-	tick:
-		Give the slot_manager opportunity to open slots, send requests, etc.
+	resume:
+		When the peer_ID is received this function is called to resume downloads.
 	*/
-	void tick();
+	void resume(const std::string & peer_ID);
 
 private:
 	exchange & Exchange;
@@ -63,21 +63,16 @@ private:
 	std::list<boost::shared_ptr<slot> > Pending_Slot_Request;
 	std::list<boost::shared_ptr<slot> > Slot_Request;
 
-	//set of all slots that exist somewhere in this class
-	std::set<boost::shared_ptr<slot> > Known_Slot;
-
 	/*
+	make_slot_requests:
+		Does pending slot requests.
 	send_CLOSE_SLOT:
 		Send CLOSE_SLOT for specified slot_ID.
 	send_REQUEST_SLOT_FAILED:
 		Send REQUEST_SLOT_FAILED.
-	sync_slots:
-		Sync slots in the share with slots in the slot_manager. This is useful for
-		when a slot becomes associated with a new host, or when a totally new slot
-		is added.
 	*/
+	void make_slot_requests();
 	void send_CLOSE_SLOT(const unsigned char slot_ID);
 	void send_REQUEST_SLOT_FAILED();
-	void sync_slots(network::connection_info & CI);
 };
 #endif
