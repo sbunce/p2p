@@ -322,11 +322,11 @@ private:
 		int code;
 		while((code = sqlite3_blob_open(
 			DB_handle,
-			"main",               //DB name ("main" is default)
+			"main",              //DB name ("main" is default)
 			Blob.table.c_str(),
 			Blob.column.c_str(),
-			Blob.rowid,           //row ID (primary key)
-			reinterpret_cast<const int &>(writeable), //0 = read only, non-zero = read/write
+			Blob.rowid,          //row ID (primary key)
+			writeable ? 1 : 0,   //0 = read only, non-zero = read/write
 			&blob_handle
 		)) != SQLITE_OK){
 			if(code == SQLITE_BUSY){
