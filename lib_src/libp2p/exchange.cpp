@@ -18,43 +18,23 @@ boost::shared_ptr<exchange::message> exchange::recv(network::connection_info & C
 	if(CI.recv_buf.empty()){
 		return boost::shared_ptr<message>();
 	}else if(CI.recv_buf[0] == protocol::REQUEST_SLOT){
-		//expect at any time
 		return non_response(CI, protocol::REQUEST_SLOT_SIZE);
 	}else if(CI.recv_buf[0] == protocol::CLOSE_SLOT){
-		//expect at any time
 		return non_response(CI, protocol::CLOSE_SLOT_SIZE);
-	}else if(CI.recv_buf[0] == protocol::SUBSCRIBE_HASH_TREE_CHANGES){
-		//slot_manager checks to make sure slot open
-		return non_response(CI, protocol::SUBSCRIBE_HASH_TREE_CHANGES_SIZE);
-	}else if(CI.recv_buf[0] == protocol::SUBSCRIBE_FILE_CHANGES){
-		//slot_manager checks to make sure slot open
-		return non_response(CI, protocol::SUBSCRIBE_FILE_CHANGES_SIZE);
 	}else if(CI.recv_buf[0] == protocol::HAVE_HASH_TREE_BLOCK){
-		/*
-		The slot_manager makes sure slot open. The slot makes sure we are
-		subscribed to hash tree changes.
-		*/
-LOGGER << "stub"; exit(1);
-		//return non_response(CI, protocol::HAVE_HASH_TREE_BLOCK_SIZE);
+
+LOGGER << "stub, need to memorize message size"; exit(1);
 	}else if(CI.recv_buf[0] == protocol::HAVE_FILE_BLOCK){
-		/*
-		The slot_manager makes sure slot open. The slot makes sure we are
-		subscribed to file changes.
-		*/
-LOGGER << "stub"; exit(1);
-		//return non_response(CI, protocol::HAVE_FILE_BLOCK_SIZE);
-	}else if(CI.recv_buf[0] == protocol::REQUEST_SLOT_FAILED
-		|| CI.recv_buf[0] == protocol::REQUEST_BLOCK_HASH_TREE
-		|| CI.recv_buf[0] == protocol::REQUEST_BLOCK_FILE
-		|| CI.recv_buf[0] == protocol::FILE_REMOVED
-		|| CI.recv_buf[0] == protocol::SLOT_ID
-		|| CI.recv_buf[0] == protocol::BIT_FIELD
-		|| CI.recv_buf[0] == protocol::BIT_FIELD_COMPLETE
-		|| CI.recv_buf[0] == protocol::BLOCK
+
+LOGGER << "stub, need to memorize message size"; exit(1);
+	}else if(CI.recv_buf[0] == protocol::ERROR ||
+		CI.recv_buf[0] == protocol::SLOT ||
+		CI.recv_buf[0] == protocol::REQUEST_HASH_TREE_BLOCK ||
+		CI.recv_buf[0] == protocol::REQUEST_FILE_BLOCK ||
+		CI.recv_buf[0] == protocol::BLOCK
 	){
-		//message is a response to a message we sent
 		if(Sent.empty()){
-			//we weren't expecting any response
+			LOGGER << "unexpected response";
 			database::table::blacklist::add(CI.IP);
 			return boost::shared_ptr<message>();
 		}else{
@@ -66,15 +46,16 @@ LOGGER << "stub"; exit(1);
 			{
 				if(CI.recv_buf[0] == iter_cur->first){
 					M->recv_buf.append(CI.recv_buf.data(), iter_cur->second);
+					CI.recv_buf.erase(0, iter_cur->second);
 					return M;
 				}
 			}
-			LOGGER << "unrecognized command " << static_cast<unsigned>(CI.recv_buf[0]);
+			LOGGER << "unrecognized command";
 			database::table::blacklist::add(CI.IP);
 			return boost::shared_ptr<message>();
 		}
 	}else{
-		LOGGER << "unrecognized command " << static_cast<unsigned>(CI.recv_buf[0]);
+		LOGGER << "unrecognized command";
 		database::table::blacklist::add(CI.IP);
 		return boost::shared_ptr<message>();
 	}
@@ -83,8 +64,9 @@ LOGGER << "stub"; exit(1);
 void exchange::schedule_send(boost::shared_ptr<message> & M)
 {
 	assert(M && !M->send_buf.empty());
+//DEBUG, prioritizion will be done here
 
-//DEBUG, need prioritization here
+//DEBUG, check for SUBSCRIBE_* and memorize length of HAVE_* responses
 	Send.push_back(M);
 }
 

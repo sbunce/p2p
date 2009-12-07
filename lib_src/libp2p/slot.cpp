@@ -24,7 +24,7 @@ bool slot::complete()
 	return Hash_Tree.complete() && File.complete();
 }
 
-boost::shared_ptr<exchange::message> slot::create_REQUEST_SLOT(
+boost::shared_ptr<exchange::message> slot::create_request_slot(
 	const unsigned char slot_num)
 {
 	boost::shared_ptr<exchange::message> M(new exchange::message());
@@ -38,7 +38,7 @@ boost::shared_ptr<exchange::message> slot::create_REQUEST_SLOT(
 	}else if(!Hash_Tree.complete() && !File.complete()){
 		status = 3;
 	}
-	M->send_buf.append(protocol::SLOT_ID)
+	M->send_buf.append(protocol::SLOT)
 		.append(slot_num)
 		.append(status)
 		.append(convert::encode(file_size()));

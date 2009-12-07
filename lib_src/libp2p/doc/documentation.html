@@ -156,44 +156,21 @@ Message 0: Peer Identifier
 Description: Randomly generated 20 byte number. This number identifies the host
 on the DHT.
 
-+---+---+---+---+---+---+---+---+
-|               H               |
-+---+---+---+---+---+---+---+---+
-  0   1   2   3      ...     20
++---+---+---+
+|     H     |
++---+---+---+
+  0  ...  20
 </pre>
 </fieldset>
 </blockquote>
 
 <b>2.3 Commands</b>
 <blockquote>
-
 <fieldset>
 <pre>
-Name: REQUEST_SLOT
+Name: ERROR
 Base10: 0
-Description: Request a slot for downloading a hash tree and file.
-
-+---+---+---+---+---+---+---+---+
-| C |             H             |
-+---+---+---+---+---+---+---+---+
-  0   1   2   3      ...     20
-
-C = command, H = hash
-
-Possible Responses:
-SLOT_ID
-REQUEST_SLOT_FAILED (the server does not have the file)
-</pre>
-</fieldset>
-
-<br>
-
-<fieldset>
-<pre>
-Name: REQUEST_SLOT_FAILED
-Base10: 1
-Description: Server does not have requested file.
-Postcondition: Slot is not opened.
+Description: Meaning depends on what it's sent in response to.
 
 +---+
 | C |
@@ -201,23 +178,71 @@ Postcondition: Slot is not opened.
   0
 
 C = command
-
-Possible Responses: None
 </pre>
 </fieldset>
-
 <br>
-
 <fieldset>
 <pre>
-Name: REQUEST_BLOCK_HASH_TREE
+Name: REQUEST_SLOT
+Base10: 1
+Description: Request a slot for downloading.
+
++---+---+---+---+
+| C |     H     |
++---+---+---+---+
+  0   1  ...  20
+
+C = command, H = hash
+
+Possible Responses:
+SLOT
+ERROR
+
+Note: If ERROR response the slot is not opened.
+</pre>
+</fieldset>
+<br>
+<fieldset>
+<pre>
+Name: SLOT
 Base10: 2
+Description: Sent in response to REQUEST_SLOT.
+
++---+---+---+---+---+---+---+---+---+   +---+---+---+   +---+---+---+
+| C | S | K |     F     |     R     | + |     O     | + |     O     |
++---+---+---+---+---+---+---+---+---+   +---+---+---+   +---+---+---+
+  0   1   2   3  ...  10  11 ...  30      31 ...  x      x+1 ...  y
+
+C = command, S = slot number, K = status, F = file size, R = root hash,
+O = optional bit field
+
+Status:
+
+Base10: 0
+Description: Hash tree complete, file complete. No bit fields appended.
+
+Base10: 1
+Description: Hash tree complete, file incomplete. File bit field appended.
+
+Base10: 2
+Description: Hash tree incomplete, file complete. Hash tree bit field appended.
+
+Base10: 3
+Description: Hash tree incomplete, file incomplete. Hash tree bit field
+appended (first) and file bit field appended (second).
+</pre>
+</fieldset>
+<br>
+<fieldset>
+<pre>
+Name: REQUEST_HASH_TREE_BLOCK
+Base10: 3
 Description: Request a block from a hash tree.
 
-+---+---+---+---+---+---+
-| C | S |       B       |
-+---+---+---+---+---+---+
-  0   1   2    ...    n
++---+---+---+---+---+
+| C | S |     B     |
++---+---+---+---+---+
+  0   1   2  ...  n
 
 C = command, S = slot ID, B = block number (VLI)
 
@@ -225,38 +250,91 @@ Note: B is sized such that it can hold the maximum tree block number.
 
 Possible Responses:
 BLOCK
-FILE_REMOVED
+ERROR
+
+Note: When ERROR received it means host is no longer sharing the file. The slot
+is not automatically closed.
 </pre>
 </fieldset>
-
 <br>
-
 <fieldset>
 <pre>
-Name: REQUEST_BLOCK_FILE
-Base10: 3
+Name: REQUEST_FILE_BLOCK
+Base10: 4
 Description: Request a block from a file.
 
-+---+---+---+---+---+---+
-| C | S |       B       |
-+---+---+---+---+---+---+
-  0   1   2    ...    n
++---+---+---+---+---+
+| C | S |     B     |
++---+---+---+---+---+
+  0   1   2  ...  n
+
+Note: B is sized such that it can hold the maximum file block number.
 
 C = command, S = slot ID, B = block number (VLI)
 
 Possible Responses:
 BLOCK
-FILE_REMOVED
+ERROR
+
+Note: When ERROR received it means host is no longer sharing the file. The slot
+is not automatically closed.
 </pre>
 </fieldset>
-
 <br>
+<fieldset>
+<pre>
+Name: BLOCK
+Base10: 5
+Description: Either a hash tree block or file block. The hash tree blocks vary
+in size. The file blocks are fixed size except the last block which will be
+shorter.
 
++---+---+---+---+
+| C |     B     |
++---+---+---+---+
+  0   1  ... 10240
+
+C = command, B = block (maximum size of 10240)
+</pre>
+</fieldset>
+<br>
+<fieldset>
+<pre>
+Name: HAVE_HASH_TREE_BLOCK
+Base10: 6
+Description: After a slot is opened these messages are sent whenever the host
+gets a new hash tree block.
+
++---+---+---+---+---+
+| C | S |     B     |
++---+---+---+---+---+
+  0   1   2  ...  n
+
+C = command, B = block number (VLI)
+</pre>
+</fieldset>
+<br>
+<fieldset>
+<pre>
+Name: HAVE_FILE_BLOCK
+Base10: 7
+Description: After a slot is opened these messages are sent whenever the host
+gets a new file block.
+
++---+---+---+---+---+
+| C | S |     B     |
++---+---+---+---+---+
+  0   1   2  ...  n
+
+C = command, B = block number (VLI)
+</pre>
+</fieldset>
+<br>
 <fieldset>
 <pre>
 Name: CLOSE_SLOT
-Base10: 4
-Description: This is done after a hash tree or file is finished downloading.
+Base10: 8
+Description: Closes a slot.
 
 +---+---+
 | C | S |
@@ -264,210 +342,6 @@ Description: This is done after a hash tree or file is finished downloading.
   0   1
 
 C = command, S = slot number
-</pre>
-</fieldset>
-
-<br>
-
-<fieldset>
-<pre>
-Name: FILE_REMOVED
-Base10: 5
-Description: Host no longer has the file. When this is received a CLOSE_SLOT
-should be sent to close the slot. We don't close the slot after sending
-FILE_REMOVED because there could be requests in the pipeline.
-
-+---+
-| C |
-+---+
-  0
-
-C = command
-</pre>
-</fieldset>
-
-<br>
-
-<fieldset>
-<pre>
-Name: SLOT_ID
-Base10: 6
-Description: Sent in response to REQUEST_SLOT. The slot number is needed to
-request hash tree and file blocks.
-
-+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-| C | S | K |             F                 |       R       |
-+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-  0   1   2   3   4   5   6   7   8   9  10  11    ...   30
-
-C = command, S = slot number, K = status, F = file size, R = root hash
-
-Status:
-
-Base10: 0
-Description: Hash tree complete, file complete.
-
-Base10: 1
-Description: Hash tree complete, file incomplete.
-
-Base10: 2
-Description: Hash tree incomplete, file complete.
-
-Base10: 3
-Description: Hash tree incomplete, file incomplete.
-
-Note:
-SUBSCRIBE_HASH_TREE_CHANGES and SUBSCRIBE_FILE_CHANGES can be used to get bit
-fields for exactly what blocks the host has, and to be updated when it gets new
-blocks.
-</pre>
-</fieldset>
-
-<br>
-
-<fieldset>
-<pre>
-Name: SUBSCRIBE_HASH_TREE_CHANGES
-Base10: 7
-Description: Request BIT_FIELD representing what hash tree blocks the host has.
-Also subscribe to HAVE_HASH_TREE_BLOCK whenever the remote host receives a new
-block.
-
-+---+---+
-| C | S |
-+---+---+
-  0   1
-
-C = command, S = slot ID
-
-Possible Responses:
-BIT_FIELD
-BIT_FIELD_COMPLETE
-FILE_REMOVED
-</pre>
-</fieldset>
-
-<br>
-
-<fieldset>
-<pre>
-Name: SUBSCRIBE_FILE_CHANGES
-Base10: 8
-Description: Request BIT_FIELD representing what file blocks the host has. Also
-subscribe to HAVE_FILE_BLOCK whenever the remote host receives a new
-block.
-
-+---+---+
-| C | S |
-+---+---+
-  0   1
-
-C = command, S = slot ID
-
-Possible Responses:
-BIT_FIELD
-BIT_FIELD_COMPLETE
-FILE_REMOVED
-</pre>
-</fieldset>
-
-<br>
-
-<fieldset>
-<pre>
-Name: BIT_FIELD
-Base10: 9
-Description: Bit field that represents what blocks the host has. This may be
-hash tree or file blocks depending on if this message is in response to
-SUBSCRIBE_HASH_TREE_CHANGES or SUBSCRIBE_FILE_CHANGES. The bit field is big
-endian so byte 1 will contain the highest number blocks. A 0 bit represents a
-block that the host has, a 1 bit represents a block that the host needs.
-
-+---+---+---+---+---+
-| C |       B       |
-+---+---+---+---+---+
-  0   1    ...    n
-
-C = command, B = bit field
-
-Note: The file size must be known to calculate how long the bit field will be.
-</pre>
-</fieldset>
-
-<br>
-
-<fieldset>
-<pre>
-Name: BIT_FIELD_COMPLETE
-Base10: 10
-Description: Sent in response to SUBSCRIBE_HASH_TREE_CHANGES when hash tree
-complete. Sent in response to SUBSCRIBE_FILE_CHANGES when file complete.
-
-+---+
-| C |
-+---+
-  0
-
-C = command
-</pre>
-</fieldset>
-
-<br>
-
-<fieldset>
-<pre>
-Name: BLOCK
-Base10: 11
-Description: Either a hash tree block or file block. The hash tree blocks vary
-in size. The file blocks are fixed size except the last block which will be
-shorter.
-
-+---+---+---+---+---+---+---+---+
-| C |             B             |
-+---+---+---+---+---+---+---+---+
-  0   1   2   3      ...    10240
-
-C = command, B = block (maximum size of 10240)
-
-Note: The block size will be highly variable for hash tree blocks because they
-do not span two rows in a tree. All file blocks will be 10240 bytes except for
-the last block.
-</pre>
-</fieldset>
-
-<br>
-
-<fieldset>
-<pre>
-Name: HAVE_HASH_TREE_BLOCK
-Base10: 12
-Description: Sent to inform a host that a new hash tree block is available. This
-is sent to all hosts that have a open slot for a file.
-
-+---+---+---+---+---+---+
-| C | S |       B       |
-+---+---+---+---+---+---+
-  0   1   2    ...    n
-
-C = command, B = block number (VLI)
-</pre>
-</fieldset>
-
-<br>
-
-<fieldset>
-<pre>
-Name: HAVE_FILE_BLOCK
-Base10: 13
-Description: Sent to inform a host that a new file block is available. This is
-sent to all hosts that have a open slot for a file.
-
-+---+---+---+---+---+---+
-| C | S |       B       |
-+---+---+---+---+---+---+
-  0   1   2    ...    n
-
-C = command, B = block number (VLI)
 </pre>
 </fieldset>
 </blockquote>
@@ -492,30 +366,8 @@ idle waiting for a request.
 The maximum allowed pipeline size is 16. This would saturate a link with a
 delay throughput product of less than 163840 (10240 * 16) bytes. For example, a
 6Mb/s connection would have to have a latency greater than 213ms to not
-saturate. This number is highly arbitrary and factors in buffering size, and
-
+saturate. This number is highly arbitrary.
 </p>
-<b>Adaptive Pipeline Sizing Algorithm:</b>
-<p>
-This simple algorithm reduces the size of the pipeline to the minimum needed
-without reducing throughput.
-</p>
-<pre>
-Run after request fulfilled to adjust pipeline size.
-
-C = current requests unfulfilled (requests in pipeline)
-M = maximum pipeline size (this is what we adjust)
-A = absolute maximum pipeline size (M always < A)
-
-case: C == 0 && M < A
-	//pipeline is too small, increase by one
-	++M
-case: C == 1
-	//pipeline size optimal, do nothing
-case: C > 1 && M > 1
-	//pipeline is too large, decrease by one
-	--M;
-</pre>
 </blockquote>
 
 <b>2.6 Hash Tree</b>

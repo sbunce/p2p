@@ -19,17 +19,17 @@
 class slot_manager : private boost::noncopyable
 {
 public:
-	slot_manager(
-		exchange & Exchange_in,
-		network::connection_info & CI
-	);
+	slot_manager(exchange & Exchange_in);
 
-	/* Functions to receive messages.
-	The functions are named after the messages they receive. False is returned if
-	the remote host violated the protocol.
+	/*
+	is_slot_message:
+		Returns true if message needs to be passed to slot_manger::recv().
+	recv:
+		Receives a slot related message. Returns false if message violates
+		protocol.
 	*/
-	bool recv_REQUEST_SLOT(boost::shared_ptr<exchange::message> & M);
-	bool recv_REQUEST_SLOT_FAILED(boost::shared_ptr<exchange::message> & M);
+	bool is_slot_message(boost::shared_ptr<exchange::message> & M);
+	bool recv(boost::shared_ptr<exchange::message> & M);
 
 	/*
 	resume:
@@ -39,9 +39,6 @@ public:
 
 private:
 	exchange & Exchange;
-
-	//used to detect when slot within share modified
-	int share_slot_state;
 
 	/*
 	Outgoing_Slot holds slots we have opened with the remote host.
@@ -66,13 +63,11 @@ private:
 	/*
 	make_slot_requests:
 		Does pending slot requests.
-	send_CLOSE_SLOT:
-		Send CLOSE_SLOT for specified slot_ID.
-	send_REQUEST_SLOT_FAILED:
-		Send REQUEST_SLOT_FAILED.
 	*/
 	void make_slot_requests();
-	void send_CLOSE_SLOT(const unsigned char slot_ID);
-	void send_REQUEST_SLOT_FAILED();
+
+	bool recv_request_slot(boost::shared_ptr<exchange::message> & M);
+	bool recv_request_slot_failed(boost::shared_ptr<exchange::message> & M);
+	bool recv_slot(boost::shared_ptr<exchange::message> & M);
 };
 #endif

@@ -63,7 +63,7 @@ public:
 		Creates a REQUEST_SLOT message with the given slot_num.
 	*/
 	bool complete();
-	boost::shared_ptr<exchange::message> create_REQUEST_SLOT(const unsigned char slot_num);
+	boost::shared_ptr<exchange::message> create_request_slot(const unsigned char slot_num);
 
 private:
 	//the ctor will throw an exception if database access fails

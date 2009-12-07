@@ -1,32 +1,76 @@
 #include "slot_manager.hpp"
 
-slot_manager::slot_manager(
-	exchange & Exchange_in,
-	network::connection_info & CI
-):
-	Exchange(Exchange_in),
-	share_slot_state(0)
+slot_manager::slot_manager(exchange & Exchange_in):
+	Exchange(Exchange_in)
 {
 
 }
 
+bool slot_manager::is_slot_message(boost::shared_ptr<exchange::message> & M)
+{
+	assert(M && !M->recv_buf.empty());
+
+	//check if a response to a slot message
+	if(!M->send_buf.empty() && (
+		M->send_buf[0] == protocol::REQUEST_SLOT ||
+		M->send_buf[0] == protocol::REQUEST_HASH_TREE_BLOCK ||
+		M->send_buf[0] == protocol::REQUEST_FILE_BLOCK))
+	{
+		return true;
+	}
+
+	//check if slot message
+	if(M->recv_buf[0] == protocol::REQUEST_SLOT ||
+		M->recv_buf[0] == protocol::SLOT ||
+		M->recv_buf[0] == protocol::HAVE_HASH_TREE_BLOCK ||
+		M->recv_buf[0] == protocol::HAVE_FILE_BLOCK ||
+		M->recv_buf[0] == protocol::CLOSE_SLOT
+	){
+		return true;
+	}
+
+	//not a slot message
+	return false;
+}
+
+bool slot_manager::recv(boost::shared_ptr<exchange::message> & M)
+{
+	assert(M && !M->recv_buf.empty());
+	if(M->recv_buf[0] == protocol::REQUEST_SLOT){
+		return recv_request_slot(M);
+	}else if(!M->send_buf.empty() && M->send_buf[0] == protocol::REQUEST_SLOT
+		&& M->recv_buf[0] == protocol::ERROR)
+	{
+		return recv_request_slot_failed(M);
+	}else if(M->recv_buf[0] == protocol::SLOT){
+		return recv_slot(M);
+	}
+	LOGGER << "unhandled message"; exit(1);
+}
+
 void slot_manager::make_slot_requests()
 {
-	while(!Pending_Slot_Request.empty() && Outgoing_Slot.size() < 256){
+	while(!Pending_Slot_Request.empty() &&
+		Slot_Request.size() + Outgoing_Slot.size() < 256)
+	{
 		boost::shared_ptr<exchange::message> M(new exchange::message());
 		M->send_buf.append(protocol::REQUEST_SLOT)
 			.append(convert::hex_to_bin(Pending_Slot_Request.front()->hash()));
-		M->expected_response.push_back(std::make_pair(protocol::SLOT_ID,
-			protocol::SLOT_ID_SIZE));
-		M->expected_response.push_back(std::make_pair(protocol::REQUEST_SLOT_FAILED,
-			protocol::REQUEST_SLOT_FAILED_SIZE));
+		M->expected_response.push_back(std::make_pair(protocol::SLOT,
+			protocol::SLOT_SIZE()));
+		M->expected_response.push_back(std::make_pair(protocol::ERROR,
+			protocol::ERROR_SIZE));
+		/*
+		The possible SLOT messages with bit fields appended to them will be
+		handled by exchange.
+		*/
 		Exchange.schedule_send(M);
 		Slot_Request.push_back(Pending_Slot_Request.front());
 		Pending_Slot_Request.pop_front();
 	}
 }
 
-bool slot_manager::recv_REQUEST_SLOT(boost::shared_ptr<exchange::message> & M)
+bool slot_manager::recv_request_slot(boost::shared_ptr<exchange::message> & M)
 {
 	if(Incoming_Slot.size() > 256){
 		return false;
@@ -38,7 +82,9 @@ bool slot_manager::recv_REQUEST_SLOT(boost::shared_ptr<exchange::message> & M)
 	share::slot_iterator slot_iter = share::singleton().find_slot(hash);
 	if(slot_iter == share::singleton().end_slot()){
 		LOGGER << "failed " << hash;
-		send_REQUEST_SLOT_FAILED();
+		boost::shared_ptr<exchange::message> M(new exchange::message());
+		M->send_buf.append(protocol::ERROR);
+		Exchange.schedule_send(M);
 		return true;
 	}
 
@@ -54,22 +100,54 @@ bool slot_manager::recv_REQUEST_SLOT(boost::shared_ptr<exchange::message> & M)
 		++slot_num;
 	}
 
-	//create SLOT_ID response message
-	if(M = slot_iter->create_REQUEST_SLOT(slot_num)){
+	//create SLOT response message
+	if(M = slot_iter->create_request_slot(slot_num)){
 		LOGGER << "opened " << hash;
 		Incoming_Slot.insert(std::make_pair(slot_num, slot_iter.get()));
 		Exchange.schedule_send(M);
 	}else{
 		LOGGER << "failed " << hash;
-		send_REQUEST_SLOT_FAILED();
+		boost::shared_ptr<exchange::message> M(new exchange::message());
+		M->send_buf.append(protocol::ERROR);
+		Exchange.schedule_send(M);
 	}
 	return true;
 }
 
-bool slot_manager::recv_REQUEST_SLOT_FAILED(boost::shared_ptr<exchange::message> & M)
+bool slot_manager::recv_request_slot_failed(boost::shared_ptr<exchange::message> & M)
 {
+	LOGGER << "open failed "
+		<< convert::bin_to_hex(reinterpret_cast<char *>(M->send_buf.data()+1), SHA1::bin_size);
+}
 
-LOGGER << "stub"; exit(1);
+bool slot_manager::recv_slot(boost::shared_ptr<exchange::message> & M)
+{
+	if(Slot_Request.empty()){
+		LOGGER << "unexpected SLOT_ID message";
+		return false;
+	}
+
+	//verify validity of file size and root hash
+	SHA1 SHA;
+	SHA.init();
+	SHA.load(reinterpret_cast<const char *>(M->recv_buf.data()) + 3,
+		8 + SHA1::bin_size);
+	SHA.end();
+	if(SHA.hex() != Slot_Request.front()->hash()){
+		LOGGER << "invalid SLOT_ID message";
+		return false;
+	}
+
+	std::pair<std::map<unsigned char, boost::shared_ptr<slot> >::iterator, bool>
+		ret = Outgoing_Slot.insert(std::make_pair(M->recv_buf[1], Slot_Request.front()));
+	Slot_Request.pop_front();
+	if(ret.second == false){
+		LOGGER << "invalid SLOT_ID message";
+		return false;
+	}
+	LOGGER << "opened "
+		<< convert::bin_to_hex(reinterpret_cast<char *>(M->send_buf.data()+1), SHA1::bin_size);
+	return true;
 }
 
 void slot_manager::resume(const std::string & peer_ID)
@@ -84,18 +162,4 @@ void slot_manager::resume(const std::string & peer_ID)
 		}
 	}
 	make_slot_requests();
-}
-
-void slot_manager::send_CLOSE_SLOT(const unsigned char slot_ID)
-{
-	boost::shared_ptr<exchange::message> M(new exchange::message());
-	M->send_buf.append(protocol::CLOSE_SLOT).append(slot_ID);
-	Exchange.schedule_send(M);
-}
-
-void slot_manager::send_REQUEST_SLOT_FAILED()
-{
-	boost::shared_ptr<exchange::message> M(new exchange::message());
-	M->send_buf.append(protocol::REQUEST_SLOT_FAILED);
-	Exchange.schedule_send(M);
 }

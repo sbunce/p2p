@@ -32,20 +32,20 @@ public:
 		stored here.
 		std::pair<command, size of response>
 		*/
-//DEBUG, use this on SUBSCRIBE_* requests
-//have exchange memorize the values
 		std::vector<std::pair<unsigned char, unsigned> > expected_response;
 	};
 
 	/*
 	recv:
-		Returns shared_ptr to received message. Returns empty shared_ptr if a
-		complete message hasn't been received or if the remote host was
-		blacklisted.
+		Returns shared_ptr to received message or empty shared_ptr if complete
+		message not received or host was blacklisted.
+		Note: If message is a response then send_buf will contain the message that
+			caused the response.
 	schedule_send:
 		Add message to be sent.
 	send:
 		Returns message to send (or empty buffer if nothing to send).
+		Note: The returned message MUST be sent.
 	*/
 	boost::shared_ptr<message> recv(network::connection_info & CI);
 	void schedule_send(boost::shared_ptr<message> & M);
@@ -60,5 +60,20 @@ private:
 	this. When a response arrives it is to the message on the front.
 	*/
 	std::list<boost::shared_ptr<message> > Sent;
+
+	/*
+	Used to memorize size of HAVE_* messages which might arrive at any time.
+	Note: The size is memorized from the time we receive the SLOT message, to the
+		time we receive another SLOT message with the same slot number.
+	std::map<slot number, message size>
+	*/
+	class VLI_size_element
+	{
+	public:
+		unsigned hash_tree;
+		unsigned file;
+	};
+	std::map<unsigned char, VLI_size_element> incoming_VLI_size;
+	std::map<unsigned char, VLI_size_element> outgoing_VLI_size;
 };
 #endif

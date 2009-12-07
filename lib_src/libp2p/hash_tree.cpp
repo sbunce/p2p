@@ -99,9 +99,9 @@ bool hash_tree::block_info(const boost::uint64_t block,
 			}
 
 			//convert to bytes
-			parent = parent * protocol::BIN_HASH_SIZE;
-			info.first = info.first * protocol::BIN_HASH_SIZE;
-			info.second = info.second * protocol::BIN_HASH_SIZE;
+			parent = parent * SHA1::bin_size;
+			info.first = info.first * SHA1::bin_size;
+			info.second = info.second * SHA1::bin_size;
 			return true;
 		}
 		block_count += row_block_count;
@@ -153,13 +153,13 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t block_num)
 
 	if(block_num == 0){
 		//special requirements to check root hash, see header documentation for hash
-		if(!database::pool::get()->blob_read(blob, buff, protocol::BIN_HASH_SIZE, 0)){
+		if(!database::pool::get()->blob_read(blob, buff, SHA1::bin_size, 0)){
 			return io_error;
 		}
-		std::memmove(buff + 8, buff, protocol::BIN_HASH_SIZE);
+		std::memmove(buff + 8, buff, SHA1::bin_size);
 		std::memcpy(buff, convert::encode(file_size).data(), 8);
 		SHA.init();
-		SHA.load(buff, protocol::BIN_HASH_SIZE + 8);
+		SHA.load(buff, SHA1::bin_size + 8);
 		SHA.end();
 		if(SHA.hex() == hash){
 			return good;
@@ -415,7 +415,7 @@ boost::uint64_t hash_tree::file_size_to_tree_size(const boost::uint64_t file_siz
 		return 0;
 	}else{
 		std::deque<boost::uint64_t> throw_away;
-		return protocol::BIN_HASH_SIZE * file_hash_to_tree_hash(file_size_to_file_hash(file_size), throw_away);
+		return SHA1::bin_size * file_hash_to_tree_hash(file_size_to_file_hash(file_size), throw_away);
 	}
 }
 
@@ -462,7 +462,7 @@ boost::uint64_t hash_tree::row_to_file_hash_offset(
 
 	//add up size (bytes) of rows until reaching the last row
 	for(int x=0; x<row.size()-1; ++x){
-		file_hash_offset += row[x] * protocol::BIN_HASH_SIZE;
+		file_hash_offset += row[x] * SHA1::bin_size;
 	}
 	return file_hash_offset;
 }

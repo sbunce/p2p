@@ -21,8 +21,6 @@ public:
 
 	const std::string IP;
 
-	//void open(const std::string & hash);
-
 private:
 	//locks all entry points in to the object (including call backs)
 	boost::recursive_mutex Recursive_Mutex;
@@ -58,6 +56,6 @@ private:
 	send_initial:
 		Sends initial messages after key exchange done.
 	*/
-	void send_initial(network::connection_info & CI);
+	void initial_send(network::connection_info & CI);
 };
 #endif

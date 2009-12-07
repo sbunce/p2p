@@ -10,6 +10,9 @@ connection_manager::connection_manager(
 
 void connection_manager::connect_call_back(network::connection_info & CI)
 {
+//DEBUG, disable persistent blacklist
+database::pool::get()->query("DELETE FROM blacklist");
+
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	for(std::map<int, boost::shared_ptr<connection> >::iterator
