@@ -31,16 +31,16 @@ is entirely binary.
 <p>
 VLI (Variable Length Integer):
 <br>
-VLIs are used to save space. VLIs are used when we know the maximum value the integer
-must hold. We know the maximum block number of a file so we can use VLIs
+VLIs are used to save space. VLIs are used when we know the maximum value the
+integer must hold. We know the maximum block number of a file so we can use VLIs
 when requesting blocks. VLIs are a minimum of 1 byte and a maximum of 8 bytes.
 </p>
 <p>
 Hash vs Root Hash:
 <br>
-The hash is a hash of the file size (big-endian) followed by the root hash
-(20 byte SHA1 hash). Refer to the hash tree section for documentation on the
-root hash.
+The hash is a hash of the file size (8 byte big-endian) followed by the root
+hash (20 byte SHA1 hash). Refer to the hash tree section for documentation on
+the root hash.
 </p>
 </blockquote>
 
@@ -138,8 +138,8 @@ uint32 extract()
 
 <p>
 After the PRNG is seeded all bytes sent and received are XOR'd against the
-output of the PRNGs. The send PRNG of Host_A remains synchronized to the recv
-PRNG of Host_B and vise versa.
+output of the PRNGs (big-endian). The send PRNG of Host_A remains synchronized
+to the recv PRNG of Host_B and vise versa.
 </p>
 </blockquote>
 
@@ -164,7 +164,7 @@ on the DHT.
 </fieldset>
 </blockquote>
 
-<b>2.3 Commands</b>
+<b>2.3 Slot Commands</b>
 <blockquote>
 <fieldset>
 <pre>
@@ -348,7 +348,7 @@ C = command, S = slot number
 
 <br>
 
-<b>2.4 Kademlia</b>
+<b>2.4 DHT Commands</b>
 <blockquote>
 
 </blockquote>

@@ -60,7 +60,7 @@ void http::recv_call_back(network::connection_info & CI)
 			}else{
 				//file at request path doesn't exist
 				network::buffer B("404");
-				Proactor.write(CI.connection_ID, B);
+				Proactor.send(CI.connection_ID, B);
 				Proactor.disconnect_on_empty(CI.connection_ID);
 			}
 		}
@@ -149,7 +149,7 @@ void http::file_send_call_back(network::connection_info & CI)
 			fin.read(reinterpret_cast<char *>(B.tail_start()), B.tail_size());
 			B.tail_resize(fin.gcount());
 			index += fin.gcount();
-			Proactor.write(CI.connection_ID, B);
+			Proactor.send(CI.connection_ID, B);
 			if(fin.eof()){
 				CI.send_call_back.clear();
 				Proactor.disconnect_on_empty(CI.connection_ID);
@@ -197,6 +197,6 @@ void http::read_directory(network::connection_info & CI)
 	std::string header = create_header(ss.str().size());
 	network::buffer B;
 	B.append(header).append(ss.str());
-	Proactor.write(CI.connection_ID, B);
+	Proactor.send(CI.connection_ID, B);
 	Proactor.disconnect_on_empty(CI.connection_ID);
 }

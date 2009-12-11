@@ -3,7 +3,6 @@
 
 //custom
 #include "encryption.hpp"
-#include "exchange.hpp"
 #include "share.hpp"
 #include "slot_manager.hpp"
 
@@ -25,16 +24,20 @@ private:
 	//locks all entry points in to the object (including call backs)
 	boost::recursive_mutex Recursive_Mutex;
 
+	/*
+	Messages to send are inserted in to the Send buffer. When a message that
+	expects a response is sent it is pushed on to the back of the Sent buffer.
+	Incoming messages that are responses are matched to the request on the front
+	of the Sent buffer.
+	*/
+	std::list<network::buffer> Send;
+	std::list<network::buffer> Sent;
+
 	network::proactor & Proactor;
 	encryption Encryption;
-	exchange Exchange;
 	slot_manager Slot_Manager;
-
-	//peer_ID of remote host
-	std::string peer_ID;
-
-	//allows us to determine if the blacklist has changed
-	int blacklist_state;
+	std::string peer_ID; //holds peer_ID when it's received
+	int blacklist_state; //used to know if blacklist updated
 
 	/* Proactor Call Backs
 	key_exchange_recv_call_back:
@@ -43,14 +46,10 @@ private:
 		Receives initial messages sent after key exchange.
 	recv_call_back:
 		The last recv call back used. Handles commands.
-	send_call_back:
-		The last send call back used. Handles sending new requests when send_buf
-		empties out.
 	*/
 	void key_exchange_recv_call_back(network::connection_info & CI);
 	void initial_recv_call_back(network::connection_info & CI);
 	void recv_call_back(network::connection_info & CI);
-	void send_call_back(network::connection_info & CI);
 
 	/*
 	send_initial:

@@ -1,94 +1,56 @@
 #include "slot_manager.hpp"
 
-slot_manager::slot_manager(exchange & Exchange_in):
-	Exchange(Exchange_in)
+slot_manager::slot_manager(
+	std::list<network::buffer> & Send_in
+):
+	Send(Send_in)
 {
 
 }
 
-bool slot_manager::is_slot_message(boost::shared_ptr<exchange::message> & M)
-{
-	assert(M && !M->recv_buf.empty());
-
-	//check if a response to a slot message
-	if(!M->send_buf.empty() && (
-		M->send_buf[0] == protocol::REQUEST_SLOT ||
-		M->send_buf[0] == protocol::REQUEST_HASH_TREE_BLOCK ||
-		M->send_buf[0] == protocol::REQUEST_FILE_BLOCK))
-	{
-		return true;
-	}
-
-	//check if slot message
-	if(M->recv_buf[0] == protocol::REQUEST_SLOT ||
-		M->recv_buf[0] == protocol::SLOT ||
-		M->recv_buf[0] == protocol::HAVE_HASH_TREE_BLOCK ||
-		M->recv_buf[0] == protocol::HAVE_FILE_BLOCK ||
-		M->recv_buf[0] == protocol::CLOSE_SLOT
-	){
-		return true;
-	}
-
-	//not a slot message
-	return false;
-}
-
-bool slot_manager::recv(boost::shared_ptr<exchange::message> & M)
-{
-	assert(M && !M->recv_buf.empty());
-	if(M->recv_buf[0] == protocol::REQUEST_SLOT){
-		return recv_request_slot(M);
-	}else if(!M->send_buf.empty() && M->send_buf[0] == protocol::REQUEST_SLOT
-		&& M->recv_buf[0] == protocol::ERROR)
-	{
-		return recv_request_slot_failed(M);
-	}else if(M->recv_buf[0] == protocol::SLOT){
-		return recv_slot(M);
-	}
-	LOGGER << "unhandled message"; exit(1);
-}
-
-void slot_manager::make_slot_requests()
+void slot_manager::make_slot_requests(network::connection_info & CI)
 {
 	while(!Pending_Slot_Request.empty() &&
 		Slot_Request.size() + Outgoing_Slot.size() < 256)
 	{
-		boost::shared_ptr<exchange::message> M(new exchange::message());
-		M->send_buf.append(protocol::REQUEST_SLOT)
+		network::buffer send_buf;
+		send_buf
+			.append(protocol::REQUEST_SLOT)
 			.append(convert::hex_to_bin(Pending_Slot_Request.front()->hash()));
-		M->expected_response.push_back(std::make_pair(protocol::SLOT,
-			protocol::SLOT_SIZE()));
-		M->expected_response.push_back(std::make_pair(protocol::ERROR,
-			protocol::ERROR_SIZE));
-		/*
-		The possible SLOT messages with bit fields appended to them will be
-		handled by exchange.
-		*/
-		Exchange.schedule_send(M);
+		Send.push_back(send_buf);
 		Slot_Request.push_back(Pending_Slot_Request.front());
 		Pending_Slot_Request.pop_front();
 	}
 }
 
-bool slot_manager::recv_request_slot(boost::shared_ptr<exchange::message> & M)
+bool slot_manager::recv_request_slot(network::connection_info & CI)
 {
 	if(Incoming_Slot.size() > 256){
+		LOGGER << CI.IP << " requested too many slots";
+		database::table::blacklist::add(CI.IP);
 		return false;
 	}
 
-	//see if we have a file with the requested hash
+	if(CI.recv_buf.size() < protocol::REQUEST_SLOT_SIZE){
+		return false;
+	}
+
+	//unmarshal data and erase incoming message from recv_buf
 	std::string hash = convert::bin_to_hex(std::string(
-		reinterpret_cast<const char *>(M->recv_buf.data()+1), SHA1::bin_size));
+		reinterpret_cast<const char *>(CI.recv_buf.data()+1), SHA1::bin_size));
+	CI.recv_buf.erase(0, protocol::REQUEST_SLOT_SIZE);
+
+	//locate requested slot
 	share::slot_iterator slot_iter = share::singleton().find_slot(hash);
 	if(slot_iter == share::singleton().end_slot()){
 		LOGGER << "failed " << hash;
-		boost::shared_ptr<exchange::message> M(new exchange::message());
-		M->send_buf.append(protocol::ERROR);
-		Exchange.schedule_send(M);
+		network::buffer send_buf;
+		send_buf.append(protocol::ERROR);
+		Send.push_back(send_buf);
 		return true;
 	}
 
-	//find available slot
+	//find available slot number
 	unsigned char slot_num = 0;
 	for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter_cur = Incoming_Slot.begin(), iter_end = Incoming_Slot.end();
@@ -100,57 +62,100 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<exchange::message> & M)
 		++slot_num;
 	}
 
-	//create SLOT response message
-	if(M = slot_iter->create_request_slot(slot_num)){
-		LOGGER << "opened " << hash;
-		Incoming_Slot.insert(std::make_pair(slot_num, slot_iter.get()));
-		Exchange.schedule_send(M);
-	}else{
+	//determine status byte
+	unsigned char status;
+	if(slot_iter->Hash_Tree.complete() && slot_iter->File.complete()){
+		status = 0;
+	}else if(slot_iter->Hash_Tree.complete() && !slot_iter->File.complete()){
+		status = 1;
+	}else if(!slot_iter->Hash_Tree.complete() && slot_iter->File.complete()){
+		status = 2;
+	}else if(!slot_iter->Hash_Tree.complete() && !slot_iter->File.complete()){
+		status = 3;
+	}
+
+	//prepare SLOT message
+	network::buffer send_buf;
+	send_buf
+		.append(protocol::SLOT)
+		.append(slot_num)
+		.append(status)
+		.append(convert::encode(slot_iter->file_size()));
+	send_buf.tail_reserve(SHA1::bin_size);
+	if(!database::pool::get()->blob_read(slot_iter->Hash_Tree.blob,
+		reinterpret_cast<char *>(send_buf.tail_start()), SHA1::bin_size, 0))
+	{
 		LOGGER << "failed " << hash;
-		boost::shared_ptr<exchange::message> M(new exchange::message());
-		M->send_buf.append(protocol::ERROR);
-		Exchange.schedule_send(M);
+		network::buffer send_buf;
+		send_buf.append(protocol::ERROR);
+		Send.push_back(send_buf);
+		return true;
 	}
-	return true;
-}
-
-bool slot_manager::recv_request_slot_failed(boost::shared_ptr<exchange::message> & M)
-{
-	LOGGER << "open failed "
-		<< convert::bin_to_hex(reinterpret_cast<char *>(M->send_buf.data()+1), SHA1::bin_size);
-}
-
-bool slot_manager::recv_slot(boost::shared_ptr<exchange::message> & M)
-{
-	if(Slot_Request.empty()){
-		LOGGER << "unexpected SLOT_ID message";
-		return false;
-	}
-
-	//verify validity of file size and root hash
+	send_buf.tail_resize(SHA1::bin_size);
 	SHA1 SHA;
 	SHA.init();
-	SHA.load(reinterpret_cast<const char *>(M->recv_buf.data()) + 3,
+	SHA.load(reinterpret_cast<const char *>(send_buf.data()) + 3,
 		8 + SHA1::bin_size);
 	SHA.end();
-	if(SHA.hex() != Slot_Request.front()->hash()){
-		LOGGER << "invalid SLOT_ID message";
+	if(SHA.hex() != slot_iter->hash()){
+		LOGGER << "failed " << hash;
+		network::buffer send_buf;
+		send_buf.append(protocol::ERROR);
+		Send.push_back(send_buf);
+		return true;
+	}
+
+	//send SLOT message
+	Send.push_back(send_buf);
+}
+
+bool slot_manager::recv_request_slot_failed(network::connection_info & CI)
+{
+	LOGGER;
+/*
+	LOGGER << "open failed "
+		<< convert::bin_to_hex(reinterpret_cast<char *>(M->send_buf.data()+1), SHA1::bin_size);
+*/
+}
+
+bool slot_manager::recv_slot(network::connection_info & CI)
+{
+LOGGER;
+	if(Slot_Request.empty()){
+		LOGGER << "invalid SLOT";
+		database::table::blacklist::add(CI.IP);
 		return false;
 	}
 
-	std::pair<std::map<unsigned char, boost::shared_ptr<slot> >::iterator, bool>
-		ret = Outgoing_Slot.insert(std::make_pair(M->recv_buf[1], Slot_Request.front()));
-	Slot_Request.pop_front();
-	if(ret.second == false){
-		LOGGER << "invalid SLOT_ID message";
+	if(CI.recv_buf.size() < protocol::SLOT_SIZE()){
 		return false;
 	}
-	LOGGER << "opened "
-		<< convert::bin_to_hex(reinterpret_cast<char *>(M->send_buf.data()+1), SHA1::bin_size);
+
+	unsigned char slot_num = CI.recv_buf[1];
+	SHA1 SHA;
+	SHA.init();
+	SHA.load(reinterpret_cast<const char *>(CI.recv_buf.data()) + 3,
+		8 + SHA1::bin_size);
+	SHA.end();
+	CI.recv_buf.erase(0, protocol::SLOT_SIZE());
+	if(SHA.hex() != Slot_Request.front()->hash()){
+		LOGGER << "invalid SLOT";
+		database::table::blacklist::add(CI.IP);
+		return true;
+	}
+	std::pair<std::map<unsigned char, boost::shared_ptr<slot> >::iterator, bool>
+		ret = Outgoing_Slot.insert(std::make_pair(slot_num, Slot_Request.front()));
+	Slot_Request.pop_front();
+	if(ret.second == false){
+		LOGGER << "invalid SLOT";
+		database::table::blacklist::add(CI.IP);
+		return true;
+	}
+	LOGGER << "received SLOT";
 	return true;
 }
 
-void slot_manager::resume(const std::string & peer_ID)
+void slot_manager::resume(network::connection_info & CI, const std::string & peer_ID)
 {
 	std::set<std::string> hash = database::table::join::resume_hash(peer_ID);
 	for(std::set<std::string>::iterator iter_cur = hash.begin(), iter_end = hash.end();
@@ -161,5 +166,5 @@ void slot_manager::resume(const std::string & peer_ID)
 			Pending_Slot_Request.push_back(slot_iter.get());
 		}
 	}
-	make_slot_requests();
+	make_slot_requests(CI);
 }

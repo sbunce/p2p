@@ -2,7 +2,6 @@
 #define H_SLOT_MANAGER
 
 //custom
-#include "exchange.hpp"
 #include "share.hpp"
 #include "slot.hpp"
 
@@ -15,30 +14,32 @@
 //standard
 #include <vector>
 
-
 class slot_manager : private boost::noncopyable
 {
 public:
-	slot_manager(exchange & Exchange_in);
+	slot_manager(std::list<network::buffer> & Send_in);
 
 	/*
-	is_slot_message:
-		Returns true if message needs to be passed to slot_manger::recv().
-	recv:
-		Receives a slot related message. Returns false if message violates
-		protocol.
+	recv_request_slot:
+		Handles incoming REQUEST_SLOT messages.
+	recv_request_slot_failed:
+		Handles an ERROR in response to a REQUEST_SLOT.
+	recv_slot:
+		Handles incoming SLOT messages.
 	*/
-	bool is_slot_message(boost::shared_ptr<exchange::message> & M);
-	bool recv(boost::shared_ptr<exchange::message> & M);
+	bool recv_request_slot(network::connection_info & CI);
+	bool recv_request_slot_failed(network::connection_info & CI);
+	bool recv_slot(network::connection_info & CI);
 
 	/*
 	resume:
 		When the peer_ID is received this function is called to resume downloads.
 	*/
-	void resume(const std::string & peer_ID);
+	void resume(network::connection_info & CI, const std::string & peer_ID);
 
 private:
-	exchange & Exchange;
+	//reference to connection::Send
+	std::list<network::buffer> & Send;
 
 	/*
 	Outgoing_Slot holds slots we have opened with the remote host.
@@ -64,10 +65,6 @@ private:
 	make_slot_requests:
 		Does pending slot requests.
 	*/
-	void make_slot_requests();
-
-	bool recv_request_slot(boost::shared_ptr<exchange::message> & M);
-	bool recv_request_slot_failed(boost::shared_ptr<exchange::message> & M);
-	bool recv_slot(boost::shared_ptr<exchange::message> & M);
+	void make_slot_requests(network::connection_info & CI);
 };
 #endif

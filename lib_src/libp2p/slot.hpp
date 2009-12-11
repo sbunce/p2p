@@ -3,7 +3,6 @@
 
 //custom
 #include "database.hpp"
-#include "exchange.hpp"
 #include "file.hpp"
 #include "file_info.hpp"
 #include "hash_tree.hpp"
@@ -28,7 +27,12 @@ class slot : private boost::noncopyable
 	friend class share;
 
 public:
-	/* Info
+	hash_tree Hash_Tree;
+	file File;
+
+	/*
+	complete:
+		Returns true if both the Hash_Tree and File are complete.
 	download_speed:
 		Returns download speed (bytes/second).
 	file_size:
@@ -42,6 +46,7 @@ public:
 	upload_speed:
 		Returns upload speed (bytes/second).
 	*/
+	bool complete();
 	unsigned download_speed();
 	boost::uint64_t file_size();
 	const std::string & hash();
@@ -56,20 +61,8 @@ public:
 	*/
 	void check();
 
-	/* Slot Manager
-	complete:
-		Returns true if both the Hash_Tree and File are complete.
-	create_REQUEST_SLOT:
-		Creates a REQUEST_SLOT message with the given slot_num.
-	*/
-	bool complete();
-	boost::shared_ptr<exchange::message> create_request_slot(const unsigned char slot_num);
-
 private:
 	//the ctor will throw an exception if database access fails
 	slot(const file_info & FI);
-
-	hash_tree Hash_Tree;
-	file File;
 };
 #endif

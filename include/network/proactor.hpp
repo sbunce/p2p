@@ -119,7 +119,7 @@ public:
 	Async write data to specified socket. Buffer will be appended to send_buf
 	for specified socket.
 	*/
-	void write(const int connection_ID, buffer & send_buf)
+	void send(const int connection_ID, buffer & send_buf)
 	{
 		if(!send_buf.empty()){
 			boost::mutex::scoped_lock lock(network_thread_call_mutex);
