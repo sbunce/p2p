@@ -135,6 +135,15 @@ public:
 		network_thread = boost::thread(boost::bind(&proactor::network_loop, this));
 	}
 
+	//trigger a recv for 0 bytes
+	void trigger_recv(const int connection_ID)
+	{
+		boost::mutex::scoped_lock lock(network_thread_call_mutex);
+		network_thread_call.push_back(boost::bind(&proactor::trigger_recv_call_back,
+			this, connection_ID));
+		Select_Interrupter.trigger();
+	}
+
 	//returns upload rate (averaged over a few seconds)
 	unsigned upload_rate()
 	{
@@ -588,6 +597,16 @@ private:
 			}
 		}
 		Select_Interrupter.trigger();
+	}
+
+	//called by trigger_recv
+	void trigger_recv_call_back(const int connection_ID)
+	{
+		std::pair<int, boost::shared_ptr<state> > P = lookup_ID(connection_ID);
+		if(P.second){
+			boost::shared_ptr<network::buffer> recv_buf(new network::buffer());
+			Call_Back_Dispatcher.recv(P.second->CI, recv_buf);
+		}
 	}
 };
 }

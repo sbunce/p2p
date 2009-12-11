@@ -33,8 +33,7 @@ void connection::key_exchange_recv_call_back(network::connection_info & CI)
 			//remote result received, key exchange done
 			initial_send(CI);
 			CI.recv_call_back = boost::bind(&connection::initial_recv_call_back, this, _1);
-			CI.latest_recv = CI.recv_buf.size();
-			CI.recv_call_back(CI); //initial may have already arrived
+			Proactor.trigger_recv(CI.connection_ID); //initial may have already arrived
 		}
 	}else{
 		if(CI.recv_buf.size() >= protocol::DH_KEY_SIZE * 2){
@@ -61,16 +60,15 @@ void connection::key_exchange_recv_call_back(network::connection_info & CI)
 void connection::initial_recv_call_back(network::connection_info & CI)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	Encryption.crypt_recv(CI.recv_buf, CI.recv_buf.size() - CI.latest_recv);
 	if(CI.recv_buf.size() >= SHA1::bin_size){
+		Encryption.crypt_recv(CI.recv_buf);
 		peer_ID = convert::bin_to_hex(
 			reinterpret_cast<const char *>(CI.recv_buf.data()), SHA1::bin_size);
 		CI.recv_buf.erase(0, SHA1::bin_size);
 		LOGGER << CI.IP << " " << CI.port << " peer_ID: " << peer_ID;
 		Slot_Manager.resume(CI, peer_ID);
 		CI.recv_call_back = boost::bind(&connection::recv_call_back, this, _1);
-		CI.latest_recv = 0;
-		CI.recv_call_back(CI);
+		Proactor.trigger_recv(CI.connection_ID);
 	}
 }
 
