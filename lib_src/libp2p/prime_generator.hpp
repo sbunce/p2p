@@ -11,8 +11,8 @@
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
-#include <KISS.hpp>
 #include <random.hpp>
+#include <RC4.hpp>
 #include <tommath/mpint.hpp>
 
 //standard

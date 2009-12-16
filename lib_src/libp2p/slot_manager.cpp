@@ -1,30 +1,31 @@
 #include "slot_manager.hpp"
 
 slot_manager::slot_manager(
-	std::list<network::buffer> & Send_in
+	boost::function<void (boost::shared_ptr<message>)> send_in
 ):
-	Send(Send_in)
+	send(send_in),
+	open_slots(0)
 {
 
 }
 
 void slot_manager::make_slot_requests(network::connection_info & CI)
 {
-	while(!Pending_Slot_Request.empty() &&
-		Slot_Request.size() + Outgoing_Slot.size() < 256)
-	{
-		network::buffer send_buf;
-		send_buf
+	while(!Pending_Slot_Request.empty() && open_slots < 256){
+/*
+		boost::shared_ptr<message> M(new slot_request
+		M->buf
 			.append(protocol::REQUEST_SLOT)
 			.append(convert::hex_to_bin(Pending_Slot_Request.front()->hash()));
-		Send.push_back(send_buf);
-		Slot_Request.push_back(Pending_Slot_Request.front());
+		send(M);
 		Pending_Slot_Request.pop_front();
+*/
 	}
 }
 
 bool slot_manager::recv_request_slot(network::connection_info & CI)
 {
+/*
 	if(Incoming_Slot.size() > 256){
 		LOGGER << CI.IP << " requested too many slots";
 		database::table::blacklist::add(CI.IP);
@@ -107,20 +108,22 @@ bool slot_manager::recv_request_slot(network::connection_info & CI)
 
 	//send SLOT message
 	Send.push_back(send_buf);
+*/
 }
 
 bool slot_manager::recv_request_slot_failed(network::connection_info & CI)
 {
-	LOGGER;
 /*
-	LOGGER << "open failed "
-		<< convert::bin_to_hex(reinterpret_cast<char *>(M->send_buf.data()+1), SHA1::bin_size);
+	LOGGER << "failed to open slot";
+	CI.recv_buf.erase(0, protocol::ERROR_SIZE);
+	Slot_Request.pop_front();
+	return true;
 */
 }
 
 bool slot_manager::recv_slot(network::connection_info & CI)
 {
-LOGGER;
+/*
 	if(Slot_Request.empty()){
 		LOGGER << "invalid SLOT";
 		database::table::blacklist::add(CI.IP);
@@ -153,6 +156,7 @@ LOGGER;
 	}
 	LOGGER << "received SLOT";
 	return true;
+*/
 }
 
 void slot_manager::resume(network::connection_info & CI, const std::string & peer_ID)

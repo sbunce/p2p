@@ -4,66 +4,47 @@
 
 int fail(0);
 
-//copies one buffer to another, simulates sending over network
-void send(network::buffer & source, network::buffer & destination)
-{
-	destination.append(source.data(), source.size());
-	source.clear();
-}
-
 int main()
 {
 	path::unit_test_override("encryption.db");
 	database::init::drop_all();
 	database::init::create_all();
 
-	//Host_A will connect to Host_B.
-	encryption Host_A_Encryption;
-	network::buffer Host_A_send_buff;
-	network::buffer Host_A_recv_buff;
+	//encryption for hosts A and B
+	encryption Encryption_A;
+	encryption Encryption_B;
+	network::buffer buf;
 
-	encryption Host_B_Encryption;
-	network::buffer Host_B_send_buff;
-	network::buffer Host_B_recv_buff;
-
-	//Host_A sends prime and local_result.
-	Host_A_Encryption.send_prime_and_local_result(Host_A_send_buff);
-	send(Host_A_send_buff, Host_B_recv_buff);
-
-	//Host_B receives prime and remote_result. Host_B sends local_result.
-	if(!Host_B_Encryption.recv_prime_and_remote_result(Host_B_recv_buff, Host_B_send_buff)){
+	//do key exchange
+	buf = Encryption_A.send_p_rA();
+	if(!Encryption_B.recv_p_rA(buf)){
 		LOGGER; ++fail;
 	}
-	send(Host_B_send_buff, Host_A_recv_buff);
+	buf = Encryption_B.send_rB();
+	Encryption_A.recv_rB(buf);
 
-	//Host_A receives remote_result.
-	Host_A_Encryption.recv_remote_result(Host_A_recv_buff);
+	if(!Encryption_A.ready()){
+		LOGGER; ++fail;
+	}
 
-	//all buffers should be empty at this point
-	assert(Host_A_send_buff.empty());
-	assert(Host_A_recv_buff.empty());
-	assert(Host_B_send_buff.empty());
-	assert(Host_B_recv_buff.empty());
+	if(!Encryption_B.ready()){
+		LOGGER; ++fail;
+	}
 
-	/*
-	Both hosts are ready to encrypt/decrypt. Test sending a message from Host_A
-	to Host_B.
-	*/
+	//test sending encrypted message A -> B
 	std::string message = "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-	Host_A_send_buff.append(message);
-	Host_A_Encryption.crypt_send(Host_A_send_buff);
-	send(Host_A_send_buff, Host_B_recv_buff);
-	Host_B_Encryption.crypt_recv(Host_B_recv_buff);
-	if(Host_B_recv_buff != message){
+	buf = message;
+	Encryption_A.crypt_send(buf);
+	Encryption_B.crypt_recv(buf);
+	if(buf != message){
 		LOGGER; ++fail;
 	}
 
-	//test sending a message from Host_B to Host_A
-	Host_B_send_buff.append(message);
-	Host_B_Encryption.crypt_send(Host_B_send_buff);
-	send(Host_B_send_buff, Host_A_recv_buff);
-	Host_A_Encryption.crypt_recv(Host_A_recv_buff);
-	if(Host_A_recv_buff != message){
+	//test sending encrypted message B -> A
+	buf = message;
+	Encryption_B.crypt_send(buf);
+	Encryption_A.crypt_recv(buf);
+	if(buf != message){
 		LOGGER; ++fail;
 	}
 	return fail;

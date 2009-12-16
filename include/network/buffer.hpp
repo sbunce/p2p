@@ -2,7 +2,6 @@
 #define H_NETWORK_BUFFER
 
 //include
-#include <bit_field.hpp>
 #include <logger.hpp>
 
 //standard
@@ -38,11 +37,11 @@ public:
 	}
 
 	buffer(const buffer & B):
-		reserved(B.reserved),
-		bytes(B.bytes)
+		reserved(0),
+		bytes(0),
+		buf(NULL)
 	{
-		buf = static_cast<unsigned char *>(std::malloc(bytes));
-		std::memcpy(buf, B.buf, bytes);
+		*this = B;
 	}
 
 	~buffer()
@@ -333,18 +332,36 @@ public:
 		return buf[index];
 	}
 
-	bool operator == (const buffer & Buffer) const
+	buffer & operator = (const buffer & B)
 	{
-		if(bytes != Buffer.bytes){
+		allocate(bytes, B.bytes);
+		std::memcpy(buf, B.buf, bytes);
+		return *this;
+	}
+
+	bool operator == (const buffer & B) const
+	{
+		if(bytes != B.bytes){
 			return false;
 		}else{
-			return std::memcmp(buf, Buffer.buf, bytes) == 0;
+			return std::memcmp(buf, B.buf, bytes) == 0;
 		}
 	}
 
-	bool operator != (const buffer & Buffer) const
+	bool operator != (const buffer & B) const
 	{
-		return !(*this == Buffer);
+		return !(*this == B);
+	}
+
+	bool operator < (const buffer & B) const
+	{
+		if(bytes < B.bytes){
+			return true;
+		}else if(bytes > B.bytes){
+			return false;
+		}else{
+			return std::memcmp(buf, B.buf, bytes) < 0;
+		}
 	}
 
 private:
@@ -369,7 +386,7 @@ private:
 				//no reserve, nothing in buffer, set buf = NULL to signify empty
 				if(buf != NULL){
 					//free any memory currently in buffer
-					free(buf);
+					std::free(buf);
 					buf = NULL;
 				}
 			}else if(buf == NULL){

@@ -2,7 +2,7 @@
 #define H_MPINT
 
 //include
-#include <KISS.hpp>
+#include <RC4.hpp>
 #include <logger.hpp>
 #include <random.hpp>
 #include <tommath/tommath.h>
@@ -146,7 +146,7 @@ public:
 	Returns a random prime of the specified bytes. This version uses a specified
 	CMWC4096 PRNG which is VERY fast but is not a cryptographically secure PRNG.
 	*/
-	static mpint random_prime_fast(const int bytes, KISS & PRNG)
+	static mpint random_prime_fast(const int bytes, RC4 & PRNG)
 	{
 		mpint temp;
 		if(mp_prime_random_ex(
@@ -154,7 +154,7 @@ public:
 			mp_prime_rabin_miller_trials(bytes * 8),
 			bytes * 8,     //size (bits) of prime to generate
 			0,             //optional flags
-			&KISS_wrapper, //random byte source
+			&RC4_wrapper,  //random byte source
 			&PRNG          //optional void * passed to PRNG
 		) != MP_OKAY)
 		{
@@ -170,10 +170,12 @@ public:
 	}
 
 private:
-	static int KISS_wrapper(unsigned char * buff, int size, void * data)
+	static int RC4_wrapper(unsigned char * buf, int size, void * data)
 	{
-		KISS * PRNG = reinterpret_cast<KISS *>(data);
-		PRNG->bytes(buff, size);
+		RC4 * PRNG = reinterpret_cast<RC4 *>(data);
+		for(int x=0; x<size; ++x){
+			buf[x] = PRNG->byte();
+		}
 		return size;
 	}
 

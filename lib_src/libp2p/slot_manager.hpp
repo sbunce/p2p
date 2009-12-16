@@ -2,22 +2,21 @@
 #define H_SLOT_MANAGER
 
 //custom
+#include "message.hpp"
 #include "share.hpp"
 #include "slot.hpp"
 
 //include
+#include <boost/function.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
 #include <convert.hpp>
 #include <network/network.hpp>
 
-//standard
-#include <vector>
-
 class slot_manager : private boost::noncopyable
 {
 public:
-	slot_manager(std::list<network::buffer> & Send_in);
+	slot_manager(boost::function<void (boost::shared_ptr<message>)> send_in);
 
 	/*
 	recv_request_slot:
@@ -38,8 +37,8 @@ public:
 	void resume(network::connection_info & CI, const std::string & peer_ID);
 
 private:
-	//reference to connection::Send
-	std::list<network::buffer> & Send;
+	//call back to send a message
+	boost::function<void (boost::shared_ptr<message>)> send;
 
 	/*
 	Outgoing_Slot holds slots we have opened with the remote host.
@@ -51,15 +50,14 @@ private:
 	std::map<unsigned char, boost::shared_ptr<slot> > Incoming_Slot;
 
 	/*
+	open_slots:
+		Number of slots opened, or requested, from the remote host.
+		Invariant: 0 <= open_slots <= 256.
 	Pending_Slot_Request:
 		Slots which need to be opened with the remote host.
-	Slot_Request:
-		Slot elements for which we've requested a slot are pushed on the back of
-		this. When a response arrives it will be for the element on the front of
-		this.
 	*/
+	unsigned open_slots;
 	std::list<boost::shared_ptr<slot> > Pending_Slot_Request;
-	std::list<boost::shared_ptr<slot> > Slot_Request;
 
 	/*
 	make_slot_requests:

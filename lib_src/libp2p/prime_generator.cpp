@@ -15,7 +15,7 @@ prime_generator::~prime_generator()
 
 void prime_generator::main_loop()
 {
-	KISS PRNG;
+	RC4 PRNG;
 	PRNG.seed();
 	mpint random_prime;
 	while(true){

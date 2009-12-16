@@ -9,7 +9,7 @@
 
 //include
 #include <boost/utility.hpp>
-#include <KISS.hpp>
+#include <RC4.hpp>
 #include <network/network.hpp>
 #include <random.hpp>
 #include <tommath/mpint.hpp>
@@ -23,54 +23,28 @@
 class encryption : private boost::noncopyable
 {
 public:
-	//size of the key exchanged (bytes)
-	static const int DHM_KEY_SIZE = 16;
-
 	encryption();
+
+	//see protocol documentation for more information
+	network::buffer send_p_rA();
+	bool recv_p_rA(network::buffer & buf);
+	network::buffer send_rB();
+	void recv_rB(network::buffer & buf);
 
 	/*
 	Used to encrypt/decrypt buffers.
 	Decrypts buffer from index to end of buffer.
-	Precondition: Key exhange must be done before these work.
+	Precondition: read() = true
 	*/
-	void crypt_send(network::buffer & send_buff, const int index = 0);
 	void crypt_recv(network::buffer & recv_buff, const int index = 0);
+	void crypt_send(network::buffer & send_buff, const int index = 0);
 
-	/* Protocol for key exchange:
-	Host_A initiates outgoing connection.
-	Host_B accepts incoming connection.
-	Note: All encoded numbers are big-endian.
-
-	send_prime_and_local_result:
-		Appends a random prime and local_result to the send_buff.
-	recv_prime_and_remote_result:
-		Sets prime and remote_result from recv_buff. Calculates local_result,
-		calculates shared_secret. Appends local_result to send_buff. Returns true
-		if prime is good, false if prime is bad. If prime is bad the server should
-		be disconnected because key negotiation failed.
-		Precondition: recv_buff.size() >= protocol::DH_KEY_SIZE * 2
-		Precondition: send_buff must be empty.
-		Postcondition: Host_B is ready to crypt data.
-	recv_remote_result:
-		Sets remote result from recv_buff. Calculates shared_key and seeds PRNGs.
-		Precondition: recv_buff.size() >= protocol::DH_KEY_SIZE
-		Precondition: send_buff must be empty.
-		Postcondition: Host_A is ready to crypt data.
-	*/
-
-	//Step 0: Host_A sends prime followed by local_result.
-	void send_prime_and_local_result(network::buffer & send_buff);
-
-	//Step 1: Host_B receives prime and remote_result, and sends local_result.
-	bool recv_prime_and_remote_result(network::buffer & recv_buff,
-		network::buffer & send_buff);
-
-	//Step 2: Host_A receives remote_result.
-	void recv_remote_result(network::buffer & recv_buff);
+	//returns true when ready to encrypt/decrypt
+	bool ready();
 
 private:
-	//Diffie-Hellman-Merkle key exchange components. (g**s % p)
-	mpint g; //agreed upon base (the generator)
+	//Diffie-Hellman key exchange components. (g^s % p)
+	mpint g; //agreed upon base (the generator, always 2)
 	mpint p; //agreed upon prime
 	mpint s; //secret exponent
 	mpint local_result;  //result of g^s % p with our secret s
@@ -78,7 +52,17 @@ private:
 	mpint shared_key;    //agreed upon key (used as seed for PRNG)
 
 	//stream cypher
-	KISS PRNG_send;
-	KISS PRNG_recv;
+	RC4 PRNG_send;
+	RC4 PRNG_recv;
+
+	//used to assert functions not called out of order
+	bool enable_send_p_rA;
+	bool enable_recv_p_rA;
+	bool enable_send_rB;
+	bool enable_recv_rB;
+	bool enable_crypt;
+
+	//sets all of the enable_* flags to false
+	void set_enable_false();
 };
 #endif

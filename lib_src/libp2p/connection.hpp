@@ -3,6 +3,7 @@
 
 //custom
 #include "encryption.hpp"
+#include "message.hpp"
 #include "share.hpp"
 #include "slot_manager.hpp"
 
@@ -19,19 +20,80 @@ public:
 	);
 
 	const std::string IP;
+	const int connection_ID;
 
 private:
-	//locks all entry points in to the object (including call backs)
+
+	class key_exchange_p_rA : public message
+	{
+	public:
+		virtual bool expects(network::connection_info & CI)
+		{
+			//p rA doesn't begin with any command
+			return true;
+		}
+		virtual bool parse(network::connection_info & CI)
+		{
+			if(CI.recv_buf.size() >= protocol::DH_KEY_SIZE * 2){
+				buf.append(CI.recv_buf.data(), protocol::DH_KEY_SIZE * 2);
+				CI.recv_buf.erase(0, protocol::DH_KEY_SIZE * 2);
+				return true;
+			}
+			return false;
+		}
+		virtual message_type type(){ return message::key_exchange_p_rA; }
+	};
+
+	class key_exchange_rB : public message
+	{
+	public:
+		virtual bool expects(network::connection_info & CI)
+		{
+			//rB doesn't begin with any command
+			return true;
+		}
+		virtual bool parse(network::connection_info & CI)
+		{
+			if(CI.recv_buf.size() >= protocol::DH_KEY_SIZE){
+				buf.append(CI.recv_buf.data(), protocol::DH_KEY_SIZE);
+				CI.recv_buf.erase(0, protocol::DH_KEY_SIZE);
+				return true;
+			}
+			return false;
+		}
+		virtual message_type type(){ return message::key_exchange_rB; }
+	};
+
+	class initial : public message
+	{
+	public:
+		virtual bool expects(network::connection_info & CI)
+		{
+			//initial doesn't begin with any command
+			return true;
+		}
+		virtual bool parse(network::connection_info & CI)
+		{
+			if(CI.recv_buf.size() >= SHA1::bin_size){
+				buf.append(CI.recv_buf.data(), SHA1::bin_size);
+				CI.recv_buf.erase(0, SHA1::bin_size);
+				return true;
+			}
+			return false;
+		}
+		virtual message_type type(){ return message::initial; }
+	};
+
+	//locks all entry points to the object
 	boost::recursive_mutex Recursive_Mutex;
 
 	/*
-	Messages to send are inserted in to the Send buffer. When a message that
-	expects a response is sent it is pushed on to the back of the Sent buffer.
-	Incoming messages that are responses are matched to the request on the front
-	of the Sent buffer.
+	When a message is sent that expects a response it is pushed on the back of
+	Expected. The request member of the message_pair stores the request made
+	(but only if it's later needed). The response member is used to parse the
+	incoming response.
 	*/
-	std::list<network::buffer> Send;
-	std::list<network::buffer> Sent;
+	std::list<message_pair> Expected;
 
 	network::proactor & Proactor;
 	encryption Encryption;
@@ -39,22 +101,14 @@ private:
 	std::string peer_ID; //holds peer_ID when it's received
 	int blacklist_state; //used to know if blacklist updated
 
-	/* Proactor Call Backs
-	key_exchange_recv_call_back:
-		Used for key exchange. This is the first call back used.
-	initial_recv_call_back:
-		Receives initial messages sent after key exchange.
-	recv_call_back:
-		The last recv call back used. Handles commands.
-	*/
-	void key_exchange_recv_call_back(network::connection_info & CI);
-	void initial_recv_call_back(network::connection_info & CI);
-	void recv_call_back(network::connection_info & CI);
-
 	/*
+	recv_call_back:
+		Proactor calls back to this function whenever data is received.
 	send_initial:
-		Sends initial messages after key exchange done.
+		Send initial messages. Called after key exchange completed.
 	*/
-	void initial_send(network::connection_info & CI);
+	void recv_call_back(network::connection_info & CI);
+	void send(boost::shared_ptr<message> M);
+	void send_initial();
 };
 #endif
