@@ -18,8 +18,8 @@ const unsigned ERROR_SIZE = 1;
 const unsigned char REQUEST_SLOT = static_cast<unsigned char>(1);
 const unsigned REQUEST_SLOT_SIZE = 21;
 const unsigned char SLOT = static_cast<unsigned char>(2);
-static const unsigned SLOT_SIZE(const unsigned bit_field_1_size = 0,
-	const unsigned bit_field_2_size = 0)
+static const unsigned SLOT_SIZE(const unsigned bit_field_1_size,
+	const unsigned bit_field_2_size)
 {
 	return 31 + bit_field_1_size + bit_field_2_size;
 }

@@ -16,7 +16,8 @@
 class slot_manager : private boost::noncopyable
 {
 public:
-	slot_manager(boost::function<void (boost::shared_ptr<message>)> send_in);
+	slot_manager(boost::function<void (boost::shared_ptr<message::base>,
+		boost::shared_ptr<message::base>)> send_in);
 
 	/*
 	recv_request_slot:
@@ -25,20 +26,19 @@ public:
 		Handles an ERROR in response to a REQUEST_SLOT.
 	recv_slot:
 		Handles incoming SLOT messages.
-	*/
-	bool recv_request_slot(network::connection_info & CI);
-	bool recv_request_slot_failed(network::connection_info & CI);
-	bool recv_slot(network::connection_info & CI);
-
-	/*
 	resume:
 		When the peer_ID is received this function is called to resume downloads.
 	*/
-	void resume(network::connection_info & CI, const std::string & peer_ID);
+	bool recv_request_slot(boost::shared_ptr<message::base> M);
+	bool recv_request_slot_failed(message::pair MP);
+	bool recv_slot(message::pair MP);
+	void resume(const std::string & peer_ID);
 
 private:
+
 	//call back to send a message
-	boost::function<void (boost::shared_ptr<message>)> send;
+	boost::function<void (boost::shared_ptr<message::base>,
+		boost::shared_ptr<message::base>)> send;
 
 	/*
 	Outgoing_Slot holds slots we have opened with the remote host.
@@ -63,6 +63,6 @@ private:
 	make_slot_requests:
 		Does pending slot requests.
 	*/
-	void make_slot_requests(network::connection_info & CI);
+	void make_slot_requests();
 };
 #endif

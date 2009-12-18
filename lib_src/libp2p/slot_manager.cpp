@@ -1,7 +1,8 @@
 #include "slot_manager.hpp"
 
 slot_manager::slot_manager(
-	boost::function<void (boost::shared_ptr<message>)> send_in
+	boost::function<void (boost::shared_ptr<message::base>,
+		boost::shared_ptr<message::base>)> send_in
 ):
 	send(send_in),
 	open_slots(0)
@@ -9,38 +10,30 @@ slot_manager::slot_manager(
 
 }
 
-void slot_manager::make_slot_requests(network::connection_info & CI)
+void slot_manager::make_slot_requests()
 {
 	while(!Pending_Slot_Request.empty() && open_slots < 256){
-/*
-		boost::shared_ptr<message> M(new slot_request
-		M->buf
-			.append(protocol::REQUEST_SLOT)
-			.append(convert::hex_to_bin(Pending_Slot_Request.front()->hash()));
-		send(M);
+		++open_slots;
+		boost::shared_ptr<message::base> M_request(new message::request_slot(
+			Pending_Slot_Request.front()->hash()));
+		boost::shared_ptr<message::composite> M_response(new message::composite());
+		M_response->add(boost::shared_ptr<message::base>(
+			new message::slot(Pending_Slot_Request.front()->hash())));
+		M_response->add(boost::shared_ptr<message::base>(
+			new message::error()));
+		send(M_request, M_response);
 		Pending_Slot_Request.pop_front();
-*/
 	}
 }
 
-bool slot_manager::recv_request_slot(network::connection_info & CI)
+bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 {
-/*
-	if(Incoming_Slot.size() > 256){
-		LOGGER << CI.IP << " requested too many slots";
-		database::table::blacklist::add(CI.IP);
-		return false;
-	}
-
-	if(CI.recv_buf.size() < protocol::REQUEST_SLOT_SIZE){
-		return false;
-	}
-
 	//unmarshal data and erase incoming message from recv_buf
 	std::string hash = convert::bin_to_hex(std::string(
-		reinterpret_cast<const char *>(CI.recv_buf.data()+1), SHA1::bin_size));
-	CI.recv_buf.erase(0, protocol::REQUEST_SLOT_SIZE);
+		reinterpret_cast<const char *>(M->buf().data()+1), SHA1::bin_size));
+LOGGER << "request slot: " << hash;
 
+/*
 	//locate requested slot
 	share::slot_iterator slot_iter = share::singleton().find_slot(hash);
 	if(slot_iter == share::singleton().end_slot()){
@@ -50,7 +43,7 @@ bool slot_manager::recv_request_slot(network::connection_info & CI)
 		Send.push_back(send_buf);
 		return true;
 	}
-
+/*
 	//find available slot number
 	unsigned char slot_num = 0;
 	for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
@@ -111,8 +104,9 @@ bool slot_manager::recv_request_slot(network::connection_info & CI)
 */
 }
 
-bool slot_manager::recv_request_slot_failed(network::connection_info & CI)
+bool slot_manager::recv_request_slot_failed(message::pair MP)
 {
+LOGGER;
 /*
 	LOGGER << "failed to open slot";
 	CI.recv_buf.erase(0, protocol::ERROR_SIZE);
@@ -121,15 +115,10 @@ bool slot_manager::recv_request_slot_failed(network::connection_info & CI)
 */
 }
 
-bool slot_manager::recv_slot(network::connection_info & CI)
+bool slot_manager::recv_slot(message::pair MP)
 {
+LOGGER;
 /*
-	if(Slot_Request.empty()){
-		LOGGER << "invalid SLOT";
-		database::table::blacklist::add(CI.IP);
-		return false;
-	}
-
 	if(CI.recv_buf.size() < protocol::SLOT_SIZE()){
 		return false;
 	}
@@ -159,7 +148,7 @@ bool slot_manager::recv_slot(network::connection_info & CI)
 */
 }
 
-void slot_manager::resume(network::connection_info & CI, const std::string & peer_ID)
+void slot_manager::resume(const std::string & peer_ID)
 {
 	std::set<std::string> hash = database::table::join::resume_hash(peer_ID);
 	for(std::set<std::string>::iterator iter_cur = hash.begin(), iter_end = hash.end();
@@ -170,5 +159,5 @@ void slot_manager::resume(network::connection_info & CI, const std::string & pee
 			Pending_Slot_Request.push_back(slot_iter.get());
 		}
 	}
-	make_slot_requests(CI);
+	make_slot_requests();
 }

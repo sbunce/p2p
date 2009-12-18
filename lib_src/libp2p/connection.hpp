@@ -23,67 +23,6 @@ public:
 	const int connection_ID;
 
 private:
-
-	class key_exchange_p_rA : public message
-	{
-	public:
-		virtual bool expects(network::connection_info & CI)
-		{
-			//p rA doesn't begin with any command
-			return true;
-		}
-		virtual bool parse(network::connection_info & CI)
-		{
-			if(CI.recv_buf.size() >= protocol::DH_KEY_SIZE * 2){
-				buf.append(CI.recv_buf.data(), protocol::DH_KEY_SIZE * 2);
-				CI.recv_buf.erase(0, protocol::DH_KEY_SIZE * 2);
-				return true;
-			}
-			return false;
-		}
-		virtual message_type type(){ return message::key_exchange_p_rA; }
-	};
-
-	class key_exchange_rB : public message
-	{
-	public:
-		virtual bool expects(network::connection_info & CI)
-		{
-			//rB doesn't begin with any command
-			return true;
-		}
-		virtual bool parse(network::connection_info & CI)
-		{
-			if(CI.recv_buf.size() >= protocol::DH_KEY_SIZE){
-				buf.append(CI.recv_buf.data(), protocol::DH_KEY_SIZE);
-				CI.recv_buf.erase(0, protocol::DH_KEY_SIZE);
-				return true;
-			}
-			return false;
-		}
-		virtual message_type type(){ return message::key_exchange_rB; }
-	};
-
-	class initial : public message
-	{
-	public:
-		virtual bool expects(network::connection_info & CI)
-		{
-			//initial doesn't begin with any command
-			return true;
-		}
-		virtual bool parse(network::connection_info & CI)
-		{
-			if(CI.recv_buf.size() >= SHA1::bin_size){
-				buf.append(CI.recv_buf.data(), SHA1::bin_size);
-				CI.recv_buf.erase(0, SHA1::bin_size);
-				return true;
-			}
-			return false;
-		}
-		virtual message_type type(){ return message::initial; }
-	};
-
 	//locks all entry points to the object
 	boost::recursive_mutex Recursive_Mutex;
 
@@ -93,22 +32,32 @@ private:
 	(but only if it's later needed). The response member is used to parse the
 	incoming response.
 	*/
-	std::list<message_pair> Expected;
+	std::list<message::pair> Expected;
+
+	/*
+	Incoming messages that aren't responses are processed by the messages in this
+	container. The message objects in this container are saved.
+	*/
+	std::vector<boost::shared_ptr<message::base> > Non_Response;
 
 	network::proactor & Proactor;
-	encryption Encryption;
-	slot_manager Slot_Manager;
-	std::string peer_ID; //holds peer_ID when it's received
-	int blacklist_state; //used to know if blacklist updated
+	encryption Encryption;     //key exchange and stream cypher
+	slot_manager Slot_Manager; //logic for dealing with slots
+	std::string peer_ID;       //holds peer_ID when it's received
+	int blacklist_state;       //used to know if blacklist updated
 
 	/*
 	recv_call_back:
 		Proactor calls back to this function whenever data is received.
+	send:
+		Send a message and/or set up an expected response.
+		Note: M_send and/or M_response may be empty.
 	send_initial:
 		Send initial messages. Called after key exchange completed.
 	*/
 	void recv_call_back(network::connection_info & CI);
-	void send(boost::shared_ptr<message> M);
+	void send(boost::shared_ptr<message::base> M_send,
+		boost::shared_ptr<message::base> M_response);
 	void send_initial();
 };
 #endif
