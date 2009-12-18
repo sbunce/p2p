@@ -189,7 +189,7 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 		++iter_cur)
 	{
 		if(iter_cur->second.connection_ID == connection_ID
-			&& std::time(NULL) - iter_cur->second.request_time > protocol::TIMEOUT)
+			&& std::time(NULL) - iter_cur->second.request_time > protocol::timeout)
 		{
 			return false;
 		}
@@ -203,7 +203,7 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 		iter_cur = request.begin(), iter_end = request.end(); iter_cur != iter_end;
 		++iter_cur)
 	{
-		if(std::time(NULL) - iter_cur->second.request_time > protocol::TIMEOUT){
+		if(std::time(NULL) - iter_cur->second.request_time > protocol::timeout){
 			block = iter_cur->first;
 			request.insert(std::make_pair(block, request_element(connection_ID, std::time(NULL))));
 			return true;

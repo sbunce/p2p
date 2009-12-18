@@ -38,7 +38,7 @@ void test(const unsigned size)
 	std::stringstream ss;
 	ss << path::share() << size << "_block";
 	FI.path = ss.str();
-	FI.file_size = size * protocol::FILE_BLOCK_SIZE;
+	FI.file_size = size * protocol::file_block_size;
 	create_test_file(FI);
 
 	//create hash tree and check it

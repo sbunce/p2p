@@ -143,7 +143,7 @@ After key exchange the following messages are sent by both sides.
 
 <fieldset>
 <pre>
-Message 0: Peer Identifier
+Message 0: peer identifier
 Description: Randomly generated 20 byte number. This number identifies the host
 on the DHT.
 
@@ -159,9 +159,9 @@ on the DHT.
 <blockquote>
 <fieldset>
 <pre>
-Name: ERROR
-Base10: 0
-Description: Meaning depends on what it's sent in response to.
+name: error
+base10: 0
+description: Meaning depends on what it's sent in response to.
 
 +---+
 | C |
@@ -174,9 +174,9 @@ C = command
 <br>
 <fieldset>
 <pre>
-Name: REQUEST_SLOT
-Base10: 1
-Description: Request a slot for downloading.
+name: request_slot
+base10: 1
+description: Request a slot for downloading.
 
 +---+---+---+---+
 | C |     H     |
@@ -186,18 +186,18 @@ Description: Request a slot for downloading.
 C = command, H = hash
 
 Possible Responses:
-SLOT
-ERROR
+slot
+error
 
-Note: If ERROR response the slot is not opened.
+Note: If error response the slot is not opened.
 </pre>
 </fieldset>
 <br>
 <fieldset>
 <pre>
-Name: SLOT
-Base10: 2
-Description: Sent in response to REQUEST_SLOT.
+name: slot
+base10: 2
+description: Sent in response to request_slot.
 
 +---+---+---+---+---+---+---+---+---+   +---+---+---+   +---+---+---+
 | C | S | K |     F     |     R     | + |     O     | + |     O     |
@@ -209,16 +209,16 @@ O = optional bit field
 
 Status:
 
-Base10: 0
+base10: 0
 Description: Hash tree complete, file complete. No bit fields appended.
 
-Base10: 1
+base10: 1
 Description: Hash tree complete, file incomplete. File bit field appended.
 
-Base10: 2
+base10: 2
 Description: Hash tree incomplete, file complete. Hash tree bit field appended.
 
-Base10: 3
+base10: 3
 Description: Hash tree incomplete, file incomplete. Hash tree bit field
 appended (first) and file bit field appended (second).
 </pre>
@@ -226,9 +226,9 @@ appended (first) and file bit field appended (second).
 <br>
 <fieldset>
 <pre>
-Name: REQUEST_HASH_TREE_BLOCK
-Base10: 3
-Description: Request a block from a hash tree.
+name: request_hash_tree_block
+base10: 3
+description: Request a block from a hash tree.
 
 +---+---+---+---+---+
 | C | S |     B     |
@@ -240,19 +240,19 @@ C = command, S = slot ID, B = block number (VLI)
 Note: B is sized such that it can hold the maximum tree block number.
 
 Possible Responses:
-BLOCK
-ERROR
+block
+error
 
-Note: When ERROR received it means host is no longer sharing the file. The slot
+Note: When error received it means host is no longer sharing the file. The slot
 is not automatically closed.
 </pre>
 </fieldset>
 <br>
 <fieldset>
 <pre>
-Name: REQUEST_FILE_BLOCK
-Base10: 4
-Description: Request a block from a file.
+name: request_file_block
+base10: 4
+description: Request a block from a file.
 
 +---+---+---+---+---+
 | C | S |     B     |
@@ -264,19 +264,19 @@ Note: B is sized such that it can hold the maximum file block number.
 C = command, S = slot ID, B = block number (VLI)
 
 Possible Responses:
-BLOCK
-ERROR
+block
+error
 
-Note: When ERROR received it means host is no longer sharing the file. The slot
+Note: When error received it means host is no longer sharing the file. The slot
 is not automatically closed.
 </pre>
 </fieldset>
 <br>
 <fieldset>
 <pre>
-Name: BLOCK
-Base10: 5
-Description: Either a hash tree block or file block. The hash tree blocks vary
+name: block
+base10: 5
+description: Either a hash tree block or file block. The hash tree blocks vary
 in size. The file blocks are fixed size except the last block which will be
 shorter.
 
@@ -291,9 +291,9 @@ C = command, B = block (maximum size of 10240)
 <br>
 <fieldset>
 <pre>
-Name: HAVE_HASH_TREE_BLOCK
-Base10: 6
-Description: After a slot is opened these messages are sent whenever the host
+name: have_hash_tree_block
+base10: 6
+description: After a slot is opened these messages are sent whenever the host
 gets a new hash tree block.
 
 +---+---+---+---+---+
@@ -307,9 +307,9 @@ C = command, B = block number (VLI)
 <br>
 <fieldset>
 <pre>
-Name: HAVE_FILE_BLOCK
-Base10: 7
-Description: After a slot is opened these messages are sent whenever the host
+name: have_file_block
+base10: 7
+description: After a slot is opened these messages are sent whenever the host
 gets a new file block.
 
 +---+---+---+---+---+
@@ -323,9 +323,9 @@ C = command, B = block number (VLI)
 <br>
 <fieldset>
 <pre>
-Name: CLOSE_SLOT
-Base10: 8
-Description: Closes a slot.
+name: close_slot
+base10: 8
+description: Closes a slot.
 
 +---+---+
 | C | S |

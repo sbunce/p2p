@@ -6,18 +6,18 @@ file::file(
 	path(FI.path),
 	file_size(FI.file_size),
 	block_count(
-		file_size % protocol::FILE_BLOCK_SIZE == 0 ?
-			file_size / protocol::FILE_BLOCK_SIZE :
-			file_size / protocol::FILE_BLOCK_SIZE + 1
+		file_size % protocol::file_block_size == 0 ?
+			file_size / protocol::file_block_size :
+			file_size / protocol::file_block_size + 1
 	),
 	last_block_size(
-		file_size % protocol::FILE_BLOCK_SIZE == 0 ?
-			protocol::FILE_BLOCK_SIZE :
-			file_size % protocol::FILE_BLOCK_SIZE
+		file_size % protocol::file_block_size == 0 ?
+			protocol::file_block_size :
+			file_size % protocol::file_block_size
 	),
-	Block_Request(file_size % protocol::FILE_BLOCK_SIZE == 0 ?
-		file_size / protocol::FILE_BLOCK_SIZE :
-		file_size / protocol::FILE_BLOCK_SIZE + 1
+	Block_Request(file_size % protocol::file_block_size == 0 ?
+		file_size / protocol::file_block_size :
+		file_size / protocol::file_block_size + 1
 	)
 {
 
@@ -30,7 +30,7 @@ unsigned file::block_size(const boost::uint64_t block_num)
 		//last block
 		return last_block_size;
 	}else{
-		return protocol::FILE_BLOCK_SIZE;
+		return protocol::file_block_size;
 	}
 }
 

@@ -12,14 +12,14 @@ hash_tree::hash_tree(
 	file_hash_offset(row_to_file_hash_offset(row)),
 	tree_size(file_size_to_tree_size(file_size)),
 	file_block_count(
-		file_size % protocol::FILE_BLOCK_SIZE == 0 ?
-			file_size / protocol::FILE_BLOCK_SIZE :
-			file_size / protocol::FILE_BLOCK_SIZE + 1
+		file_size % protocol::file_block_size == 0 ?
+			file_size / protocol::file_block_size :
+			file_size / protocol::file_block_size + 1
 	),
 	last_file_block_size(
-		file_size % protocol::FILE_BLOCK_SIZE == 0 ?
-			protocol::FILE_BLOCK_SIZE :
-			file_size % protocol::FILE_BLOCK_SIZE
+		file_size % protocol::file_block_size == 0 ?
+			protocol::file_block_size :
+			file_size % protocol::file_block_size
 	),
 	Block_Request(hash.empty() ? 0 : tree_block_count),
 	end_of_good(0)
@@ -75,20 +75,20 @@ bool hash_tree::block_info(const boost::uint64_t block,
 	boost::uint64_t block_count = 0;     //total block count in all previous rows
 	boost::uint64_t row_block_count = 0; //total block count in current row
 	for(unsigned x=0; x<row.size(); ++x){
-		if(row[x] % protocol::HASH_BLOCK_SIZE == 0){
-			row_block_count = row[x] / protocol::HASH_BLOCK_SIZE;
+		if(row[x] % protocol::hash_block_size == 0){
+			row_block_count = row[x] / protocol::hash_block_size;
 		}else{
-			row_block_count = row[x] / protocol::HASH_BLOCK_SIZE + 1;
+			row_block_count = row[x] / protocol::hash_block_size + 1;
 		}
 
 		//check if block we're looking for is in row
 		if(block_count + row_block_count > block){
-			info.first = offset + (block - block_count) * protocol::HASH_BLOCK_SIZE;
+			info.first = offset + (block - block_count) * protocol::hash_block_size;
 
 			//determine size of block
 			boost::uint64_t delta = offset + row[x] - info.first;
-			if(delta > protocol::HASH_BLOCK_SIZE){
-				info.second = protocol::HASH_BLOCK_SIZE;
+			if(delta > protocol::hash_block_size){
+				info.second = protocol::hash_block_size;
 			}else{
 				info.second = delta;
 			}
@@ -149,7 +149,7 @@ hash_tree::status hash_tree::check()
 hash_tree::status hash_tree::check_block(const boost::uint64_t block_num)
 {
 	SHA1 SHA;
-	char buff[protocol::FILE_BLOCK_SIZE];
+	char buff[protocol::file_block_size];
 
 	if(block_num == 0){
 		//special requirements to check root hash, see header documentation for hash
@@ -246,7 +246,7 @@ hash_tree::status hash_tree::create()
 		return io_error;
 	}
 
-	char buff[protocol::FILE_BLOCK_SIZE];
+	char buff[protocol::file_block_size];
 	SHA1 SHA;
 
 	//do file hashes
@@ -269,7 +269,7 @@ hash_tree::status hash_tree::create()
 		if(boost::this_thread::interruption_requested()){
 			return io_error;
 		}
-		file.read(buff, protocol::FILE_BLOCK_SIZE);
+		file.read(buff, protocol::file_block_size);
 		if(file.gcount() == 0){
 			LOGGER << "error reading file";
 			return io_error;
@@ -350,8 +350,8 @@ hash_tree::status hash_tree::create()
 			database::table::hash::remove(hash);
 			return io_error;
 		}
-		if(bytes_remaining > protocol::FILE_BLOCK_SIZE){
-			read_size = protocol::FILE_BLOCK_SIZE;
+		if(bytes_remaining > protocol::file_block_size){
+			read_size = protocol::file_block_size;
 		}else{
 			read_size = bytes_remaining;
 		}
@@ -384,18 +384,18 @@ boost::uint64_t hash_tree::file_hash_to_tree_hash(boost::uint64_t row_hash,
 	row.push_front(row_hash);
 	if(row_hash == 1){
 		return 1;
-	}else if(row_hash % protocol::HASH_BLOCK_SIZE == 0){
-		row_hash = start_hash / protocol::HASH_BLOCK_SIZE;
+	}else if(row_hash % protocol::hash_block_size == 0){
+		row_hash = start_hash / protocol::hash_block_size;
 	}else{
-		row_hash = start_hash / protocol::HASH_BLOCK_SIZE + 1;
+		row_hash = start_hash / protocol::hash_block_size + 1;
 	}
 	return start_hash + file_hash_to_tree_hash(row_hash, row);
 }
 
 boost::uint64_t hash_tree::file_size_to_file_hash(const boost::uint64_t file_size)
 {
-	boost::uint64_t hash_count = file_size / protocol::FILE_BLOCK_SIZE;
-	if(file_size % protocol::FILE_BLOCK_SIZE != 0){
+	boost::uint64_t hash_count = file_size / protocol::file_block_size;
+	if(file_size % protocol::file_block_size != 0){
 		//add one for partial last block
 		++hash_count;
 	}
@@ -422,7 +422,7 @@ boost::uint64_t hash_tree::file_size_to_tree_size(const boost::uint64_t file_siz
 hash_tree::status hash_tree::read_block(const boost::uint64_t block_num,
 	std::string & block)
 {
-	char buff[protocol::FILE_BLOCK_SIZE];
+	char buff[protocol::file_block_size];
 	std::pair<boost::uint64_t, unsigned> info;
 	if(block_info(block_num, row, info)){
 		if(!database::pool::get()->blob_read(blob, buff, info.second, info.first)){
@@ -442,10 +442,10 @@ boost::uint64_t hash_tree::row_to_tree_block_count(
 {
 	boost::uint64_t block_count = 0;
 	for(int x=0; x<row.size(); ++x){
-		if(row[x] % protocol::HASH_BLOCK_SIZE == 0){
-			block_count += row[x] / protocol::HASH_BLOCK_SIZE;
+		if(row[x] % protocol::hash_block_size == 0){
+			block_count += row[x] / protocol::hash_block_size;
 		}else{
-			block_count += row[x] / protocol::HASH_BLOCK_SIZE + 1;
+			block_count += row[x] / protocol::hash_block_size + 1;
 		}
 	}
 	return block_count;

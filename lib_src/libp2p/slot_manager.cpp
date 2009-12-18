@@ -31,7 +31,7 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 	//unmarshal data and erase incoming message from recv_buf
 	std::string hash = convert::bin_to_hex(std::string(
 		reinterpret_cast<const char *>(M->buf().data()+1), SHA1::bin_size));
-LOGGER << "request slot: " << hash;
+	LOGGER << "request_slot: " << hash;
 
 /*
 	//locate requested slot
@@ -43,7 +43,7 @@ LOGGER << "request slot: " << hash;
 		Send.push_back(send_buf);
 		return true;
 	}
-/*
+
 	//find available slot number
 	unsigned char slot_num = 0;
 	for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
