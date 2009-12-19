@@ -1,5 +1,13 @@
 #include "message.hpp"
 
+//BEGIN base
+bool message::base::encrypt()
+{
+	return true;
+}
+
+//END base
+
 //BEGIN composite
 void message::composite::add(boost::shared_ptr<base> M)
 {
@@ -29,21 +37,13 @@ bool message::composite::recv(network::connection_info & CI)
 	{
 		if((*iter_cur)->expects(CI)){
 			if((*iter_cur)->recv(CI)){
+				func = (*iter_cur)->func;
 				buf.move((*iter_cur)->buf);
 				response = *iter_cur;
 				return true;
 			}
 			return false;
 		}
-	}
-}
-
-message::type message::composite::type()
-{
-	if(response){
-		response->type();
-	}else{
-		return composite_t;
 	}
 }
 //END composite
@@ -67,11 +67,6 @@ bool message::error::recv(network::connection_info & CI)
 		return true;
 	}
 	return false;
-}
-
-message::type message::error::type()
-{
-	return error_t;
 }
 //END error
 
@@ -102,11 +97,6 @@ bool message::initial::recv(network::connection_info & CI)
 	}
 	return false;
 }
-
-message::type message::initial::type()
-{
-	return initial_t;
-}
 //END initial
 
 //BEGIN key_exchange_p_rA
@@ -119,6 +109,11 @@ message::key_exchange_p_rA::key_exchange_p_rA(
 message::key_exchange_p_rA::key_exchange_p_rA(encryption & Encryption)
 {
 	buf = Encryption.send_p_rA();
+}
+
+bool message::key_exchange_p_rA::encrypt()
+{
+	return false;
 }
 
 bool message::key_exchange_p_rA::expects(network::connection_info & CI)
@@ -137,11 +132,6 @@ bool message::key_exchange_p_rA::recv(network::connection_info & CI)
 	}
 	return false;
 }
-
-message::type message::key_exchange_p_rA::type()
-{
-	return key_exchange_p_rA_t;
-}
 //END key_exchange_p_rA
 
 //BEGIN key_exchange_rB
@@ -154,6 +144,11 @@ message::key_exchange_rB::key_exchange_rB(
 message::key_exchange_rB::key_exchange_rB(encryption & Encryption)
 {
 	buf = Encryption.send_rB();
+}
+
+bool message::key_exchange_rB::encrypt()
+{
+	return false;
 }
 
 bool message::key_exchange_rB::expects(network::connection_info & CI)
@@ -171,11 +166,6 @@ bool message::key_exchange_rB::recv(network::connection_info & CI)
 		return true;
 	}
 	return false;
-}
-
-message::type message::key_exchange_rB::type()
-{
-	return key_exchange_rB_t;
 }
 //END key_exchange_rB
 
@@ -204,11 +194,6 @@ bool message::request_slot::recv(network::connection_info & CI)
 		return true;
 	}
 	return false;
-}
-
-message::type message::request_slot::type()
-{
-	return request_slot_t;
 }
 //END request_slot
 
@@ -260,10 +245,5 @@ bool message::slot::recv(network::connection_info & CI)
 		exit(1);
 	}
 	return true;
-}
-
-message::type message::slot::type()
-{
-	return message::slot_t;
 }
 //END slot

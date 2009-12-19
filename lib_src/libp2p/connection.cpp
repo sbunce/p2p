@@ -137,15 +137,13 @@ bool connection::recv_initial(boost::shared_ptr<message::base> M)
 void connection::send(boost::shared_ptr<message::base> M)
 {
 	assert(M && !M->buf.empty());
-	if(M->type() == message::key_exchange_p_rA_t ||
-		M->type() == message::key_exchange_rB_t)
-	{
-		Proactor.send(connection_ID, M->buf);
-	}else{
+	if(M->encrypt()){
 		//copy buffer to leave original unencrypted
 		network::buffer buf = M->buf;
 		Encryption.crypt_send(buf);
 		Proactor.send(connection_ID, buf);
+	}else{
+		Proactor.send(connection_ID, M->buf);
 	}
 }
 

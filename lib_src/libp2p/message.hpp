@@ -15,23 +15,6 @@
 
 namespace message{
 
-//message types (like RTTI and typeid())
-enum type{
-	block_t,
-	close_slot_t,
-	composite_t,
-	error_t,
-	have_hash_tree_block_t,
-	have_file_block_t,
-	initial_t,
-	key_exchange_p_rA_t,
-	key_exchange_rB_t,
-	request_file_block_t,
-	request_hash_tree_block_t,
-	request_slot_t,
-	slot_t,
-};
-
 //abstract base class for all messages
 class base
 {
@@ -43,17 +26,19 @@ public:
 	network::buffer buf;
 
 	/*
+	encrypt:
+		Returns true if message should be encrypted before sending. The default is
+		true. The key_exchange messages override this and return false.
 	expects:
 		Returns true if recv() expects message on front of CI.recv_buf.
 	recv:
 		Returns true if incoming message received. False if incomplete message or
 		host blacklisted.
-	type:
-		Returns the type of the message.
+	encrypt
 	*/
+	virtual bool encrypt();
 	virtual bool expects(network::connection_info & CI) = 0;
 	virtual bool recv(network::connection_info & CI) = 0;
-	virtual message::type type() = 0;
 };
 
 //the composite message is used to handle multiple possible responses
@@ -64,7 +49,6 @@ public:
 	void add(boost::shared_ptr<base> M);
 	virtual bool expects(network::connection_info & CI);
 	virtual bool recv(network::connection_info & CI);
-	virtual message::type type();
 private:
 	boost::shared_ptr<base> response;
 	std::vector<boost::shared_ptr<base> > possible_response;
@@ -77,7 +61,6 @@ public:
 	error();
 	virtual bool expects(network::connection_info & CI);
 	virtual bool recv(network::connection_info & CI);
-	virtual message::type type();
 };
 
 class initial : public base
@@ -89,7 +72,6 @@ public:
 	explicit initial(const std::string peer_ID);
 	virtual bool expects(network::connection_info & CI);
 	virtual bool recv(network::connection_info & CI);
-	virtual message::type type();
 };
 
 class key_exchange_p_rA : public base
@@ -99,9 +81,9 @@ public:
 	key_exchange_p_rA(boost::function<bool (boost::shared_ptr<base>)> func_in);
 	//ctor to send message
 	explicit key_exchange_p_rA(encryption & Encryption);
+	virtual bool encrypt();
 	virtual bool expects(network::connection_info & CI);
 	virtual bool recv(network::connection_info & CI);
-	virtual message::type type();
 };
 
 class key_exchange_rB : public base
@@ -111,9 +93,9 @@ public:
 	key_exchange_rB(boost::function<bool (boost::shared_ptr<base>)> func_in);
 	//ctor to send message
 	explicit key_exchange_rB(encryption & Encryption);
+	virtual bool encrypt();
 	virtual bool expects(network::connection_info & CI);
 	virtual bool recv(network::connection_info & CI);
-	virtual message::type type();
 };
 
 class request_slot : public base
@@ -125,7 +107,6 @@ public:
 	explicit request_slot(const std::string & hash);
 	virtual bool expects(network::connection_info & CI);
 	virtual bool recv(network::connection_info & CI);
-	virtual message::type type();
 };
 
 class slot : public base
@@ -137,7 +118,6 @@ public:
 	slot();
 	virtual bool expects(network::connection_info & CI);
 	virtual bool recv(network::connection_info & CI);
-	virtual message::type type();
 private:
 	//hash requested
 	std::string hash;
