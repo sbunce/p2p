@@ -1,9 +1,10 @@
 #include "slot_manager.hpp"
 
 slot_manager::slot_manager(
-	boost::function<void (boost::shared_ptr<message::base>,
-		boost::shared_ptr<message::base>)> send_in
+	boost::function<void (boost::shared_ptr<message::base>)> expect_in,
+	boost::function<void (boost::shared_ptr<message::base>)> send_in
 ):
+	expect(expect_in),
 	send(send_in),
 	open_slots(0)
 {
@@ -12,28 +13,31 @@ slot_manager::slot_manager(
 
 void slot_manager::make_slot_requests()
 {
+/*
 	while(!Pending_Slot_Request.empty() && open_slots < 256){
 		++open_slots;
 		boost::shared_ptr<message::base> M_request(new message::request_slot(
 			Pending_Slot_Request.front()->hash()));
+		send(M_request);
 		boost::shared_ptr<message::composite> M_response(new message::composite());
 		M_response->add(boost::shared_ptr<message::base>(
 			new message::slot(Pending_Slot_Request.front()->hash())));
 		M_response->add(boost::shared_ptr<message::base>(
 			new message::error()));
-		send(M_request, M_response);
+		expect(M_response);
 		Pending_Slot_Request.pop_front();
 	}
+*/
 }
-
+/*
 bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 {
+
 	//unmarshal data and erase incoming message from recv_buf
 	std::string hash = convert::bin_to_hex(std::string(
 		reinterpret_cast<const char *>(M->buf().data()+1), SHA1::bin_size));
 	LOGGER << "request_slot: " << hash;
 
-/*
 	//locate requested slot
 	share::slot_iterator slot_iter = share::singleton().find_slot(hash);
 	if(slot_iter == share::singleton().end_slot()){
@@ -101,24 +105,25 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 
 	//send SLOT message
 	Send.push_back(send_buf);
-*/
 }
-
+*/
+/*
 bool slot_manager::recv_request_slot_failed(message::pair MP)
 {
 LOGGER;
-/*
+
 	LOGGER << "failed to open slot";
 	CI.recv_buf.erase(0, protocol::ERROR_SIZE);
 	Slot_Request.pop_front();
 	return true;
-*/
-}
 
+}
+*/
+/*
 bool slot_manager::recv_slot(message::pair MP)
 {
 LOGGER;
-/*
+
 	if(CI.recv_buf.size() < protocol::SLOT_SIZE()){
 		return false;
 	}
@@ -145,9 +150,9 @@ LOGGER;
 	}
 	LOGGER << "received SLOT";
 	return true;
-*/
-}
 
+}
+*/
 void slot_manager::resume(const std::string & peer_ID)
 {
 	std::set<std::string> hash = database::table::join::resume_hash(peer_ID);

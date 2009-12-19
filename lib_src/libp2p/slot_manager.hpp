@@ -16,8 +16,10 @@
 class slot_manager : private boost::noncopyable
 {
 public:
-	slot_manager(boost::function<void (boost::shared_ptr<message::base>,
-		boost::shared_ptr<message::base>)> send_in);
+	slot_manager(
+		boost::function<void (boost::shared_ptr<message::base>)> expect_in,
+		boost::function<void (boost::shared_ptr<message::base>)> send_in
+	);
 
 	/*
 	recv_request_slot:
@@ -29,16 +31,14 @@ public:
 	resume:
 		When the peer_ID is received this function is called to resume downloads.
 	*/
-	bool recv_request_slot(boost::shared_ptr<message::base> M);
-	bool recv_request_slot_failed(message::pair MP);
-	bool recv_slot(message::pair MP);
+	//bool recv_request_slot(boost::shared_ptr<message::base> M);
+	//bool recv_request_slot_failed(message::pair MP);
+	//bool recv_slot(message::pair MP);
 	void resume(const std::string & peer_ID);
 
 private:
-
-	//call back to send a message
-	boost::function<void (boost::shared_ptr<message::base>,
-		boost::shared_ptr<message::base>)> send;
+	boost::function<void (boost::shared_ptr<message::base>)> expect;
+	boost::function<void (boost::shared_ptr<message::base>)> send;
 
 	/*
 	Outgoing_Slot holds slots we have opened with the remote host.

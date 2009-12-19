@@ -4,54 +4,64 @@ int fail(0);
 
 int main()
 {
-	network::buffer Buffer;
+	network::buffer B;
 
 	//erase
-	Buffer.append("ABC");
-	Buffer.erase(1, 1);
-	if(Buffer[0] != 'A' || Buffer[1] != 'C'){
+	B = "ABC";
+	B.erase(1, 1);
+	if(B[0] != 'A' || B[1] != 'C'){
 		LOGGER; ++fail;
 	}
 
 	//str()
-	Buffer.clear();
-	Buffer.append("ABC");
-	std::string str = Buffer.str();
+	B.clear();
+	B = "ABC";
+	std::string str = B.str();
 	if(str != "ABC"){
 		LOGGER; ++fail;
 	}
-	str = Buffer.str(0, 1);
+	str = B.str(0, 1);
 	if(str != "A"){
 		LOGGER; ++fail;
 	}
-	str = Buffer.str(2, 1);
+	str = B.str(2, 1);
 	if(str != "C"){
 		LOGGER; ++fail;
 	}
-	str = Buffer.str(3, 0);
+	str = B.str(3, 0);
 	if(str != ""){
 		LOGGER; ++fail;
 	}
 
 	//tail reserve
-	Buffer.clear();
-	Buffer.append('A');
-	Buffer.tail_reserve(1);
-	Buffer.tail_start()[0] = 'B';
-	Buffer.tail_resize(1);
-	if(Buffer[1] != 'B'){
+	B.clear();
+	B.append('A');
+	B.tail_reserve(1);
+	B.tail_start()[0] = 'B';
+	B.tail_resize(1);
+	if(B[1] != 'B'){
 		LOGGER; ++fail;
 	}
 
 	//!=
 	network::buffer B1, B2;
-	B1.append("ABC");
-	B2.append("ABC");
+	B1 = "ABC";
+	B2 = "ABC";
 	if(B1 != B2){
 		LOGGER; ++fail;
 	}
-	if(B1.str() != "ABC"){
+	if(B1 != "ABC"){
 		LOGGER; ++fail;
 	}
 	return fail;
+
+	//move
+	B1.clear(); B2 = "ABC";
+	B1.move(B2);
+	if(B1 != "ABC"){
+		LOGGER; ++fail;
+	}
+	if(!B2.empty()){
+		LOGGER; ++fail;
+	}
 }

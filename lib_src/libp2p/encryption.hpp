@@ -25,7 +25,10 @@ class encryption : private boost::noncopyable
 public:
 	encryption();
 
-	//see protocol documentation for more information
+	/*
+	See protocol documentation for more information.
+	Note: recv_p_rA returns false if invalid prime received.
+	*/
 	network::buffer send_p_rA();
 	bool recv_p_rA(network::buffer & buf);
 	network::buffer send_rB();

@@ -267,6 +267,22 @@ public:
 		}
 	}
 
+	/*
+	Moves the contents of source buffer in to this buffer without copying.
+	Postcondition: source buffer empty.
+	Postcondition: this buffer equal to previous contents of source buffer.
+	*/
+	void move(buffer & source)
+	{
+		clear();
+		reserved = source.reserved;
+		bytes = source.bytes;
+		buf = source.buf;
+		source.reserved = 0;
+		source.bytes = 0;
+		source.buf = NULL;
+	}
+
 	//specified amount of memory will be left allocated
 	void reserve(const int size)
 	{
@@ -285,10 +301,7 @@ public:
 		return bytes;
 	}
 
-	/*
-	Returns std::string of buffer starting at index and len chars long.
-	Note: This is useful for text based protocols.
-	*/
+	//returns std::string of buffer starting at index and len chars long
 	std::string str(const int index = 0, const int len = npos) const
 	{
 		if(len == npos){
@@ -339,6 +352,14 @@ public:
 		return *this;
 	}
 
+	buffer & operator = (const char * str)
+	{
+		int len = std::strlen(str);
+		allocate(bytes, len);
+		std::memcpy(buf, str, bytes);
+		return *this;
+	}
+
 	bool operator == (const buffer & B) const
 	{
 		if(bytes != B.bytes){
@@ -348,9 +369,24 @@ public:
 		}
 	}
 
+	bool operator == (const char * str) const
+	{
+		int len = std::strlen(str);
+		if(bytes != len){
+			return false;
+		}else{
+			return std::memcmp(buf, str, bytes) == 0;
+		}
+	}
+
 	bool operator != (const buffer & B) const
 	{
 		return !(*this == B);
+	}
+
+	bool operator != (const char * str) const
+	{
+		return !(*this == str);
 	}
 
 	bool operator < (const buffer & B) const
@@ -361,6 +397,18 @@ public:
 			return false;
 		}else{
 			return std::memcmp(buf, B.buf, bytes) < 0;
+		}
+	}
+
+	bool operator < (const char * str) const
+	{
+		int len = std::strlen(str);
+		if(bytes < len){
+			return true;
+		}else if(bytes > len){
+			return false;
+		}else{
+			return std::memcmp(buf, str, bytes) < 0;
 		}
 	}
 

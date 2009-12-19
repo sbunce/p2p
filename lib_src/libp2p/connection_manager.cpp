@@ -12,6 +12,7 @@ void connection_manager::connect_call_back(network::connection_info & CI)
 {
 //DEBUG, disable persistent blacklist
 database::pool::get()->query("DELETE FROM blacklist");
+//DEBUG, need to check blacklist here
 
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(Connection_mutex);

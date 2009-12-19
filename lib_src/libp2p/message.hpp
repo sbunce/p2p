@@ -17,100 +17,103 @@ namespace message{
 
 //message types (like RTTI and typeid())
 enum type{
-	key_exchange_p_rA_t,
-	key_exchange_rB_t,
-	initial_t,
-	error_t,
-	request_slot_t,
-	slot_t,
-	request_hash_tree_block_t,
-	request_file_block_t,
 	block_t,
-	have_hash_tree_block_t,
-	have_file_block_t,
 	close_slot_t,
 	composite_t,
+	error_t,
+	have_hash_tree_block_t,
+	have_file_block_t,
+	initial_t,
+	key_exchange_p_rA_t,
+	key_exchange_rB_t,
+	request_file_block_t,
+	request_hash_tree_block_t,
+	request_slot_t,
+	slot_t,
 };
 
 //abstract base class for all messages
 class base
 {
 public:
+	//function to handle the message when it's received
+	boost::function<bool (boost::shared_ptr<base>)> func;
+
+	//bytes that have been sent or received
+	network::buffer buf;
+
 	/*
-	buf:
-		Returns buffer to send, or buffer that was received.
 	expects:
 		Returns true if recv() expects message on front of CI.recv_buf.
 	recv:
-		Returns true if incoming message received.
+		Returns true if incoming message received. False if incomplete message or
+		host blacklisted.
 	type:
 		Returns the type of the message.
 	*/
-	virtual network::buffer & buf() = 0;
 	virtual bool expects(network::connection_info & CI) = 0;
 	virtual bool recv(network::connection_info & CI) = 0;
 	virtual message::type type() = 0;
 };
 
-/*
-Used in place of a std::pair to be more expressive.
-Ex: MP.response instead of MP.second.
-*/
-class pair
+//the composite message is used to handle multiple possible responses
+class composite : public base
 {
 public:
-	pair();
-	pair(
-		boost::shared_ptr<base> request_in,
-		boost::shared_ptr<base> response_in
-	);
-	boost::shared_ptr<base> request;
+	//add messages to expect() and recv()
+	void add(boost::shared_ptr<base> M);
+	virtual bool expects(network::connection_info & CI);
+	virtual bool recv(network::connection_info & CI);
+	virtual message::type type();
+private:
 	boost::shared_ptr<base> response;
+	std::vector<boost::shared_ptr<base> > possible_response;
 };
 
-class key_exchange_p_rA : public base
+class error : public base
 {
 public:
-	//ctor to recv message
-	key_exchange_p_rA();
-	//ctor to send message
-	explicit key_exchange_p_rA(encryption & Encryption);
-	virtual network::buffer & buf();
+	//ctor to recv and send (buf() always returns buffer with protocol::error)
+	error();
 	virtual bool expects(network::connection_info & CI);
 	virtual bool recv(network::connection_info & CI);
 	virtual message::type type();
-private:
-	network::buffer _buf;
-};
-
-class key_exchange_rB : public base
-{
-public:
-	//ctor to recv message
-	key_exchange_rB();
-	//ctor to send message
-	explicit key_exchange_rB(encryption & Encryption);
-	virtual network::buffer & buf();
-	virtual bool expects(network::connection_info & CI);
-	virtual bool recv(network::connection_info & CI);
-	virtual message::type type();
-private:
-	network::buffer _buf;
 };
 
 class initial : public base
 {
 public:
 	//ctor to recv message
-	initial();
+	initial(boost::function<bool (boost::shared_ptr<base>)> func_in);
 	//ctor to send message
 	explicit initial(const std::string peer_ID);
-	virtual network::buffer & buf();
 	virtual bool expects(network::connection_info & CI);
 	virtual bool recv(network::connection_info & CI);
 	virtual message::type type();
-private:
-	network::buffer _buf;
+};
+
+class key_exchange_p_rA : public base
+{
+public:
+	//ctor to recv message
+	key_exchange_p_rA(boost::function<bool (boost::shared_ptr<base>)> func_in);
+	//ctor to send message
+	explicit key_exchange_p_rA(encryption & Encryption);
+	virtual bool expects(network::connection_info & CI);
+	virtual bool recv(network::connection_info & CI);
+	virtual message::type type();
+};
+
+class key_exchange_rB : public base
+{
+public:
+	//ctor to recv message
+	key_exchange_rB(boost::function<bool (boost::shared_ptr<base>)> func_in);
+	//ctor to send message
+	explicit key_exchange_rB(encryption & Encryption);
+	virtual bool expects(network::connection_info & CI);
+	virtual bool recv(network::connection_info & CI);
+	virtual message::type type();
 };
 
 class request_slot : public base
@@ -120,28 +123,9 @@ public:
 	request_slot();
 	//ctor to send message
 	explicit request_slot(const std::string & hash);
-	virtual network::buffer & buf();
 	virtual bool expects(network::connection_info & CI);
 	virtual bool recv(network::connection_info & CI);
 	virtual message::type type();
-private:
-	network::buffer _buf;
-};
-
-//the composite message is used to handle multiple possible responses
-class composite : public base
-{
-public:
-	//add messages to expect() and recv()
-	void add(boost::shared_ptr<base> M);
-	virtual network::buffer & buf();
-	virtual bool expects(network::connection_info & CI);
-	virtual bool recv(network::connection_info & CI);
-	virtual message::type type();
-private:
-	network::buffer _buf;
-	boost::shared_ptr<base> response;
-	std::vector<boost::shared_ptr<base> > possible_response;
 };
 
 class slot : public base
@@ -151,12 +135,10 @@ public:
 	explicit slot(const std::string & hash_in);
 	//ctor to send message
 	slot();
-	virtual network::buffer & buf();
 	virtual bool expects(network::connection_info & CI);
 	virtual bool recv(network::connection_info & CI);
 	virtual message::type type();
 private:
-	network::buffer _buf;
 	//hash requested
 	std::string hash;
 	/*
@@ -164,19 +146,6 @@ private:
 	processing from computing the hash multiple times.
 	*/
 	bool checked;
-};
-
-class error : public base
-{
-public:
-	//ctor to recv and send (buf() always returns buffer with protocol::error)
-	error();
-	virtual network::buffer & buf();
-	virtual bool expects(network::connection_info & CI);
-	virtual bool recv(network::connection_info & CI);
-	virtual message::type type();
-private:
-	network::buffer _buf;
 };
 }//end namespace message
 #endif

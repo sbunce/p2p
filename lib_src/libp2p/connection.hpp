@@ -19,20 +19,20 @@ public:
 		network::connection_info & CI
 	);
 
-	const std::string IP;
 	const int connection_ID;
+	const std::string IP;
 
 private:
 	//locks all entry points to the object
 	boost::recursive_mutex Recursive_Mutex;
 
+	network::proactor & Proactor;
+
 	/*
-	When a message is sent that expects a response it is pushed on the back of
-	Expected. The request member of the message_pair stores the request made
-	(but only if it's later needed). The response member is used to parse the
-	incoming response.
+	Messages that expect a response are pushed on the back of Expect. When a
+	response arrives it is for the message on the front of Expect.
 	*/
-	std::list<message::pair> Expected;
+	std::list<boost::shared_ptr<message::base> > Expect;
 
 	/*
 	Incoming messages that aren't responses are processed by the messages in this
@@ -40,24 +40,40 @@ private:
 	*/
 	std::vector<boost::shared_ptr<message::base> > Non_Response;
 
-	network::proactor & Proactor;
-	encryption Encryption;     //key exchange and stream cypher
-	slot_manager Slot_Manager; //logic for dealing with slots
-	std::string peer_ID;       //holds peer_ID when it's received
-	int blacklist_state;       //used to know if blacklist updated
+	encryption Encryption; //key exchange and stream cypher
+	std::string peer_ID;   //holds peer_ID when it's received
+	int blacklist_state;   //used to know if blacklist updated
+
+	//does everything slot related
+	slot_manager Slot_Manager;
 
 	/*
-	recv_call_back:
+	expect:
+		After sending a message that expects a response this function should be
+		called with the message expected. If there are multiple possible messages
+		expected a composite message should be used.
+	send:
+		Sends a message. Handles encryption.
+	*/
+	void expect(boost::shared_ptr<message::base> M);
+	void send(boost::shared_ptr<message::base> M);
+
+	/*
+	proactor_recv_call_back:
 		Proactor calls back to this function whenever data is received.
 	send:
 		Send a message and/or set up an expected response.
-		Note: M_send and/or M_response may be empty.
 	send_initial:
-		Send initial messages. Called after key exchange completed.
+		Send initial message. Called after key exchange completed.
 	*/
-	void recv_call_back(network::connection_info & CI);
-	void send(boost::shared_ptr<message::base> M_send,
-		boost::shared_ptr<message::base> M_response);
+	void proactor_recv_call_back(network::connection_info & CI);
 	void send_initial();
+
+	/* Functions to handle receiving messages.
+	Note: These functions return false if the protocol was violated.
+	*/
+	bool recv_initial(boost::shared_ptr<message::base> M);
+	bool recv_p_rA(boost::shared_ptr<message::base> M, network::connection_info & CI);
+	bool recv_rB(boost::shared_ptr<message::base> M, network::connection_info & CI);
 };
 #endif
