@@ -49,6 +49,11 @@ bool message::composite::recv(network::connection_info & CI)
 //END composite
 
 //BEGIN error
+message::error::error(boost::function<bool (boost::shared_ptr<base>)> func_in)
+{
+	func = func_in;
+}
+
 message::error::error()
 {
 	buf.append(protocol::error);
@@ -63,6 +68,7 @@ bool message::error::recv(network::connection_info & CI)
 {
 	assert(expects(CI));
 	if(CI.recv_buf[0] == protocol::error){
+		buf.append(CI.recv_buf.data(), protocol::error_size);
 		CI.recv_buf.erase(0, protocol::error_size);
 		return true;
 	}
@@ -170,9 +176,10 @@ bool message::key_exchange_rB::recv(network::connection_info & CI)
 //END key_exchange_rB
 
 //BEGIN request_slot
-message::request_slot::request_slot()
+message::request_slot::request_slot(
+	boost::function<bool (boost::shared_ptr<base>)> func_in)
 {
-
+	func = func_in;
 }
 
 message::request_slot::request_slot(const std::string & hash)
@@ -198,17 +205,25 @@ bool message::request_slot::recv(network::connection_info & CI)
 //END request_slot
 
 //BEGIN slot
-message::slot::slot(const std::string & hash_in):
+message::slot::slot(
+	boost::function<bool (boost::shared_ptr<base>)> func_in,
+	const std::string & hash_in
+):
 	hash(hash_in),
 	checked(false)
 {
-
+LOGGER << hash;
+	func = func_in;
 }
 
-message::slot::slot()
+message::slot::slot(const unsigned char slot_num, unsigned char status,
+	const boost::uint64_t file_size, const std::string & root_hash)
 {
-//DEBUG, need to complete this
-	//_buf.append(
+	buf.append(protocol::slot)
+		.append(slot_num)
+		.append(status)
+		.append(convert::encode(file_size))
+		.append(convert::hex_to_bin(root_hash));
 }
 
 bool message::slot::expects(network::connection_info & CI)
@@ -226,7 +241,7 @@ bool message::slot::recv(network::connection_info & CI)
 	if(!checked){
 		SHA1 SHA;
 		SHA.init();
-		SHA.load(reinterpret_cast<const char *>(CI.recv_buf.data()) + 3,
+		SHA.load(reinterpret_cast<char *>(CI.recv_buf.data()) + 3,
 			8 + SHA1::bin_size);
 		SHA.end();
 		if(SHA.hex() != hash){

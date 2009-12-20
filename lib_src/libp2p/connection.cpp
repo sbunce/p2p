@@ -24,8 +24,8 @@ connection::connection(
 	}
 
 	//register possible incoming messages
-	Non_Response.push_back(boost::shared_ptr<message::base>(
-		new message::request_slot()));
+	Non_Response.push_back(boost::shared_ptr<message::base>(new message::request_slot(
+		boost::bind(&slot_manager::recv_request_slot, &Slot_Manager, _1))));
 
 	CI.recv_call_back = boost::bind(&connection::proactor_recv_call_back, this, _1);
 	CI.recv_call_back(CI);
@@ -130,7 +130,7 @@ bool connection::recv_initial(boost::shared_ptr<message::base> M)
 	std::string peer_ID = convert::bin_to_hex(std::string(
 		reinterpret_cast<const char *>(M->buf.data()), SHA1::bin_size));
 	LOGGER << peer_ID;
-	//Slot_Manager.resume(peer_ID);
+	Slot_Manager.resume(peer_ID);
 	return true;
 }
 

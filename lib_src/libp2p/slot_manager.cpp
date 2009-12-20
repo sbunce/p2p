@@ -13,38 +13,36 @@ slot_manager::slot_manager(
 
 void slot_manager::make_slot_requests()
 {
-/*
 	while(!Pending_Slot_Request.empty() && open_slots < 256){
 		++open_slots;
 		boost::shared_ptr<message::base> M_request(new message::request_slot(
 			Pending_Slot_Request.front()->hash()));
 		send(M_request);
 		boost::shared_ptr<message::composite> M_response(new message::composite());
-		M_response->add(boost::shared_ptr<message::base>(
-			new message::slot(Pending_Slot_Request.front()->hash())));
-		M_response->add(boost::shared_ptr<message::base>(
-			new message::error()));
+		M_response->add(boost::shared_ptr<message::base>(new message::slot(
+			boost::bind(&slot_manager::recv_slot, this, _1,
+			Pending_Slot_Request.front()->hash()),
+			Pending_Slot_Request.front()->hash())));
+		M_response->add(boost::shared_ptr<message::base>(new message::error(
+			boost::bind(&slot_manager::recv_request_slot_failed, this, _1))));
 		expect(M_response);
 		Pending_Slot_Request.pop_front();
 	}
-*/
 }
-/*
+
 bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 {
-
-	//unmarshal data and erase incoming message from recv_buf
-	std::string hash = convert::bin_to_hex(std::string(
-		reinterpret_cast<const char *>(M->buf().data()+1), SHA1::bin_size));
-	LOGGER << "request_slot: " << hash;
+	//requested hash
+	std::string hash = convert::bin_to_hex(
+		reinterpret_cast<const char *>(M->buf.data()+1), SHA1::bin_size);
+	LOGGER << hash;
 
 	//locate requested slot
 	share::slot_iterator slot_iter = share::singleton().find_slot(hash);
 	if(slot_iter == share::singleton().end_slot()){
 		LOGGER << "failed " << hash;
-		network::buffer send_buf;
-		send_buf.append(protocol::ERROR);
-		Send.push_back(send_buf);
+		boost::shared_ptr<message::base> M(new message::error());
+		send(M);
 		return true;
 	}
 
@@ -66,64 +64,57 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 		status = 0;
 	}else if(slot_iter->Hash_Tree.complete() && !slot_iter->File.complete()){
 		status = 1;
+LOGGER << "stub: add support for incomplete";
 	}else if(!slot_iter->Hash_Tree.complete() && slot_iter->File.complete()){
 		status = 2;
+LOGGER << "stub: add support for incomplete";
 	}else if(!slot_iter->Hash_Tree.complete() && !slot_iter->File.complete()){
 		status = 3;
+LOGGER << "stub: add support for incomplete";
 	}
 
-	//prepare SLOT message
-	network::buffer send_buf;
-	send_buf
-		.append(protocol::SLOT)
-		.append(slot_num)
-		.append(status)
-		.append(convert::encode(slot_iter->file_size()));
-	send_buf.tail_reserve(SHA1::bin_size);
-	if(!database::pool::get()->blob_read(slot_iter->Hash_Tree.blob,
-		reinterpret_cast<char *>(send_buf.tail_start()), SHA1::bin_size, 0))
+	//check to make sure we have valid file_size/root_hash
+	char buf[8 + SHA1::bin_size];
+	std::memcpy(buf, convert::encode(slot_iter->file_size()).data(), 8);
+	if(!database::pool::get()->blob_read(slot_iter->Hash_Tree.blob, buf+8,
+		SHA1::bin_size, 0))
 	{
 		LOGGER << "failed " << hash;
-		network::buffer send_buf;
-		send_buf.append(protocol::ERROR);
-		Send.push_back(send_buf);
+		boost::shared_ptr<message::base> M(new message::error());
+		send(M);
 		return true;
 	}
-	send_buf.tail_resize(SHA1::bin_size);
 	SHA1 SHA;
 	SHA.init();
-	SHA.load(reinterpret_cast<const char *>(send_buf.data()) + 3,
-		8 + SHA1::bin_size);
+	SHA.load(buf, 8 + SHA1::bin_size);
 	SHA.end();
 	if(SHA.hex() != slot_iter->hash()){
 		LOGGER << "failed " << hash;
-		network::buffer send_buf;
-		send_buf.append(protocol::ERROR);
-		Send.push_back(send_buf);
+		boost::shared_ptr<message::base> M(new message::error());
+		send(M);
 		return true;
 	}
 
-	//send SLOT message
-	Send.push_back(send_buf);
-}
-*/
-/*
-bool slot_manager::recv_request_slot_failed(message::pair MP)
-{
-LOGGER;
-
-	LOGGER << "failed to open slot";
-	CI.recv_buf.erase(0, protocol::ERROR_SIZE);
-	Slot_Request.pop_front();
+	//we have all information to send slot message
+//DEBUG, converting root hash to hex and back, this is inefficient
+	boost::shared_ptr<message::base> M_send(new message::slot(slot_num, status,
+		slot_iter->file_size(), convert::bin_to_hex(buf+8, SHA1::bin_size)));
+	send(M_send);
 	return true;
-
 }
-*/
-/*
-bool slot_manager::recv_slot(message::pair MP)
+
+bool slot_manager::recv_request_slot_failed(boost::shared_ptr<message::base> M)
 {
 LOGGER;
+	return true;
+}
 
+
+bool slot_manager::recv_slot(boost::shared_ptr<message::base> M,
+	const std::string hash)
+{
+LOGGER << hash;
+/*
 	if(CI.recv_buf.size() < protocol::SLOT_SIZE()){
 		return false;
 	}
@@ -150,9 +141,9 @@ LOGGER;
 	}
 	LOGGER << "received SLOT";
 	return true;
-
-}
 */
+}
+
 void slot_manager::resume(const std::string & peer_ID)
 {
 	std::set<std::string> hash = database::table::join::resume_hash(peer_ID);

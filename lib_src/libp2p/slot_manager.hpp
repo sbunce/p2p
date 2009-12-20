@@ -23,17 +23,18 @@ public:
 
 	/*
 	recv_request_slot:
-		Handles incoming REQUEST_SLOT messages.
+		Handles incoming request_slot messages.
 	recv_request_slot_failed:
-		Handles an ERROR in response to a REQUEST_SLOT.
+		Handles an ERROR in response to a request_slot.
 	recv_slot:
-		Handles incoming SLOT messages.
+		Handles incoming slot messages. The hash parameter is the hash of the file
+		requested.
 	resume:
 		When the peer_ID is received this function is called to resume downloads.
 	*/
-	//bool recv_request_slot(boost::shared_ptr<message::base> M);
-	//bool recv_request_slot_failed(message::pair MP);
-	//bool recv_slot(message::pair MP);
+	bool recv_request_slot(boost::shared_ptr<message::base> M);
+	bool recv_request_slot_failed(boost::shared_ptr<message::base> M);
+	bool recv_slot(boost::shared_ptr<message::base> M, const std::string hash);
 	void resume(const std::string & peer_ID);
 
 private:
@@ -57,6 +58,8 @@ private:
 		Slots which need to be opened with the remote host.
 	*/
 	unsigned open_slots;
+
+//DEBUG, this should contain hashes, not slots
 	std::list<boost::shared_ptr<slot> > Pending_Slot_Request;
 
 	/*

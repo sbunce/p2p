@@ -149,17 +149,17 @@ hash_tree::status hash_tree::check()
 hash_tree::status hash_tree::check_block(const boost::uint64_t block_num)
 {
 	SHA1 SHA;
-	char buff[protocol::file_block_size];
+	char buf[protocol::file_block_size];
 
 	if(block_num == 0){
 		//special requirements to check root hash, see header documentation for hash
-		if(!database::pool::get()->blob_read(blob, buff, SHA1::bin_size, 0)){
+		if(!database::pool::get()->blob_read(blob, buf, SHA1::bin_size, 0)){
 			return io_error;
 		}
-		std::memmove(buff + 8, buff, SHA1::bin_size);
-		std::memcpy(buff, convert::encode(file_size).data(), 8);
+		std::memmove(buf + 8, buf, SHA1::bin_size);
+		std::memcpy(buf, convert::encode(file_size).data(), 8);
 		SHA.init();
-		SHA.load(buff, SHA1::bin_size + 8);
+		SHA.load(buf, SHA1::bin_size + 8);
 		SHA.end();
 		if(SHA.hex() == hash){
 			return good;
@@ -176,20 +176,20 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t block_num)
 		}
 
 		//read children
-		if(!database::pool::get()->blob_read(blob, buff, info.second, info.first)){
+		if(!database::pool::get()->blob_read(blob, buf, info.second, info.first)){
 			return io_error;
 		}
 
 		//create hash for children
 		SHA.init();
-		SHA.load(buff, info.second);
+		SHA.load(buf, info.second);
 		SHA.end();
 
 		//verify parent hash is a hash of the children
-		if(!database::pool::get()->blob_read(blob, buff, SHA1::bin_size, parent)){
+		if(!database::pool::get()->blob_read(blob, buf, SHA1::bin_size, parent)){
 			return io_error;
 		}
-		if(std::memcmp(buff, SHA.bin(), SHA1::bin_size) == 0){
+		if(std::memcmp(buf, SHA.bin(), SHA1::bin_size) == 0){
 			return good;
 		}else{
 			return bad;
@@ -201,8 +201,8 @@ hash_tree::status hash_tree::check_file_block(const boost::uint64_t file_block_n
 	const char * block, const int size)
 {
 	assert(complete());
-	char parent_buff[SHA1::bin_size];
-	if(!database::pool::get()->blob_read(blob, parent_buff,
+	char parent_buf[SHA1::bin_size];
+	if(!database::pool::get()->blob_read(blob, parent_buf,
 		SHA1::bin_size, file_hash_offset + file_block_num * SHA1::bin_size))
 	{
 		return io_error;
@@ -211,7 +211,7 @@ hash_tree::status hash_tree::check_file_block(const boost::uint64_t file_block_n
 	SHA.init();
 	SHA.load(block, size);
 	SHA.end();
-	if(std::memcmp(parent_buff, SHA.bin(), SHA1::bin_size) == 0){
+	if(std::memcmp(parent_buf, SHA.bin(), SHA1::bin_size) == 0){
 		return good;
 	}else{
 		return bad;
@@ -246,7 +246,7 @@ hash_tree::status hash_tree::create()
 		return io_error;
 	}
 
-	char buff[protocol::file_block_size];
+	char buf[protocol::file_block_size];
 	SHA1 SHA;
 
 	//do file hashes
@@ -269,13 +269,13 @@ hash_tree::status hash_tree::create()
 		if(boost::this_thread::interruption_requested()){
 			return io_error;
 		}
-		file.read(buff, protocol::file_block_size);
+		file.read(buf, protocol::file_block_size);
 		if(file.gcount() == 0){
 			LOGGER << "error reading file";
 			return io_error;
 		}
 		SHA.init();
-		SHA.load(buff, file.gcount());
+		SHA.load(buf, file.gcount());
 		SHA.end();
 		temp.seekp(file_hash_offset + x * SHA1::bin_size, std::ios::beg);
 		temp.write(SHA.bin(), SHA1::bin_size);
@@ -294,13 +294,13 @@ hash_tree::status hash_tree::create()
 			exit(1);
 		}
 		temp.seekg(info.first, std::ios::beg);
-		temp.read(buff, info.second);
+		temp.read(buf, info.second);
 		if(temp.gcount() != info.second){
 			LOGGER << "error reading temp file";
 			return io_error;
 		}
 		SHA.init();
-		SHA.load(buff, info.second);
+		SHA.load(buf, info.second);
 		SHA.end();
 		temp.seekp(parent, std::ios::beg);
 		temp.write(SHA.bin(), SHA1::bin_size);
@@ -311,10 +311,10 @@ hash_tree::status hash_tree::create()
 	}
 
 	//calculate hash
-	std::memcpy(buff, convert::encode(file_size).data(), 8);
-	std::memcpy(buff + 8, SHA.bin(), SHA1::bin_size);
+	std::memcpy(buf, convert::encode(file_size).data(), 8);
+	std::memcpy(buf + 8, SHA.bin(), SHA1::bin_size);
 	SHA.init();
-	SHA.load(buff, SHA1::bin_size + 8);
+	SHA.load(buf, SHA1::bin_size + 8);
 	SHA.end();
 	const_cast<std::string &>(hash) = SHA.hex();
 
@@ -355,13 +355,13 @@ hash_tree::status hash_tree::create()
 		}else{
 			read_size = bytes_remaining;
 		}
-		temp.read(buff, read_size);
+		temp.read(buf, read_size);
 		if(temp.gcount() != read_size){
 			LOGGER << "error reading temp file";
 			database::table::hash::remove(hash);
 			return io_error;
 		}else{
-			if(!database::pool::get()->blob_write(blob, buff, read_size, offset)){
+			if(!database::pool::get()->blob_write(blob, buf, read_size, offset)){
 				LOGGER << "error doing incremental write to blob";
 				database::table::hash::remove(hash);
 				return io_error;
@@ -422,14 +422,14 @@ boost::uint64_t hash_tree::file_size_to_tree_size(const boost::uint64_t file_siz
 hash_tree::status hash_tree::read_block(const boost::uint64_t block_num,
 	std::string & block)
 {
-	char buff[protocol::file_block_size];
+	char buf[protocol::file_block_size];
 	std::pair<boost::uint64_t, unsigned> info;
 	if(block_info(block_num, row, info)){
-		if(!database::pool::get()->blob_read(blob, buff, info.second, info.first)){
+		if(!database::pool::get()->blob_read(blob, buf, info.second, info.first)){
 			return io_error;
 		}
 		block.clear();
-		block.assign(buff, info.second);
+		block.assign(buf, info.second);
 		return good;
 	}else{
 		LOGGER << "invalid block number, programming error";

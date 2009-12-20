@@ -57,7 +57,9 @@ private:
 class error : public base
 {
 public:
-	//ctor to recv and send (buf() always returns buffer with protocol::error)
+	//ctor to recv error
+	explicit error(boost::function<bool (boost::shared_ptr<base>)> func_in);
+	//ctor to send error
 	error();
 	virtual bool expects(network::connection_info & CI);
 	virtual bool recv(network::connection_info & CI);
@@ -67,7 +69,7 @@ class initial : public base
 {
 public:
 	//ctor to recv message
-	initial(boost::function<bool (boost::shared_ptr<base>)> func_in);
+	explicit initial(boost::function<bool (boost::shared_ptr<base>)> func_in);
 	//ctor to send message
 	explicit initial(const std::string peer_ID);
 	virtual bool expects(network::connection_info & CI);
@@ -78,7 +80,7 @@ class key_exchange_p_rA : public base
 {
 public:
 	//ctor to recv message
-	key_exchange_p_rA(boost::function<bool (boost::shared_ptr<base>)> func_in);
+	explicit key_exchange_p_rA(boost::function<bool (boost::shared_ptr<base>)> func_in);
 	//ctor to send message
 	explicit key_exchange_p_rA(encryption & Encryption);
 	virtual bool encrypt();
@@ -90,7 +92,7 @@ class key_exchange_rB : public base
 {
 public:
 	//ctor to recv message
-	key_exchange_rB(boost::function<bool (boost::shared_ptr<base>)> func_in);
+	explicit key_exchange_rB(boost::function<bool (boost::shared_ptr<base>)> func_in);
 	//ctor to send message
 	explicit key_exchange_rB(encryption & Encryption);
 	virtual bool encrypt();
@@ -102,7 +104,7 @@ class request_slot : public base
 {
 public:
 	//ctor to recv message
-	request_slot();
+	explicit request_slot(boost::function<bool (boost::shared_ptr<base>)> func_in);
 	//ctor to send message
 	explicit request_slot(const std::string & hash);
 	virtual bool expects(network::connection_info & CI);
@@ -113,9 +115,11 @@ class slot : public base
 {
 public:
 	//ctor to recv message
-	explicit slot(const std::string & hash_in);
+	slot(boost::function<bool (boost::shared_ptr<base>)> func_in,
+		const std::string & hash_in);
 	//ctor to send message
-	slot();
+	slot(const unsigned char slot_num, unsigned char status,
+		const boost::uint64_t file_size, const std::string & root_hash);
 	virtual bool expects(network::connection_info & CI);
 	virtual bool recv(network::connection_info & CI);
 private:
