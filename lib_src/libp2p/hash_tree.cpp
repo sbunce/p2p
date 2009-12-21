@@ -35,8 +35,18 @@ hash_tree::hash_tree(
 				throw std::runtime_error("error checking tree size");
 			}
 			//only open tree if the size is what we expect
-			if(tree_size == size){
-				const_cast<database::blob &>(blob) = info->blob;
+			if(tree_size != size){
+				/*
+				It is possible someone might encounter two files of different sizes
+				that have the same hash. We don't account for this because it's so
+				rare. We just fail to create a slot for one of the files.
+				*/
+				throw std::runtime_error("incorrect tree size");
+			}
+			const_cast<database::blob &>(blob) = info->blob;
+			if(info->tree_state == database::table::hash::complete){
+				//make complete() return true
+				end_of_good = tree_block_count;
 			}
 		}else{
 			//allocate space to reconstruct hash tree

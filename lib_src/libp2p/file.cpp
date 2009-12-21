@@ -20,7 +20,16 @@ file::file(
 		file_size / protocol::file_block_size + 1
 	)
 {
-
+	boost::shared_ptr<database::table::share::info>
+		info = database::table::share::find(FI.hash);
+	if(info){
+		if(info->file_state == database::table::share::complete){
+//DEBUG, set Block_Request to complete
+			//Block_Request
+		}
+	}else{
+		LOGGER << "could not locate file info in share";
+	}
 }
 
 unsigned file::block_size(const boost::uint64_t block_num)
@@ -36,5 +45,6 @@ unsigned file::block_size(const boost::uint64_t block_num)
 
 bool file::complete()
 {
-	return false;
+//DEBUG, always return true for testing
+	return true;
 }

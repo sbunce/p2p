@@ -38,6 +38,7 @@ public:
 	void resume(const std::string & peer_ID);
 
 private:
+	//pointers to connection::expect and connection::send
 	boost::function<void (boost::shared_ptr<message::base>)> expect;
 	boost::function<void (boost::shared_ptr<message::base>)> send;
 
@@ -54,13 +55,12 @@ private:
 	open_slots:
 		Number of slots opened, or requested, from the remote host.
 		Invariant: 0 <= open_slots <= 256.
-	Pending_Slot_Request:
-		Slots which need to be opened with the remote host.
+	Pending:
+		Hashes of files that need to be downloaded from host. Files will be
+		queued up if the slot limit of 256 is reached.
 	*/
 	unsigned open_slots;
-
-//DEBUG, this should contain hashes, not slots
-	std::list<boost::shared_ptr<slot> > Pending_Slot_Request;
+	std::queue<std::string> Pending;
 
 	/*
 	make_slot_requests:
