@@ -213,7 +213,14 @@ private:
 	//socket_FD associated with socket state
 	std::map<int, boost::shared_ptr<state> > Socket;
 
-	//connection_ID associated with socket state
+	/*
+	A connection_ID associated with socket state.
+	Note: A connection_ID is used instead of a socket_FD outside the proactor
+	because socket_FDs are reused often internally to the proactor. This avoids
+	possible race conditions where we instruct the proactor to do something and
+	it operates on the wrong connection (because what connection the socket_FD
+	represents has changed).
+	*/
 	std::map<int, boost::shared_ptr<state> > ID; 
 
 	/*
