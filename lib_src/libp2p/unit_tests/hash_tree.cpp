@@ -74,7 +74,8 @@ void test(const unsigned size)
 	if(HT_reassemble.complete()){
 		LOGGER; ++fail;
 	}
-
+return;
+/* DISABLE
 	//replace the corrupted blocks, add one host that has all blocks
 	HT_reassemble.Block_Request.add_host_complete(0);
 	while(!HT_reassemble.complete()){
@@ -84,6 +85,7 @@ void test(const unsigned size)
 		}
 		HT_reassemble.write_block(0, block_num, block[block_num]);
 	}
+*/
 
 	//now the tree should be complete
 	if(!HT_reassemble.complete()){

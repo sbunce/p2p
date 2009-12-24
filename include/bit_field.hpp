@@ -87,7 +87,7 @@ public:
 	};
 
 	//returns proxy object (see documentation for proxy)
-	proxy operator [](const boost::uint64_t & index)
+	proxy operator [](const boost::uint64_t index)
 	{
 		assert(index < groups);
 		return proxy(*this, index);

@@ -21,10 +21,8 @@ hash_tree::hash_tree(
 			protocol::file_block_size :
 			file_size % protocol::file_block_size
 	),
-	Block_Request(hash.empty() ? 0 : tree_block_count),
 	end_of_good(0)
 {
-	//if no hash, then no need to check because hash tree will be created
 	if(!hash.empty()){
 		boost::shared_ptr<database::table::hash::info>
 			info = database::table::hash::find(hash, DB);
@@ -45,7 +43,6 @@ hash_tree::hash_tree(
 			}
 			const_cast<database::blob &>(blob) = info->blob;
 			if(info->tree_state == database::table::hash::complete){
-				//make complete() return true
 				end_of_good = tree_block_count;
 			}
 		}else{
@@ -138,13 +135,6 @@ hash_tree::status hash_tree::check()
 		if(Status == good){
 			end_of_good = x+1;
 		}else if(Status == bad){
-			/*
-			We don't store who sent blocks so we can't know which host sent a bad
-			block unless the block it sent is equal to end_of_good (see
-			documentation in write_block()). We will "re"request this block from
-			any host.
-			*/
-			Block_Request.rerequest_block(x);
 			return bad;
 		}else if(Status == io_error){
 			return io_error;
@@ -483,11 +473,6 @@ hash_tree::status hash_tree::write_block(const int connection_ID,
 	std::pair<boost::uint64_t, unsigned> info;
 	if(block_info(block_num, row, info)){
 		assert(info.second == block.size());
-		/*
-		Add block as if it were good. If it's not then the check() function will
-		rerequest the block.
-		*/
-		Block_Request.add_block_local(connection_ID, block_num);
 		if(!database::pool::get()->blob_write(blob, block.data(), block.size(),
 			info.first))
 		{
@@ -498,17 +483,10 @@ hash_tree::status hash_tree::write_block(const int connection_ID,
 			return io_error;
 		}else{
 			if(end_of_good == block_num){
-				/*
-				We can only know if a block is bad if it's one past the highest good
-				block in the tree.
-				*/
+				//can only know that block is bad if it's one past highest good
 				return bad;
 			}else{
-				/*
-				We cannot know if this block is good or bad so we assume it's good.
-				The check() function will rerequest the block later if it turns out
-				to be bad.
-				*/
+				//we cannot know if this block is good or bad so we assume it's good
 				return good;
 			}
 		}

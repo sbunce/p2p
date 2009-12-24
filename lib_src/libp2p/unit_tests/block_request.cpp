@@ -11,7 +11,7 @@ void all_complete()
 	boost::uint64_t block_count = 128;
 	block_request BR(block_count);
 
-	//add 8 hosts that each have all blocks (socket_FD 0 .. 7)
+	//add 8 hosts that each have all blocks (connection_ID 0 to 7)
 	for(int x=0; x<8; ++x){
 		BR.add_host_complete(x);
 	}

@@ -14,7 +14,7 @@
 
 <b>1.0 Abstract</b>
 <blockquote>
-The libp2p library provides the means to connect to a global DHT (distributed
+The p2p library provides the means to connect to a global DHT (distributed
 hash table) on which to lookup and download files from multiple hosts
 concurrently.
 </blockquote>
@@ -143,25 +143,32 @@ After key exchange the following messages are sent by both sides.
 
 <fieldset>
 <pre>
-Message 0: peer identifier
+Message 0: local node ID
 Description: Randomly generated 20 byte number. This number identifies the host
 on the DHT.
 
 +---+---+---+
-|     H     |
+|     N     |
 +---+---+---+
   0  ...  20
+
+N = local node ID
+
+note: This is our node identifier on the DHT.
 </pre>
 </fieldset>
 </blockquote>
 
 <b>2.3 Slot Commands</b>
 <blockquote>
+<p>
+Slot commands are used to exchange hash tree blocks and file blocks.
+</p>
 <fieldset>
 <pre>
 name: error
 base10: 0
-description: Meaning depends on what it's sent in response to.
+description: Meaning depends on what the error is sent in response to.
 
 +---+
 | C |
@@ -185,11 +192,10 @@ description: Request a slot for downloading.
 
 C = command, H = hash
 
-Possible Responses:
-slot
-error
+possible responses: slot, error
 
-Note: If error response the slot is not opened.
+note: If error response the slot is not opened.
+note: The maximum number of slots that can be opened is 256.
 </pre>
 </fieldset>
 <br>
@@ -197,30 +203,39 @@ Note: If error response the slot is not opened.
 <pre>
 name: slot
 base10: 2
-description: Sent in response to request_slot.
+description: Sent in response to request_slot. This message contains the
+information needed to downloads hash tree blocks and file blocks.
 
 +---+---+---+---+---+---+---+---+---+   +---+---+---+   +---+---+---+
-| C | S | K |     F     |     R     | + |     O     | + |     O     |
+| C | S | K |     F     |     R     | + |     O     | + |     P     |
 +---+---+---+---+---+---+---+---+---+   +---+---+---+   +---+---+---+
   0   1   2   3  ...  10  11 ...  30      31 ...  x      x+1 ...  y
 
 C = command, S = slot number, K = status, F = file size, R = root hash,
-O = optional bit field
+O = optional hash tree bit field, P = optional file bit field
 
-Status:
+note: The hash of the file_size and root_hash bytes is the hash the file is
+tracked by. This should be verified before trusting the file_size and root_hash.
+
+note: The root hash is block 0 of the hash tree.
+
+possible status bytes:
 
 base10: 0
-Description: Hash tree complete, file complete. No bit fields appended.
+description: Hash tree complete, file complete.
 
 base10: 1
-Description: Hash tree complete, file incomplete. File bit field appended.
+description: Hash tree complete, file incomplete. File bit field appended.
+Expect have_file_block messages.
 
 base10: 2
-Description: Hash tree incomplete, file complete. Hash tree bit field appended.
+description: Hash tree incomplete, file complete. Expect have_hash_tree_block
+messages.
 
 base10: 3
-Description: Hash tree incomplete, file incomplete. Hash tree bit field
-appended (first) and file bit field appended (second).
+description: Hash tree incomplete, file incomplete. File bit field appended and
+hash tree bit field appended after that. Expect have_hash_tree_block and
+have_file_block messages.
 </pre>
 </fieldset>
 <br>
@@ -237,14 +252,15 @@ description: Request a block from a hash tree.
 
 C = command, S = slot ID, B = block number (VLI)
 
-Note: B is sized such that it can hold the maximum tree block number.
+possible responses: block, error
 
-Possible Responses:
-block
-error
+note: B is sized such that it can hold the maximum tree block number.
 
-Note: When error received it means host is no longer sharing the file. The slot
-is not automatically closed.
+note: If error response the hash_tree and file are no longer being shared. The
+slot is closed after. Any messages in the pipeline for the slot are ignored.
+
+note: Since only the contiguous good blocks are made available requests should
+be made in order from block 0 to the last block.
 </pre>
 </fieldset>
 <br>
@@ -259,16 +275,17 @@ description: Request a block from a file.
 +---+---+---+---+---+
   0   1   2  ...  n
 
-Note: B is sized such that it can hold the maximum file block number.
-
 C = command, S = slot ID, B = block number (VLI)
 
-Possible Responses:
-block
-error
+possible responses: block, error
 
-Note: When error received it means host is no longer sharing the file. The slot
-is not automatically closed.
+note: B is sized such that it can hold the maximum file block number.
+
+note: If error response the hash_tree and file are no longer being shared. The
+slot is closed after. Any messages in the pipeline for the slot are ignored.
+
+note: Since there is no forced order (as there is with the hash tree) to
+download blocks a rarest first policy should be used.
 </pre>
 </fieldset>
 <br>
@@ -286,6 +303,9 @@ shorter.
   0   1  ... 10240
 
 C = command, B = block (maximum size of 10240)
+
+note: It is a violation of the protocol to send a bad block. All blocks should
+be checked before they're sent.
 </pre>
 </fieldset>
 <br>
@@ -293,15 +313,16 @@ C = command, B = block (maximum size of 10240)
 <pre>
 name: have_hash_tree_block
 base10: 6
-description: After a slot is opened these messages are sent whenever the host
-gets a new hash tree block.
+description: 
 
 +---+---+---+---+---+
 | C | S |     B     |
 +---+---+---+---+---+
   0   1   2  ...  n
 
-C = command, B = block number (VLI)
+C = command, S = slot number, B = block number (VLI)
+
+note: B is sized such that it can hold the maximum hash tree block number.
 </pre>
 </fieldset>
 <br>
@@ -309,15 +330,17 @@ C = command, B = block number (VLI)
 <pre>
 name: have_file_block
 base10: 7
-description: After a slot is opened these messages are sent whenever the host
-gets a new file block.
+description: If slot message indicates the file is incomplete this message is
+sent whenever the host receives a new block.
 
 +---+---+---+---+---+
 | C | S |     B     |
 +---+---+---+---+---+
   0   1   2  ...  n
 
-C = command, B = block number (VLI)
+C = command, S = slot number, B = block number (VLI)
+
+note: B is sized such that it can hold the maximum file block number.
 </pre>
 </fieldset>
 <br>
@@ -341,7 +364,110 @@ C = command, S = slot number
 
 <b>2.4 DHT Commands</b>
 <blockquote>
+<fieldset>
+<pre>
+name: find_node
+base10: 9
+description: Request for closer nodes.
 
++---+---+---+---+
+| C |     N     |
++---+---+---+---+
+  0   1  ...  20
+
+C = command, N = node ID we're looking for
+
+possible responses: host_list
+</pre>
+</fieldset>
+<br>
+<fieldset>
+<pre>
+name: host_list
+base10: 10
+description: A list of nodes which are closer.
+
++---+---+---+   +---+---+---+   +---+---+---+
+| C | I | J | + |     K     | + |     L     |
++---+---+---+   +---+---+---+   +---+---+---+
+  0   1   2       3  ...  x      x+1 ...  y
+
+C = command, I = IPv4 address count, J = IPv6 address count,
+K = IPv4 address list, L = IPv6 address list
+
+note: The counts indicate how many addresses will be in the address lists.
+
+A K list element:
++---+---+---+---+---+
+|    IP     | port  |
++---+---+---+---+---+
+  0  ...  3   4   5
+
+A L list element:
++---+---+---+---+---+
+|    IP     | port  |
++---+---+---+---+---+
+  0  ...  7   8   9
+</pre>
+</fieldset>
+<br>
+<fieldset>
+<pre>
+name: store
+base10: 11
+description: Request that the node store a mapping from a file hash to our node
+ID.
+
++---+---+---+---+
+| C |     F     |
++---+---+---+---+
+  0   1  ...  20
+
+C = command, N = file hash
+
+note: The host has our node ID from the initial message.
+</pre>
+</fieldset>
+<br>
+<fieldset>
+<pre>
+name: find_value
+base10: 12
+description: Request a list of node IDs which have the specified file.
+
++---+---+---+---+
+| C |     F     |
++---+---+---+---+
+  0   1  ...  20
+
+C = command, N = file hash
+
+possible responses: node_list
+</pre>
+</fieldset>
+<br>
+<fieldset>
+<pre>
+name: node_list
+base10: 13
+description: A list of nodes.
+
++---+---+   +---+---+---+
+| C | I | + |     K     |
++---+---+   +---+---+---+
+  0   1       2  ...  x
+
+C = command, I = node count, J = node list
+
+note: The node count indicates how many nodes are in the list.
+
+A J node list element:
++---+---+---+
+|  node ID  |
++---+---+---+
+  0  ... 19
+</pre>
+</fieldset>
 </blockquote>
 
 <br>
@@ -350,14 +476,39 @@ C = command, S = slot number
 <blockquote>
 <p>
 Pipelining is done by sending multiple requests, and a new request whenever a
-response is received. This increases throughput because the sender will never be
+response is received. This increases throughput because the sender will not be
 idle waiting for a request.
 </p>
 <p>
-The maximum allowed pipeline size is 16. This would saturate a link with a
-delay throughput product of less than 163840 (10240 * 16) bytes. For example, a
-6Mb/s connection would have to have a latency greater than 213ms to not
-saturate. This number is highly arbitrary.
+A maximum of 16 (request_hash_tree_block + request_file_block) commands can be
+pipelined.
+</p>
+<p>
+It is recommended to use this pipeline sizing algorithm which should be run
+whenever a block request is fulfilled.
+</p>
+<br>
+<p>
+<b>Adaptive Pipeline Sizing Algorithm</b>
+</p>
+<pre>
+C = current requests unfulfilled (requests in pipeline)
+M = maximum pipeline size (this is what we adjust)
+A = absolute maximum pipeline size (M always < A)
+
+case: C == 0 && M < A
+	//pipeline is too small, increase by one
+	++M
+case: C == 1
+	//pipeline size optimal, do nothing
+case: C > 1 && M > 1
+	//pipeline is too large, decrease by one
+	--M;
+</pre>
+<p>
+The idea behind this algorithm is that it dynamically adjusts the pipeline size
+such that there is always one unfulfilled request. This minimizes the pipeline
+size and insures the computer sending blocks always has something to send.
 </p>
 </blockquote>
 
@@ -393,7 +544,7 @@ Hash trees are currently stored in SQLite. SQLite blobs are limited to
 hashed until this limitation can be addressed.
 </blockquote>
 
-<b>3.0 Building</b>
+<b>3.0 Building (THIS SECTION NEEDS WORK)</b>
 <blockquote>
 </blockquote>
 
@@ -427,7 +578,12 @@ Install to "C:\gtkmm" or pkg-config won't work properly.
 
 <p>
 <a href="http://python.org/download/">Python</a> &#62;= 1.5<br>
-This is used to run the build system (SCons).
+This is used to run the build system.
+</p>
+
+<p>
+<a href="http://scons.org">SCons</a> &#62;= 1.2 (lesser may work)<br>
+This is the software used to build.
 </p>
 
 <p>

@@ -175,6 +175,70 @@ bool message::key_exchange_rB::recv(network::connection_info & CI)
 }
 //END key_exchange_rB
 
+//BEGIN request_hash_tree_block
+message::request_hash_tree_block::request_hash_tree_block(
+	const unsigned char slot_num, const boost::uint64_t block,
+	const boost::uint64_t tree_block_count)
+{
+	buf.append(protocol::request_hash_tree_block)
+		.append(slot_num)
+		.append(convert::encode_VLI(block, tree_block_count));
+}
+
+message::request_hash_tree_block::request_hash_tree_block(
+	const boost::uint64_t tree_block_count)
+{
+	VLI_size = convert::VLI_size(tree_block_count);
+}
+
+bool message::request_hash_tree_block::expects(network::connection_info & CI)
+{
+	return CI.recv_buf[0] == protocol::request_hash_tree_block;
+}
+
+bool message::request_hash_tree_block::recv(network::connection_info & CI)
+{
+	if(CI.recv_buf.size() >= 2 + VLI_size){
+		buf.append(CI.recv_buf.data(), 2 + VLI_size);
+		CI.recv_buf.erase(0, 2 + VLI_size);
+		return true;
+	}
+	return false;
+}
+//END request_hash_tree_block
+
+//BEGIN request_file_block
+message::request_file_block::request_file_block(
+	const unsigned char slot_num, const boost::uint64_t block,
+	const boost::uint64_t file_block_count)
+{
+	buf.append(protocol::request_file_block)
+		.append(slot_num)
+		.append(convert::encode_VLI(block, file_block_count));
+}
+
+message::request_file_block::request_file_block(
+	const boost::uint64_t tree_block_count)
+{
+	VLI_size = convert::VLI_size(tree_block_count);
+}
+
+bool message::request_file_block::expects(network::connection_info & CI)
+{
+	return CI.recv_buf[0] == protocol::request_hash_tree_block;
+}
+
+bool message::request_file_block::recv(network::connection_info & CI)
+{
+	if(CI.recv_buf.size() >= 2 + VLI_size){
+		buf.append(CI.recv_buf.data(), 2 + VLI_size);
+		CI.recv_buf.erase(0, 2 + VLI_size);
+		return true;
+	}
+	return false;
+}
+//END request_file_block
+
 //BEGIN request_slot
 message::request_slot::request_slot(
 	boost::function<bool (boost::shared_ptr<base>)> func_in)

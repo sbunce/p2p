@@ -9,6 +9,7 @@ connection::connection(
 	Proactor(Proactor_in),
 	blacklist_state(-1),
 	Slot_Manager(
+		connection_ID,
 		boost::bind(&connection::expect, this, _1),
 		boost::bind(&connection::send, this, _1)
 	)
@@ -24,7 +25,7 @@ connection::connection(
 	}
 
 	//register possible incoming messages
-	Non_Response.push_back(boost::shared_ptr<message::base>(new message::request_slot(
+	Expect_Anytime.push_back(boost::shared_ptr<message::base>(new message::request_slot(
 		boost::bind(&slot_manager::recv_request_slot, &Slot_Manager, _1))));
 
 	CI.recv_call_back = boost::bind(&connection::proactor_recv_call_back, this, _1);
@@ -72,7 +73,7 @@ void connection::proactor_recv_call_back(network::connection_info & CI)
 	}
 	//check if message is not a response
 	for(std::vector<boost::shared_ptr<message::base> >::iterator
-		iter_cur = Non_Response.begin(), iter_end = Non_Response.end();
+		iter_cur = Expect_Anytime.begin(), iter_end = Expect_Anytime.end();
 		iter_cur != iter_end; ++iter_cur)
 	{
 		if((*iter_cur)->expects(CI)){

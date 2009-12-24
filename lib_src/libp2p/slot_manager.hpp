@@ -17,9 +17,12 @@ class slot_manager : private boost::noncopyable
 {
 public:
 	slot_manager(
+		const int connection_ID_in,
 		boost::function<void (boost::shared_ptr<message::base>)> expect_in,
 		boost::function<void (boost::shared_ptr<message::base>)> send_in
 	);
+
+	const int connection_ID;
 
 	/*
 	recv_request_slot:
@@ -66,6 +69,7 @@ private:
 	make_slot_requests:
 		Does pending slot requests.
 	*/
+	void make_block_requests(boost::shared_ptr<slot> S);
 	void make_slot_requests();
 };
 #endif

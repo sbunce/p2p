@@ -100,6 +100,36 @@ public:
 	virtual bool recv(network::connection_info & CI);
 };
 
+class request_hash_tree_block : public base
+{
+public:
+	//ctor to recv message
+	request_hash_tree_block(const unsigned char slot_num,
+		const boost::uint64_t block, const boost::uint64_t tree_block_count);
+	//ctor to send message
+	request_hash_tree_block(const boost::uint64_t tree_block_count);
+	virtual bool expects(network::connection_info & CI);
+	virtual bool recv(network::connection_info & CI);
+private:
+	//size (bytes) of the block number field
+	unsigned VLI_size;
+};
+
+class request_file_block : public base
+{
+public:
+	//ctor to recv message
+	request_file_block(const unsigned char slot_num,
+		const boost::uint64_t block, const boost::uint64_t file_block_count);
+	//ctor to send message
+	request_file_block(const boost::uint64_t file_block_count);
+	virtual bool expects(network::connection_info & CI);
+	virtual bool recv(network::connection_info & CI);
+private:
+	//size (bytes) of the block number field
+	unsigned VLI_size;
+};
+
 class request_slot : public base
 {
 public:

@@ -9,18 +9,21 @@ block_request::block_request(
 	local_block.set();
 }
 
-void block_request::add_block_local(const int connection_ID, const boost::uint64_t block)
+void block_request::add_block_local(const boost::uint64_t block)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-
-	//add block
 	if(!local_block.empty()){
 		local_block[block] = 0;
 		if(local_block.none()){
 			local_block.clear();
 		}
 	}
+}
 
+void block_request::add_block_local(const int connection_ID, const boost::uint64_t block)
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	add_block_local(block);
 	//erase request element this block fulfils
 	std::pair<std::multimap<boost::uint64_t, request_element>::iterator,
 		std::multimap<boost::uint64_t, request_element>::iterator>
@@ -38,11 +41,9 @@ void block_request::add_block_local(const int connection_ID, const boost::uint64
 void block_request::add_block_remote(const int connection_ID, const boost::uint64_t block)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-
 	//find bitset for remote host
 	std::map<int, bit_field>::iterator remote_iter = remote_block.find(connection_ID);
 	assert(remote_iter != remote_block.end());
-
 	//add block
 	if(!remote_iter->second.empty()){
 		remote_iter->second[block] = 0;
@@ -105,7 +106,6 @@ bool block_request::find_next_rarest(const int connection_ID, boost::uint64_t & 
 		//we are waiting on a bit_field from the remote host most likely
 		return false;
 	}
-
 	//find rarest block that we need, that remote host has
 	block = 0;                            //current block being checked (reused)
 	boost::uint64_t rare_block;           //rarest known block
@@ -123,17 +123,14 @@ bool block_request::find_next_rarest(const int connection_ID, boost::uint64_t & 
 		}else{
 			block = local_block.find_next(block);
 		}
-
 		//stopping case, host doesn't have a block we need
 		if(block == bit_field::npos){
 			break;
 		}
-
 		if(request.find(block) != request.end()){
 			//the block has already been requested
 			continue;
 		}
-
 		//check if the remote host has the block we're checking for
 		if(remote_iter->second.empty() || remote_iter->second[block] == 0){
 			/*
@@ -148,7 +145,6 @@ bool block_request::find_next_rarest(const int connection_ID, boost::uint64_t & 
 					++hosts;
 				}
 			}
-
 			if(hosts == 1){
 				/*
 				If a block has maximum rarity (only one host has it) there is no
@@ -178,7 +174,6 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 	if(complete()){
 		return false;
 	}
-
 	/*
 	Check for a timed out request to the host. If a request to the host has timed
 	out we don't want to make any additional requests because they would likely
@@ -194,7 +189,6 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 			return false;
 		}
 	}
-
 	/*
 	Check to see if requests to other hosts have timed out. If they have we can
 	request the block from this host.
@@ -209,7 +203,6 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 			return true;
 		}
 	}
-
 	/*
 	At this point we know there are no timed out requests to the host and there
 	are no re-requests to do. We move on to checking for the next rarest block to
@@ -229,7 +222,6 @@ void block_request::remove_host(const int connection_ID)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	remote_block.erase(connection_ID);
-
 	//erase request elements for this host
 	std::multimap<boost::uint64_t, request_element>::iterator
 		iter_cur = request.begin(), iter_end = request.end();
@@ -246,4 +238,19 @@ void block_request::rerequest_block(const boost::uint64_t block)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	request.erase(block);
+}
+
+unsigned block_request::unfulfilled(const int connection_ID)
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	unsigned count = 0;
+	for(std::multimap<boost::uint64_t, request_element>::iterator
+		iter_cur = request.begin(), iter_end = request.end(); iter_cur != iter_end;
+		++iter_cur)
+	{
+		if(iter_cur->second.connection_ID == connection_ID){
+			++count;
+		}
+	}
+	return count;
 }

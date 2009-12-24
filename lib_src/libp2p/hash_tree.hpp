@@ -70,8 +70,7 @@ public:
 	check:
 		If the tree is not complete the check function should be called to
 		determine what blocks are good.
-		Note: This function does a lot of disk access and can take a long time to
-			run.
+		Note: This function may take a long time to run.
 	check_file_block:
 		Checks a file block against a hash in the hash tree. Returns GOOD if file
 		block good. Returns BAD if file block bad. Returns IO_ERROR if cannot read
@@ -110,16 +109,6 @@ public:
 	status read_block(const boost::uint64_t block_num, std::string & block);
 	status write_block(const int connection_ID, const boost::uint64_t block_num,
 		const std::string & block);
-
-	/*
-	This is used to determine what blocks to request when downloading the hash
-	tree. The check functions will call block_request::remove_block when a block
-	hash fails.
-	Note: The block_request keeps track of all the blocks we have, not blocks
-		which are known to be good. For a block to be good it must be in
-		Block_Request and the block number must be < end_of_good.
-	*/
-	block_request Block_Request;
 
 private:
 	/*

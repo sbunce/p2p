@@ -1,14 +1,29 @@
 #include "slot_manager.hpp"
 
 slot_manager::slot_manager(
+	const int connection_ID_in,
 	boost::function<void (boost::shared_ptr<message::base>)> expect_in,
 	boost::function<void (boost::shared_ptr<message::base>)> send_in
 ):
+	connection_ID(connection_ID_in),
 	expect(expect_in),
 	send(send_in),
 	open_slots(0)
 {
 
+}
+
+void slot_manager::make_block_requests(boost::shared_ptr<slot> S)
+{
+LOGGER << "woot";
+/*
+	if(!S->Hash_Tree.complete()){
+		int unfullfilled = S->Hash_Tree.
+
+	}else if(!S->File.complete()){
+
+	}
+*/
 }
 
 void slot_manager::make_slot_requests()
@@ -67,13 +82,13 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 		status = 0;
 	}else if(slot_iter->Hash_Tree.complete() && !slot_iter->File.complete()){
 		status = 1;
-LOGGER << "stub: add support for incomplete";
+LOGGER << "stub: add support for incomplete"; exit(1);
 	}else if(!slot_iter->Hash_Tree.complete() && slot_iter->File.complete()){
 		status = 2;
-LOGGER << "stub: add support for incomplete";
+LOGGER << "stub: add support for incomplete"; exit(1);
 	}else if(!slot_iter->Hash_Tree.complete() && !slot_iter->File.complete()){
 		status = 3;
-LOGGER << "stub: add support for incomplete";
+LOGGER << "stub: add support for incomplete"; exit(1);
 	}
 
 	//check to make sure we have valid file_size/root_hash
@@ -113,7 +128,9 @@ LOGGER << "stub: add support for incomplete";
 
 bool slot_manager::recv_request_slot_failed(boost::shared_ptr<message::base> M)
 {
+//DEBUG, eventually handle this failure by removing source
 LOGGER;
+	--open_slots;
 	return true;
 }
 
@@ -121,7 +138,6 @@ LOGGER;
 bool slot_manager::recv_slot(boost::shared_ptr<message::base> M,
 	const std::string hash)
 {
-//DEBUG, need to handle setting up possible incoming have_* messages
 	share::slot_iterator slot_iter = share::singleton().find_slot(hash);
 	if(slot_iter == share::singleton().end_slot()){
 		LOGGER << "failed " << hash;
@@ -137,7 +153,22 @@ bool slot_manager::recv_slot(boost::shared_ptr<message::base> M,
 		return false;
 	}
 	LOGGER << hash;
-//DEBUG, need to start making requests here
+	if(M->buf[2] == 0){
+/* DEBUG
+It's possible we will get the file size at this point. We need a function within
+slot to take the file size. The postcondition of this function will be that the
+hash tree and file will be instantiated.
+*/
+		//slot_iter->Hash_Tree.Block_Request.
+	}else if(M->buf[2] == 1){
+LOGGER << "stub: add support for incomplete"; exit(1);
+	}else if(M->buf[2] == 2){
+LOGGER << "stub: add support for incomplete"; exit(1);
+	}else if(M->buf[2] == 3){
+LOGGER << "stub: add support for incomplete"; exit(1);
+	}
+
+	make_block_requests(slot_iter.get());
 	return true;
 }
 

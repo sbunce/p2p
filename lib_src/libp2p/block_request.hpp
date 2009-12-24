@@ -29,42 +29,35 @@ public:
 	block_request(const boost::uint64_t block_count_in);
 
 	/*
-	add_block_local:
-		Adds a block that we have that does not need to be requested. This is
-		called when we hash check and discover that a block is good.
-		Note: If the block is not from anyone, for example if it hash checked good
-			during resume, then use -1 as the connection_ID.
+	add_block_local (one paramter):
+		Add block. Used when not known what host block came from.
+	add_block_local (two parameters):
+		Add block from specific host.
 	add_block_remote:
-		Adds a block that a remote host has. This is called when a remote host
-		tells us it got a new block.
+		Add block that we know remote host has.
 	add_host_complete:
-		Adds a remote host that has all blocks available.
+		Add remote host that has all blocks.
 	add_host_incomplete:
-		Adds a bitset for a remote host. This function is used when the remote
-		host sends us a bitfield because it doesn't have all blocks.
-	append_bitfield:
-		Appends our bitfield to buffer. The appended bitfield is big-endian.
+		Add remote host that has only some blocks.
 	bytes:
-		Returns the size of the bit_field (bytes).
+		Returns size of bit_field. (bytes)
 	complete:
 		Returns true if we have all blocks.
 	have_block:
-		Returns true if we have the specified block.
+		Returns true if we have specified block.
 	next_request:
-		Returns true and sets block to the number of the next block we need to
-		request from the remote host. If returns false then the remote host has no
-		blocks we need or we are waiting on a bit_field from the host.
+		Returns true and sets block to next block to request. Or returns false if
+		host not yet added or no blocks to request from host.
 		Precondition: !complete()
 	remove_host:
-		Removes bit_field for host. This is done when a host disconnects or when
-		we stop downloading the file from them. Any unfulfilled requests are
-		immediately rerequested.
-		Precondition: host must have been previously added.
+		Remove host as source for blocks. Any blocks requested from this host are
+		rerequested.
 	rerequest_block:
-		This function is called when we receive a bad block but we don't know who
-		it is from. When this happens we need to "re"request the block from any
-		host. This function is commonly called when reassembling a hash tree.
+		Rerequest block from any host.
+	unfulfilled:
+		Returns the number of unfulfilled requests.
 	*/
+	void add_block_local(const boost::uint64_t block);
 	void add_block_local(const int connection_ID, const boost::uint64_t block);
 	void add_block_remote(const int connection_ID, const boost::uint64_t block);
 	void add_host_complete(const int connection_ID);
@@ -75,6 +68,7 @@ public:
 	bool next_request(const int connection_ID, boost::uint64_t & block);
 	void remove_host(const int connection_ID);
 	void rerequest_block(const boost::uint64_t block);
+	unsigned unfulfilled(const int connection_ID);
 
 private:
 	//locks access to all data members
@@ -105,12 +99,10 @@ private:
 			connection_ID(connection_ID_in),
 			request_time(request_time_in)
 		{}
-
 		request_element(const request_element & RE):
 			connection_ID(RE.connection_ID),
 			request_time(RE.request_time)
 		{}
-
 		const int connection_ID;        //socket request was made to
 		const std::time_t request_time; //time request was made
 	};

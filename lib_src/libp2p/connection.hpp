@@ -38,7 +38,7 @@ private:
 	Incoming messages that aren't responses are processed by the messages in this
 	container. The message objects in this container are saved.
 	*/
-	std::vector<boost::shared_ptr<message::base> > Non_Response;
+	std::vector<boost::shared_ptr<message::base> > Expect_Anytime;
 
 	encryption Encryption; //key exchange and stream cypher
 	std::string peer_ID;   //holds peer_ID when it's received
