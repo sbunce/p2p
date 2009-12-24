@@ -24,7 +24,8 @@ void all_complete()
 		if(BR.next_request(temp, block)){
 			BR.add_block_local(temp, block);
 		}else{
-			LOGGER; ++fail;
+			//exit immediately to avoid infinite loop on error
+			LOGGER; exit(1);
 		}
 	}
 }

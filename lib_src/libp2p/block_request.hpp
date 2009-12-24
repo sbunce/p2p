@@ -26,7 +26,10 @@ This class is threadsafe.
 class block_request : private boost::noncopyable
 {
 public:
-	block_request(const boost::uint64_t block_count_in);
+	block_request(
+		const boost::uint64_t block_count_in,
+		const bool approve_all = true
+	);
 
 	/*
 	add_block_local (one paramter):
@@ -57,6 +60,7 @@ public:
 	unfulfilled:
 		Returns the number of unfulfilled requests.
 	*/
+	void add_block_approved(const boost::uint64_t block);
 	void add_block_local(const boost::uint64_t block);
 	void add_block_local(const int connection_ID, const boost::uint64_t block);
 	void add_block_remote(const int connection_ID, const boost::uint64_t block);
@@ -78,16 +82,26 @@ private:
 	const boost::uint64_t block_count;
 
 	/*
-	Bits set to 1 represent blocks we need to request. Bits set to 0 represent
+	Bits set to 0 represent blocks we need to request. Bits set to 1 represent
 	blocks we have. If the container is empty it's the same as all bits being set
-	to 0 (this is done to save memory).
+	to 1 (this is done to save memory).
 	*/
 	bit_field local_block;
 
 	/*
+	Bits set to 1 represent blocks we are allowed to request. Bits set to 0
+	represent blocks we are forbidden from requesting. If the container is empty
+	it means we are allowed to request any block.
+
+	This is used for hash tree reconstruction to insure we only request blocks we
+	can hash check.
+	*/
+	bit_field approved_block;
+
+	/*
 	This is used to rerequest blocks that haven't been received after a certain
-	time. The connection_ID is needed so that we don't make a re-request to a host
-	which 
+	time. The connection_ID is needed so that we don't make a rerequest to a
+	host which has a timed out block request.
 	*/
 	class request_element
 	{

@@ -20,7 +20,7 @@ public:
 		group_size(group_size_in),
 		vec((groups * group_size) % 8 == 0 ?
 			((groups * group_size) / 8) : ((groups * group_size) / 8 + 1),
-			'\0'
+			0
 		),
 		max_group_value(std::pow(static_cast<const double>(2),
 			static_cast<const int>(group_size)) - 1)
@@ -154,6 +154,17 @@ public:
 		return *this;
 	}
 
+	//returns true if all bits set to one
+	bool all_set() const
+	{
+		for(boost::uint64_t x=0; x<vec.size(); ++x){
+			if(vec[x] != 255){
+				return false;
+			}
+		}
+		return true;
+	}
+
 	//sets the size of the bit_field to zero
 	void clear()
 	{
@@ -167,51 +178,14 @@ public:
 		return groups == 0;
 	}
 
-	/*
-	Searches the bit_field starting at 0 for an element != 0. Returns the index
-	of that element or npos if all bits are 0.
-	*/
-	boost::uint64_t find_first() const
-	{
-		if(groups == 0){
-			return npos;
-		}else{
-			for(boost::uint64_t x=0; x<groups; ++x){
-				if(get_num(x) != 0){
-					return x;
-				}
-			}
-			return npos;
-		}
-	}
-
-	/*
-	Searches the bit_field starting at > pos for an element != 0. Returns the index
-	of that element or npos if all bits are 0.
-	Note: If size() == 0 then npos is always returned.
-	*/
-	boost::uint64_t find_next(const boost::uint64_t pos) const
-	{
-		if(groups == 0){
-			return npos;
-		}else{
-			for(boost::uint64_t x=pos+1; x<groups; ++x){
-				if(get_num(x) != 0){
-					return x;
-				}
-			}
-			return npos;
-		}
-	}
-
 	//returns const reference to internal buffer
 	const std::vector<unsigned char> & internal_buffer() const
 	{
 		return vec;
 	}
 
-	//return true if all groups are equal to zero
-	bool none() const
+	//return true if all bits set to zero
+	bool none_set() const
 	{
 		for(boost::uint64_t x=0; x<vec.size(); ++x){
 			if(vec[x] != 0){

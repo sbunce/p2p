@@ -1,20 +1,33 @@
 #include "block_request.hpp"
 
 block_request::block_request(
-	const boost::uint64_t block_count_in
+	const boost::uint64_t block_count_in,
+	const bool approve_all
 ):
 	block_count(block_count_in),
-	local_block(block_count)
+	local_block(block_count),
+	approved_block(approve_all ? 0 : block_count)
 {
-	local_block.set();
+
+}
+
+void block_request::add_block_approved(const boost::uint64_t block)
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	if(!approved_block.empty()){
+		approved_block[block] = true;
+		if(approved_block.all_set()){
+			approved_block.clear();
+		}
+	}
 }
 
 void block_request::add_block_local(const boost::uint64_t block)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	if(!local_block.empty()){
-		local_block[block] = 0;
-		if(local_block.none()){
+		local_block[block] = true;
+		if(local_block.all_set()){
 			local_block.clear();
 		}
 	}
@@ -46,8 +59,8 @@ void block_request::add_block_remote(const int connection_ID, const boost::uint6
 	assert(remote_iter != remote_block.end());
 	//add block
 	if(!remote_iter->second.empty()){
-		remote_iter->second[block] = 0;
-		if(remote_iter->second.none()){
+		remote_iter->second[block] = true;
+		if(remote_iter->second.all_set()){
 			remote_iter->second.clear();
 		}
 	}
@@ -94,7 +107,7 @@ bool block_request::have_block(const boost::uint64_t block)
 	if(complete()){
 		return true;
 	}else{
-		return local_block[block] == 0;
+		return local_block[block] == true;
 	}
 }
 
@@ -106,65 +119,42 @@ bool block_request::find_next_rarest(const int connection_ID, boost::uint64_t & 
 		//we are waiting on a bit_field from the remote host most likely
 		return false;
 	}
-	//find rarest block that we need, that remote host has
-	block = 0;                            //current block being checked (reused)
-	boost::uint64_t rare_block;           //rarest known block
-	boost::uint64_t rare_block_hosts = 0; //number of hosts that have a block
-	bool checked_zero = false;
-	while(true){
-		/*
-		Special case needed for zero since bit_field::find_next() searches greater
-		than specified number and we can't specify -1 since the parameter is
-		unsigned.
-		*/
-		if(block == 0 && !checked_zero){
-			block = local_block.find_first();
-			checked_zero = true;
-		}else{
-			block = local_block.find_next(block);
-		}
-		//stopping case, host doesn't have a block we need
-		if(block == bit_field::npos){
-			break;
-		}
-		if(request.find(block) != request.end()){
-			//the block has already been requested
+	boost::uint64_t rare_block;           //most rare block
+	boost::uint64_t rare_block_hosts = 0; //number of hosts that have rare_block
+	for(block = 0; block < local_block.size(); ++block){
+		if(local_block[block]){
+			//we already have this block
 			continue;
 		}
-		//check if the remote host has the block we're checking for
-		if(remote_iter->second.empty() || remote_iter->second[block] == 0){
-			/*
-			Remote host has the block we need. Check it's rarity by looking to see
-			how many other hosts have the block.
-			*/
-			boost::uint32_t hosts = 0;
-			for(std::map<int, bit_field>::iterator iter_cur = remote_block.begin(),
-				iter_end = remote_block.end(); iter_cur != iter_end; ++iter_cur)
-			{
-				if(iter_cur->second.empty() || iter_cur->second[block] == 0){
-					++hosts;
-				}
-			}
-			if(hosts == 1){
-				/*
-				If a block has maximum rarity (only one host has it) there is no
-				need to search any further. We can request this block.
-				*/
-				return true;
-			}else if(hosts < rare_block_hosts || rare_block_hosts == 0){
-				//a new most-rare block found. This is a block that > 1 hosts have
-				rare_block = block;
-				rare_block_hosts = hosts;
+		if(!approved_block.empty() && !approved_block[block]){
+			//block is not approved
+			continue;
+		}
+		//check rarity
+		boost::uint32_t hosts = 0;
+		for(std::map<int, bit_field>::iterator iter_cur = remote_block.begin(),
+			iter_end = remote_block.end(); iter_cur != iter_end; ++iter_cur)
+		{
+			if(iter_cur->second.empty() || iter_cur->second[block]){
+				++hosts;
 			}
 		}
+		if(hosts == 1){
+			//block with maximum rarity found (only one host has it)
+			return true;
+		}else if(hosts < rare_block_hosts || rare_block_hosts == 0){
+			//a new most-rare block found. This is a block that > 1 hosts have
+			rare_block = block;
+			rare_block_hosts = hosts;
+		}
 	}
-	if(rare_block_hosts != 0){
+	if(rare_block_hosts == 0){
+		//host has no blocks we need
+		return false;
+	}else{
 		//a block was found that we need
 		block = rare_block;
 		return true;
-	}else{
-		//host has no blocks we need
-		return false;
 	}
 }
 
@@ -199,7 +189,8 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 	{
 		if(std::time(NULL) - iter_cur->second.request_time > protocol::timeout){
 			block = iter_cur->first;
-			request.insert(std::make_pair(block, request_element(connection_ID, std::time(NULL))));
+			request.insert(std::make_pair(block, request_element(connection_ID,
+				std::time(NULL))));
 			return true;
 		}
 	}
@@ -210,7 +201,8 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 	*/
 	if(find_next_rarest(connection_ID, block)){
 		//there is a block to request
-		request.insert(std::make_pair(block, request_element(connection_ID, std::time(NULL))));
+		request.insert(std::make_pair(block, request_element(connection_ID,
+			std::time(NULL))));
 		return true;
 	}else{
 		//no blocks to request at this time.
