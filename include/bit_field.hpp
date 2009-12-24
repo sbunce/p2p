@@ -13,7 +13,7 @@ class bit_field
 {
 public:
 	bit_field(
-		const boost::uint64_t & groups_in,
+		const boost::uint64_t groups_in,
 		const unsigned group_size_in = 1
 	):
 		groups(groups_in),
@@ -60,7 +60,7 @@ public:
 		}
 
 		//for b[i] = x;
-		proxy & operator = (const boost::uint64_t & num)
+		proxy & operator = (const boost::uint64_t num)
 		{
 			BF.set_num(index, num);
 			return *this;
@@ -76,7 +76,7 @@ public:
 	private:
 		proxy(
 			bit_field & BF_in,
-			const boost::uint64_t & index_in
+			const boost::uint64_t index_in
 		):
 			BF(BF_in),
 			index(index_in)
@@ -190,7 +190,7 @@ public:
 	of that element or npos if all bits are 0.
 	Note: If size() == 0 then npos is always returned.
 	*/
-	boost::uint64_t find_next(const boost::uint64_t & pos) const
+	boost::uint64_t find_next(const boost::uint64_t pos) const
 	{
 		if(groups == 0){
 			return npos;
@@ -233,7 +233,7 @@ public:
 	}
 
 	//changes the number of groups in the bit_field to specified size
-	void resize(const boost::uint64_t & size)
+	void resize(const boost::uint64_t size)
 	{
 		groups = size;
 		vec.resize(
@@ -274,7 +274,7 @@ private:
 	unsigned max_group_value;
 
 	//get a number from the bitgroup_set
-	boost::uint64_t get_num(const boost::uint64_t & index) const
+	boost::uint64_t get_num(const boost::uint64_t index) const
 	{
 		boost::uint64_t byte_offset = index * group_size / 8;
 		boost::uint64_t bit_offset = index * group_size % 8;
@@ -303,7 +303,7 @@ private:
 	}
 
 	//set a number in the bitgroup_set
-	void set_num(const boost::uint64_t & index, const unsigned num)
+	void set_num(const boost::uint64_t index, const unsigned num)
 	{
 		assert(num <= max_group_value);
 		boost::uint64_t byte_offset = index * group_size / 8;

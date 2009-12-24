@@ -37,8 +37,8 @@ Returns num encoded in big-endian. However only returns enough bytes to hold
 range of numbers [0, end). We call this a VLI (variable length interger).
 Note: This only works with unsigned integers.
 */
-static std::string encode_VLI(const boost::uint64_t & num,
-	const boost::uint64_t & end)
+static std::string encode_VLI(const boost::uint64_t num,
+	const boost::uint64_t end)
 {
 	assert(num < end);
 	//determine index of first used byte for max
@@ -81,7 +81,7 @@ static boost::uint64_t decode_VLI(std::string encoded)
 }
 
 //returns the size of string encode_VLI would return given the specified end
-static unsigned VLI_size(const boost::uint64_t & end)
+static unsigned VLI_size(const boost::uint64_t end)
 {
 	assert(end > 0);
 	unsigned index = 0;
@@ -150,7 +150,7 @@ static std::string bin_to_hex(const std::string & bin)
 }
 
 //convert bytes to reasonable SI unit, example 1024 -> 1kB
-static std::string size_SI(const boost::uint64_t & bytes)
+static std::string size_SI(const boost::uint64_t bytes)
 {
 	std::ostringstream oss;
 	if(bytes < 1024){
