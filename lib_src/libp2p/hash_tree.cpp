@@ -20,11 +20,8 @@ hash_tree::hash_tree(
 		file_size % protocol::file_block_size == 0 ?
 			protocol::file_block_size :
 			file_size % protocol::file_block_size
-	),
-	Tree_Block(tree_block_count, false),
-	File_Block(file_block_count, true)
+	)
 {
-	Tree_Block.approve_block(0);
 	if(!hash.empty()){
 		boost::shared_ptr<database::table::hash::info>
 			info = database::table::hash::find(hash, DB);
@@ -135,10 +132,10 @@ hash_tree::status hash_tree::check()
 			return bad;
 		}else if(Status == io_error){
 			return io_error;
+		}else if(x == tree_block_count - 1){
+			//last block checked good
+			database::table::hash::set_state(hash, database::table::hash::complete);
 		}
-	}
-	if(tree_complete()){
-		database::table::hash::set_state(hash, database::table::hash::complete);
 	}
 	return good;
 }
@@ -147,9 +144,8 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t block_num)
 {
 	SHA1 SHA;
 	char buf[protocol::file_block_size];
-
 	if(block_num == 0){
-		//special requirements to check root hash, see header documentation for hash
+		//special requirements to check root_hash, see documentation for root_hash
 		if(!database::pool::get()->blob_read(blob, buf, SHA1::bin_size, 0)){
 			return io_error;
 		}
@@ -168,20 +164,16 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t block_num)
 		boost::uint64_t parent;
 		if(!block_info(block_num, row, info, parent)){
 			//invalid block sent to block_info
-			LOGGER << "programmer error\n";
-			exit(1);
+			LOGGER; exit(1);
 		}
-
 		//read children
 		if(!database::pool::get()->blob_read(blob, buf, info.second, info.first)){
 			return io_error;
 		}
-
 		//create hash for children
 		SHA.init();
 		SHA.load(buf, info.second);
 		SHA.end();
-
 		//verify parent hash is a hash of the children
 		if(!database::pool::get()->blob_read(blob, buf, SHA1::bin_size, parent)){
 			return io_error;
@@ -361,14 +353,7 @@ hash_tree::status hash_tree::create()
 			bytes_remaining -= read_size;
 		}
 	}
-	Tree_Block.force_complete();
-	File_Block.force_complete();
 	return good;
-}
-
-bool hash_tree::file_complete()
-{
-	return File_Block.complete();
 }
 
 boost::uint64_t hash_tree::file_hash_to_tree_hash(boost::uint64_t row_hash,
@@ -413,7 +398,7 @@ boost::uint64_t hash_tree::file_size_to_tree_size(const boost::uint64_t file_siz
 	}
 }
 
-hash_tree::status hash_tree::read_tree_block(const boost::uint64_t block_num,
+hash_tree::status hash_tree::read_block(const boost::uint64_t block_num,
 	network::buffer & buf)
 {
 	std::pair<boost::uint64_t, unsigned> info;
@@ -455,7 +440,6 @@ boost::uint64_t hash_tree::row_to_file_hash_offset(
 		//no hash tree, root hash is file hash
 		return file_hash_offset;
 	}
-
 	//add up size (bytes) of rows until reaching the last row
 	for(int x=0; x<row.size()-1; ++x){
 		file_hash_offset += row[x] * SHA1::bin_size;
@@ -463,20 +447,27 @@ boost::uint64_t hash_tree::row_to_file_hash_offset(
 	return file_hash_offset;
 }
 
-bool hash_tree::tree_complete()
-{
-	return Tree_Block.complete();
-}
-
-hash_tree::status hash_tree::write_tree_block(const int connection_ID,
-	const boost::uint64_t block_num, const network::buffer & buf)
+hash_tree::status hash_tree::write_block(const boost::uint64_t block_num,
+	const network::buffer & buf)
 {
 	std::pair<boost::uint64_t, unsigned> info;
-	if(block_info(block_num, row, info)){
+	boost::uint64_t parent;
+	if(block_info(block_num, row, info, parent)){
 		assert(info.second == buf.size());
-
-//DEBUG, check block here
-
+		if(block_num != 0){
+			char parent_buf[SHA1::bin_size];
+			if(!database::pool::get()->blob_read(blob, parent_buf, SHA1::bin_size, parent)){
+				return io_error;
+			}
+			SHA1 SHA;
+			SHA.init();
+			SHA.load(reinterpret_cast<char *>(const_cast<network::buffer &>(buf).data()),
+				info.second);
+			SHA.end();
+			if(std::memcmp(parent_buf, SHA.bin(), SHA1::bin_size) != 0){
+				return bad;
+			}
+		}
 		if(!database::pool::get()->blob_write(blob,
 			reinterpret_cast<char *>(const_cast<network::buffer &>(buf).data()),
 			buf.size(), info.first))
@@ -484,7 +475,6 @@ hash_tree::status hash_tree::write_tree_block(const int connection_ID,
 			return io_error;
 		}
 	}else{
-		LOGGER << "invalid block number";
-		exit(1);
+		LOGGER; exit(1);
 	}
 }

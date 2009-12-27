@@ -1,12 +1,9 @@
 #include "block_request.hpp"
 
-block_request::block_request(
-	const boost::uint64_t block_count_in,
-	const bool approve_all
-):
+block_request::block_request(const boost::uint64_t block_count_in):
 	block_count(block_count_in),
 	local(block_count),
-	approved(approve_all ? 0 : block_count)
+	approved(block_count)
 {
 
 }
@@ -41,6 +38,13 @@ void block_request::add_block_local(const int connection_ID, const boost::uint64
 		}
 	}
 	assert(found);
+}
+
+void block_request::add_block_local_all()
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	local.clear();
+	request.clear();
 }
 
 void block_request::add_block_remote(const int connection_ID, const boost::uint64_t block)
@@ -85,6 +89,12 @@ void block_request::approve_block(const boost::uint64_t block)
 			approved.clear();
 		}
 	}
+}
+
+void block_request::approve_block_all()
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	approved.clear();
 }
 
 boost::uint64_t block_request::bytes()
@@ -133,12 +143,18 @@ bool block_request::find_next_rarest(const int connection_ID, boost::uint64_t & 
 			}
 		}
 		if(hosts == 1){
-			//block with maximum rarity found (only one host has it)
-			return true;
+			//block with maximum rarity found
+			if(request.find(block) == request.end()){
+				//block not already requested
+				return true;
+			}
 		}else if(hosts < rare_block_hosts || rare_block_hosts == 0){
 			//a new most-rare block found. This is a block that > 1 hosts have
-			rare_block = block;
-			rare_block_hosts = hosts;
+			if(request.find(block) == request.end()){
+				//block not already requested, consider requesting this block
+				rare_block = block;
+				rare_block_hosts = hosts;
+			}
 		}
 	}
 	if(rare_block_hosts == 0){
@@ -149,15 +165,6 @@ bool block_request::find_next_rarest(const int connection_ID, boost::uint64_t & 
 		block = rare_block;
 		return true;
 	}
-}
-
-bool block_request::force_complete()
-{
-	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	local.clear();
-	approved.clear();
-	request.clear();
-	remote.clear();
 }
 
 bool block_request::have_block(const boost::uint64_t block)
@@ -247,12 +254,6 @@ void block_request::remove_host(const int connection_ID)
 			++iter_cur;
 		}
 	}
-}
-
-void block_request::rerequest_block(const boost::uint64_t block)
-{
-	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	request.erase(block);
 }
 
 unsigned block_request::unfulfilled(const int connection_ID)

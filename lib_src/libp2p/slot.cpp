@@ -15,7 +15,8 @@ void slot::check()
 
 bool slot::complete()
 {
-	return Hash_Tree.tree_complete() && Hash_Tree.file_complete();
+	//return Hash_Tree.tree_complete() && Hash_Tree.file_complete();
+	return false;
 }
 
 unsigned slot::download_speed()

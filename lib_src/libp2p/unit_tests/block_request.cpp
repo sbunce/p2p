@@ -10,6 +10,7 @@ void all_complete()
 {
 	boost::uint64_t block_count = 128;
 	block_request BR(block_count);
+	BR.approve_block_all();
 
 	//add 8 hosts that each have all blocks (connection_ID 0 to 7)
 	for(int x=0; x<8; ++x){
@@ -34,6 +35,7 @@ void all_partial()
 {
 	boost::uint64_t block_count = 1024;
 	block_request BR(block_count);
+	BR.approve_block_all();
 
 	//add 8 hosts that each have NO blocks (socket_FD 0 .. 7)
 	for(int x=0; x<8; ++x){

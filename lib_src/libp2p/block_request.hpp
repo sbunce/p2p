@@ -26,16 +26,19 @@ This class is threadsafe.
 class block_request : private boost::noncopyable
 {
 public:
-	block_request(
-		const boost::uint64_t block_count_in,
-		const bool approve_all = true
-	);
+	block_request(const boost::uint64_t block_count_in);
 
 	/*
 	add_block_local (one paramter):
-		Add block. Used when not known what host block came from.
+		Add block. Used when next_request was not involved in getting a block.
+		This function is used during hash check to mark what blocks we already
+		have.
 	add_block_local (two parameters):
 		Add block from specific host.
+	add_block_local_all:
+		Adds all local blocks.
+		Postcondition: complete() = true, all requests cleared (so no rerequests
+			are done on timeout).
 	add_block_remote:
 		Add block that we know remote host has.
 	add_host_complete:
@@ -60,25 +63,23 @@ public:
 	remove_host:
 		Remove host as source for blocks. Any blocks requested from this host are
 		rerequested.
-	rerequest_block:
-		Rerequest block from any host.
 	unfulfilled:
 		Returns the number of unfulfilled requests.
 	*/
 	void add_block_local(const boost::uint64_t block);
 	void add_block_local(const int connection_ID, const boost::uint64_t block);
+	void add_block_local_all();
 	void add_block_remote(const int connection_ID, const boost::uint64_t block);
 	void add_host_complete(const int connection_ID);
 	void add_host_incomplete(const int connection_ID, bit_field & BF);
 	void approve_block(const boost::uint64_t block);
+	void approve_block_all();
 	boost::uint64_t bytes();
 	bool complete();
-	bool force_complete();
 	bool have_block(const boost::uint64_t block);
 	bool is_approved(const boost::uint64_t block);
 	bool next_request(const int connection_ID, boost::uint64_t & block);
 	void remove_host(const int connection_ID);
-	void rerequest_block(const boost::uint64_t block);
 	unsigned unfulfilled(const int connection_ID);
 
 private:

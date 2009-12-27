@@ -78,6 +78,7 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 
 	//determine status byte
 	unsigned char status;
+/*
 	if(slot_iter->Hash_Tree.tree_complete() && slot_iter->Hash_Tree.file_complete()){
 		status = 0;
 	}else if(slot_iter->Hash_Tree.tree_complete() && !slot_iter->Hash_Tree.file_complete()){
@@ -90,6 +91,7 @@ LOGGER << "stub: add support for incomplete"; exit(1);
 		status = 3;
 LOGGER << "stub: add support for incomplete"; exit(1);
 	}
+*/
 
 	//check to make sure we have valid file_size/root_hash
 	char buf[8 + SHA1::bin_size];

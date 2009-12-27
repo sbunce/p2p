@@ -26,7 +26,6 @@ void create_test_file(const file_info & FI)
 	fout.flush();
 }
 
-//randomly reassemble a hash tree
 void test(const unsigned size)
 {
 	//delete all hash trees
@@ -45,33 +44,39 @@ void test(const unsigned size)
 	hash_tree HT(FI);
 	if(HT.create() != hash_tree::good){
 		LOGGER; ++fail;
+		return;
 	}
 	FI.hash = HT.hash;
+
+	//hash tree should be good
+	if(HT.check() != hash_tree::good){
+		LOGGER; ++fail;
+		return;
+	}
 
 	//read all blocks from the hash tree in to memory
 	std::vector<network::buffer> block; //location in vector is block number
 	for(boost::uint32_t x=0; x<HT.tree_block_count; ++x){
 		network::buffer buf;
-		HT.read_tree_block(x, buf);
+		HT.read_block(x, buf);
 		block.push_back(buf);
 	}
 
-	//delete all hash trees
+	//delete hash tree
 	database::init::drop_all();
 	database::init::create_all();
 
 	//reassemble
-	std::srand(42);
 	hash_tree HT_reassemble(FI);
 	for(boost::uint64_t x=0; x<HT.tree_block_count; ++x){
-		HT_reassemble.write_tree_block(0, x, block[x]);
+		HT_reassemble.write_block(x, block[x]);
 	}
 
-/* DEBUG, disable until hash_tree::tree_complete() works
-	if(!HT_reassemble.tree_complete()){
+	//hash tree should be good
+	if(HT_reassemble.check() != hash_tree::good){
 		LOGGER; ++fail;
+		return;
 	}
-*/
 }
 
 int main()

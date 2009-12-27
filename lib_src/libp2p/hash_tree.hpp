@@ -64,15 +64,6 @@ public:
 	const boost::uint64_t last_file_block_size; //size of last file block
 
 	/*
-	file_complete:
-		Returns true if file is complete.
-	tree_complete:
-		Returns true if hash tree is complete.
-	*/
-	bool file_complete();
-	bool tree_complete();
-
-	/* Hash Tree Related
 	block_size:
 		Returns the size of a hash block. This is used to know what to expect from
 		a hash block request.
@@ -90,34 +81,31 @@ public:
 		reading the tree or temp files.
 		Note: If tree created the tree state will be set to reserved. This must
 			be set to complete or tree will be deleted on next program start.
+		Note: The create function modifies const data members.
 	read_block:
-		Get block from hash tree. Returns good if suceeded. Returns io_error if
-		cannot read hash tree.
+		Get block from hash tree. Returns good if suceeded (and block appended to
+		buf). Returns io_error if cannot read hash tree.
 	write_block:
 		Add or replace block in hash tree. Returns good if block was written,
 		io_error if block could not be written, or bad if the block hash failed.
 		The connection_ID is needed for block_request.
+		Precondition: Parent hash must have been written.
+		Note: This function does not check validity of root_hash (block 0).
 	*/
 	unsigned block_size(const boost::uint64_t block_num);
 	status check();
 	status check_file_block(const boost::uint64_t file_block_num,
 		const char * block, const int size);
 	status create();
-	status read_tree_block(const boost::uint64_t block_num, network::buffer & block);
-	status write_tree_block(const int connection_ID, const boost::uint64_t block_num,
+	status read_block(const boost::uint64_t block_num, network::buffer & block);
+	status write_block(const boost::uint64_t block_num,
 		const network::buffer & block);
 
 private:
-	block_request Tree_Block;
-	block_request File_Block;
-
 	/*
 	check_block:
-		Checks a hash tree block.
-		Precondition: the parent of this block must be valid and the block must
-			exist.
-		Note: This function is only called from check_incremental which makes sure
-		the precondition is satisfied.
+		Checks a hash tree block that already exists in tree.
+		Precondition: Parent and child must exist in tree.
 	*/
 	status check_block(const boost::uint64_t block_num);
 
