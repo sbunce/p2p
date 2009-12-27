@@ -64,36 +64,34 @@ public:
 	const boost::uint64_t last_file_block_size; //size of last file block
 
 	/*
+	file_complete:
+		Returns true if file is complete.
+	tree_complete:
+		Returns true if hash tree is complete.
+	*/
+	bool file_complete();
+	bool tree_complete();
+
+	/* Hash Tree Related
 	block_size:
 		Returns the size of a hash block. This is used to know what to expect from
 		a hash block request.
 	check:
-		If the tree is not complete the check function should be called to
-		determine what blocks are good.
-		Note: This function may take a long time to run.
+		Checks the entire hash tree. This is called on program start to see what
+		blocks are good.
 	check_file_block:
-		Checks a file block against a hash in the hash tree. Returns GOOD if file
-		block good. Returns BAD if file block bad. Returns IO_ERROR if cannot read
+		Checks a file block against a hash in the hash tree. Returns good if file
+		block good. Returns bad if file block bad. Returns io_error if cannot read
 		hash tree.
 		Precondition: The complete function must return true.
-	complete:
-		Returns true if the hash tree is complete. Complete means that all hashes
-		have been checked good. If this funtion returns false then the missing
-		block to request should be gotten from Block_Request. It should be noted
-		that Block_Request can be complete and the hash_tree not complete if the
-		request for the last blocks were made, but not yet received.
 	create:
-		Create a hash tree. Returns good if tree created or tree already existed.
-		Returns bad if hash tree could never be created. Returns io_error if
-		io_error occured (such as file changing size, temp files failing to read,
-		etc). When an io_error occurs the file is generally retried later.
-		Precondition: FI.path and FI.file_size must be correctly set.
-		Postcondition: FI.hash set unless io_error returned.
-		Note: If hash tree creation suceeds the hash tree state will only be set
-			to RESERVED. If it's not changed the tree will be deleted upon next
-			program start.
+		Create hash tree. Returns good if tree created or already existed. Returns
+		bad if tree could never be created. Returns io_error if an error occured
+		reading the tree or temp files.
+		Note: If tree created the tree state will be set to reserved. This must
+			be set to complete or tree will be deleted on next program start.
 	read_block:
-		Get block from hash tree. Returns GOOD if suceeded. Returns IO_ERROR if
+		Get block from hash tree. Returns good if suceeded. Returns io_error if
 		cannot read hash tree.
 	write_block:
 		Add or replace block in hash tree. Returns good if block was written,
@@ -105,22 +103,13 @@ public:
 	status check_file_block(const boost::uint64_t file_block_num,
 		const char * block, const int size);
 	status create();
-	bool complete();
-	status read_block(const boost::uint64_t block_num, std::string & block);
-	status write_block(const int connection_ID, const boost::uint64_t block_num,
-		const std::string & block);
+	status read_tree_block(const boost::uint64_t block_num, network::buffer & block);
+	status write_tree_block(const int connection_ID, const boost::uint64_t block_num,
+		const network::buffer & block);
 
 private:
-	/*
-	Hashes are checked in order. If a block is missing we can't check blocks past
-	it. The end_of_good value is how far we've been able to hash check.
-
-	We don't keep track of what IP sent what block so we only have access to the
-	IP of the latest block that arrived. We are still able to blacklist people
-	that send bad blocks because if someone is sending bad blocks eventually they
-	will send a block equal to the value of end_of_good and get blacklisted.
-	*/
-	atomic_int<boost::uint64_t> end_of_good;
+	block_request Tree_Block;
+	block_request File_Block;
 
 	/*
 	check_block:

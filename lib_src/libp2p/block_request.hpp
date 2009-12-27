@@ -42,10 +42,15 @@ public:
 		Add remote host that has all blocks.
 	add_host_incomplete:
 		Add remote host that has only some blocks.
+	approve_block:
+		Approve block for requesting. Blocks that aren't approved won't be
+		requested.
 	bytes:
 		Returns size of bit_field. (bytes)
 	complete:
 		Returns true if we have all blocks.
+	force_complete:
+		Sets block request to indicate that we have all blocks.
 	have_block:
 		Returns true if we have specified block.
 	next_request:
@@ -60,15 +65,17 @@ public:
 	unfulfilled:
 		Returns the number of unfulfilled requests.
 	*/
-	void add_block_approved(const boost::uint64_t block);
 	void add_block_local(const boost::uint64_t block);
 	void add_block_local(const int connection_ID, const boost::uint64_t block);
 	void add_block_remote(const int connection_ID, const boost::uint64_t block);
 	void add_host_complete(const int connection_ID);
 	void add_host_incomplete(const int connection_ID, bit_field & BF);
+	void approve_block(const boost::uint64_t block);
 	boost::uint64_t bytes();
 	bool complete();
+	bool force_complete();
 	bool have_block(const boost::uint64_t block);
+	bool is_approved(const boost::uint64_t block);
 	bool next_request(const int connection_ID, boost::uint64_t & block);
 	void remove_host(const int connection_ID);
 	void rerequest_block(const boost::uint64_t block);
@@ -86,7 +93,7 @@ private:
 	blocks we have. If the container is empty it's the same as all bits being set
 	to 1 (this is done to save memory).
 	*/
-	bit_field local_block;
+	bit_field local;
 
 	/*
 	Bits set to 1 represent blocks we are allowed to request. Bits set to 0
@@ -96,7 +103,7 @@ private:
 	This is used for hash tree reconstruction to insure we only request blocks we
 	can hash check.
 	*/
-	bit_field approved_block;
+	bit_field approved;
 
 	/*
 	This is used to rerequest blocks that haven't been received after a certain
@@ -123,7 +130,7 @@ private:
 	std::multimap<boost::uint64_t, request_element> request;
 
 	//connection_ID associated with bitset representing blocks remote host has
-	std::map<int, bit_field> remote_block;
+	std::map<int, bit_field> remote;
 
 	/*
 	find_next_rarest:

@@ -38,7 +38,8 @@ bool message::composite::recv(network::connection_info & CI)
 		if((*iter_cur)->expects(CI)){
 			if((*iter_cur)->recv(CI)){
 				func = (*iter_cur)->func;
-				buf.move((*iter_cur)->buf);
+				buf.clear();
+				buf.swap((*iter_cur)->buf);
 				response = *iter_cur;
 				return true;
 			}

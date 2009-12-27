@@ -3,7 +3,6 @@
 
 //custom
 #include "database.hpp"
-#include "file.hpp"
 #include "file_info.hpp"
 #include "hash_tree.hpp"
 
@@ -28,7 +27,6 @@ class slot : private boost::noncopyable
 
 public:
 	hash_tree Hash_Tree;
-	file File;
 
 	/*
 	complete:

@@ -21,8 +21,10 @@ hash_tree::hash_tree(
 			protocol::file_block_size :
 			file_size % protocol::file_block_size
 	),
-	end_of_good(0)
+	Tree_Block(tree_block_count, false),
+	File_Block(file_block_count, true)
 {
+	Tree_Block.approve_block(0);
 	if(!hash.empty()){
 		boost::shared_ptr<database::table::hash::info>
 			info = database::table::hash::find(hash, DB);
@@ -42,9 +44,6 @@ hash_tree::hash_tree(
 				throw std::runtime_error("incorrect tree size");
 			}
 			const_cast<database::blob &>(blob) = info->blob;
-			if(info->tree_state == database::table::hash::complete){
-				end_of_good = tree_block_count;
-			}
 		}else{
 			//allocate space to reconstruct hash tree
 			if(database::table::hash::add(hash, tree_size, DB)){
@@ -130,17 +129,15 @@ unsigned hash_tree::block_size(const boost::uint64_t block_num)
 
 hash_tree::status hash_tree::check()
 {
-	for(boost::uint32_t x=end_of_good; x<tree_block_count; ++x){
+	for(boost::uint32_t x=0; x<tree_block_count; ++x){
 		status Status = check_block(x);
-		if(Status == good){
-			end_of_good = x+1;
-		}else if(Status == bad){
+		if(Status == bad){
 			return bad;
 		}else if(Status == io_error){
 			return io_error;
 		}
 	}
-	if(complete()){
+	if(tree_complete()){
 		database::table::hash::set_state(hash, database::table::hash::complete);
 	}
 	return good;
@@ -200,7 +197,6 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t block_num)
 hash_tree::status hash_tree::check_file_block(const boost::uint64_t file_block_num,
 	const char * block, const int size)
 {
-	assert(complete());
 	char parent_buf[SHA1::bin_size];
 	if(!database::pool::get()->blob_read(blob, parent_buf,
 		SHA1::bin_size, file_hash_offset + file_block_num * SHA1::bin_size))
@@ -216,11 +212,6 @@ hash_tree::status hash_tree::check_file_block(const boost::uint64_t file_block_n
 	}else{
 		return bad;
 	}
-}
-
-bool hash_tree::complete()
-{
-	return end_of_good == tree_block_count;
 }
 
 hash_tree::status hash_tree::create()
@@ -370,11 +361,14 @@ hash_tree::status hash_tree::create()
 			bytes_remaining -= read_size;
 		}
 	}
-
-	//set tree complete
-	end_of_good = tree_block_count;
-
+	Tree_Block.force_complete();
+	File_Block.force_complete();
 	return good;
+}
+
+bool hash_tree::file_complete()
+{
+	return File_Block.complete();
 }
 
 boost::uint64_t hash_tree::file_hash_to_tree_hash(boost::uint64_t row_hash,
@@ -419,17 +413,19 @@ boost::uint64_t hash_tree::file_size_to_tree_size(const boost::uint64_t file_siz
 	}
 }
 
-hash_tree::status hash_tree::read_block(const boost::uint64_t block_num,
-	std::string & block)
+hash_tree::status hash_tree::read_tree_block(const boost::uint64_t block_num,
+	network::buffer & buf)
 {
-	char buf[protocol::file_block_size];
 	std::pair<boost::uint64_t, unsigned> info;
 	if(block_info(block_num, row, info)){
-		if(!database::pool::get()->blob_read(blob, buf, info.second, info.first)){
+		buf.tail_reserve(info.second);
+		if(!database::pool::get()->blob_read(blob,
+			reinterpret_cast<char *>(buf.tail_start()), info.second, info.first))
+		{
+			buf.tail_resize(0);
 			return io_error;
 		}
-		block.clear();
-		block.assign(buf, info.second);
+		buf.tail_resize(info.second);
 		return good;
 	}else{
 		LOGGER << "invalid block number, programming error";
@@ -467,28 +463,25 @@ boost::uint64_t hash_tree::row_to_file_hash_offset(
 	return file_hash_offset;
 }
 
-hash_tree::status hash_tree::write_block(const int connection_ID,
-	const boost::uint64_t block_num, const std::string & block)
+bool hash_tree::tree_complete()
+{
+	return Tree_Block.complete();
+}
+
+hash_tree::status hash_tree::write_tree_block(const int connection_ID,
+	const boost::uint64_t block_num, const network::buffer & buf)
 {
 	std::pair<boost::uint64_t, unsigned> info;
 	if(block_info(block_num, row, info)){
-		assert(info.second == block.size());
-		if(!database::pool::get()->blob_write(blob, block.data(), block.size(),
-			info.first))
+		assert(info.second == buf.size());
+
+//DEBUG, check block here
+
+		if(!database::pool::get()->blob_write(blob,
+			reinterpret_cast<char *>(const_cast<network::buffer &>(buf).data()),
+			buf.size(), info.first))
 		{
 			return io_error;
-		}
-		status Status = check();
-		if(Status == io_error){
-			return io_error;
-		}else{
-			if(end_of_good == block_num){
-				//can only know that block is bad if it's one past highest good
-				return bad;
-			}else{
-				//we cannot know if this block is good or bad so we assume it's good
-				return good;
-			}
 		}
 	}else{
 		LOGGER << "invalid block number";

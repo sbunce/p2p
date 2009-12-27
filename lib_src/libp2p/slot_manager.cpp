@@ -78,15 +78,15 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 
 	//determine status byte
 	unsigned char status;
-	if(slot_iter->Hash_Tree.complete() && slot_iter->File.complete()){
+	if(slot_iter->Hash_Tree.tree_complete() && slot_iter->Hash_Tree.file_complete()){
 		status = 0;
-	}else if(slot_iter->Hash_Tree.complete() && !slot_iter->File.complete()){
+	}else if(slot_iter->Hash_Tree.tree_complete() && !slot_iter->Hash_Tree.file_complete()){
 		status = 1;
 LOGGER << "stub: add support for incomplete"; exit(1);
-	}else if(!slot_iter->Hash_Tree.complete() && slot_iter->File.complete()){
+	}else if(!slot_iter->Hash_Tree.tree_complete() && slot_iter->Hash_Tree.file_complete()){
 		status = 2;
 LOGGER << "stub: add support for incomplete"; exit(1);
-	}else if(!slot_iter->Hash_Tree.complete() && !slot_iter->File.complete()){
+	}else if(!slot_iter->Hash_Tree.tree_complete() && !slot_iter->Hash_Tree.file_complete()){
 		status = 3;
 LOGGER << "stub: add support for incomplete"; exit(1);
 	}

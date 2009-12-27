@@ -267,20 +267,23 @@ public:
 		}
 	}
 
-	/*
-	Moves the contents of source buffer in to this buffer without copying.
-	Postcondition: source buffer empty.
-	Postcondition: this buffer equal to previous contents of source buffer.
-	*/
-	void move(buffer & source)
+	//swap one buffer with another without copying buf
+	void swap(buffer & rval)
 	{
-		clear();
-		reserved = source.reserved;
-		bytes = source.bytes;
-		buf = source.buf;
-		source.reserved = 0;
-		source.bytes = 0;
-		source.buf = NULL;
+		//save current lval
+		int tmp_reserved = reserved;
+		int tmp_bytes = bytes;
+		unsigned char * tmp_buf = buf;
+
+		//copy rval to lval
+		reserved = rval.reserved;
+		bytes = rval.bytes;
+		buf = rval.buf;
+
+		//copy old lval to rval
+		rval.reserved = tmp_reserved;
+		rval.bytes = tmp_bytes;
+		rval.buf = tmp_buf;
 	}
 
 	//specified amount of memory will be left allocated

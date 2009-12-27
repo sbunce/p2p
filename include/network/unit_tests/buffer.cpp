@@ -44,24 +44,24 @@ int main()
 	}
 
 	//!=
-	network::buffer B1, B2;
+	network::buffer B0, B1;
+	B0 = "ABC";
 	B1 = "ABC";
-	B2 = "ABC";
-	if(B1 != B2){
+	if(B0 != B1){
 		LOGGER; ++fail;
 	}
-	if(B1 != "ABC"){
+	if(B0 != "ABC"){
+		LOGGER; ++fail;
+	}
+
+	//move
+	B0 = "123"; B1 = "ABC";
+	B0.swap(B1);
+	if(B0 != "ABC"){
+		LOGGER; ++fail;
+	}
+	if(B1 != "123"){
 		LOGGER; ++fail;
 	}
 	return fail;
-
-	//move
-	B1.clear(); B2 = "ABC";
-	B1.move(B2);
-	if(B1 != "ABC"){
-		LOGGER; ++fail;
-	}
-	if(!B2.empty()){
-		LOGGER; ++fail;
-	}
 }

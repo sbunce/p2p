@@ -5,30 +5,19 @@ block_request::block_request(
 	const bool approve_all
 ):
 	block_count(block_count_in),
-	local_block(block_count),
-	approved_block(approve_all ? 0 : block_count)
+	local(block_count),
+	approved(approve_all ? 0 : block_count)
 {
 
-}
-
-void block_request::add_block_approved(const boost::uint64_t block)
-{
-	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	if(!approved_block.empty()){
-		approved_block[block] = true;
-		if(approved_block.all_set()){
-			approved_block.clear();
-		}
-	}
 }
 
 void block_request::add_block_local(const boost::uint64_t block)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	if(!local_block.empty()){
-		local_block[block] = true;
-		if(local_block.all_set()){
-			local_block.clear();
+	if(!local.empty()){
+		local[block] = true;
+		if(local.all_set()){
+			local.clear();
 		}
 	}
 }
@@ -41,22 +30,25 @@ void block_request::add_block_local(const int connection_ID, const boost::uint64
 	std::pair<std::multimap<boost::uint64_t, request_element>::iterator,
 		std::multimap<boost::uint64_t, request_element>::iterator>
 		pair = request.equal_range(block);
+	bool found = false;
 	while(pair.first != request.end() && pair.first != pair.second){
 		if(pair.first->second.connection_ID == connection_ID){
+			found = true;
 			request.erase(pair.first);
 			break;
 		}else{
 			++pair.first;
 		}
 	}
+	assert(found);
 }
 
 void block_request::add_block_remote(const int connection_ID, const boost::uint64_t block)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	//find bitset for remote host
-	std::map<int, bit_field>::iterator remote_iter = remote_block.find(connection_ID);
-	assert(remote_iter != remote_block.end());
+	std::map<int, bit_field>::iterator remote_iter = remote.find(connection_ID);
+	assert(remote_iter != remote.end());
 	//add block
 	if(!remote_iter->second.empty()){
 		remote_iter->second[block] = true;
@@ -71,7 +63,7 @@ void block_request::add_host_complete(const int connection_ID)
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	//insert empty bit_field (host has all blocks)
 	std::pair<std::map<int, bit_field>::iterator, bool>
-		ret = remote_block.insert(std::make_pair(connection_ID, bit_field(0)));
+		ret = remote.insert(std::make_pair(connection_ID, bit_field(0)));
 	assert(ret.second);
 }
 
@@ -80,8 +72,19 @@ void block_request::add_host_incomplete(const int connection_ID, bit_field & BF)
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	assert(BF.size() == block_count);
 	std::pair<std::map<int, bit_field>::iterator, bool>
-		ret = remote_block.insert(std::make_pair(connection_ID, BF));
+		ret = remote.insert(std::make_pair(connection_ID, BF));
 	assert(ret.second);
+}
+
+void block_request::approve_block(const boost::uint64_t block)
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	if(!approved.empty()){
+		approved[block] = true;
+		if(approved.all_set()){
+			approved.clear();
+		}
+	}
 }
 
 boost::uint64_t block_request::bytes()
@@ -97,43 +100,33 @@ bool block_request::complete()
 	When the dynamic_bitset is complete it is clear()'d to save space. If a
 	bit_field is clear we know the host has all blocks.
 	*/
-	return local_block.empty();
-}
-
-bool block_request::have_block(const boost::uint64_t block)
-{
-	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	assert(block < block_count);
-	if(complete()){
-		return true;
-	}else{
-		return local_block[block] == true;
-	}
+	return local.empty();
 }
 
 bool block_request::find_next_rarest(const int connection_ID, boost::uint64_t & block)
 {
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	//find bitset for remote host
-	std::map<int, bit_field>::iterator remote_iter = remote_block.find(connection_ID);
-	if(remote_iter == remote_block.end()){
+	std::map<int, bit_field>::iterator remote_iter = remote.find(connection_ID);
+	if(remote_iter == remote.end()){
 		//we are waiting on a bit_field from the remote host most likely
 		return false;
 	}
 	boost::uint64_t rare_block;           //most rare block
 	boost::uint64_t rare_block_hosts = 0; //number of hosts that have rare_block
-	for(block = 0; block < local_block.size(); ++block){
-		if(local_block[block]){
+	for(block = 0; block < local.size(); ++block){
+		if(local[block]){
 			//we already have this block
 			continue;
 		}
-		if(!approved_block.empty() && !approved_block[block]){
+		if(!approved.empty() && !approved[block]){
 			//block is not approved
 			continue;
 		}
 		//check rarity
 		boost::uint32_t hosts = 0;
-		for(std::map<int, bit_field>::iterator iter_cur = remote_block.begin(),
-			iter_end = remote_block.end(); iter_cur != iter_end; ++iter_cur)
+		for(std::map<int, bit_field>::iterator iter_cur = remote.begin(),
+			iter_end = remote.end(); iter_cur != iter_end; ++iter_cur)
 		{
 			if(iter_cur->second.empty() || iter_cur->second[block]){
 				++hosts;
@@ -155,6 +148,36 @@ bool block_request::find_next_rarest(const int connection_ID, boost::uint64_t & 
 		//a block was found that we need
 		block = rare_block;
 		return true;
+	}
+}
+
+bool block_request::force_complete()
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	local.clear();
+	approved.clear();
+	request.clear();
+	remote.clear();
+}
+
+bool block_request::have_block(const boost::uint64_t block)
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	assert(block < block_count);
+	if(complete()){
+		return true;
+	}else{
+		return local[block] == true;
+	}
+}
+
+bool block_request::is_approved(const boost::uint64_t block)
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	if(approved.empty()){
+		return true;
+	}else{
+		return approved[block] == true;
 	}
 }
 
@@ -213,7 +236,7 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 void block_request::remove_host(const int connection_ID)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	remote_block.erase(connection_ID);
+	remote.erase(connection_ID);
 	//erase request elements for this host
 	std::multimap<boost::uint64_t, request_element>::iterator
 		iter_cur = request.begin(), iter_end = request.end();
