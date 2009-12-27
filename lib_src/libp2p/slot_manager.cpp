@@ -15,15 +15,7 @@ slot_manager::slot_manager(
 
 void slot_manager::make_block_requests(boost::shared_ptr<slot> S)
 {
-LOGGER << "woot";
-/*
-	if(!S->Hash_Tree.complete()){
-		int unfullfilled = S->Hash_Tree.
 
-	}else if(!S->File.complete()){
-
-	}
-*/
 }
 
 void slot_manager::make_slot_requests()
@@ -76,39 +68,27 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 		++slot_num;
 	}
 
-	//determine status byte
+	//status byte (third byte of slot message)
 	unsigned char status;
-/*
-	if(slot_iter->Hash_Tree.tree_complete() && slot_iter->Hash_Tree.file_complete()){
-		status = 0;
-	}else if(slot_iter->Hash_Tree.tree_complete() && !slot_iter->Hash_Tree.file_complete()){
-		status = 1;
-LOGGER << "stub: add support for incomplete"; exit(1);
-	}else if(!slot_iter->Hash_Tree.tree_complete() && slot_iter->Hash_Tree.file_complete()){
-		status = 2;
-LOGGER << "stub: add support for incomplete"; exit(1);
-	}else if(!slot_iter->Hash_Tree.tree_complete() && !slot_iter->Hash_Tree.file_complete()){
-		status = 3;
-LOGGER << "stub: add support for incomplete"; exit(1);
-	}
-*/
-
-	//check to make sure we have valid file_size/root_hash
-	char buf[8 + SHA1::bin_size];
-	std::memcpy(buf, convert::encode(slot_iter->file_size()).data(), 8);
-	if(!database::pool::get()->blob_read(slot_iter->Hash_Tree.blob, buf+8,
-		SHA1::bin_size, 0))
-	{
+	if(!slot_iter->status(status)){
 		LOGGER << "failed " << hash;
 		boost::shared_ptr<message::base> M(new message::error());
 		send(M);
 		return true;
 	}
-	SHA1 SHA;
-	SHA.init();
-	SHA.load(buf, 8 + SHA1::bin_size);
-	SHA.end();
-	if(SHA.hex() != slot_iter->hash()){
+
+	//file size
+	boost::uint64_t file_size = slot_iter->file_size();
+	if(file_size == 0){
+		LOGGER << "failed " << hash;
+		boost::shared_ptr<message::base> M(new message::error());
+		send(M);
+		return true;
+	}
+
+	//root hash
+	std::string root_hash;
+	if(!slot_iter->root_hash(root_hash)){
 		LOGGER << "failed " << hash;
 		boost::shared_ptr<message::base> M(new message::error());
 		send(M);
@@ -116,9 +96,8 @@ LOGGER << "stub: add support for incomplete"; exit(1);
 	}
 
 	//we have all information to send slot message
-//DEBUG, converting root hash to bin -> hex, then hex -> bin, this is inefficient
 	boost::shared_ptr<message::base> M_send(new message::slot(slot_num, status,
-		slot_iter->file_size(), convert::bin_to_hex(buf+8, SHA1::bin_size)));
+		file_size, root_hash));
 	send(M_send);
 
 	//add slot
@@ -130,8 +109,7 @@ LOGGER << "stub: add support for incomplete"; exit(1);
 
 bool slot_manager::recv_request_slot_failed(boost::shared_ptr<message::base> M)
 {
-//DEBUG, eventually handle this failure by removing source
-LOGGER;
+LOGGER << "stub: handle request slot failure by removing source";
 	--open_slots;
 	return true;
 }
@@ -155,21 +133,21 @@ bool slot_manager::recv_slot(boost::shared_ptr<message::base> M,
 		return false;
 	}
 	LOGGER << hash;
-	if(M->buf[2] == 0){
-/* DEBUG
-It's possible we will get the file size at this point. We need a function within
-slot to take the file size. The postcondition of this function will be that the
-hash tree and file will be instantiated.
-*/
-		//slot_iter->Hash_Tree.Block_Request.
-	}else if(M->buf[2] == 1){
+	//file size and root hash might not be known, set them
+	boost::uint64_t file_size = convert::decode<boost::uint64_t>(
+		std::string(reinterpret_cast<char *>(M->buf.data()+3), 8));
+	std::string root_hash = convert::bin_to_hex(
+		reinterpret_cast<char *>(M->buf.data()+11), SHA1::bin_size);
+	LOGGER << "file_size: " << file_size;
+	LOGGER << "root_hash: " << root_hash;
+	slot_iter->set_unknown(file_size, root_hash);
+	if(M->buf[2] == 1){
 LOGGER << "stub: add support for incomplete"; exit(1);
 	}else if(M->buf[2] == 2){
 LOGGER << "stub: add support for incomplete"; exit(1);
 	}else if(M->buf[2] == 3){
 LOGGER << "stub: add support for incomplete"; exit(1);
 	}
-
 	make_block_requests(slot_iter.get());
 	return true;
 }

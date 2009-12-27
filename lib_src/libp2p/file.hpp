@@ -28,14 +28,8 @@ public:
 	block_size:
 		Returns size of the specified file block.
 		Precondition: block_num < block_count
-	complete:
-		Returns true if the file is complete.
 	*/
 	unsigned block_size(const boost::uint64_t block_num);
-	bool complete();
-
-	//used for requesting blocks, also keeps track of all blocks we have
-	block_request Block_Request;
 
 private:
 
