@@ -1,15 +1,17 @@
 #include "transfer.hpp"
 
 transfer::transfer(const file_info & FI):
+	Hash_Tree(FI),
 	File(FI),
-	Hash_Tree(FI)
+	Hash_Tree_Block(Hash_Tree.tree_block_count),
+	File_Block(Hash_Tree.file_block_count)
 {
-
+	assert(FI.file_size != 0);
 }
 
 void transfer::check()
 {
-LOGGER << "YIPPIE!";
+
 }
 
 bool transfer::complete()
@@ -26,6 +28,50 @@ boost::uint64_t transfer::file_size()
 const std::string & transfer::hash()
 {
 	return Hash_Tree.hash;
+}
+
+void transfer::register_outgoing_0(const int connection_ID)
+{
+	Hash_Tree_Block.add_host_complete(connection_ID);
+	File_Block.add_host_complete(connection_ID);
+}
+
+boost::shared_ptr<message::base> transfer::request(const int connection_ID,
+	const unsigned char slot_num)
+{
+/*
+class request_hash_tree_block : public base
+{
+public:
+	//ctor to recv message
+	request_hash_tree_block(const unsigned char slot_num,
+		const boost::uint64_t block, const boost::uint64_t tree_block_count);
+	//ctor to send message
+	request_hash_tree_block(const boost::uint64_t tree_block_count);
+	virtual bool expects(network::connection_info & CI);
+	virtual bool recv(network::connection_info & CI);
+private:
+	//size (bytes) of the block number field
+	unsigned VLI_size;
+};
+
+class request_file_block : public base
+{
+public:
+	//ctor to recv message
+	request_file_block(const unsigned char slot_num,
+		const boost::uint64_t block, const boost::uint64_t file_block_count);
+	//ctor to send message
+	request_file_block(const boost::uint64_t file_block_count);
+	virtual bool expects(network::connection_info & CI);
+	virtual bool recv(network::connection_info & CI);
+private:
+	//size (bytes) of the block number field
+	unsigned VLI_size;
+};
+*/
+
+	return boost::shared_ptr<message::base>();
 }
 
 bool transfer::root_hash(std::string & RH)

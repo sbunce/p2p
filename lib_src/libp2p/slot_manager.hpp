@@ -55,6 +55,20 @@ private:
 	std::map<unsigned char, boost::shared_ptr<slot> > Incoming_Slot;
 
 	/*
+	These are passed to, and adjusted by, the transfer objects for adaptive
+	pipeline sizing.
+	Note: These are only for pipelining of block requests.
+	*/
+	unsigned pipeline_cur; //current size (unfulfilled requests
+	unsigned pipeline_max; //current maximum size
+
+	/*
+	When making requests for blocks we loop through slots. This keeps track of
+	the latest slot that had a block sent.
+	*/
+	unsigned char latest_slot;
+
+	/*
 	open_slots:
 		Number of slots opened, or requested, from the remote host.
 		Invariant: 0 <= open_slots <= 256.

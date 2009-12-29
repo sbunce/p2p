@@ -80,7 +80,6 @@ public:
 	bool is_approved(const boost::uint64_t block);
 	bool next_request(const int connection_ID, boost::uint64_t & block);
 	void remove_host(const int connection_ID);
-	unsigned unfulfilled(const int connection_ID);
 
 private:
 	//locks access to all data members

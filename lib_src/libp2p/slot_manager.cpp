@@ -8,14 +8,86 @@ slot_manager::slot_manager(
 	connection_ID(connection_ID_in),
 	expect(expect_in),
 	send(send_in),
-	open_slots(0)
+	pipeline_cur(0),
+	pipeline_max(protocol::max_block_pipeline / 2),
+	open_slots(0),
+	latest_slot(0)
 {
 
 }
 
 void slot_manager::make_block_requests(boost::shared_ptr<slot> S)
 {
+	/*
+	This function is always called after a block is received (except for the
+	first call to send initial requests). The optimal pipeline size is 1 so that
+	we have as little in the pipeline as we need to maintain max throughput. We
+	adjust the max pipeline size to try to achieve the optimal pipeline size.
 
+	Adaptive Pipeline Sizing Algorithm
+
+	C = current requests unfulfilled (requests in pipeline)
+	M = maximum pipeline size (this is what we adjust)
+	A = absolute maximum pipeline size (M always < A)
+
+	case: C == 0 && M < A
+		//pipeline is too small, increase by one
+		++M
+	case: C == 1
+		//pipeline size optimal, do nothing
+	case: C > 1 && M > 1
+		//pipeline is too large, decrease by one
+		--M;
+	*/
+	if(pipeline_cur == 0 && pipeline_max < protocol::max_block_pipeline){
+		++pipeline_max;
+	}else if(pipeline_cur > 1 && pipeline_max > 1){
+		--pipeline_max;
+	}
+
+	if(pipeline_cur >= pipeline_max){
+		return;
+	}
+	if(Outgoing_Slot.empty()){
+		return;
+	}
+	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
+		iter_cur = Outgoing_Slot.upper_bound(latest_slot);
+	if(iter_cur == Outgoing_Slot.end()){
+		iter_cur = Outgoing_Slot.begin();
+	}
+
+	/*
+	These are used to break out of the loop if we loop through all slots and none
+	need to make a request.
+	*/
+	unsigned char start_slot = iter_cur->first;
+	bool serviced_one = false;
+
+	while(true){
+		if(pipeline_cur >= pipeline_max){
+			break;
+		}
+		if(iter_cur->second->get_transfer()){
+			boost::shared_ptr<message::base> M = iter_cur->second->get_transfer()->request(
+				connection_ID, iter_cur->first);
+			if(M){
+				++pipeline_cur;
+				serviced_one = true;
+//DEBUG, need to send M
+			}
+		}
+		++iter_cur;
+		if(iter_cur == Outgoing_Slot.end()){
+			iter_cur = Outgoing_Slot.begin();
+		}
+		if(iter_cur->first == start_slot && !serviced_one){
+			//looped through all sockets and none needed to be serviced
+			break;
+		}else{
+			serviced_one = false;
+		}
+	}
 }
 
 void slot_manager::make_slot_requests()
@@ -56,6 +128,14 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 		return true;
 	}
 
+	if(!slot_iter->get_transfer()){
+		//we do not yet know file size
+		LOGGER << "failed " << hash;
+		boost::shared_ptr<message::base> M(new message::error());
+		send(M);
+		return true;
+	}
+
 	//find available slot number
 	unsigned char slot_num = 0;
 	for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
@@ -70,7 +150,7 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 
 	//status byte (third byte of slot message)
 	unsigned char status;
-	if(!slot_iter->status(status)){
+	if(!slot_iter->get_transfer()->status(status)){
 		LOGGER << "failed " << hash;
 		boost::shared_ptr<message::base> M(new message::error());
 		send(M);
@@ -88,7 +168,7 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 
 	//root hash
 	std::string root_hash;
-	if(!slot_iter->root_hash(root_hash)){
+	if(!slot_iter->get_transfer()->root_hash(root_hash)){
 		LOGGER << "failed " << hash;
 		boost::shared_ptr<message::base> M(new message::error());
 		send(M);
@@ -140,8 +220,13 @@ bool slot_manager::recv_slot(boost::shared_ptr<message::base> M,
 		reinterpret_cast<char *>(M->buf.data()+11), SHA1::bin_size);
 	LOGGER << "file_size: " << file_size;
 	LOGGER << "root_hash: " << root_hash;
-	slot_iter->set_unknown(file_size, root_hash);
-	if(M->buf[2] == 1){
+	if(!slot_iter->set_unknown(file_size, root_hash)){
+LOGGER << "stub: need to send close slot here";
+		return true;
+	}
+	if(M->buf[2] == 0){
+		slot_iter->get_transfer()->register_outgoing_0(connection_ID);
+	}else if(M->buf[2] == 1){
 LOGGER << "stub: add support for incomplete"; exit(1);
 	}else if(M->buf[2] == 2){
 LOGGER << "stub: add support for incomplete"; exit(1);

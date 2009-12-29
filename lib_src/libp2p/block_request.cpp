@@ -255,18 +255,3 @@ void block_request::remove_host(const int connection_ID)
 		}
 	}
 }
-
-unsigned block_request::unfulfilled(const int connection_ID)
-{
-	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	unsigned count = 0;
-	for(std::multimap<boost::uint64_t, request_element>::iterator
-		iter_cur = request.begin(), iter_end = request.end(); iter_cur != iter_end;
-		++iter_cur)
-	{
-		if(iter_cur->second.connection_ID == connection_ID){
-			++count;
-		}
-	}
-	return count;
-}

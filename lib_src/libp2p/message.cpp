@@ -277,7 +277,6 @@ message::slot::slot(
 	hash(hash_in),
 	checked(false)
 {
-LOGGER << hash;
 	func = func_in;
 }
 

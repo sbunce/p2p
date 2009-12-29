@@ -47,45 +47,33 @@ public:
 	unsigned download_speed();
 	boost::uint64_t file_size();
 	const std::string & hash();
-	const std::string & name();
+	std::string name();
 	unsigned percent_complete();
 	unsigned upload_speed();
 
-	/* Resume
-	check:
-		Hash checks the hash tree and the file if the hash tree is complete.
-	*/
-	void check();
-
-	/* Used by Slot Manager
-	root_hash:
-		Sets RH to root hash needed for slot message. Returns true if RH can be
-		set, false if RH cannot be set.
+	/* Slot Manager
+	get_transfer:
+		Get object responsible for exchanging hash tree and file data.
+		Note: May be empty shared_ptr if we don't yet know the file size.
 	set_unknown:
-		This function is called whenever a slot message is received to set the
-		potentially unknown file size and root hash.
-	status:
-		Sets byte to status byte needed for slot message. Returns true if byte
-		can be set, false if byte cannot be set.
+		Sets data that may not be known. Instantiates transfer. Returns false if
+		transfer could not be instantiated.
 	*/
-	bool root_hash(std::string & RH);
-	void set_unknown(const boost::uint64_t file_size, const std::string & root_hash);
-	bool status(unsigned char & byte);
+	const boost::shared_ptr<transfer> & get_transfer();
+	bool set_unknown(const boost::uint64_t file_size, const std::string & root_hash);
 
 private:
 	/*
-	Note:The ctor may throw.
-	Note: If FI_in.file_size = 0 it means we don't know the file size. The 0
-		value has special meaning because we don't share files of 0 size.
+	Note: The ctor may throw.
+	Note: If FI_in.file_size = 0 it means we don't know the file size.
 	*/
 	slot(const file_info & FI_in);
 
-	const std::string _name;
+	//FI mutex locks all access to FI and locks initialization of Transfer
+	boost::mutex FI_mutex;
+	file_info FI;
 
-	//non-empty when we don't know file size
-	boost::shared_ptr<file_info> FI;
-
-	//non-empty when we know file size
+	//only instantiated when we know the file size
 	boost::shared_ptr<transfer> Transfer;
 };
 #endif

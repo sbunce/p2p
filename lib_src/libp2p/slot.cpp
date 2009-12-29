@@ -1,99 +1,106 @@
 #include "slot.hpp"
 
 slot::slot(const file_info & FI_in):
-	_name(FI_in.path.get().rfind('/') == std::string::npos ?
-		FI_in.path.get().substr(FI_in.path.get().rfind('/')+1) : "ERROR")
+	FI(FI_in)
 {
-	if(FI_in.file_size == 0){
-		FI = boost::shared_ptr<file_info>(new file_info(FI_in));
-	}else{
-		Transfer = boost::shared_ptr<transfer>(new transfer(FI_in));
-	}
-}
-
-void slot::check()
-{
-	if(Transfer){
-		Transfer->check();
+	if(FI.file_size != 0){
+		try{
+			Transfer = boost::shared_ptr<transfer>(new transfer(FI));
+		}catch(std::exception & ex){
+			LOGGER << ex.what();
+			Transfer = boost::shared_ptr<transfer>();
+		}
 	}
 }
 
 bool slot::complete()
 {
-	if(FI){
-		return false;
-	}else{
+	if(Transfer){
 		return Transfer->complete();
+	}else{
+		return false;
 	}
 }
 
 unsigned slot::download_speed()
 {
+	if(Transfer){
 //DEBUG, implement granular rate measurement later
-	return 0;
+		return 0;
+	}else{
+		return 0;
+	}
 }
 
 boost::uint64_t slot::file_size()
 {
-	if(FI){
-		return FI->file_size;
-	}else{
-		return Transfer->file_size();
-	}
+	boost::mutex::scoped_lock lock(FI_mutex);
+	return FI.file_size;
+}
+
+const boost::shared_ptr<transfer> & slot::get_transfer()
+{
+	return Transfer;
 }
 
 const std::string & slot::hash()
 {
-	if(FI){
-		return FI->hash;
-	}else{
-		return Transfer->hash();
-	}
+	boost::mutex::scoped_lock lock(FI_mutex);
+	return FI.hash;
 }
 
-const std::string & slot::name()
+std::string slot::name()
 {
-	return _name;
+	boost::mutex::scoped_lock lock(FI_mutex);
+	return std::string(FI.path.get().rfind('/') != std::string::npos ?
+		FI.path.get().substr(FI.path.get().rfind('/')+1) : "ERROR");
 }
 
 unsigned slot::percent_complete()
 {
-//DEBUG, implement later
-	return 69;
-}
-
-bool slot::root_hash(std::string & RH)
-{
 	if(Transfer){
-		return Transfer->root_hash(RH);
+//DEBUG, implement later
+		return 25;
 	}else{
-		return false;
+		return 25;
 	}
 }
 
-void slot::set_unknown(const boost::uint64_t file_size, const std::string & root_hash)
+bool slot::set_unknown(const boost::uint64_t file_size, const std::string & root_hash)
 {
+	//true if this thread instantiated transfer (used to save disk access)
+	bool created = false;
+	std::string path_tmp;
+
+	{//BEGIN lock scope
+	boost::mutex::scoped_lock lock(FI_mutex);
 	if(!Transfer){
-		assert(FI);
-		FI->file_size = file_size;
-		Transfer = boost::shared_ptr<transfer>(new transfer(*FI));
-		FI = boost::shared_ptr<file_info>();
+		created = true;
+		FI.file_size = file_size;
+		path_tmp = FI.path;
+		try{
+			Transfer = boost::shared_ptr<transfer>(new transfer(FI));
+		}catch(std::exception & ex){
+			LOGGER << ex.what();
+			Transfer = boost::shared_ptr<transfer>();
+			return false;
+		}
+	}
+	}//END lock scope
+	if(created){
+		database::table::share::update_file_size(path_tmp, file_size);
 		network::buffer buf(convert::hex_to_bin(root_hash));
 		Transfer->write_hash_tree_block(0, buf);
 	}
-}
-
-bool slot::status(unsigned char & byte)
-{
-	if(Transfer){
-		return Transfer->status(byte);
-	}else{
-		return false;
-	}
+	return true;
 }
 
 unsigned slot::upload_speed()
 {
+	if(Transfer){
 //DEBUG, implement granular rate measurement later
-	return 0;
+		return 0;
+	}else{
+		return 0;
+	}
 }

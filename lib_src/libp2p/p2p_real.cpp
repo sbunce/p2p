@@ -115,7 +115,9 @@ void p2p_real::resume()
 	for(share::slot_iterator iter_cur = share::singleton().begin_slot(),
 		iter_end = share::singleton().end_slot(); iter_cur != iter_end; ++iter_cur)
 	{
-		iter_cur->check();
+		if(iter_cur->get_transfer()){
+			iter_cur->get_transfer()->check();
+		}
 	}
 
 	//connect to peers that have files we need

@@ -4,6 +4,7 @@
 //custom
 #include "file.hpp"
 #include "hash_tree.hpp"
+#include "message.hpp"
 
 class transfer
 {
@@ -35,6 +36,11 @@ public:
 		Returns true if hash tree and file are complete.
 	hash:
 		Returns hash.
+	register_outgoing_0:
+		Register a host that has a complete hash tree and file.
+	request:
+		Returns a request_hash_tree_block or request_file_block message. Returns
+		empty shared_ptr if no requests to make.
 	status:
 		Sets byte to status byte needed for slot message. Returns true if byte
 		can be set, false if byte cannot be set.
@@ -42,10 +48,15 @@ public:
 	void check();
 	bool complete();
 	const std::string & hash();
+	void register_outgoing_0(const int connection_ID);
+	boost::shared_ptr<message::base> request(const int connection_ID,
+		const unsigned char slot_num);
 	bool status(unsigned char & byte);
 
 private:
-	file File;
 	hash_tree Hash_Tree;
+	file File;
+	block_request Hash_Tree_Block;
+	block_request File_Block;
 };
 #endif

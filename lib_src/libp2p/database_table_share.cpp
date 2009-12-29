@@ -87,3 +87,12 @@ std::deque<database::table::share::info> database::table::share::resume(
 		boost::bind(&resume_call_back, _1, _2, _3, boost::ref(info_container)));
 	return info_container;
 }
+
+void database::table::share::update_file_size(const std::string & path,
+	const boost::uint64_t file_size, database::pool::proxy DB)
+{
+	std::stringstream ss;
+	ss << "UPDATE OR IGNORE share SET file_size = '" << file_size
+		<< "' WHERE path = '" << database::escape(path) << "'";
+	DB->query(ss.str()); 
+}

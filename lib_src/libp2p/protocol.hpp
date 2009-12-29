@@ -7,9 +7,10 @@
 namespace protocol
 {
 //hard coded protocol preferences
-const unsigned timeout = 16;          //time after which a block will be rerequested
-const unsigned DH_key_size = 16;      //size exchanged key in Diffie-Hellman-Merkle
-const unsigned hash_block_size = 512; //number of hashes in hash block
+const unsigned timeout = 16;            //time after which a block will be rerequested
+const unsigned max_block_pipeline = 16; //maximum pipeline size for block requests
+const unsigned DH_key_size = 16;        //size exchanged key in Diffie-Hellman-Merkle
+const unsigned hash_block_size = 512;   //number of hashes in hash block
 const unsigned file_block_size = hash_block_size * SHA1::bin_size;
 
 //commands and messages sizes
