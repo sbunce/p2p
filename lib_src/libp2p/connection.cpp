@@ -10,8 +10,9 @@ connection::connection(
 	blacklist_state(-1),
 	Slot_Manager(
 		connection_ID,
+		boost::bind(&connection::send, this, _1),
 		boost::bind(&connection::expect, this, _1),
-		boost::bind(&connection::send, this, _1)
+		boost::bind(&connection::expect_anytime, this, _1)
 	)
 {
 	//start key exchange
@@ -23,19 +24,20 @@ connection::connection(
 		expect(boost::shared_ptr<message::base>(new message::key_exchange_p_rA(
 			boost::bind(&connection::recv_p_rA, this, _1, boost::ref(CI)))));
 	}
-
-	//register possible incoming messages
-	Expect_Anytime.push_back(boost::shared_ptr<message::base>(new message::request_slot(
-		boost::bind(&slot_manager::recv_request_slot, &Slot_Manager, _1))));
-
 	CI.recv_call_back = boost::bind(&connection::proactor_recv_call_back, this, _1);
-	CI.recv_call_back(CI);
 }
 
 void connection::expect(boost::shared_ptr<message::base> M)
 {
 	assert(M);
 	Expect.push_back(M);
+}
+
+void connection::expect_anytime(boost::shared_ptr<message::base> M)
+{
+//DEBUG, need a way to remove expected_anytime message
+	assert(M);
+	Expect_Anytime.push_back(M);
 }
 
 void connection::proactor_recv_call_back(network::connection_info & CI)
@@ -72,7 +74,7 @@ void connection::proactor_recv_call_back(network::connection_info & CI)
 		}
 	}
 	//check if message is not a response
-	for(std::vector<boost::shared_ptr<message::base> >::iterator
+	for(std::list<boost::shared_ptr<message::base> >::iterator
 		iter_cur = Expect_Anytime.begin(), iter_end = Expect_Anytime.end();
 		iter_cur != iter_end; ++iter_cur)
 	{

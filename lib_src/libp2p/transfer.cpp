@@ -36,42 +36,28 @@ void transfer::register_outgoing_0(const int connection_ID)
 	File_Block.add_host_complete(connection_ID);
 }
 
-boost::shared_ptr<message::base> transfer::request(const int connection_ID,
-	const unsigned char slot_num)
+bool transfer::request_hash_tree_block(const int connection_ID,
+	boost::uint64_t & block_num, unsigned & block_size,
+	boost::uint64_t & tree_block_count)
 {
-/*
-class request_hash_tree_block : public base
-{
-public:
-	//ctor to recv message
-	request_hash_tree_block(const unsigned char slot_num,
-		const boost::uint64_t block, const boost::uint64_t tree_block_count);
-	//ctor to send message
-	request_hash_tree_block(const boost::uint64_t tree_block_count);
-	virtual bool expects(network::connection_info & CI);
-	virtual bool recv(network::connection_info & CI);
-private:
-	//size (bytes) of the block number field
-	unsigned VLI_size;
-};
+	if(Hash_Tree_Block.next_request(connection_ID, block_num)){
+		block_size = Hash_Tree.block_size(block_num);
+		tree_block_count = Hash_Tree.tree_block_count;
+		return true;
+	}
+	return false;
+}
 
-class request_file_block : public base
+bool transfer::request_file_block(const int connection_ID,
+	boost::uint64_t & block_num, unsigned & block_size,
+	boost::uint64_t & file_block_count)
 {
-public:
-	//ctor to recv message
-	request_file_block(const unsigned char slot_num,
-		const boost::uint64_t block, const boost::uint64_t file_block_count);
-	//ctor to send message
-	request_file_block(const boost::uint64_t file_block_count);
-	virtual bool expects(network::connection_info & CI);
-	virtual bool recv(network::connection_info & CI);
-private:
-	//size (bytes) of the block number field
-	unsigned VLI_size;
-};
-*/
-
-	return boost::shared_ptr<message::base>();
+	if(File_Block.next_request(connection_ID, block_num)){
+		block_size = File.block_size(block_num);
+		file_block_count = Hash_Tree.file_block_count;
+		return true;
+	}
+	return false;
 }
 
 bool transfer::root_hash(std::string & RH)
@@ -115,5 +101,7 @@ LOGGER << "stub: add support for incomplete"; exit(1);
 hash_tree::status transfer::write_hash_tree_block(const boost::uint64_t block_num,
 	const network::buffer & block)
 {
-	return Hash_Tree.write_block(block_num, block);
+//DEBUG, need to record block in Hash_Tree_Block
+
+	hash_tree::status Status = Hash_Tree.write_block(block_num, block);
 }

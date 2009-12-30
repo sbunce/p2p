@@ -2,6 +2,7 @@
 #define H_TRANSFER
 
 //custom
+#include "block_request.hpp"
 #include "file.hpp"
 #include "hash_tree.hpp"
 #include "message.hpp"
@@ -38,9 +39,12 @@ public:
 		Returns hash.
 	register_outgoing_0:
 		Register a host that has a complete hash tree and file.
-	request:
-		Returns a request_hash_tree_block or request_file_block message. Returns
-		empty shared_ptr if no requests to make.
+	request_hash_tree_block:
+		Returns true and sets block_num, block_size, and tree_block_count if a
+		hash tree block needs to be requested.
+	request_file_block:
+		Returns true and sets block_num, block-size, and file_block_count if a
+		file block needs to be requested.
 	status:
 		Sets byte to status byte needed for slot message. Returns true if byte
 		can be set, false if byte cannot be set.
@@ -49,8 +53,10 @@ public:
 	bool complete();
 	const std::string & hash();
 	void register_outgoing_0(const int connection_ID);
-	boost::shared_ptr<message::base> request(const int connection_ID,
-		const unsigned char slot_num);
+	bool request_hash_tree_block(const int connection_ID, boost::uint64_t & block_num,
+		unsigned & block_size, boost::uint64_t & tree_block_count);
+	bool request_file_block(const int connection_ID, boost::uint64_t & block_num,
+		unsigned & block_size, boost::uint64_t & file_block_count);
 	bool status(unsigned char & byte);
 
 private:

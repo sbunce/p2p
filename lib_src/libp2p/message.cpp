@@ -49,6 +49,38 @@ bool message::composite::recv(network::connection_info & CI)
 }
 //END composite
 
+//BEGIN block
+message::block::block(
+	boost::function<bool (boost::shared_ptr<base>)> func_in,
+	const boost::uint64_t block_size_in
+):
+	block_size(block_size_in)
+{
+	func = func_in;
+}
+
+message::block::block(network::buffer & block)
+{
+	buf.append(protocol::block).append(block);
+}
+
+bool message::block::expects(network::connection_info & CI)
+{
+	return CI.recv_buf[0] == protocol::block;
+}
+
+bool message::block::recv(network::connection_info & CI)
+{
+	assert(expects(CI));
+	if(CI.recv_buf.size() >= protocol::block_size(block_size)){
+		buf.append(CI.recv_buf.data(), protocol::block_size(block_size));
+		CI.recv_buf.erase(0, protocol::block_size(block_size));
+		return true;
+	}
+	return false;
+}
+//END block
+
 //BEGIN error
 message::error::error(boost::function<bool (boost::shared_ptr<base>)> func_in)
 {
@@ -178,18 +210,26 @@ bool message::key_exchange_rB::recv(network::connection_info & CI)
 
 //BEGIN request_hash_tree_block
 message::request_hash_tree_block::request_hash_tree_block(
-	const unsigned char slot_num, const boost::uint64_t block,
-	const boost::uint64_t tree_block_count)
+	boost::function<bool (boost::shared_ptr<base>)> func_in,
+	const unsigned char slot_num_in,
+	const boost::uint64_t tree_block_count
+):
+	slot_num(slot_num_in),
+	VLI_size(convert::VLI_size(tree_block_count))
+{
+	func = func_in;
+}
+
+
+message::request_hash_tree_block::request_hash_tree_block(
+	const unsigned char slot_num,
+	const boost::uint64_t block_num,
+	const boost::uint64_t tree_block_count
+)
 {
 	buf.append(protocol::request_hash_tree_block)
 		.append(slot_num)
-		.append(convert::encode_VLI(block, tree_block_count));
-}
-
-message::request_hash_tree_block::request_hash_tree_block(
-	const boost::uint64_t tree_block_count)
-{
-	VLI_size = convert::VLI_size(tree_block_count);
+		.append(convert::encode_VLI(block_num, tree_block_count));
 }
 
 bool message::request_hash_tree_block::expects(network::connection_info & CI)
@@ -210,18 +250,24 @@ bool message::request_hash_tree_block::recv(network::connection_info & CI)
 
 //BEGIN request_file_block
 message::request_file_block::request_file_block(
-	const unsigned char slot_num, const boost::uint64_t block,
+	boost::function<bool (boost::shared_ptr<base>)> func_in,
+	const unsigned char slot_num_in,
+	const boost::uint64_t tree_block_count
+):
+	slot_num(slot_num_in),
+	VLI_size(convert::VLI_size(tree_block_count))
+{
+	func = func_in;
+}
+
+message::request_file_block::request_file_block(
+	const unsigned char slot_num,
+	const boost::uint64_t block_num,
 	const boost::uint64_t file_block_count)
 {
 	buf.append(protocol::request_file_block)
 		.append(slot_num)
-		.append(convert::encode_VLI(block, file_block_count));
-}
-
-message::request_file_block::request_file_block(
-	const boost::uint64_t tree_block_count)
-{
-	VLI_size = convert::VLI_size(tree_block_count);
+		.append(convert::encode_VLI(block_num, file_block_count));
 }
 
 bool message::request_file_block::expects(network::connection_info & CI)

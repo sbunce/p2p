@@ -34,11 +34,25 @@ public:
 	recv:
 		Returns true if incoming message received. False if incomplete message or
 		host blacklisted.
-	encrypt
 	*/
 	virtual bool encrypt();
 	virtual bool expects(network::connection_info & CI) = 0;
 	virtual bool recv(network::connection_info & CI) = 0;
+};
+
+class block : public base
+{
+public:
+	//recv ctor
+	explicit block(boost::function<bool (boost::shared_ptr<base>)> func_in,
+		const boost::uint64_t block_size_in);
+	//send ctor
+	block(network::buffer & block);
+	virtual bool expects(network::connection_info & CI);
+	virtual bool recv(network::connection_info & CI);
+private:
+	//size of block field (only used for recv)
+	boost::uint64_t block_size;
 };
 
 //the composite message is used to handle multiple possible responses
@@ -57,9 +71,9 @@ private:
 class error : public base
 {
 public:
-	//ctor to recv error
+	//recv ctor
 	explicit error(boost::function<bool (boost::shared_ptr<base>)> func_in);
-	//ctor to send error
+	//send ctor
 	error();
 	virtual bool expects(network::connection_info & CI);
 	virtual bool recv(network::connection_info & CI);
@@ -79,9 +93,9 @@ public:
 class key_exchange_p_rA : public base
 {
 public:
-	//ctor to recv message
+	//recv ctor
 	explicit key_exchange_p_rA(boost::function<bool (boost::shared_ptr<base>)> func_in);
-	//ctor to send message
+	//send ctor
 	explicit key_exchange_p_rA(encryption & Encryption);
 	virtual bool encrypt();
 	virtual bool expects(network::connection_info & CI);
@@ -91,9 +105,9 @@ public:
 class key_exchange_rB : public base
 {
 public:
-	//ctor to recv message
+	//recv ctor
 	explicit key_exchange_rB(boost::function<bool (boost::shared_ptr<base>)> func_in);
-	//ctor to send message
+	//send ctor
 	explicit key_exchange_rB(encryption & Encryption);
 	virtual bool encrypt();
 	virtual bool expects(network::connection_info & CI);
@@ -103,39 +117,43 @@ public:
 class request_hash_tree_block : public base
 {
 public:
-	//ctor to recv message
+	//recv ctor
+	request_hash_tree_block(boost::function<bool (boost::shared_ptr<base>)> func_in,
+		const unsigned char slot_num_in, const boost::uint64_t tree_block_count);
+	//send ctor
 	request_hash_tree_block(const unsigned char slot_num,
-		const boost::uint64_t block, const boost::uint64_t tree_block_count);
-	//ctor to send message
-	request_hash_tree_block(const boost::uint64_t tree_block_count);
+		const boost::uint64_t block_num, const boost::uint64_t tree_block_count);
 	virtual bool expects(network::connection_info & CI);
 	virtual bool recv(network::connection_info & CI);
 private:
-	//size (bytes) of the block number field
-	unsigned VLI_size;
+	//these are only initialized by recv ctor
+	unsigned char slot_num;
+	unsigned VLI_size; //size (bytes) of the block number field
 };
 
 class request_file_block : public base
 {
 public:
-	//ctor to recv message
+	//recv ctor
+	request_file_block(boost::function<bool (boost::shared_ptr<base>)> func_in,
+		const unsigned char slot_num_in, const boost::uint64_t file_block_count);
+	//send ctor
 	request_file_block(const unsigned char slot_num,
-		const boost::uint64_t block, const boost::uint64_t file_block_count);
-	//ctor to send message
-	request_file_block(const boost::uint64_t file_block_count);
+		const boost::uint64_t block_num, const boost::uint64_t file_block_count);
 	virtual bool expects(network::connection_info & CI);
 	virtual bool recv(network::connection_info & CI);
 private:
-	//size (bytes) of the block number field
-	unsigned VLI_size;
+	//these are only initialized by recv ctor
+	unsigned char slot_num;
+	unsigned VLI_size; //size (bytes) of the block number field
 };
 
 class request_slot : public base
 {
 public:
-	//ctor to recv message
+	//recv ctor
 	explicit request_slot(boost::function<bool (boost::shared_ptr<base>)> func_in);
-	//ctor to send message
+	//send ctor
 	explicit request_slot(const std::string & hash);
 	virtual bool expects(network::connection_info & CI);
 	virtual bool recv(network::connection_info & CI);
@@ -144,20 +162,20 @@ public:
 class slot : public base
 {
 public:
-	//ctor to recv message
+	//recv ctor
 	slot(boost::function<bool (boost::shared_ptr<base>)> func_in,
 		const std::string & hash_in);
-	//ctor to send message
+	//send ctor
 	slot(const unsigned char slot_num, unsigned char status,
 		const boost::uint64_t file_size, const std::string & root_hash);
 	virtual bool expects(network::connection_info & CI);
 	virtual bool recv(network::connection_info & CI);
 private:
-	//hash requested
+	//hash requested (only used for recv)
 	std::string hash;
 	/*
 	Set to true when file_size and root_hash checked. This is used to save
-	processing from computing the hash multiple times.
+	processing from computing the hash multiple times. (only used for recv)
 	*/
 	bool checked;
 };

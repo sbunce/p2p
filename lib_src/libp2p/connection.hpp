@@ -29,16 +29,16 @@ private:
 	network::proactor & Proactor;
 
 	/*
-	Messages that expect a response are pushed on the back of Expect. When a
-	response arrives it is for the message on the front of Expect.
+	Expected responses are pushed on the back of Expect after a request is sent.
+	When a response arrives it is for the message on the front of Expect.
 	*/
 	std::list<boost::shared_ptr<message::base> > Expect;
 
 	/*
 	Incoming messages that aren't responses are processed by the messages in this
-	container. The message objects in this container are saved.
+	container. The message objects in this container are reused.
 	*/
-	std::vector<boost::shared_ptr<message::base> > Expect_Anytime;
+	std::list<boost::shared_ptr<message::base> > Expect_Anytime;
 
 	encryption Encryption; //key exchange and stream cypher
 	std::string peer_ID;   //holds peer_ID when it's received
@@ -52,10 +52,13 @@ private:
 		After sending a message that expects a response this function should be
 		called with the message expected. If there are multiple possible messages
 		expected a composite message should be used.
+	expect_anytime:
+		Expect a incoming message at any time.
 	send:
 		Sends a message. Handles encryption.
 	*/
 	void expect(boost::shared_ptr<message::base> M);
+	void expect_anytime(boost::shared_ptr<message::base> M);
 	void send(boost::shared_ptr<message::base> M);
 
 	/*

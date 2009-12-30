@@ -2,18 +2,28 @@
 
 slot_manager::slot_manager(
 	const int connection_ID_in,
+	boost::function<void (boost::shared_ptr<message::base>)> send_in,
 	boost::function<void (boost::shared_ptr<message::base>)> expect_in,
-	boost::function<void (boost::shared_ptr<message::base>)> send_in
+	boost::function<void (boost::shared_ptr<message::base>)> expect_anytime_in
 ):
 	connection_ID(connection_ID_in),
-	expect(expect_in),
 	send(send_in),
+	expect(expect_in),
+	expect_anytime(expect_anytime_in),
 	pipeline_cur(0),
 	pipeline_max(protocol::max_block_pipeline / 2),
 	open_slots(0),
 	latest_slot(0)
 {
-
+	//register possible incoming messages
+	expect_anytime(boost::shared_ptr<message::base>(new message::request_slot(
+		boost::bind(&slot_manager::recv_request_slot, this, _1))));
+/*
+DEBUG, must be expected_anytime after slot message sent
+	expect_anytime(boost::shared_ptr<message::base>(new message::request_hash_tree_block(
+		boost::bind(&slot_manager::recv_request_hash_tree_block, this, _1)
+	));
+*/
 }
 
 void slot_manager::make_block_requests(boost::shared_ptr<slot> S)
@@ -69,12 +79,37 @@ void slot_manager::make_block_requests(boost::shared_ptr<slot> S)
 			break;
 		}
 		if(iter_cur->second->get_transfer()){
-			boost::shared_ptr<message::base> M = iter_cur->second->get_transfer()->request(
-				connection_ID, iter_cur->first);
-			if(M){
+			boost::uint64_t block_num;   //block number to request
+			boost::uint64_t block_count; //total number of blocks
+			unsigned block_size;
+			if(iter_cur->second->get_transfer()->request_hash_tree_block(connection_ID,
+				block_num, block_size, block_count))
+			{
 				++pipeline_cur;
 				serviced_one = true;
-//DEBUG, need to send M
+				boost::shared_ptr<message::base> M_request(new message::request_hash_tree_block(
+					iter_cur->first, block_num, block_count));
+				send(M_request);
+				boost::shared_ptr<message::composite> M_response(new message::composite());
+				M_response->add(boost::shared_ptr<message::block>(new message::block(boost::bind(
+					&slot_manager::recv_hash_tree_block, this, _1, block_num), block_size)));
+				M_response->add(boost::shared_ptr<message::error>(new message::error(
+					boost::bind(&slot_manager::recv_request_block_failed, this, _1))));
+				expect(M_response);
+			}else if(iter_cur->second->get_transfer()->request_file_block(connection_ID,
+				block_num, block_size, block_count))
+			{
+				++pipeline_cur;
+				serviced_one = true;
+				boost::shared_ptr<message::base> M_request(new message::request_file_block(
+					iter_cur->first, block_num, block_count));
+				send(M_request);
+				boost::shared_ptr<message::composite> M_response(new message::composite());
+				M_response->add(boost::shared_ptr<message::block>(new message::block(boost::bind(
+					&slot_manager::recv_file_block, this, _1, block_num), block_size)));
+				M_response->add(boost::shared_ptr<message::error>(new message::error(
+					boost::bind(&slot_manager::recv_request_block_failed, this, _1))));
+				expect(M_response);
 			}
 		}
 		++iter_cur;
@@ -84,7 +119,8 @@ void slot_manager::make_block_requests(boost::shared_ptr<slot> S)
 		if(iter_cur->first == start_slot && !serviced_one){
 			//looped through all sockets and none needed to be serviced
 			break;
-		}else{
+		}else if(iter_cur->first == start_slot && serviced_one){
+			//reset flag for next loop through slots
 			serviced_one = false;
 		}
 	}
@@ -110,6 +146,26 @@ void slot_manager::make_slot_requests()
 			boost::bind(&slot_manager::recv_request_slot_failed, this, _1))));
 		expect(M_response);
 	}
+}
+
+bool slot_manager::recv_file_block(boost::shared_ptr<message::base> M,
+	const boost::uint64_t block_num)
+{
+LOGGER << block_num;
+	return true;
+}
+
+bool slot_manager::recv_hash_tree_block(boost::shared_ptr<message::base> M,
+	const boost::uint64_t block_num)
+{
+LOGGER << block_num;
+	return true;
+}
+
+bool slot_manager::recv_request_block_failed(boost::shared_ptr<message::base> M)
+{
+LOGGER;
+	return true;
 }
 
 bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
@@ -193,7 +249,6 @@ LOGGER << "stub: handle request slot failure by removing source";
 	--open_slots;
 	return true;
 }
-
 
 bool slot_manager::recv_slot(boost::shared_ptr<message::base> M,
 	const std::string hash)
