@@ -20,6 +20,11 @@ bool transfer::complete()
 	return false;
 }
 
+boost::uint64_t transfer::file_block_count()
+{
+	return Hash_Tree.file_block_count;
+}
+
 boost::uint64_t transfer::file_size()
 {
 	return Hash_Tree.file_size;
@@ -37,24 +42,20 @@ void transfer::register_outgoing_0(const int connection_ID)
 }
 
 bool transfer::request_hash_tree_block(const int connection_ID,
-	boost::uint64_t & block_num, unsigned & block_size,
-	boost::uint64_t & tree_block_count)
+	boost::uint64_t & block_num, unsigned & block_size)
 {
 	if(Hash_Tree_Block.next_request(connection_ID, block_num)){
 		block_size = Hash_Tree.block_size(block_num);
-		tree_block_count = Hash_Tree.tree_block_count;
 		return true;
 	}
 	return false;
 }
 
 bool transfer::request_file_block(const int connection_ID,
-	boost::uint64_t & block_num, unsigned & block_size,
-	boost::uint64_t & file_block_count)
+	boost::uint64_t & block_num, unsigned & block_size)
 {
 	if(File_Block.next_request(connection_ID, block_num)){
 		block_size = File.block_size(block_num);
-		file_block_count = Hash_Tree.file_block_count;
 		return true;
 	}
 	return false;
@@ -96,6 +97,11 @@ LOGGER << "stub: add support for incomplete"; exit(1);
 LOGGER << "stub: add support for incomplete"; exit(1);
 	}
 */
+}
+
+boost::uint64_t transfer::tree_block_count()
+{
+	return Hash_Tree.tree_block_count;
 }
 
 hash_tree::status transfer::write_hash_tree_block(const boost::uint64_t block_num,

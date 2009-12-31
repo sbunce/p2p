@@ -36,7 +36,7 @@ public:
 		host blacklisted.
 	*/
 	virtual bool encrypt();
-	virtual bool expects(network::connection_info & CI) = 0;
+	virtual bool expects(network::buffer & recv_buf) = 0;
 	virtual bool recv(network::connection_info & CI) = 0;
 };
 
@@ -48,7 +48,7 @@ public:
 		const boost::uint64_t block_size_in);
 	//send ctor
 	block(network::buffer & block);
-	virtual bool expects(network::connection_info & CI);
+	virtual bool expects(network::buffer & recv_buf);
 	virtual bool recv(network::connection_info & CI);
 private:
 	//size of block field (only used for recv)
@@ -61,11 +61,13 @@ class composite : public base
 public:
 	//add messages to expect() and recv()
 	void add(boost::shared_ptr<base> M);
-	virtual bool expects(network::connection_info & CI);
+	virtual bool expects(network::buffer & recv_buf);
 	virtual bool recv(network::connection_info & CI);
 private:
 	boost::shared_ptr<base> response;
 	std::vector<boost::shared_ptr<base> > possible_response;
+	//dummy that func is initially set to
+	bool dummy(boost::shared_ptr<base> M);
 };
 
 class error : public base
@@ -75,7 +77,7 @@ public:
 	explicit error(boost::function<bool (boost::shared_ptr<base>)> func_in);
 	//send ctor
 	error();
-	virtual bool expects(network::connection_info & CI);
+	virtual bool expects(network::buffer & recv_buf);
 	virtual bool recv(network::connection_info & CI);
 };
 
@@ -86,7 +88,7 @@ public:
 	explicit initial(boost::function<bool (boost::shared_ptr<base>)> func_in);
 	//ctor to send message
 	explicit initial(const std::string peer_ID);
-	virtual bool expects(network::connection_info & CI);
+	virtual bool expects(network::buffer & recv_buf);
 	virtual bool recv(network::connection_info & CI);
 };
 
@@ -98,7 +100,7 @@ public:
 	//send ctor
 	explicit key_exchange_p_rA(encryption & Encryption);
 	virtual bool encrypt();
-	virtual bool expects(network::connection_info & CI);
+	virtual bool expects(network::buffer & recv_buf);
 	virtual bool recv(network::connection_info & CI);
 };
 
@@ -110,7 +112,7 @@ public:
 	//send ctor
 	explicit key_exchange_rB(encryption & Encryption);
 	virtual bool encrypt();
-	virtual bool expects(network::connection_info & CI);
+	virtual bool expects(network::buffer & recv_buf);
 	virtual bool recv(network::connection_info & CI);
 };
 
@@ -123,7 +125,7 @@ public:
 	//send ctor
 	request_hash_tree_block(const unsigned char slot_num,
 		const boost::uint64_t block_num, const boost::uint64_t tree_block_count);
-	virtual bool expects(network::connection_info & CI);
+	virtual bool expects(network::buffer & recv_buf);
 	virtual bool recv(network::connection_info & CI);
 private:
 	//these are only initialized by recv ctor
@@ -140,7 +142,7 @@ public:
 	//send ctor
 	request_file_block(const unsigned char slot_num,
 		const boost::uint64_t block_num, const boost::uint64_t file_block_count);
-	virtual bool expects(network::connection_info & CI);
+	virtual bool expects(network::buffer & recv_buf);
 	virtual bool recv(network::connection_info & CI);
 private:
 	//these are only initialized by recv ctor
@@ -155,7 +157,7 @@ public:
 	explicit request_slot(boost::function<bool (boost::shared_ptr<base>)> func_in);
 	//send ctor
 	explicit request_slot(const std::string & hash);
-	virtual bool expects(network::connection_info & CI);
+	virtual bool expects(network::buffer & recv_buf);
 	virtual bool recv(network::connection_info & CI);
 };
 
@@ -168,7 +170,7 @@ public:
 	//send ctor
 	slot(const unsigned char slot_num, unsigned char status,
 		const boost::uint64_t file_size, const std::string & root_hash);
-	virtual bool expects(network::connection_info & CI);
+	virtual bool expects(network::buffer & recv_buf);
 	virtual bool recv(network::connection_info & CI);
 private:
 	//hash requested (only used for recv)

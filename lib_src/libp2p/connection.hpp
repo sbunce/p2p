@@ -32,7 +32,7 @@ private:
 	Expected responses are pushed on the back of Expect after a request is sent.
 	When a response arrives it is for the message on the front of Expect.
 	*/
-	std::list<boost::shared_ptr<message::base> > Expect;
+	std::list<boost::shared_ptr<message::base> > Expect_Response;
 
 	/*
 	Incoming messages that aren't responses are processed by the messages in this
@@ -48,17 +48,20 @@ private:
 	slot_manager Slot_Manager;
 
 	/*
-	expect:
+	expect_response:
 		After sending a message that expects a response this function should be
 		called with the message expected. If there are multiple possible messages
 		expected a composite message should be used.
 	expect_anytime:
 		Expect a incoming message at any time.
+	expect_anytime_remove:
+		Removes messages expected anytime that expects the specified buffer.
 	send:
 		Sends a message. Handles encryption.
 	*/
-	void expect(boost::shared_ptr<message::base> M);
+	void expect_response(boost::shared_ptr<message::base> M);
 	void expect_anytime(boost::shared_ptr<message::base> M);
+	void expect_anytime_erase(network::buffer buf);
 	void send(boost::shared_ptr<message::base> M);
 
 	/*

@@ -12,16 +12,32 @@ bool message::base::encrypt()
 void message::composite::add(boost::shared_ptr<base> M)
 {
 	assert(M);
+	assert(M->func);
+
+	/*
+	We set func to a dummy handler to pass asserts in the connection class which
+	make sure a handler is defined. This makes sure that at least one message is
+	added to the composite message. This will be set later, by recv, to the
+	correct handler.
+	*/
+	func = boost::bind(&composite::dummy, this, _1);
+
 	possible_response.push_back(M);
 }
 
-bool message::composite::expects(network::connection_info & CI)
+bool message::composite::dummy(boost::shared_ptr<base> M)
+{
+	LOGGER << "improperly used composite message";
+	exit(1);
+}
+
+bool message::composite::expects(network::buffer & recv_buf)
 {
 	for(std::vector<boost::shared_ptr<base> >::iterator
 		iter_cur = possible_response.begin(), iter_end = possible_response.end();
 		iter_cur != iter_end; ++iter_cur)
 	{
-		if((*iter_cur)->expects(CI)){
+		if((*iter_cur)->expects(recv_buf)){
 			return true;
 		}
 	}
@@ -30,12 +46,12 @@ bool message::composite::expects(network::connection_info & CI)
 
 bool message::composite::recv(network::connection_info & CI)
 {
-	assert(expects(CI));
+	assert(expects(CI.recv_buf));
 	for(std::vector<boost::shared_ptr<base> >::iterator
 		iter_cur = possible_response.begin(), iter_end = possible_response.end();
 		iter_cur != iter_end; ++iter_cur)
 	{
-		if((*iter_cur)->expects(CI)){
+		if((*iter_cur)->expects(CI.recv_buf)){
 			if((*iter_cur)->recv(CI)){
 				func = (*iter_cur)->func;
 				buf.clear();
@@ -64,14 +80,14 @@ message::block::block(network::buffer & block)
 	buf.append(protocol::block).append(block);
 }
 
-bool message::block::expects(network::connection_info & CI)
+bool message::block::expects(network::buffer & recv_buf)
 {
-	return CI.recv_buf[0] == protocol::block;
+	return recv_buf[0] == protocol::block;
 }
 
 bool message::block::recv(network::connection_info & CI)
 {
-	assert(expects(CI));
+	assert(expects(CI.recv_buf));
 	if(CI.recv_buf.size() >= protocol::block_size(block_size)){
 		buf.append(CI.recv_buf.data(), protocol::block_size(block_size));
 		CI.recv_buf.erase(0, protocol::block_size(block_size));
@@ -92,14 +108,14 @@ message::error::error()
 	buf.append(protocol::error);
 }
 
-bool message::error::expects(network::connection_info & CI)
+bool message::error::expects(network::buffer & recv_buf)
 {
-	return CI.recv_buf[0] == protocol::error;
+	return recv_buf[0] == protocol::error;
 }
 
 bool message::error::recv(network::connection_info & CI)
 {
-	assert(expects(CI));
+	assert(expects(CI.recv_buf));
 	if(CI.recv_buf[0] == protocol::error){
 		buf.append(CI.recv_buf.data(), protocol::error_size);
 		CI.recv_buf.erase(0, protocol::error_size);
@@ -120,7 +136,7 @@ message::initial::initial(const std::string peer_ID)
 	buf = convert::hex_to_bin(peer_ID);
 }
 
-bool message::initial::expects(network::connection_info & CI)
+bool message::initial::expects(network::buffer & recv_buf)
 {
 	//initial doesn't begin with any command
 	return true;
@@ -128,7 +144,7 @@ bool message::initial::expects(network::connection_info & CI)
 
 bool message::initial::recv(network::connection_info & CI)
 {
-	assert(expects(CI));
+	assert(expects(CI.recv_buf));
 	if(CI.recv_buf.size() >= SHA1::bin_size){
 		buf.append(CI.recv_buf.data(), SHA1::bin_size);
 		CI.recv_buf.erase(0, SHA1::bin_size);
@@ -155,7 +171,7 @@ bool message::key_exchange_p_rA::encrypt()
 	return false;
 }
 
-bool message::key_exchange_p_rA::expects(network::connection_info & CI)
+bool message::key_exchange_p_rA::expects(network::buffer & recv_buf)
 {
 	//p rA doesn't begin with any command
 	return true;
@@ -163,7 +179,7 @@ bool message::key_exchange_p_rA::expects(network::connection_info & CI)
 
 bool message::key_exchange_p_rA::recv(network::connection_info & CI)
 {
-	assert(expects(CI));
+	assert(expects(CI.recv_buf));
 	if(CI.recv_buf.size() >= protocol::DH_key_size * 2){
 		buf.append(CI.recv_buf.data(), protocol::DH_key_size * 2);
 		CI.recv_buf.erase(0, protocol::DH_key_size * 2);
@@ -190,7 +206,7 @@ bool message::key_exchange_rB::encrypt()
 	return false;
 }
 
-bool message::key_exchange_rB::expects(network::connection_info & CI)
+bool message::key_exchange_rB::expects(network::buffer & recv_buf)
 {
 	//rB doesn't begin with any command
 	return true;
@@ -198,7 +214,7 @@ bool message::key_exchange_rB::expects(network::connection_info & CI)
 
 bool message::key_exchange_rB::recv(network::connection_info & CI)
 {
-	assert(expects(CI));
+	assert(expects(CI.recv_buf));
 	if(CI.recv_buf.size() >= protocol::DH_key_size){
 		buf.append(CI.recv_buf.data(), protocol::DH_key_size);
 		CI.recv_buf.erase(0, protocol::DH_key_size);
@@ -232,13 +248,25 @@ message::request_hash_tree_block::request_hash_tree_block(
 		.append(convert::encode_VLI(block_num, tree_block_count));
 }
 
-bool message::request_hash_tree_block::expects(network::connection_info & CI)
+bool message::request_hash_tree_block::expects(network::buffer & recv_buf)
 {
-	return CI.recv_buf[0] == protocol::request_hash_tree_block;
+	if(recv_buf.size() == 1 && recv_buf[0] == protocol::request_hash_tree_block){
+		/*
+		We don't have the slot number yet so we can't be sure if we expect this
+		message or not. Return true and wait for the next byte.
+		*/
+		return true;
+	}else if(recv_buf.size() > 1 && recv_buf[0] == protocol::request_hash_tree_block
+		&& recv_buf[1] == slot_num)
+	{
+		return true;
+	}
+	return false;
 }
 
 bool message::request_hash_tree_block::recv(network::connection_info & CI)
 {
+	assert(expects(CI.recv_buf));
 	if(CI.recv_buf.size() >= 2 + VLI_size){
 		buf.append(CI.recv_buf.data(), 2 + VLI_size);
 		CI.recv_buf.erase(0, 2 + VLI_size);
@@ -270,13 +298,25 @@ message::request_file_block::request_file_block(
 		.append(convert::encode_VLI(block_num, file_block_count));
 }
 
-bool message::request_file_block::expects(network::connection_info & CI)
+bool message::request_file_block::expects(network::buffer & recv_buf)
 {
-	return CI.recv_buf[0] == protocol::request_hash_tree_block;
+	if(recv_buf.size() == 1 && recv_buf[0] == protocol::request_file_block){
+		/*
+		We don't have the slot number yet so we can't be sure if we expect this
+		message or not. Return true and wait for the next byte.
+		*/
+		return true;
+	}else if(recv_buf.size() > 1 && recv_buf[0] == protocol::request_file_block
+		&& recv_buf[1] == slot_num)
+	{
+		return true;
+	}
+	return false;
 }
 
 bool message::request_file_block::recv(network::connection_info & CI)
 {
+	assert(expects(CI.recv_buf));
 	if(CI.recv_buf.size() >= 2 + VLI_size){
 		buf.append(CI.recv_buf.data(), 2 + VLI_size);
 		CI.recv_buf.erase(0, 2 + VLI_size);
@@ -298,14 +338,14 @@ message::request_slot::request_slot(const std::string & hash)
 	buf.append(protocol::request_slot).append(convert::hex_to_bin(hash));
 }
 
-bool message::request_slot::expects(network::connection_info & CI)
+bool message::request_slot::expects(network::buffer & recv_buf)
 {
-	return CI.recv_buf[0] == protocol::request_slot;
+	return recv_buf[0] == protocol::request_slot;
 }
 
 bool message::request_slot::recv(network::connection_info & CI)
 {
-	assert(expects(CI));
+	assert(expects(CI.recv_buf));
 	if(CI.recv_buf.size() >= protocol::request_slot_size){
 		buf.append(CI.recv_buf.data(), protocol::request_slot_size);
 		CI.recv_buf.erase(0, protocol::request_slot_size);
@@ -336,14 +376,14 @@ message::slot::slot(const unsigned char slot_num, unsigned char status,
 		.append(convert::hex_to_bin(root_hash));
 }
 
-bool message::slot::expects(network::connection_info & CI)
+bool message::slot::expects(network::buffer & recv_buf)
 {
-	return CI.recv_buf[0] == protocol::slot;
+	return recv_buf[0] == protocol::slot;
 }
 
 bool message::slot::recv(network::connection_info & CI)
 {
-	assert(expects(CI));
+	assert(expects(CI.recv_buf));
 	if(CI.recv_buf.size() < protocol::slot_size(0, 0)){
 		//we do not have the minimum size slot message
 		return false;

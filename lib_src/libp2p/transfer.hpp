@@ -16,18 +16,25 @@ public:
 	root_hash:
 		Sets RH to root hash needed for slot message. Returns true if RH can be
 		set, false if RH cannot be set.
+	tree_block_count:
+		Returns number of blocks in hash tree.
 	write_hash_tree_block:
 		Writes block to hash tree.
 	*/
 	bool root_hash(std::string & RH);
+	boost::uint64_t tree_block_count();
 	hash_tree::status write_hash_tree_block(const boost::uint64_t block_num,
 		const network::buffer & block);
 
 	/* File
+	file_block_size:
+		Returns number of blocks in file.
 	file_size:
 		Returns file size.
 	*/
+	boost::uint64_t file_block_count();
 	boost::uint64_t file_size();
+
 
 	/* Hash Tree + File
 	check:
@@ -54,9 +61,9 @@ public:
 	const std::string & hash();
 	void register_outgoing_0(const int connection_ID);
 	bool request_hash_tree_block(const int connection_ID, boost::uint64_t & block_num,
-		unsigned & block_size, boost::uint64_t & tree_block_count);
+		unsigned & block_size);
 	bool request_file_block(const int connection_ID, boost::uint64_t & block_num,
-		unsigned & block_size, boost::uint64_t & file_block_count);
+		unsigned & block_size);
 	bool status(unsigned char & byte);
 
 private:

@@ -19,8 +19,9 @@ public:
 	slot_manager(
 		const int connection_ID_in,
 		boost::function<void (boost::shared_ptr<message::base>)> send_in,
-		boost::function<void (boost::shared_ptr<message::base>)> expect_in,
-		boost::function<void (boost::shared_ptr<message::base>)> expect_anytime_in
+		boost::function<void (boost::shared_ptr<message::base>)> expect_response_in,
+		boost::function<void (boost::shared_ptr<message::base>)> expect_anytime_in,
+		boost::function<void (network::buffer)> expect_anytime_erase_in
 	);
 
 	const int connection_ID;
@@ -32,20 +33,18 @@ public:
 	void resume(const std::string & peer_ID);
 
 private:
-	/*
+	/* See documentation for corresponding functions in connection.
 	send:
-		Sends a message.
-		Note: pointer to connection::send.
+		Pointer to connection::send.
 	expect:
-		Expect a response.
-		Note: pointer to connection::expect.
+		Pointer to connection::expect.
 	expect_anytime:
-		Expect an incoming message at any time.
-		Note: pointer to connection::expect_anytime.
+		Pointer to connection::expect_anytime.
 	*/
 	boost::function<void (boost::shared_ptr<message::base>)> send;
-	boost::function<void (boost::shared_ptr<message::base>)> expect;
+	boost::function<void (boost::shared_ptr<message::base>)> expect_response;
 	boost::function<void (boost::shared_ptr<message::base>)> expect_anytime;
+	boost::function<void (network::buffer)> expect_anytime_erase;
 
 	/*
 	Outgoing_Slot holds slots we have opened with the remote host.

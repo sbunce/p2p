@@ -3,13 +3,15 @@
 slot_manager::slot_manager(
 	const int connection_ID_in,
 	boost::function<void (boost::shared_ptr<message::base>)> send_in,
-	boost::function<void (boost::shared_ptr<message::base>)> expect_in,
-	boost::function<void (boost::shared_ptr<message::base>)> expect_anytime_in
+	boost::function<void (boost::shared_ptr<message::base>)> expect_response_in,
+	boost::function<void (boost::shared_ptr<message::base>)> expect_anytime_in,
+	boost::function<void (network::buffer)> expect_anytime_erase_in
 ):
 	connection_ID(connection_ID_in),
 	send(send_in),
-	expect(expect_in),
+	expect_response(expect_response_in),
 	expect_anytime(expect_anytime_in),
+	expect_anytime_erase(expect_anytime_erase_in),
 	pipeline_cur(0),
 	pipeline_max(protocol::max_block_pipeline / 2),
 	open_slots(0),
@@ -80,36 +82,35 @@ void slot_manager::make_block_requests(boost::shared_ptr<slot> S)
 		}
 		if(iter_cur->second->get_transfer()){
 			boost::uint64_t block_num;   //block number to request
-			boost::uint64_t block_count; //total number of blocks
 			unsigned block_size;
 			if(iter_cur->second->get_transfer()->request_hash_tree_block(connection_ID,
-				block_num, block_size, block_count))
+				block_num, block_size))
 			{
 				++pipeline_cur;
 				serviced_one = true;
 				boost::shared_ptr<message::base> M_request(new message::request_hash_tree_block(
-					iter_cur->first, block_num, block_count));
+					iter_cur->first, block_num, iter_cur->second->get_transfer()->tree_block_count()));
 				send(M_request);
 				boost::shared_ptr<message::composite> M_response(new message::composite());
 				M_response->add(boost::shared_ptr<message::block>(new message::block(boost::bind(
 					&slot_manager::recv_hash_tree_block, this, _1, block_num), block_size)));
 				M_response->add(boost::shared_ptr<message::error>(new message::error(
 					boost::bind(&slot_manager::recv_request_block_failed, this, _1))));
-				expect(M_response);
+				expect_response(M_response);
 			}else if(iter_cur->second->get_transfer()->request_file_block(connection_ID,
-				block_num, block_size, block_count))
+				block_num, block_size))
 			{
 				++pipeline_cur;
 				serviced_one = true;
 				boost::shared_ptr<message::base> M_request(new message::request_file_block(
-					iter_cur->first, block_num, block_count));
+					iter_cur->first, block_num, iter_cur->second->get_transfer()->file_block_count()));
 				send(M_request);
 				boost::shared_ptr<message::composite> M_response(new message::composite());
 				M_response->add(boost::shared_ptr<message::block>(new message::block(boost::bind(
 					&slot_manager::recv_file_block, this, _1, block_num), block_size)));
 				M_response->add(boost::shared_ptr<message::error>(new message::error(
 					boost::bind(&slot_manager::recv_request_block_failed, this, _1))));
-				expect(M_response);
+				expect_response(M_response);
 			}
 		}
 		++iter_cur;
@@ -144,7 +145,7 @@ void slot_manager::make_slot_requests()
 			slot_iter->hash())));
 		M_response->add(boost::shared_ptr<message::base>(new message::error(
 			boost::bind(&slot_manager::recv_request_slot_failed, this, _1))));
-		expect(M_response);
+		expect_response(M_response);
 	}
 }
 
@@ -240,6 +241,9 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 	std::pair<std::map<unsigned char, boost::shared_ptr<slot> >::iterator, bool>
 		ret = Incoming_Slot.insert(std::make_pair(slot_num, slot_iter.get()));
 	assert(ret.second);
+
+//DEBUG, need to expect_anytime request_hash_tree_block and request_file_block
+
 	return true;
 }
 

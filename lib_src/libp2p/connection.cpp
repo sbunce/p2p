@@ -11,33 +11,52 @@ connection::connection(
 	Slot_Manager(
 		connection_ID,
 		boost::bind(&connection::send, this, _1),
-		boost::bind(&connection::expect, this, _1),
-		boost::bind(&connection::expect_anytime, this, _1)
+		boost::bind(&connection::expect_response, this, _1),
+		boost::bind(&connection::expect_anytime, this, _1),
+		boost::bind(&connection::expect_anytime_erase, this, _1)
 	)
 {
 	//start key exchange
 	if(CI.direction == network::outgoing){
 		send(boost::shared_ptr<message::base>(new message::key_exchange_p_rA(Encryption)));
-		expect(boost::shared_ptr<message::base>(new message::key_exchange_rB(
+		expect_response(boost::shared_ptr<message::base>(new message::key_exchange_rB(
 			boost::bind(&connection::recv_rB, this, _1, boost::ref(CI)))));
 	}else{
-		expect(boost::shared_ptr<message::base>(new message::key_exchange_p_rA(
+		expect_response(boost::shared_ptr<message::base>(new message::key_exchange_p_rA(
 			boost::bind(&connection::recv_p_rA, this, _1, boost::ref(CI)))));
 	}
 	CI.recv_call_back = boost::bind(&connection::proactor_recv_call_back, this, _1);
 }
 
-void connection::expect(boost::shared_ptr<message::base> M)
+void connection::expect_response(boost::shared_ptr<message::base> M)
 {
 	assert(M);
-	Expect.push_back(M);
+LOGGER << typeid(*M).name();
+	assert(M->func);
+	Expect_Response.push_back(M);
 }
 
 void connection::expect_anytime(boost::shared_ptr<message::base> M)
 {
-//DEBUG, need a way to remove expected_anytime message
 	assert(M);
+	assert(M->func);
 	Expect_Anytime.push_back(M);
+}
+
+void connection::expect_anytime_erase(network::buffer buf)
+{
+	for(std::list<boost::shared_ptr<message::base> >::iterator
+		iter_cur = Expect_Anytime.begin(), iter_end = Expect_Anytime.end();
+		iter_cur != iter_end; ++iter_cur)
+	{
+		if((*iter_cur)->expects(buf)){
+			/*
+			Schedule message to be erased. We don't erase element here because it
+			might invalidate iterator in recv loop in proactor_recv_call_back.
+			*/
+			(*iter_cur)->func.clear();
+		}
+	}
 }
 
 void connection::proactor_recv_call_back(network::connection_info & CI)
@@ -59,15 +78,13 @@ void connection::proactor_recv_call_back(network::connection_info & CI)
 		goto end;
 	}
 	//check if message is an expected response
-	if(!Expect.empty() && Expect.front()->expects(CI)){
-		if(Expect.front()->recv(CI)){
-			if(Expect.front()->func){
-				if(!Expect.front()->func(Expect.front())){
-					database::table::blacklist::add(CI.IP);
-					goto end;
-				}
+	if(!Expect_Response.empty() && Expect_Response.front()->expects(CI.recv_buf)){
+		if(Expect_Response.front()->recv(CI)){
+			if(!Expect_Response.front()->func(Expect_Response.front())){
+				database::table::blacklist::add(CI.IP);
+				goto end;
 			}
-			Expect.pop_front();
+			Expect_Response.pop_front();
 			goto begin;
 		}else{
 			goto end;
@@ -76,17 +93,22 @@ void connection::proactor_recv_call_back(network::connection_info & CI)
 	//check if message is not a response
 	for(std::list<boost::shared_ptr<message::base> >::iterator
 		iter_cur = Expect_Anytime.begin(), iter_end = Expect_Anytime.end();
-		iter_cur != iter_end; ++iter_cur)
+		iter_cur != iter_end;)
 	{
-		if((*iter_cur)->expects(CI)){
-			if((*iter_cur)->recv(CI)){
-				if((*iter_cur)->func){
+		if((*iter_cur)->func){
+			if((*iter_cur)->expects(CI.recv_buf)){
+				if((*iter_cur)->recv(CI)){
 					(*iter_cur)->func(*iter_cur);
+					//clear message for reuse
+					(*iter_cur)->buf.clear();
+					goto begin;
 				}
-				(*iter_cur)->buf.clear();
-				goto begin;
+				goto end;
 			}
-			goto end;
+			++iter_cur;
+		}else{
+			//message sceduled to be erased
+			iter_cur = Expect_Anytime.erase(iter_cur);
 		}
 	}
 	LOGGER << "unrecognized message";
@@ -154,6 +176,6 @@ void connection::send_initial()
 {
 	std::string peer_ID = database::table::prefs::get_peer_ID();
 	send(boost::shared_ptr<message::base>(new message::initial(peer_ID)));
-	expect(boost::shared_ptr<message::base>(new message::initial(
+	expect_response(boost::shared_ptr<message::base>(new message::initial(
 		boost::bind(&connection::recv_initial, this, _1))));
 }
