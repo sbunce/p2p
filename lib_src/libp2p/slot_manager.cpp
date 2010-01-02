@@ -1,31 +1,17 @@
 #include "slot_manager.hpp"
 
 slot_manager::slot_manager(
-	const int connection_ID_in,
-	boost::function<void (boost::shared_ptr<message::base>)> send_in,
-	boost::function<void (boost::shared_ptr<message::base>)> expect_response_in,
-	boost::function<void (boost::shared_ptr<message::base>)> expect_anytime_in,
-	boost::function<void (network::buffer)> expect_anytime_erase_in
+	exchange & Exchange_in
 ):
-	connection_ID(connection_ID_in),
-	send(send_in),
-	expect_response(expect_response_in),
-	expect_anytime(expect_anytime_in),
-	expect_anytime_erase(expect_anytime_erase_in),
+	Exchange(Exchange_in),
 	pipeline_cur(0),
 	pipeline_max(protocol::max_block_pipeline / 2),
 	open_slots(0),
 	latest_slot(0)
 {
 	//register possible incoming messages
-	expect_anytime(boost::shared_ptr<message::base>(new message::request_slot(
+	Exchange.expect_anytime(boost::shared_ptr<message::base>(new message::request_slot(
 		boost::bind(&slot_manager::recv_request_slot, this, _1))));
-/*
-DEBUG, must be expected_anytime after slot message sent
-	expect_anytime(boost::shared_ptr<message::base>(new message::request_hash_tree_block(
-		boost::bind(&slot_manager::recv_request_hash_tree_block, this, _1)
-	));
-*/
 }
 
 void slot_manager::make_block_requests(boost::shared_ptr<slot> S)
@@ -83,34 +69,34 @@ void slot_manager::make_block_requests(boost::shared_ptr<slot> S)
 		if(iter_cur->second->get_transfer()){
 			boost::uint64_t block_num;   //block number to request
 			unsigned block_size;
-			if(iter_cur->second->get_transfer()->request_hash_tree_block(connection_ID,
-				block_num, block_size))
+			if(iter_cur->second->get_transfer()->request_hash_tree_block(
+				Exchange.connection_ID, block_num, block_size))
 			{
 				++pipeline_cur;
 				serviced_one = true;
 				boost::shared_ptr<message::base> M_request(new message::request_hash_tree_block(
 					iter_cur->first, block_num, iter_cur->second->get_transfer()->tree_block_count()));
-				send(M_request);
+				Exchange.send(M_request);
 				boost::shared_ptr<message::composite> M_response(new message::composite());
 				M_response->add(boost::shared_ptr<message::block>(new message::block(boost::bind(
 					&slot_manager::recv_hash_tree_block, this, _1, block_num), block_size)));
 				M_response->add(boost::shared_ptr<message::error>(new message::error(
 					boost::bind(&slot_manager::recv_request_block_failed, this, _1))));
-				expect_response(M_response);
-			}else if(iter_cur->second->get_transfer()->request_file_block(connection_ID,
-				block_num, block_size))
+				Exchange.expect_response(M_response);
+			}else if(iter_cur->second->get_transfer()->request_file_block(
+				Exchange.connection_ID, block_num, block_size))
 			{
 				++pipeline_cur;
 				serviced_one = true;
 				boost::shared_ptr<message::base> M_request(new message::request_file_block(
 					iter_cur->first, block_num, iter_cur->second->get_transfer()->file_block_count()));
-				send(M_request);
+				Exchange.send(M_request);
 				boost::shared_ptr<message::composite> M_response(new message::composite());
 				M_response->add(boost::shared_ptr<message::block>(new message::block(boost::bind(
 					&slot_manager::recv_file_block, this, _1, block_num), block_size)));
 				M_response->add(boost::shared_ptr<message::error>(new message::error(
 					boost::bind(&slot_manager::recv_request_block_failed, this, _1))));
-				expect_response(M_response);
+				Exchange.expect_response(M_response);
 			}
 		}
 		++iter_cur;
@@ -138,14 +124,14 @@ void slot_manager::make_slot_requests()
 		++open_slots;
 		boost::shared_ptr<message::base> M_request(new message::request_slot(
 			slot_iter->hash()));
-		send(M_request);
+		Exchange.send(M_request);
 		boost::shared_ptr<message::composite> M_response(new message::composite());
 		M_response->add(boost::shared_ptr<message::base>(new message::slot(
 			boost::bind(&slot_manager::recv_slot, this, _1, slot_iter->hash()),
 			slot_iter->hash())));
 		M_response->add(boost::shared_ptr<message::base>(new message::error(
 			boost::bind(&slot_manager::recv_request_slot_failed, this, _1))));
-		expect_response(M_response);
+		Exchange.expect_response(M_response);
 	}
 }
 
@@ -181,7 +167,7 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 	if(slot_iter == share::singleton().end_slot()){
 		LOGGER << "failed " << hash;
 		boost::shared_ptr<message::base> M(new message::error());
-		send(M);
+		Exchange.send(M);
 		return true;
 	}
 
@@ -189,7 +175,7 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 		//we do not yet know file size
 		LOGGER << "failed " << hash;
 		boost::shared_ptr<message::base> M(new message::error());
-		send(M);
+		Exchange.send(M);
 		return true;
 	}
 
@@ -210,7 +196,7 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 	if(!slot_iter->get_transfer()->status(status)){
 		LOGGER << "failed " << hash;
 		boost::shared_ptr<message::base> M(new message::error());
-		send(M);
+		Exchange.send(M);
 		return true;
 	}
 
@@ -219,7 +205,7 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 	if(file_size == 0){
 		LOGGER << "failed " << hash;
 		boost::shared_ptr<message::base> M(new message::error());
-		send(M);
+		Exchange.send(M);
 		return true;
 	}
 
@@ -228,14 +214,14 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 	if(!slot_iter->get_transfer()->root_hash(root_hash)){
 		LOGGER << "failed " << hash;
 		boost::shared_ptr<message::base> M(new message::error());
-		send(M);
+		Exchange.send(M);
 		return true;
 	}
 
 	//we have all information to send slot message
 	boost::shared_ptr<message::base> M_send(new message::slot(slot_num, status,
 		file_size, root_hash));
-	send(M_send);
+	Exchange.send(M_send);
 
 	//add slot
 	std::pair<std::map<unsigned char, boost::shared_ptr<slot> >::iterator, bool>
@@ -262,7 +248,7 @@ bool slot_manager::recv_slot(boost::shared_ptr<message::base> M,
 	if(slot_iter == share::singleton().end_slot()){
 		LOGGER << "failed " << hash;
 		boost::shared_ptr<message::base> M(new message::error());
-		send(M);
+		Exchange.send(M);
 		return true;
 	}
 	std::pair<std::map<unsigned char, boost::shared_ptr<slot> >::iterator, bool>
@@ -285,7 +271,7 @@ LOGGER << "stub: need to send close slot here";
 		return true;
 	}
 	if(M->buf[2] == 0){
-		slot_iter->get_transfer()->register_outgoing_0(connection_ID);
+		slot_iter->get_transfer()->register_outgoing_0(Exchange.connection_ID);
 	}else if(M->buf[2] == 1){
 LOGGER << "stub: add support for incomplete"; exit(1);
 	}else if(M->buf[2] == 2){

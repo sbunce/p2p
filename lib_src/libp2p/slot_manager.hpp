@@ -2,6 +2,7 @@
 #define H_SLOT_MANAGER
 
 //custom
+#include "exchange.hpp"
 #include "message.hpp"
 #include "share.hpp"
 #include "slot.hpp"
@@ -16,15 +17,7 @@
 class slot_manager : private boost::noncopyable
 {
 public:
-	slot_manager(
-		const int connection_ID_in,
-		boost::function<void (boost::shared_ptr<message::base>)> send_in,
-		boost::function<void (boost::shared_ptr<message::base>)> expect_response_in,
-		boost::function<void (boost::shared_ptr<message::base>)> expect_anytime_in,
-		boost::function<void (network::buffer)> expect_anytime_erase_in
-	);
-
-	const int connection_ID;
+	slot_manager(exchange & Exchange_in);
 
 	/*
 	resume:
@@ -33,20 +26,8 @@ public:
 	void resume(const std::string & peer_ID);
 
 private:
-	/* See documentation for corresponding functions in connection.
-	send:
-		Pointer to connection::send.
-	expect:
-		Pointer to connection::expect.
-	expect_anytime:
-		Pointer to connection::expect_anytime.
-	*/
-//DEBUG, think about creating separate class to contain this stuff
-// ... so we don't have function pointer sphaghetti
-	boost::function<void (boost::shared_ptr<message::base>)> send;
-	boost::function<void (boost::shared_ptr<message::base>)> expect_response;
-	boost::function<void (boost::shared_ptr<message::base>)> expect_anytime;
-	boost::function<void (network::buffer)> expect_anytime_erase;
+	//reference to connection::Exchange
+	exchange & Exchange;
 
 	/*
 	Outgoing_Slot holds slots we have opened with the remote host.
