@@ -47,7 +47,7 @@ public:
 	unsigned download_speed();
 	boost::uint64_t file_size();
 	const std::string & hash();
-	std::string name();
+	const std::string & name();
 	unsigned percent_complete();
 	unsigned upload_speed();
 
@@ -72,6 +72,9 @@ private:
 	//FI mutex locks all access to FI and locks initialization of Transfer
 	boost::mutex FI_mutex;
 	file_info FI;
+
+	//name of file
+	std::string file_name;
 
 	//only instantiated when we know the file size
 	boost::shared_ptr<transfer> Transfer;

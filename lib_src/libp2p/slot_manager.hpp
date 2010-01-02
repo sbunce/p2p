@@ -41,6 +41,8 @@ private:
 	expect_anytime:
 		Pointer to connection::expect_anytime.
 	*/
+//DEBUG, think about creating separate class to contain this stuff
+// ... so we don't have function pointer sphaghetti
 	boost::function<void (boost::shared_ptr<message::base>)> send;
 	boost::function<void (boost::shared_ptr<message::base>)> expect_response;
 	boost::function<void (boost::shared_ptr<message::base>)> expect_anytime;

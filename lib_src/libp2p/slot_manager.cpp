@@ -242,7 +242,8 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 		ret = Incoming_Slot.insert(std::make_pair(slot_num, slot_iter.get()));
 	assert(ret.second);
 
-//DEBUG, need to expect_anytime request_hash_tree_block and request_file_block
+	//expect incoming block requests
+	//expect_anytime();
 
 	return true;
 }

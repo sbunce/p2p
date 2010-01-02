@@ -1,7 +1,9 @@
 #include "slot.hpp"
 
 slot::slot(const file_info & FI_in):
-	FI(FI_in)
+	FI(FI_in),
+	file_name(FI.path.get().rfind('/') != std::string::npos ?
+		FI.path.get().substr(FI.path.get().rfind('/')+1) : "ERROR")
 {
 	if(FI.file_size != 0){
 		try{
@@ -49,11 +51,10 @@ const std::string & slot::hash()
 	return FI.hash;
 }
 
-std::string slot::name()
+const std::string & slot::name()
 {
 	boost::mutex::scoped_lock lock(FI_mutex);
-	return std::string(FI.path.get().rfind('/') != std::string::npos ?
-		FI.path.get().substr(FI.path.get().rfind('/')+1) : "ERROR");
+	return file_name;
 }
 
 unsigned slot::percent_complete()
