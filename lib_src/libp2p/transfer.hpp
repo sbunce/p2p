@@ -12,18 +12,35 @@ class transfer
 public:
 	transfer(const file_info & FI);
 
+	enum status{
+		good,             //operation succeeded
+		bad,              //operation failed
+		protocol_violated //host violated protocol and should be blacklisted
+	};
+
 	/* Hash Tree
+	next_request_hash_tree:
+		Returns true and sets block_num, block_size, and tree_block_count if a
+		hash tree block needs to be requested.
+	read_tree_block:
+		Reads block from hash tree and constructs block message. Returns good if
+		block message created, bad if read failed, protocol_violated if tried to
+		read a block we don't have.
 	root_hash:
 		Sets RH to root hash needed for slot message. Returns true if RH can be
 		set, false if RH cannot be set.
 	tree_block_count:
 		Returns number of blocks in hash tree.
 	write_hash_tree_block:
-		Writes block to hash tree.
+		Write block to hash tree.
 	*/
+	bool next_request_tree(const int connection_ID, boost::uint64_t & block_num,
+		unsigned & block_size);
+	status read_tree_block(boost::shared_ptr<message::base> & M,
+		const boost::uint64_t block_num);
 	bool root_hash(std::string & RH);
 	boost::uint64_t tree_block_count();
-	hash_tree::status write_hash_tree_block(const boost::uint64_t block_num,
+	hash_tree::status write_tree_block(const boost::uint64_t block_num,
 		const network::buffer & block);
 
 	/* File
@@ -31,10 +48,20 @@ public:
 		Returns number of blocks in file.
 	file_size:
 		Returns file size.
+	next_request_file:
+		Returns true and sets block_num, block-size, and file_block_count if a
+		file block needs to be requested.
+	read_file_block:
+		Reads block from fiel and constructs block message. Returns good if block
+		message created, bad if read failed, protocol_violated if tried to read a
+		block we don't have.
 	*/
 	boost::uint64_t file_block_count();
 	boost::uint64_t file_size();
-
+	bool next_request_file(const int connection_ID, boost::uint64_t & block_num,
+		unsigned & block_size);
+	status read_file_block(boost::shared_ptr<message::base> & M,
+		const boost::uint64_t block_num);
 
 	/* Hash Tree + File
 	check:
@@ -42,29 +69,20 @@ public:
 		transfers.
 	complete:
 		Returns true if hash tree and file are complete.
+	get_status:
+		Sets byte to status byte needed for slot message. Returns true if byte
+		can be set, false if byte cannot be set.
 	hash:
 		Returns hash.
 	register_outgoing_0:
 		Register a host that has a complete hash tree and file.
-	request_hash_tree_block:
-		Returns true and sets block_num, block_size, and tree_block_count if a
-		hash tree block needs to be requested.
-	request_file_block:
-		Returns true and sets block_num, block-size, and file_block_count if a
-		file block needs to be requested.
-	status:
-		Sets byte to status byte needed for slot message. Returns true if byte
-		can be set, false if byte cannot be set.
+
 	*/
 	void check();
 	bool complete();
 	const std::string & hash();
+	bool get_status(unsigned char & byte);
 	void register_outgoing_0(const int connection_ID);
-	bool request_hash_tree_block(const int connection_ID, boost::uint64_t & block_num,
-		unsigned & block_size);
-	bool request_file_block(const int connection_ID, boost::uint64_t & block_num,
-		unsigned & block_size);
-	bool status(unsigned char & byte);
 
 private:
 	hash_tree Hash_Tree;

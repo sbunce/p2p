@@ -60,15 +60,14 @@ hash_tree::hash_tree(
 }
 
 bool hash_tree::block_info(const boost::uint64_t block,
-	const std::deque<boost::uint64_t> & row, std::pair<boost::uint64_t, unsigned> & info)
+	std::pair<boost::uint64_t, unsigned> & info)
 {
 	boost::uint64_t throw_away;
-	return block_info(block, row, info, throw_away);
+	return block_info(block, info, throw_away);
 }
 
 bool hash_tree::block_info(const boost::uint64_t block,
-	const std::deque<boost::uint64_t> & row, std::pair<boost::uint64_t, unsigned> & info,
-	boost::uint64_t & parent)
+	std::pair<boost::uint64_t, unsigned> & info, boost::uint64_t & parent)
 {
 	/*
 	For simplicity this function operates on RRNs until just before it is done
@@ -116,7 +115,7 @@ bool hash_tree::block_info(const boost::uint64_t block,
 unsigned hash_tree::block_size(const boost::uint64_t block_num)
 {
 	std::pair<boost::uint64_t, unsigned> info;
-	if(block_info(block_num, row, info)){
+	if(block_info(block_num, info)){
 		return info.second;
 	}else{
 		LOGGER << "programmer error, invalid block specified";
@@ -162,7 +161,7 @@ hash_tree::status hash_tree::check_block(const boost::uint64_t block_num)
 	}else{
 		std::pair<boost::uint64_t, unsigned> info;
 		boost::uint64_t parent;
-		if(!block_info(block_num, row, info, parent)){
+		if(!block_info(block_num, info, parent)){
 			//invalid block sent to block_info
 			LOGGER; exit(1);
 		}
@@ -272,7 +271,7 @@ hash_tree::status hash_tree::create()
 	for(boost::uint64_t x=tree_block_count - 1; x>0; --x){
 		std::pair<boost::uint64_t, unsigned> info;
 		boost::uint64_t parent;
-		if(!block_info(x, row, info, parent)){
+		if(!block_info(x, info, parent)){
 			LOGGER << "programmer error";
 			exit(1);
 		}
@@ -356,6 +355,28 @@ hash_tree::status hash_tree::create()
 	return good;
 }
 
+std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool>
+	hash_tree::file_block_children(const boost::uint64_t block)
+{
+	std::pair<boost::uint64_t, unsigned> info;
+	if(block_info(block, info)){
+		std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool> pair;
+		if(info.first >= file_hash_offset){
+			pair.first.first = (info.first - file_hash_offset) / SHA1::bin_size;
+			pair.first.second = ((info.first + info.second) - file_hash_offset)
+				/ SHA1::bin_size;
+			pair.second = true;
+			return pair;
+		}else{
+			pair.second = false;
+			return pair;
+		}
+	}else{
+		LOGGER << "invalid block number, programming error";
+		exit(1);
+	}
+}
+
 boost::uint64_t hash_tree::file_hash_to_tree_hash(boost::uint64_t row_hash,
 	std::deque<boost::uint64_t> & row)
 {
@@ -402,7 +423,7 @@ hash_tree::status hash_tree::read_block(const boost::uint64_t block_num,
 	network::buffer & buf)
 {
 	std::pair<boost::uint64_t, unsigned> info;
-	if(block_info(block_num, row, info)){
+	if(block_info(block_num, info)){
 		buf.tail_reserve(info.second);
 		if(!database::pool::get()->blob_read(blob,
 			reinterpret_cast<char *>(buf.tail_start()), info.second, info.first))
@@ -447,12 +468,61 @@ boost::uint64_t hash_tree::row_to_file_hash_offset(
 	return file_hash_offset;
 }
 
+std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool>
+	hash_tree::tree_block_children(const boost::uint64_t block)
+{
+	boost::uint64_t offset = 0;          //hash offset from beginning of file to start of row
+	boost::uint64_t block_count = 0;     //total block count in all previous rows
+	boost::uint64_t row_block_count = 0; //total block count in current row
+	for(unsigned x=0; x<row.size(); ++x){
+		if(row[x] % protocol::hash_block_size == 0){
+			row_block_count = row[x] / protocol::hash_block_size;
+		}else{
+			row_block_count = row[x] / protocol::hash_block_size + 1;
+		}
+		//check if block we're looking for is in row
+		if(block_count + row_block_count > block){
+			//offset to start of block (RRN, hash offset)
+			boost::uint64_t block_offset = offset + (block - block_count)
+				* protocol::hash_block_size;
+
+			if(block_offset * SHA1::bin_size >= file_hash_offset){
+				//leaf, no hash block children
+				std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool> pair;
+				pair.second = false;
+				return pair;
+			}
+
+			//determine size of block
+			boost::uint64_t delta = offset + row[x] - block_offset;
+			unsigned block_size;
+			if(delta > protocol::hash_block_size){
+				block_size = protocol::hash_block_size;
+			}else{
+				block_size = delta;
+			}
+
+			std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool> pair;
+			pair.second = true;
+			pair.first.first =
+				(block_offset - offset) +        //parents in current row before block
+				(block_count + row_block_count); //block number of start of next row
+			pair.first.second = pair.first.first + block_size;
+			return pair;
+		}
+		block_count += row_block_count;
+		offset += row[x];
+	}
+	LOGGER << "invalid block number";
+	exit(1);
+}
+
 hash_tree::status hash_tree::write_block(const boost::uint64_t block_num,
 	const network::buffer & buf)
 {
 	std::pair<boost::uint64_t, unsigned> info;
 	boost::uint64_t parent;
-	if(block_info(block_num, row, info, parent)){
+	if(block_info(block_num, info, parent)){
 		assert(info.second == buf.size());
 		if(block_num != 0){
 			char parent_buf[SHA1::bin_size];
@@ -474,6 +544,7 @@ hash_tree::status hash_tree::write_block(const boost::uint64_t block_num,
 		{
 			return io_error;
 		}
+		return good;
 	}else{
 		LOGGER; exit(1);
 	}

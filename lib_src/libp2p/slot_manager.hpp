@@ -43,7 +43,7 @@ private:
 	pipeline sizing.
 	Note: These are only for pipelining of block requests.
 	*/
-	unsigned pipeline_cur; //current size (unfulfilled requests
+	unsigned pipeline_cur; //current size (unfulfilled requests)
 	unsigned pipeline_max; //current maximum size
 
 	/*
@@ -72,6 +72,8 @@ private:
 		Call back for receiving a file block.
 	recv_hash_tree_block:
 		Call back for receiving a hash tree block.
+	recv_request_hash_tree_block:
+		Call back for receiving request for hash tree block.
 	recv_request_block_failed:
 		Call back for when a hash tree block request or file block request fails.
 	recv_request_slot:
@@ -87,7 +89,11 @@ private:
 	bool recv_file_block(boost::shared_ptr<message::base> M,
 		const boost::uint64_t block_num);
 	bool recv_hash_tree_block(boost::shared_ptr<message::base> M,
-		const boost::uint64_t block_num);
+		const unsigned slot_num, const boost::uint64_t block_num);
+	bool recv_request_hash_tree_block(boost::shared_ptr<message::base> M,
+		const unsigned slot_num);
+	bool recv_request_file_block(boost::shared_ptr<message::base> M,
+		const unsigned slot_num);
 	bool recv_request_block_failed(boost::shared_ptr<message::base> M);
 	bool recv_request_slot(boost::shared_ptr<message::base> M);
 	bool recv_request_slot_failed(boost::shared_ptr<message::base> M);

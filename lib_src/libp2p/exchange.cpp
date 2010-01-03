@@ -86,7 +86,10 @@ void exchange::recv_call_back(network::connection_info & CI)
 		if((*iter_cur)->func){
 			if((*iter_cur)->expects(CI.recv_buf)){
 				if((*iter_cur)->recv(CI)){
-					(*iter_cur)->func(*iter_cur);
+					if(!(*iter_cur)->func(*iter_cur)){
+						database::table::blacklist::add(CI.IP);
+						goto end;
+					}
 					//clear message for reuse
 					(*iter_cur)->buf.clear();
 					goto begin;

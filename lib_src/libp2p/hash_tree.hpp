@@ -82,9 +82,17 @@ public:
 		Note: If tree created the tree state will be set to reserved. This must
 			be set to complete or tree will be deleted on next program start.
 		Note: The create function modifies const data members.
+	file_block_children:
+		Returns hash tree block children of specified hash tree block. Second
+		element of pair set to true if block has children.
+		std::pair<first child in range, one past last child in range>
 	read_block:
 		Get block from hash tree. Returns good if suceeded (and block appended to
 		buf). Returns io_error if cannot read hash tree.
+	tree_block_children:
+		Returns file block children of specified hash tree block. Second element
+		of pair set to true if hash tree block has file block children.
+		std::pair<first child in range, one past last child in range>
 	write_block:
 		Add or replace block in hash tree. Returns good if block was written,
 		io_error if block could not be written, or bad if the block hash failed.
@@ -97,16 +105,32 @@ public:
 	status check_file_block(const boost::uint64_t file_block_num,
 		const char * block, const int size);
 	status create();
+	std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool> file_block_children(
+		const boost::uint64_t block);
 	status read_block(const boost::uint64_t block_num, network::buffer & block);
+	std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool> tree_block_children(
+		const boost::uint64_t block);
 	status write_block(const boost::uint64_t block_num,
 		const network::buffer & block);
 
 private:
 	/*
+	block_info (with parent paramter):
+		Sets info to offset (bytes) and size of block. Sets parent to offset
+		(bytes) of parent hash.
+		Note: info.first is offset (bytes), info.second is size (bytes).
+		Note: If block is 0 then parent won't be set.
+	block_info (without parent parameter):
+		Doesn't get parent.
 	check_block:
-		Checks a hash tree block that already exists in tree.
+		Checks a hash tree block that already exists in tree. This reads both the
+		parent and child in to memory and hash checks.
 		Precondition: Parent and child must exist in tree.
 	*/
+	bool block_info(const boost::uint64_t block,
+		std::pair<boost::uint64_t, unsigned> & info, boost::uint64_t & parent);
+	bool block_info(const boost::uint64_t block,
+		std::pair<boost::uint64_t, unsigned> & info);
 	status check_block(const boost::uint64_t block_num);
 
 	/*
@@ -114,30 +138,19 @@ private:
 	non-static member variables. Most of these functions are called in the
 	initializer list of the ctor.
 
-	block_info:
-		Requires a block number, and row info. Sets info.first to byte offset
-		to start of hash block and info.second to hash block length. Parent is
-		set to offset of start of parent hash.
-		Note: If block is 0 then parent won't be set.
-		Note: A version that doesn't set parent is available.
 	file_size_to_file_hash:
-		Given file size (size of actual file, not hash tree), returns the
-		number of file hashes (bottom row of tree).
+		Given file size, returns number of file hashes (number of hashes in bottom
+		row of tree).
 	file_size_to_tree_size:
-		Given a file_size, returns tree size (bytes).
+		Given file_size, returns tree size (bytes).
 	file_hash_to_tree_hash:
 		Given the file hash count returns the number of hashes in tree. Populates
 		row with how many hashes are in each row of the tree.
 	row_to_block_count:
-		Given tree row information, returns hash block count (total number of
-		hash blocks in tree).
+		Given tree row information, returns number of hash blocks.
 	row_to_file_hash_offset:
-		Returns the byte offset to the start of the file hashes.
+		Returns offset (bytes) to the start of file hashes.
 	*/
-	static bool block_info(const boost::uint64_t block, const std::deque<boost::uint64_t> & row,
-		std::pair<boost::uint64_t, unsigned> & info, boost::uint64_t & parent);
-	static bool block_info(const boost::uint64_t block, const std::deque<boost::uint64_t> & row,
-		std::pair<boost::uint64_t, unsigned> & info);
 	static boost::uint64_t file_size_to_file_hash(const boost::uint64_t file_size);
 	static boost::uint64_t file_size_to_tree_size(const boost::uint64_t file_size);
 	static boost::uint64_t file_hash_to_tree_hash(boost::uint64_t row_hash, std::deque<boost::uint64_t> & row);

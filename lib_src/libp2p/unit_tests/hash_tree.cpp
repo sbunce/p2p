@@ -14,21 +14,20 @@
 int fail(0);
 
 //create test files to hash if they don't already exist
-void create_test_file(const file_info & FI)
+void create_file(const file_info & FI)
 {
 	std::fstream fout(FI.path.get().c_str(), std::ios::out | std::ios::binary
 		| std::ios::trunc);
-	std::srand(42);
+	unsigned data = 0;
 	for(boost::uint64_t x=0; x<FI.file_size; ++x){
-		char ch = (char)std::rand() % 255;
+		char ch = (char)(data++ % 255);
 		fout.put(ch);
 	}
 	fout.flush();
 }
 
-void test(const unsigned size)
+void create_reassemble(const unsigned size)
 {
-	//delete all hash trees
 	database::init::drop_all();
 	database::init::create_all();
 
@@ -38,7 +37,7 @@ void test(const unsigned size)
 	ss << path::share() << size << "_block";
 	FI.path = ss.str();
 	FI.file_size = size * protocol::file_block_size;
-	create_test_file(FI);
+	create_file(FI);
 
 	//create hash tree and check it
 	hash_tree HT(FI);
@@ -62,7 +61,6 @@ void test(const unsigned size)
 		block.push_back(buf);
 	}
 
-	//delete hash tree
 	database::init::drop_all();
 	database::init::create_all();
 
@@ -79,19 +77,114 @@ void test(const unsigned size)
 	}
 }
 
+void child_block()
+{
+	//this test only works with a specific block size
+	assert(protocol::hash_block_size == 512);
+
+	database::init::drop_all();
+	database::init::create_all();
+
+	//for this test we only care about file size
+	std::string dummy_hash = ""; //causes database space to not be allocated
+	std::string dummy_path = "share/bla";
+	std::time_t dummy_last_write_time = 123;
+
+	//1 row tree
+	{//BEGIN test
+	file_info FI(
+		dummy_hash,
+		dummy_path,
+		1 * protocol::file_block_size,
+		dummy_last_write_time
+	);
+	hash_tree HT(FI);
+	std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool> pair;
+
+	//block 0
+	pair = HT.tree_block_children(0);
+	assert(!pair.second);
+	pair = HT.file_block_children(0);
+	assert(pair.second);
+	assert(pair.first.first == 0); assert(pair.first.second == 1);
+	}//END test
+
+	std::cout << "\n";
+
+	//2 row tree
+	{//BEGIN test
+	file_info FI(
+		dummy_hash,
+		dummy_path,
+		2 * protocol::file_block_size,
+		dummy_last_write_time
+	);
+	hash_tree HT(FI);
+	std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool> pair;
+
+	//block 0
+	pair = HT.tree_block_children(0);
+	assert(pair.second);
+	assert(pair.first.first == 1); assert(pair.first.second == 2);
+	pair = HT.file_block_children(0);
+	assert(!pair.second);
+
+	//block 1
+	pair = HT.tree_block_children(1);
+	assert(!pair.second);
+	pair = HT.file_block_children(1);
+	assert(pair.second);
+	assert(pair.first.first == 0); assert(pair.first.second == 2);
+	}//END test
+
+	//3 row tree
+	{//BEGIN test
+	file_info FI(
+		dummy_hash,
+		dummy_path,
+		513 * protocol::file_block_size,
+		dummy_last_write_time
+	);
+	hash_tree HT(FI);
+	std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool> pair;
+
+	//block 0 (row 0)
+	pair = HT.tree_block_children(0);
+	assert(pair.second);
+	assert(pair.first.first == 1); assert(pair.first.second == 2);
+	pair = HT.file_block_children(0);
+	assert(!pair.second);
+
+	//block 1 (row 1)
+	pair = HT.tree_block_children(1);
+	assert(pair.second);
+	pair = HT.file_block_children(1);
+	assert(!pair.second);
+
+	//block 2 (row 2)
+	pair = HT.tree_block_children(2);
+	assert(!pair.second);
+	pair = HT.file_block_children(2);
+	assert(pair.second);
+	assert(pair.first.first == 0); assert(pair.first.second == 512);
+	}//END test
+}
+
 int main()
 {
 	//setup database and make sure hash table clear
 	path::unit_test_override("hash_tree.db");
 	path::create_required_directories();
 
-	test(2);
-	test(3);
-	test(4);
-	test(256);
-	test(257);
-	test(1024);
-	test(1536);
+	create_reassemble(2);
+	create_reassemble(3);
+	create_reassemble(4);
+	create_reassemble(256);
+	create_reassemble(257);
+	create_reassemble(1024);
+	create_reassemble(1536);
+
+	child_block();
 
 	//remove temporary files
 	path::remove_temporary_hash_tree_files();

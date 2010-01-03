@@ -67,11 +67,12 @@ void slot_manager::make_block_requests(boost::shared_ptr<slot> S)
 			break;
 		}
 		if(iter_cur->second->get_transfer()){
-			boost::uint64_t block_num;   //block number to request
-			unsigned block_size;
-			if(iter_cur->second->get_transfer()->request_hash_tree_block(
+			boost::uint64_t block_num; //block number to request
+			unsigned block_size;       //size of block
+			if(iter_cur->second->get_transfer()->next_request_tree(
 				Exchange.connection_ID, block_num, block_size))
 			{
+LOGGER << "request hash tree block " << block_num;
 				++pipeline_cur;
 				serviced_one = true;
 				boost::shared_ptr<message::base> M_request(new message::request_hash_tree_block(
@@ -79,11 +80,12 @@ void slot_manager::make_block_requests(boost::shared_ptr<slot> S)
 				Exchange.send(M_request);
 				boost::shared_ptr<message::composite> M_response(new message::composite());
 				M_response->add(boost::shared_ptr<message::block>(new message::block(boost::bind(
-					&slot_manager::recv_hash_tree_block, this, _1, block_num), block_size)));
+					&slot_manager::recv_hash_tree_block, this, _1, iter_cur->first, block_num),
+					block_size)));
 				M_response->add(boost::shared_ptr<message::error>(new message::error(
 					boost::bind(&slot_manager::recv_request_block_failed, this, _1))));
 				Exchange.expect_response(M_response);
-			}else if(iter_cur->second->get_transfer()->request_file_block(
+			}else if(iter_cur->second->get_transfer()->next_request_file(
 				Exchange.connection_ID, block_num, block_size))
 			{
 				++pipeline_cur;
@@ -143,13 +145,60 @@ LOGGER << block_num;
 }
 
 bool slot_manager::recv_hash_tree_block(boost::shared_ptr<message::base> M,
-	const boost::uint64_t block_num)
+	const unsigned slot_num, const boost::uint64_t block_num)
 {
 LOGGER << block_num;
+//DEBUG, big copy when erasing
+	M->buf.erase(0, 1);
+	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
+		iter = Outgoing_Slot.find(slot_num);
+	if(iter != Outgoing_Slot.end()){
+		assert(iter->second->get_transfer());
+		iter->second->get_transfer()->write_tree_block(block_num, M->buf);
+		make_block_requests(iter->second);
+	}
+	--pipeline_cur;
 	return true;
 }
 
 bool slot_manager::recv_request_block_failed(boost::shared_ptr<message::base> M)
+{
+LOGGER;
+	return true;
+}
+
+bool slot_manager::recv_request_hash_tree_block(
+	boost::shared_ptr<message::base> M, const unsigned slot_num)
+{
+LOGGER;
+	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
+		iter = Incoming_Slot.find(slot_num);
+	if(iter == Incoming_Slot.end() || !iter->second->get_transfer()){
+		boost::shared_ptr<message::base> M(new message::error());
+		Exchange.send(M);
+	}else{
+		boost::uint64_t block_num = convert::decode_VLI(M->buf.str(2));
+		LOGGER << block_num;
+		boost::shared_ptr<message::base> M;
+		transfer::status status = iter->second->get_transfer()->read_tree_block(M, block_num);
+		if(status == transfer::good){
+			Exchange.send(M);
+			return true;
+		}else if(status == transfer::bad){
+			LOGGER << "error reading tree block";
+			Incoming_Slot.erase(iter);
+			boost::shared_ptr<message::base> M(new message::error());
+			Exchange.send(M);
+			return true;
+		}else if(status == transfer::protocol_violated){
+			return false;
+		}
+	}
+	return true;
+}
+
+bool slot_manager::recv_request_file_block(
+	boost::shared_ptr<message::base> M, const unsigned slot_num)
 {
 LOGGER;
 	return true;
@@ -193,7 +242,7 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 
 	//status byte (third byte of slot message)
 	unsigned char status;
-	if(!slot_iter->get_transfer()->status(status)){
+	if(!slot_iter->get_transfer()->get_status(status)){
 		LOGGER << "failed " << hash;
 		boost::shared_ptr<message::base> M(new message::error());
 		Exchange.send(M);
@@ -229,7 +278,14 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 	assert(ret.second);
 
 	//expect incoming block requests
-	//expect_anytime();
+	Exchange.expect_anytime(boost::shared_ptr<message::base>(
+		new message::request_hash_tree_block(
+		boost::bind(&slot_manager::recv_request_hash_tree_block, this, _1, slot_num),
+		slot_num, slot_iter->get_transfer()->tree_block_count())));
+	Exchange.expect_anytime(boost::shared_ptr<message::base>(
+		new message::request_file_block(
+		boost::bind(&slot_manager::recv_request_file_block, this, _1, slot_num),
+		slot_num, slot_iter->get_transfer()->file_block_count())));
 
 	return true;
 }

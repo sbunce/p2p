@@ -309,7 +309,7 @@ public:
 	{
 		if(len == npos){
 			assert(index <= bytes);
-			return std::string(reinterpret_cast<const char *>(buf + index), bytes);
+			return std::string(reinterpret_cast<const char *>(buf + index), bytes - index);
 		}else{
 			assert(index + len <= bytes);
 			return std::string(reinterpret_cast<const char *>(buf + index), len);

@@ -88,11 +88,12 @@ bool slot::set_unknown(const boost::uint64_t file_size, const std::string & root
 		}
 	}
 	}//END lock scope
-	if(created){
+//DEBUG, disable this optimization until resume hash checking working
+//	if(created){
 		database::table::share::update_file_size(path_tmp, file_size);
 		network::buffer buf(convert::hex_to_bin(root_hash));
-		Transfer->write_hash_tree_block(0, buf);
-	}
+		Transfer->write_tree_block(0, buf);
+//	}
 	return true;
 }
 
