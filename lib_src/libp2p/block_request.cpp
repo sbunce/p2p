@@ -259,3 +259,9 @@ void block_request::remove_host(const int connection_ID)
 		}
 	}
 }
+
+unsigned block_request::remote_host_count()
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	return remote.size();
+}

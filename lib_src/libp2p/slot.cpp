@@ -60,10 +60,9 @@ const std::string & slot::name()
 unsigned slot::percent_complete()
 {
 	if(Transfer){
-//DEBUG, implement later
-		return 25;
+		return Transfer->percent_complete();
 	}else{
-		return 25;
+		return 0;
 	}
 }
 

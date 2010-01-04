@@ -7,6 +7,9 @@
 #include "hash_tree.hpp"
 #include "message.hpp"
 
+//include
+#include <atomic_int.hpp>
+
 class transfer
 {
 public:
@@ -75,19 +78,22 @@ public:
 		transfers.
 	complete:
 		Returns true if hash tree and file are complete.
+	hash:
+		Returns hash.
 	get_status:
 		Sets byte to status byte needed for slot message. Returns true if byte
 		can be set, false if byte cannot be set.
-	hash:
-		Returns hash.
+	percent_complete:
+		Returns percent complete of the hash tree and file combined.
 	register_outgoing_0:
 		Register a host that has a complete hash tree and file.
 
 	*/
 	void check();
 	bool complete();
-	const std::string & hash();
 	bool get_status(unsigned char & byte);
+	const std::string & hash();
+	unsigned percent_complete();
 	void register_outgoing_0(const int connection_ID);
 
 private:
@@ -95,5 +101,7 @@ private:
 	file File;
 	block_request Hash_Tree_Block;
 	block_request File_Block;
+
+	atomic_int<boost::uint64_t> bytes_received;
 };
 #endif

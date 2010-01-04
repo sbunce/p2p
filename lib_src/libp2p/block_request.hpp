@@ -63,8 +63,8 @@ public:
 	remove_host:
 		Remove host as source for blocks. Any blocks requested from this host are
 		rerequested.
-	unfulfilled:
-		Returns the number of unfulfilled requests.
+	remote_host_count:
+		Returns the number of remote hosts block_request is keeping track of.
 	*/
 	void add_block_local(const boost::uint64_t block);
 	void add_block_local(const int connection_ID, const boost::uint64_t block);
@@ -80,6 +80,7 @@ public:
 	bool is_approved(const boost::uint64_t block);
 	bool next_request(const int connection_ID, boost::uint64_t & block);
 	void remove_host(const int connection_ID);
+	unsigned remote_host_count();
 
 private:
 	//locks access to all data members

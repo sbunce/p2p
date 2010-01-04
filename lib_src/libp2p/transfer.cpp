@@ -4,12 +4,12 @@ transfer::transfer(const file_info & FI):
 	Hash_Tree(FI),
 	File(FI),
 	Hash_Tree_Block(Hash_Tree.tree_block_count),
-	File_Block(Hash_Tree.file_block_count)
+	File_Block(Hash_Tree.file_block_count),
+	bytes_received(0)
 {
 	assert(FI.file_size != 0);
 
-//DEBUG, need to know if we have all blocks, if we do set block_request members
-//appropriately
+	//see if tree complete
 	boost::shared_ptr<database::table::hash::info>
 		hash_info = database::table::hash::find(FI.hash);
 	if(hash_info){
@@ -20,6 +20,7 @@ transfer::transfer(const file_info & FI):
 		throw std::runtime_error("error finding hash tree info");
 	}
 
+	//see if file complete
 	boost::shared_ptr<database::table::share::info>
 		share_info = database::table::share::find(FI.hash);
 	if(share_info){
@@ -38,8 +39,7 @@ void transfer::check()
 
 bool transfer::complete()
 {
-//DEBUG, finish this function
-	return false;
+	return Hash_Tree_Block.complete() && File_Block.complete();
 }
 
 boost::uint64_t transfer::file_block_count()
@@ -97,14 +97,27 @@ bool transfer::next_request_file(const int connection_ID,
 	return false;
 }
 
+unsigned transfer::percent_complete()
+{
+	return ((double)bytes_received / (Hash_Tree.tree_size + Hash_Tree.file_size)) * 100;
+}
+
 transfer::status transfer::read_file_block(boost::shared_ptr<message::base> & M,
 		const boost::uint64_t block_num)
 {
 	if(File_Block.have_block(block_num)){
-		network::buffer block;
-		if(File.read_block(block_num, block)){
+		network::buffer buf;
+		if(File.read_block(block_num, buf)){
+			/*
+			We can't trust that the local user hasn't modified the file. We hash
+			check every block before we send it to detect modified blocks.
+			*/
+			hash_tree::status status = Hash_Tree.check_file_block(block_num, buf);
+			if(status != hash_tree::good){
+				return bad;
+			}
 //DEBUG, big copy constructing this message.
-			M = boost::shared_ptr<message::base>(new message::block(block));
+			M = boost::shared_ptr<message::base>(new message::block(buf));
 			return good;
 		}else{
 			return bad;
@@ -164,10 +177,12 @@ boost::uint64_t transfer::tree_block_count()
 transfer::status transfer::write_file_block(const int connection_ID,
 	const boost::uint64_t block_num, const network::buffer & buf)
 {
+	LOGGER << block_num;
 	hash_tree::status status = Hash_Tree.check_file_block(block_num, buf);
 	if(status == hash_tree::good){
 		if(File.write_block(block_num, buf)){
 			File_Block.add_block_local(connection_ID, block_num);
+			bytes_received += buf.size();
 			return good;
 		}else{
 			//failed to write block
@@ -181,11 +196,13 @@ transfer::status transfer::write_file_block(const int connection_ID,
 }
 
 transfer::status transfer::write_tree_block(const int connection_ID,
-	const boost::uint64_t block_num, const network::buffer & block)
+	const boost::uint64_t block_num, const network::buffer & buf)
 {
-	hash_tree::status status = Hash_Tree.write_block(block_num, block);
+	LOGGER << block_num;
+	hash_tree::status status = Hash_Tree.write_block(block_num, buf);
 	if(status == hash_tree::good){
 		Hash_Tree_Block.add_block_local(connection_ID, block_num);
+		bytes_received += buf.size();
 		std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool>
 			pair = Hash_Tree.tree_block_children(block_num);
 		if(pair.second){

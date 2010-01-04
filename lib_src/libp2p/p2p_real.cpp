@@ -1,12 +1,6 @@
 #include "p2p_real.hpp"
 
 p2p_real::p2p_real():
-	Proactor(
-		boost::bind(&connection_manager::connect_call_back, &Connection_Manager, _1),
-		boost::bind(&connection_manager::disconnect_call_back, &Connection_Manager, _1),
-		settings::P2P_PORT
-	),
-	Connection_Manager(Proactor),
 	Thread_Pool(1),
 	max_connections_proxy(0),
 	max_download_rate_proxy(0),
@@ -24,7 +18,7 @@ p2p_real::~p2p_real()
 
 unsigned p2p_real::download_rate()
 {
-	return Proactor.download_rate();
+	return Connection_Manager.Proactor.download_rate();
 }
 
 unsigned p2p_real::max_connections()
@@ -48,7 +42,7 @@ unsigned p2p_real::max_download_rate()
 
 void p2p_real::max_download_rate(const unsigned rate)
 {
-	Proactor.max_download_rate(rate);
+	Connection_Manager.Proactor.max_download_rate(rate);
 	max_download_rate_proxy = rate;
 	Thread_Pool.queue(boost::bind(&database::table::prefs::set_max_download_rate,
 		rate, database::pool::get()));
@@ -61,7 +55,7 @@ unsigned p2p_real::max_upload_rate()
 
 void p2p_real::max_upload_rate(const unsigned rate)
 {
-	Proactor.max_upload_rate(rate);
+	Connection_Manager.Proactor.max_upload_rate(rate);
 	max_upload_rate_proxy = rate;
 	Thread_Pool.queue(boost::bind(&database::table::prefs::set_max_upload_rate,
 		rate, database::pool::get()));
@@ -88,8 +82,8 @@ void p2p_real::resume()
 	max_upload_rate_proxy = database::table::prefs::get_max_upload_rate();
 
 	//set prefs with proactor
-	Proactor.max_download_rate(max_download_rate_proxy);
-	Proactor.max_upload_rate(max_upload_rate_proxy);
+	max_download_rate(max_download_rate_proxy);
+	max_upload_rate(max_upload_rate_proxy);
 
 	//repopulate share from database
 	std::deque<database::table::share::info> resume = database::table::share::resume();
@@ -127,11 +121,11 @@ void p2p_real::resume()
 		iter_cur = peers.begin(), iter_end = peers.end(); iter_cur != iter_end;
 		++iter_cur)
 	{
-		Proactor.connect(iter_cur->first, iter_cur->second, network::tcp);
+		Connection_Manager.Proactor.connect(iter_cur->first, iter_cur->second, network::tcp);
 	}
 
 	//bring up networking
-	Proactor.start();
+	Connection_Manager.Proactor.start();
 }
 
 boost::uint64_t p2p_real::share_size_bytes()
@@ -173,5 +167,5 @@ void p2p_real::transfers(std::vector<p2p::transfer> & T)
 
 unsigned p2p_real::upload_rate()
 {
-	return Proactor.upload_rate();
+	return Connection_Manager.Proactor.upload_rate();
 }

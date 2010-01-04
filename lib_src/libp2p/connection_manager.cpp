@@ -1,9 +1,11 @@
 #include "connection_manager.hpp"
 
-connection_manager::connection_manager(
-	network::proactor & Proactor_in
-):
-	Proactor(Proactor_in)
+connection_manager::connection_manager():
+	Proactor(
+		boost::bind(&connection_manager::connect_call_back, this, _1),
+		boost::bind(&connection_manager::disconnect_call_back, this, _1),
+		settings::P2P_PORT
+	)
 {
 
 }

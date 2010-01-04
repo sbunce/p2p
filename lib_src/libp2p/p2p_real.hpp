@@ -54,14 +54,7 @@ private:
 	//thread spawned by ctor to do actions on startup
 	boost::thread resume_thread;
 
-	/*
-	Proactor does call backs for network activity. The call backs are done to the
-	Connection_Manager.
-	Note: Proactor is specified last in header because it starts threads in it's
-		ctor which use objects in p2p_real. We specify it last because we want to
-		make sure the objects it uses are constructed before it uses them.
-	*/
-	network::proactor Proactor;
+	//handles incoming/outgoing connections
 	connection_manager Connection_Manager;
 
 	/*
