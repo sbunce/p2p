@@ -29,8 +29,6 @@ transfer::transfer(const file_info & FI):
 	}else{
 		throw std::runtime_error("error finding share info");
 	}
-
-LOGGER << "tree block count " << Hash_Tree.tree_block_count;
 }
 
 void transfer::check()
@@ -82,9 +80,7 @@ LOGGER << "stub: add support for incomplete"; exit(1);
 bool transfer::next_request_tree(const int connection_ID,
 	boost::uint64_t & block_num, unsigned & block_size)
 {
-LOGGER;
 	if(Hash_Tree_Block.next_request(connection_ID, block_num)){
-LOGGER << block_num;
 		block_size = Hash_Tree.block_size(block_num);
 		return true;
 	}
@@ -168,7 +164,6 @@ boost::uint64_t transfer::tree_block_count()
 transfer::status transfer::write_file_block(const int connection_ID,
 	const boost::uint64_t block_num, const network::buffer & buf)
 {
-LOGGER << block_num;
 	hash_tree::status status = Hash_Tree.check_file_block(block_num, buf);
 	if(status == hash_tree::good){
 		if(File.write_block(block_num, buf)){
@@ -188,7 +183,6 @@ LOGGER << block_num;
 transfer::status transfer::write_tree_block(const int connection_ID,
 	const boost::uint64_t block_num, const network::buffer & block)
 {
-LOGGER << block_num;
 	hash_tree::status status = Hash_Tree.write_block(block_num, block);
 	if(status == hash_tree::good){
 		Hash_Tree_Block.add_block_local(connection_ID, block_num);

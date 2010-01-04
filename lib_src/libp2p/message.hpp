@@ -44,15 +44,26 @@ class block : public base
 {
 public:
 	//recv ctor
-	explicit block(boost::function<bool (boost::shared_ptr<base>)> func_in,
+	block(boost::function<bool (boost::shared_ptr<base>)> func_in,
 		const boost::uint64_t block_size_in);
 	//send ctor
-	block(network::buffer & block);
+	explicit block(network::buffer & block);
 	virtual bool expects(network::buffer & recv_buf);
 	virtual bool recv(network::connection_info & CI);
 private:
 	//size of block field (only used for recv)
 	boost::uint64_t block_size;
+};
+
+class close_slot : public base
+{
+public:
+	//recv ctor
+	explicit close_slot(boost::function<bool (boost::shared_ptr<base>)> func_in);
+	//send ctor
+	close_slot();
+	virtual bool expects(network::buffer & recv_buf);
+	virtual bool recv(network::connection_info & CI);
 };
 
 //the composite message is used to handle multiple possible responses

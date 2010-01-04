@@ -5,8 +5,35 @@ bool message::base::encrypt()
 {
 	return true;
 }
-
 //END base
+
+//BEGIN close_slot
+message::close_slot::close_slot(boost::function<bool (boost::shared_ptr<base>)> func_in)
+{
+	func = func_in;
+}
+
+message::close_slot::close_slot()
+{
+	buf.append(protocol::close_slot);
+}
+
+bool message::close_slot::expects(network::buffer & recv_buf)
+{
+	return recv_buf[0] == protocol::close_slot;
+}
+
+bool message::close_slot::recv(network::connection_info & CI)
+{
+	assert(expects(CI.recv_buf));
+	if(CI.recv_buf.size() >= protocol::close_slot_size){
+		buf.append(CI.recv_buf.data(), protocol::close_slot_size);
+		CI.recv_buf.erase(0, protocol::close_slot_size);
+		return true;
+	}
+	return false;
+}
+//END close_slot
 
 //BEGIN composite
 void message::composite::add(boost::shared_ptr<base> M)

@@ -199,7 +199,6 @@ hash_tree::status hash_tree::check_file_block(const boost::uint64_t file_block_n
 	SHA.load(reinterpret_cast<char *>(const_cast<network::buffer &>(buf).data()),
 		buf.size());
 	SHA.end();
-LOGGER << "parent: " << convert::bin_to_hex(parent_buf, 20) << " child: " << SHA.hex();
 	if(std::memcmp(parent_buf, SHA.bin(), SHA1::bin_size) == 0){
 		return good;
 	}else{

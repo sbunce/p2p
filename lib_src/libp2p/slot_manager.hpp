@@ -94,7 +94,8 @@ private:
 		const unsigned slot_num);
 	bool recv_request_file_block(boost::shared_ptr<message::base> M,
 		const unsigned slot_num);
-	bool recv_request_block_failed(boost::shared_ptr<message::base> M);
+	bool recv_request_block_failed(boost::shared_ptr<message::base> M,
+		const unsigned slot_num);
 	bool recv_request_slot(boost::shared_ptr<message::base> M);
 	bool recv_request_slot_failed(boost::shared_ptr<message::base> M);
 	bool recv_slot(boost::shared_ptr<message::base> M, const std::string hash);

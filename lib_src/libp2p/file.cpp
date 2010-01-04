@@ -42,25 +42,28 @@ bool file::read_block(const boost::uint64_t block_num, network::buffer & buf)
 			buf.tail_resize(size);
 			return true;
 		}else{
+			LOGGER << "failed to write file";
 			buf.tail_reserve(0);
 			return false;
 		}
 	}else{
+		LOGGER << "failed to open file";
 		return false;
 	}
 }
 
 bool file::write_block(const boost::uint64_t block_num, const network::buffer & buf)
 {
-LOGGER << buf.size();
 	std::fstream fout(path.c_str(), std::ios::in | std::ios::out | std::ios::binary);
 	if(!fout.is_open()){
+		LOGGER << "failed to open file";
 		return false;
 	}
 	fout.seekp(block_num * protocol::file_block_size);
 	fout.write(reinterpret_cast<char *>(const_cast<network::buffer &>(buf).data()),
 		buf.size());
 	if(!fout.is_open()){
+		LOGGER << "failed to open file";
 		return false;
 	}
 	return true;
