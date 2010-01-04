@@ -15,6 +15,7 @@ transfer::transfer(const file_info & FI):
 	if(hash_info){
 		if(hash_info->tree_state == database::table::hash::complete){
 			Hash_Tree_Block.add_block_local_all();
+			bytes_received += Hash_Tree.tree_size;
 		}
 	}else{
 		throw std::runtime_error("error finding hash tree info");
@@ -26,6 +27,7 @@ transfer::transfer(const file_info & FI):
 	if(share_info){
 		if(share_info->file_state == database::table::share::complete){
 			File_Block.add_block_local_all();
+			bytes_received += Hash_Tree.file_size;
 		}
 	}else{
 		throw std::runtime_error("error finding share info");
@@ -40,6 +42,11 @@ void transfer::check()
 bool transfer::complete()
 {
 	return Hash_Tree_Block.complete() && File_Block.complete();
+}
+
+unsigned transfer::download_speed()
+{
+	return Download_Speed.speed();
 }
 
 boost::uint64_t transfer::file_block_count()
@@ -116,6 +123,7 @@ transfer::status transfer::read_file_block(boost::shared_ptr<message::base> & M,
 			if(status != hash_tree::good){
 				return bad;
 			}
+			Upload_Speed.add(buf.size());
 //DEBUG, big copy constructing this message.
 			M = boost::shared_ptr<message::base>(new message::block(buf));
 			return good;
@@ -131,11 +139,12 @@ transfer::status transfer::read_tree_block(boost::shared_ptr<message::base> & M,
 	const boost::uint64_t block_num)
 {
 	if(Hash_Tree_Block.have_block(block_num)){
-		network::buffer block;
-		hash_tree::status status = Hash_Tree.read_block(block_num, block);
+		network::buffer buf;
+		hash_tree::status status = Hash_Tree.read_block(block_num, buf);
 		if(status == hash_tree::good){
+			Upload_Speed.add(buf.size());
 //DEBUG, big copy constructing this message.
-			M = boost::shared_ptr<message::base>(new message::block(block));
+			M = boost::shared_ptr<message::base>(new message::block(buf));
 			return good;
 		}else{
 			return bad;
@@ -174,10 +183,16 @@ boost::uint64_t transfer::tree_block_count()
 	return Hash_Tree.tree_block_count;
 }
 
+unsigned transfer::upload_speed()
+{
+	return Upload_Speed.speed();
+}
+
 transfer::status transfer::write_file_block(const int connection_ID,
 	const boost::uint64_t block_num, const network::buffer & buf)
 {
 	LOGGER << block_num;
+	Download_Speed.add(buf.size());
 	hash_tree::status status = Hash_Tree.check_file_block(block_num, buf);
 	if(status == hash_tree::good){
 		if(File.write_block(block_num, buf)){
@@ -199,6 +214,7 @@ transfer::status transfer::write_tree_block(const int connection_ID,
 	const boost::uint64_t block_num, const network::buffer & buf)
 {
 	LOGGER << block_num;
+	Download_Speed.add(buf.size());
 	hash_tree::status status = Hash_Tree.write_block(block_num, buf);
 	if(status == hash_tree::good){
 		Hash_Tree_Block.add_block_local(connection_ID, block_num);

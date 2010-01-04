@@ -9,6 +9,7 @@
 
 //include
 #include <atomic_int.hpp>
+#include <network/network.hpp>
 
 class transfer
 {
@@ -96,12 +97,25 @@ public:
 	unsigned percent_complete();
 	void register_outgoing_0(const int connection_ID);
 
+	/* Speeds
+	download_speed:
+		Returns download speed (bytes/second).
+	upload_speed:
+		Returns upload speed (bytes/second).
+	*/
+	unsigned download_speed();
+	unsigned upload_speed();
+
 private:
 	hash_tree Hash_Tree;
 	file File;
 	block_request Hash_Tree_Block;
 	block_request File_Block;
 
+	//number of bytes received (used to calculate percent complete)
 	atomic_int<boost::uint64_t> bytes_received;
+
+	network::speed_calculator Download_Speed;
+	network::speed_calculator Upload_Speed;
 };
 #endif

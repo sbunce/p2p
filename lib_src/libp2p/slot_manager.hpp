@@ -18,6 +18,7 @@ class slot_manager : private boost::noncopyable
 {
 public:
 	slot_manager(exchange & Exchange_in);
+	~slot_manager();
 
 	/*
 	resume:
@@ -30,13 +31,13 @@ private:
 	exchange & Exchange;
 
 	/*
-	Outgoing_Slot holds slots we have opened with the remote host.
 	Incoming_Slot container holds slots the remote host has opened with us.
+	Outgoing_Slot holds slots we have opened with the remote host.
 	Note: Index in vector is slot ID.
 	Note: If there is an empty shared_ptr it means the slot ID is available.
 	*/
-	std::map<unsigned char, boost::shared_ptr<slot> > Outgoing_Slot;
 	std::map<unsigned char, boost::shared_ptr<slot> > Incoming_Slot;
+	std::map<unsigned char, boost::shared_ptr<slot> > Outgoing_Slot;
 
 	/*
 	These are passed to, and adjusted by, the transfer objects for adaptive

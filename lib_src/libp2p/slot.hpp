@@ -29,6 +29,8 @@ public:
 	/* Info
 	complete:
 		Returns true if both the Hash_Tree and File are complete.
+	download_peers:
+		Returns how many hosts we're downloading this file from.
 	download_speed:
 		Returns download speed (bytes/second).
 	file_size:
@@ -40,15 +42,19 @@ public:
 		Returns the name of the file.
 	percent_complete:
 		Returns percent complete of the download (0-100).
+	upload_peers:
+		Returns how many hosts we're uploading this file to.
 	upload_speed:
 		Returns upload speed (bytes/second).
 	*/
 	bool complete();
+	unsigned download_peers();
 	unsigned download_speed();
 	boost::uint64_t file_size();
 	const std::string & hash();
 	const std::string & name();
 	unsigned percent_complete();
+	unsigned upload_peers();
 	unsigned upload_speed();
 
 	/* Slot Manager
@@ -62,6 +68,10 @@ public:
 	const boost::shared_ptr<transfer> & get_transfer();
 	bool set_unknown(const int connection_ID, const boost::uint64_t file_size,
 		const std::string & root_hash);
+	void register_download();
+	void register_upload();
+	void unregister_download();
+	void unregister_upload();
 
 private:
 	/*
@@ -77,7 +87,11 @@ private:
 	//name of file
 	std::string file_name;
 
-	//only instantiated when we know the file size
+	//instantiated when we get file size
 	boost::shared_ptr<transfer> Transfer;
+
+	//counts for how many peers downloading/uploading
+	atomic_int<unsigned> downloading;
+	atomic_int<unsigned> uploading;
 };
 #endif

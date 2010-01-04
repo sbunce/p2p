@@ -132,7 +132,6 @@ bool window_transfer::click(GdkEventButton * event)
 
 bool window_transfer::refresh()
 {
-	//update download info
 	std::vector<p2p::transfer> T;
 	P2P.transfers(T);
 
@@ -141,8 +140,18 @@ bool window_transfer::refresh()
 	{
 		//set up column
 		std::stringstream ss;
-		ss << T_iter_cur->download.size();
-		std::string speed = convert::size_SI(T_iter_cur->download_speed) + "/s";
+		if(Type == download){
+			ss << T_iter_cur->download_peers;
+		}else{
+			ss << T_iter_cur->upload_peers;
+		}
+
+		std::string speed;
+		if(Type == download){
+			speed = convert::size_SI(T_iter_cur->download_speed) + "/s";
+		}else{
+			speed = convert::size_SI(T_iter_cur->upload_speed) + "/s";
+		}
 		std::string size = convert::size_SI(T_iter_cur->file_size);
 
 		//update rows
@@ -167,6 +176,14 @@ bool window_transfer::refresh()
 		}
 
 		if(!entry_found){
+			if(Type == download && (T_iter_cur->percent_complete == 100
+				&& T_iter_cur->download_peers == 0))
+			{
+				continue;
+			}
+			if(Type == upload && T_iter_cur->upload_peers == 0){
+				continue;
+			}
 			Gtk::TreeModel::Row row = *(download_list->append());
 			row[column_hash] = T_iter_cur->hash;
 			row[column_name] = T_iter_cur->name;

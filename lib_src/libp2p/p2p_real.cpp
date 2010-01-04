@@ -159,8 +159,10 @@ void p2p_real::transfers(std::vector<p2p::transfer> & T)
 		transfer.name = iter_cur->name();
 		transfer.file_size = iter_cur->file_size();
 		transfer.percent_complete = iter_cur->percent_complete();
-		transfer.upload_speed = iter_cur->upload_speed();
+		transfer.download_peers = iter_cur->download_peers();
 		transfer.download_speed = iter_cur->download_speed();
+		transfer.upload_peers = iter_cur->upload_peers();
+		transfer.upload_speed = iter_cur->upload_speed();
 		T.push_back(transfer);
 	}
 }

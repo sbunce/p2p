@@ -24,12 +24,10 @@ public:
 		boost::uint64_t file_size; //size of the file (bytes)
 		boost::uint64_t tree_size; //size of hash tree (bytes)
 		unsigned percent_complete; //0-100
+		unsigned download_peers;   //number of hosts we're downloading from
 		unsigned download_speed;   //total download bytes/second
+		unsigned upload_peers;     //number of hosts we're uploading to
 		unsigned upload_speed;     //total upload bytes/second
-
-		//host associated with current speed
-		std::vector<std::pair<std::string, unsigned> > upload;
-		std::vector<std::pair<std::string, unsigned> > download;
 	};
 
 	//needed to start a download
@@ -38,18 +36,13 @@ public:
 	public:
 		download(
 			const std::string & hash_in,
-			const std::string & name_in,
-			const boost::uint64_t & file_size_in
+			const std::string & name_in
 		):
 			hash(hash_in),
-			name(name_in),
-			file_size(file_size_in)
+			name(name_in)
 		{}
-
-		std::string hash;              //root hash of hash tree
-		std::string name;              //name of the file
-		boost::uint64_t file_size;     //size of the file (bytes)
-		std::vector<std::string> host; //hosts known to have this file
+		std::string hash;
+		std::string name;
 	};
 
 	/*

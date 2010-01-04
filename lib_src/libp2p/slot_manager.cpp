@@ -14,6 +14,22 @@ slot_manager::slot_manager(
 		boost::bind(&slot_manager::recv_request_slot, this, _1))));
 }
 
+slot_manager::~slot_manager()
+{
+	for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
+		iter_cur = Incoming_Slot.begin(), iter_end = Incoming_Slot.end();
+		iter_cur != iter_end; ++iter_cur)
+	{
+		iter_cur->second->unregister_upload();
+	}
+	for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
+		iter_cur = Outgoing_Slot.begin(), iter_end = Outgoing_Slot.end();
+		iter_cur != iter_end; ++iter_cur)
+	{
+		iter_cur->second->unregister_download();
+	}
+}
+
 void slot_manager::make_block_requests(boost::shared_ptr<slot> S)
 {
 	/*
@@ -340,6 +356,8 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 		boost::bind(&slot_manager::recv_request_file_block, this, _1, slot_num),
 		slot_num, slot_iter->get_transfer()->file_block_count())));
 
+	slot_iter->register_upload();
+
 	return true;
 }
 
@@ -396,6 +414,7 @@ bool slot_manager::recv_slot(boost::shared_ptr<message::base> M,
 		LOGGER << "violated protocol";
 		return false;
 	}
+	slot_iter->register_download();
 
 	//make initial block requests
 	make_block_requests(slot_iter.get());
