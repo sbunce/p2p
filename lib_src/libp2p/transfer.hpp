@@ -40,8 +40,8 @@ public:
 		const boost::uint64_t block_num);
 	bool root_hash(std::string & RH);
 	boost::uint64_t tree_block_count();
-	hash_tree::status write_tree_block(const boost::uint64_t block_num,
-		const network::buffer & block);
+	status write_tree_block(const int connection_ID, const boost::uint64_t block_num,
+		const network::buffer & buf);
 
 	/* File
 	file_block_size:
@@ -55,6 +55,10 @@ public:
 		Reads block from fiel and constructs block message. Returns good if block
 		message created, bad if read failed, protocol_violated if tried to read a
 		block we don't have.
+	write_file_block:
+		Hash checks file block and writes it to the file if it is good. Returns
+		good if block good and written to file, bad if error writing to file,
+		protocol_violated if block failed hash check.
 	*/
 	boost::uint64_t file_block_count();
 	boost::uint64_t file_size();
@@ -62,6 +66,8 @@ public:
 		unsigned & block_size);
 	status read_file_block(boost::shared_ptr<message::base> & M,
 		const boost::uint64_t block_num);
+	status write_file_block(const int connection_ID, const boost::uint64_t block_num,
+		const network::buffer & buf);
 
 	/* Hash Tree + File
 	check:

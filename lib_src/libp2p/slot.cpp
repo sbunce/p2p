@@ -67,7 +67,8 @@ unsigned slot::percent_complete()
 	}
 }
 
-bool slot::set_unknown(const boost::uint64_t file_size, const std::string & root_hash)
+bool slot::set_unknown(const int connection_ID, const boost::uint64_t file_size,
+	const std::string & root_hash)
 {
 	//true if this thread instantiated transfer (used to save disk access)
 	bool created = false;
@@ -92,7 +93,7 @@ bool slot::set_unknown(const boost::uint64_t file_size, const std::string & root
 //	if(created){
 		database::table::share::update_file_size(path_tmp, file_size);
 		network::buffer buf(convert::hex_to_bin(root_hash));
-		Transfer->write_tree_block(0, buf);
+		Transfer->write_tree_block(connection_ID, 0, buf);
 //	}
 	return true;
 }

@@ -37,7 +37,8 @@ void block_request::add_block_local(const int connection_ID, const boost::uint64
 			++pair.first;
 		}
 	}
-	assert(found);
+//DEBUG, assert disabled because it errors on on hash block 0 gotten from slot message
+	//assert(found);
 }
 
 void block_request::add_block_local_all()

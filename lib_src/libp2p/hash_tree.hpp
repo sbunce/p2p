@@ -103,15 +103,15 @@ public:
 	unsigned block_size(const boost::uint64_t block_num);
 	status check();
 	status check_file_block(const boost::uint64_t file_block_num,
-		const char * block, const int size);
+		const network::buffer & buf);
 	status create();
 	std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool> file_block_children(
 		const boost::uint64_t block);
-	status read_block(const boost::uint64_t block_num, network::buffer & block);
+	status read_block(const boost::uint64_t block_num, network::buffer & buf);
 	std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool> tree_block_children(
 		const boost::uint64_t block);
 	status write_block(const boost::uint64_t block_num,
-		const network::buffer & block);
+		const network::buffer & buf);
 
 private:
 	/*

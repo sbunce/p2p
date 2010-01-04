@@ -87,7 +87,7 @@ private:
 	void make_block_requests(boost::shared_ptr<slot> S);
 	void make_slot_requests();
 	bool recv_file_block(boost::shared_ptr<message::base> M,
-		const boost::uint64_t block_num);
+		const unsigned slot_num, const boost::uint64_t block_num);
 	bool recv_hash_tree_block(boost::shared_ptr<message::base> M,
 		const unsigned slot_num, const boost::uint64_t block_num);
 	bool recv_request_hash_tree_block(boost::shared_ptr<message::base> M,

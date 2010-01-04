@@ -104,11 +104,9 @@ bool transfer::next_request_file(const int connection_ID,
 transfer::status transfer::read_file_block(boost::shared_ptr<message::base> & M,
 		const boost::uint64_t block_num)
 {
-/*
 	if(File_Block.have_block(block_num)){
 		network::buffer block;
-		hash_tree::status status = File.read_block(block_num, block);
-		if(status == hash_tree::good){
+		if(File.read_block(block_num, block)){
 //DEBUG, big copy constructing this message.
 			M = boost::shared_ptr<message::base>(new message::block(block));
 			return good;
@@ -118,7 +116,6 @@ transfer::status transfer::read_file_block(boost::shared_ptr<message::base> & M,
 	}else{
 		return protocol_violated;
 	}
-*/
 }
 
 transfer::status transfer::read_tree_block(boost::shared_ptr<message::base> & M,
@@ -168,18 +165,37 @@ boost::uint64_t transfer::tree_block_count()
 	return Hash_Tree.tree_block_count;
 }
 
-hash_tree::status transfer::write_tree_block(const boost::uint64_t block_num,
-	const network::buffer & block)
+transfer::status transfer::write_file_block(const int connection_ID,
+	const boost::uint64_t block_num, const network::buffer & buf)
+{
+LOGGER << block_num;
+	hash_tree::status status = Hash_Tree.check_file_block(block_num, buf);
+	if(status == hash_tree::good){
+		if(File.write_block(block_num, buf)){
+			File_Block.add_block_local(connection_ID, block_num);
+			return good;
+		}else{
+			//failed to write block
+			return bad;
+		}
+	}else if(status == hash_tree::io_error){
+		return bad;
+	}else{
+		return protocol_violated;
+	}
+}
+
+transfer::status transfer::write_tree_block(const int connection_ID,
+	const boost::uint64_t block_num, const network::buffer & block)
 {
 LOGGER << block_num;
 	hash_tree::status status = Hash_Tree.write_block(block_num, block);
 	if(status == hash_tree::good){
-		Hash_Tree_Block.add_block_local(block_num);
+		Hash_Tree_Block.add_block_local(connection_ID, block_num);
 		std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool>
 			pair = Hash_Tree.tree_block_children(block_num);
 		if(pair.second){
 			//approve child hash tree blocks
-LOGGER << pair.first.first << " " << pair.first.second;
 			for(boost::uint64_t x=pair.first.first; x<pair.first.second; ++x){
 				Hash_Tree_Block.approve_block(x);
 			}
@@ -187,11 +203,14 @@ LOGGER << pair.first.first << " " << pair.first.second;
 		pair = Hash_Tree.file_block_children(block_num);
 		if(pair.second){
 			//approve file blocks that are children of bottom tree row
-LOGGER << pair.first.first << " " << pair.first.second;
 			for(boost::uint64_t x=pair.first.first; x<pair.first.second; ++x){
 				File_Block.approve_block(x);
 			}
 		}
+		return good;
+	}else if(status == hash_tree::bad){
+		return protocol_violated;
+	}else if(status == hash_tree::io_error){
+		return bad;
 	}
-	return status;
 }

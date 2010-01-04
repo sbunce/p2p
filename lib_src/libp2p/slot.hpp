@@ -60,7 +60,8 @@ public:
 		transfer could not be instantiated.
 	*/
 	const boost::shared_ptr<transfer> & get_transfer();
-	bool set_unknown(const boost::uint64_t file_size, const std::string & root_hash);
+	bool set_unknown(const int connection_ID, const boost::uint64_t file_size,
+		const std::string & root_hash);
 
 private:
 	/*
