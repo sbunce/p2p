@@ -2,11 +2,9 @@
 
 window_transfer::window_transfer(
 	p2p & P2P_in,
-	Gtk::Notebook * notebook_in,
 	const type Type_in
 ):
 	P2P(P2P_in),
-	notebook(notebook_in),
 	Type(Type_in)
 {
 	window = this;
@@ -36,10 +34,9 @@ window_transfer::window_transfer(
 	download_view->append_column(" Speed ", column_speed);
 
 	//display percentage progress bar
-	cell = Gtk::manage(new Gtk::CellRendererProgress);
-	int cols_count = download_view->append_column(" Complete ", *cell);
+	int cols_count = download_view->append_column(" Complete ", cell);
 	Gtk::TreeViewColumn * pColumn = download_view->get_column(cols_count - 1);
-	pColumn->add_attribute(cell->property_value(), column_percent_complete);
+	pColumn->add_attribute(cell.property_value(), column_percent_complete);
 
 	//setup sorting on columns
 	Gtk::TreeViewColumn * C;

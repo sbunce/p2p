@@ -24,15 +24,11 @@ public:
 
 	window_transfer(
 		p2p & P2P_in,
-		Gtk::Notebook * notebook_in,
 		const type Type_in
 	);
 
 private:
 	p2p & P2P;
-
-	//the same notebook that exists in GUI
-	Gtk::Notebook * notebook;
 
 	//upload or download (some things are disabled for upload)
 	const type Type;
@@ -53,7 +49,7 @@ private:
 	Gtk::TreeModelColumn<Glib::ustring> column_peers;
 	Gtk::TreeModelColumn<Glib::ustring> column_speed;
 	Gtk::TreeModelColumn<int> column_percent_complete;
-	Gtk::CellRendererProgress * cell; //percent renderer
+	Gtk::CellRendererProgress cell; //percent renderer
 
 	//popup menus for when user right clicks on treeviews
 	Gtk::Menu downloads_popup_menu;
