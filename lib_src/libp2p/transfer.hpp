@@ -11,7 +11,7 @@
 #include <atomic_int.hpp>
 #include <network/network.hpp>
 
-class transfer
+class transfer : private boost::noncopyable
 {
 public:
 	transfer(const file_info & FI);

@@ -30,8 +30,9 @@ std::string path::database()
 
 std::string & path::database_name()
 {
-	static std::string * d = new std::string();
-	return *d;
+	//static std::string * d = new std::string();
+	static std::string d;
+	return d;
 }
 
 void path::init()
@@ -69,8 +70,8 @@ std::string path::hash_tree_temp()
 
 std::string & path::program_directory()
 {
-	static std::string * p = new std::string();
-	return *p;
+	static std::string p;
+	return p;
 }
 
 void path::remove_temporary_hash_tree_files()

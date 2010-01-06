@@ -5,7 +5,8 @@ exchange::exchange(
 	network::connection_info & CI
 ):
 	connection_ID(CI.connection_ID),
-	Proactor(Proactor_in)
+	Proactor(Proactor_in),
+	blacklist_state(0)
 {
 	//start key exchange
 	if(CI.direction == network::outgoing){

@@ -54,11 +54,7 @@ public:
 
 	~proactor()
 	{
-		Resolve_TP.clear();
-		Resolve_TP.interrupt_join();
-		network_thread.interrupt();
-		Select_Interrupter.trigger();
-		network_thread.join();
+		stop();
 	}
 
 	/*
@@ -129,10 +125,20 @@ public:
 		}
 	}
 
-	//start networking thread
+	//start all proactor threads (except those that won't leave proactor)
 	void start()
 	{
 		network_thread = boost::thread(boost::bind(&proactor::network_loop, this));
+	}
+
+	//stop all proactor threads
+	void stop()
+	{
+		Resolve_TP.clear();           //cancel resolve jobs
+		Resolve_TP.interrupt_join();  //interrupt and wait for threads to die
+		network_thread.interrupt();   //interrupt network thread
+		Select_Interrupter.trigger(); //allow network_thread to reach interruption_point
+		network_thread.join();        //wait for network thread to die
 	}
 
 	//returns upload rate (averaged over a few seconds)

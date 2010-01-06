@@ -10,6 +10,11 @@ connection_manager::connection_manager():
 
 }
 
+connection_manager::~connection_manager()
+{
+	Proactor.stop();
+}
+
 void connection_manager::connect_call_back(network::connection_info & CI)
 {
 //DEBUG, disable persistent blacklist

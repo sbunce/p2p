@@ -13,8 +13,8 @@ void database::table::blacklist::add(const std::string & IP, database::pool::pro
 
 atomic_int<int> & database::table::blacklist::blacklist_state()
 {
-	static atomic_int<int> * b = new atomic_int<int>(0);
-	return *b;
+	static atomic_int<int> b(0);
+	return b;
 }
 
 void database::table::blacklist::init()

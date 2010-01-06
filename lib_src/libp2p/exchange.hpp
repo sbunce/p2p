@@ -9,7 +9,7 @@
 #include <boost/shared_ptr.hpp>
 #include <network/network.hpp>
 
-class exchange
+class exchange : private boost::noncopyable
 {
 public:
 	exchange(
