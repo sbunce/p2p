@@ -138,10 +138,18 @@ public:
 		boost::mutex::scoped_lock lock(stop_mutex);
 		//assert network thread is started
 		assert(network_thread.get_id() != boost::thread::id());
+
 		Resolve_TP.clear();           //cancel resolve jobs
 		Resolve_TP.interrupt_join();  //interrupt and wait for threads to die
-		network_thread.interrupt();   //interrupt network thread
-		Select_Interrupter.trigger(); //allow network_thread to reach interruption_point
+
+		//stop network_thread
+		{//BEGIN lock scope
+		boost::mutex::scoped_lock lock(network_thread_call_mutex);
+		//Note: This is pushed on the front to give it priority.
+		network_thread_call.push_front(boost::bind(&proactor::shutdown, this));
+		}//END lock scope
+		Select_Interrupter.trigger();
+
 		network_thread.join();        //wait for network thread to die
 		Call_Back_Dispatcher.stop();  //cancel call backs, stop call back threads
 	}
@@ -606,6 +614,23 @@ private:
 			}
 		}
 		Select_Interrupter.trigger();
+	}
+
+	//shuts down proactor, disconnect all sockets, clears all state
+	void shutdown()
+	{
+		//disconnect all sockets, except listener
+		while(!ID.empty()){
+			disconnect(ID.begin()->first, false);
+		}
+
+		{//BEGIN lock scope
+		boost::mutex::scoped_lock lock(network_thread_call_mutex);
+		network_thread_call.clear();
+		}//end lock scope
+
+		network_thread.interrupt();
+		boost::this_thread::interruption_point();
 	}
 };
 }
