@@ -132,93 +132,72 @@ bool window_transfer::refresh()
 	std::vector<p2p::transfer> T;
 	P2P.transfers(T);
 
-	for(std::vector<p2p::transfer>::iterator T_iter_cur = T.begin(),
-		T_iter_end = T.end(); T_iter_cur != T_iter_end; ++T_iter_cur)
+	for(std::vector<p2p::transfer>::iterator iter_cur = T.begin(),
+		iter_end = T.end(); iter_cur != iter_end; ++iter_cur)
 	{
-		//set up column
-		std::stringstream ss;
-		if(Type == download){
-			ss << T_iter_cur->download_peers;
-		}else{
-			ss << T_iter_cur->upload_peers;
-		}
-
-		std::string speed;
-		if(Type == download){
-			speed = convert::size_SI(T_iter_cur->download_speed) + "/s";
-		}else{
-			speed = convert::size_SI(T_iter_cur->upload_speed) + "/s";
-		}
-		std::string size = convert::size_SI(T_iter_cur->file_size);
-
-		//update rows
-		bool entry_found = false;
-		Gtk::TreeModel::Children children = download_list->children();
-		for(Gtk::TreeModel::Children::iterator child_iter_cur = children.begin(),
-			child_iter_end = children.end(); child_iter_cur != child_iter_end;
-			++child_iter_cur)
-		{
- 			Gtk::TreeModel::Row row = *child_iter_cur;
-			Glib::ustring hash_retrieved;
-			row.get_value(0, hash_retrieved);
-			if(hash_retrieved == T_iter_cur->hash){
-				row[column_name] = T_iter_cur->name;
-				row[column_size] = size;
-				row[column_peers] = ss.str();
-				row[column_speed] = speed;
-				row[column_percent_complete] = T_iter_cur->percent_complete;
-				entry_found = true;
-				break;
-			}
-		}
-
-		if(!entry_found){
-			if(Type == download && (T_iter_cur->percent_complete == 100
-				&& T_iter_cur->download_peers == 0))
+		std::map<std::string, Gtk::TreeModel::Row>::iterator
+			iter = Row_Index.find(iter_cur->hash);
+		if(iter == Row_Index.end()){
+			//add
+			if(Type == download && (iter_cur->percent_complete == 100
+				&& iter_cur->download_peers == 0))
 			{
 				continue;
 			}
-			if(Type == upload && T_iter_cur->upload_peers == 0){
+			if(Type == upload && iter_cur->upload_peers == 0){
 				continue;
 			}
 			Gtk::TreeModel::Row row = *(download_list->append());
-			row[column_hash] = T_iter_cur->hash;
-			row[column_name] = T_iter_cur->name;
-			row[column_size] = size;
-			row[column_peers] = ss.str();
-			row[column_speed] = speed;
-			row[column_percent_complete] = T_iter_cur->percent_complete;
-		}
-	}
-
-	//if no download info exists remove all remaining rows
-	if(T.size() == 0){
-		download_list->clear();
-	}
-
-	//remove rows without corresponding download_info
-	Gtk::TreeModel::Children children = download_list->children();
-	Gtk::TreeModel::Children::iterator child_iter_cur = children.begin(),
-		child_iter_end = children.end();
-	while(child_iter_cur != child_iter_end){
-	 	Gtk::TreeModel::Row row = *child_iter_cur;
-		Glib::ustring hash_retrieved;
-		row.get_value(0, hash_retrieved);
-
-		bool entry_found = false;
-		for(std::vector<p2p::transfer>::iterator T_iter_cur = T.begin(),
-			T_iter_end = T.end(); T_iter_cur != T_iter_end; ++T_iter_cur)
-		{
-			if(hash_retrieved == T_iter_cur->hash){
-				entry_found = true;
-				break;
+			row[column_hash] = iter_cur->hash;
+			row[column_name] = iter_cur->name;
+			row[column_size] = convert::size_SI(iter_cur->file_size);
+			std::stringstream peers;
+			if(Type == download){
+				peers << iter_cur->download_peers;
+			}else{
+				peers << iter_cur->upload_peers;
 			}
-		}
-
-		if(!entry_found){
-			child_iter_cur = download_list->erase(child_iter_cur);
+			row[column_peers] = peers.str();
+			if(Type == download){
+				row[column_speed] = convert::size_SI(iter_cur->download_speed) + "/s";
+			}else{
+				row[column_speed] = convert::size_SI(iter_cur->upload_speed) + "/s";
+			}
+			row[column_percent_complete] = iter_cur->percent_complete;
+			Row_Index.insert(std::make_pair(iter_cur->hash, row));
 		}else{
-			++child_iter_cur;
+			//update
+			iter->second[column_name] = iter_cur->name;
+			iter->second[column_size] = convert::size_SI(iter_cur->file_size);
+			std::stringstream peers;
+			if(Type == download){
+				peers << iter_cur->download_peers;
+			}else{
+				peers << iter_cur->upload_peers;
+			}
+			iter->second[column_peers] = peers.str();
+			if(Type == download){
+				iter->second[column_speed] = convert::size_SI(iter_cur->download_speed) + "/s";
+			}else{
+				iter->second[column_speed] = convert::size_SI(iter_cur->upload_speed) + "/s";
+			}
+			iter->second[column_percent_complete] = iter_cur->percent_complete;
+		}
+	}
+
+	//remove rows with no row info
+	for(Gtk::TreeModel::Children::iterator iter_cur = download_list->children().begin(),
+		iter_end = download_list->children().end(); iter_cur != iter_end;)
+	{
+		Glib::ustring hash;
+		iter_cur->get_value(0, hash);
+		std::map<std::string, Gtk::TreeModel::Row>::iterator
+			iter = Row_Index.find(hash);
+		if(iter == Row_Index.end()){
+			iter_cur = download_list->erase(iter_cur);
+			Row_Index.erase(iter);
+		}else{
+			++iter_cur;
 		}
 	}
 	return true;

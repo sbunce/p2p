@@ -164,6 +164,8 @@ void share_scanner::scan_loop()
 
 void share_scanner::start()
 {
+	boost::mutex::scoped_lock lock(start_mutex);
+	assert(Workers.size() == 0);
 	Workers.create_thread(boost::bind(&share_scanner::scan_loop, this));
 	for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
 		Workers.create_thread(boost::bind(&share_scanner::hash_loop, this));

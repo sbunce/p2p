@@ -15,7 +15,6 @@ namespace network{
 class call_back_dispatcher : private boost::noncopyable
 {
 public:
-
 	call_back_dispatcher(
 		const boost::function<void (connection_info &)> & connect_call_back_in,
 		const boost::function<void (connection_info &)> & disconnect_call_back_in
@@ -23,17 +22,7 @@ public:
 		connect_call_back(connect_call_back_in),
 		disconnect_call_back(disconnect_call_back_in)
 	{
-		int threads = boost::thread::hardware_concurrency() < 8 ?
-			8 : boost::thread::hardware_concurrency();
-		for(int x=0; x<threads; ++x){
-			Workers.create_thread(boost::bind(&call_back_dispatcher::dispatch, this));
-		}
-	}
 
-	~call_back_dispatcher()
-	{
-		Workers.interrupt_all();
-		Workers.join_all();
 	}
 
 	/*
@@ -85,6 +74,36 @@ public:
 		job.push_back(std::make_pair(CI->connection_ID, boost::bind(
 			&call_back_dispatcher::send_call_back_wrapper, this, CI, send_buf_size)));
 		job_cond.notify_one();
+	}
+
+	//starts threads to do call backs
+	boost::mutex start_mutex;
+	void start()
+	{
+		boost::mutex::scoped_lock lock(start_mutex);
+		assert(Workers.size() == 0);
+		int threads = boost::thread::hardware_concurrency() < 4 ?
+			4 : boost::thread::hardware_concurrency();
+		for(int x=0; x<threads; ++x){
+			Workers.create_thread(boost::bind(&call_back_dispatcher::dispatch, this));
+		}
+	}
+
+	/*
+	Stops all call back threads.
+	Cancels all pending jobs.
+	*/
+	boost::mutex stop_mutex;
+	void stop()
+	{
+		boost::mutex::scoped_lock lock(stop_mutex);
+		assert(Workers.size() != 0);
+		Workers.interrupt_all();
+		Workers.join_all();
+		{//BEGIN lock scope
+		job.clear();
+		memoize.clear();
+		}//END lock scope
 	}
 
 private:

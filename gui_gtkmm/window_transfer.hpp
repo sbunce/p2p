@@ -11,6 +11,7 @@
 #include <p2p.hpp>
 
 //standard
+#include <map>
 #include <set>
 #include <string>
 
@@ -54,8 +55,8 @@ private:
 	//popup menus for when user right clicks on treeviews
 	Gtk::Menu downloads_popup_menu;
 
-	//hashes of all opened tabs
-	std::set<std::string> open_info_tabs;
+	//hash associated with row (this is used as index for fast updates)
+	std::map<std::string, Gtk::TreeModel::Row> Row_Index;
 
 	/*
 	compare_size:

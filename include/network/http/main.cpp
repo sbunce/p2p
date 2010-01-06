@@ -68,7 +68,6 @@ int main(int argc, char ** argv)
 	}
 	//Proactor.max_upload_rate(1024*32);
 	Proactor.start();
-
 	while(!terminate_program){
 		if(Proactor.download_rate() || Proactor.upload_rate()){
 			LOGGER
@@ -77,4 +76,5 @@ int main(int argc, char ** argv)
 		}
 		boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
 	}
+	Proactor.stop();
 }

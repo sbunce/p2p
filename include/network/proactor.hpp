@@ -34,7 +34,7 @@ public:
 		const std::string & listen_port = "-1"
 	):
 		Call_Back_Dispatcher(connect_call_back, disconnect_call_back),
-		Resolve_TP(8),
+		Resolve_TP(1),
 		begin_FD(0),
 		end_FD(1),
 		latest_ID(0)
@@ -50,11 +50,6 @@ public:
 			Listener->set_non_blocking();
 			add_socket(std::make_pair(Listener->socket(), boost::shared_ptr<state>()));
 		}
-	}
-
-	~proactor()
-	{
-		stop();
 	}
 
 	/*
@@ -125,20 +120,30 @@ public:
 		}
 	}
 
-	//start all proactor threads (except those that won't leave proactor)
+	//start all proactor threads
+	boost::mutex start_mutex;
 	void start()
 	{
+		boost::mutex::scoped_lock lock(start_mutex);
+		//assert network thread not started
+		assert(network_thread.get_id() == boost::thread::id());
 		network_thread = boost::thread(boost::bind(&proactor::network_loop, this));
+		Call_Back_Dispatcher.start();
 	}
 
 	//stop all proactor threads
+	boost::mutex stop_mutex;
 	void stop()
 	{
+		boost::mutex::scoped_lock lock(stop_mutex);
+		//assert network thread is started
+		assert(network_thread.get_id() != boost::thread::id());
 		Resolve_TP.clear();           //cancel resolve jobs
 		Resolve_TP.interrupt_join();  //interrupt and wait for threads to die
 		network_thread.interrupt();   //interrupt network thread
 		Select_Interrupter.trigger(); //allow network_thread to reach interruption_point
 		network_thread.join();        //wait for network thread to die
+		Call_Back_Dispatcher.stop();  //cancel call backs, stop call back threads
 	}
 
 	//returns upload rate (averaged over a few seconds)

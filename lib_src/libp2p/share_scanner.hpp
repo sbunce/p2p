@@ -31,7 +31,9 @@ public:
 	/*
 	start:
 		Starts threads to scan share and hash files.
+		Note: If threads are started they are stopped in dtor.
 	*/
+	boost::mutex start_mutex;
 	void start();
 
 private:
