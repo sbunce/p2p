@@ -117,6 +117,13 @@ bool slot::set_unknown(const int connection_ID, const boost::uint64_t file_size,
 	return true;
 }
 
+void slot::touch()
+{
+	if(Transfer){
+		Transfer->touch();
+	}
+}
+
 void slot::unregister_download()
 {
 	--downloading;

@@ -73,6 +73,12 @@ public:
 	void unregister_download();
 	void unregister_upload();
 
+	/* Misc
+	touch:
+		Updates speeds. Should be called before calling any speed function.
+	*/
+	void touch();
+
 private:
 	/*
 	Note: The ctor may throw.

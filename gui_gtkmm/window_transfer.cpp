@@ -9,49 +9,47 @@ window_transfer::window_transfer(
 {
 	window = this;
 
-	//instantiation
+	//instantiate
 	download_view = Gtk::manage(new Gtk::TreeView);
+	window->add(*download_view);
 	download_scrolled_window = Gtk::manage(new Gtk::ScrolledWindow);
 
-	//options and ownership
+	//options
 	download_view->set_headers_visible(true);
-	download_view->set_rules_hint(true); //alternate row background colors
-	window->add(*download_view);
+	download_view->set_rules_hint(true); //alternate row color
 
 	//set up column
-	column.add(column_hash);
 	column.add(column_name);
 	column.add(column_size);
 	column.add(column_peers);
 	column.add(column_speed);
 	column.add(column_percent_complete);
+	column.add(column_hash); hash_col_num = 5;
+	column.add(column_update); update_col_num = 6;
+
+	//setup list to hold rows in treeview
 	download_list = Gtk::ListStore::create(column);
 	download_view->set_model(download_list);
 
-	download_view->append_column(" Name ", column_name);
-	download_view->append_column(" Size ", column_size);
-	download_view->append_column(" Peers ", column_peers);
-	download_view->append_column(" Speed ", column_speed);
+	//add columns to download_view
+	int name_col_num = download_view->append_column(" Name ", column_name) - 1;
+	int size_col_num = download_view->append_column(" Size ", column_size) - 1;
+	int peers_col_num = download_view->append_column(" Peers ", column_peers) - 1;
+	int speed_col_num = download_view->append_column(" Speed ", column_speed) - 1;
+	int complete_col_num = download_view->append_column(" Complete ", cell) - 1;
+	download_view->get_column(complete_col_num)->add_attribute(cell.property_value(),
+		column_percent_complete);
 
-	//display percentage progress bar
-	int cols_count = download_view->append_column(" Complete ", cell);
-	Gtk::TreeViewColumn * pColumn = download_view->get_column(cols_count - 1);
-	pColumn->add_attribute(cell.property_value(), column_percent_complete);
-
-	//setup sorting on columns
-	Gtk::TreeViewColumn * C;
-	C = download_view->get_column(0); assert(C);
-	C->set_sort_column(1);
-	C = download_view->get_column(1); assert(C);
-	C->set_sort_column(2);
-	download_list->set_sort_func(2, sigc::mem_fun(*this, &window_transfer::compare_size));
-	C = download_view->get_column(2); assert(C);
-	C->set_sort_column(3);
-	C = download_view->get_column(3); assert(C);
-	C->set_sort_column(4);
-	download_list->set_sort_func(4, sigc::mem_fun(*this, &window_transfer::compare_size));
-	C = download_view->get_column(4); assert(C);
-	C->set_sort_column(5);
+	//make columns sortable
+	download_view->get_column(name_col_num)->set_sort_column(name_col_num);
+	download_view->get_column(size_col_num)->set_sort_column(size_col_num);
+	download_list->set_sort_func(size_col_num, sigc::mem_fun(*this,
+		&window_transfer::compare_size));
+	download_view->get_column(peers_col_num)->set_sort_column(peers_col_num);
+	download_view->get_column(speed_col_num)->set_sort_column(speed_col_num);
+	download_list->set_sort_func(speed_col_num, sigc::mem_fun(*this,
+		&window_transfer::compare_size));
+	download_view->get_column(complete_col_num)->set_sort_column(complete_col_num);
 
 	if(Type == download){
 		//menu that pops up when right click happens on download
@@ -73,15 +71,11 @@ window_transfer::window_transfer(
 int window_transfer::compare_size(const Gtk::TreeModel::iterator & lval,
 	const Gtk::TreeModel::iterator & rval)
 {
-	Gtk::TreeModel::Row row_lval = *lval;
-	Gtk::TreeModel::Row row_rval = *rval;
-	std::stringstream ss;
-	ss << row_lval[column_size];
-	std::string left = ss.str();
-	ss.str(""); ss.clear();
-	ss << row_rval[column_size];
-	std::string right = ss.str();
-	return convert::size_SI_cmp(left, right);
+	std::stringstream left_ss;
+	left_ss << (*lval)[column_size];
+	std::stringstream right_ss;
+	right_ss << (*rval)[column_size];
+	return convert::size_SI_cmp(left_ss.str(), right_ss.str());
 }
 
 void window_transfer::delete_download()
@@ -90,10 +84,8 @@ void window_transfer::delete_download()
 	if(refSelection){
 		Gtk::TreeModel::iterator selected_row_iter = refSelection->get_selected();
 		if(selected_row_iter){
-			Gtk::TreeModel::Row row = *selected_row_iter;
-			Glib::ustring hash_retrieved;
-			row.get_value(0, hash_retrieved);
-			P2P.remove_download(hash_retrieved);
+			Glib::ustring hash = (*selected_row_iter)[column_hash];
+			P2P.remove_download(hash);
 		}
 	}
 }
@@ -106,19 +98,25 @@ bool window_transfer::click(GdkEventButton * event)
 		Gtk::TreeModel::Path path;
 		Gtk::TreeViewColumn columnObject;
 		Gtk::TreeViewColumn * column = &columnObject;
-		if(download_view->get_path_at_pos((int)event->x, (int)event->y, path, column, x, y)){
+		if(download_view->get_path_at_pos((int)event->x, (int)event->y, path,
+			column, x, y))
+		{
 			download_view->set_cursor(path);
 		}else{
 			download_view->get_selection()->unselect_all();
 		}
-	}else if(Type == download && event->type == GDK_BUTTON_PRESS && event->button == 3){
+	}else if(Type == download && event->type == GDK_BUTTON_PRESS
+		&& event->button == 3)
+	{
 		//right click
 		downloads_popup_menu.popup(event->button, event->time);
 		int x, y;
 		Gtk::TreeModel::Path path;
 		Gtk::TreeViewColumn columnObject;
 		Gtk::TreeViewColumn * column = &columnObject;
-		if(download_view->get_path_at_pos((int)event->x, (int)event->y, path, column, x, y)){
+		if(download_view->get_path_at_pos((int)event->x, (int)event->y, path,
+			column, x, y))
+		{
 			download_view->set_cursor(path);
 		}else{
 			download_view->get_selection()->unselect_all();
@@ -132,6 +130,7 @@ bool window_transfer::refresh()
 	std::vector<p2p::transfer> T;
 	P2P.transfers(T);
 
+	//add and update rows
 	for(std::vector<p2p::transfer>::iterator iter_cur = T.begin(),
 		iter_end = T.end(); iter_cur != iter_end; ++iter_cur)
 	{
@@ -148,7 +147,6 @@ bool window_transfer::refresh()
 				continue;
 			}
 			Gtk::TreeModel::Row row = *(download_list->append());
-			row[column_hash] = iter_cur->hash;
 			row[column_name] = iter_cur->name;
 			row[column_size] = convert::size_SI(iter_cur->file_size);
 			std::stringstream peers;
@@ -164,42 +162,51 @@ bool window_transfer::refresh()
 				row[column_speed] = convert::size_SI(iter_cur->upload_speed) + "/s";
 			}
 			row[column_percent_complete] = iter_cur->percent_complete;
+			row[column_hash] = iter_cur->hash;
+			row[column_update] = true;
 			Row_Index.insert(std::make_pair(iter_cur->hash, row));
 		}else{
 			//update
-			iter->second[column_name] = iter_cur->name;
-			iter->second[column_size] = convert::size_SI(iter_cur->file_size);
+			Gtk::TreeModel::Row row = iter->second;
+			row[column_name] = iter_cur->name;
+			row[column_size] = convert::size_SI(iter_cur->file_size);
 			std::stringstream peers;
 			if(Type == download){
 				peers << iter_cur->download_peers;
 			}else{
 				peers << iter_cur->upload_peers;
 			}
-			iter->second[column_peers] = peers.str();
+			row[column_peers] = peers.str();
 			if(Type == download){
-				iter->second[column_speed] = convert::size_SI(iter_cur->download_speed) + "/s";
+				row[column_speed] = convert::size_SI(iter_cur->download_speed) + "/s";
 			}else{
-				iter->second[column_speed] = convert::size_SI(iter_cur->upload_speed) + "/s";
+				row[column_speed] = convert::size_SI(iter_cur->upload_speed) + "/s";
 			}
-			iter->second[column_percent_complete] = iter_cur->percent_complete;
+			row[column_percent_complete] = iter_cur->percent_complete;
+			row[column_update] = true;
 		}
 	}
 
-	//remove rows with no row info
+	//remove rows not updated
 	for(Gtk::TreeModel::Children::iterator iter_cur = download_list->children().begin(),
 		iter_end = download_list->children().end(); iter_cur != iter_end;)
 	{
-		Glib::ustring hash;
-		iter_cur->get_value(0, hash);
-		std::map<std::string, Gtk::TreeModel::Row>::iterator
-			iter = Row_Index.find(hash);
-		if(iter == Row_Index.end()){
-			iter_cur = download_list->erase(iter_cur);
-			Row_Index.erase(iter);
-		}else{
+		if((*iter_cur)[column_update]){
 			++iter_cur;
+		}else{
+			Glib::ustring hash = (*iter_cur)[column_hash];
+			Row_Index.erase(hash);
+			iter_cur = download_list->erase(iter_cur);
 		}
 	}
+
+	//make all rows as not updated for next call to refresh()
+	for(Gtk::TreeModel::Children::iterator iter_cur = download_list->children().begin(),
+		iter_end = download_list->children().end(); iter_cur != iter_end; ++iter_cur)
+	{
+		(*iter_cur)[column_update] = false;
+	}
+
 	return true;
 }
 
@@ -209,10 +216,8 @@ void window_transfer::pause()
 	if(refSelection){
 		Gtk::TreeModel::iterator selected_row_iter = refSelection->get_selected();
 		if(selected_row_iter){
-			Gtk::TreeModel::Row row = *selected_row_iter;
-			Glib::ustring hash_retrieved;
-			row.get_value(0, hash_retrieved);
-			P2P.pause_download(hash_retrieved);
+			Glib::ustring hash = (*selected_row_iter)[column_hash];
+			P2P.pause_download(hash);
 		}
 	}
 }

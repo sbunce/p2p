@@ -178,6 +178,12 @@ bool transfer::root_hash(std::string & RH)
 	return true;
 }
 
+void transfer::touch()
+{
+	Download_Speed.add(0);
+	Upload_Speed.add(0);
+}
+
 boost::uint64_t transfer::tree_block_count()
 {
 	return Hash_Tree.tree_block_count;

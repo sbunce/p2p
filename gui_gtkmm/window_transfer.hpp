@@ -44,13 +44,17 @@ private:
 
 	//treeview columns
 	Gtk::TreeModel::ColumnRecord column;
-	Gtk::TreeModelColumn<Glib::ustring> column_hash;
+
 	Gtk::TreeModelColumn<Glib::ustring> column_name;
 	Gtk::TreeModelColumn<Glib::ustring> column_size;
 	Gtk::TreeModelColumn<Glib::ustring> column_peers;
 	Gtk::TreeModelColumn<Glib::ustring> column_speed;
 	Gtk::TreeModelColumn<int> column_percent_complete;
-	Gtk::CellRendererProgress cell; //percent renderer
+	Gtk::TreeModelColumn<Glib::ustring> column_hash;
+	Gtk::TreeModelColumn<bool> column_update;
+	Gtk::CellRendererProgress cell;
+	int hash_col_num;
+	int update_col_num;
 
 	//popup menus for when user right clicks on treeviews
 	Gtk::Menu downloads_popup_menu;

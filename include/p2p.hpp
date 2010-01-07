@@ -6,8 +6,8 @@
 #include <boost/shared_ptr.hpp>
 
 //standard
+#include <list>
 #include <string>
-#include <vector>
 
 class p2p_real;
 class p2p : private boost::noncopyable

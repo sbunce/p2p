@@ -140,12 +140,12 @@ boost::uint64_t p2p_real::share_size_files()
 
 void p2p_real::start_download(const p2p::download & D)
 {
-
+	LOGGER;
 }
 
 void p2p_real::remove_download(const std::string & hash)
 {
-
+	LOGGER << hash;
 }
 
 void p2p_real::transfers(std::vector<p2p::transfer> & T)
@@ -154,6 +154,8 @@ void p2p_real::transfers(std::vector<p2p::transfer> & T)
 	for(share::slot_iterator iter_cur = share::singleton().begin_slot(),
 		iter_end = share::singleton().end_slot(); iter_cur != iter_end; ++iter_cur)
 	{
+		iter_cur->touch();
+
 		p2p::transfer transfer;
 		transfer.hash = iter_cur->hash();
 		transfer.name = iter_cur->name();

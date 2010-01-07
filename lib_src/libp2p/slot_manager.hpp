@@ -39,13 +39,8 @@ private:
 	std::map<unsigned char, boost::shared_ptr<slot> > Incoming_Slot;
 	std::map<unsigned char, boost::shared_ptr<slot> > Outgoing_Slot;
 
-	/*
-	These are passed to, and adjusted by, the transfer objects for adaptive
-	pipeline sizing.
-	Note: These are only for pipelining of block requests.
-	*/
-	unsigned pipeline_cur; //current size (unfulfilled requests)
-	unsigned pipeline_max; //current maximum size
+	//current pipeline size (unfulfilled requests)
+	unsigned pipeline_size;
 
 	/*
 	When making requests for blocks we loop through slots. This keeps track of
@@ -85,7 +80,7 @@ private:
 		Handles incoming slot messages. The hash parameter is the hash of the file
 		requested.
 	*/
-	void make_block_requests(boost::shared_ptr<slot> S);
+	void make_block_requests();
 	void make_slot_requests();
 	bool recv_file_block(boost::shared_ptr<message::base> M,
 		const unsigned slot_num, const boost::uint64_t block_num);

@@ -100,10 +100,13 @@ public:
 	/* Speeds
 	download_speed:
 		Returns download speed (bytes/second).
+	touch:
+		Add 0 bytes to Download_Speed/Upload_Speed to force recalculation.
 	upload_speed:
 		Returns upload speed (bytes/second).
 	*/
 	unsigned download_speed();
+	void touch();
 	unsigned upload_speed();
 
 private:

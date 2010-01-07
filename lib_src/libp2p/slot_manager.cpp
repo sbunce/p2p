@@ -4,8 +4,7 @@ slot_manager::slot_manager(
 	exchange & Exchange_in
 ):
 	Exchange(Exchange_in),
-	pipeline_cur(0),
-	pipeline_max(protocol::max_block_pipeline / 2),
+	pipeline_size(0),
 	open_slots(0),
 	latest_slot(0)
 {
@@ -30,38 +29,8 @@ slot_manager::~slot_manager()
 	}
 }
 
-void slot_manager::make_block_requests(boost::shared_ptr<slot> S)
+void slot_manager::make_block_requests()
 {
-	/*
-	This function is always called after a block is received (except for the
-	first call to send initial requests). The optimal pipeline size is 1 so that
-	we have as little in the pipeline as we need to maintain max throughput. We
-	adjust the max pipeline size to try to achieve the optimal pipeline size.
-
-	Adaptive Pipeline Sizing Algorithm
-
-	C = current requests unfulfilled (requests in pipeline)
-	M = maximum pipeline size (this is what we adjust)
-	A = absolute maximum pipeline size (M always < A)
-
-	case: C == 0 && M < A
-		//pipeline is too small, increase by one
-		++M
-	case: C == 1
-		//pipeline size optimal, do nothing
-	case: C > 1 && M > 1
-		//pipeline is too large, decrease by one
-		--M;
-	*/
-	if(pipeline_cur == 0 && pipeline_max < protocol::max_block_pipeline){
-		++pipeline_max;
-	}else if(pipeline_cur > 1 && pipeline_max > 1){
-		--pipeline_max;
-	}
-
-	if(pipeline_cur >= pipeline_max){
-		return;
-	}
 	if(Outgoing_Slot.empty()){
 		return;
 	}
@@ -78,17 +47,14 @@ void slot_manager::make_block_requests(boost::shared_ptr<slot> S)
 	unsigned char start_slot = iter_cur->first;
 	bool serviced_one = false;
 
-	while(true){
-		if(pipeline_cur >= pipeline_max){
-			break;
-		}
+	while(pipeline_size <= protocol::max_block_pipeline){
 		if(iter_cur->second->get_transfer()){
 			boost::uint64_t block_num; //block number to request
 			unsigned block_size;       //size of block
 			if(iter_cur->second->get_transfer()->next_request_tree(
 				Exchange.connection_ID, block_num, block_size))
 			{
-				++pipeline_cur;
+				++pipeline_size;
 				serviced_one = true;
 				boost::shared_ptr<message::base> M_request(new message::request_hash_tree_block(
 					iter_cur->first, block_num, iter_cur->second->get_transfer()->tree_block_count()));
@@ -103,7 +69,7 @@ void slot_manager::make_block_requests(boost::shared_ptr<slot> S)
 			}else if(iter_cur->second->get_transfer()->next_request_file(
 				Exchange.connection_ID, block_num, block_size))
 			{
-				++pipeline_cur;
+				++pipeline_size;
 				serviced_one = true;
 				boost::shared_ptr<message::base> M_request(new message::request_file_block(
 					iter_cur->first, block_num, iter_cur->second->get_transfer()->file_block_count()));
@@ -156,7 +122,7 @@ void slot_manager::make_slot_requests()
 bool slot_manager::recv_file_block(boost::shared_ptr<message::base> M,
 	const unsigned slot_num, const boost::uint64_t block_num)
 {
-	--pipeline_cur;
+	--pipeline_size;
 //DEBUG, big copy when erasing
 	M->buf.erase(0, 1);
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
@@ -166,7 +132,7 @@ bool slot_manager::recv_file_block(boost::shared_ptr<message::base> M,
 		transfer::status status = iter->second->get_transfer()->write_file_block(
 			Exchange.connection_ID, block_num, M->buf);
 		if(status == transfer::good){
-			make_block_requests(iter->second);
+			make_block_requests();
 			return true;
 		}else if(status == transfer::bad){
 			LOGGER << "stub: need to close slot";
@@ -181,7 +147,7 @@ bool slot_manager::recv_file_block(boost::shared_ptr<message::base> M,
 bool slot_manager::recv_hash_tree_block(boost::shared_ptr<message::base> M,
 	const unsigned slot_num, const boost::uint64_t block_num)
 {
-	--pipeline_cur;
+	--pipeline_size;
 //DEBUG, big copy when erasing
 	M->buf.erase(0, 1);
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
@@ -191,7 +157,7 @@ bool slot_manager::recv_hash_tree_block(boost::shared_ptr<message::base> M,
 		transfer::status status = iter->second->get_transfer()->write_tree_block(
 			Exchange.connection_ID, block_num, M->buf);
 		if(status == transfer::good){
-			make_block_requests(iter->second);
+			make_block_requests();
 			return true;
 		}else if(status == transfer::bad){
 			LOGGER << "stub: need to close slot";
@@ -417,7 +383,7 @@ bool slot_manager::recv_slot(boost::shared_ptr<message::base> M,
 	slot_iter->register_download();
 
 	//make initial block requests
-	make_block_requests(slot_iter.get());
+	make_block_requests();
 	return true;
 }
 

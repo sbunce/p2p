@@ -483,33 +483,6 @@ idle waiting for a request.
 A maximum of 16 (request_hash_tree_block + request_file_block) commands can be
 pipelined.
 </p>
-<p>
-It is recommended to use this pipeline sizing algorithm which should be run
-whenever a block request is fulfilled.
-</p>
-<br>
-<p>
-<b>Adaptive Pipeline Sizing Algorithm</b>
-</p>
-<pre>
-C = current requests unfulfilled (requests in pipeline)
-M = maximum pipeline size (this is what we adjust)
-A = absolute maximum pipeline size (M always < A)
-
-case: C == 0 && M < A
-	//pipeline is too small, increase by one
-	++M
-case: C == 1
-	//pipeline size optimal, do nothing
-case: C > 1 && M > 1
-	//pipeline is too large, decrease by one
-	--M;
-</pre>
-<p>
-The idea behind this algorithm is that it dynamically adjusts the pipeline size
-such that there is always one unfulfilled request. This minimizes the pipeline
-size and insures the computer sending blocks always has something to send.
-</p>
 </blockquote>
 
 <b>2.6 Hash Tree</b>
