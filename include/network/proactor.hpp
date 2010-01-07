@@ -36,8 +36,7 @@ public:
 		Call_Back_Dispatcher(connect_call_back, disconnect_call_back),
 		Resolve_TP(1),
 		begin_FD(0),
-		end_FD(1),
-		latest_ID(0)
+		end_FD(1)
 	{
 		FD_ZERO(&read_FDS);
 		FD_ZERO(&write_FDS);
@@ -191,14 +190,16 @@ private:
 			connected(connected_in),
 			E(E_in),
 			N(N_in),
-			CI(CI_in),
 			disconnect_on_empty(false),
+			CI(CI_in),
 			last_seen(std::time(NULL))
 		{}
 
 		bool connected;               //false if async connect in progress
 		std::set<endpoint> E;         //endpoints to connect to (E.begin() tried first)
 		boost::shared_ptr<nstream> N; //the connection
+		bool disconnect_on_empty;     //if true, disconnect when send_buf becomes empty
+		buffer send_buf;
 
 		/*
 		Connection info passed to call backs.
@@ -206,9 +207,6 @@ private:
 			call backs.
 		*/
 		boost::shared_ptr<connection_info> CI;
-
-		bool disconnect_on_empty; //if true disconnect when send_buf becomes empty
-		buffer send_buf;
 
 		//returns true if socket timed out
 		bool timed_out()
@@ -232,21 +230,57 @@ private:
 	//socket_FD associated with socket state
 	std::map<int, boost::shared_ptr<state> > Socket;
 
-	/*
-	A connection_ID associated with socket state.
-	Note: A connection_ID is used instead of a socket_FD outside the proactor
-	because socket_FDs are reused often internally to the proactor. This avoids
-	possible race conditions where we instruct the proactor to do something and
-	it operates on the wrong connection (because what connection the socket_FD
-	represents has changed).
-	*/
+	//connection_ID associated with socket state
 	std::map<int, boost::shared_ptr<state> > ID; 
 
 	/*
-	Used to get keys for the ID map. The key should be gotten like this:
-		int connection_ID = ++latest_ID;
+	This class allocates connection_IDs. There are a few problems this class
+	addresses:
+	1. We don't want to let the socket_FDs leave the proactor because the
+		proactor operates on sockets asynchronously and may disconnect/reconnect
+		while a call back is taking place.
+	2. The connection_IDs would have the same problem as #1 if we reused
+		connection_IDs. To avoid the problem we continually allocate
+		connection_IDs one greater than the last allocated connection_ID.
+	3. It is possible that the connection_IDs will wrap around and reuse existing
+		connection_IDs. We maintain a set of used connection_IDs so we can prevent
+		this.
 	*/
-	atomic_int<int> latest_ID;
+	class ID_manager
+	{
+	public:
+		ID_manager():
+			highest_allocated(0)
+		{}
+
+		//allocate connection_ID (call deallocate when done with it)
+		int allocate()
+		{
+			boost::mutex::scoped_lock lock(Mutex);
+			while(true){
+				++highest_allocated;
+				if(allocated.find(highest_allocated) == allocated.end()){
+					allocated.insert(highest_allocated);
+					return highest_allocated;
+				}
+			}
+		}
+
+		//deallocate connection_ID
+		void deallocate(int connection_ID)
+		{
+			boost::mutex::scoped_lock lock(Mutex);
+			if(allocated.erase(connection_ID) != 1){
+				LOGGER << "double free of connection_ID";
+				exit(1);
+			}
+		}
+
+	private:
+		boost::mutex Mutex;      //locks all access to object
+		int highest_allocated;   //last connection_ID allocated
+		std::set<int> allocated; //set of all connection_IDs allocated
+	} ID_Manager;
 
 	/*
 	When a thread that is not the network_thread needs to modify data that
@@ -388,7 +422,7 @@ private:
 				P.first = P.second->N->socket();
 				//recreate connection_info with new IP
 				P.second->CI = boost::shared_ptr<connection_info>(new connection_info(
-					++latest_ID, P.first, P.second->CI->host, P.second->E.begin()->IP(),
+					ID_Manager.allocate(), P.first, P.second->CI->host, P.second->E.begin()->IP(),
 					P.second->CI->port, P.second->CI->type, outgoing));
 				if(P.first == -1){
 					//couldn't allocate socket
@@ -449,7 +483,7 @@ private:
 					//handle incoming connections
 					while(boost::shared_ptr<nstream> N = Listener->accept()){
 						boost::shared_ptr<connection_info> CI(new connection_info(
-							++latest_ID, N->socket(), "", Listener->accept_endpoint().IP(),
+							ID_Manager.allocate(), N->socket(), "", Listener->accept_endpoint().IP(),
 							Listener->accept_endpoint().port(), tcp, incoming));
 						std::pair<int, boost::shared_ptr<state> > P(N->socket(),
 							boost::shared_ptr<state>(new state(true, std::set<endpoint>(), N, CI)));
@@ -573,6 +607,7 @@ private:
 		std::pair<int, boost::shared_ptr<state> > P = lookup_socket(socket_FD);
 		if(P.second){
 			Socket.erase(socket_FD);
+			ID_Manager.deallocate(P.second->CI->connection_ID);
 			ID.erase(P.second->CI->connection_ID);
 		}
 	}
@@ -586,19 +621,20 @@ private:
 	void resolve(const std::string & host, const std::string & port,
 		const sock_type type)
 	{
-		//std::pair<int, boost::shared_ptr<state> > P(-1, boost::shared_ptr<state>(new state()));
 		std::set<endpoint> E = get_endpoint(host, port, type);
 		if(E.empty()){
 			//host did not resolve
-			boost::shared_ptr<connection_info> CI(new connection_info(++latest_ID,
+			boost::shared_ptr<connection_info> CI(new connection_info(ID_Manager.allocate(),
 				-1, host, "", port, type, outgoing));
+			//deallocate connection_ID right away, it won't be stored outside proactor
+			ID_Manager.deallocate(CI->connection_ID);
 			Call_Back_Dispatcher.disconnect(CI);
 		}else{
 			//host resolved, proceed to connection
 			boost::shared_ptr<nstream> N(new nstream());
 			bool connected = N->open_async(*E.begin());
-			boost::shared_ptr<connection_info> CI(new connection_info(++latest_ID, N->socket(),
-				host, E.begin()->IP(), port, type, outgoing));
+			boost::shared_ptr<connection_info> CI(new connection_info(ID_Manager.allocate(),
+				N->socket(), host, E.begin()->IP(), port, type, outgoing));
 			std::pair<int, boost::shared_ptr<state> > P(N->socket(),
 				boost::shared_ptr<state>(new state(connected, E, N, CI)));
 			if(connected){
