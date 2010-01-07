@@ -63,12 +63,7 @@ void p2p_real::max_upload_rate(const unsigned rate)
 
 void p2p_real::pause_download(const std::string & hash)
 {
-
-}
-
-unsigned p2p_real::prime_count()
-{
-	return prime_generator::singleton().prime_count();
+	LOGGER << hash;
 }
 
 void p2p_real::resume()

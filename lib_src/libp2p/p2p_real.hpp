@@ -42,7 +42,6 @@ public:
 	unsigned max_upload_rate();
 	void max_upload_rate(const unsigned rate);
 	void pause_download(const std::string & hash);
-	unsigned prime_count();
 	void remove_download(const std::string & hash);
 	boost::uint64_t share_size_bytes();
 	boost::uint64_t share_size_files();

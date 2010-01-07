@@ -22,13 +22,11 @@ bool statusbar_main::update_status_bar()
 	std::stringstream upload_rate_s;
 	upload_rate_s << convert::size_SI(upload_rate) << "/s";
 
-
 	std::stringstream ss;
-	ss << " DL: " << download_rate_s.str() << " ";
-	ss << " UL: " << upload_rate_s.str() << " ";
-	ss << " Prime: " << P2P.prime_count() << " ";
-	ss << " Share: " << convert::size_SI(P2P.share_size_bytes()) << " ";
-	ss << " Share: " << P2P.share_size_files();
+	ss << " DL: " << download_rate_s.str()
+		<< " UL: " << upload_rate_s.str()
+		<< " Share: " << convert::size_SI(P2P.share_size_bytes())
+		<< " (" << P2P.share_size_files() << " files)";
 
 	statusbar->pop();
 	statusbar->push(ss.str());

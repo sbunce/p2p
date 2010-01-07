@@ -51,11 +51,6 @@ void p2p::pause_download(const std::string & hash)
 	P2P_Real->pause_download(hash);
 }
 
-unsigned p2p::prime_count()
-{
-	return P2P_Real->prime_count();
-}
-
 void p2p::remove_download(const std::string & hash)
 {
 	P2P_Real->remove_download(hash);

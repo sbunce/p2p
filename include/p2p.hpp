@@ -56,8 +56,6 @@ public:
 		Get or set upload rate limit (bytes).
 	pause_download:
 		Pause a download.
-	prime_count:
-		Returns number of primes in prime cache used for key-exchanges.
 	remove_download:
 		Removes a running download.
 	share_size_bytes:
@@ -79,7 +77,6 @@ public:
 	unsigned max_upload_rate();
 	void max_upload_rate(const unsigned rate);
 	void pause_download(const std::string & hash);
-	unsigned prime_count();
 	void remove_download(const std::string & hash);
 	boost::uint64_t share_size_bytes();
 	boost::uint64_t share_size_files();
