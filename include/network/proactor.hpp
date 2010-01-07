@@ -106,15 +106,20 @@ public:
 	}
 
 	/*
-	Async write data to specified socket. Buffer will be appended to send_buf
-	for specified socket.
+	Async write data to specified connection.
+	Postcondition: send_buf empty.
 	*/
 	void send(const int connection_ID, buffer & send_buf)
 	{
 		if(!send_buf.empty()){
 			boost::mutex::scoped_lock lock(network_thread_call_mutex);
+
+			//swap buffers to avoid copy
+			boost::shared_ptr<buffer> buf(new buffer());
+			buf->swap(send_buf);
+
 			network_thread_call.push_back(boost::bind(&proactor::append_send_buf, this,
-				connection_ID, boost::shared_ptr<buffer>(new buffer(send_buf))));
+				connection_ID, buf));
 			Select_Interrupter.trigger();
 		}
 	}
