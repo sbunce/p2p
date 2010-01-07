@@ -34,6 +34,9 @@ std::string version()
 		exit(1);
 	}
 	std::string day(__DATE__, 4, 2);
+	if(day[0] == ' '){
+		day[0] = '0';
+	}
 	return year + month + day;
 }
 
