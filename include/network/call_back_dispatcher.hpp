@@ -81,11 +81,12 @@ public:
 	void start()
 	{
 		boost::mutex::scoped_lock lock(start_mutex);
-		assert(Workers.size() == 0);
+		assert(!Workers);
+		Workers = boost::shared_ptr<boost::thread_group>(new boost::thread_group());
 		int threads = boost::thread::hardware_concurrency() < 4 ?
 			4 : boost::thread::hardware_concurrency();
 		for(int x=0; x<threads; ++x){
-			Workers.create_thread(boost::bind(&call_back_dispatcher::dispatch, this));
+			Workers->create_thread(boost::bind(&call_back_dispatcher::dispatch, this));
 		}
 	}
 
@@ -97,9 +98,10 @@ public:
 	void stop()
 	{
 		boost::mutex::scoped_lock lock(stop_mutex);
-		assert(Workers.size() != 0);
-		Workers.interrupt_all();
-		Workers.join_all();
+		assert(Workers);
+		Workers->interrupt_all();
+		Workers->join_all();
+		Workers = boost::shared_ptr<boost::thread_group>();
 		{//BEGIN lock scope
 		job.clear();
 		memoize.clear();
@@ -109,7 +111,7 @@ public:
 private:
 
 	//threads which wait in call_back_dispatch
-	boost::thread_group Workers;
+	boost::shared_ptr<boost::thread_group> Workers;
 
 	const boost::function<void (connection_info &)> connect_call_back;
 	const boost::function<void (connection_info &)> disconnect_call_back;

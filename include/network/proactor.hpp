@@ -17,12 +17,6 @@
 //standard
 #include <map>
 
-/*
--add connect timeout
--add start_listener function
--make rate limiting more granular than 1 second
-*/
-
 namespace network{
 class proactor : private boost::noncopyable
 {
@@ -30,8 +24,7 @@ public:
 	//if listener not specified then listener is not started
 	proactor(
 		const boost::function<void (connection_info &)> & connect_call_back,
-		const boost::function<void (connection_info &)> & disconnect_call_back,
-		const std::string & listen_port = "-1"
+		const boost::function<void (connection_info &)> & disconnect_call_back
 	):
 		Call_Back_Dispatcher(connect_call_back, disconnect_call_back),
 		Resolve_TP(1),
@@ -41,14 +34,6 @@ public:
 		FD_ZERO(&read_FDS);
 		FD_ZERO(&write_FDS);
 		add_socket(std::make_pair(Select_Interrupter.socket(), boost::shared_ptr<state>()));
-		if(listen_port != "-1"){
-			std::set<endpoint> E = get_endpoint("", listen_port, tcp);
-			assert(!E.empty());
-			Listener = boost::shared_ptr<listener>(new listener(*E.begin()));
-			assert(Listener->is_open());
-			Listener->set_non_blocking();
-			add_socket(std::make_pair(Listener->socket(), boost::shared_ptr<state>()));
-		}
 	}
 
 	/*
@@ -124,38 +109,78 @@ public:
 		}
 	}
 
-	//start all proactor threads
+	/*
+	Start all proactor threads. This will allow outgoing connections to be made.
+	Optionally, a listener can also be started.
+	*/
 	boost::mutex start_mutex;
-	void start()
+	void start(const std::string listen_port = "-1")
 	{
 		boost::mutex::scoped_lock lock(start_mutex);
-		//assert network thread not started
-		assert(network_thread.get_id() == boost::thread::id());
+		if(network_thread.get_id() != boost::thread::id()){
+			LOGGER << "attempted to start proactor twice";
+			exit(1);
+		}
+
+		/*
+		Start listener if a port was specified.
+		Note: This is done before network_thread started so no locking needed.
+		*/
+		if(listen_port != "-1"){
+			std::set<endpoint> E = get_endpoint("", listen_port, tcp);
+			assert(!E.empty());
+			Listener = boost::shared_ptr<listener>(new listener(*E.begin()));
+			assert(Listener->is_open());
+			Listener->set_non_blocking();
+			add_socket(std::make_pair(Listener->socket(), boost::shared_ptr<state>()));
+		}
+
 		network_thread = boost::thread(boost::bind(&proactor::network_loop, this));
 		Call_Back_Dispatcher.start();
 	}
 
-	//stop all proactor threads
+	/*
+	Stop all proactor threads. Cancel all pending resolve jobs and pending call
+	backs. Disconnect all sockets. Stop listener (if one is active).
+	*/
 	boost::mutex stop_mutex;
 	void stop()
 	{
 		boost::mutex::scoped_lock lock(stop_mutex);
+
 		//assert network thread is started
-		assert(network_thread.get_id() != boost::thread::id());
+		if(network_thread.get_id() == boost::thread::id()){
+			LOGGER << "attempted to shut down proactor twice";
+			exit(1);
+		}
 
 		Resolve_TP.clear();           //cancel resolve jobs
 		Resolve_TP.interrupt_join();  //interrupt and wait for threads to die
 
-		//stop network_thread
+		//shutdown network thread
 		{//BEGIN lock scope
 		boost::mutex::scoped_lock lock(network_thread_call_mutex);
 		//Note: This is pushed on the front to give it priority.
 		network_thread_call.push_front(boost::bind(&proactor::shutdown, this));
 		}//END lock scope
 		Select_Interrupter.trigger();
+		network_thread.join(); //wait for thread to stop
 
-		network_thread.join();        //wait for network thread to die
-		Call_Back_Dispatcher.stop();  //cancel call backs, stop call back threads
+		//erase any pending network_thread_call's
+		{//BEGIN lock scope
+		boost::mutex::scoped_lock lock(network_thread_call_mutex);
+		network_thread_call.clear();
+		}//end lock scope
+
+		//cancel call backs, stop call back threads
+		Call_Back_Dispatcher.stop();
+
+		/*
+		Close the listener.
+		Note: This is done after network_thread stopped so no locking is needed.
+		*/
+		remove_socket(Listener->socket());
+		Listener = boost::shared_ptr<listener>();
 	}
 
 	//returns upload rate (averaged over a few seconds)
@@ -170,7 +195,7 @@ private:
 	select_interrupter Select_Interrupter;
 	rate_limit Rate_Limit;
 
-	//used for async DNS resolution, calls proactor::resolve()
+	//used for async DNS resolution
 	thread_pool Resolve_TP;
 
 	//stuff needed for select()
@@ -664,12 +689,6 @@ private:
 		while(!ID.empty()){
 			disconnect(ID.begin()->first, false);
 		}
-
-		{//BEGIN lock scope
-		boost::mutex::scoped_lock lock(network_thread_call_mutex);
-		network_thread_call.clear();
-		}//end lock scope
-
 		network_thread.interrupt();
 		boost::this_thread::interruption_point();
 	}

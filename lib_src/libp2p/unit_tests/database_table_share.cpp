@@ -6,7 +6,7 @@ int fail(0);
 int main()
 {
 	//setup database and make sure share table clear
-	path::unit_test_override("database_table_share.db");
+	path::test_override("database_table_share.db");
 	database::init::drop_all();
 	database::init::create_all();
 

@@ -173,7 +173,7 @@ void child_block()
 int main()
 {
 	//setup database and make sure hash table clear
-	path::unit_test_override("hash_tree.db");
+	path::test_override("hash_tree.db");
 	path::create_required_directories();
 
 	create_reassemble(2);

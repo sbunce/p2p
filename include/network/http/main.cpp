@@ -20,8 +20,7 @@ namespace
 {
 network::proactor Proactor(
 	&connect_call_back,
-	&disconnect_call_back,
-	"8080"
+	&disconnect_call_back
 );
 
 //connection specific information
@@ -67,7 +66,7 @@ int main(int argc, char ** argv)
 		exit(1);
 	}
 	//Proactor.max_upload_rate(1024*32);
-	Proactor.start();
+	Proactor.start("8080");
 	while(!terminate_program){
 		if(Proactor.download_rate() || Proactor.upload_rate()){
 			LOGGER

@@ -49,11 +49,11 @@ public:
 	static std::string temp();
 
 	/*
-	unit_test_override:
-		The home directory of unit tests should always be the current directory
-		of the unit test. This function also overrides the database path.
+	test_override:
+		Override the name of the database file and set program directory to
+		current directory.
 	*/
-	static void unit_test_override(const std::string & DB_path);
+	static void test_override(const std::string & DB_name);
 
 private:
 	path(){}

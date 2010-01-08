@@ -6,7 +6,7 @@ int fail(0);
 int main()
 {
 	//setup database, there is no need to clear this table for testing
-	path::unit_test_override("database_table_prefs.db");
+	path::test_override("database_table_prefs.db");
 	database::init::drop_all();
 	database::init::create_all();
 

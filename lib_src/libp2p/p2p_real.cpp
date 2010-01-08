@@ -120,7 +120,7 @@ void p2p_real::resume()
 	}
 
 	//bring up networking
-	Connection_Manager.Proactor.start();
+	Connection_Manager.Proactor.start(settings::P2P_PORT);
 }
 
 boost::uint64_t p2p_real::share_size_bytes()

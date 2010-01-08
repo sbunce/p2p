@@ -6,7 +6,7 @@ int fail(0);
 
 int main()
 {
-	path::unit_test_override("encryption.db");
+	path::test_override("encryption.db");
 	database::init::drop_all();
 	database::init::create_all();
 

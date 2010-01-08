@@ -107,9 +107,9 @@ std::string path::temp()
 	return program_directory() + "temp/";
 }
 
-void path::unit_test_override(const std::string & DB_path)
+void path::test_override(const std::string & DB_name)
 {
 	boost::call_once(init, once_flag);
 	program_directory() = "";
-	database_name() = DB_path;
+	database_name() = DB_name;
 }
