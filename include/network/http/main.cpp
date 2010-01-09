@@ -57,15 +57,16 @@ void disconnect_call_back(network::connection_info & CI)
 
 int main(int argc, char ** argv)
 {
+	CLI_args CLI_Args(argc, argv);
+
 	//register signal handlers
 	signal(SIGINT, signal_handler);
 
-	CLI_args CLI_Args(argc, argv);
-	if(!CLI_Args.get_string("--web_root", web_root)){
+	if(!CLI_Args.string("--web_root", web_root)){
 		LOGGER << "web root not specified";
 		exit(1);
 	}
-	//Proactor.max_upload_rate(1024*32);
+
 	Proactor.start("8080");
 	while(!terminate_program){
 		if(Proactor.download_rate() || Proactor.upload_rate()){

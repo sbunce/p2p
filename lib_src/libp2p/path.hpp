@@ -48,12 +48,15 @@ public:
 	static std::string share();
 	static std::string temp();
 
-	/*
-	test_override:
-		Override the name of the database file and set program directory to
-		current directory.
+	/* Testing
+	Note: These functions are not thread safe.
+	override_DB_name:
+		Override the name of the database file.
+	override_program_directory:
+		Override path of program directory.
 	*/
-	static void test_override(const std::string & DB_name);
+	static void override_database_name(const std::string & DB_name);
+	static void override_program_directory(const std::string & path);
 
 private:
 	path(){}

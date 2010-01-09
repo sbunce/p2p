@@ -30,7 +30,6 @@ std::string path::database()
 
 std::string & path::database_name()
 {
-	//static std::string * d = new std::string();
 	static std::string d;
 	return d;
 }
@@ -66,6 +65,18 @@ std::string path::hash_tree_temp()
 	std::stringstream ss;
 	ss << program_directory() << "temp/hash_tree_" << boost::this_thread::get_id();
 	return ss.str();
+}
+
+void path::override_database_name(const std::string & DB_name)
+{
+	boost::call_once(init, once_flag);
+	database_name() = DB_name;
+}
+
+void path::override_program_directory(const std::string & path)
+{
+	boost::call_once(init, once_flag);
+	program_directory() = path;
 }
 
 std::string & path::program_directory()
@@ -105,11 +116,4 @@ std::string path::temp()
 {
 	boost::call_once(init, once_flag);
 	return program_directory() + "temp/";
-}
-
-void path::test_override(const std::string & DB_name)
-{
-	boost::call_once(init, once_flag);
-	program_directory() = "";
-	database_name() = DB_name;
 }

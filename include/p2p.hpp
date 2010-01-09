@@ -84,6 +84,13 @@ public:
 	void transfers(std::vector<p2p::transfer> & T);
 	unsigned upload_rate();
 
+	/* UNSTABLE - MAY BE REMOVED FROM API AT ANYTIME
+	test:
+		Stores data files in a different location for testing purposes.
+		Note: Must be called before instantiating p2p.
+	*/
+	static void test(const std::string & port, const std::string & program_directory);
+
 private:
 	boost::shared_ptr<p2p_real> P2P_Real;
 };

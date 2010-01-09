@@ -2,11 +2,9 @@
 #ifndef H_CLI_ARGS
 #define H_CLI_ARGS
 
-//include
-#include <boost/thread.hpp>
-
 //standard
 #include <algorithm>
+#include <cstdlib>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -16,50 +14,49 @@ class CLI_args
 {
 public:
 	//pass in argc and argv from main()
-	CLI_args(const int argc_in, char * argv_in[]):
-		argc(argc_in)
+	CLI_args(const int argc, char ** argv_in)
 	{
 		for(int x=0; x<argc; ++x){
 			argv.push_back(std::string(argv_in[x]));
 		}
 	}
 
-	//returns true if specified parameter was passed to program
-	bool check_bool(const std::string & param)
+	/*
+	Returns true if specified bool flag present.
+	Example: "./a.out -b" requires param = "-b"
+	*/
+	bool bool_flag(const std::string & param)
 	{
 		return std::find(argv.begin(), argv.end(), param) != argv.end();
 	}
 
 	/*
-	Returns true and sets string if string parameter passed to program. Parameter
-	must contain a zero before string. ex:
-		--foo=bar
-		Use "--foo" as param and str would be set to "bar".
+	Returns true and sets string if string parameter passed to program.
+	Example: "./a.out --foo=bar" requires param = "--foo" to return "bar"
 	*/
-	bool get_string(const std::string & param, std::string & str)
+	bool string(const std::string & param, std::string & str)
 	{
-		std::vector<std::string>::iterator iter_cur, iter_end;
-		iter_cur = argv.begin();
-		iter_end = argv.end();
-		while(iter_cur != iter_end){
+		for(std::vector<std::string>::iterator iter_cur = argv.begin(),
+			iter_end = argv.end(); iter_cur != iter_end; ++iter_cur)
+		{
 			if(iter_cur->compare(0, param.size(), param) == 0){
 				str = iter_cur->substr(iter_cur->find_first_of('=')+1);
 				return true;
 			}
-			++iter_cur;
 		}
 		return false;
 	}
 
 	/*
 	Returns true and sets unsigned if parameter passed to program.
+	Example: "./a.out --foo=123" requires param = "--foo" to return 123.
 	*/
-	bool get_uint(const std::string & param, unsigned & uint)
+	bool uint(const std::string & param, unsigned & uint)
 	{
-		std::string temp_str;
-		if(get_string(param, temp_str)){
+		std::string temp;
+		if(string(param, temp)){
 			std::stringstream ss;
-			ss << temp_str;
+			ss << temp;
 			ss >> uint;
 			return true;
 		}else{
@@ -67,10 +64,13 @@ public:
 		}
 	}
 
-	//prints help message if specified help parameter exists
+	/*
+	If help parameter present this function prints help_message and terminates
+	the program.
+	*/
 	void help_message(const std::string & help_param, const std::string & help_message)
 	{
-		if(check_bool(help_param)){
+		if(bool_flag(help_param)){
 			std::cout << help_message;
 			exit(0);
 		}
@@ -82,7 +82,6 @@ public:
 		return argv[0];
 	}
 private:
-	int argc;
 	std::vector<std::string> argv;
 };
 #endif

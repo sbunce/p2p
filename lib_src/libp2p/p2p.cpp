@@ -71,6 +71,14 @@ void p2p::start_download(const p2p::download & D)
 	P2P_Real->start_download(D);
 }
 
+void p2p::test(const std::string & port, const std::string & program_directory)
+{
+	path::override_database_name("DB_"+port);
+	path::override_program_directory(program_directory);
+	database::init::create_all();
+	database::table::prefs::set_port(port);
+}
+
 void p2p::transfers(std::vector<p2p::transfer> & T)
 {
 	P2P_Real->transfers(T);

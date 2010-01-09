@@ -1,5 +1,7 @@
 //include
 #include <boost/thread.hpp>
+#include <CLI_args.hpp>
+#include <logger.hpp>
 #include <p2p.hpp>
 
 //standard
@@ -25,10 +27,20 @@ void signal_handler(int sig)
 }
 }//end of unnamed namespace
 
-int main()
+int main(int argc, char ** argv)
 {
+	CLI_args CLI_Args(argc, argv);
+
 	//register signal handlers
 	signal(SIGINT, signal_handler);
+
+	//test server functionality, run multiple servers out of same directory
+	std::string str;
+	if(CLI_Args.string("--test", str)){
+		std::string port = str.substr(0, str.find_first_of(':'));
+		std::string program_directory = str.substr(str.find_first_of(':')+1);
+		p2p::test(port, program_directory);
+	}
 
 	p2p P2P;
 
