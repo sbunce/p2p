@@ -13,9 +13,8 @@ const unsigned MAX_DOWNLOAD_RATE = 0; //no limit
 const unsigned MAX_UPLOAD_RATE = 0;   //no limit
 
 //hard settings, not changable at runtime
-const int PRIME_CACHE = 64;          //number of primes to keep in prime cache
-const std::string P2P_PORT = "6969"; //port client connects to and server receives on
-const int DATABASE_POOL_SIZE = 8;    //size of database connection pool
-const int SHARE_BUFFER_SIZE = 1024;  //size of buffers between share pipeline stages
+const int PRIME_CACHE = 32;         //number of primes to keep in prime cache
+const int DATABASE_POOL_SIZE = 8;   //size of database connection pool
+const int SHARE_BUFFER_SIZE = 1024; //size of buffers between share pipeline stages
 }//end of namespace settings
 #endif

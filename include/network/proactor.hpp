@@ -114,7 +114,7 @@ public:
 	Optionally, a listener can also be started.
 	*/
 	boost::mutex start_mutex;
-	void start(const std::string listen_port = "-1")
+	void start(const std::string & listen_port = "-1")
 	{
 		boost::mutex::scoped_lock lock(start_mutex);
 		if(network_thread.get_id() != boost::thread::id()){

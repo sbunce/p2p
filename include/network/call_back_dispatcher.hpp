@@ -101,7 +101,10 @@ public:
 		assert(Workers);
 		Workers->interrupt_all();
 		Workers->join_all();
+
+		//we destroy thread_group because there is no clear() function
 		Workers = boost::shared_ptr<boost::thread_group>();
+
 		{//BEGIN lock scope
 		job.clear();
 		memoize.clear();

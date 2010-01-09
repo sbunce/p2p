@@ -15,7 +15,7 @@
 class CLI_args
 {
 public:
-	//pass argc and argv strait from the main() function parameters
+	//pass in argc and argv from main()
 	CLI_args(const int argc_in, char * argv_in[]):
 		argc(argc_in)
 	{
@@ -27,9 +27,7 @@ public:
 	//returns true if specified parameter was passed to program
 	bool check_bool(const std::string & param)
 	{
-		std::vector<std::string>::iterator iter;
-		iter = std::find(argv.begin(), argv.end(), param);
-		return iter != argv.end();
+		return std::find(argv.begin(), argv.end(), param) != argv.end();
 	}
 
 	/*

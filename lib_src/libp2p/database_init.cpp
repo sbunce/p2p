@@ -49,6 +49,16 @@ void database::init::create_all()
 		<< convert::bin_to_hex(reinterpret_cast<const char *>(buf), SHA1::bin_size)
 		<< "')";
 	DB->query(ss.str());
+	//generate random port between 1024 - 65535
+	union num_byte{
+		unsigned num;
+		unsigned char byte[sizeof(unsigned)];
+	} NB;
+	portable_urandom(NB.byte, sizeof(unsigned), NULL);
+	ss.str(""); ss.clear();
+	ss << "INSERT OR IGNORE INTO prefs VALUES('port', '"
+		<< NB.num % 64512 + 1024 << "')";
+	DB->query(ss.str());
 
 	//share
 	DB->query("CREATE TABLE IF NOT EXISTS share(hash TEXT, path TEXT, "
