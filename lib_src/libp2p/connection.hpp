@@ -20,8 +20,6 @@ public:
 		network::connection_info & CI
 	);
 
-	const std::string IP;
-
 private:
 	//locks all entry points to this object
 	boost::recursive_mutex Recursive_Mutex;

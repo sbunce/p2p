@@ -9,6 +9,9 @@ void database::table::blacklist::add(const std::string & IP, database::pool::pro
 	ss << "INSERT OR IGNORE INTO blacklist VALUES ('" << IP << "')";
 	DB->query(ss.str());
 	++blacklist_state();
+	if(blacklist_state() == 0){
+		++blacklist_state();
+	}
 }
 
 atomic_int<int> & database::table::blacklist::blacklist_state()

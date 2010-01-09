@@ -87,7 +87,7 @@ void share_scanner::scan_loop()
 {
 	boost::filesystem::path share_path(boost::filesystem::system_complete(
 		boost::filesystem::path(path::share(), boost::filesystem::native)));
-	boost::posix_time::milliseconds scan_delay(20);
+	boost::posix_time::milliseconds scan_delay(1000/5);
 
 	/*
 	If a new file is found we don't sleep before we iterate to the next file.

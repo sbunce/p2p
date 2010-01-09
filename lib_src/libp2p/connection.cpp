@@ -4,7 +4,6 @@ connection::connection(
 	network::proactor & Proactor_in,
 	network::connection_info & CI
 ):
-	IP(CI.IP),
 	Exchange(Proactor_in, CI),
 	Slot_Manager(Exchange)
 {
