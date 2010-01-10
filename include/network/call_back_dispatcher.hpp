@@ -76,12 +76,14 @@ public:
 		job_cond.notify_one();
 	}
 
-	//starts threads to do call backs
-	boost::mutex start_mutex;
+	/*
+	Starts threads to do call backs.
+	Precondition: Call_Back_Dispatcher must be stopped.
+	*/
 	void start()
 	{
-		boost::mutex::scoped_lock lock(start_mutex);
-		assert(!Workers);
+		boost::mutex::scoped_lock lock(start_stop_mutex);
+		assert(!Workers); //assert stopped
 		Workers = boost::shared_ptr<boost::thread_group>(new boost::thread_group());
 		int threads = boost::thread::hardware_concurrency() < 4 ?
 			4 : boost::thread::hardware_concurrency();
@@ -91,27 +93,22 @@ public:
 	}
 
 	/*
-	Stops all call back threads.
-	Cancels all pending jobs.
+	Stops all call back threads. Cancels all pending jobs.
+	Precondition: Call_Back_Dispatcher must be started.
 	*/
-	boost::mutex stop_mutex;
 	void stop()
 	{
-		boost::mutex::scoped_lock lock(stop_mutex);
-		assert(Workers);
+		boost::mutex::scoped_lock lock(start_stop_mutex);
+		assert(Workers); //assert started
 		Workers->interrupt_all();
 		Workers->join_all();
-
-		//we destroy thread_group because there is no clear() function
 		Workers = boost::shared_ptr<boost::thread_group>();
-
-		{//BEGIN lock scope
 		job.clear();
 		memoize.clear();
-		}//END lock scope
 	}
 
 private:
+	boost::mutex start_stop_mutex;
 
 	//threads which wait in call_back_dispatch
 	boost::shared_ptr<boost::thread_group> Workers;

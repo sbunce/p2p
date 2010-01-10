@@ -22,6 +22,11 @@ public:
 		}
 	}
 
+	~thread_pool()
+	{
+		interrupt_join();
+	}
+
 	//clears all pending jobs
 	void clear()
 	{

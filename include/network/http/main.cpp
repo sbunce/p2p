@@ -68,6 +68,7 @@ int main(int argc, char ** argv)
 	}
 
 	Proactor.start("8080");
+	Proactor.restart("8080");
 	while(!terminate_program){
 		if(Proactor.download_rate() || Proactor.upload_rate()){
 			LOGGER

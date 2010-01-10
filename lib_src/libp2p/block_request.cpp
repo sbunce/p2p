@@ -199,36 +199,6 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 		return false;
 	}
 	/*
-	Check for a timed out request to the host. If a request to the host has timed
-	out we don't want to make any additional requests because they would likely
-	time out too.
-	*/
-	for(std::multimap<boost::uint64_t, request_element>::iterator
-		iter_cur = request.begin(), iter_end = request.end(); iter_cur != iter_end;
-		++iter_cur)
-	{
-		if(iter_cur->second.connection_ID == connection_ID
-			&& std::time(NULL) - iter_cur->second.request_time > protocol::timeout)
-		{
-			return false;
-		}
-	}
-	/*
-	Check to see if requests to other hosts have timed out. If they have we can
-	request the block from this host.
-	*/
-	for(std::multimap<boost::uint64_t, request_element>::iterator
-		iter_cur = request.begin(), iter_end = request.end(); iter_cur != iter_end;
-		++iter_cur)
-	{
-		if(std::time(NULL) - iter_cur->second.request_time > protocol::timeout){
-			block = iter_cur->first;
-			request.insert(std::make_pair(block, request_element(connection_ID,
-				std::time(NULL))));
-			return true;
-		}
-	}
-	/*
 	At this point we know there are no timed out requests to the host and there
 	are no re-requests to do. We move on to checking for the next rarest block to
 	request from the host.

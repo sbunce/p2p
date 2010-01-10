@@ -42,10 +42,6 @@ public:
 		//accept write_only connection
 		write_only = L.accept();
 		assert(write_only);
-
-		//disable unused functionality on sockets
-		//read_only->shutdown(SHUT_WR);
-		//write_only->shutdown(SHUT_RD);
 	}
 
 	/*

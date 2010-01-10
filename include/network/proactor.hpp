@@ -46,6 +46,7 @@ public:
 		Resolve_TP.queue(boost::bind(&proactor::resolve, this, host, port, type));
 	}
 
+	//disconnect as soon as possible
 	void disconnect(const int connection_ID)
 	{
 		boost::mutex::scoped_lock lock(network_thread_call_mutex);
@@ -53,6 +54,7 @@ public:
 			connection_ID, false));
 	}
 
+	//disconnect when send buffer becomes empty
 	void disconnect_on_empty(const int connection_ID)
 	{
 		boost::mutex::scoped_lock lock(network_thread_call_mutex);
@@ -60,136 +62,81 @@ public:
 			connection_ID, true));
 	}
 
-	//returns download rate (averaged over a few seconds)
-	unsigned download_rate()
-	{
-		return Rate_Limit.download();
-	}
-
-	//returns maximum allowed download rate
-	unsigned max_download_rate()
-	{
-		return Rate_Limit.max_download();
-	}
-
-	//sets maximum allowed download rate
-	void max_download_rate(const unsigned rate)
-	{
-		Rate_Limit.max_download(rate);
-	}
-
-	//returns maximum allowed upload rate
-	unsigned max_upload_rate()
-	{
-		return Rate_Limit.max_upload();
-	}
-
-	//sets maximum allowed upload rate
-	void max_upload_rate(const unsigned rate)
-	{
-		Rate_Limit.max_upload(rate);
-	}
-
-	/*
-	Async write data to specified connection.
-	Postcondition: send_buf empty.
-	*/
+	//send data to specified connection
 	void send(const int connection_ID, buffer & send_buf)
 	{
 		if(!send_buf.empty()){
 			boost::mutex::scoped_lock lock(network_thread_call_mutex);
-
-			//swap buffers to avoid copy
 			boost::shared_ptr<buffer> buf(new buffer());
-			buf->swap(send_buf);
-
+			buf->swap(send_buf); //swap buffers to avoid copy
 			network_thread_call.push_back(boost::bind(&proactor::append_send_buf, this,
 				connection_ID, buf));
 			Select_Interrupter.trigger();
 		}
 	}
 
-	/*
-	Start all proactor threads. This will allow outgoing connections to be made.
-	Optionally, a listener can also be started.
+	/* Info / Options
+	download_rate:
+		Returns download rate (averaged over a few seconds).
+	max_download_rate:
+		Get or set maximum allowed download rate.
+	max_upload_rate:
+		Get or set maximum allowed upload rate.
+	upload_rate:
+		Returns upload rate (averaged over a few seconds).
 	*/
-	boost::mutex start_mutex;
-	void start(const std::string & listen_port = "-1")
+	unsigned download_rate(){ return Rate_Limit.download(); }
+	unsigned max_download_rate(){ return Rate_Limit.max_download(); }
+	void max_download_rate(const unsigned rate){ Rate_Limit.max_download(rate); }
+	unsigned max_upload_rate(){ return Rate_Limit.max_upload(); }
+	void max_upload_rate(const unsigned rate){ Rate_Limit.max_upload(rate); }
+	unsigned upload_rate(){ return Rate_Limit.upload(); }
+
+	/*
+	Restart proactor, optionally start a listener.
+	Precondition: proactor must be started.
+	*/
+	void restart(const std::string & listen_port = "-1")
 	{
-		boost::mutex::scoped_lock lock(start_mutex);
-		if(network_thread.get_id() != boost::thread::id()){
-			LOGGER << "attempted to start proactor twice";
-			exit(1);
-		}
-
-		/*
-		Start listener if a port was specified.
-		Note: This is done before network_thread started so no locking needed.
-		*/
-		if(listen_port != "-1"){
-			std::set<endpoint> E = get_endpoint("", listen_port, tcp);
-			assert(!E.empty());
-			Listener = boost::shared_ptr<listener>(new listener(*E.begin()));
-			assert(Listener->is_open());
-			Listener->set_non_blocking();
-			add_socket(std::make_pair(Listener->socket(), boost::shared_ptr<state>()));
-		}
-
-		network_thread = boost::thread(boost::bind(&proactor::network_loop, this));
-		Call_Back_Dispatcher.start();
+		boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
+		stop();
+		start(listen_port);
 	}
 
 	/*
-	Stop all proactor threads. Cancel all pending resolve jobs and pending call
-	backs. Disconnect all sockets. Stop listener (if one is active).
+	Start proactor, and optionally start a listener.
+	Precondition: proactor must be stopped.
 	*/
-	boost::mutex stop_mutex;
+	void start(const std::string & listen_port = "-1")
+	{
+		boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
+		//assert proactor not running
+		assert(network_thread.get_id() == boost::thread::id());
+		network_thread = boost::thread(boost::bind(&proactor::startup, this, listen_port));
+	}
+
+	/*
+	Stop proactor.
+	Precondition: proactor must be started.
+	*/
 	void stop()
 	{
-		boost::mutex::scoped_lock lock(stop_mutex);
-
-		//assert network thread is started
-		if(network_thread.get_id() == boost::thread::id()){
-			LOGGER << "attempted to shut down proactor twice";
-			exit(1);
-		}
-
-		Resolve_TP.clear();           //cancel resolve jobs
-		Resolve_TP.interrupt_join();  //interrupt and wait for threads to die
-
+		boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
+		//assert proactor running
+		assert(network_thread.get_id() != boost::thread::id());
 		//shutdown network thread
 		{//BEGIN lock scope
 		boost::mutex::scoped_lock lock(network_thread_call_mutex);
-		//Note: This is pushed on the front to give it priority.
 		network_thread_call.push_front(boost::bind(&proactor::shutdown, this));
 		}//END lock scope
 		Select_Interrupter.trigger();
-		network_thread.join(); //wait for thread to stop
-
-		//erase any pending network_thread_call's
-		{//BEGIN lock scope
-		boost::mutex::scoped_lock lock(network_thread_call_mutex);
-		network_thread_call.clear();
-		}//end lock scope
-
-		//cancel call backs, stop call back threads
-		Call_Back_Dispatcher.stop();
-
-		/*
-		Close the listener.
-		Note: This is done after network_thread stopped so no locking is needed.
-		*/
-		remove_socket(Listener->socket());
-		Listener = boost::shared_ptr<listener>();
-	}
-
-	//returns upload rate (averaged over a few seconds)
-	unsigned upload_rate()
-	{
-		return Rate_Limit.upload();
+		network_thread.join();
 	}
 
 private:
+	//locks for start()/stop() functions
+	boost::recursive_mutex start_stop_mutex;
+
 	boost::thread network_thread;
 	call_back_dispatcher Call_Back_Dispatcher;
 	select_interrupter Select_Interrupter;
@@ -238,20 +185,14 @@ private:
 		*/
 		boost::shared_ptr<connection_info> CI;
 
-		//returns true if socket timed out
-		bool timed_out()
-		{
-			return std::time(NULL) - last_seen > 60;
-		}
-
 		/*
-		Updates the last seen time used when checking timeouts. This is called
-		whenever there is activity on the socket.
+		timed_out:
+			Returns true if connection timed out.
+		touch:
+			Updates the last time connection was active (used for timeout).
 		*/
-		void touch()
-		{
-			last_seen = std::time(NULL);
-		}
+		bool timed_out(){ return std::time(NULL) - last_seen > 60; }
+		void touch(){ last_seen = std::time(NULL); }
 
 	private:
 		std::time_t last_seen;
@@ -682,15 +623,59 @@ private:
 		Select_Interrupter.trigger();
 	}
 
-	//shuts down proactor, disconnect all sockets, clears all state
+	/*
+	Shutdown proactor.
+	Disconnects all sockets and does cleanup.
+	*/
 	void shutdown()
 	{
 		//disconnect all sockets, except listener
 		while(!ID.empty()){
 			disconnect(ID.begin()->first, false);
 		}
+
+		//disconnect listener
+		remove_socket(Listener->socket());
+		Listener = boost::shared_ptr<listener>();
+
+		//stop any pending resolve jobs
+		Resolve_TP.clear();
+
+		//erase any pending network_thread_call's
+		{//BEGIN lock scope
+		boost::mutex::scoped_lock lock(network_thread_call_mutex);
+		network_thread_call.clear();
+		}//end lock scope
+
+		//stop call back threads
+		Call_Back_Dispatcher.stop();
+
+		//terminate this thread
 		network_thread.interrupt();
 		boost::this_thread::interruption_point();
+	}
+
+	/*
+	The network_thread starts in this function.
+	Do setup and start listener.
+	*/
+	void startup(const std::string listen_port)
+	{
+		//start listener
+		if(listen_port != "-1"){
+			std::set<endpoint> E = get_endpoint("", listen_port, tcp);
+			assert(!E.empty());
+			Listener = boost::shared_ptr<listener>(new listener(*E.begin()));
+			assert(Listener->is_open());
+			Listener->set_non_blocking();
+			add_socket(std::make_pair(Listener->socket(), boost::shared_ptr<state>()));
+		}
+
+		//start call back threads
+		Call_Back_Dispatcher.start();
+
+		//send/recv
+		network_loop();
 	}
 };
 }
