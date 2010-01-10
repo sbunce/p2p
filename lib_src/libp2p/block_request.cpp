@@ -23,25 +23,22 @@ void block_request::add_block_local(const int connection_ID, const boost::uint64
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	add_block_local(block);
-	//erase request element this block fulfils
-	std::pair<std::multimap<boost::uint64_t, request_element>::iterator,
-		std::multimap<boost::uint64_t, request_element>::iterator>
-		pair = request.equal_range(block);
-	bool found = false;
-	while(pair.first != request.end() && pair.first != pair.second){
-		if(pair.first->second.connection_ID == connection_ID){
-			found = true;
-			request.erase(pair.first);
-			break;
+
+	/*
+	Only remove request element if block != 0. Block 0 arrives in the slot
+	message and is not requested normally.
+	*/
+	if(block != 0){
+		std::map<boost::uint64_t, std::set<int> >::iterator r_iter = request.find(block);
+		assert(r_iter != request.end());
+		std::set<int>::iterator c_iter = r_iter->second.find(connection_ID);
+		assert(c_iter != r_iter->second.end());
+		if(r_iter->second.size() == 1){
+			request.erase(r_iter);
 		}else{
-			++pair.first;
+			r_iter->second.erase(c_iter);
 		}
 	}
-	/*
-	Don't check for block 0 because it arrives with a slot message and is not
-	requested normally with next_request.
-	*/
-	assert(block == 0 || found);
 }
 
 void block_request::add_block_local_all()
@@ -204,12 +201,55 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 	request from the host.
 	*/
 	if(find_next_rarest(connection_ID, block)){
-		//there is a block to request
-		request.insert(std::make_pair(block, request_element(connection_ID,
-			std::time(NULL))));
+		//there is a new block to request
+		std::pair<std::map<boost::uint64_t, std::set<int> >::iterator, bool>
+			ret = request.insert(std::make_pair(block, std::set<int>()));
+		assert(ret.second);
+		ret.first->second.insert(connection_ID);
 		return true;
 	}else{
-		//no blocks to request at this time.
+		/*
+		No new blocks to request. If this connection has no requests pending then
+		determine what block has been requested least, and make duplicate request.
+		*/
+
+		//determine if we have any requests pending
+		for(std::map<boost::uint64_t, std::set<int> >::iterator
+			iter_cur = request.begin(), iter_end = request.end();
+			iter_cur != iter_end; ++iter_cur)
+		{
+			if(iter_cur->second.find(connection_ID) != iter_cur->second.end()){
+				//pending request found, make no duplicate request
+				return false;
+			}
+		}
+
+		//determine what block has been requested least, and request it
+		boost::uint64_t rare_block;
+		unsigned min_request = std::numeric_limits<unsigned>::max();
+		for(std::map<boost::uint64_t, std::set<int> >::iterator
+			iter_cur = request.begin(), iter_end = request.end();
+			iter_cur != iter_end; ++iter_cur)
+		{
+			if(iter_cur->second.size() == 1){
+				//this block must be at least tied for least requested
+				block = iter_cur->first;
+				iter_cur->second.insert(connection_ID);
+				return true;
+			}else if(iter_cur->second.size() < min_request){
+				rare_block = iter_cur->first;
+				min_request = iter_cur->second.size();
+			}
+		}
+		if(min_request != std::numeric_limits<unsigned>::max()){
+LOGGER << "dupe: " << rare_block;
+			block = rare_block;
+			std::map<boost::uint64_t, std::set<int> >::iterator
+				iter = request.find(rare_block);
+			assert(iter != request.end());
+			iter->second.insert(connection_ID);
+			return true;
+		}
 		return false;
 	}
 }
@@ -219,10 +259,11 @@ void block_request::remove_host(const int connection_ID)
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	remote.erase(connection_ID);
 	//erase request elements for this host
-	std::multimap<boost::uint64_t, request_element>::iterator
+	std::map<boost::uint64_t, std::set<int> >::iterator
 		iter_cur = request.begin(), iter_end = request.end();
 	while(iter_cur != iter_end){
-		if(iter_cur->second.connection_ID == connection_ID){
+		iter_cur->second.erase(connection_ID);
+		if(iter_cur->second.empty()){
 			request.erase(iter_cur++);
 		}else{
 			++iter_cur;

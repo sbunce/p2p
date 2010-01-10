@@ -107,28 +107,11 @@ private:
 	bit_field approved;
 
 	/*
-	This is used to rerequest blocks that haven't been received after a certain
-	time. The connection_ID is needed so that we don't make a rerequest to a
-	host which has a timed out block request.
+	Associates a block number with all the connections it has been requested
+	from.
+	std::map<block_num, std::list<connection_ID> >
 	*/
-	class request_element
-	{
-	public:
-		request_element(
-			const int connection_ID_in,
-			const std::time_t request_time_in
-		):
-			connection_ID(connection_ID_in),
-			request_time(request_time_in)
-		{}
-		request_element(const request_element & RE):
-			connection_ID(RE.connection_ID),
-			request_time(RE.request_time)
-		{}
-		const int connection_ID;        //socket request was made to
-		const std::time_t request_time; //time request was made
-	};
-	std::multimap<boost::uint64_t, request_element> request;
+	std::map<boost::uint64_t, std::set<int> > request;
 
 	//connection_ID associated with bitset representing blocks remote host has
 	std::map<int, bit_field> remote;
