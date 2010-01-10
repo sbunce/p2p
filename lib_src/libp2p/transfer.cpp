@@ -197,7 +197,9 @@ unsigned transfer::upload_speed()
 transfer::status transfer::write_file_block(const int connection_ID,
 	const boost::uint64_t block_num, const network::buffer & buf)
 {
-	LOGGER << block_num;
+	if(File_Block.have_block(block_num)){
+		return good;
+	}
 	Download_Speed.add(buf.size());
 	hash_tree::status status = Hash_Tree.check_file_block(block_num, buf);
 	if(status == hash_tree::good){
@@ -219,7 +221,9 @@ transfer::status transfer::write_file_block(const int connection_ID,
 transfer::status transfer::write_tree_block(const int connection_ID,
 	const boost::uint64_t block_num, const network::buffer & buf)
 {
-	LOGGER << block_num;
+	if(Hash_Tree_Block.have_block(block_num)){
+		return good;
+	}
 	Download_Speed.add(buf.size());
 	hash_tree::status status = Hash_Tree.write_block(block_num, buf);
 	if(status == hash_tree::good){

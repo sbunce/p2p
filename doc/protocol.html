@@ -257,10 +257,11 @@ possible responses: block, error
 note: B is sized such that it can hold the maximum tree block number.
 
 note: If error response the hash_tree and file are no longer being shared. The
-slot is closed after. Any messages in the pipeline for the slot are ignored.
+slot is closed after. Any messages in the pipeline for the slot are ignored (up
+to the max size of the pipeline minus 1).
 
-note: Since only the contiguous good blocks are made available requests should
-be made in order from block 0 to the last block.
+note: It is a violation of the protocol to request a block the server doesn't
+have.
 </pre>
 </fieldset>
 <br>
@@ -282,10 +283,8 @@ possible responses: block, error
 note: B is sized such that it can hold the maximum file block number.
 
 note: If error response the hash_tree and file are no longer being shared. The
-slot is closed after. Any messages in the pipeline for the slot are ignored.
-
-note: Since there is no forced order (as there is with the hash tree) to
-download blocks a rarest first policy should be used.
+slot is closed after. Any messages in the pipeline for the slot are ignored (up
+to the max size of the pipeline minus 1).
 </pre>
 </fieldset>
 <br>

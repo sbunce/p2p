@@ -241,7 +241,7 @@ private:
 		//returns true if socket timed out
 		bool timed_out()
 		{
-			return std::time(NULL) - last_seen > 16;
+			return std::time(NULL) - last_seen > 60;
 		}
 
 		/*
