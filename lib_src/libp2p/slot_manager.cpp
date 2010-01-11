@@ -56,6 +56,7 @@ void slot_manager::make_block_requests()
 			{
 				++pipeline_size;
 				serviced_one = true;
+				latest_slot = iter_cur->first;
 				boost::shared_ptr<message::base> M_request(new message::request_hash_tree_block(
 					iter_cur->first, block_num, iter_cur->second->get_transfer()->tree_block_count()));
 				Exchange.send(M_request);
@@ -71,6 +72,7 @@ void slot_manager::make_block_requests()
 			{
 				++pipeline_size;
 				serviced_one = true;
+				latest_slot = iter_cur->first;
 				boost::shared_ptr<message::base> M_request(new message::request_file_block(
 					iter_cur->first, block_num, iter_cur->second->get_transfer()->file_block_count()));
 				Exchange.send(M_request);

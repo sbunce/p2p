@@ -242,7 +242,6 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 			}
 		}
 		if(min_request != std::numeric_limits<unsigned>::max()){
-LOGGER << "dupe: " << rare_block;
 			block = rare_block;
 			std::map<boost::uint64_t, std::set<int> >::iterator
 				iter = request.find(rare_block);
