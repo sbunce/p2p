@@ -23,22 +23,7 @@ void block_request::add_block_local(const int connection_ID, const boost::uint64
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	add_block_local(block);
-
-	/*
-	Only remove request element if block != 0. Block 0 arrives in the slot
-	message and is not requested normally.
-	*/
-	if(block != 0){
-		std::map<boost::uint64_t, std::set<int> >::iterator r_iter = request.find(block);
-		assert(r_iter != request.end());
-		std::set<int>::iterator c_iter = r_iter->second.find(connection_ID);
-		assert(c_iter != r_iter->second.end());
-		if(r_iter->second.size() == 1){
-			request.erase(r_iter);
-		}else{
-			r_iter->second.erase(c_iter);
-		}
-	}
+	request.erase(block);
 }
 
 void block_request::add_block_local_all()
@@ -150,7 +135,7 @@ bool block_request::find_next_rarest(const int connection_ID, boost::uint64_t & 
 				return true;
 			}
 		}else if(hosts < rare_block_hosts || rare_block_hosts == 0){
-			//a new most-rare block found. This is a block that > 1 hosts have
+			//a new most-rare block found
 			if(request.find(block) == request.end()){
 				//block not already requested, consider requesting this block
 				rare_block = block;
@@ -203,9 +188,11 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 	if(find_next_rarest(connection_ID, block)){
 		//there is a new block to request
 		std::pair<std::map<boost::uint64_t, std::set<int> >::iterator, bool>
-			ret = request.insert(std::make_pair(block, std::set<int>()));
-		assert(ret.second);
-		ret.first->second.insert(connection_ID);
+			r_ret = request.insert(std::make_pair(block, std::set<int>()));
+		assert(r_ret.second);
+		std::pair<std::set<int>::iterator, bool>
+			c_ret = r_ret.first->second.insert(connection_ID);
+		assert(c_ret.second);
 		return true;
 	}else{
 		/*

@@ -61,7 +61,7 @@ public:
 	//recv ctor
 	explicit close_slot(boost::function<bool (boost::shared_ptr<base>)> func_in);
 	//send ctor
-	close_slot();
+	close_slot(const unsigned char slot_num);
 	virtual bool expects(network::buffer & recv_buf);
 	virtual bool recv(network::connection_info & CI);
 };

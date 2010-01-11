@@ -138,9 +138,7 @@ bool window_transfer::refresh()
 			iter = Row_Index.find(iter_cur->hash);
 		if(iter == Row_Index.end()){
 			//add
-			if(Type == download && (iter_cur->percent_complete == 100
-				&& iter_cur->download_peers == 0))
-			{
+			if(Type == download && iter_cur->download_peers == 0){
 				continue;
 			}
 			if(Type == upload && iter_cur->upload_peers == 0){
@@ -188,8 +186,8 @@ bool window_transfer::refresh()
 	}
 
 	//remove rows not updated
-	for(Gtk::TreeModel::Children::iterator iter_cur = download_list->children().begin(),
-		iter_end = download_list->children().end(); iter_cur != iter_end;)
+	for(Gtk::TreeModel::Children::iterator iter_cur = download_list->children().begin();
+		iter_cur != download_list->children().end();)
 	{
 		if((*iter_cur)[column_update]){
 			++iter_cur;

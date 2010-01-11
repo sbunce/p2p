@@ -65,6 +65,9 @@ public:
 		rerequested.
 	remote_host_count:
 		Returns the number of remote hosts block_request is keeping track of.
+	request_zero:
+		Function which requests block 0. This is needed for the hash tree
+		block_request when making a slot request.
 	*/
 	void add_block_local(const boost::uint64_t block);
 	void add_block_local(const int connection_ID, const boost::uint64_t block);

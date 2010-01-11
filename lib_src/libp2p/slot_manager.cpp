@@ -11,6 +11,8 @@ slot_manager::slot_manager(
 	//register possible incoming messages
 	Exchange.expect_anytime(boost::shared_ptr<message::base>(new message::request_slot(
 		boost::bind(&slot_manager::recv_request_slot, this, _1))));
+	Exchange.expect_anytime(boost::shared_ptr<message::base>(new message::close_slot(
+		boost::bind(&slot_manager::recv_close_slot, this, _1))));
 }
 
 slot_manager::~slot_manager()
@@ -26,6 +28,23 @@ slot_manager::~slot_manager()
 		iter_cur != iter_end; ++iter_cur)
 	{
 		iter_cur->second->unregister_download();
+	}
+}
+
+void slot_manager::close_complete()
+{
+	for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
+		iter_cur = Outgoing_Slot.begin(); iter_cur != Outgoing_Slot.end();)
+	{
+		if(iter_cur->second->get_transfer()
+			&& iter_cur->second->get_transfer()->complete())
+		{
+			Exchange.send(boost::shared_ptr<message::base>(
+				new message::close_slot(iter_cur->first)));
+			Outgoing_Slot.erase(iter_cur++);
+		}else{
+			++iter_cur;
+		}
 	}
 }
 
@@ -49,6 +68,7 @@ void slot_manager::make_block_requests()
 
 	while(pipeline_size <= protocol::max_block_pipeline){
 		if(iter_cur->second->get_transfer()){
+			//make block requests
 			boost::uint64_t block_num; //block number to request
 			unsigned block_size;       //size of block
 			if(iter_cur->second->get_transfer()->next_request_tree(
@@ -121,6 +141,20 @@ void slot_manager::make_slot_requests()
 	}
 }
 
+bool slot_manager::recv_close_slot(boost::shared_ptr<message::base> M)
+{
+	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
+		iter = Incoming_Slot.find(M->buf[1]);
+	if(iter != Incoming_Slot.end()){
+		LOGGER;
+		Incoming_Slot.erase(iter);
+		return true;
+	}else{
+		LOGGER << "slot already closed";
+		return false;
+	}
+}
+
 bool slot_manager::recv_file_block(boost::shared_ptr<message::base> M,
 	const unsigned slot_num, const boost::uint64_t block_num)
 {
@@ -135,6 +169,7 @@ bool slot_manager::recv_file_block(boost::shared_ptr<message::base> M,
 			Exchange.connection_ID, block_num, M->buf);
 		if(status == transfer::good){
 			make_block_requests();
+			close_complete();
 			return true;
 		}else if(status == transfer::bad){
 			LOGGER << "stub: need to close slot";
@@ -160,6 +195,7 @@ bool slot_manager::recv_hash_tree_block(boost::shared_ptr<message::base> M,
 			Exchange.connection_ID, block_num, M->buf);
 		if(status == transfer::good){
 			make_block_requests();
+			close_complete();
 			return true;
 		}else if(status == transfer::bad){
 			LOGGER << "stub: need to close slot";
@@ -355,7 +391,7 @@ bool slot_manager::recv_slot(boost::shared_ptr<message::base> M,
 		reinterpret_cast<char *>(M->buf.data()+11), SHA1::bin_size);
 	if(!slot_iter->set_unknown(Exchange.connection_ID, file_size, root_hash)){
 		LOGGER << "error setting file size and root hash";
-		boost::shared_ptr<message::base> M(new message::close_slot());
+		boost::shared_ptr<message::base> M(new message::close_slot(M->buf[1]));
 		Exchange.send(M);
 		return true;
 	}

@@ -13,9 +13,9 @@ message::close_slot::close_slot(boost::function<bool (boost::shared_ptr<base>)> 
 	func = func_in;
 }
 
-message::close_slot::close_slot()
+message::close_slot::close_slot(const unsigned char slot_num)
 {
-	buf.append(protocol::close_slot);
+	buf.append(protocol::close_slot).append(slot_num);
 }
 
 bool message::close_slot::expects(network::buffer & recv_buf)

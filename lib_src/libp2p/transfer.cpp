@@ -198,6 +198,7 @@ transfer::status transfer::write_file_block(const int connection_ID,
 	const boost::uint64_t block_num, const network::buffer & buf)
 {
 	if(File_Block.have_block(block_num)){
+		//don't write block which already exists
 		return good;
 	}
 	Download_Speed.add(buf.size());
@@ -222,6 +223,7 @@ transfer::status transfer::write_tree_block(const int connection_ID,
 	const boost::uint64_t block_num, const network::buffer & buf)
 {
 	if(Hash_Tree_Block.have_block(block_num)){
+		//don't write block which already exists
 		return good;
 	}
 	Download_Speed.add(buf.size());

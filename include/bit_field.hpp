@@ -157,8 +157,8 @@ public:
 	//returns true if all bits set to one
 	bool all_set() const
 	{
-		for(boost::uint64_t x=0; x<vec.size(); ++x){
-			if(vec[x] != 255){
+		for(boost::uint64_t x=0; x<groups; ++x){
+			if(get_num(x) != max_group_value){
 				return false;
 			}
 		}
@@ -187,8 +187,8 @@ public:
 	//return true if all bits set to zero
 	bool none_set() const
 	{
-		for(boost::uint64_t x=0; x<vec.size(); ++x){
-			if(vec[x] != 0){
+		for(boost::uint64_t x=0; x<groups; ++x){
+			if(get_num(x) != 0){
 				return false;
 			}
 		}
@@ -220,8 +220,8 @@ public:
 	//sets all groups to their max value (sets all bits to 1)
 	void set()
 	{
-		for(boost::uint64_t x=0; x<vec.size(); ++x){
-			vec[x] = 255;
+		for(boost::uint64_t x=0; x<groups; ++x){
+			set_num(x, max_group_value);
 		}
 	}
 
@@ -248,7 +248,7 @@ private:
 	unsigned max_group_value;
 
 	//get a number from the bitgroup_set
-	boost::uint64_t get_num(const boost::uint64_t index) const
+	unsigned get_num(const boost::uint64_t index) const
 	{
 		boost::uint64_t byte_offset = index * group_size / 8;
 		boost::uint64_t bit_offset = index * group_size % 8;

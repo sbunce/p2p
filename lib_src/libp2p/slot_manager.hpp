@@ -60,10 +60,14 @@ private:
 	std::queue<std::string> Pending;
 
 	/*
+	close_complete:
+		Send close_slot messages for complete slots.
 	make_block_requests:
 		Makes any hash_tree of file block requests that need to be done.
 	make_slot_requests:
 		Does pending slot requests.
+	recv_close_slot:
+		Call back for receiving close slot messages.
 	recv_file_block:
 		Call back for receiving a file block.
 	recv_hash_tree_block:
@@ -80,8 +84,10 @@ private:
 		Handles incoming slot messages. The hash parameter is the hash of the file
 		requested.
 	*/
+	void close_complete();
 	void make_block_requests();
 	void make_slot_requests();
+	bool recv_close_slot(boost::shared_ptr<message::base> M);
 	bool recv_file_block(boost::shared_ptr<message::base> M,
 		const unsigned slot_num, const boost::uint64_t block_num);
 	bool recv_hash_tree_block(boost::shared_ptr<message::base> M,
