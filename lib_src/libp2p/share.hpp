@@ -111,6 +111,9 @@ public:
 	find_slot:
 		Returns slot_iterator for specified hash. Returns end iterator if file
 		with specified hash not in share.
+	garbage_collect:
+		Remove unused slots. This is called whenever a slot is closed with a
+		remote host.
 	is_downloading:
 		Returns true if slot exists and it's incomplete. This function is used by
 		the share scanner so it can know not to hash downloading files even though
@@ -119,6 +122,7 @@ public:
 	slot_iterator begin_slot();
 	slot_iterator end_slot();
 	slot_iterator find_slot(const std::string & hash);
+	void garbage_collect();
 	bool is_downloading(const std::string & path);
 
 	/* Info

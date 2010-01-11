@@ -124,7 +124,6 @@ transfer::status transfer::read_file_block(boost::shared_ptr<message::base> & M,
 				return bad;
 			}
 			Upload_Speed.add(buf.size());
-//DEBUG, big copy constructing this message.
 			M = boost::shared_ptr<message::base>(new message::block(buf));
 			return good;
 		}else{
@@ -143,7 +142,6 @@ transfer::status transfer::read_tree_block(boost::shared_ptr<message::base> & M,
 		hash_tree::status status = Hash_Tree.read_block(block_num, buf);
 		if(status == hash_tree::good){
 			Upload_Speed.add(buf.size());
-//DEBUG, big copy constructing this message.
 			M = boost::shared_ptr<message::base>(new message::block(buf));
 			return good;
 		}else{

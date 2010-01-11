@@ -29,6 +29,7 @@ slot_manager::~slot_manager()
 	{
 		iter_cur->second->unregister_download();
 	}
+	share::singleton().garbage_collect();
 }
 
 void slot_manager::close_complete()
@@ -42,6 +43,7 @@ void slot_manager::close_complete()
 			Exchange.send(boost::shared_ptr<message::base>(
 				new message::close_slot(iter_cur->first)));
 			Outgoing_Slot.erase(iter_cur++);
+			share::singleton().garbage_collect();
 		}else{
 			++iter_cur;
 		}
@@ -159,12 +161,11 @@ bool slot_manager::recv_file_block(boost::shared_ptr<message::base> M,
 	const unsigned slot_num, const boost::uint64_t block_num)
 {
 	--pipeline_size;
-//DEBUG, big copy when erasing
-	M->buf.erase(0, 1);
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter = Outgoing_Slot.find(slot_num);
 	if(iter != Outgoing_Slot.end()){
 		assert(iter->second->get_transfer());
+		M->buf.erase(0, 1);
 		transfer::status status = iter->second->get_transfer()->write_file_block(
 			Exchange.connection_ID, block_num, M->buf);
 		if(status == transfer::good){
@@ -185,12 +186,11 @@ bool slot_manager::recv_hash_tree_block(boost::shared_ptr<message::base> M,
 	const unsigned slot_num, const boost::uint64_t block_num)
 {
 	--pipeline_size;
-//DEBUG, big copy when erasing
-	M->buf.erase(0, 1);
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter = Outgoing_Slot.find(slot_num);
 	if(iter != Outgoing_Slot.end()){
 		assert(iter->second->get_transfer());
+		M->buf.erase(0, 1);
 		transfer::status status = iter->second->get_transfer()->write_tree_block(
 			Exchange.connection_ID, block_num, M->buf);
 		if(status == transfer::good){

@@ -280,6 +280,22 @@ share::slot_iterator share::find_slot(const std::string & hash)
 	return slot_iterator(this, ret.first->second);
 }
 
+void share::garbage_collect()
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+
+	for(std::map<flyweight_string, boost::shared_ptr<slot> >::iterator
+		iter_cur = Slot.begin(); iter_cur != Slot.end();)
+	{
+		if(iter_cur->second.unique()){
+LOGGER << "free'ing " << iter_cur->second->hash();
+			Slot.erase(iter_cur++);
+		}else{
+			++iter_cur;
+		}
+	}
+}
+
 std::pair<share::const_file_iterator, bool> share::insert(const file_info & FI)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
