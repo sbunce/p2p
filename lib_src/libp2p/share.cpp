@@ -376,6 +376,8 @@ share::slot_iterator share::remove_slot(const std::string & hash)
 		}
 		//remove path element
 		Path.erase(flyweight_string(SI->path()));
+		_bytes -= SI->file_size();
+		--_files;
 		return SI;
 	}
 }
