@@ -21,9 +21,13 @@ public:
 	~slot_manager();
 
 	/*
+	remove:
+		Remove incoming/outgoing slots with the specified hash. Cancel pending
+		slots with the specified hash.
 	resume:
 		When the peer_ID is received this function is called to resume downloads.
 	*/
+	void remove(const std::string & hash);
 	void resume(const std::string & peer_ID);
 
 private:
@@ -57,7 +61,7 @@ private:
 		queued up if the slot limit of 256 is reached.
 	*/
 	unsigned open_slots;
-	std::queue<std::string> Pending;
+	std::list<std::string> Pending;
 
 	/*
 	close_complete:

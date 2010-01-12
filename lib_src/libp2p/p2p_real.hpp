@@ -41,7 +41,6 @@ public:
 	void max_download_rate(const unsigned rate);
 	unsigned max_upload_rate();
 	void max_upload_rate(const unsigned rate);
-	void pause_download(const std::string & hash);
 	void remove_download(const std::string & hash);
 	boost::uint64_t share_size_bytes();
 	boost::uint64_t share_size_files();
@@ -76,10 +75,16 @@ private:
 	atomic_int<unsigned> max_upload_rate_proxy;
 
 	/*
+	remove_download_thread:
+		The remove_download() function schedules a job with Thread_Pool to call
+		this function to do removal of a download.
+		Note: This is done to make the remove_download() function take less time
+			to run.
 	resume:
 		Thread spawned in this function by ctor to do things needed to resume
 		downloads.
 	*/
+	void remove_download_thread(const std::string hash);
 	void resume();
 };
 #endif

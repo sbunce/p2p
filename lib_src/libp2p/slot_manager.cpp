@@ -34,19 +34,24 @@ slot_manager::~slot_manager()
 
 void slot_manager::close_complete()
 {
+	bool closed_one = false;
 	for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter_cur = Outgoing_Slot.begin(); iter_cur != Outgoing_Slot.end();)
 	{
 		if(iter_cur->second->get_transfer()
 			&& iter_cur->second->get_transfer()->complete())
 		{
+			closed_one = true;
+			iter_cur->second->unregister_download();
 			Exchange.send(boost::shared_ptr<message::base>(
 				new message::close_slot(iter_cur->first)));
 			Outgoing_Slot.erase(iter_cur++);
-			share::singleton().garbage_collect();
 		}else{
 			++iter_cur;
 		}
+	}
+	if(closed_one){
+		share::singleton().garbage_collect();
 	}
 }
 
@@ -79,32 +84,30 @@ void slot_manager::make_block_requests()
 				++pipeline_size;
 				serviced_one = true;
 				latest_slot = iter_cur->first;
-				boost::shared_ptr<message::base> M_request(new message::request_hash_tree_block(
-					iter_cur->first, block_num, iter_cur->second->get_transfer()->tree_block_count()));
-				Exchange.send(M_request);
-				boost::shared_ptr<message::composite> M_response(new message::composite());
-				M_response->add(boost::shared_ptr<message::block>(new message::block(boost::bind(
+				Exchange.send(boost::shared_ptr<message::base>(new message::request_hash_tree_block(
+					iter_cur->first, block_num, iter_cur->second->get_transfer()->tree_block_count())));
+				boost::shared_ptr<message::composite> M_composite(new message::composite());
+				M_composite->add(boost::shared_ptr<message::block>(new message::block(boost::bind(
 					&slot_manager::recv_hash_tree_block, this, _1, iter_cur->first, block_num),
 					block_size)));
-				M_response->add(boost::shared_ptr<message::error>(new message::error(
+				M_composite->add(boost::shared_ptr<message::error>(new message::error(
 					boost::bind(&slot_manager::recv_request_block_failed, this, _1, iter_cur->first))));
-				Exchange.expect_response(M_response);
+				Exchange.expect_response(M_composite);
 			}else if(iter_cur->second->get_transfer()->next_request_file(
 				Exchange.connection_ID, block_num, block_size))
 			{
 				++pipeline_size;
 				serviced_one = true;
 				latest_slot = iter_cur->first;
-				boost::shared_ptr<message::base> M_request(new message::request_file_block(
-					iter_cur->first, block_num, iter_cur->second->get_transfer()->file_block_count()));
-				Exchange.send(M_request);
-				boost::shared_ptr<message::composite> M_response(new message::composite());
-				M_response->add(boost::shared_ptr<message::block>(new message::block(boost::bind(
+				Exchange.send(boost::shared_ptr<message::base>(new message::request_file_block(
+					iter_cur->first, block_num, iter_cur->second->get_transfer()->file_block_count())));
+				boost::shared_ptr<message::composite> M_composite(new message::composite());
+				M_composite->add(boost::shared_ptr<message::block>(new message::block(boost::bind(
 					&slot_manager::recv_file_block, this, _1, iter_cur->first, block_num),
 					block_size)));
-				M_response->add(boost::shared_ptr<message::error>(new message::error(
+				M_composite->add(boost::shared_ptr<message::error>(new message::error(
 					boost::bind(&slot_manager::recv_request_block_failed, this, _1, iter_cur->first))));
-				Exchange.expect_response(M_response);
+				Exchange.expect_response(M_composite);
 			}
 		}
 		++iter_cur;
@@ -125,21 +128,20 @@ void slot_manager::make_slot_requests()
 {
 	while(!Pending.empty() && open_slots < 256){
 		share::slot_iterator slot_iter = share::singleton().find_slot(Pending.front());
-		Pending.pop();
+		Pending.pop_front();
 		if(slot_iter == share::singleton().end_slot()){
 			continue;
 		}
 		++open_slots;
-		boost::shared_ptr<message::base> M_request(new message::request_slot(
-			slot_iter->hash()));
-		Exchange.send(M_request);
-		boost::shared_ptr<message::composite> M_response(new message::composite());
-		M_response->add(boost::shared_ptr<message::base>(new message::slot(
+		Exchange.send(boost::shared_ptr<message::base>(new message::request_slot(
+			slot_iter->hash())));
+		boost::shared_ptr<message::composite> M_composite(new message::composite());
+		M_composite->add(boost::shared_ptr<message::base>(new message::slot(
 			boost::bind(&slot_manager::recv_slot, this, _1, slot_iter->hash()),
 			slot_iter->hash())));
-		M_response->add(boost::shared_ptr<message::base>(new message::error(
+		M_composite->add(boost::shared_ptr<message::base>(new message::error(
 			boost::bind(&slot_manager::recv_request_slot_failed, this, _1))));
-		Exchange.expect_response(M_response);
+		Exchange.expect_response(M_composite);
 	}
 }
 
@@ -165,6 +167,7 @@ bool slot_manager::recv_file_block(boost::shared_ptr<message::base> M,
 		iter = Outgoing_Slot.find(slot_num);
 	if(iter != Outgoing_Slot.end()){
 		assert(iter->second->get_transfer());
+//DEBUG, large copy
 		M->buf.erase(0, 1);
 		transfer::status status = iter->second->get_transfer()->write_file_block(
 			Exchange.connection_ID, block_num, M->buf);
@@ -190,6 +193,7 @@ bool slot_manager::recv_hash_tree_block(boost::shared_ptr<message::base> M,
 		iter = Outgoing_Slot.find(slot_num);
 	if(iter != Outgoing_Slot.end()){
 		assert(iter->second->get_transfer());
+//DEBUG, large copy
 		M->buf.erase(0, 1);
 		transfer::status status = iter->second->get_transfer()->write_tree_block(
 			Exchange.connection_ID, block_num, M->buf);
@@ -221,23 +225,21 @@ bool slot_manager::recv_request_hash_tree_block(
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter = Incoming_Slot.find(slot_num);
 	if(iter == Incoming_Slot.end()){
-		boost::shared_ptr<message::base> M(new message::error());
-		Exchange.send(M);
+		Exchange.send(boost::shared_ptr<message::base>(new message::error()));
 	}else{
 		assert(iter->second->get_transfer());
 		boost::uint64_t block_num = convert::decode_VLI(M->buf.str(2));
 		LOGGER << block_num;
-		boost::shared_ptr<message::base> M;
+		boost::shared_ptr<message::base> M_request;
 		transfer::status status = iter->second->get_transfer()->read_tree_block(
-			M, block_num);
+			M_request, block_num);
 		if(status == transfer::good){
-			Exchange.send(M);
+			Exchange.send(M_request);
 			return true;
 		}else if(status == transfer::bad){
 			LOGGER << "error reading tree block";
 			Incoming_Slot.erase(iter);
-			boost::shared_ptr<message::base> M(new message::error());
-			Exchange.send(M);
+			Exchange.send(boost::shared_ptr<message::base>(new message::error()));
 			return true;
 		}else if(status == transfer::protocol_violated){
 			return false;
@@ -252,23 +254,21 @@ bool slot_manager::recv_request_file_block(
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter = Incoming_Slot.find(slot_num);
 	if(iter == Incoming_Slot.end()){
-		boost::shared_ptr<message::base> M(new message::error());
-		Exchange.send(M);
+		Exchange.send(boost::shared_ptr<message::base>(new message::error()));
 	}else{
 		assert(iter->second->get_transfer());
 		boost::uint64_t block_num = convert::decode_VLI(M->buf.str(2));
 		LOGGER << block_num;
-		boost::shared_ptr<message::base> M;
+		boost::shared_ptr<message::base> M_request;
 		transfer::status status = iter->second->get_transfer()->read_file_block(
-			M, block_num);
+			M_request, block_num);
 		if(status == transfer::good){
-			Exchange.send(M);
+			Exchange.send(M_request);
 			return true;
 		}else if(status == transfer::bad){
 			LOGGER << "error reading file block";
 			Incoming_Slot.erase(iter);
-			boost::shared_ptr<message::base> M(new message::error());
-			Exchange.send(M);
+			Exchange.send(boost::shared_ptr<message::base>(new message::error()));
 			return true;
 		}else if(status == transfer::protocol_violated){
 			return false;
@@ -288,16 +288,14 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 	share::slot_iterator slot_iter = share::singleton().find_slot(hash);
 	if(slot_iter == share::singleton().end_slot()){
 		LOGGER << "failed " << hash;
-		boost::shared_ptr<message::base> M(new message::error());
-		Exchange.send(M);
+		Exchange.send(boost::shared_ptr<message::base>(new message::error()));
 		return true;
 	}
 
 	if(!slot_iter->get_transfer()){
 		//we do not yet know file size
 		LOGGER << "failed " << hash;
-		boost::shared_ptr<message::base> M(new message::error());
-		Exchange.send(M);
+		Exchange.send(boost::shared_ptr<message::base>(new message::error()));
 		return true;
 	}
 
@@ -317,8 +315,7 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 	unsigned char status;
 	if(!slot_iter->get_transfer()->get_status(status)){
 		LOGGER << "failed " << hash;
-		boost::shared_ptr<message::base> M(new message::error());
-		Exchange.send(M);
+		Exchange.send(boost::shared_ptr<message::base>(new message::error()));
 		return true;
 	}
 
@@ -326,8 +323,7 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 	boost::uint64_t file_size = slot_iter->file_size();
 	if(file_size == 0){
 		LOGGER << "failed " << hash;
-		boost::shared_ptr<message::base> M(new message::error());
-		Exchange.send(M);
+		Exchange.send(boost::shared_ptr<message::base>(new message::error()));
 		return true;
 	}
 
@@ -335,15 +331,13 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 	std::string root_hash;
 	if(!slot_iter->get_transfer()->root_hash(root_hash)){
 		LOGGER << "failed " << hash;
-		boost::shared_ptr<message::base> M(new message::error());
-		Exchange.send(M);
+		Exchange.send(boost::shared_ptr<message::base>(new message::error()));
 		return true;
 	}
 
 	//we have all information to send slot message
-	boost::shared_ptr<message::base> M_send(new message::slot(slot_num, status,
-		file_size, root_hash));
-	Exchange.send(M_send);
+	Exchange.send(boost::shared_ptr<message::base>(new message::slot(slot_num,
+		status, file_size, root_hash)));
 
 	//add slot
 	std::pair<std::map<unsigned char, boost::shared_ptr<slot> >::iterator, bool>
@@ -379,8 +373,7 @@ bool slot_manager::recv_slot(boost::shared_ptr<message::base> M,
 	share::slot_iterator slot_iter = share::singleton().find_slot(hash);
 	if(slot_iter == share::singleton().end_slot()){
 		LOGGER << "failed " << hash;
-		boost::shared_ptr<message::base> M(new message::error());
-		Exchange.send(M);
+		Exchange.send(boost::shared_ptr<message::base>(new message::close_slot(M->buf[1])));
 		return true;
 	}
 
@@ -391,8 +384,7 @@ bool slot_manager::recv_slot(boost::shared_ptr<message::base> M,
 		reinterpret_cast<char *>(M->buf.data()+11), SHA1::bin_size);
 	if(!slot_iter->set_unknown(Exchange.connection_ID, file_size, root_hash)){
 		LOGGER << "error setting file size and root hash";
-		boost::shared_ptr<message::base> M(new message::close_slot(M->buf[1]));
-		Exchange.send(M);
+		Exchange.send(boost::shared_ptr<message::base>(new message::close_slot(M->buf[1])));
 		return true;
 	}
 
@@ -425,13 +417,51 @@ bool slot_manager::recv_slot(boost::shared_ptr<message::base> M,
 	return true;
 }
 
+void slot_manager::remove(const std::string & hash)
+{
+	for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
+		iter_cur = Incoming_Slot.begin(); iter_cur != Incoming_Slot.end();)
+	{
+		if(iter_cur->second->hash() == hash){
+			/*
+			The next request made for this slot will result in an error and the
+			other side will close it's slot.
+			*/
+			iter_cur->second->unregister_upload();
+			Incoming_Slot.erase(iter_cur++);
+		}else{
+			++iter_cur;
+		}
+	}
+	for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
+		iter_cur = Outgoing_Slot.begin(); iter_cur != Outgoing_Slot.end();)
+	{
+		if(iter_cur->second->hash() == hash){
+			iter_cur->second->unregister_download();
+			Exchange.send(boost::shared_ptr<message::base>(new message::close_slot(iter_cur->first)));
+			Outgoing_Slot.erase(iter_cur++);
+		}else{
+			++iter_cur;
+		}
+	}
+	for(std::list<std::string>::iterator iter_cur = Pending.begin();
+		iter_cur != Pending.end();)
+	{
+		if(*iter_cur == hash){
+			iter_cur = Pending.erase(iter_cur);
+		}else{
+			++iter_cur;
+		}
+	}
+}
+
 void slot_manager::resume(const std::string & peer_ID)
 {
 	std::set<std::string> hash = database::table::join::resume_hash(peer_ID);
 	for(std::set<std::string>::iterator iter_cur = hash.begin(), iter_end = hash.end();
 		iter_cur != iter_end; ++iter_cur)
 	{
-		Pending.push(*iter_cur);
+		Pending.push_back(*iter_cur);
 	}
 	make_slot_requests();
 }

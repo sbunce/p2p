@@ -27,14 +27,21 @@ public:
 		interrupt_join();
 	}
 
-	//clears all pending jobs
+	/*
+	Clears all pending jobs.
+	Note: This is often called before interrupt_join() if we don't want to finish
+		jobs befroe stopping the thread_pool.
+	*/
 	void clear()
 	{
 		boost::mutex::scoped_lock lock(job_queue_mutex);
 		job_queue.clear();
 	}
 
-	//add call back job to thread pool
+	/*
+	Add job to thread pool.
+	Note: boost::bind can be used to make this totally general.
+	*/
 	void queue(const boost::function<void ()> & func)
 	{
 		boost::mutex::scoped_lock lock(job_queue_mutex);
@@ -42,7 +49,12 @@ public:
 		job_queue_cond.notify_one();
 	}
 
-	//interrupts threads, block until job_queue empties and threads terminate
+	/*
+	Ends all threads in thread_pool after they finish all pending jobs. This is
+	often necessary to call in a dtor of a class that has a thread_pool as a
+	member function. Destruction order must be carefully considered to make sure
+	that the thread_pool doesn't use an object after it has been destroyed.
+	*/
 	void interrupt_join()
 	{
 		{//begin lock scope

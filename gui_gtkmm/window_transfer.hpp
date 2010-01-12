@@ -79,6 +79,5 @@ private:
 	void delete_download();
 	bool click(GdkEventButton * event);
 	bool refresh();
-	void pause();
 };
 #endif

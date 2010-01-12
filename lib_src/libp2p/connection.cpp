@@ -11,9 +11,16 @@ connection::connection(
 	send_initial();
 }
 
+bool connection::empty()
+{
+	boost::mutex::scoped_lock lock(Mutex);
+
+return false;
+}
+
 void connection::recv_call_back(network::connection_info & CI)
 {
-	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	boost::mutex::scoped_lock lock(Mutex);
 	/*
 	We have this function as a wrapper for exchange::recv_call_back so we can
 	lock the mutex that needs to be locked for all entry points to the connection
@@ -29,6 +36,12 @@ bool connection::recv_initial(boost::shared_ptr<message::base> M)
 	LOGGER << peer_ID;
 	Slot_Manager.resume(peer_ID);
 	return true;
+}
+
+void connection::remove(const std::string & hash)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	Slot_Manager.remove(hash);
 }
 
 void connection::send_initial()

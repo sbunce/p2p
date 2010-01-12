@@ -20,9 +20,18 @@ public:
 		network::connection_info & CI
 	);
 
+	/*
+	empty:
+		Returns true if no slots are open and not slots need to be opened.
+	remove:
+		Close and remove all outgoing slots with the specified hash.
+	*/
+	bool empty();
+	void remove(const std::string & hash);
+
 private:
 	//locks all entry points to this object
-	boost::recursive_mutex Recursive_Mutex;
+	boost::mutex Mutex;
 
 	exchange Exchange;         //used to exchange messages
 	slot_manager Slot_Manager; //does everything slot related

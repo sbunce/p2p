@@ -283,12 +283,10 @@ share::slot_iterator share::find_slot(const std::string & hash)
 void share::garbage_collect()
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-
 	for(std::map<flyweight_string, boost::shared_ptr<slot> >::iterator
 		iter_cur = Slot.begin(); iter_cur != Slot.end();)
 	{
 		if(iter_cur->second.unique()){
-LOGGER << "free'ing " << iter_cur->second->hash();
 			Slot.erase(iter_cur++);
 		}else{
 			++iter_cur;
@@ -352,6 +350,33 @@ boost::shared_ptr<slot> share::next_slot(const std::string & hash)
 		return boost::shared_ptr<slot>();
 	}else{
 		return iter->second;
+	}
+}
+
+share::slot_iterator share::remove_slot(const std::string & hash)
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	std::map<flyweight_string, boost::shared_ptr<slot> >::iterator
+		S_iter = Slot.find(flyweight_string(hash));
+	if(S_iter == Slot.end()){
+		return end_slot();
+	}else{
+		//create slot_iterator, remove slot
+		slot_iterator SI(this, S_iter->second);
+		Slot.erase(S_iter);
+		//remove hash element
+		std::pair<std::multimap<flyweight_string, boost::shared_ptr<file_info> >::iterator,
+			std::multimap<flyweight_string, boost::shared_ptr<file_info> >::iterator>
+			Hash_iter_pair = Hash.equal_range(flyweight_string(SI->hash()));
+		for(; Hash_iter_pair.first != Hash_iter_pair.second; ++Hash_iter_pair.first){
+			if(Hash_iter_pair.first->second->path == SI->path()){
+				Hash.erase(Hash_iter_pair.first);
+				break;
+			}
+		}
+		//remove path element
+		Path.erase(flyweight_string(SI->path()));
+		return SI;
 	}
 }
 

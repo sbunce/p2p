@@ -54,8 +54,6 @@ public:
 		Get or set download rate limit (bytes).
 	max_upload_rate:
 		Get or set upload rate limit (bytes).
-	pause_download:
-		Pause a download.
 	remove_download:
 		Removes a running download.
 	share_size_bytes:
@@ -76,7 +74,6 @@ public:
 	void max_download_rate(const unsigned rate);
 	unsigned max_upload_rate();
 	void max_upload_rate(const unsigned rate);
-	void pause_download(const std::string & hash);
 	void remove_download(const std::string & hash);
 	boost::uint64_t share_size_bytes();
 	boost::uint64_t share_size_files();

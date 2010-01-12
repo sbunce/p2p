@@ -63,11 +63,6 @@ void p2p_real::max_upload_rate(const unsigned rate)
 		rate, database::pool::get()));
 }
 
-void p2p_real::pause_download(const std::string & hash)
-{
-	LOGGER << hash;
-}
-
 void p2p_real::resume()
 {
 	//delay helps GUI have responsive startup
@@ -143,6 +138,8 @@ void p2p_real::start_download(const p2p::download & D)
 void p2p_real::remove_download(const std::string & hash)
 {
 	LOGGER << hash;
+	Thread_Pool.queue(boost::bind(&connection_manager::remove,
+		&Connection_Manager, hash));
 }
 
 void p2p_real::transfers(std::vector<p2p::transfer> & T)

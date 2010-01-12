@@ -30,6 +30,12 @@ public:
 	void connect_call_back(network::connection_info & CI);
 	void disconnect_call_back(network::connection_info & CI);
 
+	/*
+	remove:
+		Remove incoming/outgoing slots with the specified hash.
+	*/
+	void remove(const std::string hash);
+
 private:
 	/*
 	The connection_ID associated with a connection (the state each connection

@@ -118,12 +118,17 @@ public:
 		Returns true if slot exists and it's incomplete. This function is used by
 		the share scanner so it can know not to hash downloading files even though
 		their size and modification dates are changing.
+	remove_slot:
+		Remove slot, and file info. Return iterator to removed slot or end
+		iterator if not slot erased. This function does not modify the database or
+		remove the actual file the slot deals with.
 	*/
 	slot_iterator begin_slot();
 	slot_iterator end_slot();
 	slot_iterator find_slot(const std::string & hash);
 	void garbage_collect();
 	bool is_downloading(const std::string & path);
+	slot_iterator remove_slot(const std::string & hash);
 
 	/* Info
 	bytes:

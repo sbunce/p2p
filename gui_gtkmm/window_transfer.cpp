@@ -54,9 +54,6 @@ window_transfer::window_transfer(
 	if(Type == download){
 		//menu that pops up when right click happens on download
 		downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::StockMenuElem(
-			Gtk::StockID(Gtk::Stock::MEDIA_PAUSE), sigc::mem_fun(*this,
-			&window_transfer::pause)));
-		downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::StockMenuElem(
 			Gtk::StockID(Gtk::Stock::DELETE), sigc::mem_fun(*this,
 			&window_transfer::delete_download)));
 	}
@@ -138,7 +135,9 @@ bool window_transfer::refresh()
 			iter = Row_Index.find(iter_cur->hash);
 		if(iter == Row_Index.end()){
 			//add
-			if(Type == download && iter_cur->download_peers == 0){
+			if(Type == download && iter_cur->download_peers == 0
+				&& iter_cur->percent_complete == 100)
+			{
 				continue;
 			}
 			if(Type == upload && iter_cur->upload_peers == 0){
@@ -206,16 +205,4 @@ bool window_transfer::refresh()
 	}
 
 	return true;
-}
-
-void window_transfer::pause()
-{
-	Glib::RefPtr<Gtk::TreeView::Selection> refSelection = download_view->get_selection();
-	if(refSelection){
-		Gtk::TreeModel::iterator selected_row_iter = refSelection->get_selected();
-		if(selected_row_iter){
-			Glib::ustring hash = (*selected_row_iter)[column_hash];
-			P2P.pause_download(hash);
-		}
-	}
 }

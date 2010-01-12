@@ -46,8 +46,11 @@ unsigned slot::download_speed()
 
 boost::uint64_t slot::file_size()
 {
-	boost::mutex::scoped_lock lock(FI_mutex);
-	return FI.file_size;
+	if(Transfer){
+		return Transfer->file_size();
+	}else{
+		return FI.file_size;
+	}
 }
 
 const boost::shared_ptr<transfer> & slot::get_transfer()
@@ -57,14 +60,17 @@ const boost::shared_ptr<transfer> & slot::get_transfer()
 
 const std::string & slot::hash()
 {
-	boost::mutex::scoped_lock lock(FI_mutex);
 	return FI.hash;
 }
 
 const std::string & slot::name()
 {
-	boost::mutex::scoped_lock lock(FI_mutex);
 	return file_name;
+}
+
+std::string slot::path()
+{
+	return FI.path;
 }
 
 unsigned slot::percent_complete()
@@ -89,16 +95,8 @@ void slot::register_upload()
 bool slot::set_unknown(const int connection_ID, const boost::uint64_t file_size,
 	const std::string & root_hash)
 {
-	//true if this thread instantiated transfer (used to save disk access)
-	bool created = false;
-	std::string path_tmp;
-
-	{//BEGIN lock scope
-	boost::mutex::scoped_lock lock(FI_mutex);
+	boost::mutex::scoped_lock lock(Transfer_mutex);
 	if(!Transfer){
-		created = true;
-		FI.file_size = file_size;
-		path_tmp = FI.path;
 		try{
 			Transfer = boost::shared_ptr<transfer>(new transfer(FI));
 		}catch(std::exception & ex){
@@ -106,14 +104,11 @@ bool slot::set_unknown(const int connection_ID, const boost::uint64_t file_size,
 			Transfer = boost::shared_ptr<transfer>();
 			return false;
 		}
+		//set file size in case we don't know it
+		database::table::share::update_file_size(FI.path, file_size);
 	}
-	}//END lock scope
-//DEBUG, disable this optimization until resume hash checking working
-//	if(created){
-		database::table::share::update_file_size(path_tmp, file_size);
-		network::buffer buf(convert::hex_to_bin(root_hash));
-		Transfer->write_tree_block(connection_ID, 0, buf);
-//	}
+	network::buffer buf(convert::hex_to_bin(root_hash));
+	Transfer->write_tree_block(connection_ID, 0, buf);
 	return true;
 }
 
