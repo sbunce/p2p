@@ -23,7 +23,6 @@ unsigned file::block_size(const boost::uint64_t block_num)
 {
 	assert(block_num < block_count);
 	if(block_num == block_count - 1){
-		//last block
 		return last_block_size;
 	}else{
 		return protocol::file_block_size;

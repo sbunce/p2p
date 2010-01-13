@@ -34,24 +34,20 @@ slot_manager::~slot_manager()
 
 void slot_manager::close_complete()
 {
-	bool closed_one = false;
 	for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter_cur = Outgoing_Slot.begin(); iter_cur != Outgoing_Slot.end();)
 	{
 		if(iter_cur->second->get_transfer()
 			&& iter_cur->second->get_transfer()->complete())
 		{
-			closed_one = true;
 			iter_cur->second->unregister_download();
 			Exchange.send(boost::shared_ptr<message::base>(
 				new message::close_slot(iter_cur->first)));
 			Outgoing_Slot.erase(iter_cur++);
+			share::singleton().garbage_collect();
 		}else{
 			++iter_cur;
 		}
-	}
-	if(closed_one){
-		share::singleton().garbage_collect();
 	}
 }
 

@@ -3,6 +3,8 @@
 
 int main()
 {
+	network::start();
+
 	//setup listener
 	std::set<network::endpoint> E = network::get_endpoint("localhost", "0", network::tcp);
 	assert(!E.empty());

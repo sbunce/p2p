@@ -45,7 +45,8 @@ public:
 		sockaddr_storage sas;
 		ai.ai_addr = reinterpret_cast<sockaddr *>(&sas);
 		ai.ai_addrlen = sizeof(sockaddr_storage);
-		int new_socket = ::accept(socket_FD, ai.ai_addr, &ai.ai_addrlen);
+		int new_socket = ::accept(socket_FD, ai.ai_addr,
+			reinterpret_cast<socklen_t *>(&ai.ai_addrlen));
 		if(new_socket == -1){
 			_error = errno;
 			return boost::shared_ptr<nstream>();
@@ -158,20 +159,17 @@ public:
 	//returns port of listener on localhost, or empty string if error
 	std::string port()
 	{
-		addrinfo ai;
-		sockaddr_storage sas;
-		ai.ai_addr = reinterpret_cast<sockaddr *>(&sas);
-		ai.ai_addrlen = sizeof(sockaddr_storage);
-		if(getsockname(socket_FD, ai.ai_addr, &ai.ai_addrlen) == -1){
+		sockaddr_storage addr;
+		socklen_t addrlen = sizeof(addr);
+		if(getsockname(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
 			LOGGER << errno;
 			_error = errno;
 			close();
 			return "";
 		}
-
 		char buf[6];
-		if(getnameinfo(ai.ai_addr, ai.ai_addrlen, NULL, 0, buf, sizeof(buf),
-			NI_NUMERICSERV) == -1)
+		if(getnameinfo(reinterpret_cast<sockaddr *>(&addr), addrlen, NULL, 0, buf,
+			sizeof(buf), NI_NUMERICSERV) == -1)
 		{
 			LOGGER << errno;
 			_error = errno;

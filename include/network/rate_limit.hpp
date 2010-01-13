@@ -17,6 +17,9 @@ This class is generally accessed through the reactor interface.
 //standard
 #include <limits>
 
+//needed for windows
+#undef max
+
 namespace network{
 class rate_limit : private boost::noncopyable
 {

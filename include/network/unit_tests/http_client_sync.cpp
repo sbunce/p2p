@@ -8,6 +8,8 @@ int main()
 	//disable test
 	return 0;
 
+	network::start();
+
 	std::set<network::endpoint> E = network::get_endpoint("google.com", "80", network::tcp);
 	network::nstream N;
 	for(std::set<network::endpoint>::iterator cur = E.begin(), end = E.end();
@@ -35,5 +37,7 @@ int main()
 	}
 	while(N.recv(B) > 0);
 	LOGGER << "recv buff size: " << B.size();
+
+	network::stop();
 	return fail;
 }

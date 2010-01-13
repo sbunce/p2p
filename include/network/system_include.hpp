@@ -30,4 +30,29 @@
 	#include <unistd.h>
 #endif
 
+namespace network{
+
+//must be called before using any network function
+static void start()
+{
+	#ifdef _WIN32
+	WORD wsock_ver = MAKEWORD(2,2);
+	WSADATA wsock_data;
+	int startup;
+	if((startup = WSAStartup(wsock_ver, &wsock_data)) != 0){
+		LOGGER << "winsock startup error " << startup;
+		exit(1);
+	}
+	#endif
+}
+
+//for every call to start_networking this function must be called
+static void stop()
+{
+	#ifdef _WIN32
+	WSACleanup();
+	#endif
+}
+
+}//end namespace network
 #endif

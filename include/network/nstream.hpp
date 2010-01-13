@@ -99,21 +99,21 @@ public:
 	//returns local port, or empty string if error
 	std::string local_IP()
 	{
-		addrinfo ai;
-		sockaddr_storage sas;
-		ai.ai_addr = reinterpret_cast<sockaddr *>(&sas);
-		ai.ai_addrlen = sizeof(sockaddr_storage);
-		if(getsockname(socket_FD, ai.ai_addr, &ai.ai_addrlen) == -1){
+		sockaddr_storage addr;
+		socklen_t addrlen = sizeof(addr);
+		if(getsockname(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
 			LOGGER << errno;
 			_error = errno;
 			close();
 			return "";
 		}
-
 		char buf[INET6_ADDRSTRLEN];
-		if(getnameinfo(ai.ai_addr, ai.ai_addrlen, buf, sizeof(buf), NULL, 0,
-			NI_NUMERICHOST) == -1)
+		if(getnameinfo(reinterpret_cast<sockaddr *>(&addr), addrlen, buf,
+			sizeof(buf), NULL, 0, NI_NUMERICHOST) == -1)
 		{
+			LOGGER << errno;
+			_error = errno;
+			close();
 			return "";
 		}
 		return buf;
@@ -122,20 +122,17 @@ public:
 	//returns local port, or empty string if error
 	std::string local_port()
 	{
-		addrinfo ai;
-		sockaddr_storage sas;
-		ai.ai_addr = reinterpret_cast<sockaddr *>(&sas);
-		ai.ai_addrlen = sizeof(sockaddr_storage);
-		if(getsockname(socket_FD, ai.ai_addr, &ai.ai_addrlen) == -1){
+		sockaddr_storage addr;
+		socklen_t addrlen = sizeof(addr);
+		if(getsockname(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
 			LOGGER << errno;
 			_error = errno;
 			close();
 			return "";
 		}
-
 		char buf[6];
-		if(getnameinfo(ai.ai_addr, ai.ai_addrlen, NULL, 0, buf, sizeof(buf),
-			NI_NUMERICSERV) == -1)
+		if(getnameinfo(reinterpret_cast<sockaddr *>(&addr), addrlen, NULL, 0, buf,
+			sizeof(buf), NI_NUMERICSERV) == -1)
 		{
 			LOGGER << errno;
 			_error = errno;
@@ -227,21 +224,21 @@ public:
 	//returns local port, or empty string if error
 	std::string remote_IP()
 	{
-		addrinfo ai;
-		sockaddr_storage sas;
-		ai.ai_addr = reinterpret_cast<sockaddr *>(&sas);
-		ai.ai_addrlen = sizeof(sockaddr_storage);
-		if(getpeername(socket_FD, ai.ai_addr, &ai.ai_addrlen) == -1){
+		sockaddr_storage addr;
+		socklen_t addrlen = sizeof(addr);
+		if(getpeername(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
 			LOGGER << errno;
 			_error = errno;
 			close();
 			return "";
 		}
-
 		char buf[INET6_ADDRSTRLEN];
-		if(getnameinfo(ai.ai_addr, ai.ai_addrlen, buf, sizeof(buf), NULL, 0,
-			NI_NUMERICHOST) == -1)
+		if(getnameinfo(reinterpret_cast<sockaddr *>(&addr), addrlen, buf,
+			sizeof(buf), NULL, 0, NI_NUMERICHOST) == -1)
 		{
+			LOGGER << errno;
+			_error = errno;
+			close();
 			return "";
 		}
 		return buf;
@@ -250,20 +247,17 @@ public:
 	//returns local port, or empty string if error
 	std::string remote_port()
 	{
-		addrinfo ai;
-		sockaddr_storage sas;
-		ai.ai_addr = reinterpret_cast<sockaddr *>(&sas);
-		ai.ai_addrlen = sizeof(sockaddr_storage);
-		if(getpeername(socket_FD, ai.ai_addr, &ai.ai_addrlen) == -1){
+		sockaddr_storage addr;
+		socklen_t addrlen = sizeof(addr);
+		if(getpeername(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
 			LOGGER << errno;
 			_error = errno;
 			close();
 			return "";
 		}
-
 		char buf[6];
-		if(getnameinfo(ai.ai_addr, ai.ai_addrlen, NULL, 0, buf, sizeof(buf),
-			NI_NUMERICSERV) == -1)
+		if(getnameinfo(reinterpret_cast<sockaddr *>(&addr), addrlen, NULL, 0, buf,
+			sizeof(buf), NI_NUMERICSERV) == -1)
 		{
 			LOGGER << errno;
 			_error = errno;

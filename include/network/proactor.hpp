@@ -33,7 +33,14 @@ public:
 	{
 		FD_ZERO(&read_FDS);
 		FD_ZERO(&write_FDS);
+
+		network::start();
 		add_socket(std::make_pair(Select_Interrupter.socket(), boost::shared_ptr<state>()));
+	}
+
+	~proactor()
+	{
+		network::stop();
 	}
 
 	/*
