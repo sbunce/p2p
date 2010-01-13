@@ -444,6 +444,17 @@ private:
 			timeval tv;
 			tv.tv_sec = 0; tv.tv_usec = 1000000 / 100;
 
+			/*
+			Windows gives a 10022 error (invalid argument) if passed empty fdsets.
+			Don't call select if fdsets are empty.
+			*/
+			#ifdef _WIN32
+			if(tmp_read_FDS.fd_count == 0 && tmp_write_FDS.fd_count == 0){
+				boost::this_thread::sleep(boost::posix_time::milliseconds(10));
+				continue;
+			}
+			#endif
+
 			int service = select(end_FD, &tmp_read_FDS, &tmp_write_FDS, NULL, &tv);
 			if(service == -1){
 				//ignore interrupt signal, profilers can cause this

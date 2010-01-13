@@ -180,18 +180,16 @@ public:
 			E.ai.ai_protocol)) == -1)
 		{
 			LOGGER << errno;
-			_error = errno;
-			return false;
+			exit(1);
 		}
 		set_non_blocking();
 		if(::connect(socket_FD, E.ai.ai_addr, E.ai.ai_addrlen) == 0){
 			return true;
 		}else{
-			//socket not connected, make sure it's in progress of connecting
+			//socket in progress of connecting
 			if(errno != EINPROGRESS && errno != EWOULDBLOCK){
 				LOGGER << errno;
-				_error = errno;
-				close();
+				exit(1);
 			}
 			return false;
 		}
