@@ -83,15 +83,23 @@ public:
 	*/
 	bool is_open_async()
 	{
-		#ifdef _WIN32
-		char opt_val = 1;
-		#else
 		int opt_val = 1;
-		#endif
 		socklen_t opt_len = sizeof(opt_val);
-		if(getsockopt(socket_FD, SOL_SOCKET, SO_ERROR, &opt_val, &opt_len) == 0){
-			return opt_val == 0;
+		if(getsockopt(socket_FD, SOL_SOCKET, SO_ERROR,
+			reinterpret_cast<char *>(&opt_val), &opt_len) == 0)
+		{
+			//we got option
+			if(opt_val == 0){
+				return true;
+			}else{
+				LOGGER << errno;
+				_error = errno;
+				return false;
+			}
 		}else{
+			//error getting option
+			LOGGER << errno;
+			_error = errno;
 			return false;
 		}
 	}
