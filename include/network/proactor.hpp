@@ -20,6 +20,13 @@
 namespace network{
 class proactor : private boost::noncopyable
 {
+	class init
+	{
+	public:
+		init(){ network::start(); }
+		~init(){ network::stop(); }
+	} Init;
+
 public:
 	//if listener not specified then listener is not started
 	proactor(
@@ -33,14 +40,7 @@ public:
 	{
 		FD_ZERO(&read_FDS);
 		FD_ZERO(&write_FDS);
-
-		network::start();
 		add_socket(std::make_pair(Select_Interrupter.socket(), boost::shared_ptr<state>()));
-	}
-
-	~proactor()
-	{
-		network::stop();
 	}
 
 	/*

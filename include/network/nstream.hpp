@@ -180,7 +180,7 @@ public:
 			return true;
 		}else{
 			//socket not connected, make sure it's in progress of connecting
-			if(errno != EINPROGRESS){
+			if(errno != EINPROGRESS && errno != EWOULDBLOCK){
 				LOGGER << errno;
 				_error = errno;
 				close();

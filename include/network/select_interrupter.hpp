@@ -22,8 +22,6 @@ class select_interrupter : private boost::noncopyable
 public:
 	select_interrupter()
 	{
-		network::start();
-
 		/*
 		Create socket pair, one side writes the other side reads. The select()
 		function will monitor the read_only socket.
@@ -43,11 +41,6 @@ public:
 		//accept write_only connection
 		write_only = L.accept();
 		assert(write_only);
-	}
-
-	~select_interrupter()
-	{
-		network::stop();
 	}
 
 	/*
