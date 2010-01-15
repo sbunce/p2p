@@ -1,3 +1,4 @@
 SConscript([
+	'CLI/SConscript',
 	'unit_tests/SConscript'
 ])

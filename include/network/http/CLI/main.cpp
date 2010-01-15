@@ -1,6 +1,5 @@
 //include
 #include <boost/thread.hpp>
-#include <CLI_args.hpp>
 #include <logger.hpp>
 #include <network/network.hpp>
 
@@ -25,18 +24,15 @@ void signal_handler(int sig)
 
 int main(int argc, char ** argv)
 {
-	CLI_args CLI_Args(argc, argv);
+	if(argc != 2){
+		std::cout << "usage: " << argv[0] << " <path>\n";
+		return 1;
+	}
 
 	//register signal handlers
 	signal(SIGINT, signal_handler);
 
-	std::string web_root;
-	if(!CLI_Args.string("--web_root", web_root)){
-		LOGGER << "web root not specified";
-		exit(1);
-	}
-
-	network::http::server HTTP(web_root);
+	network::http::server HTTP(argv[1]);
 	LOGGER << "listening on " << HTTP.port();
 
 	{//begin lock scope

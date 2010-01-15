@@ -1,0 +1,5 @@
+#standard
+import glob
+
+Import('env_base')
+env_base.Program('#bin/p2p_CLI', glob.glob('*.cpp'))
