@@ -26,7 +26,7 @@ public:
 	{
 		std::set<network::endpoint> E = network::get_endpoint(
 			localhost_only ? "localhost" : "",
-			"0",
+			"8080",
 			network::tcp
 		);
 		assert(!E.empty());
@@ -45,8 +45,8 @@ public:
 	}
 
 private:
-	const std::string web_root;
 	network::proactor Proactor;
+	std::string web_root;
 
 	//connection specific information
 	boost::mutex Connection_mutex;

@@ -30,7 +30,8 @@ public:
 		network::connection_info & CI,
 		const std::string & web_root_in
 	):
-		web_root(web_root_in),
+		web_root(boost::filesystem::system_complete(boost::filesystem::path(
+			web_root_in, boost::filesystem::native)).directory_string()),
 		Proactor(Proactor_in),
 		index(0)
 	{
