@@ -85,6 +85,9 @@ public:
 	/* Info / Options
 	download_rate:
 		Returns download rate (averaged over a few seconds).
+	listen_port:
+		Returns port we're listening on, or empty string if not listening on any
+		port.
 	max_download_rate:
 		Get or set maximum allowed download rate.
 	max_upload_rate:
@@ -93,33 +96,40 @@ public:
 		Returns upload rate (averaged over a few seconds).
 	*/
 	unsigned download_rate(){ return Rate_Limit.download(); }
+	std::string listen_port(){ return Listener.port(); }
 	unsigned max_download_rate(){ return Rate_Limit.max_download(); }
 	void max_download_rate(const unsigned rate){ Rate_Limit.max_download(rate); }
 	unsigned max_upload_rate(){ return Rate_Limit.max_upload(); }
 	void max_upload_rate(const unsigned rate){ Rate_Limit.max_upload(rate); }
 	unsigned upload_rate(){ return Rate_Limit.upload(); }
 
-	/*
-	Restart proactor, optionally start a listener.
-	Precondition: proactor must be started.
-	*/
-	void restart(const std::string & listen_port = "-1")
+	//start proactor, return false if fail to start
+	bool start()
 	{
-		boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
-		stop();
-		start(listen_port);
+		network_thread = boost::thread(boost::bind(&proactor::startup, this));
+		return true;
 	}
 
 	/*
-	Start proactor, and optionally start a listener.
+	Start proactor, and optionally start a listener. Returns false if proactor
+	failed to start.
 	Precondition: proactor must be stopped.
 	*/
-	void start(const std::string & listen_port = "-1")
+	bool start(const endpoint & E)
 	{
 		boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
-		//assert proactor not running
-		assert(network_thread.get_id() == boost::thread::id());
-		network_thread = boost::thread(boost::bind(&proactor::startup, this, listen_port));
+		if(network_thread.get_id() != boost::thread::id()){
+			//proactor already started
+			return false;
+		}
+		Listener.open(E);
+		if(!Listener.is_open()){
+			LOGGER << "failed to start listener";
+			return false;
+		}
+		Listener.set_non_blocking();
+		add_socket(std::make_pair(Listener.socket(), boost::shared_ptr<state>()));
+		return start();
 	}
 
 	/*
@@ -129,9 +139,10 @@ public:
 	void stop()
 	{
 		boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
-		//assert proactor running
-		assert(network_thread.get_id() != boost::thread::id());
-		//shutdown network thread
+		if(network_thread.get_id() == boost::thread::id()){
+			//proactor already stopped
+			return;
+		}
 		{//BEGIN lock scope
 		boost::mutex::scoped_lock lock(network_thread_call_mutex);
 		network_thread_call.push_front(boost::bind(&proactor::shutdown, this));
@@ -140,16 +151,38 @@ public:
 		network_thread.join();
 	}
 
+	//restart proactor, return false if fail to start
+	bool restart()
+	{
+		boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
+		stop();
+		return start();
+	}
+
+	//restart proactor and start a listener, return false if fail to start
+	bool restart(const endpoint & E)
+	{
+		boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
+		stop();
+		return start(E);
+	}
+
 private:
-	//locks for start()/stop() functions
+	//lock for restart(), start(), and stop() functions
 	boost::recursive_mutex start_stop_mutex;
 
+	//thread which runs in network_loop(), does all send/recv
 	boost::thread network_thread;
-	call_back_dispatcher Call_Back_Dispatcher;
-	select_interrupter Select_Interrupter;
-	rate_limit Rate_Limit;
 
-	//used for async DNS resolution
+	call_back_dispatcher Call_Back_Dispatcher;
+	listener Listener;
+	rate_limit Rate_Limit;
+	select_interrupter Select_Interrupter;
+
+	/*
+	Thread pool for DNS resolution.
+	Note: There is async DNS resolution on some platforms but not all.
+	*/
 	thread_pool Resolve_TP;
 
 	//stuff needed for select()
@@ -157,9 +190,6 @@ private:
 	fd_set write_FDS; //set of sockets that need to write
 	int begin_FD;     //first socket
 	int end_FD;       //one past last socket
-
-	//listener socket (empty if no listener)
-	boost::shared_ptr<listener> Listener;
 
 	//all state associated with the socket
 	class state : private boost::noncopyable
@@ -198,7 +228,7 @@ private:
 		touch:
 			Updates the last time connection was active (used for timeout).
 		*/
-		bool timed_out(){ return std::time(NULL) - last_seen > 60; }
+		bool timed_out(){ return std::time(NULL) - last_seen > 30; }
 		void touch(){ last_seen = std::time(NULL); }
 
 	private:
@@ -445,8 +475,8 @@ private:
 			tv.tv_sec = 0; tv.tv_usec = 1000000 / 100;
 
 			/*
-			Windows gives a 10022 error (invalid argument) if passed empty fdsets.
-			Don't call select if fdsets are empty.
+			Windows gives a 10022 error (invalid argument) if passed empty fd_sets.
+			Don't call select if fd_sets are empty.
 			*/
 			#ifdef _WIN32
 			if(tmp_read_FDS.fd_count == 0 && tmp_write_FDS.fd_count == 0){
@@ -468,18 +498,18 @@ private:
 					--service;
 				}
 
-				if(Listener && FD_ISSET(Listener->socket(), &tmp_read_FDS)){
+				if(Listener.is_open() && FD_ISSET(Listener.socket(), &tmp_read_FDS)){
 					//handle incoming connections
-					while(boost::shared_ptr<nstream> N = Listener->accept()){
+					while(boost::shared_ptr<nstream> N = Listener.accept()){
 						boost::shared_ptr<connection_info> CI(new connection_info(
-							ID_Manager.allocate(), N->socket(), "", Listener->accept_endpoint().IP(),
-							Listener->accept_endpoint().port(), tcp, incoming));
+							ID_Manager.allocate(), N->socket(), "", Listener.accept_endpoint().IP(),
+							Listener.accept_endpoint().port(), tcp, incoming));
 						std::pair<int, boost::shared_ptr<state> > P(N->socket(),
 							boost::shared_ptr<state>(new state(true, std::set<endpoint>(), N, CI)));
 						add_socket(P);
 						Call_Back_Dispatcher.connect(P.second->CI);
 					}
-					FD_CLR(Listener->socket(), &tmp_read_FDS);
+					FD_CLR(Listener.socket(), &tmp_read_FDS);
 					--service;
 				}
 
@@ -653,8 +683,8 @@ private:
 		}
 
 		//disconnect listener
-		remove_socket(Listener->socket());
-		Listener = boost::shared_ptr<listener>();
+		remove_socket(Listener.socket());
+		Listener.close();
 
 		//stop any pending resolve jobs
 		Resolve_TP.clear();
@@ -677,18 +707,8 @@ private:
 	The network_thread starts in this function.
 	Do setup and start listener.
 	*/
-	void startup(const std::string listen_port)
+	void startup()
 	{
-		//start listener
-		if(listen_port != "-1"){
-			std::set<endpoint> E = get_endpoint("", listen_port, tcp);
-			assert(!E.empty());
-			Listener = boost::shared_ptr<listener>(new listener(*E.begin()));
-			assert(Listener->is_open());
-			Listener->set_non_blocking();
-			add_socket(std::make_pair(Listener->socket(), boost::shared_ptr<state>()));
-		}
-
 		//start call back threads
 		Call_Back_Dispatcher.start();
 

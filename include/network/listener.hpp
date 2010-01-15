@@ -107,10 +107,7 @@ public:
 	void open(const endpoint & E)
 	{
 		assert(E.type() == tcp);
-
-		//if listener open, close it
 		close();
-
 		if((socket_FD = ::socket(E.ai.ai_family, E.ai.ai_socktype,
 			E.ai.ai_protocol)) == -1)
 		{
@@ -119,34 +116,27 @@ public:
 			close();
 			return;
 		}
-
 		/*
 		This takes care of "address already in use" errors that can happen when
 		trying to bind to a port that wasn't properly closed and hasn't timed
 		out.
 		*/
-		#ifdef _WIN32
-		const char optval = 1;
-		#else
 		int optval = 1;
-		#endif
 		socklen_t optlen = sizeof(optval);
-		if(::setsockopt(socket_FD, SOL_SOCKET, SO_REUSEADDR, &optval, optlen) == -1){
+		if(::setsockopt(socket_FD, SOL_SOCKET, SO_REUSEADDR,
+			reinterpret_cast<char *>(&optval), optlen) == -1)
+		{
 			LOGGER << errno;
 			_error = errno;
 			close();
 			return;
 		}
-
-		//bind port to socket_FD
 		if(::bind(socket_FD, E.ai.ai_addr, E.ai.ai_addrlen) == -1){
 			LOGGER << errno;
 			_error = errno;
 			close();
 			return;
 		}
-
-		//start listening
 		int backlog = 512; //max pending accepts
 		if(::listen(socket_FD, backlog) == -1){
 			LOGGER << errno;
@@ -156,9 +146,15 @@ public:
 		}
 	}
 
-	//returns port of listener on localhost, or empty string if error
+	/*
+	Returns port of listener on localhost, or empty string if not listening or
+	error.
+	*/
 	std::string port()
 	{
+		if(socket_FD == -1){
+			return "";
+		}
 		sockaddr_storage addr;
 		socklen_t addrlen = sizeof(addr);
 		if(getsockname(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){

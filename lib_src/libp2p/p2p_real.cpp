@@ -117,7 +117,16 @@ void p2p_real::resume()
 	}
 
 	//bring up networking
-	Connection_Manager.Proactor.start(database::table::prefs::get_port());
+	std::set<network::endpoint> E = network::get_endpoint(
+		"", //all interfaces
+		database::table::prefs::get_port(),
+		network::tcp
+	);
+	assert(!E.empty());
+	if(!Connection_Manager.Proactor.start(*E.begin())){
+		LOGGER << "stub: handle failed listener start";
+		exit(1);
+	}
 }
 
 boost::uint64_t p2p_real::share_size_bytes()

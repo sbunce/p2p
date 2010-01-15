@@ -13,9 +13,9 @@ def compile_flags(env):
 	if platform.system() == 'Windows':
 		env['CCFLAGS'].append('/EHsc') #exception support
 		env['CCFLAGS'].append('/w')    #disable warnings
-		#env['CCFLAGS'].append('/Ox')   #max optimization
-	#else:
-		#env['CCFLAGS'].append('-O3')   #max optimization
+		env['CCFLAGS'].append('/Ox')   #max optimization
+	else:
+		env['CCFLAGS'].append('-O3')   #max optimization
 
 def system_library_path(env):
 	if platform.system() == 'Windows':

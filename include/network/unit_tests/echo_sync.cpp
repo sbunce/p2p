@@ -22,17 +22,17 @@ int main()
 	assert(N_server);
 
 	//send test message client -> server
-	network::buffer B("123ABC");
+	network::buffer B("ABC");
 	N_client.send(B);
 	assert(B.empty());
 
 	//echo back test message server -> client
 	N_server->recv(B);
-	assert(B.str() == "123ABC");
+	assert(B.str() == "ABC");
 	N_server->send(B);
 	assert(B.empty());
 
 	//recv echo'd test message on client
 	N_client.recv(B);
-	assert(B.str() == "123ABC");
+	assert(B.str() == "ABC");
 }

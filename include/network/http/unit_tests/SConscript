@@ -1,0 +1,5 @@
+#site_scons
+import unit_test
+
+Import('env_base')
+unit_test.run(env_base)

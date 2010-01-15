@@ -1,7 +1,3 @@
-#site_scons
-import boost
-import unit_test
-
-Import('env_base')
-
-env_base.Program('#/bin/http', ['main.cpp', 'http.cpp'])
+SConscript([
+	'unit_tests/SConscript'
+])

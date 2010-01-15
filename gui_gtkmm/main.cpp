@@ -8,8 +8,6 @@
 //std
 #include <csignal>
 
-namespace
-{
 Gtk::Main * Main_ptr;
 
 void signal_handler(int sig)
@@ -17,7 +15,6 @@ void signal_handler(int sig)
 	signal(sig, signal_handler);
 	Main_ptr->quit();
 }
-}//end of unnamed namespace
 
 int main(int argc, char ** argv)
 {

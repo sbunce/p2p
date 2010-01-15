@@ -11,6 +11,7 @@ print 'scons: starting',env_base.GetOption('num_jobs'),'builder'
 SConscript([
 	'gui_CLI/SConscript',
 	'gui_gtkmm/SConscript',
+	'http/SConscript',
 	'include/SConscript',
 	'lib_src/SConscript',
 	'site_scons/SConscript'

@@ -2,7 +2,7 @@
 #include <boost/thread.hpp>
 #include <CLI_args.hpp>
 #include <logger.hpp>
-#include <p2p.hpp>
+#include <network/network.hpp>
 
 //standard
 #include <csignal>
@@ -16,7 +16,6 @@ volatile sig_atomic_t terminate_program = 0;
 void signal_handler(int sig)
 {
 	signal(sig, signal_handler);
-
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(terminate_mutex);
 	terminate_program = 1;
@@ -31,19 +30,14 @@ int main(int argc, char ** argv)
 	//register signal handlers
 	signal(SIGINT, signal_handler);
 
-	//test server functionality, run multiple servers out of same directory
-	std::string str;
-	if(CLI_Args.string("--test", str)){
-		std::string port = str.substr(0, str.find_first_of(':'));
-		std::string program_directory = str.substr(str.find_first_of(':')+1);
-		if(!program_directory.empty() && program_directory[program_directory.size()-1] != '/'){
-			//make sure path ends with slash
-			program_directory += '/';
-		}
-		p2p::test(port, program_directory);
+	std::string web_root;
+	if(!CLI_Args.string("--web_root", web_root)){
+		LOGGER << "web root not specified";
+		exit(1);
 	}
 
-	p2p P2P;
+	network::http::server HTTP(web_root);
+	LOGGER << "listening on " << HTTP.port();
 
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(terminate_mutex);

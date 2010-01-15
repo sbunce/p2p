@@ -46,7 +46,7 @@ static void start()
 	#endif
 }
 
-//for every call to start_networking this function must be called
+//for every call to start() this function must be called
 static void stop()
 {
 	#ifdef _WIN32
