@@ -75,6 +75,27 @@ void create_reassemble(const unsigned size)
 		LOGGER; ++fail;
 		return;
 	}
+
+	//check file blocks with rebuilt tree
+	network::buffer buf;
+	std::fstream fin(FI.path.get().c_str(), std::ios::in | std::ios::binary);
+	if(!fin.good()){
+		LOGGER; ++fail;
+		return;
+	}
+	for(boost::uint64_t x=0; x<HT_reassemble.file_block_count; ++x){
+		buf.reserve(protocol::file_block_size);
+		fin.read(reinterpret_cast<char *>(buf.data()), protocol::file_block_size);
+		if(!fin.good()){
+			LOGGER; ++fail;
+			return;
+		}
+		buf.resize(fin.gcount());
+		if(HT_reassemble.check_file_block(x, buf) != hash_tree::good){
+			LOGGER; ++fail;
+			return;
+		}
+	}
 }
 
 void child_block()
@@ -183,7 +204,6 @@ int main()
 	create_reassemble(256);
 	create_reassemble(257);
 	create_reassemble(1024);
-	create_reassemble(1536);
 
 	child_block();
 

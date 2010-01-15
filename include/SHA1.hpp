@@ -18,6 +18,12 @@ class SHA1
 {
 public:
 	SHA1(){}
+	SHA1(const char * data, int len)
+	{
+		init();
+		load(data, len);
+		end();
+	}
 
 	//size of hash in different forms
 	static const int bin_size = 20;
