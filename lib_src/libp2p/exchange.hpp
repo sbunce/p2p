@@ -13,6 +13,7 @@ class exchange : private boost::noncopyable
 {
 public:
 	exchange(
+		boost::mutex & Mutex_in,
 		network::proactor & Proactor_in,
 		network::connection_info & CI
 	);
@@ -45,6 +46,7 @@ public:
 	void send(boost::shared_ptr<message::base> M);
 
 private:
+	boost::mutex & Mutex;
 	network::proactor & Proactor;
 
 	/*

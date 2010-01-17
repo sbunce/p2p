@@ -1,10 +1,12 @@
 #include "exchange.hpp"
 
 exchange::exchange(
+	boost::mutex & Mutex_in,
 	network::proactor & Proactor_in,
 	network::connection_info & CI
 ):
 	connection_ID(CI.connection_ID),
+	Mutex(Mutex_in),
 	Proactor(Proactor_in),
 	blacklist_state(0)
 {
@@ -17,6 +19,7 @@ exchange::exchange(
 		expect_response(boost::shared_ptr<message::base>(new message::key_exchange_p_rA(
 			boost::bind(&exchange::recv_p_rA, this, _1, boost::ref(CI)))));
 	}
+	CI.recv_call_back = boost::bind(&exchange::recv_call_back, this, _1);
 }
 
 void exchange::expect_response(boost::shared_ptr<message::base> M)
@@ -51,6 +54,7 @@ void exchange::expect_anytime_erase(network::buffer buf)
 
 void exchange::recv_call_back(network::connection_info & CI)
 {
+	boost::mutex::scoped_lock lock(Mutex);
 	if(Encryption.ready()){
 		Encryption.crypt_recv(CI.recv_buf, CI.recv_buf.size() - CI.latest_recv);
 	}
@@ -79,7 +83,7 @@ void exchange::recv_call_back(network::connection_info & CI)
 			goto end;
 		}
 	}
-	//check if message is not a response
+	//check if message is not expected response
 	for(std::list<boost::shared_ptr<message::base> >::iterator
 		iter_cur = Expect_Anytime.begin(), iter_end = Expect_Anytime.end();
 		iter_cur != iter_end;)

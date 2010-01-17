@@ -51,6 +51,14 @@ void slot_manager::close_complete()
 	}
 }
 
+bool slot_manager::empty()
+{
+	LOGGER << "open_slots " << open_slots;
+	LOGGER << "incoming slot " << Incoming_Slot.empty();
+	LOGGER << "Pending " << Pending.empty();
+	return open_slots == 0 && Incoming_Slot.empty() && Pending.empty();
+}
+
 void slot_manager::make_block_requests()
 {
 	if(Outgoing_Slot.empty()){
@@ -435,6 +443,7 @@ void slot_manager::remove(const std::string & hash)
 		if(iter_cur->second->hash() == hash){
 			iter_cur->second->unregister_download();
 			Exchange.send(boost::shared_ptr<message::base>(new message::close_slot(iter_cur->first)));
+			--open_slots;
 			Outgoing_Slot.erase(iter_cur++);
 		}else{
 			++iter_cur;

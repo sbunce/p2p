@@ -58,6 +58,9 @@ void connection_manager::remove(const std::string hash)
 			iter_cur = Connection.begin(); iter_cur != Connection.end(); ++iter_cur)
 		{
 			iter_cur->second->remove(hash);
+			if(iter_cur->second->empty()){
+				Proactor.disconnect(iter_cur->first);
+			}
 		}
 		/*
 		At this point we know the slot has been removed from all connections and we

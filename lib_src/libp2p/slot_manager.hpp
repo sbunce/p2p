@@ -21,12 +21,15 @@ public:
 	~slot_manager();
 
 	/*
+	empty:
+		Returns true if no incoming/outgoing slots.
 	remove:
 		Remove incoming/outgoing slots with the specified hash. Cancel pending
 		slots with the specified hash.
 	resume:
 		When the peer_ID is received this function is called to resume downloads.
 	*/
+	bool empty();
 	void remove(const std::string & hash);
 	void resume(const std::string & peer_ID);
 
@@ -54,7 +57,7 @@ private:
 
 	/*
 	open_slots:
-		Number of slots opened, or requested, from the remote host.
+		Number of outgoing slots opened, or requested, from the remote host.
 		Invariant: 0 <= open_slots <= 256.
 	Pending:
 		Hashes of files that need to be downloaded from host. Files will be

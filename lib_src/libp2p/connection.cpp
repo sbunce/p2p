@@ -4,29 +4,16 @@ connection::connection(
 	network::proactor & Proactor_in,
 	network::connection_info & CI
 ):
-	Exchange(Proactor_in, CI),
+	Exchange(Mutex, Proactor_in, CI),
 	Slot_Manager(Exchange)
 {
-	CI.recv_call_back = boost::bind(&connection::recv_call_back, this, _1);
 	send_initial();
 }
 
 bool connection::empty()
 {
 	boost::mutex::scoped_lock lock(Mutex);
-
-return false;
-}
-
-void connection::recv_call_back(network::connection_info & CI)
-{
-	boost::mutex::scoped_lock lock(Mutex);
-	/*
-	We have this function as a wrapper for exchange::recv_call_back so we can
-	lock the mutex that needs to be locked for all entry points to the connection
-	object.
-	*/
-	Exchange.recv_call_back(CI);
+	return Slot_Manager.empty();
 }
 
 bool connection::recv_initial(boost::shared_ptr<message::base> M)

@@ -37,14 +37,11 @@ private:
 	slot_manager Slot_Manager; //does everything slot related
 
 	/*
-	recv_call_back:
-		Proactor calls back to this function whenever data is received.
 	recv_initial:
 		Call back for receiving initial message.
 	send_initial:
 		Send initial message. Called after key exchange completed.
 	*/
-	void recv_call_back(network::connection_info & CI);
 	bool recv_initial(boost::shared_ptr<message::base> M);
 	void send_initial();
 };
