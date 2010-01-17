@@ -88,6 +88,6 @@ int main()
 	Proactor.stop();
 
 	if(disconnect_count != test_echo * 2){
-		LOGGER; exit(1);
+		LOGGER << disconnect_count; exit(1);
 	}
 }

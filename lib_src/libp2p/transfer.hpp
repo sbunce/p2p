@@ -100,12 +100,15 @@ public:
 	/* Speeds
 	download_speed:
 		Returns download speed (bytes/second).
+	download_speed_calculator:
+		Returns shared_ptr to speed calculator responsible for download speed.
 	touch:
 		Add 0 bytes to Download_Speed/Upload_Speed to force recalculation.
 	upload_speed:
 		Returns upload speed (bytes/second).
 	*/
 	unsigned download_speed();
+	boost::shared_ptr<network::speed_calculator> download_speed_calculator();
 	void touch();
 	unsigned upload_speed();
 
@@ -118,7 +121,7 @@ private:
 	//number of bytes received (used to calculate percent complete)
 	atomic_int<boost::uint64_t> bytes_received;
 
-	network::speed_calculator Download_Speed;
-	network::speed_calculator Upload_Speed;
+	boost::shared_ptr<network::speed_calculator> Download_Speed;
+	boost::shared_ptr<network::speed_calculator> Upload_Speed;
 };
 #endif

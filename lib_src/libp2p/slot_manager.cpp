@@ -85,7 +85,7 @@ void slot_manager::make_block_requests()
 				boost::shared_ptr<message::composite> M_composite(new message::composite());
 				M_composite->add(boost::shared_ptr<message::block>(new message::block(boost::bind(
 					&slot_manager::recv_hash_tree_block, this, _1, iter_cur->first, block_num),
-					block_size)));
+					block_size, iter_cur->second->get_transfer()->download_speed_calculator())));
 				M_composite->add(boost::shared_ptr<message::error>(new message::error(
 					boost::bind(&slot_manager::recv_request_block_failed, this, _1, iter_cur->first))));
 				Exchange.expect_response(M_composite);
@@ -100,7 +100,7 @@ void slot_manager::make_block_requests()
 				boost::shared_ptr<message::composite> M_composite(new message::composite());
 				M_composite->add(boost::shared_ptr<message::block>(new message::block(boost::bind(
 					&slot_manager::recv_file_block, this, _1, iter_cur->first, block_num),
-					block_size)));
+					block_size, iter_cur->second->get_transfer()->download_speed_calculator())));
 				M_composite->add(boost::shared_ptr<message::error>(new message::error(
 					boost::bind(&slot_manager::recv_request_block_failed, this, _1, iter_cur->first))));
 				Exchange.expect_response(M_composite);

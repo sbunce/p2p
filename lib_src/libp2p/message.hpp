@@ -45,7 +45,8 @@ class block : public base
 public:
 	//recv ctor
 	block(boost::function<bool (boost::shared_ptr<base>)> func_in,
-		const boost::uint64_t block_size_in);
+		const boost::uint64_t block_size_in,
+		boost::shared_ptr<network::speed_calculator> Download_Speed_in);
 	//send ctor
 	explicit block(network::buffer & block);
 	virtual bool expects(network::buffer & recv_buf);
@@ -53,6 +54,10 @@ public:
 private:
 	//size of block field (only used for recv)
 	boost::uint64_t block_size;
+
+	//used to update speed_calculator when only part of message seen
+	unsigned bytes_seen; //bytes already added to Download_Speed
+	boost::shared_ptr<network::speed_calculator> Download_Speed;
 };
 
 class close_slot : public base

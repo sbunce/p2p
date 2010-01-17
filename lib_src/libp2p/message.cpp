@@ -95,9 +95,12 @@ bool message::composite::recv(network::connection_info & CI)
 //BEGIN block
 message::block::block(
 	boost::function<bool (boost::shared_ptr<base>)> func_in,
-	const boost::uint64_t block_size_in
+	const boost::uint64_t block_size_in,
+	boost::shared_ptr<network::speed_calculator> Download_Speed_in
 ):
-	block_size(block_size_in)
+	block_size(block_size_in),
+	bytes_seen(0),
+	Download_Speed(Download_Speed_in)
 {
 	func = func_in;
 }
@@ -115,6 +118,8 @@ bool message::block::expects(network::buffer & recv_buf)
 bool message::block::recv(network::connection_info & CI)
 {
 	assert(expects(CI.recv_buf));
+	Download_Speed->add(CI.recv_buf.size() - bytes_seen);
+	bytes_seen = CI.recv_buf.size();
 	if(CI.recv_buf.size() >= protocol::block_size(block_size)){
 		buf.append(CI.recv_buf.data(), protocol::block_size(block_size));
 		CI.recv_buf.erase(0, protocol::block_size(block_size));

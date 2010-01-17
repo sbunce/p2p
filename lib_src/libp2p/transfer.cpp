@@ -5,7 +5,9 @@ transfer::transfer(const file_info & FI):
 	File(FI),
 	Hash_Tree_Block(Hash_Tree.tree_block_count),
 	File_Block(Hash_Tree.file_block_count),
-	bytes_received(0)
+	bytes_received(0),
+	Download_Speed(new network::speed_calculator()),
+	Upload_Speed(new network::speed_calculator())
 {
 	assert(FI.file_size != 0);
 
@@ -46,7 +48,12 @@ bool transfer::complete()
 
 unsigned transfer::download_speed()
 {
-	return Download_Speed.speed();
+	return Download_Speed->speed();
+}
+
+boost::shared_ptr<network::speed_calculator> transfer::download_speed_calculator()
+{
+	return Download_Speed;
 }
 
 boost::uint64_t transfer::file_block_count()
@@ -123,7 +130,7 @@ transfer::status transfer::read_file_block(boost::shared_ptr<message::base> & M,
 			if(status != hash_tree::good){
 				return bad;
 			}
-			Upload_Speed.add(buf.size());
+			Upload_Speed->add(buf.size());
 //DEBUG, large copy
 			M = boost::shared_ptr<message::base>(new message::block(buf));
 			return good;
@@ -142,7 +149,7 @@ transfer::status transfer::read_tree_block(boost::shared_ptr<message::base> & M,
 		network::buffer buf;
 		hash_tree::status status = Hash_Tree.read_block(block_num, buf);
 		if(status == hash_tree::good){
-			Upload_Speed.add(buf.size());
+			Upload_Speed->add(buf.size());
 //DEBUG, large copy
 			M = boost::shared_ptr<message::base>(new message::block(buf));
 			return good;
@@ -167,10 +174,7 @@ bool transfer::root_hash(std::string & RH)
 	if(!database::pool::get()->blob_read(Hash_Tree.blob, buf+8, SHA1::bin_size, 0)){
 		return false;
 	}
-	SHA1 SHA;
-	SHA.init();
-	SHA.load(buf, 8 + SHA1::bin_size);
-	SHA.end();
+	SHA1 SHA(buf, 8 + SHA1::bin_size);
 	if(SHA.hex() != hash()){
 		return false;
 	}
@@ -180,8 +184,8 @@ bool transfer::root_hash(std::string & RH)
 
 void transfer::touch()
 {
-	Download_Speed.add(0);
-	Upload_Speed.add(0);
+	Download_Speed->add(0);
+	Upload_Speed->add(0);
 }
 
 boost::uint64_t transfer::tree_block_count()
@@ -191,7 +195,7 @@ boost::uint64_t transfer::tree_block_count()
 
 unsigned transfer::upload_speed()
 {
-	return Upload_Speed.speed();
+	return Upload_Speed->speed();
 }
 
 transfer::status transfer::write_file_block(const int connection_ID,
@@ -201,7 +205,6 @@ transfer::status transfer::write_file_block(const int connection_ID,
 		//don't write block which already exists
 		return good;
 	}
-	Download_Speed.add(buf.size());
 	hash_tree::status status = Hash_Tree.check_file_block(block_num, buf);
 	if(status == hash_tree::good){
 		if(File.write_block(block_num, buf)){
@@ -226,7 +229,6 @@ transfer::status transfer::write_tree_block(const int connection_ID,
 		//don't write block which already exists
 		return good;
 	}
-	Download_Speed.add(buf.size());
 	hash_tree::status status = Hash_Tree.write_block(block_num, buf);
 	if(status == hash_tree::good){
 		Hash_Tree_Block.add_block_local(connection_ID, block_num);

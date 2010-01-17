@@ -351,6 +351,7 @@ private:
 			if(FD_ISSET(socket_FD, &read_FDS) || FD_ISSET(socket_FD, &write_FDS)){
 				std::pair<int, boost::shared_ptr<state> > P = lookup_socket(socket_FD);
 				if(P.second && P.second->timed_out()){
+					LOGGER << "timed out " << P.second->N->remote_IP();
 					remove_socket(socket_FD);
 					Call_Back_Dispatcher.disconnect(P.second->CI);
 				}
@@ -446,15 +447,22 @@ private:
 	//networking threads works in this function
 	void network_loop()
 	{
-		std::time_t last_check_timeouts(std::time(NULL));
+		/*
+		The number of times select will timeout per second. This is needed because
+		the rate limiter won't always let us send/recv data.
+		*/
+		static const unsigned timeout_per_second = 100;
+
+		std::time_t last_loop_time(std::time(NULL));
 		fd_set tmp_read_FDS;
 		fd_set tmp_write_FDS;
+		timeval tv;
 		while(true){
 			boost::this_thread::interruption_point();
-			if(last_check_timeouts != std::time(NULL)){
-				//only check time outs once per second
+			if(last_loop_time != std::time(NULL)){
+				//stuff to run only once per second
 				check_timeouts();
-				last_check_timeouts = std::time(NULL);
+				last_loop_time = std::time(NULL);
 			}
 			process_network_thread_call();
 
@@ -470,20 +478,25 @@ private:
 				tmp_write_FDS = write_FDS;
 			}
 
-			//timeout needed because rate limiter won't always let us send/recv data
-			timeval tv;
-			tv.tv_sec = 0; tv.tv_usec = 1000000 / 100;
-
 			/*
 			Windows gives a 10022 error (invalid argument) if passed empty fd_sets.
 			Don't call select if fd_sets are empty.
 			*/
 			#ifdef _WIN32
 			if(tmp_read_FDS.fd_count == 0 && tmp_write_FDS.fd_count == 0){
-				boost::this_thread::sleep(boost::posix_time::milliseconds(10));
+				boost::this_thread::sleep(boost::posix_time::milliseconds(
+					1000 / timeout_per_second));
 				continue;
 			}
 			#endif
+
+			/*
+			On some systems timeval is modified after select returns and set to the
+			time that select blocked for. For example, Linux does this but Windows
+			does not.
+			*/
+			tv.tv_sec = 0;
+			tv.tv_usec = 1000000 / timeout_per_second;
 
 			int service = select(end_FD, &tmp_read_FDS, &tmp_write_FDS, NULL, &tv);
 			if(service == -1){
