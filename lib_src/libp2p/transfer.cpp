@@ -130,9 +130,8 @@ transfer::status transfer::read_file_block(boost::shared_ptr<message::base> & M,
 			if(status != hash_tree::good){
 				return bad;
 			}
-			Upload_Speed->add(buf.size());
 //DEBUG, large copy
-			M = boost::shared_ptr<message::base>(new message::block(buf));
+			M = boost::shared_ptr<message::base>(new message::block(buf, Upload_Speed));
 			return good;
 		}else{
 			return bad;
@@ -149,9 +148,8 @@ transfer::status transfer::read_tree_block(boost::shared_ptr<message::base> & M,
 		network::buffer buf;
 		hash_tree::status status = Hash_Tree.read_block(block_num, buf);
 		if(status == hash_tree::good){
-			Upload_Speed->add(buf.size());
 //DEBUG, large copy
-			M = boost::shared_ptr<message::base>(new message::block(buf));
+			M = boost::shared_ptr<message::base>(new message::block(buf, Upload_Speed));
 			return good;
 		}else{
 			return bad;

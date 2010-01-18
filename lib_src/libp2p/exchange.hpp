@@ -22,13 +22,6 @@ public:
 	const int connection_ID;
 
 	/*
-	recv_call_back:
-		The proactor calls back to this function whenever data is received.
-		Note: Only connection should use this.
-	*/
-	void recv_call_back(network::connection_info & CI);
-
-	/*
 	expect_response:
 		After sending a message that expects a response this function should be
 		called with the message expected. If there are multiple possible messages
@@ -71,8 +64,26 @@ private:
 	*/
 	std::list<boost::shared_ptr<message::base> > Encrypt_Buf;
 
+	/*
+	When we send a message to the proactor we push it's size and a shared_ptr to
+	a speed_calculator on the back of this container. When bytes are sent we
+	update the speed_calculator. The shared_ptr is empty if there is no
+	shared_ptr to update.
+	*/
+	std::list<std::pair<unsigned, boost::shared_ptr<network::speed_calculator> > > Send_Speed;
+
 	//state of blacklist (used as hint to see if we need to check)
 	int blacklist_state;
+
+	/*
+	recv_call_back:
+		The proactor calls back to this function whenever data is received.
+		Note: Only connection should use this.
+	send_call_back:
+		The proactor calls back to this function whenever data is sent.
+	*/
+	void recv_call_back(network::connection_info & CI);
+	void send_call_back(network::connection_info & CI);
 
 	/* Functions to handle receiving messages.
 	recv_p_rA:

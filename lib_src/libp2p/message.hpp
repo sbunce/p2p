@@ -19,11 +19,14 @@ namespace message{
 class base
 {
 public:
-	//function to handle the message when it's received
+	//function to handle incoming message (empty if message to send)
 	boost::function<bool (boost::shared_ptr<base>)> func;
 
 	//bytes that have been sent or received
 	network::buffer buf;
+
+	//speed calculator for upload or download (empty if no speed to track)
+	boost::shared_ptr<network::speed_calculator> Speed_Calculator;
 
 	/*
 	encrypt:
@@ -46,18 +49,18 @@ public:
 	//recv ctor
 	block(boost::function<bool (boost::shared_ptr<base>)> func_in,
 		const boost::uint64_t block_size_in,
-		boost::shared_ptr<network::speed_calculator> Download_Speed_in);
+		boost::shared_ptr<network::speed_calculator> Download_Speed);
 	//send ctor
-	explicit block(network::buffer & block);
+	explicit block(network::buffer & block,
+		boost::shared_ptr<network::speed_calculator> Upload_Speed);
 	virtual bool expects(network::buffer & recv_buf);
 	virtual bool recv(network::connection_info & CI);
 private:
 	//size of block field (only used for recv)
 	boost::uint64_t block_size;
 
-	//used to update speed_calculator when only part of message seen
-	unsigned bytes_seen; //bytes already added to Download_Speed
-	boost::shared_ptr<network::speed_calculator> Download_Speed;
+	//how many bytes have already been added to download speed
+	unsigned bytes_seen;
 };
 
 class close_slot : public base

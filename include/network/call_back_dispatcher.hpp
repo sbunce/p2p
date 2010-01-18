@@ -68,11 +68,13 @@ public:
 	Schedule call back for send_buf size decrease.
 	Precondition: The connect call back must have been scheduled.
 	*/
-	void send(const boost::shared_ptr<connection_info> & CI, const int send_buf_size)
+	void send(const boost::shared_ptr<connection_info> & CI, const unsigned latest_send,
+		const unsigned send_buf_size)
 	{
 		boost::mutex::scoped_lock lock(job_mutex);
 		job.push_back(std::make_pair(CI->connection_ID, boost::bind(
-			&call_back_dispatcher::send_call_back_wrapper, this, CI, send_buf_size)));
+			&call_back_dispatcher::send_call_back_wrapper, this, CI, latest_send,
+			send_buf_size)));
 		job_cond.notify_one();
 	}
 
@@ -203,8 +205,10 @@ private:
 	necessary to allow send_call_back to be changed while another send call back
 	is being blocked by in dispatch().
 	*/
-	void send_call_back_wrapper(boost::shared_ptr<connection_info> CI, const int send_buf_size)
+	void send_call_back_wrapper(boost::shared_ptr<connection_info> CI,
+		const unsigned latest_send, const int send_buf_size)
 	{
+		CI->latest_send = latest_send;
 		CI->send_buf_size = send_buf_size;
 		if(CI->send_call_back){
 			CI->send_call_back(*CI);

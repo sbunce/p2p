@@ -20,6 +20,7 @@ exchange::exchange(
 			boost::bind(&exchange::recv_p_rA, this, _1, boost::ref(CI)))));
 	}
 	CI.recv_call_back = boost::bind(&exchange::recv_call_back, this, _1);
+	CI.send_call_back = boost::bind(&exchange::send_call_back, this, _1);
 }
 
 void exchange::expect_response(boost::shared_ptr<message::base> M)
@@ -153,8 +154,10 @@ void exchange::send(boost::shared_ptr<message::base> M)
 		Encrypt_Buf.push_back(M);
 	}else if(Encryption.ready() && M->encrypt()){
 		Encryption.crypt_send(M->buf);
+		Send_Speed.push_back(std::make_pair(M->buf.size(), M->Speed_Calculator));
 		Proactor.send(connection_ID, M->buf);
 	}else if(!M->encrypt()){
+		Send_Speed.push_back(std::make_pair(M->buf.size(), M->Speed_Calculator));
 		Proactor.send(connection_ID, M->buf);
 	}
 }
@@ -168,4 +171,25 @@ void exchange::send_buffered()
 		send(*iter_cur);
 	}
 	Encrypt_Buf.clear();
+}
+
+void exchange::send_call_back(network::connection_info & CI)
+{
+	unsigned latest_send = CI.latest_send;
+	while(latest_send){
+		assert(!Send_Speed.empty());
+		if(latest_send >= Send_Speed.front().first){
+			if(Send_Speed.front().second){
+				Send_Speed.front().second->add(Send_Speed.front().first);
+			}
+			latest_send -= Send_Speed.front().first;
+			Send_Speed.pop_front();
+		}else{
+			if(Send_Speed.front().second){
+				Send_Speed.front().second->add(latest_send);
+			}
+			Send_Speed.front().first -= latest_send;
+			break;
+		}
+	}
 }

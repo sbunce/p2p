@@ -35,6 +35,7 @@ public:
 		type(type_in),
 		direction(direction_in),
 		latest_recv(0),
+		latest_send(0),
 		send_buf_size(0)
 	{}
 
@@ -58,7 +59,8 @@ public:
 	number of bytes appended are stored in latest_recv.
 	*/
 	buffer recv_buf;
-	int latest_recv;
+	unsigned latest_recv;
+	unsigned latest_send;
 
 	/*
 	The size of the send_buf only accessible to the proactor. This value can be
@@ -66,7 +68,7 @@ public:
 	date when checked during the send_call_back. If the send_call_back is set
 	then a call back will happen whenever this value decreases.
 	*/
-	int send_buf_size;
+	unsigned send_buf_size;
 
 private:
 	//socket file descriptor only used internally to proactor

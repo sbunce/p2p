@@ -20,6 +20,18 @@
 namespace network{
 class proactor : private boost::noncopyable
 {
+	/*
+	Timeout (seconds) before idle sockets disconnected. This has to be quite high
+	otherwise client that download very slowly will be erroneously disconnected.
+	*/
+	static const unsigned idle_timeout = 180;
+
+	/*
+	Maximum number of times per second select will timeout. This is needed
+	because the rate limiter won't always allow us to send bytes.
+	*/
+	static const unsigned select_timeouts_per_second = 100;
+
 	class init
 	{
 	public:
@@ -217,8 +229,8 @@ private:
 
 		/*
 		Connection info passed to call backs.
-		Note: Once this is instantiated it should not be modified except by the
-			call backs.
+		Note: Once this is instantiated it is not be modified except by the
+			Call_Back_Dispatcher when it knows it's safe.
 		*/
 		boost::shared_ptr<connection_info> CI;
 
@@ -228,7 +240,7 @@ private:
 		touch:
 			Updates the last time connection was active (used for timeout).
 		*/
-		bool timed_out(){ return std::time(NULL) - last_seen > 30; }
+		bool timed_out(){ return std::time(NULL) - last_seen > idle_timeout; }
 		void touch(){ last_seen = std::time(NULL); }
 
 	private:
@@ -447,12 +459,6 @@ private:
 	//networking threads works in this function
 	void network_loop()
 	{
-		/*
-		The number of times select will timeout per second. This is needed because
-		the rate limiter won't always let us send/recv data.
-		*/
-		static const unsigned timeout_per_second = 100;
-
 		std::time_t last_loop_time(std::time(NULL));
 		fd_set tmp_read_FDS;
 		fd_set tmp_write_FDS;
@@ -485,7 +491,7 @@ private:
 			#ifdef _WIN32
 			if(tmp_read_FDS.fd_count == 0 && tmp_write_FDS.fd_count == 0){
 				boost::this_thread::sleep(boost::posix_time::milliseconds(
-					1000 / timeout_per_second));
+					1000 / select_timeouts_per_second));
 				continue;
 			}
 			#endif
@@ -496,7 +502,7 @@ private:
 			does not.
 			*/
 			tv.tv_sec = 0;
-			tv.tv_usec = 1000000 / timeout_per_second;
+			tv.tv_usec = 1000000 / select_timeouts_per_second;
 
 			int service = select(end_FD, &tmp_read_FDS, &tmp_write_FDS, NULL, &tv);
 			if(service == -1){
@@ -559,13 +565,14 @@ private:
 								if(P.second->send_buf.empty()){
 									if(P.second->disconnect_on_empty){
 										remove_socket(P.first);
+										Call_Back_Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
 										Call_Back_Dispatcher.disconnect(P.second->CI);
 									}else{
 										FD_CLR(P.first, &write_FDS);
-										Call_Back_Dispatcher.send(P.second->CI, P.second->send_buf.size());
+										Call_Back_Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
 									}
 								}else{
-									Call_Back_Dispatcher.send(P.second->CI, P.second->send_buf.size());
+									Call_Back_Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
 								}
 							}
 						}
