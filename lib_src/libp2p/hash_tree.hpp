@@ -70,6 +70,8 @@ public:
 	check:
 		Checks the entire hash tree. This is called on program start to see what
 		blocks are good.
+	check_block:
+		Checks the hash tree block in buf.
 	check_file_block:
 		Checks a file block against a hash in the hash tree. Returns good if file
 		block good. Returns bad if file block bad. Returns io_error if cannot read
@@ -104,6 +106,7 @@ public:
 	status check();
 	status check_file_block(const boost::uint64_t file_block_num,
 		const network::buffer & buf);
+	status check_tree_block(const boost::uint64_t block_num, const network::buffer & buf);
 	status create();
 	std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool> file_block_children(
 		const boost::uint64_t block);
@@ -122,16 +125,11 @@ private:
 		Note: If block is 0 then parent won't be set.
 	block_info (without parent parameter):
 		Doesn't get parent.
-	check_block:
-		Checks a hash tree block that already exists in tree. This reads both the
-		parent and child in to memory and hash checks.
-		Precondition: Parent and child must exist in tree.
 	*/
 	bool block_info(const boost::uint64_t block,
 		std::pair<boost::uint64_t, unsigned> & info, boost::uint64_t & parent);
 	bool block_info(const boost::uint64_t block,
 		std::pair<boost::uint64_t, unsigned> & info);
-	status check_block(const boost::uint64_t block_num);
 
 	/*
 	These functions are static to make it clear that none of them depend on

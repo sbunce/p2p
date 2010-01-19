@@ -125,59 +125,25 @@ unsigned hash_tree::block_size(const boost::uint64_t block_num)
 
 hash_tree::status hash_tree::check()
 {
-	for(boost::uint32_t x=0; x<tree_block_count; ++x){
-		status Status = check_block(x);
+	network::buffer buf;
+	buf.reserve(protocol::file_block_size);
+	for(boost::uint32_t block_num=0; block_num<tree_block_count; ++block_num){
+		buf.clear();
+		status Status = read_block(block_num, buf);
+		if(Status == bad){
+			return io_error;
+		}
+		Status = check_block(block_num, buf);
 		if(Status == bad){
 			return bad;
 		}else if(Status == io_error){
 			return io_error;
-		}else if(x == tree_block_count - 1){
+		}else if(block_num == tree_block_count - 1){
 			//last block checked good
 			database::table::hash::set_state(hash, database::table::hash::complete);
 		}
 	}
 	return good;
-}
-
-hash_tree::status hash_tree::check_block(const boost::uint64_t block_num)
-{
-	char buf[protocol::file_block_size];
-	if(block_num == 0){
-		//special requirements to check root_hash, see documentation for root_hash
-		if(!database::pool::get()->blob_read(blob, buf, SHA1::bin_size, 0)){
-			return io_error;
-		}
-		std::memmove(buf + 8, buf, SHA1::bin_size);
-		std::memcpy(buf, convert::encode(file_size).data(), 8);
-		SHA1 SHA(buf, SHA1::bin_size + 8);
-		if(SHA.hex() == hash){
-			return good;
-		}else{
-			return bad;
-		}
-	}else{
-		std::pair<boost::uint64_t, unsigned> info;
-		boost::uint64_t parent;
-		if(!block_info(block_num, info, parent)){
-			//invalid block sent to block_info
-			LOGGER; exit(1);
-		}
-		//read children
-		if(!database::pool::get()->blob_read(blob, buf, info.second, info.first)){
-			return io_error;
-		}
-		//create hash for children
-		SHA1 SHA(buf, info.second);
-		//verify parent hash is a hash of the children
-		if(!database::pool::get()->blob_read(blob, buf, SHA1::bin_size, parent)){
-			return io_error;
-		}
-		if(std::memcmp(buf, SHA.bin(), SHA1::bin_size) == 0){
-			return good;
-		}else{
-			return bad;
-		}
-	}
 }
 
 hash_tree::status hash_tree::check_file_block(const boost::uint64_t file_block_num,
@@ -195,6 +161,42 @@ hash_tree::status hash_tree::check_file_block(const boost::uint64_t file_block_n
 		return good;
 	}else{
 		return bad;
+	}
+}
+
+hash_tree::status hash_tree::check_tree_block(const boost::uint64_t block_num,
+	const network::buffer & buf)
+{
+	if(block_num == 0){
+		//special requirements to check root_hash, see documentation for root_hash
+		assert(buf.size() == SHA1::bin_size);
+		char special[SHA1::bin_size + 8];
+		std::memcpy(special, convert::encode(file_size).data(), 8);
+		std::memcpy(special + 8, const_cast<network::buffer &>(buf).data(), SHA1::bin_size);
+		SHA1 SHA(special, SHA1::bin_size + 8);
+		return SHA.hex() == hash ? good : bad;
+	}else{
+		std::pair<boost::uint64_t, unsigned> info;
+		boost::uint64_t parent;
+		if(!block_info(block_num, info, parent)){
+			//invalid block
+			LOGGER << "invalid block";
+			exit(1);
+		}
+		assert(buf.size() == info.second);
+		//create hash for children
+		SHA1 SHA(reinterpret_cast<char *>(const_cast<network::buffer &>(buf).data()),
+			buf.size());
+		//verify parent hash is a hash of the children
+		char parent_hash[SHA1::bin_size];
+		if(!database::pool::get()->blob_read(blob, parent_hash, SHA1::bin_size, parent)){
+			return io_error;
+		}
+		if(std::memcmp(parent_hash, SHA.bin(), SHA1::bin_size) == 0){
+			return good;
+		}else{
+			return bad;
+		}
 	}
 }
 

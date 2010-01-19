@@ -38,8 +38,5 @@ public:
 	unsigned block_size(const boost::uint64_t block_num);
 	bool read_block(const boost::uint64_t block_num, network::buffer & buf);
 	bool write_block(const boost::uint64_t block_num, const network::buffer & buf);
-
-private:
-
 };
 #endif

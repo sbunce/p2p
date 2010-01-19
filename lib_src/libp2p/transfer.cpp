@@ -38,7 +38,62 @@ transfer::transfer(const file_info & FI):
 
 void transfer::check()
 {
+	network::buffer buf;
+	buf.reserve(protocol::file_block_size);
 
+	//only check tree blocks with good parents
+	Hash_Tree_Block.approve_block(0);
+	for(boost::uint64_t block_num=0; block_num<Hash_Tree.tree_block_count; ++block_num){
+		if(!Hash_Tree_Block.is_approved(block_num)){
+			continue;
+		}
+		buf.clear();
+		hash_tree::status status = Hash_Tree.read_block(block_num, buf);
+		if(status == hash_tree::io_error){
+			LOGGER << "stub: handle io_error when hash checking";
+			exit(1);
+		}
+		status = Hash_Tree.check_block(block_num, buf);
+		if(status == hash_tree::good){
+			bytes_received += buf.size();
+			Hash_Tree_Block.add_block_local(block_num);
+			std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool>
+				pair = Hash_Tree.tree_block_children(block_num);
+			if(pair.second){
+				//approve child hash tree blocks
+				for(boost::uint64_t x=pair.first.first; x<pair.first.second; ++x){
+					Hash_Tree_Block.approve_block(x);
+				}
+			}
+			pair = Hash_Tree.file_block_children(block_num);
+			if(pair.second){
+				//approve file blocks that are children of bottom tree row
+				for(boost::uint64_t x=pair.first.first; x<pair.first.second; ++x){
+					File_Block.approve_block(x);
+				}
+			}
+		}else if(status == hash_tree::io_error){
+			LOGGER << "stub: handle io_error when hash checking";
+			exit(1);
+		}
+	}
+
+	//only check file blocks with good hash tree parents
+	for(boost::uint64_t block_num=0; block_num<Hash_Tree.file_block_count; ++block_num){
+		if(!File_Block.is_approved(block_num)){
+			continue;
+		}
+		buf.clear();
+		File.read_block(block_num, buf);
+		hash_tree::status status = Hash_Tree.check_file_block(block_num, buf);
+		if(status == hash_tree::good){
+			bytes_received += buf.size();
+			File_Block.add_block_local(block_num);
+		}else if(status == hash_tree::io_error){
+			LOGGER << "stub: handle io_error when hash checking";
+			exit(1);
+		}
+	}
 }
 
 bool transfer::complete()

@@ -16,7 +16,7 @@ class speed_calculator : private boost::noncopyable
 {
 public:
 	//must be >= 1
-	static const unsigned AVERAGE = 4;
+	static const unsigned AVERAGE = 8;
 
 	speed_calculator():
 		average_speed(0)

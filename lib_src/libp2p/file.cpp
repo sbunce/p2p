@@ -41,7 +41,6 @@ bool file::read_block(const boost::uint64_t block_num, network::buffer & buf)
 			buf.tail_resize(size);
 			return true;
 		}else{
-			LOGGER << "failed to write file";
 			buf.tail_reserve(0);
 			return false;
 		}

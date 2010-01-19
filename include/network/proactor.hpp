@@ -24,7 +24,7 @@ class proactor : private boost::noncopyable
 	Timeout (seconds) before idle sockets disconnected. This has to be quite high
 	otherwise client that download very slowly will be erroneously disconnected.
 	*/
-	static const unsigned idle_timeout = 180;
+	static const unsigned idle_timeout = 600;
 
 	/*
 	Maximum number of times per second select will timeout. This is needed
