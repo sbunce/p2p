@@ -11,7 +11,9 @@ block_request::block_request(const boost::uint64_t block_count_in):
 void block_request::add_block_local(const boost::uint64_t block)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	assert(have.empty());
 	if(!local.empty()){
+		assert(local[block] == false);
 		local[block] = true;
 		if(local.all_set()){
 			local.clear();
@@ -22,8 +24,19 @@ void block_request::add_block_local(const boost::uint64_t block)
 void block_request::add_block_local(const int connection_ID, const boost::uint64_t block)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	add_block_local(block);
+	if(!local.empty()){
+		assert(local[block] == false);
+		local[block] = true;
+		if(local.all_set()){
+			local.clear();
+		}
+	}
 	request.erase(block);
+	for(std::map<int, std::queue<boost::uint64_t> >::iterator iter_cur = have.begin(),
+		iter_end = have.end(); iter_cur != iter_end; ++iter_cur)
+	{
+		iter_cur->second.push(block);
+	}
 }
 
 void block_request::add_block_local_all()
@@ -261,4 +274,31 @@ unsigned block_request::remote_host_count()
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	return remote.size();
+}
+
+bool block_request::send_have(const int connection_ID, boost::uint64_t & block)
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	std::map<int, std::queue<boost::uint64_t> >::iterator iter = have.find(connection_ID);
+	assert(iter != have.end());
+	if(iter->second.empty()){
+		return false;
+	}else{
+		block = iter->second.front();
+		iter->second.pop();
+		return true;
+	}
+}
+
+void block_request::subscribe(const int connection_ID, bit_field & BF)
+{
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	if(local.empty()){
+		BF.clear();
+	}else{
+		std::pair<std::map<int, std::queue<boost::uint64_t> >::iterator, bool>
+			ret = have.insert(std::make_pair(connection_ID, std::queue<boost::uint64_t>()));
+		assert(ret.second);
+		BF = local;
+	}
 }

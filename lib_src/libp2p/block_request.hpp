@@ -33,6 +33,7 @@ public:
 		Add block. Used when next_request was not involved in getting a block.
 		This function is used during hash check to mark what blocks we already
 		have.
+		Precondition: No hosts must be subscribed.
 	add_block_local (two parameters):
 		Add block from specific host.
 	add_block_local_all:
@@ -68,6 +69,13 @@ public:
 	request_zero:
 		Function which requests block 0. This is needed for the hash tree
 		block_request when making a slot request.
+	send_have:
+		Returns true and sets block if have_* message needs to be sent. Returns
+		false if no have messages need to be sent.
+	subscribe:
+		Sets BF to our current local bit_field and subscribes the host to changes.
+		If BF is empty after return then our local bitfield is complete and the
+		connection will not be subscribed.
 	*/
 	void add_block_local(const boost::uint64_t block);
 	void add_block_local(const int connection_ID, const boost::uint64_t block);
@@ -84,6 +92,8 @@ public:
 	bool next_request(const int connection_ID, boost::uint64_t & block);
 	void remove_host(const int connection_ID);
 	unsigned remote_host_count();
+	bool send_have(const int connection_ID, boost::uint64_t & block);
+	void subscribe(const int connection_ID, bit_field & BF);
 
 private:
 	//locks access to all data members
@@ -118,6 +128,16 @@ private:
 
 	//connection_ID associated with bitset representing blocks remote host has
 	std::map<int, bit_field> remote;
+
+	/*
+	When we subscribe a host we add a element to this container. Whenever we add
+	a new local block we add the block number to each element in this container.
+	These are the numbers put in have_* messages. This container effectively
+	contains diff's between the local bit_field when someone subscribed vs the
+	local bit_field as it currently exists.
+	std::map<connection_ID, std::queue<block> >
+	*/
+	std::map<int, std::queue<boost::uint64_t> > have;
 
 	/*
 	find_next_rarest:
