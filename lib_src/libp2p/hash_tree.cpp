@@ -133,7 +133,7 @@ hash_tree::status hash_tree::check()
 		if(Status == bad){
 			return io_error;
 		}
-		Status = check_block(block_num, buf);
+		Status = check_tree_block(block_num, buf);
 		if(Status == bad){
 			return bad;
 		}else if(Status == io_error){

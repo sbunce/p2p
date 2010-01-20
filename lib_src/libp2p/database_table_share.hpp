@@ -63,6 +63,8 @@ public:
 		Removes record for file with specified path.
 	resume:
 		Returns all info in the share table.
+	set_state:
+		Set the state of the file.
 	update_file_size:
 		Update the file size for record that has specified path. This is used when
 		we start a download and receive the file size in the slot message.
@@ -74,6 +76,8 @@ public:
 	static void remove(const std::string & path,
 		database::pool::proxy DB = database::pool::proxy());
 	static std::deque<info> resume(database::pool::proxy DB = database::pool::proxy());
+	static void set_state(const std::string & hash, const state file_state,
+		database::pool::proxy DB = database::pool::proxy());
 	static void update_file_size(const std::string & path, const boost::uint64_t file_size,
 		database::pool::proxy DB = database::pool::proxy());
 

@@ -29,6 +29,7 @@ class p2p_real : private boost::noncopyable
 {
 	//set up all directories and database before anything else
 	database::init init;
+
 public:
 	p2p_real();
 	~p2p_real();

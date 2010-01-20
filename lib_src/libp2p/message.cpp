@@ -54,7 +54,7 @@ void message::composite::add(boost::shared_ptr<base> M)
 
 bool message::composite::dummy(boost::shared_ptr<base> M)
 {
-	LOGGER << "improperly used composite message";
+	LOGGER << "programmer error: improperly used composite message";
 	exit(1);
 }
 

@@ -88,6 +88,14 @@ std::deque<database::table::share::info> database::table::share::resume(
 	return info_container;
 }
 
+void database::table::share::set_state(const std::string & hash,
+	const state file_state, database::pool::proxy DB)
+{
+	std::stringstream ss;
+	ss << "UPDATE share SET state = " << file_state << " WHERE hash = '" << hash << "'";
+	DB->query(ss.str());
+}
+
 void database::table::share::update_file_size(const std::string & path,
 	const boost::uint64_t file_size, database::pool::proxy DB)
 {

@@ -44,6 +44,7 @@ void transfer::check()
 	//only check tree blocks with good parents
 	Hash_Tree_Block.approve_block(0);
 	for(boost::uint64_t block_num=0; block_num<Hash_Tree.tree_block_count; ++block_num){
+		boost::this_thread::interruption_point();
 		if(!Hash_Tree_Block.is_approved(block_num)){
 			continue;
 		}
@@ -53,7 +54,7 @@ void transfer::check()
 			LOGGER << "stub: handle io_error when hash checking";
 			exit(1);
 		}
-		status = Hash_Tree.check_block(block_num, buf);
+		status = Hash_Tree.check_tree_block(block_num, buf);
 		if(status == hash_tree::good){
 			bytes_received += buf.size();
 			Hash_Tree_Block.add_block_local(block_num);
@@ -80,6 +81,7 @@ void transfer::check()
 
 	//only check file blocks with good hash tree parents
 	for(boost::uint64_t block_num=0; block_num<Hash_Tree.file_block_count; ++block_num){
+		boost::this_thread::interruption_point();
 		if(!File_Block.is_approved(block_num)){
 			continue;
 		}
@@ -135,13 +137,16 @@ bool transfer::get_status(unsigned char & byte)
 		status = 0;
 	}else if(slot_iter->Hash_Tree.tree_complete() && !slot_iter->Hash_Tree.file_complete()){
 		status = 1;
-LOGGER << "stub: add support for incomplete"; exit(1);
+		LOGGER << "stub: add support for incomplete";
+		exit(1);
 	}else if(!slot_iter->Hash_Tree.tree_complete() && slot_iter->Hash_Tree.file_complete()){
 		status = 2;
-LOGGER << "stub: add support for incomplete"; exit(1);
+		LOGGER << "stub: add support for incomplete";
+		exit(1);
 	}else if(!slot_iter->Hash_Tree.tree_complete() && !slot_iter->Hash_Tree.file_complete()){
 		status = 3;
-LOGGER << "stub: add support for incomplete"; exit(1);
+		LOGGER << "stub: add support for incomplete";
+		exit(1);
 	}
 	*/
 }
@@ -263,6 +268,9 @@ transfer::status transfer::write_file_block(const int connection_ID,
 		if(File.write_block(block_num, buf)){
 			File_Block.add_block_local(connection_ID, block_num);
 			bytes_received += buf.size();
+			if(File_Block.complete()){
+				database::table::share::set_state(Hash_Tree.hash, database::table::share::complete);
+			}
 			return good;
 		}else{
 			//failed to write block
@@ -300,6 +308,9 @@ transfer::status transfer::write_tree_block(const int connection_ID,
 			for(boost::uint64_t x=pair.first.first; x<pair.first.second; ++x){
 				File_Block.approve_block(x);
 			}
+		}
+		if(Hash_Tree_Block.complete()){
+			database::table::hash::set_state(Hash_Tree.hash, database::table::hash::complete);
 		}
 		return good;
 	}else if(status == hash_tree::bad){
