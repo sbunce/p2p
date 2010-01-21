@@ -7,6 +7,47 @@ bool message::base::encrypt()
 }
 //END base
 
+//BEGIN block
+message::block::block(
+	boost::function<bool (boost::shared_ptr<base>)> func_in,
+	const boost::uint64_t block_size_in,
+	boost::shared_ptr<network::speed_calculator> Download_Speed
+):
+	block_size(block_size_in),
+	bytes_seen(1)
+{
+	func = func_in;
+	Speed_Calculator = Download_Speed;
+}
+
+message::block::block(network::buffer & block,
+	boost::shared_ptr<network::speed_calculator> Upload_Speed)
+{
+	buf.append(protocol::block).append(block);
+	Speed_Calculator = Upload_Speed;
+}
+
+bool message::block::expects(network::buffer & recv_buf)
+{
+	return recv_buf[0] == protocol::block;
+}
+
+bool message::block::recv(network::connection_info & CI)
+{
+	assert(expects(CI.recv_buf));
+//DEBUG, something wrong with this speed calculation
+	if(CI.recv_buf.size() >= protocol::block_size(block_size)){
+		Speed_Calculator->add(block_size - bytes_seen);
+		buf.append(CI.recv_buf.data(), protocol::block_size(block_size));
+		CI.recv_buf.erase(0, protocol::block_size(block_size));
+		return true;
+	}
+	Speed_Calculator->add(CI.recv_buf.size() - bytes_seen);
+	bytes_seen = CI.recv_buf.size();
+	return false;
+}
+//END block
+
 //BEGIN close_slot
 message::close_slot::close_slot(boost::function<bool (boost::shared_ptr<base>)> func_in)
 {
@@ -92,45 +133,6 @@ bool message::composite::recv(network::connection_info & CI)
 }
 //END composite
 
-//BEGIN block
-message::block::block(
-	boost::function<bool (boost::shared_ptr<base>)> func_in,
-	const boost::uint64_t block_size_in,
-	boost::shared_ptr<network::speed_calculator> Download_Speed
-):
-	block_size(block_size_in),
-	bytes_seen(0)
-{
-	func = func_in;
-	Speed_Calculator = Download_Speed;
-}
-
-message::block::block(network::buffer & block,
-	boost::shared_ptr<network::speed_calculator> Upload_Speed)
-{
-	buf.append(protocol::block).append(block);
-	Speed_Calculator = Upload_Speed;
-}
-
-bool message::block::expects(network::buffer & recv_buf)
-{
-	return recv_buf[0] == protocol::block;
-}
-
-bool message::block::recv(network::connection_info & CI)
-{
-	assert(expects(CI.recv_buf));
-	Speed_Calculator->add(CI.recv_buf.size() - bytes_seen);
-	bytes_seen = CI.recv_buf.size();
-	if(CI.recv_buf.size() >= protocol::block_size(block_size)){
-		buf.append(CI.recv_buf.data(), protocol::block_size(block_size));
-		CI.recv_buf.erase(0, protocol::block_size(block_size));
-		return true;
-	}
-	return false;
-}
-//END block
-
 //BEGIN error
 message::error::error(boost::function<bool (boost::shared_ptr<base>)> func_in)
 {
@@ -212,9 +214,8 @@ bool message::have_file_block::recv(network::connection_info & CI)
 		buf.append(CI.recv_buf.data(), expected_size);
 		CI.recv_buf.erase(0, expected_size);
 		return true;
-	}else{
-		return false;
 	}
+	return false;
 }
 //END have_file_block
 
@@ -271,9 +272,8 @@ bool message::have_hash_tree_block::recv(network::connection_info & CI)
 		buf.append(CI.recv_buf.data(), expected_size);
 		CI.recv_buf.erase(0, expected_size);
 		return true;
-	}else{
-		return false;
 	}
+	return false;
 }
 //END have_hash_tree_block
 

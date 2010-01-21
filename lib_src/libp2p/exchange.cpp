@@ -46,7 +46,7 @@ void exchange::expect_anytime_erase(network::buffer buf)
 		if((*iter_cur)->expects(buf)){
 			/*
 			Schedule message to be erased. We don't erase element here because it
-			might invalidate iterator in recv loop in proactor_recv_call_back.
+			might invalidate iterator in recv loop in exchange::recv_call_back.
 			*/
 			(*iter_cur)->func.clear();
 		}
