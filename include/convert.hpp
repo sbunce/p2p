@@ -19,7 +19,7 @@ namespace convert {
 
 //returns num encoded in big-endian
 template<class T>
-static std::string encode(const T & num)
+static std::string encode(const T num)
 {
 	union{
 		T n;
@@ -56,7 +56,7 @@ static std::string encode_VLI(const boost::uint64_t num,
 
 //decode number encoded in big-endian
 template<class T>
-static T decode(const std::string & encoded)
+static T decode(const std::string encoded)
 {
 	assert(encoded.size() == sizeof(T));
 	union{
@@ -118,7 +118,6 @@ static std::string hex_to_bin(const char * hex, const int size)
 			bin.clear();
 			return bin;
 		}
-
 		//convert
 		char ch = (hex[x] >= 'A' ? hex[x] - 'A' + 10 : hex[x] - '0') << 4;
 		bin += ch + (hex[x+1] >= 'A' ? hex[x+1] - 'A' + 10 : hex[x+1] - '0');

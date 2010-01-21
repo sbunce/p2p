@@ -3,10 +3,14 @@
 
 //custom
 #include "encryption.hpp"
+#include "file.hpp"
+#include "hash_tree.hpp"
 #include "protocol.hpp"
 
 //include
+#include <bit_field.hpp>
 #include <boost/shared_ptr.hpp>
+#include <convert.hpp>
 #include <network/network.hpp>
 
 //standard
@@ -100,6 +104,42 @@ public:
 	virtual bool recv(network::connection_info & CI);
 };
 
+class have_file_block : public base
+{
+public:
+	//ctor to recv message
+	have_file_block(boost::function<bool (boost::shared_ptr<base>)> func_in,
+		const unsigned char slot_num_in, const boost::uint64_t file_block_count_in);
+	//ctor to send message
+	have_file_block(const unsigned char slot_num_in,
+		const boost::uint64_t block_num, const boost::uint64_t file_block_count_in);
+	virtual bool expects(network::buffer & recv_buf);
+	virtual bool recv(network::connection_info & CI);
+private:
+	const unsigned char slot_num;
+
+	//size (bytes) of block number VLI, only used for recv
+	const boost::uint64_t file_block_count;
+};
+
+class have_hash_tree_block : public base
+{
+public:
+	//ctor to recv message
+	have_hash_tree_block(boost::function<bool (boost::shared_ptr<base>)> func_in,
+		const unsigned char slot_num_in, const boost::uint64_t tree_block_count_in);
+	//ctor to send message
+	have_hash_tree_block(const unsigned char slot_num_in,
+		const boost::uint64_t block_num, const boost::uint64_t tree_block_count_in);
+	virtual bool expects(network::buffer & recv_buf);
+	virtual bool recv(network::connection_info & CI);
+private:
+	const unsigned char slot_num;
+
+	//size (bytes) of block number VLI, only used for recv
+	const boost::uint64_t tree_block_count;
+};
+
 class initial : public base
 {
 public:
@@ -187,8 +227,9 @@ public:
 	slot(boost::function<bool (boost::shared_ptr<base>)> func_in,
 		const std::string & hash_in);
 	//send ctor
-	slot(const unsigned char slot_num, unsigned char status,
-		const boost::uint64_t file_size, const std::string & root_hash);
+	slot(const unsigned char slot_num, const boost::uint64_t file_size,
+		const std::string & root_hash, const bit_field & tree_BF,
+		const bit_field & file_BF);
 	virtual bool expects(network::buffer & recv_buf);
 	virtual bool recv(network::connection_info & CI);
 private:

@@ -108,7 +108,8 @@ void exchange::recv_call_back(network::connection_info & CI)
 			iter_cur = Expect_Anytime.erase(iter_cur);
 		}
 	}
-	LOGGER << "unrecognized message";
+	LOGGER << "unrecognized message, recv_buf.size(): " << CI.recv_buf.size()
+		<< " recv_buf[0]: " << (int)CI.recv_buf[0];
 	database::table::blacklist::add(CI.IP);
 	end:
 	//END loop

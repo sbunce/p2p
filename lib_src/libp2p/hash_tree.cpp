@@ -404,6 +404,12 @@ std::deque<boost::uint64_t> hash_tree::file_size_to_row(const boost::uint64_t fi
 	return row;
 }
 
+boost::uint64_t hash_tree::calc_tree_block_count(boost::uint64_t file_size)
+{
+	std::deque<boost::uint64_t> row = file_size_to_row(file_size);
+	return row_to_tree_block_count(row);
+}
+
 boost::uint64_t hash_tree::file_size_to_tree_size(const boost::uint64_t file_size)
 {
 	if(file_size == 0){

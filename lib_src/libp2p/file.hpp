@@ -19,10 +19,10 @@ class file : private boost::noncopyable
 public:
 	file(const file_info & FI);
 
-	const std::string path;                //full path to downloading file
-	const boost::uint64_t file_size;       //complete size of downloading file
-	const boost::uint64_t block_count;     //number of file blocks
-	const boost::uint64_t last_block_size; //size of last block in file
+	const std::string path;                 //full path to downloading file
+	const boost::uint64_t file_size;        //complete size of downloading file
+	const boost::uint64_t file_block_count; //number of file blocks
+	const boost::uint64_t last_block_size;  //size of last block in file
 
 	/*
 	block_size:
@@ -38,5 +38,12 @@ public:
 	unsigned block_size(const boost::uint64_t block_num);
 	bool read_block(const boost::uint64_t block_num, network::buffer & buf);
 	bool write_block(const boost::uint64_t block_num, const network::buffer & buf);
+
+	/*
+	calc_file_block_count:
+		Given the file size, returns the file block count. Used to get
+		file_block_count when file not instanted.
+	*/
+	static boost::uint64_t calc_file_block_count(boost::uint64_t file_size);
 };
 #endif

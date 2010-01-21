@@ -77,6 +77,10 @@ private:
 		Call back for receiving close slot messages.
 	recv_file_block:
 		Call back for receiving a file block.
+	recv_have_file_block:
+		Called when a have_file_block_message is received.
+	recv_have_hash_tree_block:
+		Called when a have_hash_tree_block message is received.
 	recv_hash_tree_block:
 		Call back for receiving a hash tree block.
 	recv_request_hash_tree_block:
@@ -97,6 +101,8 @@ private:
 	bool recv_close_slot(boost::shared_ptr<message::base> M);
 	bool recv_file_block(boost::shared_ptr<message::base> M,
 		const unsigned slot_num, const boost::uint64_t block_num);
+	bool recv_have_file_block(boost::shared_ptr<message::base> M);
+	bool recv_have_hash_tree_block(boost::shared_ptr<message::base> M);
 	bool recv_hash_tree_block(boost::shared_ptr<message::base> M,
 		const unsigned slot_num, const boost::uint64_t block_num);
 	bool recv_request_hash_tree_block(boost::shared_ptr<message::base> M,

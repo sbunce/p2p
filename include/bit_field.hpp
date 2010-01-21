@@ -13,7 +13,7 @@ class bit_field
 {
 public:
 	bit_field(
-		const boost::uint64_t groups_in,
+		const boost::uint64_t groups_in = 0,
 		const unsigned group_size_in = 1
 	):
 		groups(groups_in),
@@ -43,6 +43,17 @@ public:
 	}
 
 	static const boost::uint64_t npos = -1;
+
+	//returns size (bytes) of bit_field with specified groups and group_size 
+	static boost::uint64_t size_bytes(boost::uint64_t groups, boost::uint64_t group_size)
+	{
+		boost::uint64_t tmp = groups * group_size;
+		if(tmp % 8 == 0){
+			return tmp / 8;
+		}else{
+			return tmp / 8 + 1;
+		}
+	}
 
 	/*
 	A reference can't be returned to a few bits so this object is returned
@@ -165,6 +176,20 @@ public:
 		return true;
 	}
 
+	//return bit_field as big-endian string
+	std::string get_buf() const
+	{
+		if(vec.empty()){
+			return std::string();
+		}
+		std::string tmp;
+		tmp.resize(vec.size());
+		for(int x=0, y=vec.size()-1; x<vec.size(); ++x, --y){
+			tmp[x] = vec[y];
+		}
+		return tmp;
+	}
+
 	//sets the size of the bit_field to zero
 	void clear()
 	{
@@ -176,12 +201,6 @@ public:
 	bool empty() const
 	{
 		return groups == 0;
-	}
-
-	//returns const reference to internal buffer
-	const std::vector<unsigned char> & internal_buffer() const
-	{
-		return vec;
 	}
 
 	//return true if all bits set to zero
@@ -225,6 +244,21 @@ public:
 		}
 	}
 
+	//set internal buffer from big-endian encoded buf
+	void set_buf(unsigned char * buf, const unsigned size,
+		const boost::uint64_t groups_in, const boost::uint64_t group_size_in)
+	{
+		groups = groups_in;
+		group_size = group_size_in;
+		max_group_value = std::pow(static_cast<const double>(2),
+			static_cast<const int>(group_size)) - 1;
+		assert(size_bytes(groups, group_size) == size);
+		vec.resize(size);
+		for(boost::uint64_t x=0, y=vec.size()-1; x<vec.size(); ++x, --y){
+			vec[x] = buf[y];
+		}
+	}
+
 	//returns the number of bitgroups in the bitgroup_set
 	unsigned size() const
 	{
@@ -233,7 +267,7 @@ public:
 
 private:
 	boost::uint64_t groups;    //how many bit groups
-	const unsigned group_size; //how many bits in each group
+	unsigned group_size; //how many bits in each group
 
 	/*
 	The bitgroups are stored here.

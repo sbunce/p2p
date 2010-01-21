@@ -159,6 +159,124 @@ bool message::error::recv(network::connection_info & CI)
 }
 //END error
 
+//BEGIN have_file_block
+message::have_file_block::have_file_block(
+	boost::function<bool (boost::shared_ptr<base>)> func_in,
+	const unsigned char slot_num_in,
+	const boost::uint64_t file_block_count_in
+):
+	slot_num(slot_num_in),
+	file_block_count(file_block_count_in)
+{
+	func = func_in;
+}
+
+message::have_file_block::have_file_block(
+	const unsigned char slot_num_in,
+	const boost::uint64_t block_num,
+	const boost::uint64_t file_block_count_in
+):
+	slot_num(slot_num_in),
+	file_block_count(file_block_count_in)
+{
+
+}
+
+bool message::have_file_block::expects(network::buffer & recv_buf)
+{
+	if(recv_buf[0] != protocol::have_file_block){
+		return false;
+	}
+	if(recv_buf.size() == 1){
+		/*
+		We say we expect this message even though we don't know it's slot number.
+		We may return false later when we see that it's not for the correct slot.
+		*/
+		return true;
+	}else{
+		//recv_buf.size() >= 2
+		return recv_buf[1] == slot_num;
+	}
+}
+
+bool message::have_file_block::recv(network::connection_info & CI)
+{
+	assert(expects(CI.recv_buf));
+	if(CI.recv_buf.size() == 1){
+		//see documentation in expects() for recv_buf.size() == 1
+		return false;
+	}
+	unsigned expected_size = protocol::have_file_block_size(
+		convert::VLI_size(file_block_count));
+	if(CI.recv_buf.size() >= expected_size){
+		buf.append(CI.recv_buf.data(), expected_size);
+		CI.recv_buf.erase(0, expected_size);
+		return true;
+	}else{
+		return false;
+	}
+}
+//END have_file_block
+
+//BEGIN have_hash_tree_block
+message::have_hash_tree_block::have_hash_tree_block(
+	boost::function<bool (boost::shared_ptr<base>)> func_in,
+	const unsigned char slot_num_in,
+	const boost::uint64_t tree_block_count_in
+):
+	slot_num(slot_num_in),
+	tree_block_count(tree_block_count_in)
+{
+	func = func_in;
+}
+
+message::have_hash_tree_block::have_hash_tree_block(
+	const unsigned char slot_num_in,
+	const boost::uint64_t block_num,
+	const boost::uint64_t tree_block_count_in
+):
+	slot_num(slot_num_in),
+	tree_block_count(tree_block_count_in)
+{
+
+}
+
+bool message::have_hash_tree_block::expects(network::buffer & recv_buf)
+{
+	if(recv_buf[0] != protocol::have_hash_tree_block){
+		return false;
+	}
+	if(recv_buf.size() == 1){
+		/*
+		We say we expect this message even though we don't know it's slot number.
+		We may return false later when we see that it's not for the correct slot.
+		*/
+		return true;
+	}else{
+		//recv_buf.size() >= 2
+		return recv_buf[1] == slot_num;
+	}
+}
+
+bool message::have_hash_tree_block::recv(network::connection_info & CI)
+{
+	assert(expects(CI.recv_buf));
+	if(CI.recv_buf.size() == 1){
+		//see documentation in expects() for recv_buf.size() == 1
+		return false;
+	}
+	unsigned expected_size = protocol::have_hash_tree_block_size(
+		convert::VLI_size(tree_block_count));
+	if(CI.recv_buf.size() >= expected_size){
+		buf.append(CI.recv_buf.data(), expected_size);
+		CI.recv_buf.erase(0, expected_size);
+		return true;
+	}else{
+		return false;
+	}
+}
+//END have_hash_tree_block
+
 //BEGIN initial
 message::initial::initial(boost::function<bool (boost::shared_ptr<base>)> func_in)
 {
@@ -400,14 +518,31 @@ message::slot::slot(
 	func = func_in;
 }
 
-message::slot::slot(const unsigned char slot_num, unsigned char status,
-	const boost::uint64_t file_size, const std::string & root_hash)
+message::slot::slot(const unsigned char slot_num,
+	const boost::uint64_t file_size, const std::string & root_hash,
+	const bit_field & tree_BF, const bit_field & file_BF)
 {
+	unsigned char status;
+	if(tree_BF.empty() && file_BF.empty()){
+		status = 0;
+	}else if(tree_BF.empty() && !file_BF.empty()){
+		status = 1;
+	}else if(!tree_BF.empty() && file_BF.empty()){
+		status = 2;
+	}else if(!tree_BF.empty() && !file_BF.empty()){
+		status = 3;
+	}
 	buf.append(protocol::slot)
 		.append(slot_num)
 		.append(status)
 		.append(convert::encode(file_size))
 		.append(convert::hex_to_bin(root_hash));
+	if(!tree_BF.empty()){
+		buf.append(tree_BF.get_buf());
+	}
+	if(!file_BF.empty()){
+		buf.append(file_BF.get_buf());
+	}
 }
 
 bool message::slot::expects(network::buffer & recv_buf)
@@ -419,7 +554,7 @@ bool message::slot::recv(network::connection_info & CI)
 {
 	assert(expects(CI.recv_buf));
 	if(CI.recv_buf.size() < protocol::slot_size(0, 0)){
-		//we do not have the minimum size slot message
+		//do not have the minimum size slot message
 		return false;
 	}
 	if(!checked){
@@ -434,14 +569,45 @@ bool message::slot::recv(network::connection_info & CI)
 			return false;
 		}
 	}
-	if(CI.recv_buf[2] == static_cast<unsigned char>(0)){
-		//no bitfields to follow
+	boost::uint64_t file_size = convert::decode<boost::uint64_t>(
+		std::string(reinterpret_cast<char *>(CI.recv_buf.data()) + 3, 8));
+	if(CI.recv_buf[2] == 0){
+		//no bit_field
 		buf.append(CI.recv_buf.data(), protocol::slot_size(0, 0));
 		CI.recv_buf.erase(0, protocol::slot_size(0, 0));
-		return true;
+	}else if(CI.recv_buf[2] == 1){
+		//file bit_field
+		boost::uint64_t file_BF_size = bit_field::size_bytes(
+			file::calc_file_block_count(file_size), 1);
+		if(CI.recv_buf.size() < protocol::slot_size(0, file_BF_size)){
+			return false;
+		}
+		buf.append(CI.recv_buf.data(), protocol::slot_size(0, file_BF_size));
+		CI.recv_buf.erase(0, protocol::slot_size(0, file_BF_size));
+	}else if(CI.recv_buf[2] == 2){
+		//tree bit_field
+		boost::uint64_t tree_BF_size = bit_field::size_bytes(
+			hash_tree::calc_tree_block_count(file_size), 1);
+		if(CI.recv_buf.size() < protocol::slot_size(tree_BF_size, 0)){
+			return false;
+		}
+		buf.append(CI.recv_buf.data(), protocol::slot_size(tree_BF_size, 0));
+		CI.recv_buf.erase(0, protocol::slot_size(tree_BF_size, 0));
+	}else if(CI.recv_buf[2] == 3){ //good
+		//tree and file bit_field
+		boost::uint64_t tree_BF_size = bit_field::size_bytes(
+			hash_tree::calc_tree_block_count(file_size), 1);
+		boost::uint64_t file_BF_size = bit_field::size_bytes(
+			file::calc_file_block_count(file_size), 1);
+		if(CI.recv_buf.size() < protocol::slot_size(tree_BF_size, file_BF_size)){
+			return false;
+		}
+		buf.append(CI.recv_buf.data(), protocol::slot_size(tree_BF_size, file_BF_size));
+		CI.recv_buf.erase(0, protocol::slot_size(tree_BF_size, file_BF_size));
 	}else{
-		LOGGER << "stub: need to process slot message where k != 0";
-		exit(1);
+		LOGGER << "invalid status byte from " << CI.IP;
+		database::table::blacklist::add(CI.IP);
+		return false;
 	}
 	return true;
 }

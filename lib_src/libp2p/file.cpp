@@ -5,7 +5,7 @@ file::file(
 ):
 	path(FI.path),
 	file_size(FI.file_size),
-	block_count(
+	file_block_count(
 		file_size % protocol::file_block_size == 0 ?
 			file_size / protocol::file_block_size :
 			file_size / protocol::file_block_size + 1
@@ -21,12 +21,21 @@ file::file(
 
 unsigned file::block_size(const boost::uint64_t block_num)
 {
-	assert(block_num < block_count);
-	if(block_num == block_count - 1){
+	assert(block_num < file_block_count);
+	if(block_num == file_block_count - 1){
 		return last_block_size;
 	}else{
 		return protocol::file_block_size;
 	}
+}
+
+boost::uint64_t file::calc_file_block_count(boost::uint64_t file_size)
+{
+	if(file_size % protocol::file_block_size == 0){
+		return file_size / protocol::file_block_size;
+	}else{
+		return file_size / protocol::file_block_size + 1;
+	}		
 }
 
 bool file::read_block(const boost::uint64_t block_num, network::buffer & buf)

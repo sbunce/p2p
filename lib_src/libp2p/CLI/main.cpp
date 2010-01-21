@@ -36,10 +36,6 @@ int main(int argc, char ** argv)
 	if(CLI_Args.string("--test", str)){
 		std::string port = str.substr(0, str.find_first_of(':'));
 		std::string program_directory = str.substr(str.find_first_of(':')+1);
-		if(!program_directory.empty() && program_directory[program_directory.size()-1] != '/'){
-			//make sure path ends with slash
-			program_directory += '/';
-		}
 		p2p::test(port, program_directory);
 	}
 

@@ -57,6 +57,9 @@ public:
 		Sets block request to indicate that we have all blocks.
 	have_block:
 		Returns true if we have specified block.
+	next_have:
+		Returns true and sets block if have_* message needs to be sent. Returns
+		false if no have messages need to be sent.
 	next_request:
 		Returns true and sets block to next block to request. Or returns false if
 		host not yet added or no blocks to request from host.
@@ -69,9 +72,7 @@ public:
 	request_zero:
 		Function which requests block 0. This is needed for the hash tree
 		block_request when making a slot request.
-	send_have:
-		Returns true and sets block if have_* message needs to be sent. Returns
-		false if no have messages need to be sent.
+
 	subscribe:
 		Sets BF to our current local bit_field and subscribes the host to changes.
 		If BF is empty after return then our local bitfield is complete and the
@@ -89,10 +90,10 @@ public:
 	bool complete();
 	bool have_block(const boost::uint64_t block);
 	bool is_approved(const boost::uint64_t block);
+	bool next_have(const int connection_ID, boost::uint64_t & block);
 	bool next_request(const int connection_ID, boost::uint64_t & block);
 	void remove_host(const int connection_ID);
 	unsigned remote_host_count();
-	bool send_have(const int connection_ID, boost::uint64_t & block);
 	void subscribe(const int connection_ID, bit_field & BF);
 
 private:

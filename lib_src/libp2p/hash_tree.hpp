@@ -116,6 +116,13 @@ public:
 	status write_block(const boost::uint64_t block_num,
 		const network::buffer & buf);
 
+	/*
+	file_size_to_tree_block_count:
+		Given the file size, returns the tree block count. Used to get
+		tree_block_count when hash_tree not instantiated.
+	*/
+	static boost::uint64_t calc_tree_block_count(boost::uint64_t file_size);
+
 private:
 	/*
 	block_info (with parent paramter):

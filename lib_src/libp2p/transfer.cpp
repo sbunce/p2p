@@ -128,27 +128,21 @@ const std::string & transfer::hash()
 	return Hash_Tree.hash;
 }
 
-bool transfer::get_status(unsigned char & byte)
+void transfer::get_bit_fields(const int connection_ID, bit_field & tree_BF,
+	bit_field & file_BF)
 {
-	byte = 0;
-	return true;
-	/*
-	if(slot_iter->Hash_Tree.tree_complete() && slot_iter->Hash_Tree.file_complete()){
-		status = 0;
-	}else if(slot_iter->Hash_Tree.tree_complete() && !slot_iter->Hash_Tree.file_complete()){
-		status = 1;
-		LOGGER << "stub: add support for incomplete";
-		exit(1);
-	}else if(!slot_iter->Hash_Tree.tree_complete() && slot_iter->Hash_Tree.file_complete()){
-		status = 2;
-		LOGGER << "stub: add support for incomplete";
-		exit(1);
-	}else if(!slot_iter->Hash_Tree.tree_complete() && !slot_iter->Hash_Tree.file_complete()){
-		status = 3;
-		LOGGER << "stub: add support for incomplete";
-		exit(1);
-	}
-	*/
+	Hash_Tree_Block.subscribe(connection_ID, tree_BF);
+	File_Block.subscribe(connection_ID, file_BF);
+}
+
+bool transfer::next_have_tree(const int connection_ID, boost::uint64_t & block_num)
+{
+	return Hash_Tree_Block.next_have(connection_ID, block_num);
+}
+
+bool transfer::next_have_file(const int connection_ID, boost::uint64_t & block_num)
+{
+	return File_Block.next_have(connection_ID, block_num);
 }
 
 bool transfer::next_request_tree(const int connection_ID,
@@ -219,10 +213,31 @@ transfer::status transfer::read_tree_block(boost::shared_ptr<message::base> & M,
 	}
 }
 
-void transfer::register_outgoing_0(const int connection_ID)
+void transfer::recv_have_file_block(const int connection_ID,
+	const boost::uint64_t block_num)
 {
-	Hash_Tree_Block.add_host_complete(connection_ID);
-	File_Block.add_host_complete(connection_ID);
+	File_Block.add_block_remote(connection_ID, block_num);
+}
+
+void transfer::recv_have_hash_tree_block(const int connection_ID,
+	const boost::uint64_t block_num)
+{
+	Hash_Tree_Block.add_block_remote(connection_ID, block_num);
+}
+
+void transfer::register_outgoing(const int connection_ID, bit_field & tree_BF,
+	bit_field & file_BF)
+{
+	if(tree_BF.empty()){
+		Hash_Tree_Block.add_host_complete(connection_ID);
+	}else{
+		Hash_Tree_Block.add_host_incomplete(connection_ID, tree_BF);
+	}
+	if(file_BF.empty()){
+		File_Block.add_host_complete(connection_ID);
+	}else{
+		File_Block.add_host_incomplete(connection_ID, file_BF);
+	}
 }
 
 bool transfer::root_hash(std::string & RH)
@@ -260,7 +275,11 @@ transfer::status transfer::write_file_block(const int connection_ID,
 	const boost::uint64_t block_num, const network::buffer & buf)
 {
 	if(File_Block.have_block(block_num)){
-		//don't write block which already exists
+		/*
+		Don't write block which already exists.
+		Note: Multiple threads might make it past here with the same block but
+			that is ok.
+		*/
 		return good;
 	}
 	hash_tree::status status = Hash_Tree.check_file_block(block_num, buf);
@@ -287,7 +306,11 @@ transfer::status transfer::write_tree_block(const int connection_ID,
 	const boost::uint64_t block_num, const network::buffer & buf)
 {
 	if(Hash_Tree_Block.have_block(block_num)){
-		//don't write block which already exists
+		/*
+		Don't write block which already exists.
+		Note: Multiple threads might make it past here with the same block but
+			that is ok.
+		*/
 		return good;
 	}
 	hash_tree::status status = Hash_Tree.write_block(block_num, buf);

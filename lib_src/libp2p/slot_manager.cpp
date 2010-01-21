@@ -53,9 +53,6 @@ void slot_manager::close_complete()
 
 bool slot_manager::empty()
 {
-	LOGGER << "open_slots " << open_slots;
-	LOGGER << "incoming slot " << Incoming_Slot.empty();
-	LOGGER << "Pending " << Pending.empty();
 	return open_slots == 0 && Incoming_Slot.empty() && Pending.empty();
 }
 
@@ -79,9 +76,8 @@ void slot_manager::make_block_requests()
 
 	while(pipeline_size <= protocol::max_block_pipeline){
 		if(iter_cur->second->get_transfer()){
-			//make block requests
-			boost::uint64_t block_num; //block number to request
-			unsigned block_size;       //size of block
+			boost::uint64_t block_num;
+			unsigned block_size;
 			if(iter_cur->second->get_transfer()->next_request_tree(
 				Exchange.connection_ID, block_num, block_size))
 			{
@@ -186,6 +182,42 @@ bool slot_manager::recv_file_block(boost::shared_ptr<message::base> M,
 			return false;
 		}
 	}
+	return true;
+}
+
+bool slot_manager::recv_have_file_block(boost::shared_ptr<message::base> M)
+{
+	boost::uint64_t block_num = convert::decode_VLI(std::string(
+		reinterpret_cast<char *>(M->buf.data()) + 2, M->buf.size() - 2));
+	LOGGER << block_num;
+	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
+		iter = Outgoing_Slot.find(M->buf[1]);
+	if(iter != Outgoing_Slot.end()){
+		if(iter->second->get_transfer()){
+			iter->second->get_transfer()->recv_have_file_block(Exchange.connection_ID,
+				block_num);
+		}
+	}
+	make_block_requests();
+	close_complete();
+	return true;
+}
+
+bool slot_manager::recv_have_hash_tree_block(boost::shared_ptr<message::base> M)
+{
+	boost::uint64_t block_num = convert::decode_VLI(std::string(
+		reinterpret_cast<char *>(M->buf.data()) + 2, M->buf.size() - 2));
+	LOGGER << block_num;
+	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
+		iter = Outgoing_Slot.find(M->buf[1]);
+	if(iter != Outgoing_Slot.end()){
+		if(iter->second->get_transfer()){
+			iter->second->get_transfer()->recv_have_hash_tree_block(Exchange.connection_ID,
+				block_num);
+		}
+	}
+	make_block_requests();
+	close_complete();
 	return true;
 }
 
@@ -315,13 +347,9 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 		++slot_num;
 	}
 
-	//status byte (third byte of slot message)
-	unsigned char status;
-	if(!slot_iter->get_transfer()->get_status(status)){
-		LOGGER << "failed " << hash;
-		Exchange.send(boost::shared_ptr<message::base>(new message::error()));
-		return true;
-	}
+	//possible bit_fields for incomplete tree and/or file
+	bit_field tree_BF, file_BF;
+	slot_iter->get_transfer()->get_bit_fields(Exchange.connection_ID, tree_BF, file_BF);
 
 	//file size
 	boost::uint64_t file_size = slot_iter->file_size();
@@ -341,12 +369,20 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 
 	//we have all information to send slot message
 	Exchange.send(boost::shared_ptr<message::base>(new message::slot(slot_num,
-		status, file_size, root_hash)));
+		file_size, root_hash, tree_BF, file_BF)));
 
 	//add slot
 	std::pair<std::map<unsigned char, boost::shared_ptr<slot> >::iterator, bool>
 		ret = Incoming_Slot.insert(std::make_pair(slot_num, slot_iter.get()));
 	assert(ret.second);
+
+	//unexpect any previous
+	network::buffer buf;
+	buf.append(protocol::request_hash_tree_block).append(slot_num);
+	Exchange.expect_anytime_erase(buf);
+	buf.clear();
+	buf.append(protocol::request_file_block).append(slot_num);
+	Exchange.expect_anytime_erase(buf);
 
 	//expect incoming block requests
 	Exchange.expect_anytime(boost::shared_ptr<message::base>(
@@ -393,18 +429,70 @@ bool slot_manager::recv_slot(boost::shared_ptr<message::base> M,
 	}
 
 	//read bit field(s) (if any exist)
-	if(M->buf[2] == 0){
-		slot_iter->get_transfer()->register_outgoing_0(Exchange.connection_ID);
-	}else if(M->buf[2] == 1){
-		LOGGER << "stub: add support for incomplete";
-		exit(1);
+	bit_field tree_BF, file_BF;
+	if(M->buf[2] == 1){
+		//file bit_field
+		boost::uint64_t file_block_count = file::calc_file_block_count(file_size);
+		boost::uint64_t file_BF_size = bit_field::size_bytes(file_block_count, 1);
+		assert(M->buf.size() == 31 + file_BF_size);
+		file_BF.set_buf(M->buf.data() + 31, file_BF_size, file_block_count, 1);
+
+		//unexpect previous have_file_block message with this slot (if exists)
+		network::buffer buf;
+		buf.append(protocol::have_file_block).append(M->buf[1]);
+		Exchange.expect_anytime_erase(buf);
+
+		//expect have_hash_tree_block message
+		Exchange.expect_anytime(boost::shared_ptr<message::base>(new
+			message::have_file_block(boost::bind(&slot_manager::recv_have_file_block,
+			this, _1), M->buf[1], file_block_count)));
 	}else if(M->buf[2] == 2){
-		LOGGER << "stub: add support for incomplete";
-		exit(1);
+		//tree bit_field
+		boost::uint64_t tree_block_count = hash_tree::calc_tree_block_count(file_size);
+		boost::uint64_t tree_BF_size = bit_field::size_bytes(tree_block_count, 1);
+		assert(M->buf.size() == 31 + tree_BF_size);
+		tree_BF.set_buf(M->buf.data() + 31, tree_BF_size, tree_block_count, 1);
+
+		//unexpect previous have_hash_tree_block message with this slot (if exists)
+		network::buffer buf;
+		buf.append(protocol::have_hash_tree_block).append(M->buf[1]);
+		Exchange.expect_anytime_erase(buf);
+
+		//expect have_hash_tree_block message
+		Exchange.expect_anytime(boost::shared_ptr<message::base>(new
+			message::have_hash_tree_block(boost::bind(&slot_manager::recv_have_hash_tree_block,
+			this, _1), M->buf[1], tree_block_count)));
 	}else if(M->buf[2] == 3){
-		LOGGER << "stub: add support for incomplete";
-		exit(1);
+		//tree and file bit_field
+		boost::uint64_t tree_block_count = hash_tree::calc_tree_block_count(file_size);
+		boost::uint64_t tree_BF_size = bit_field::size_bytes(tree_block_count, 1);
+		boost::uint64_t file_block_count = file::calc_file_block_count(file_size);
+		boost::uint64_t file_BF_size = bit_field::size_bytes(file_block_count, 1);
+		assert(M->buf.size() == 31 + tree_BF_size + file_BF_size);
+		tree_BF.set_buf(M->buf.data() + 31, tree_BF_size, tree_block_count, 1);
+		file_BF.set_buf(M->buf.data() + 31 + tree_BF_size, file_BF_size, file_block_count, 1);
+
+		//unexpect previous have_hash_tree_block message with this slot (if exists)
+		network::buffer buf;
+		buf.append(protocol::have_hash_tree_block).append(M->buf[1]);
+		Exchange.expect_anytime_erase(buf);
+
+		//expect have_hash_tree_block message
+		Exchange.expect_anytime(boost::shared_ptr<message::base>(new
+			message::have_hash_tree_block(boost::bind(&slot_manager::recv_have_hash_tree_block,
+			this, _1), M->buf[1], tree_block_count)));
+
+		//unexpect previous have_file_block message with this slot (if exists)
+		buf.clear();
+		buf.append(protocol::have_file_block).append(M->buf[1]);
+		Exchange.expect_anytime_erase(buf);
+
+		//expect have_hash_tree_block message
+		Exchange.expect_anytime(boost::shared_ptr<message::base>(new
+			message::have_file_block(boost::bind(&slot_manager::recv_have_file_block,
+			this, _1), M->buf[1], file_block_count)));
 	}
+	slot_iter->get_transfer()->register_outgoing(Exchange.connection_ID, tree_BF, file_BF);
 
 	//add outgoing slot
 	std::pair<std::map<unsigned char, boost::shared_ptr<slot> >::iterator, bool>
@@ -470,3 +558,27 @@ void slot_manager::resume(const std::string & peer_ID)
 	}
 	make_slot_requests();
 }
+
+/*
+	while(true){
+		boost::uint64_t block_num;
+		if(iter_cur->second->get_transfer()->next_have_tree(
+			Exchange.connection_ID, block_num))
+		{
+LOGGER << "send have_hash_tree_block " << block_num;
+			Exchange.send(boost::shared_ptr<message::base>(
+				new message::have_hash_tree_block(iter_cur->first, block_num,
+				iter_cur->second->get_transfer()->tree_block_count())));
+		}else if(iter_cur->second->get_transfer()->next_have_file(
+			Exchange.connection_ID, block_num))
+		{
+
+LOGGER << "send have_file_block " << block_num;
+			Exchange.send(boost::shared_ptr<message::base>(
+				new message::have_file_block(iter_cur->first, block_num,
+				iter_cur->second->get_transfer()->file_block_count())));
+		}else{
+			break;
+		}
+	}
+*/
