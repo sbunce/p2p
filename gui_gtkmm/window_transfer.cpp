@@ -131,18 +131,17 @@ bool window_transfer::refresh()
 	for(std::vector<p2p::transfer>::iterator iter_cur = T.begin(),
 		iter_end = T.end(); iter_cur != iter_end; ++iter_cur)
 	{
+		if(Type == download && iter_cur->download_peers == 0
+			&& iter_cur->percent_complete == 100)
+		{
+			continue;
+		}else if(Type == upload && iter_cur->upload_peers == 0){
+			continue;
+		}
 		std::map<std::string, Gtk::TreeModel::Row>::iterator
 			iter = Row_Index.find(iter_cur->hash);
 		if(iter == Row_Index.end()){
 			//add
-			if(Type == download && iter_cur->download_peers == 0
-				&& iter_cur->percent_complete == 100)
-			{
-				continue;
-			}
-			if(Type == upload && iter_cur->upload_peers == 0){
-				continue;
-			}
 			Gtk::TreeModel::Row row = *(download_list->append());
 			row[column_name] = iter_cur->name;
 			row[column_size] = convert::size_SI(iter_cur->file_size);

@@ -35,7 +35,6 @@ bool message::block::expects(network::buffer & recv_buf)
 bool message::block::recv(network::connection_info & CI)
 {
 	assert(expects(CI.recv_buf));
-//DEBUG, something wrong with this speed calculation
 	if(CI.recv_buf.size() >= protocol::block_size(block_size)){
 		Speed_Calculator->add(block_size - bytes_seen);
 		buf.append(CI.recv_buf.data(), protocol::block_size(block_size));
