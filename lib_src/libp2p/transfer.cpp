@@ -266,6 +266,17 @@ boost::uint64_t transfer::tree_block_count()
 	return Hash_Tree.tree_block_count;
 }
 
+std::set<int> transfer::trigger()
+{
+	std::set<int> tmp_set;
+	std::vector<int> tmp_vec;
+	tmp_vec = Hash_Tree_Block.trigger();
+	tmp_set.insert(tmp_vec.begin(), tmp_vec.end());
+	tmp_vec = File_Block.trigger();
+	tmp_set.insert(tmp_vec.begin(), tmp_vec.end());
+	return tmp_set;
+}
+
 unsigned transfer::upload_speed()
 {
 	return Upload_Speed->speed();

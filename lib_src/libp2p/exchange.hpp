@@ -15,7 +15,8 @@ public:
 	exchange(
 		boost::mutex & Mutex_in,
 		network::proactor & Proactor_in,
-		network::connection_info & CI
+		network::connection_info & CI,
+		boost::function<void()> exchange_call_back_in
 	);
 
 	//our connection ID with proactor
@@ -38,9 +39,16 @@ public:
 	void expect_anytime_erase(network::buffer buf);
 	void send(boost::shared_ptr<message::base> M);
 
+	/*
+	process_triggers:
+		Triggers the proactor with every connection_ID in set.
+	*/
+	void process_triggers(const std::set<int> & ID_set);
+
 private:
 	boost::mutex & Mutex;
 	network::proactor & Proactor;
+	boost::function<void()> exchange_call_back;
 
 	/*
 	Expected responses are pushed on the back of Expect after a request is sent.

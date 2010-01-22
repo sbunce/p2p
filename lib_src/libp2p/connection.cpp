@@ -4,7 +4,8 @@ connection::connection(
 	network::proactor & Proactor_in,
 	network::connection_info & CI
 ):
-	Exchange(Mutex, Proactor_in, CI),
+	Exchange(Mutex, Proactor_in, CI,
+		boost::bind(&connection::exchange_call_back, this)),
 	Slot_Manager(Exchange)
 {
 	send_initial();
@@ -14,6 +15,11 @@ bool connection::empty()
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	return Slot_Manager.empty();
+}
+
+void connection::exchange_call_back()
+{
+	Slot_Manager.exchange_call_back();
 }
 
 bool connection::recv_initial(boost::shared_ptr<message::base> M)

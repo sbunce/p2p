@@ -23,6 +23,8 @@ public:
 	/*
 	empty:
 		Returns true if no incoming/outgoing slots.
+	exchange_call_back:
+		Called after exchange done processing buffers. Does periodic tasks.
 	remove:
 		Remove incoming/outgoing slots with the specified hash. Cancel pending
 		slots with the specified hash.
@@ -30,6 +32,7 @@ public:
 		When the peer_ID is received this function is called to resume downloads.
 	*/
 	bool empty();
+	void exchange_call_back();
 	void remove(const std::string & hash);
 	void resume(const std::string & peer_ID);
 
@@ -69,10 +72,23 @@ private:
 	/*
 	close_complete:
 		Send close_slot messages for complete slots.
-	make_block_requests:
+	send_block_requests:
 		Makes any hash_tree of file block requests that need to be done.
-	make_slot_requests:
+	send_have:
+		Send any have_* messages that are pending.
+	send_slot_requests:
 		Does pending slot requests.
+	trigger:
+		Triggers proactor to do call backs to connections which need to do
+		processing.
+	*/
+	void close_complete();
+	void send_block_requests();
+	void send_have();
+	void send_slot_requests();
+	void trigger();
+
+	/* Receive Functions
 	recv_close_slot:
 		Call back for receiving close slot messages.
 	recv_file_block:
@@ -95,9 +111,6 @@ private:
 		Handles incoming slot messages. The hash parameter is the hash of the file
 		requested.
 	*/
-	void close_complete();
-	void make_block_requests();
-	void make_slot_requests();
 	bool recv_close_slot(boost::shared_ptr<message::base> M);
 	bool recv_file_block(boost::shared_ptr<message::base> M,
 		const unsigned slot_num, const boost::uint64_t block_num);

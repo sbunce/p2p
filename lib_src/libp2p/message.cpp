@@ -180,7 +180,9 @@ message::have_file_block::have_file_block(
 	slot_num(slot_num_in),
 	file_block_count(file_block_count_in)
 {
-
+	buf.append(protocol::have_file_block)
+		.append(slot_num)
+		.append(convert::encode_VLI(block_num, file_block_count));
 }
 
 bool message::have_file_block::expects(network::buffer & recv_buf)
@@ -238,7 +240,9 @@ message::have_hash_tree_block::have_hash_tree_block(
 	slot_num(slot_num_in),
 	tree_block_count(tree_block_count_in)
 {
-
+	buf.append(protocol::have_hash_tree_block)
+		.append(slot_num)
+		.append(convert::encode_VLI(block_num, tree_block_count));
 }
 
 bool message::have_hash_tree_block::expects(network::buffer & recv_buf)

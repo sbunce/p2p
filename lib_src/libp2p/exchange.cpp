@@ -3,11 +3,13 @@
 exchange::exchange(
 	boost::mutex & Mutex_in,
 	network::proactor & Proactor_in,
-	network::connection_info & CI
+	network::connection_info & CI,
+	boost::function<void()> exchange_call_back_in
 ):
 	connection_ID(CI.connection_ID),
 	Mutex(Mutex_in),
 	Proactor(Proactor_in),
+	exchange_call_back(exchange_call_back_in),
 	blacklist_state(0)
 {
 	//start key exchange
@@ -53,6 +55,15 @@ void exchange::expect_anytime_erase(network::buffer buf)
 	}
 }
 
+void exchange::process_triggers(const std::set<int> & ID_set)
+{
+	for(std::set<int>::iterator iter_cur = ID_set.begin(), iter_end = ID_set.end();
+		iter_cur != iter_end; ++iter_cur)
+	{
+		Proactor.trigger(*iter_cur);
+	}
+}
+
 void exchange::recv_call_back(network::connection_info & CI)
 {
 	boost::mutex::scoped_lock lock(Mutex);
@@ -68,7 +79,7 @@ void exchange::recv_call_back(network::connection_info & CI)
 	*/
 	//BEGIN loop
 	begin:
-	if(CI.recv_buf.empty()){
+	if(CI.recv_buf.empty() || CI.latest_recv == 0){
 		goto end;
 	}
 	//check if message is an expected response
@@ -108,8 +119,7 @@ void exchange::recv_call_back(network::connection_info & CI)
 			iter_cur = Expect_Anytime.erase(iter_cur);
 		}
 	}
-	LOGGER << "unrecognized message, recv_buf.size(): " << CI.recv_buf.size()
-		<< " recv_buf[0]: " << (int)CI.recv_buf[0];
+	LOGGER << "unrecognized message";
 	database::table::blacklist::add(CI.IP);
 	end:
 	//END loop
@@ -123,6 +133,7 @@ void exchange::recv_call_back(network::connection_info & CI)
 		CI.recv_call_back.clear();
 		return;
 	}
+	exchange_call_back();
 }
 
 bool exchange::recv_p_rA(boost::shared_ptr<message::base> M,

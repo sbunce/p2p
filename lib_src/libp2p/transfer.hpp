@@ -101,6 +101,9 @@ public:
 		Returns percent complete of the hash tree and file combined.
 	register_outgoing:
 		Called when slot message received to store bit fields.
+	trigger:
+		Returns connection_IDs that need to be triggered with the proactor. This
+		is done to send have_* messages.
 	*/
 	void check();
 	bool complete();
@@ -110,6 +113,7 @@ public:
 	unsigned percent_complete();
 	void register_outgoing(const int connection_ID, bit_field & tree_BF,
 		bit_field & file_BF);
+	std::set<int> trigger();
 
 	/* Speeds
 	download_speed:

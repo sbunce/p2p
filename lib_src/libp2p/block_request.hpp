@@ -72,11 +72,12 @@ public:
 	request_zero:
 		Function which requests block 0. This is needed for the hash tree
 		block_request when making a slot request.
-
 	subscribe:
 		Sets BF to our current local bit_field and subscribes the host to changes.
 		If BF is empty after return then our local bitfield is complete and the
 		connection will not be subscribed.
+	trigger:
+		Returns all connection_IDs that have subscribed to block updates.
 	*/
 	void add_block_local(const boost::uint64_t block);
 	void add_block_local(const int connection_ID, const boost::uint64_t block);
@@ -95,6 +96,7 @@ public:
 	void remove_host(const int connection_ID);
 	unsigned remote_host_count();
 	void subscribe(const int connection_ID, bit_field & BF);
+	std::vector<int> trigger();
 
 private:
 	//locks access to all data members

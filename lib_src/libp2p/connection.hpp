@@ -37,11 +37,14 @@ private:
 	slot_manager Slot_Manager; //does everything slot related
 
 	/*
+	exchange_call_back:
+		Called after exchange done processing buffers. Does periodic tasks.
 	recv_initial:
 		Call back for receiving initial message.
 	send_initial:
 		Send initial message. Called after key exchange completed.
 	*/
+	void exchange_call_back();
 	bool recv_initial(boost::shared_ptr<message::base> M);
 	void send_initial();
 };
