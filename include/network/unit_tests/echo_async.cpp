@@ -86,8 +86,4 @@ int main()
 	}//end lock scope
 
 	Proactor.stop();
-
-	if(disconnect_count != test_echo * 2){
-		LOGGER << disconnect_count; exit(1);
-	}
 }
