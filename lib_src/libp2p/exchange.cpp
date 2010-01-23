@@ -55,13 +55,9 @@ void exchange::expect_anytime_erase(network::buffer buf)
 	}
 }
 
-void exchange::process_triggers(const std::set<int> & ID_set)
+void exchange::trigger_all()
 {
-	for(std::set<int>::iterator iter_cur = ID_set.begin(), iter_end = ID_set.end();
-		iter_cur != iter_end; ++iter_cur)
-	{
-		Proactor.trigger(*iter_cur);
-	}
+	Proactor.trigger_all();
 }
 
 void exchange::recv_call_back(network::connection_info & CI)

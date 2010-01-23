@@ -76,8 +76,8 @@ public:
 		Sets BF to our current local bit_field and subscribes the host to changes.
 		If BF is empty after return then our local bitfield is complete and the
 		connection will not be subscribed.
-	trigger:
-		Returns all connection_IDs that have subscribed to block updates.
+	need_tick:
+		Returns true if any have_* messages need to be sent.
 	*/
 	void add_block_local(const boost::uint64_t block);
 	void add_block_local(const int connection_ID, const boost::uint64_t block);
@@ -91,12 +91,12 @@ public:
 	bool complete();
 	bool have_block(const boost::uint64_t block);
 	bool is_approved(const boost::uint64_t block);
+	bool need_tick();
 	bool next_have(const int connection_ID, boost::uint64_t & block);
 	bool next_request(const int connection_ID, boost::uint64_t & block);
 	void remove_host(const int connection_ID);
 	unsigned remote_host_count();
 	void subscribe(const int connection_ID, bit_field & BF);
-	std::vector<int> trigger();
 
 private:
 	//locks access to all data members

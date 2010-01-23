@@ -4,8 +4,12 @@ connection::connection(
 	network::proactor & Proactor_in,
 	network::connection_info & CI
 ):
-	Exchange(Mutex, Proactor_in, CI,
-		boost::bind(&connection::exchange_call_back, this)),
+	Exchange(
+		Mutex,
+		Proactor_in,
+		CI,
+		boost::bind(&connection::exchange_call_back, this)
+	),
 	Slot_Manager(Exchange)
 {
 	send_initial();

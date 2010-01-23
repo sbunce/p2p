@@ -71,6 +71,7 @@ public:
 		boost::mutex::scoped_lock lock(network_thread_call_mutex);
 		network_thread_call.push_back(boost::bind(&proactor::disconnect, this,
 			connection_ID, false));
+		Select_Interrupter.trigger();
 	}
 
 	//disconnect when send buffer becomes empty
@@ -79,6 +80,7 @@ public:
 		boost::mutex::scoped_lock lock(network_thread_call_mutex);
 		network_thread_call.push_back(boost::bind(&proactor::disconnect, this,
 			connection_ID, true));
+		Select_Interrupter.trigger();
 	}
 
 	//send data to specified connection
@@ -95,11 +97,11 @@ public:
 	}
 
 	//trigger recv_call_back with CI.latest_recv = 0
-	void trigger(const int connection_ID)
+	void trigger_all()
 	{
 		boost::mutex::scoped_lock lock(network_thread_call_mutex);
-		network_thread_call.push_back(boost::bind(&proactor::trigger_recv, this,
-			connection_ID));
+		network_thread_call.push_back(boost::bind(&proactor::trigger, this));
+		Select_Interrupter.trigger();
 	}
 
 	/* Info / Options
@@ -745,12 +747,14 @@ private:
 	}
 
 	//causes recv call back for 0 bytes
-	void trigger_recv(const int connection_ID)
+	void trigger()
 	{
-		std::pair<int, boost::shared_ptr<state> > P = lookup_ID(connection_ID);
-		if(P.second){
-			boost::shared_ptr<buffer> recv_buf(new buffer());
-			Call_Back_Dispatcher.recv(P.second->CI, recv_buf);
+		boost::shared_ptr<buffer> buf(new buffer());
+		for(std::map<int, boost::shared_ptr<state> >::iterator
+			iter_cur = ID.begin(), iter_end = ID.end(); iter_cur != iter_end;
+			++iter_cur)
+		{
+			Call_Back_Dispatcher.recv(iter_cur->second->CI, buf);
 		}
 	}
 };

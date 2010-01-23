@@ -310,13 +310,8 @@ void block_request::subscribe(const int connection_ID, bit_field & BF)
 	}
 }
 
-std::vector<int> block_request::trigger()
+bool block_request::need_tick()
 {
-	std::vector<int> tmp;
-	for(std::map<int, std::queue<boost::uint64_t> >::iterator iter_cur = have.begin(),
-		iter_end = have.end(); iter_cur != iter_end; ++iter_cur)
-	{
-		tmp.push_back(iter_cur->first);
-	}
-	return tmp;
+	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
+	return !have.empty();
 }

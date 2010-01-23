@@ -40,10 +40,10 @@ public:
 	void send(boost::shared_ptr<message::base> M);
 
 	/*
-	process_triggers:
-		Triggers the proactor with every connection_ID in set.
+	trigger_all:
+		Triggers proactor to do call back on all connections.
 	*/
-	void process_triggers(const std::set<int> & ID_set);
+	void trigger_all();
 
 private:
 	boost::mutex & Mutex;

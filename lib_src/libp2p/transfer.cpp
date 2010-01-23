@@ -135,6 +135,11 @@ void transfer::get_bit_fields(const int connection_ID, bit_field & tree_BF,
 	File_Block.subscribe(connection_ID, file_BF);
 }
 
+bool transfer::need_tick()
+{
+	return Hash_Tree_Block.need_tick() || File_Block.need_tick();
+}
+
 bool transfer::next_have_tree(const int connection_ID, boost::uint64_t & block_num)
 {
 	return Hash_Tree_Block.next_have(connection_ID, block_num);
@@ -264,17 +269,6 @@ void transfer::touch()
 boost::uint64_t transfer::tree_block_count()
 {
 	return Hash_Tree.tree_block_count;
-}
-
-std::set<int> transfer::trigger()
-{
-	std::set<int> tmp_set;
-	std::vector<int> tmp_vec;
-	tmp_vec = Hash_Tree_Block.trigger();
-	tmp_set.insert(tmp_vec.begin(), tmp_vec.end());
-	tmp_vec = File_Block.trigger();
-	tmp_set.insert(tmp_vec.begin(), tmp_vec.end());
-	return tmp_set;
 }
 
 unsigned transfer::upload_speed()

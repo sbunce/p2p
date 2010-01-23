@@ -78,15 +78,11 @@ private:
 		Send any have_* messages that are pending.
 	send_slot_requests:
 		Does pending slot requests.
-	trigger:
-		Triggers proactor to do call backs to connections which need to do
-		processing.
 	*/
 	void close_complete();
 	void send_block_requests();
 	void send_have();
 	void send_slot_requests();
-	void trigger();
 
 	/* Receive Functions
 	recv_close_slot:

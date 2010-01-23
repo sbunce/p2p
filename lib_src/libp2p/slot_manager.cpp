@@ -62,7 +62,18 @@ void slot_manager::exchange_call_back()
 	send_block_requests();
 	send_have();
 	send_slot_requests();
-	trigger();
+
+	for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
+		iter_cur = Incoming_Slot.begin(), iter_end = Incoming_Slot.end();
+		iter_cur != iter_end; ++iter_cur)
+	{
+		if(iter_cur->second->get_transfer()
+			&& iter_cur->second->get_transfer()->need_tick())
+		{
+			Exchange.trigger_all();
+			break;
+		}
+	}
 }
 
 bool slot_manager::recv_close_slot(boost::shared_ptr<message::base> M)
@@ -583,19 +594,4 @@ void slot_manager::send_slot_requests()
 			boost::bind(&slot_manager::recv_request_slot_failed, this, _1))));
 		Exchange.expect_response(M_composite);
 	}
-}
-
-void slot_manager::trigger()
-{
-	std::set<int> all, tmp;
-	for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
-		iter_cur = Incoming_Slot.begin(), iter_end = Incoming_Slot.end();
-		iter_cur != iter_end; ++iter_cur)
-	{
-		if(iter_cur->second->get_transfer()){
-			tmp = iter_cur->second->get_transfer()->trigger();
-			all.insert(tmp.begin(), tmp.end());
-		}
-	}
-	Exchange.process_triggers(all);
 }
