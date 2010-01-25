@@ -57,9 +57,6 @@ public:
 		Sets block request to indicate that we have all blocks.
 	have_block:
 		Returns true if we have specified block.
-	next_have:
-		Returns true and sets block if have_* message needs to be sent. Returns
-		false if no have messages need to be sent.
 	next_request:
 		Returns true and sets block to next block to request. Or returns false if
 		host not yet added or no blocks to request from host.
@@ -74,10 +71,7 @@ public:
 		block_request when making a slot request.
 	subscribe:
 		Sets BF to our current local bit_field and subscribes the host to changes.
-		If BF is empty after return then our local bitfield is complete and the
-		connection will not be subscribed.
-	need_tick:
-		Returns true if any have_* messages need to be sent.
+		All blocks added to local block set are passed to call_back.
 	*/
 	void add_block_local(const boost::uint64_t block);
 	void add_block_local(const int connection_ID, const boost::uint64_t block);
@@ -91,16 +85,16 @@ public:
 	bool complete();
 	bool have_block(const boost::uint64_t block);
 	bool is_approved(const boost::uint64_t block);
-	bool need_tick();
 	bool next_have(const int connection_ID, boost::uint64_t & block);
 	bool next_request(const int connection_ID, boost::uint64_t & block);
 	void remove_host(const int connection_ID);
 	unsigned remote_host_count();
-	void subscribe(const int connection_ID, bit_field & BF);
+	void subscribe(const int connection_ID,
+		const boost::function<void(const int)> trigger_tick, bit_field & BF);
 
 private:
 	//locks access to all data members
-	boost::recursive_mutex Recursive_Mutex;
+	boost::mutex Mutex;
 
 	//number of blocks (bits in the bit_fields)
 	const boost::uint64_t block_count;
@@ -132,15 +126,21 @@ private:
 	//connection_ID associated with bitset representing blocks remote host has
 	std::map<int, bit_field> remote;
 
+	class have_info
+	{
+	public:
+		//have_* message blocks
+		std::queue<boost::uint64_t> block;
+
+		//triggers connection object to be called so it can process next_have
+		boost::function<void(const int)> trigger_tick;
+	};
+
 	/*
-	When we subscribe a host we add a element to this container. Whenever we add
-	a new local block we add the block number to each element in this container.
-	These are the numbers put in have_* messages. This container effectively
-	contains diff's between the local bit_field when someone subscribed vs the
-	local bit_field as it currently exists.
-	std::map<connection_ID, std::queue<block> >
+	This container effectively contains diff's between the local bit_field when
+	someone subscribed vs the local bit_field as it currently exists.
 	*/
-	std::map<int, std::queue<boost::uint64_t> > have;
+	std::map<int, have_info> have;
 
 	/*
 	find_next_rarest:

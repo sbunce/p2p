@@ -1,15 +1,11 @@
 #include "exchange.hpp"
 
 exchange::exchange(
-	boost::mutex & Mutex_in,
 	network::proactor & Proactor_in,
-	network::connection_info & CI,
-	boost::function<void()> exchange_call_back_in
+	network::connection_info & CI
 ):
 	connection_ID(CI.connection_ID),
-	Mutex(Mutex_in),
 	Proactor(Proactor_in),
-	exchange_call_back(exchange_call_back_in),
 	blacklist_state(0)
 {
 	//start key exchange
@@ -21,8 +17,6 @@ exchange::exchange(
 		expect_response(boost::shared_ptr<message::base>(new message::key_exchange_p_rA(
 			boost::bind(&exchange::recv_p_rA, this, _1, boost::ref(CI)))));
 	}
-	CI.recv_call_back = boost::bind(&exchange::recv_call_back, this, _1);
-	CI.send_call_back = boost::bind(&exchange::send_call_back, this, _1);
 }
 
 void exchange::expect_response(boost::shared_ptr<message::base> M)
@@ -55,14 +49,8 @@ void exchange::expect_anytime_erase(network::buffer buf)
 	}
 }
 
-void exchange::trigger_all()
-{
-	Proactor.trigger_all();
-}
-
 void exchange::recv_call_back(network::connection_info & CI)
 {
-	boost::mutex::scoped_lock lock(Mutex);
 	if(Encryption.ready()){
 		Encryption.crypt_recv(CI.recv_buf, CI.recv_buf.size() - CI.latest_recv);
 	}
@@ -129,7 +117,6 @@ void exchange::recv_call_back(network::connection_info & CI)
 		CI.recv_call_back.clear();
 		return;
 	}
-	exchange_call_back();
 }
 
 bool exchange::recv_p_rA(boost::shared_ptr<message::base> M,

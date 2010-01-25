@@ -4,7 +4,8 @@ connection_manager::connection_manager():
 	Proactor(
 		boost::bind(&connection_manager::connect_call_back, this, _1),
 		boost::bind(&connection_manager::disconnect_call_back, this, _1)
-	)
+	),
+	Thread_Pool(1)
 {
 
 }
@@ -12,6 +13,7 @@ connection_manager::connection_manager():
 connection_manager::~connection_manager()
 {
 	Proactor.stop();
+	Thread_Pool.interrupt_join();
 }
 
 void connection_manager::connect_call_back(network::connection_info & CI)
@@ -24,7 +26,8 @@ void connection_manager::connect_call_back(network::connection_info & CI)
 	LOGGER << "connect " << CI.IP << " " << CI.port;
 	std::pair<std::map<int, boost::shared_ptr<connection> >::iterator, bool>
 		ret = Connection.insert(std::make_pair(CI.connection_ID,
-		new connection(Proactor, CI)));
+		new connection(Proactor, CI, boost::bind(&connection_manager::trigger_tick,
+		this, _1))));
 	assert(ret.second);
 }
 
@@ -33,6 +36,16 @@ void connection_manager::disconnect_call_back(network::connection_info & CI)
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	LOGGER << "disconnect " << CI.IP << " " << CI.port;
 	Connection.erase(CI.connection_ID);
+}
+
+void connection_manager::do_tick(const int connection_ID)
+{
+	boost::mutex::scoped_lock lock(Connection_mutex);
+	std::map<int, boost::shared_ptr<connection> >::iterator
+		iter = Connection.find(connection_ID);
+	if(iter != Connection.end()){
+		iter->second->tick();
+	}
 }
 
 void connection_manager::remove(const std::string hash)
@@ -70,4 +83,9 @@ void connection_manager::remove(const std::string hash)
 		database::table::share::remove(S_iter->path());
 		boost::filesystem::remove(S_iter->path());
 	}
+}
+
+void connection_manager::trigger_tick(const int connection_ID)
+{
+	Thread_Pool.queue(boost::bind(&connection_manager::do_tick, this, connection_ID));
 }

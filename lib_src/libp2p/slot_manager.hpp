@@ -17,28 +17,31 @@
 class slot_manager : private boost::noncopyable
 {
 public:
-	slot_manager(exchange & Exchange_in);
+	slot_manager(
+		exchange & Exchange_in,
+		boost::function<void(const int)> trigger_tick_in
+	);
 	~slot_manager();
 
 	/*
 	empty:
 		Returns true if no incoming/outgoing slots.
-	exchange_call_back:
-		Called after exchange done processing buffers. Does periodic tasks.
 	remove:
 		Remove incoming/outgoing slots with the specified hash. Cancel pending
 		slots with the specified hash.
 	resume:
 		When the peer_ID is received this function is called to resume downloads.
+	tick:
+		Called after exchange done processing buffers. Does periodic tasks.
 	*/
 	bool empty();
-	void exchange_call_back();
 	void remove(const std::string & hash);
 	void resume(const std::string & peer_ID);
+	void tick();
 
 private:
-	//reference to connection::Exchange
 	exchange & Exchange;
+	boost::function<void(const int)> trigger_tick;
 
 	/*
 	Incoming_Slot container holds slots the remote host has opened with us.
@@ -75,7 +78,7 @@ private:
 	send_block_requests:
 		Makes any hash_tree of file block requests that need to be done.
 	send_have:
-		Send any have_* messages that are pending.
+		Sends have_* messages.
 	send_slot_requests:
 		Does pending slot requests.
 	*/

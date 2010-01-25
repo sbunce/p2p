@@ -1,9 +1,11 @@
 #include "slot_manager.hpp"
 
 slot_manager::slot_manager(
-	exchange & Exchange_in
+	exchange & Exchange_in,
+	boost::function<void(const int)> trigger_tick_in
 ):
 	Exchange(Exchange_in),
+	trigger_tick(trigger_tick_in),
 	pipeline_size(0),
 	open_slots(0),
 	latest_slot(0)
@@ -54,26 +56,6 @@ void slot_manager::close_complete()
 bool slot_manager::empty()
 {
 	return open_slots == 0 && Incoming_Slot.empty() && Pending.empty();
-}
-
-void slot_manager::exchange_call_back()
-{
-	close_complete();
-	send_block_requests();
-	send_have();
-	send_slot_requests();
-
-	for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
-		iter_cur = Incoming_Slot.begin(), iter_end = Incoming_Slot.end();
-		iter_cur != iter_end; ++iter_cur)
-	{
-		if(iter_cur->second->get_transfer()
-			&& iter_cur->second->get_transfer()->need_tick())
-		{
-			Exchange.trigger_all();
-			break;
-		}
-	}
 }
 
 bool slot_manager::recv_close_slot(boost::shared_ptr<message::base> M)
@@ -272,7 +254,10 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 
 	//possible bit_fields for incomplete tree and/or file
 	bit_field tree_BF, file_BF;
-	slot_iter->get_transfer()->get_bit_fields(Exchange.connection_ID, tree_BF, file_BF);
+	slot_iter->get_transfer()->subscribe_tree(Exchange.connection_ID,
+		trigger_tick, tree_BF);
+	slot_iter->get_transfer()->subscribe_file(Exchange.connection_ID,
+		trigger_tick, file_BF);
 
 	//file size
 	boost::uint64_t file_size = slot_iter->file_size();
@@ -415,7 +400,7 @@ bool slot_manager::recv_slot(boost::shared_ptr<message::base> M,
 			message::have_file_block(boost::bind(&slot_manager::recv_have_file_block,
 			this, _1), M->buf[1], file_block_count)));
 	}
-	slot_iter->get_transfer()->register_outgoing(Exchange.connection_ID, tree_BF, file_BF);
+	slot_iter->get_transfer()->add_subscription(Exchange.connection_ID, tree_BF, file_BF);
 
 	//add outgoing slot
 	std::pair<std::map<unsigned char, boost::shared_ptr<slot> >::iterator, bool>
@@ -548,20 +533,22 @@ void slot_manager::send_block_requests()
 
 void slot_manager::send_have()
 {
+	boost::uint64_t block_num;
 	for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter_cur = Incoming_Slot.begin(), iter_end = Incoming_Slot.end();
 		iter_cur != iter_end; ++iter_cur)
 	{
 		while(true){
-			boost::uint64_t block_num;
-			if(iter_cur->second->get_transfer()->next_have_tree(Exchange.connection_ID,
-				block_num))
+			if(iter_cur->second->get_transfer()
+				&& iter_cur->second->get_transfer()->next_have_tree(
+				Exchange.connection_ID, block_num))
 			{
 				LOGGER << "tree: " << block_num;
 				Exchange.send(boost::shared_ptr<message::base>(
 					new message::have_hash_tree_block(iter_cur->first, block_num,
 					iter_cur->second->get_transfer()->tree_block_count())));
-			}else if(iter_cur->second->get_transfer()->next_have_file(
+			}else if(iter_cur->second->get_transfer()
+				&& iter_cur->second->get_transfer()->next_have_file(
 				Exchange.connection_ID, block_num))
 			{
 				LOGGER << "file: " << block_num;
@@ -594,4 +581,12 @@ void slot_manager::send_slot_requests()
 			boost::bind(&slot_manager::recv_request_slot_failed, this, _1))));
 		Exchange.expect_response(M_composite);
 	}
+}
+
+void slot_manager::tick()
+{
+	close_complete();
+	send_block_requests();
+	send_have();
+	send_slot_requests();
 }

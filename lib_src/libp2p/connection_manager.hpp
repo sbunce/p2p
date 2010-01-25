@@ -8,6 +8,7 @@
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
 #include <network/network.hpp>
+#include <thread_pool.hpp>
 
 //standard
 #include <map>
@@ -20,20 +21,17 @@ public:
 
 	network::proactor Proactor;
 
-	/* Fixed call backs registered with proactor ctor.
+	/*
 	connect_call_back:
 		Proactor does call back when there is a new connection.
 	disconnect_call_back:
 		Proactor does call back when new connection failed, or when existing
 		connection closed.
-	*/
-	void connect_call_back(network::connection_info & CI);
-	void disconnect_call_back(network::connection_info & CI);
-
-	/*
 	remove:
 		Remove incoming/outgoing slots with the specified hash.
 	*/
+	void connect_call_back(network::connection_info & CI);
+	void disconnect_call_back(network::connection_info & CI);
 	void remove(const std::string hash);
 
 private:
@@ -43,5 +41,16 @@ private:
 	*/
 	boost::mutex Connection_mutex;
 	std::map<int, boost::shared_ptr<connection> > Connection;
+
+	thread_pool Thread_Pool;
+
+	/*
+	do_tick:
+		Do tick() of connection if it exists.
+	trigger_tick:
+		Schedule a job with the thread pool to tick a connection.
+	*/
+	void do_tick(const int connection_ID);
+	void trigger_tick(const int connection_ID);
 };
 #endif

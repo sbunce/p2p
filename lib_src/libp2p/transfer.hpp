@@ -23,9 +23,10 @@ public:
 	};
 
 	/* Hash Tree
-	next_have_tree:
-		Returns true and sets block_num to block that needs to be sent in
-		have_hash_tree_block message. Returns false if no messages needs to be sent.
+	next_have_file:
+		Returns true and sets block to block which needs to be sent in
+		have_file_block message. Returns false if no have_file_block message needs
+		to be sent.
 	next_request_hash_tree:
 		Returns true and sets block_num, block_size, and tree_block_count if a
 		hash tree block needs to be requested.
@@ -38,6 +39,9 @@ public:
 	root_hash:
 		Sets RH to root hash needed for slot message. Returns true if RH can be
 		set, false if RH cannot be set.
+	subscribe_tree:
+		Do call backs when we receive a tree block. This is used to send
+		have_hash_tree_block messages.
 	tree_block_count:
 		Returns number of blocks in hash tree.
 	write_hash_tree_block:
@@ -50,6 +54,8 @@ public:
 		const boost::uint64_t block_num);
 	void recv_have_hash_tree_block(const int connection_ID, const boost::uint64_t block_num);
 	bool root_hash(std::string & RH);
+	void subscribe_tree(const int connection_ID,
+		const boost::function<void(const int)> trigger_tick, bit_field & tree_BF);
 	boost::uint64_t tree_block_count();
 	status write_tree_block(const int connection_ID, const boost::uint64_t block_num,
 		const network::buffer & buf);
@@ -60,8 +66,9 @@ public:
 	file_size:
 		Returns file size.
 	next_have_file:
-		Returns true and sets block_num to block that needs to be sent in
-		have_file_block message. Returns false if no messages needs to be sent.
+		Returns true and sets block to block which needs to be sent in
+		have_file_block message. Returns false if no have_file_block message needs
+		to be sent.
 	next_request_file:
 		Returns true and sets block_num, block-size, and file_block_count if a
 		file block needs to be requested.
@@ -71,6 +78,9 @@ public:
 		block we don't have.
 	recv_have_file_block:
 		Called when we get a have_file_block message.
+	subscribe_file:
+		Do call backs when we receive a file block. This is used to send
+		have_file_block messages.
 	write_file_block:
 		Hash checks file block and writes it to the file if it is good. Returns
 		good if block good and written to file, bad if error writing to file,
@@ -84,10 +94,15 @@ public:
 	status read_file_block(boost::shared_ptr<message::base> & M,
 		const boost::uint64_t block_num);
 	void recv_have_file_block(const int connection_ID, const boost::uint64_t block_num);
+	void subscribe_file(const int connection_ID,
+		const boost::function<void(const int)> trigger_tick, bit_field & file_BF);
 	status write_file_block(const int connection_ID, const boost::uint64_t block_num,
 		const network::buffer & buf);
 
 	/* Hash Tree + File
+	add_subscription:
+		Called when slot message received to store bit fields and expect have_*
+		messages.
 	check:
 		Hash checks the hash tree and file. Called on program start on resumed
 		transfers.
@@ -95,24 +110,18 @@ public:
 		Returns true if hash tree and file are complete.
 	hash:
 		Returns hash.
-	get_bit_fields:
-		Get bit_fields for tree and file. If complete the bit_field will be empty.
 	need_tick:
 		Returns true if any have_* messages need to be sent.
 	percent_complete:
 		Returns percent complete of the hash tree and file combined.
-	register_outgoing:
-		Called when slot message received to store bit fields.
 	*/
+	void add_subscription(const int connection_ID, bit_field & tree_BF,
+		bit_field & file_BF);
 	void check();
 	bool complete();
-	void get_bit_fields(const int connection_ID, bit_field & tree_BF,
-		bit_field & file_BF);
 	const std::string & hash();
-	bool need_tick();
 	unsigned percent_complete();
-	void register_outgoing(const int connection_ID, bit_field & tree_BF,
-		bit_field & file_BF);
+	void remove_subscription(const int connection_ID);
 
 	/* Speeds
 	download_speed:

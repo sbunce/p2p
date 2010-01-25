@@ -13,14 +13,20 @@ class exchange : private boost::noncopyable
 {
 public:
 	exchange(
-		boost::mutex & Mutex_in,
 		network::proactor & Proactor_in,
-		network::connection_info & CI,
-		boost::function<void()> exchange_call_back_in
+		network::connection_info & CI
 	);
 
-	//our connection ID with proactor
 	const int connection_ID;
+
+	/*
+	recv_call_back:
+		Called when bytes received.
+	send_call_back:
+		Called when bytes send.
+	*/
+	void recv_call_back(network::connection_info & CI);
+	void send_call_back(network::connection_info & CI);
 
 	/*
 	expect_response:
@@ -39,16 +45,8 @@ public:
 	void expect_anytime_erase(network::buffer buf);
 	void send(boost::shared_ptr<message::base> M);
 
-	/*
-	trigger_all:
-		Triggers proactor to do call back on all connections.
-	*/
-	void trigger_all();
-
 private:
-	boost::mutex & Mutex;
 	network::proactor & Proactor;
-	boost::function<void()> exchange_call_back;
 
 	/*
 	Expected responses are pushed on the back of Expect after a request is sent.
@@ -82,16 +80,6 @@ private:
 
 	//state of blacklist (used as hint to see if we need to check)
 	int blacklist_state;
-
-	/*
-	recv_call_back:
-		The proactor calls back to this function whenever data is received.
-		Note: Only connection should use this.
-	send_call_back:
-		The proactor calls back to this function whenever data is sent.
-	*/
-	void recv_call_back(network::connection_info & CI);
-	void send_call_back(network::connection_info & CI);
 
 	/* Functions to handle receiving messages.
 	recv_p_rA:

@@ -17,7 +17,8 @@ class connection : private boost::noncopyable
 public:
 	connection(
 		network::proactor & Proactor_in,
-		network::connection_info & CI
+		network::connection_info & CI,
+		boost::function<void(const int)> trigger_tick
 	);
 
 	/*
@@ -25,26 +26,35 @@ public:
 		Returns true if no slots are open and not slots need to be opened.
 	remove:
 		Close and remove all outgoing slots with the specified hash.
+	tick:
+		Do periodic tasks.
 	*/
 	bool empty();
 	void remove(const std::string & hash);
+	void tick();
 
 private:
 	//locks all entry points to this object
 	boost::mutex Mutex;
 
-	exchange Exchange;         //used to exchange messages
-	slot_manager Slot_Manager; //does everything slot related
+	exchange Exchange;
+	slot_manager Slot_Manager;
 
 	/*
-	exchange_call_back:
-		Called after exchange done processing buffers. Does periodic tasks.
+	recv_call_back:
+		Called by connection::recv_call_back, which is called by proactor.
+	send_call_back:
+		Called by connection::send_call_back, which is called by proactor.
+	*/
+	void recv_call_back(network::connection_info & CI);
+	void send_call_back(network::connection_info & CI);
+
+	/*
 	recv_initial:
 		Call back for receiving initial message.
 	send_initial:
 		Send initial message. Called after key exchange completed.
 	*/
-	void exchange_call_back();
 	bool recv_initial(boost::shared_ptr<message::base> M);
 	void send_initial();
 };

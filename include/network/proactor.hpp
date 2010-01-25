@@ -96,14 +96,6 @@ public:
 		}
 	}
 
-	//trigger recv_call_back with CI.latest_recv = 0
-	void trigger_all()
-	{
-		boost::mutex::scoped_lock lock(network_thread_call_mutex);
-		network_thread_call.push_back(boost::bind(&proactor::trigger, this));
-		Select_Interrupter.trigger();
-	}
-
 	/* Info / Options
 	download_rate:
 		Returns download rate (averaged over a few seconds).
@@ -744,18 +736,6 @@ private:
 
 		//send/recv
 		network_loop();
-	}
-
-	//causes recv call back for 0 bytes
-	void trigger()
-	{
-		boost::shared_ptr<buffer> buf(new buffer());
-		for(std::map<int, boost::shared_ptr<state> >::iterator
-			iter_cur = ID.begin(), iter_end = ID.end(); iter_cur != iter_end;
-			++iter_cur)
-		{
-			Call_Back_Dispatcher.recv(iter_cur->second->CI, buf);
-		}
 	}
 };
 }

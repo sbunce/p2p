@@ -36,6 +36,21 @@ transfer::transfer(const file_info & FI):
 	}
 }
 
+void transfer::add_subscription(const int connection_ID, bit_field & tree_BF,
+	bit_field & file_BF)
+{
+	if(tree_BF.empty()){
+		Hash_Tree_Block.add_host_complete(connection_ID);
+	}else{
+		Hash_Tree_Block.add_host_incomplete(connection_ID, tree_BF);
+	}
+	if(file_BF.empty()){
+		File_Block.add_host_complete(connection_ID);
+	}else{
+		File_Block.add_host_incomplete(connection_ID, file_BF);
+	}
+}
+
 void transfer::check()
 {
 	network::buffer buf;
@@ -128,26 +143,14 @@ const std::string & transfer::hash()
 	return Hash_Tree.hash;
 }
 
-void transfer::get_bit_fields(const int connection_ID, bit_field & tree_BF,
-	bit_field & file_BF)
+bool transfer::next_have_file(const int connection_ID, boost::uint64_t & block_num)
 {
-	Hash_Tree_Block.subscribe(connection_ID, tree_BF);
-	File_Block.subscribe(connection_ID, file_BF);
-}
-
-bool transfer::need_tick()
-{
-	return Hash_Tree_Block.need_tick() || File_Block.need_tick();
+	return File_Block.next_have(connection_ID, block_num);
 }
 
 bool transfer::next_have_tree(const int connection_ID, boost::uint64_t & block_num)
 {
 	return Hash_Tree_Block.next_have(connection_ID, block_num);
-}
-
-bool transfer::next_have_file(const int connection_ID, boost::uint64_t & block_num)
-{
-	return File_Block.next_have(connection_ID, block_num);
 }
 
 bool transfer::next_request_tree(const int connection_ID,
@@ -230,19 +233,10 @@ void transfer::recv_have_hash_tree_block(const int connection_ID,
 	Hash_Tree_Block.add_block_remote(connection_ID, block_num);
 }
 
-void transfer::register_outgoing(const int connection_ID, bit_field & tree_BF,
-	bit_field & file_BF)
+void transfer::remove_subscription(const int connection_ID)
 {
-	if(tree_BF.empty()){
-		Hash_Tree_Block.add_host_complete(connection_ID);
-	}else{
-		Hash_Tree_Block.add_host_incomplete(connection_ID, tree_BF);
-	}
-	if(file_BF.empty()){
-		File_Block.add_host_complete(connection_ID);
-	}else{
-		File_Block.add_host_incomplete(connection_ID, file_BF);
-	}
+	Hash_Tree_Block.remove_host(connection_ID);
+	File_Block.remove_host(connection_ID);
 }
 
 bool transfer::root_hash(std::string & RH)
@@ -258,6 +252,18 @@ bool transfer::root_hash(std::string & RH)
 	}
 	RH = convert::bin_to_hex(buf+8, SHA1::bin_size);
 	return true;
+}
+
+void transfer::subscribe_file(const int connection_ID,
+	const boost::function<void(const int)> trigger_tick, bit_field & file_BF)
+{
+	File_Block.subscribe(connection_ID, trigger_tick, file_BF);
+}
+
+void transfer::subscribe_tree(const int connection_ID,
+	const boost::function<void(const int)> trigger_tick, bit_field & tree_BF)
+{
+	Hash_Tree_Block.subscribe(connection_ID, trigger_tick, tree_BF);
 }
 
 void transfer::touch()
