@@ -14,7 +14,8 @@ void all_complete()
 
 	//add 8 hosts that each have all blocks (connection_ID 0 to 7)
 	for(int x=0; x<8; ++x){
-		BR.add_host_complete(x);
+		bit_field BF;
+		BR.outgoing_subscribe(x, BF);
 	}
 
 	//we should be able to request all blocks
@@ -41,7 +42,7 @@ void all_partial()
 	for(int x=0; x<8; ++x){
 		bit_field BF(block_count);
 		BF = ~BF;
-		BR.add_host_incomplete(x, BF);
+		BR.outgoing_subscribe(x, BF);
 	}
 
 	//add blocks of different rarity

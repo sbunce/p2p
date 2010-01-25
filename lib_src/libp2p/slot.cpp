@@ -4,13 +4,11 @@ slot::slot(const file_info & FI_in):
 	FI(FI_in),
 	#ifdef _WIN32
 	file_name(FI.path.get().rfind('\\') != std::string::npos ?
-		FI.path.get().substr(FI.path.get().rfind('\\')+1) : "ERROR"),
+		FI.path.get().substr(FI.path.get().rfind('\\')+1) : "ERROR")
 	#else
 	file_name(FI.path.get().rfind('/') != std::string::npos ?
-		FI.path.get().substr(FI.path.get().rfind('/')+1) : "ERROR"),
+		FI.path.get().substr(FI.path.get().rfind('/')+1) : "ERROR")
 	#endif
-	downloading(0),
-	uploading(0)
 {
 	if(FI.file_size != 0){
 		try{
@@ -34,7 +32,7 @@ bool slot::complete()
 unsigned slot::download_peers()
 {
 	if(Transfer){
-		return downloading;
+		return Transfer->outgoing_count();
 	}else{
 		return 0;
 	}
@@ -87,16 +85,6 @@ unsigned slot::percent_complete()
 	}
 }
 
-void slot::register_download()
-{
-	++downloading;
-}
-
-void slot::register_upload()
-{
-	++uploading;
-}
-
 bool slot::set_unknown(const int connection_ID, const boost::uint64_t file_size,
 	const std::string & root_hash)
 {
@@ -124,20 +112,10 @@ void slot::touch()
 	}
 }
 
-void slot::unregister_download()
-{
-	--downloading;
-}
-
-void slot::unregister_upload()
-{
-	--uploading;
-}
-
 unsigned slot::upload_peers()
 {
 	if(Transfer){
-		return uploading;
+		return Transfer->incoming_count();
 	}else{
 		return 0;
 	}

@@ -61,36 +61,58 @@ public:
 		Returns true and sets block to next block to request. Or returns false if
 		host not yet added or no blocks to request from host.
 		Precondition: !complete()
-	remove_host:
-		Remove host as source for blocks. Any blocks requested from this host are
-		rerequested.
 	remote_host_count:
 		Returns the number of remote hosts block_request is keeping track of.
-	request_zero:
-		Function which requests block 0. This is needed for the hash tree
-		block_request when making a slot request.
-	subscribe:
-		Sets BF to our current local bit_field and subscribes the host to changes.
-		All blocks added to local block set are passed to call_back.
 	*/
 	void add_block_local(const boost::uint64_t block);
 	void add_block_local(const int connection_ID, const boost::uint64_t block);
 	void add_block_local_all();
 	void add_block_remote(const int connection_ID, const boost::uint64_t block);
-	void add_host_complete(const int connection_ID);
-	void add_host_incomplete(const int connection_ID, bit_field & BF);
 	void approve_block(const boost::uint64_t block);
 	void approve_block_all();
 	boost::uint64_t bytes();
 	bool complete();
 	bool have_block(const boost::uint64_t block);
 	bool is_approved(const boost::uint64_t block);
-	bool next_have(const int connection_ID, boost::uint64_t & block);
 	bool next_request(const int connection_ID, boost::uint64_t & block);
-	void remove_host(const int connection_ID);
 	unsigned remote_host_count();
-	void subscribe(const int connection_ID,
+
+	/* Incoming_Slot Related
+	incoming_count:
+		Number of hosts we're uploading file to.
+	incoming_subscribe:
+		Subscribes a Incoming_Slot to local bit_field updates. BF is set to our
+		current local bit_field. The trigger_tick function is used to call the
+		tick() function on the connection when there's a have_* message to send.
+		This is called when constructing a Incoming_Slot.
+	incoming_unsubscribe:
+		Unsubscribes a Incoming_Slot to bit_field updates. This is called when
+		a Incoming_Slot is removed.
+		Postcondition: We will not keep track of updates and we will not call
+			trigger for this connection_ID.
+	next_have:
+		Returns true and sets block to block we need to send in a have_* message.
+		Returns false if no have messages to send.
+	*/
+	unsigned incoming_count();
+	void incoming_subscribe(const int connection_ID,
 		const boost::function<void(const int)> trigger_tick, bit_field & BF);
+	void incoming_unsubscribe(const int connection_ID);
+	bool next_have(const int connection_ID, boost::uint64_t & block);
+
+	/* Outgoing_Slot Related
+	outgoing_count:
+		Number of hosts we're downloading file from.
+	outgoing_subscribe:
+		Add a bit_field of a remote host. If BF is empty it means the remote host
+		has all blocks. This is called when a Outgoing_Slot is added.
+	outgoing_unsubscribe:
+		Remove the connection as a source of blocks. Cancel all unfulfilled
+		requests. This is called when a Outgoing_Slot is removed.
+	*/
+	unsigned outgoing_count();
+	void outgoing_subscribe(const int connection_ID, bit_field & BF);
+	void outgoing_unsubscribe(const int connection_ID);
 
 private:
 	//locks access to all data members

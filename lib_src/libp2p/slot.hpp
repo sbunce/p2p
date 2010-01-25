@@ -64,30 +64,16 @@ public:
 	get_transfer:
 		Get object responsible for exchanging hash tree and file data.
 		Note: May be empty shared_ptr if we don't yet know the file size.
-	register_download/upload:
-		Called open slot opened with remote host. Used to keep track of how many
-		hosts we're downloading from/uploading to.
-		Note: register_download called when outgoing slot opened.
-		Note: register_upload called when incoming slot opened.
 	set_unknown:
 		Sets data that may not be known. Instantiates transfer. Returns false if
 		transfer could not be instantiated.
 	touch:
 		Updates speeds. Called before getting speeds to return to the GUI.
-	unregister_download/upload:
-		Called when slot closed with remote host. Used to keep track of how many
-		hosts we're downloading from/uploading to.
-		Note: unregister_download called when outgoing slot closed.
-		Note: unregister_upload called when incoming slot closed.
 	*/
 	const boost::shared_ptr<transfer> & get_transfer();
-	void register_download();
-	void register_upload();
 	bool set_unknown(const int connection_ID, const boost::uint64_t file_size,
 		const std::string & root_hash);
 	void touch();
-	void unregister_download();
-	void unregister_upload();
 
 private:
 	/*
@@ -102,9 +88,5 @@ private:
 	//instantiated when we get file size
 	boost::mutex Transfer_mutex; //lock for instantiation of transfer
 	boost::shared_ptr<transfer> Transfer;
-
-	//counts for how many peers downloading/uploading
-	atomic_int<unsigned> downloading;
-	atomic_int<unsigned> uploading;
 };
 #endif

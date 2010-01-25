@@ -23,13 +23,17 @@ slot_manager::~slot_manager()
 		iter_cur = Incoming_Slot.begin(), iter_end = Incoming_Slot.end();
 		iter_cur != iter_end; ++iter_cur)
 	{
-		iter_cur->second->unregister_upload();
+		if(iter_cur->second->get_transfer()){
+			iter_cur->second->get_transfer()->incoming_unsubscribe(Exchange.connection_ID);
+		}
 	}
 	for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter_cur = Outgoing_Slot.begin(), iter_end = Outgoing_Slot.end();
 		iter_cur != iter_end; ++iter_cur)
 	{
-		iter_cur->second->unregister_download();
+		if(iter_cur->second->get_transfer()){
+			iter_cur->second->get_transfer()->outgoing_unsubscribe(Exchange.connection_ID);
+		}
 	}
 	share::singleton().garbage_collect();
 }
@@ -42,7 +46,9 @@ void slot_manager::close_complete()
 		if(iter_cur->second->get_transfer()
 			&& iter_cur->second->get_transfer()->complete())
 		{
-			iter_cur->second->unregister_download();
+			if(iter_cur->second->get_transfer()){
+				iter_cur->second->get_transfer()->outgoing_unsubscribe(Exchange.connection_ID);
+			}
 			Exchange.send(boost::shared_ptr<message::base>(
 				new message::close_slot(iter_cur->first)));
 			Outgoing_Slot.erase(iter_cur++);
@@ -64,6 +70,9 @@ bool slot_manager::recv_close_slot(boost::shared_ptr<message::base> M)
 		iter = Incoming_Slot.find(M->buf[1]);
 	if(iter != Incoming_Slot.end()){
 		LOGGER;
+		if(iter->second->get_transfer()){
+			iter->second->get_transfer()->incoming_unsubscribe(Exchange.connection_ID);
+		}
 		Incoming_Slot.erase(iter);
 		return true;
 	}else{
@@ -87,8 +96,14 @@ bool slot_manager::recv_file_block(boost::shared_ptr<message::base> M,
 		if(status == transfer::good){
 			return true;
 		}else if(status == transfer::bad){
-			LOGGER << "stub: need to close slot";
-			exit(1);
+			LOGGER << "error writing file, closing slot";
+			if(iter->second->get_transfer()){
+				iter->second->get_transfer()->outgoing_unsubscribe(Exchange.connection_ID);
+			}
+			Exchange.send(boost::shared_ptr<message::base>(
+				new message::close_slot(iter->first)));
+			Outgoing_Slot.erase(iter);
+			share::singleton().garbage_collect();
 		}else if(status == transfer::protocol_violated){
 			return false;
 		}
@@ -105,8 +120,8 @@ bool slot_manager::recv_have_file_block(boost::shared_ptr<message::base> M)
 		iter = Outgoing_Slot.find(M->buf[1]);
 	if(iter != Outgoing_Slot.end()){
 		if(iter->second->get_transfer()){
-			iter->second->get_transfer()->recv_have_file_block(Exchange.connection_ID,
-				block_num);
+			iter->second->get_transfer()->recv_have_file_block(
+				Exchange.connection_ID, block_num);
 		}
 	}
 	return true;
@@ -121,8 +136,8 @@ bool slot_manager::recv_have_hash_tree_block(boost::shared_ptr<message::base> M)
 		iter = Outgoing_Slot.find(M->buf[1]);
 	if(iter != Outgoing_Slot.end()){
 		if(iter->second->get_transfer()){
-			iter->second->get_transfer()->recv_have_hash_tree_block(Exchange.connection_ID,
-				block_num);
+			iter->second->get_transfer()->recv_have_hash_tree_block(
+				Exchange.connection_ID, block_num);
 		}
 	}
 	return true;
@@ -143,8 +158,14 @@ bool slot_manager::recv_hash_tree_block(boost::shared_ptr<message::base> M,
 		if(status == transfer::good){
 			return true;
 		}else if(status == transfer::bad){
-			LOGGER << "stub: need to close slot";
-			exit(1);
+			LOGGER << "error writing hash tree, closing slot";
+			if(iter->second->get_transfer()){
+				iter->second->get_transfer()->outgoing_unsubscribe(Exchange.connection_ID);
+			}
+			Exchange.send(boost::shared_ptr<message::base>(
+				new message::close_slot(iter->first)));
+			Outgoing_Slot.erase(iter);
+			share::singleton().garbage_collect();
 		}else if(status == transfer::protocol_violated){
 			return false;
 		}
@@ -156,7 +177,14 @@ bool slot_manager::recv_request_block_failed(boost::shared_ptr<message::base> M,
 	const unsigned slot_num)
 {
 	LOGGER;
-	Outgoing_Slot.erase(slot_num);
+	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
+		iter = Outgoing_Slot.find(slot_num);
+	if(iter != Outgoing_Slot.end()){
+		if(iter->second->get_transfer()){
+			iter->second->get_transfer()->outgoing_unsubscribe(Exchange.connection_ID);
+		}
+		Outgoing_Slot.erase(iter);
+	}
 	return true;
 }
 
@@ -179,6 +207,9 @@ bool slot_manager::recv_request_hash_tree_block(
 			return true;
 		}else if(status == transfer::bad){
 			LOGGER << "error reading tree block";
+			if(iter->second->get_transfer()){
+				iter->second->get_transfer()->incoming_unsubscribe(Exchange.connection_ID);
+			}
 			Incoming_Slot.erase(iter);
 			Exchange.send(boost::shared_ptr<message::base>(new message::error()));
 			return true;
@@ -208,6 +239,9 @@ bool slot_manager::recv_request_file_block(
 			return true;
 		}else if(status == transfer::bad){
 			LOGGER << "error reading file block";
+			if(iter->second->get_transfer()){
+				iter->second->get_transfer()->incoming_unsubscribe(Exchange.connection_ID);
+			}
 			Incoming_Slot.erase(iter);
 			Exchange.send(boost::shared_ptr<message::base>(new message::error()));
 			return true;
@@ -254,10 +288,8 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 
 	//possible bit_fields for incomplete tree and/or file
 	bit_field tree_BF, file_BF;
-	slot_iter->get_transfer()->subscribe_tree(Exchange.connection_ID,
-		trigger_tick, tree_BF);
-	slot_iter->get_transfer()->subscribe_file(Exchange.connection_ID,
-		trigger_tick, file_BF);
+	slot_iter->get_transfer()->incoming_subscribe(Exchange.connection_ID,
+		trigger_tick, tree_BF, file_BF);
 
 	//file size
 	boost::uint64_t file_size = slot_iter->file_size();
@@ -301,8 +333,6 @@ bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 		new message::request_file_block(
 		boost::bind(&slot_manager::recv_request_file_block, this, _1, slot_num),
 		slot_num, slot_iter->get_transfer()->file_block_count())));
-
-	slot_iter->register_upload();
 
 	return true;
 }
@@ -400,7 +430,7 @@ bool slot_manager::recv_slot(boost::shared_ptr<message::base> M,
 			message::have_file_block(boost::bind(&slot_manager::recv_have_file_block,
 			this, _1), M->buf[1], file_block_count)));
 	}
-	slot_iter->get_transfer()->add_subscription(Exchange.connection_ID, tree_BF, file_BF);
+	slot_iter->get_transfer()->outgoing_subscribe(Exchange.connection_ID, tree_BF, file_BF);
 
 	//add outgoing slot
 	std::pair<std::map<unsigned char, boost::shared_ptr<slot> >::iterator, bool>
@@ -410,7 +440,7 @@ bool slot_manager::recv_slot(boost::shared_ptr<message::base> M,
 		LOGGER << "violated protocol";
 		return false;
 	}
-	slot_iter->register_download();
+
 	return true;
 }
 
@@ -424,7 +454,9 @@ void slot_manager::remove(const std::string & hash)
 			The next request made for this slot will result in an error and the
 			other side will close it's slot.
 			*/
-			iter_cur->second->unregister_upload();
+			if(iter_cur->second->get_transfer()){
+				iter_cur->second->get_transfer()->incoming_unsubscribe(Exchange.connection_ID);
+			}
 			Incoming_Slot.erase(iter_cur++);
 		}else{
 			++iter_cur;
@@ -434,7 +466,9 @@ void slot_manager::remove(const std::string & hash)
 		iter_cur = Outgoing_Slot.begin(); iter_cur != Outgoing_Slot.end();)
 	{
 		if(iter_cur->second->hash() == hash){
-			iter_cur->second->unregister_download();
+			if(iter_cur->second->get_transfer()){
+				iter_cur->second->get_transfer()->outgoing_unsubscribe(Exchange.connection_ID);
+			}
 			Exchange.send(boost::shared_ptr<message::base>(new message::close_slot(iter_cur->first)));
 			--open_slots;
 			Outgoing_Slot.erase(iter_cur++);
