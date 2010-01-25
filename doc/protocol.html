@@ -308,6 +308,17 @@ be checked before they're sent.
 </pre>
 </fieldset>
 <br>
+<p>
+<b>Have message recommendations.</b>
+</p>
+<p>
+Have messages should not be sent to the host which sent a block.
+</p>
+<p>
+Have messages should not be sent to hosts we know won't request the block. We
+can know that a host which already has the block will not request the block.
+This can only be known if two hosts are downloading from eachother.
+</p>
 <fieldset>
 <pre>
 name: have_hash_tree_block

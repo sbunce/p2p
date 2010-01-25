@@ -42,7 +42,15 @@ private:
 	boost::mutex Connection_mutex;
 	std::map<int, boost::shared_ptr<connection> > Connection;
 
+	//used to tick() connections
 	thread_pool Thread_Pool;
+
+	/*
+	We use the filter set to eliminate unnecessary tick()s from being scheduled
+	with the thread pool
+	*/
+	boost::mutex filter_mutex;
+	std::set<int> filter;
 
 	/*
 	do_tick:

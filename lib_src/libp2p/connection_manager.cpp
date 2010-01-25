@@ -40,12 +40,19 @@ void connection_manager::disconnect_call_back(network::connection_info & CI)
 
 void connection_manager::do_tick(const int connection_ID)
 {
+	{//BEGIN lock scope
+	boost::mutex::scoped_lock lock(filter_mutex);
+	filter.erase(connection_ID);
+	}//end lock scope
+	{//BEGIN lock scope
+
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	std::map<int, boost::shared_ptr<connection> >::iterator
 		iter = Connection.find(connection_ID);
 	if(iter != Connection.end()){
 		iter->second->tick();
 	}
+	}//END lock scope
 }
 
 void connection_manager::remove(const std::string hash)
@@ -87,5 +94,10 @@ void connection_manager::remove(const std::string hash)
 
 void connection_manager::trigger_tick(const int connection_ID)
 {
-	Thread_Pool.queue(boost::bind(&connection_manager::do_tick, this, connection_ID));
+	boost::mutex::scoped_lock lock(filter_mutex);
+	//if cannot insert then we know job already scheduled
+	std::pair<std::set<int>::iterator, bool> P = filter.insert(connection_ID);
+	if(P.second){
+		Thread_Pool.queue(boost::bind(&connection_manager::do_tick, this, connection_ID));
+	}
 }
