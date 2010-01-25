@@ -37,20 +37,42 @@ void block_request::add_block_local(const int connection_ID, const boost::uint64
 	request.erase(block);
 	if(send_have){
 		/*
-		If a host sent us a block we don't need to tell it we have it because it
-		has no reason to request the block from us (since it already has it).
+		We don't tell the host that sent us a block that we have the block. We
+		also don't tell it we have blocks we know it already has.
 		*/
+		std::set<int> trigger;
 		for(std::map<int, have_info>::iterator iter_cur = have.begin(),
 			iter_end = have.end(); iter_cur != iter_end; ++iter_cur)
 		{
 			if(iter_cur->first != connection_ID){
-				iter_cur->second.block.push(block);
+				std::map<int, bit_field>::iterator iter = remote.find(iter_cur->first);
+				if(iter == remote.end()){
+					/*
+					We are downloading from remote host, but it is not downoading from
+					us so we don't know what blocks it has.
+					*/
+					iter_cur->second.block.push(block);
+					trigger.insert(iter_cur->first);
+				}else{
+					/*
+					We are downloading from remote host, so we can check to see if it
+					already has a block. If it does there's no need to tell it we have
+					the block because it won't need to request it from us.
+					*/
+					if(iter->second.empty() || iter->second[block] == false){
+						//remote host doesn't have block
+						iter_cur->second.block.push(block);
+						trigger.insert(iter_cur->first);
+					}
+				}
 			}
 		}
 		for(std::map<int, have_info>::iterator iter_cur = have.begin(),
 			iter_end = have.end(); iter_cur != iter_end; ++iter_cur)
 		{
-			if(iter_cur->first != connection_ID){
+			if(iter_cur->first != connection_ID
+				&& trigger.find(iter_cur->first) != trigger.end())
+			{
 				iter_cur->second.trigger_tick(iter_cur->first);
 			}
 		}
