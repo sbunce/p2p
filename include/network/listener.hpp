@@ -202,13 +202,10 @@ public:
 	}
 
 private:
-	//-1 when not listening and >= 0 when listening
-	int socket_FD;
+	int socket_FD; //-1 if not open, or >= 0 if open
+	int _error;    //most recent error, or 0 if no error
 
-	//holds most recent error
-	int _error;
-
-	//endpoint of most recently accepted connection (empty if no connection accepted)
+	//endpoint of most recently accepted connection
 	boost::shared_ptr<endpoint> E;
 };
 }

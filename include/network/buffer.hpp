@@ -415,6 +415,11 @@ public:
 		}
 	}
 
+	friend std::ostream & operator << (std::ostream & lval, const buffer & rval)
+	{
+		return lval << rval.str();
+	}
+
 private:
 	int reserved;        //minimum bytes to be left allocated
 	int bytes;           //how many bytes are currently allocated to buf

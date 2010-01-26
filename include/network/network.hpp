@@ -3,6 +3,7 @@
 #include "endpoint.hpp"
 #include "http/server.hpp"
 #include "listener.hpp"
+#include "ndgram.hpp"
 #include "nstream.hpp"
 #include "protocol.hpp"
 #include "proactor.hpp"

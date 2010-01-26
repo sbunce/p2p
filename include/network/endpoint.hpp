@@ -13,10 +13,12 @@
 
 namespace network{
 class listener;
+class ndgram;
 class nstream;
 class endpoint
 {
 	friend class listener;
+	friend class ndgram;
 	friend class nstream;
 public:
 	explicit endpoint(const addrinfo * ai_in)

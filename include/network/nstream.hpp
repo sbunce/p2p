@@ -70,7 +70,7 @@ public:
 	WARNING: This function returns a false positive if a socket is asynchronously
 		connecting.
 	*/
-	bool is_open()
+	bool is_open() const
 	{
 		return socket_FD != -1;
 	}
@@ -107,6 +107,9 @@ public:
 	//returns local port, or empty string if error
 	std::string local_IP()
 	{
+		if(socket_FD == -1){
+			return "";
+		}
 		sockaddr_storage addr;
 		socklen_t addrlen = sizeof(addr);
 		if(getsockname(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
@@ -130,6 +133,9 @@ public:
 	//returns local port, or empty string if error
 	std::string local_port()
 	{
+		if(socket_FD == -1){
+			return "";
+		}
 		sockaddr_storage addr;
 		socklen_t addrlen = sizeof(addr);
 		if(getsockname(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
@@ -155,9 +161,7 @@ public:
 	{
 		assert(E.type() == tcp);
 		close();
-		if((socket_FD = ::socket(E.ai.ai_family, E.ai.ai_socktype,
-			E.ai.ai_protocol)) == -1)
-		{
+		if((socket_FD = ::socket(E.ai.ai_family, E.ai.ai_socktype, E.ai.ai_protocol)) == -1){
 			LOGGER << errno;
 			_error = errno;
 			close();
@@ -332,14 +336,8 @@ public:
 	}
 
 private:
-	/*
-	-1 when not connected and >= 0 when connected. However if async_connect() is
-	done this might be >= 0 when socket in progress of connecting.
-	*/
-	int socket_FD;
-
-	//holds most recent error
-	int _error;
+	int socket_FD; //-1 if not connected, or >= 0 if connected
+	int _error;    //most recent error, or 0 if no error
 };
 }
 #endif
