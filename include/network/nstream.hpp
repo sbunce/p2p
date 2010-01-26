@@ -153,6 +153,7 @@ public:
 	//opens connection
 	void open(const endpoint & E)
 	{
+		assert(E.type() == tcp);
 		close();
 		if((socket_FD = ::socket(E.ai.ai_family, E.ai.ai_socktype,
 			E.ai.ai_protocol)) == -1)
@@ -321,21 +322,6 @@ public:
 				close();
 			}
 			#endif
-		}
-	}
-
-	/*
-	Partially shutdown a socket.
-	SHUT_RD - shutdown recv
-	SHUT_WR - shutdown send
-	SHUT_RDWR - shutdown both recv and send
-	*/
-	void shutdown(const int mode)
-	{
-		if(::shutdown(socket_FD, mode) == -1){
-			LOGGER << errno;
-			_error = errno;
-			close();
 		}
 	}
 

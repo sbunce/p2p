@@ -59,10 +59,9 @@ public:
 	Start async connection to host. Connect call back will happen if connects,
 	of disconnect call back if connection fails.
 	*/
-	void connect(const std::string & host, const std::string & port,
-		const sock_type type)
+	void connect(const std::string & host, const std::string & port)
 	{
-		Resolve_TP.queue(boost::bind(&proactor::resolve, this, host, port, type));
+		Resolve_TP.queue(boost::bind(&proactor::resolve, this, host, port));
 	}
 
 	//disconnect as soon as possible
@@ -136,6 +135,7 @@ public:
 			//proactor already started
 			return false;
 		}
+		assert(E.type() == tcp);
 		Listener.open(E);
 		if(!Listener.is_open()){
 			LOGGER << "failed to start listener";
@@ -446,7 +446,7 @@ private:
 				//recreate connection_info with new IP
 				P.second->CI = boost::shared_ptr<connection_info>(new connection_info(
 					ID_Manager.allocate(), P.first, P.second->CI->host, P.second->E.begin()->IP(),
-					P.second->CI->port, P.second->CI->type, outgoing));
+					P.second->CI->port, outgoing));
 				if(P.first == -1){
 					//couldn't allocate socket
 					remove_socket(P.first);
@@ -524,7 +524,7 @@ private:
 					while(boost::shared_ptr<nstream> N = Listener.accept()){
 						boost::shared_ptr<connection_info> CI(new connection_info(
 							ID_Manager.allocate(), N->socket(), "", Listener.accept_endpoint().IP(),
-							Listener.accept_endpoint().port(), tcp, incoming));
+							Listener.accept_endpoint().port(), incoming));
 						std::pair<int, boost::shared_ptr<state> > P(N->socket(),
 							boost::shared_ptr<state>(new state(true, std::set<endpoint>(), N, CI)));
 						add_socket(P);
@@ -659,14 +659,13 @@ private:
 	Note: This function must not access any data member except
 		network_thread_call (after locking network_thread_call_mutex).
 	*/
-	void resolve(const std::string & host, const std::string & port,
-		const sock_type type)
+	void resolve(const std::string & host, const std::string & port)
 	{
-		std::set<endpoint> E = get_endpoint(host, port, type);
+		std::set<endpoint> E = get_endpoint(host, port, tcp);
 		if(E.empty()){
 			//host did not resolve
 			boost::shared_ptr<connection_info> CI(new connection_info(ID_Manager.allocate(),
-				-1, host, "", port, type, outgoing));
+				-1, host, "", port, outgoing));
 			//deallocate connection_ID right away, it won't be stored outside proactor
 			ID_Manager.deallocate(CI->connection_ID);
 			Call_Back_Dispatcher.disconnect(CI);
@@ -675,7 +674,7 @@ private:
 			boost::shared_ptr<nstream> N(new nstream());
 			bool connected = N->open_async(*E.begin());
 			boost::shared_ptr<connection_info> CI(new connection_info(ID_Manager.allocate(),
-				N->socket(), host, E.begin()->IP(), port, type, outgoing));
+				N->socket(), host, E.begin()->IP(), port, outgoing));
 			std::pair<int, boost::shared_ptr<state> > P(N->socket(),
 				boost::shared_ptr<state>(new state(connected, E, N, CI)));
 			if(connected){

@@ -24,7 +24,6 @@ public:
 		const std::string & host_in,
 		const std::string & IP_in,
 		const std::string & port_in,
-		const sock_type type_in,
 		const dir direction_in
 	):
 		connection_ID(connection_ID_in),
@@ -32,7 +31,6 @@ public:
 		host(host_in),
 		IP(IP_in),
 		port(port_in),
-		type(type_in),
 		direction(direction_in),
 		latest_recv(0),
 		latest_send(0),
@@ -43,7 +41,6 @@ public:
 	const std::string host;  //unresolved host name
 	const std::string IP;    //remote IP
 	const std::string port;  //remote port
-	const sock_type type;
 	const dir direction;
 
 	/*

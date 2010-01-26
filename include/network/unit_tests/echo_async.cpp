@@ -75,7 +75,7 @@ int main()
 	Proactor.start(*E.begin());
 
 	for(int x=0; x<test_echo; ++x){
-		Proactor.connect("localhost", Proactor.listen_port(), network::tcp);
+		Proactor.connect("localhost", Proactor.listen_port());
 	}
 
 	{//begin lock scope

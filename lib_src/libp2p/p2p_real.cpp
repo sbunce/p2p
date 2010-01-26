@@ -113,7 +113,7 @@ void p2p_real::resume()
 		iter_cur = peers.begin(), iter_end = peers.end(); iter_cur != iter_end;
 		++iter_cur)
 	{
-		Connection_Manager.Proactor.connect(iter_cur->first, iter_cur->second, network::tcp);
+		Connection_Manager.Proactor.connect(iter_cur->first, iter_cur->second);
 	}
 
 	//bring up networking
