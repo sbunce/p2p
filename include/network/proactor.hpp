@@ -523,8 +523,8 @@ private:
 					//handle incoming connections
 					while(boost::shared_ptr<nstream> N = Listener.accept()){
 						boost::shared_ptr<connection_info> CI(new connection_info(
-							ID_Manager.allocate(), N->socket(), "", Listener.accept_endpoint().IP(),
-							Listener.accept_endpoint().port(), incoming));
+							ID_Manager.allocate(), N->socket(), "", N->remote_IP(),
+							N->remote_port(), incoming));
 						std::pair<int, boost::shared_ptr<state> > P(N->socket(),
 							boost::shared_ptr<state>(new state(true, std::set<endpoint>(), N, CI)));
 						add_socket(P);

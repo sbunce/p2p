@@ -118,7 +118,7 @@ void p2p_real::resume()
 
 	//bring up networking
 	std::set<network::endpoint> E = network::get_endpoint(
-		"", //all interfaces
+		"",
 		database::table::prefs::get_port(),
 		network::tcp
 	);

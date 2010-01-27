@@ -16,6 +16,21 @@ int main()
 	E = network::get_endpoint("localhost", N_serv.local_port(), network::udp);
 	assert(!E.empty());
 	network::ndgram N_client;
+	assert(N_client.is_open());
+
+	//send character to server
 	network::buffer buf("x");
-	//N_client.send();
+	N_client.send(buf, *E.begin());
+	assert(buf.empty());
+
+	//recv character and echo it back
+	boost::shared_ptr<network::endpoint> from;
+	N_serv.recv(buf, from);
+	assert(buf.str() == "x");
+	N_serv.send(buf, *from);
+
+	//recv character on client
+	buf.clear();
+	N_client.recv(buf, from);
+	assert(buf.str() == "x");
 }

@@ -52,18 +52,7 @@ public:
 			return boost::shared_ptr<nstream>();
 		}
 		boost::shared_ptr<nstream> N(new nstream(new_socket));
-		E = boost::shared_ptr<endpoint>(new endpoint(&ai));
 		return N;
-	}
-
-	/*
-	Returns endpoint for latest accepted connection.
-	Precondition: At least one connection must have been accepted.
-	*/
-	endpoint & accept_endpoint()
-	{
-		assert(E);
-		return *E;
 	}
 
 	//close the socket
@@ -204,9 +193,6 @@ public:
 private:
 	int socket_FD; //-1 if not open, or >= 0 if open
 	int _error;    //most recent error, or 0 if no error
-
-	//endpoint of most recently accepted connection
-	boost::shared_ptr<endpoint> E;
 };
 }
 #endif

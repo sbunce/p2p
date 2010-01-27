@@ -204,29 +204,29 @@ public:
 	Reads bytes in to buffer. Returns the number of bytes read or 0 if the host
 	disconnected. Returns -1 on error.
 	*/
-	int recv(buffer & B, const int max_transfer = MTU)
+	int recv(buffer & buf, const int max_transfer = MTU)
 	{
 		assert(max_transfer > 0);
 		if(max_transfer > MTU){
-			B.tail_reserve(MTU);
+			buf.tail_reserve(MTU);
 		}else{
-			B.tail_reserve(max_transfer);
+			buf.tail_reserve(max_transfer);
 		}
 
 		if(socket_FD == -1){
 			//socket previously disconnected, errno might not be valid here
 			return 0;
 		}else{
-			int n_bytes = ::recv(socket_FD, reinterpret_cast<char *>(B.tail_start()),
-				B.tail_size(), MSG_NOSIGNAL);
+			int n_bytes = ::recv(socket_FD, reinterpret_cast<char *>(buf.tail_start()),
+				buf.tail_size(), MSG_NOSIGNAL);
 			if(n_bytes == -1){
 				LOGGER << errno;
 				_error = errno;
 			}else if(n_bytes == 0){
 				close();
-				B.tail_reserve(0);
+				buf.tail_reserve(0);
 			}else{
-				B.tail_resize(n_bytes);
+				buf.tail_resize(n_bytes);
 			}
 			return n_bytes;
 		}
@@ -282,11 +282,11 @@ public:
 	Writes bytes from buffer. Returns the number of bytes sent or 0 if the host
 	disconnected. The sent bytes are erased from the buffer.
 	*/
-	int send(buffer & B, int max_transfer = MTU)
+	int send(buffer & buf, int max_transfer = MTU)
 	{
 		assert(max_transfer > 0);
-		if(max_transfer > B.size()){
-			max_transfer = B.size();
+		if(max_transfer > buf.size()){
+			max_transfer = buf.size();
 		}
 		if(max_transfer > MTU){
 			max_transfer = MTU;
@@ -296,14 +296,15 @@ public:
 			//socket previously disconnected, errno might not be valid here
 			return 0;
 		}else{
-			int n_bytes = ::send(socket_FD, reinterpret_cast<char *>(B.data()),
+			int n_bytes = ::send(socket_FD, reinterpret_cast<char *>(buf.data()),
 				max_transfer, MSG_NOSIGNAL);
 			if(n_bytes == -1){
+				LOGGER << errno;
 				_error = errno;
 			}else if(n_bytes == 0){
 				close();
 			}else{
-				B.erase(0, n_bytes);
+				buf.erase(0, n_bytes);
 			}
 			return n_bytes;
 		}
