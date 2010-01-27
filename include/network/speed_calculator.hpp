@@ -1,6 +1,5 @@
-//THREADSAFE
-#ifndef H_SPEED_CALCULATOR
-#define H_SPEED_CALCULATOR
+#ifndef H_NETWORK_SPEED_CALCULATOR
+#define H_NETWORK_SPEED_CALCULATOR
 
 //include
 #include <boost/shared_ptr.hpp>

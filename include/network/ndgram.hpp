@@ -1,5 +1,5 @@
-#ifndef H_NDGRAM
-#define H_NDGRAM
+#ifndef H_NETWORK_NDGRAM
+#define H_NETWORK_NDGRAM
 
 //custom
 #include "protocol.hpp"

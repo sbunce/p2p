@@ -1,0 +1,420 @@
+Abstract
+============
+
+The p2p library provides the means to connect to a global DHT (distributed hash
+table) on which to lookup and download files from multiple hosts concurrently.
+
+
+Protocol
+============
+
+The protocol is symmetric with the exception of the key exchange. Any message
+can go in either direction. All numbers are encoded in big-endian. The protocol
+is entirely binary.
+
+VLI (variable length integers) are used to save space. VLIs are used when we
+know the maximum value an integer must hold.
+
+The protocol is designed to minimize the amount of data that must arrive from
+a trusted source. Only the root hash must be known to download a file. The root
+hash is the hash of the file size (8 byte big-endian) followed by the root hash
+(20 byte SHA1 hash).
+
+
+Key Exchange
+============
+
+Each TCP session starts with a Diffie-Hellman key exchange.
+
+host_A initiates a connection with host_B.
+g   = the generator both sides use that is always equal to 2
+sA  = secret exponent of host_A
+sB  = secret exponent of host_B
+p   = prime host_A generates that both sides use
+rA  = result of host_A, g^sA % p
+rB  = result of host_B, g^sB % p
+k   = secret key
+MiM = Man in the middle.
+^   = exponentiation symbol
+%   = modulo symbol
+
+The section header indicates who sees what.
+	+-----------------+   +-----------------+   +-----------------+
+	|     host_A      |   |       MiM       |   |      host_B     |
+	+-----------------+   +-----------------+   +-----------------+
+	| k = rB^sA % p   | = | g^(sA*sB) % p   | = | r_A^sB % p = k  |
+	+-----------------+   +-----------------+   +-----------------+
+
+host_A steps
+------------
+step 0: Send p and rA.
+	+---+---+---+---+---+---+---+---+
+	|       p       |       rA      |
+	+---+---+---+---+---+---+---+---+
+	  0    ...   15  16    ...   31
+step 1: Receive rB. Calculate shared secret.
+
+host_B steps
+------------
+step 0: Receive p and rA. Calculate shared secret.
+step 2: Send rB.
+	+---+---+---+---+
+	|       rB      |
+	+---+---+---+---+
+	  0    ...   15
+
+The shared secret is used to seed two RC4-drop768 PRNGs. One PRNG is for sending
+and one is for receiving. RC4 and key exchanges without PKI (public key
+infrastructure) are not secure. However, the point of this is obfuscation, not
+security.
+
+After the PRNG is seeded all bytes sent and received are XOR'd against the
+output of the PRNGs. The send PRNG of Host_A remains synchronized to the recv
+PRNG of Host_B and vise versa.
+
+
+Initial Messages
+================
+
+After key exchange the following messages are sent by both sides.
+
+---
+message 0: local node ID
+description: Randomly generated 20 byte number. This number identifies the host
+on the DHT.
+	+---+---+---+
+	|     N     |
+	+---+---+---+
+	  0  ...  20
+N = local node ID
+note: This is our node identifier on the DHT.
+---
+
+
+TCP Commands
+=============
+
+Slot commands are used to exchange hash tree blocks and file blocks.
+
+---
+name: error
+desc: Meaning depends on what the error is sent in response to.
+	+---+
+	| C |
+	+---+
+	  0
+C = command (base10: 0)
+---
+
+---
+name: request_slot
+desc: Request a slot for downloading.
+	+---+---+---+---+
+	| C |     H     |
+	+---+---+---+---+
+	  0   1  ...  20
+C = command (base10: 1), H = hash
+
+possible responses: slot, error
+note: If error response the slot is not opened.
+note: The maximum number of slots that can be opened is 256.
+---
+
+---
+name: slot
+desc: Sent in response to request_slot. This message contains the
+information needed to downloads hash tree blocks and file blocks.
+	+---+---+---+---+---+---+---+---+---+   +---+---+---+   +---+---+---+
+	| C | S | K |     F     |     R     | + |     O     | + |     P     |
+	+---+---+---+---+---+---+---+---+---+   +---+---+---+   +---+---+---+
+	  0   1   2   3  ...  10  11 ...  30      31 ...  x      x+1 ...  y
+C = command (base10: 2), S = slot number, K = status, F = file size,
+R = root hash, O = optional hash tree bit field, P = optional file bit field
+
+note: The file size and root hash should be hash checked when received.
+
+possible status bytes:
+
+base10: 0
+description: Hash tree complete, file complete.
+
+base10: 1
+description: Hash tree complete, file incomplete. File bit field appended.
+Expect have_file_block messages.
+
+base10: 2
+description: Hash tree incomplete, file complete. Expect have_hash_tree_block
+messages.
+
+base10: 3
+description: Hash tree incomplete, file incomplete. File bit field appended and
+hash tree bit field appended after that. Expect have_hash_tree_block and
+have_file_block messages.
+---
+
+---
+name: request_hash_tree_block
+desc: Request a block from a hash tree.
+	+---+---+---+---+---+
+	| C | S |     B     |
+	+---+---+---+---+---+
+	  0   1   2  ...  n
+C = command (base10: 3), S = slot number, B = block number (VLI)
+
+possible responses: block, error
+note: B is sized such that it can hold the maximum tree block number.
+note: If error response the slot is closed.
+note: It violates the protocol to request a block the peer doesn't have.
+---
+
+---
+name: request_file_block
+desc: Request a block from a file.
+	+---+---+---+---+---+
+	| C | S |     B     |
+	+---+---+---+---+---+
+	  0   1   2  ...  n
+C = command (base10: 4), S = slot number, B = block number (VLI)
+
+possible responses: block, error
+note: B is sized such that it can hold the maximum file block number.
+note: If error response the slot is closed.
+---
+
+---
+name: block
+desc: Either a hash tree block or file block.
+	+---+---+---+---+
+	| C |     B     |
+	+---+---+---+---+
+	  0   1  ... 10240
+C = command (base10: 5), B = block (maximum size of 10240)
+
+note: It is a violation of the protocol to send a bad block. All blocks should
+be checked before they're sent.
+---
+
+
+Have Message Recommendations
+----------------------------
+
+Have messages should not be sent to the host which sent the block.
+
+Also, they should not be sent to hosts we know won't request the block. We can
+know that a host which already has the block will not request the block. This
+can only be known if two hosts are downloading from eachother.
+
+---
+name: have_hash_tree_block
+desc: Sent to tell a peer that we have a new hash tree block.
+	+---+---+---+---+---+
+	| C | S |     B     |
+	+---+---+---+---+---+
+	  0   1   2  ...  n
+C = command (base10: 6), S = slot number, B = block number (VLI)
+
+note: B is sized such that it can hold the maximum hash tree block number.
+---
+
+---
+name: have_file_block
+desc: Sent to tell a peer that we have a new file block.
+	+---+---+---+---+---+
+	| C | S |     B     |
+	+---+---+---+---+---+
+	  0   1   2  ...  n
+C = command (base10: 7), S = slot number, B = block number (VLI)
+
+note: B is sized such that it can hold the maximum file block number.
+---
+
+---
+name: close_slot
+desc: Closes a slot.
+	+---+---+
+	| C | S |
+	+---+---+
+	  0   1
+C = command (base10: 8), S = slot number
+---
+
+UDP Commands
+============
+
+The DHT commands are sent via UDP to the same port as the TCP listener. All
+messages are kept to less than 508 bytes to insure none get truncated.
+
+---
+name: ping
+desc: Used to check if a host is up.
+	+---+
+	| C |
+	+---+
+	  0
+C = command (base10: 0)
+
+possible responses: pong
+---
+
+---
+name: pong
+desc: Sent in response to ping.
+	+---+
+	| C |
+	+---+
+	  0
+C = command (base10: 1)
+---
+
+---
+name: find_node
+desc: Request for closer nodes.
+	+---+---+---+---+
+	| C |     N     |
+	+---+---+---+---+
+	  0   1  ...  20
+C = command (base10: 2), N = node ID we're finding
+
+possible responses: host_list
+---
+
+---
+name: host_list
+desc: A list of nodes which are closer.
+	+---+---+---+   +---+---+---+   +---+---+---+
+	| C | I | J | + |     K     | + |     L     |
+	+---+---+---+   +---+---+---+   +---+---+---+
+	  0   1   2       3  ...  x      x+1 ...  y
+C = command (base10: 3), I = IPv4 address count, J = IPv6 address count,
+K = IPv4 address list, L = IPv6 address list
+
+note: The counts indicate how many addresses will be in the address lists.
+
+A K list element:
+	+---+---+---+---+---+
+	|    IP     | port  |
+	+---+---+---+---+---+
+	  0  ...  3   4   5
+
+	A L list element:
+	+---+---+---+---+---+
+	|    IP     | port  |
+	+---+---+---+---+---+
+	  0  ...  7   8   9
+---
+
+---
+name: store
+desc: Store a mapping from a file hash to our node ID.
+	+---+---+---+---+
+	| C |     F     |
+	+---+---+---+---+
+	  0   1  ...  20
+C = command (base10: 4), N = file hash
+
+note: The host has our node ID from the initial message.
+---
+
+---
+name: find_value
+desc: Request a list of node IDs which have the specified file.
+	+---+---+---+---+
+	| C |     F     |
+	+---+---+---+---+
+	  0   1  ...  20
+C = command (base10: 5), N = file hash
+
+possible responses: node_list
+---
+
+---
+name: node_list
+desc: A list of nodes.
+	+---+---+   +---+---+---+
+	| C | I | + |     K     |
+	+---+---+   +---+---+---+
+	  0   1       2  ...  x
+C = command (base10: 6), I = node count, J = node list
+
+note: The node count indicates how many nodes are in the list.
+
+A J node list element:
++---+---+---+
+|  node ID  |
++---+---+---+
+  0  ... 19
+---
+
+
+Pipelining
+==========
+
+Pipelining is done by sending multiple requests, and a new request whenever a
+response is received. This increases throughput because the sender will not be
+idle waiting for a request.
+
+A maximum of 16 (request_hash_tree_block + request_file_block) commands can be
+pipelined.
+
+
+Hash Tree
+=========
+
+Merkle Hash Trees are used to distribute downloading of hash data needed to
+verify the integrity of file blocks. The hash function used to generate the
+tree is SHA1.
+
+The bottom row of the tree consists of hashes for every 10240 bytes of the file
+(however the last block may be shorter). Every row above the bottom row consists
+of hashes for blocks of 512 hashes (may be less if there isn't 512 hashes left
+in the child row).
+
+The hash on the top of the tree is the root hash. The file size (8 byte
+big-endian) with the root hash appended are then hashed together to get the hash
+the file is tracked by.
+
+
+Limits
+======
+
+The maximum file size is 2^64 bytes.
+
+Hash trees are currently stored in SQLite. SQLite blobs are limited to
+2^31 - 1 bytes. Files which would generate hash trees larger than this won't be
+hashed until this limitation can be addressed.
+
+
+Building
+========
+
+GNU/Linux
+---------
+
+There are many different GNU/Linux distributions. Most likely you can use your
+package manager to install the developer versions of these packages: boost, and
+gtkmm.
+
+
+Windows
+-------
+
+Visual C++ Express 2008: http://www.microsoft.com/express/vc/
+The command line compiler will be used by scons. It is not necessary to register
+to use the command line compiler.
+
+Boost: http://www.boostpro.com/download
+Select Visual Studio 2008 and multithread static. Install the following libraries
+(the VC9 versions): Date Time, Filesystem, Regex, System, Thread.
+
+gtkmm: http://ftp.gnome.org/pub/GNOME/binaries/win32/gtkmm/"
+Install to "C:\gtkmm" or pkg-config won't work properly.
+
+Python: http://python.org/download/
+This is used to run the build system.
+
+SCons: http://scons.org
+This is the software used to build.
+
+
+After installing the dependencies open cmd.exe, navigate to the source directory
+and run "scons".
