@@ -109,7 +109,16 @@ public:
 		}
 	}
 
-	//open for sending/receiving, endpoint is local
+	/*
+	Open for sending/receiving, endpoint is local.
+	Common Endpoints:
+
+		Accept only from localhost. Choose random port to listen on.
+		network::get_endpoint("localhost", "0", network::udp);
+
+		Accept connections on all interfaces. Use port 1234.
+		network::get_endpoint("", "1234", network::udp);
+	*/
 	void open(const endpoint & E)
 	{
 		assert(E.type() == udp);
@@ -168,6 +177,12 @@ public:
 			buf.erase(0, n_bytes);
 		}
 		return n_bytes;
+	}
+
+	//returns socket file descriptor, or -1 if disconnected
+	int socket()
+	{
+		return socket_FD;
 	}
 
 private:

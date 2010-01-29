@@ -249,12 +249,6 @@ private:
 		std::time_t last_seen;
 	};
 
-	//socket_FD associated with socket state
-	std::map<int, boost::shared_ptr<state> > Socket;
-
-	//connection_ID associated with socket state
-	std::map<int, boost::shared_ptr<state> > ID; 
-
 	/*
 	This class allocates connection_IDs. There are a few problems this class
 	addresses:
@@ -303,6 +297,12 @@ private:
 		int highest_allocated;   //last connection_ID allocated
 		std::set<int> allocated; //set of all connection_IDs allocated
 	} ID_Manager;
+
+	//socket_FD associated with socket state
+	std::map<int, boost::shared_ptr<state> > Socket;
+
+	//connection_ID associated with socket state
+	std::map<int, boost::shared_ptr<state> > ID;
 
 	/*
 	When a thread that is not the network_thread needs to modify data that

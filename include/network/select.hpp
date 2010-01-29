@@ -37,8 +37,12 @@ public:
 		sp_write->send(B);
 	}
 
-	void operator () (std::set<int> & read, std::set<int> & write, unsigned timeout_ms)
+	void operator () (std::set<int> & read, std::set<int> & write, unsigned timeout_ms = 0)
 	{
+		//monitor self-pipe (removed from read set later)
+		assert(sp_read->is_open());
+		read.insert(sp_read->socket());
+
 		//end_FD
 		int end_FD = 0;
 		if(!read.empty() && *read.rbegin() >= end_FD){
@@ -50,6 +54,8 @@ public:
 
 		//fd_sets
 		fd_set read_FDS, write_FDS;
+		FD_ZERO(&read_FDS);
+		FD_ZERO(&write_FDS);
 		for(std::set<int>::iterator iter_cur = read.begin(), iter_end = read.end();	
 			iter_cur != iter_end; ++iter_cur)
 		{
@@ -60,8 +66,6 @@ public:
 		{
 			FD_SET(*iter_cur, &write_FDS);
 		}
-		assert(sp_read->socket() != -1);
-		FD_SET(sp_read->socket(), &read_FDS);
 
 		//timeout
 		timeval tv;
@@ -73,7 +77,8 @@ public:
 		tv.tv_usec = (timeout_ms % 1000) * 1000;
 
 		//select
-		int service = ::select(end_FD, &read_FDS, &write_FDS, NULL, &tv);
+		int service = ::select(end_FD, &read_FDS, &write_FDS, NULL,
+			timeout_ms == 0 ? NULL : &tv);
 		if(service == -1){
 			//ignore interrupt signal, profilers can cause this
 			if(errno != EINTR){
@@ -82,7 +87,8 @@ public:
 		}else if(service == 0){
 			read.clear();
 			write.clear();
-		}else if(service != 0){
+		}else{
+			read.erase(sp_read->socket();
 			if(FD_ISSET(sp_read->socket(), &read_FDS)){
 				network::buffer buf;
 				sp_read->recv(buf);
