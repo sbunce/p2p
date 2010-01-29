@@ -33,7 +33,7 @@ public:
 
 	void interrupt()
 	{
-		buffer B("\0");
+		buffer B("0");
 		sp_write->send(B);
 	}
 
@@ -88,7 +88,7 @@ public:
 			read.clear();
 			write.clear();
 		}else{
-			read.erase(sp_read->socket();
+			read.erase(sp_read->socket());
 			if(FD_ISSET(sp_read->socket(), &read_FDS)){
 				network::buffer buf;
 				sp_read->recv(buf);

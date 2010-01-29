@@ -7,7 +7,7 @@
 #include "listener.hpp"
 #include "protocol.hpp"
 #include "rate_limit.hpp"
-#include "select_interrupter.hpp"
+#include "select.hpp"
 
 //include
 #include <atomic_int.hpp>
@@ -26,12 +26,6 @@ class proactor : private boost::noncopyable
 	*/
 	static const unsigned idle_timeout = 600;
 
-	/*
-	Maximum number of times per second select will timeout. This is needed
-	because the rate limiter won't always allow us to send bytes.
-	*/
-	static const unsigned select_timeouts_per_second = 100;
-
 	class init
 	{
 	public:
@@ -46,14 +40,8 @@ public:
 		const boost::function<void (connection_info &)> & disconnect_call_back
 	):
 		Call_Back_Dispatcher(connect_call_back, disconnect_call_back),
-		Resolve_TP(1),
-		begin_FD(0),
-		end_FD(1)
-	{
-		FD_ZERO(&read_FDS);
-		FD_ZERO(&write_FDS);
-		add_socket(std::make_pair(Select_Interrupter.socket(), boost::shared_ptr<state>()));
-	}
+		Resolve_TP(1)
+	{}
 
 	/*
 	Start async connection to host. Connect call back will happen if connects,
@@ -70,7 +58,7 @@ public:
 		boost::mutex::scoped_lock lock(network_thread_call_mutex);
 		network_thread_call.push_back(boost::bind(&proactor::disconnect, this,
 			connection_ID, false));
-		Select_Interrupter.trigger();
+		Select.interrupt();
 	}
 
 	//disconnect when send buffer becomes empty
@@ -79,7 +67,7 @@ public:
 		boost::mutex::scoped_lock lock(network_thread_call_mutex);
 		network_thread_call.push_back(boost::bind(&proactor::disconnect, this,
 			connection_ID, true));
-		Select_Interrupter.trigger();
+		Select.interrupt();
 	}
 
 	//send data to specified connection
@@ -91,7 +79,7 @@ public:
 			buf->swap(send_buf); //swap buffers to avoid copy
 			network_thread_call.push_back(boost::bind(&proactor::append_send_buf, this,
 				connection_ID, buf));
-			Select_Interrupter.trigger();
+			Select.interrupt();
 		}
 	}
 
@@ -161,7 +149,7 @@ public:
 		boost::mutex::scoped_lock lock(network_thread_call_mutex);
 		network_thread_call.push_front(boost::bind(&proactor::shutdown, this));
 		}//END lock scope
-		Select_Interrupter.trigger();
+		Select.interrupt();
 		network_thread.join();
 	}
 
@@ -191,7 +179,6 @@ private:
 	call_back_dispatcher Call_Back_Dispatcher;
 	listener Listener;
 	rate_limit Rate_Limit;
-	select_interrupter Select_Interrupter;
 
 	/*
 	Thread pool for DNS resolution.
@@ -199,11 +186,10 @@ private:
 	*/
 	thread_pool Resolve_TP;
 
-	//stuff needed for select()
-	fd_set read_FDS;  //set of sockets that need to read
-	fd_set write_FDS; //set of sockets that need to write
-	int begin_FD;     //first socket
-	int end_FD;       //one past last socket
+	select Select;
+
+	//sockets monitored by select
+	std::set<int> read_FDS, write_FDS;
 
 	//all state associated with the socket
 	class state : private boost::noncopyable
@@ -320,19 +306,14 @@ private:
 	void add_socket(std::pair<int, boost::shared_ptr<state> > P)
 	{
 		assert(P.first != -1);
-		if(P.first < begin_FD){
-			begin_FD = P.first;
-		}else if(P.first >= end_FD){
-			end_FD = P.first + 1;
-		}
 		if(P.second){
 			assert(P.second->N);
 			assert(P.second->CI);
 			if(P.second->connected){
-				FD_SET(P.first, &read_FDS);
+				read_FDS.insert(P.first);
 			}else{
 				//async connection in progress
-				FD_SET(P.first, &write_FDS);
+				write_FDS.insert(P.first);
 			}
 			std::pair<std::map<int, boost::shared_ptr<state> >::iterator, bool>
 				ret = Socket.insert(P);
@@ -341,11 +322,8 @@ private:
 			ret = ID.insert(P);
 			assert(ret.second);
 		}else{
-			/*
-			The select_interrupter and listener sockets don't have state associated
-			with them. They are also read only.
-			*/
-			FD_SET(P.first, &read_FDS);
+			//the listen socket doesn't have state associated with it
+			read_FDS.insert(P.first);
 		}
 	}
 
@@ -354,13 +332,14 @@ private:
 		std::pair<int, boost::shared_ptr<state> > P = lookup_ID(connection_ID);
 		if(P.second){
 			P.second->send_buf.append(*B);
-			FD_SET(P.second->CI->socket_FD, &write_FDS);
+			write_FDS.insert(P.second->CI->socket_FD);
 		}
 	}
 
 	//disconnect sockets which have timed out
 	void check_timeouts()
 	{
+/*
 		for(int socket_FD = begin_FD; socket_FD < end_FD; ++socket_FD){
 			if(FD_ISSET(socket_FD, &read_FDS) || FD_ISSET(socket_FD, &write_FDS)){
 				std::pair<int, boost::shared_ptr<state> > P = lookup_socket(socket_FD);
@@ -371,6 +350,7 @@ private:
 				}
 			}
 		}
+*/
 	}
 
 	//disconnect socket, or schedule disconnect when send_buf empty
@@ -427,8 +407,8 @@ private:
 		assert(P.first != -1);
 		P.second->touch();
 		if(P.second->N->is_open_async()){
-			FD_SET(P.first, &read_FDS);  //monitor socket for incoming data
-			FD_CLR(P.first, &write_FDS); //send_buf will be empty after connect
+			read_FDS.insert(P.first); //monitor socket for incoming data
+			write_FDS.erase(P.first); //send_buf will be empty after connect
 			P.second->connected = true;
 			P.second->E.clear();
 			Call_Back_Dispatcher.connect(P.second->CI);
@@ -462,9 +442,7 @@ private:
 	void network_loop()
 	{
 		std::time_t last_loop_time(std::time(NULL));
-		fd_set tmp_read_FDS;
-		fd_set tmp_write_FDS;
-		timeval tv;
+		std::set<int> tmp_read_FDS, tmp_write_FDS;
 		while(true){
 			boost::this_thread::interruption_point();
 			if(last_loop_time != std::time(NULL)){
@@ -476,135 +454,88 @@ private:
 
 			//only check for reads and writes when there is available download/upload
 			if(Rate_Limit.available_download() == 0){
-				FD_ZERO(&tmp_read_FDS);
+				tmp_read_FDS.clear();
 			}else{
 				tmp_read_FDS = read_FDS;
 			}
 			if(Rate_Limit.available_upload() == 0){
-				FD_ZERO(&tmp_write_FDS);
+				tmp_write_FDS.clear();
 			}else{
 				tmp_write_FDS = write_FDS;
 			}
 
-			/*
-			Windows gives a 10022 error (invalid argument) if passed empty fd_sets.
-			Don't call select if fd_sets are empty.
-			*/
-			#ifdef _WIN32
-			if(tmp_read_FDS.fd_count == 0 && tmp_write_FDS.fd_count == 0){
-				boost::this_thread::sleep(boost::posix_time::milliseconds(
-					1000 / select_timeouts_per_second));
-				continue;
+			Select(tmp_read_FDS, tmp_write_FDS, 10);
+
+			if(Listener.is_open() && tmp_read_FDS.find(Listener.socket()) != tmp_read_FDS.end()){
+				//handle incoming connections
+				while(boost::shared_ptr<nstream> N = Listener.accept()){
+					boost::shared_ptr<connection_info> CI(new connection_info(
+						ID_Manager.allocate(), N->socket(), "", N->remote_IP(),
+						N->remote_port(), incoming));
+					std::pair<int, boost::shared_ptr<state> > P(N->socket(),
+						boost::shared_ptr<state>(new state(true, std::set<endpoint>(), N, CI)));
+					add_socket(P);
+					Call_Back_Dispatcher.connect(P.second->CI);
+				}
+				tmp_read_FDS.erase(Listener.socket());
 			}
-			#endif
 
-			/*
-			On some systems timeval is modified after select returns and set to the
-			time that select blocked for. For example, Linux does this but Windows
-			does not.
-			*/
-			tv.tv_sec = 0;
-			tv.tv_usec = 1000000 / select_timeouts_per_second;
-
-			int service = select(end_FD, &tmp_read_FDS, &tmp_write_FDS, NULL, &tv);
-			if(service == -1){
-				//ignore interrupt signal, profilers can cause this
-				if(errno != EINTR){
-					LOGGER << errno; exit(1);
-				}
-			}else if(service != 0){
-				if(FD_ISSET(Select_Interrupter.socket(), &tmp_read_FDS)){
-					Select_Interrupter.reset();
-					FD_CLR(Select_Interrupter.socket(), &tmp_read_FDS);
-					--service;
-				}
-
-				if(Listener.is_open() && FD_ISSET(Listener.socket(), &tmp_read_FDS)){
-					//handle incoming connections
-					while(boost::shared_ptr<nstream> N = Listener.accept()){
-						boost::shared_ptr<connection_info> CI(new connection_info(
-							ID_Manager.allocate(), N->socket(), "", N->remote_IP(),
-							N->remote_port(), incoming));
-						std::pair<int, boost::shared_ptr<state> > P(N->socket(),
-							boost::shared_ptr<state>(new state(true, std::set<endpoint>(), N, CI)));
-						add_socket(P);
-						Call_Back_Dispatcher.connect(P.second->CI);
-					}
-					FD_CLR(Listener.socket(), &tmp_read_FDS);
-					--service;
-				}
-
-				//collect sockets that need read/write so we can divide bandwidth between them
-				std::deque<int> need_read, need_write;
-				for(int socket_FD = begin_FD; socket_FD < end_FD && service; ++socket_FD){
-					if(FD_ISSET(socket_FD, &tmp_read_FDS)){
-						need_read.push_back(socket_FD);
-					}
-					if(FD_ISSET(socket_FD, &tmp_write_FDS)){
-						need_write.push_back(socket_FD);
-					}
-					if(FD_ISSET(socket_FD, &tmp_read_FDS) || FD_ISSET(socket_FD, &tmp_write_FDS)){
-						--service;
-					}
-				}
-
-				//handle all writes
-				while(!need_write.empty()){
-					std::pair<int, boost::shared_ptr<state> > P = lookup_socket(need_write.front());
-					P.second->touch();
-					if(!P.second->connected){
-						handle_async_connection(P);
-					}else{
-						//n_bytes initially set to max send, then set to how much sent
-						int n_bytes = Rate_Limit.available_upload(need_write.size());
-						if(n_bytes != 0){
-							n_bytes = P.second->N->send(P.second->send_buf, n_bytes);
-							if(n_bytes == -1 || n_bytes == 0){
-								remove_socket(P.first);
-								Call_Back_Dispatcher.disconnect(P.second->CI);
-							}else{
-								Rate_Limit.add_upload(n_bytes);
-								if(P.second->send_buf.empty()){
-									if(P.second->disconnect_on_empty){
-										remove_socket(P.first);
-										Call_Back_Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
-										Call_Back_Dispatcher.disconnect(P.second->CI);
-									}else{
-										FD_CLR(P.first, &write_FDS);
-										Call_Back_Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
-									}
-								}else{
-									Call_Back_Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
-								}
-							}
-						}
-					}
-					need_write.pop_front();
-				}
-
-				//handle all reads
-				while(!need_read.empty()){
-					std::pair<int, boost::shared_ptr<state> > P = lookup_socket(need_read.front());
-					if(P.second){
-						P.second->touch();
-						//n_bytes initially set to max read, then set to how much read
-						int n_bytes = Rate_Limit.available_download(need_read.size());
-						if(n_bytes == 0){
-							//maxed out what can be read
-							break;
-						}
-						boost::shared_ptr<buffer> recv_buf(new buffer());
-						n_bytes = P.second->N->recv(*recv_buf, n_bytes);
+			//handle all writes
+			while(!tmp_write_FDS.empty()){
+				std::pair<int, boost::shared_ptr<state> > P = lookup_socket(*tmp_write_FDS.begin());
+				P.second->touch();
+				if(!P.second->connected){
+					handle_async_connection(P);
+				}else{
+					//n_bytes initially set to max send, then set to how much sent
+					int n_bytes = Rate_Limit.available_upload(tmp_write_FDS.size());
+					if(n_bytes != 0){
+						n_bytes = P.second->N->send(P.second->send_buf, n_bytes);
 						if(n_bytes == -1 || n_bytes == 0){
 							remove_socket(P.first);
 							Call_Back_Dispatcher.disconnect(P.second->CI);
 						}else{
-							Rate_Limit.add_download(n_bytes);
-							Call_Back_Dispatcher.recv(P.second->CI, recv_buf);
+							Rate_Limit.add_upload(n_bytes);
+							if(P.second->send_buf.empty()){
+								if(P.second->disconnect_on_empty){
+									remove_socket(P.first);
+									Call_Back_Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
+									Call_Back_Dispatcher.disconnect(P.second->CI);
+								}else{
+									write_FDS.erase(P.first);
+									Call_Back_Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
+								}
+							}else{
+								Call_Back_Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
+							}
 						}
 					}
-					need_read.pop_front();
 				}
+				tmp_write_FDS.erase(tmp_write_FDS.begin());
+			}
+
+			//handle all reads
+			while(!tmp_read_FDS.empty()){
+				std::pair<int, boost::shared_ptr<state> > P = lookup_socket(*tmp_read_FDS.begin());
+				if(P.second){
+					P.second->touch();
+					//n_bytes initially set to max read, then set to how much read
+					int n_bytes = Rate_Limit.available_download(tmp_read_FDS.size());
+					if(n_bytes == 0){
+						//maxed out what can be read
+						break;
+					}
+					boost::shared_ptr<buffer> recv_buf(new buffer());
+					n_bytes = P.second->N->recv(*recv_buf, n_bytes);
+					if(n_bytes == -1 || n_bytes == 0){
+						remove_socket(P.first);
+						Call_Back_Dispatcher.disconnect(P.second->CI);
+					}else{
+						Rate_Limit.add_download(n_bytes);
+						Call_Back_Dispatcher.recv(P.second->CI, recv_buf);
+					}
+				}
+				tmp_read_FDS.erase(tmp_read_FDS.begin());
 			}
 		}
 	}
@@ -629,22 +560,8 @@ private:
 	void remove_socket(const int socket_FD)
 	{
 		assert(socket_FD != -1);
-		FD_CLR(socket_FD, &read_FDS);
-		FD_CLR(socket_FD, &write_FDS);
-		//update begin_FD
-		for(int x=begin_FD; x<end_FD; ++x){
-			if(FD_ISSET(x, &read_FDS) || FD_ISSET(x, &write_FDS)){
-				begin_FD = x;
-				break;
-			}
-		}
-		//update end_FD
-		for(int x=end_FD; x>begin_FD; --x){
-			if(FD_ISSET(x, &read_FDS) || FD_ISSET(x, &write_FDS)){
-				end_FD = x + 1;
-				break;
-			}
-		}
+		read_FDS.erase(socket_FD);
+		write_FDS.erase(socket_FD);
 		std::pair<int, boost::shared_ptr<state> > P = lookup_socket(socket_FD);
 		if(P.second){
 			Socket.erase(socket_FD);
@@ -689,7 +606,7 @@ private:
 				Call_Back_Dispatcher.disconnect(P.second->CI);
 			}
 		}
-		Select_Interrupter.trigger();
+		Select.interrupt();
 	}
 
 	/*
