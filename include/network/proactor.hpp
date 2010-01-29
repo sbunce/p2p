@@ -339,18 +339,28 @@ private:
 	//disconnect sockets which have timed out
 	void check_timeouts()
 	{
-/*
-		for(int socket_FD = begin_FD; socket_FD < end_FD; ++socket_FD){
-			if(FD_ISSET(socket_FD, &read_FDS) || FD_ISSET(socket_FD, &write_FDS)){
-				std::pair<int, boost::shared_ptr<state> > P = lookup_socket(socket_FD);
-				if(P.second && P.second->timed_out()){
-					LOGGER << "timed out " << P.second->N->remote_IP();
-					remove_socket(socket_FD);
-					Call_Back_Dispatcher.disconnect(P.second->CI);
-				}
+		/*
+		We save the elements we want to erase because calling remove_socket
+		invalidates iterators for the Socket container.
+		*/
+		std::vector<std::pair<int, boost::shared_ptr<state> > > timed_out;
+		for(std::map<int, boost::shared_ptr<state> >::iterator
+			iter_cur = Socket.begin(), iter_end = Socket.end(); iter_cur != iter_end;
+			++iter_cur)
+		{
+			if(iter_cur->second->timed_out()){
+				timed_out.push_back(*iter_cur);
 			}
 		}
-*/
+
+		for(std::vector<std::pair<int, boost::shared_ptr<state> > >::iterator
+			iter_cur = timed_out.begin(), iter_end = timed_out.end();
+			iter_cur != iter_end; ++iter_cur)
+		{
+			LOGGER << "timed out " << iter_cur->second->N->remote_IP();
+			remove_socket(iter_cur->first);
+			Call_Back_Dispatcher.disconnect(iter_cur->second->CI);
+		}
 	}
 
 	//disconnect socket, or schedule disconnect when send_buf empty
