@@ -13,15 +13,13 @@ class listener : private boost::noncopyable
 public:
 
 	listener():
-		socket_FD(-1),
-		_error(0)
+		socket_FD(-1)
 	{
 
 	}
 
 	listener(const endpoint & E):
-		socket_FD(-1),
-		_error(0)
+		socket_FD(-1)
 	{
 		open(E);
 	}
@@ -48,7 +46,6 @@ public:
 		int new_socket = ::accept(socket_FD, ai.ai_addr,
 			reinterpret_cast<socklen_t *>(&ai.ai_addrlen));
 		if(new_socket == -1){
-			_error = errno;
 			return boost::shared_ptr<nstream>();
 		}
 		boost::shared_ptr<nstream> N(new nstream(new_socket));
@@ -61,16 +58,9 @@ public:
 		if(socket_FD != -1){
 			if(::close(socket_FD) == -1){
 				LOGGER << errno;
-				_error = errno;
 			}
 			socket_FD = -1;
 		}
-	}
-
-	//returns errno for latest error
-	int error() const
-	{
-		return _error;
 	}
 
 	//returns true if listener listening
@@ -101,7 +91,6 @@ public:
 			E.ai.ai_protocol)) == -1)
 		{
 			LOGGER << errno;
-			_error = errno;
 			close();
 			return;
 		}
@@ -116,20 +105,17 @@ public:
 			reinterpret_cast<char *>(&optval), optlen) == -1)
 		{
 			LOGGER << errno;
-			_error = errno;
 			close();
 			return;
 		}
 		if(::bind(socket_FD, E.ai.ai_addr, E.ai.ai_addrlen) == -1){
 			LOGGER << errno;
-			_error = errno;
 			close();
 			return;
 		}
 		int backlog = 512; //max pending accepts
 		if(::listen(socket_FD, backlog) == -1){
 			LOGGER << errno;
-			_error = errno;
 			close();
 			return;
 		}
@@ -148,7 +134,6 @@ public:
 		socklen_t addrlen = sizeof(addr);
 		if(getsockname(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
 			LOGGER << errno;
-			_error = errno;
 			close();
 			return "";
 		}
@@ -157,7 +142,6 @@ public:
 			sizeof(buf), NI_NUMERICSERV) == -1)
 		{
 			LOGGER << errno;
-			_error = errno;
 			close();
 			return "";
 		}
@@ -171,13 +155,11 @@ public:
 			u_long mode = 1;
 			if(ioctlsocket(socket_FD, FIONBIO, &mode) == -1){
 				LOGGER << errno;
-				_error = errno;
 				close();
 			}
 			#else
 			if(fcntl(socket_FD, F_SETFL, O_NONBLOCK) == -1){
 				LOGGER << errno;
-				_error = errno;
 				close();
 			}
 			#endif
@@ -191,8 +173,8 @@ public:
 	}
 
 private:
-	int socket_FD; //-1 if not open, or >= 0 if open
-	int _error;    //most recent error, or 0 if no error
+	//-1 if not open, or >= 0 if open
+	int socket_FD;
 };
 }
 #endif

@@ -737,5 +737,5 @@ private:
 		network_loop();
 	}
 };
-}
+}//end namespace network
 #endif

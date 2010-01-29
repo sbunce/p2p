@@ -9,20 +9,18 @@ namespace network{
 class ndgram : private boost::noncopyable
 {
 	//max we attempt to send/recv in one go
-	static const int MTU = 16384;
+	static const int MTU = 1536;
 
 public:
 	ndgram():
-		socket_FD(-1),
-		_error(0)
+		socket_FD(-1)
 	{
 		open();
 	}
 
 	//create ndgram for sending/receiving
 	ndgram(const endpoint & E):
-		socket_FD(-1),
-		_error(0)
+		socket_FD(-1)
 	{
 		open(E);
 	}
@@ -38,16 +36,9 @@ public:
 		if(socket_FD != -1){
 			if(::close(socket_FD) == -1){
 				LOGGER << errno;
-				_error = errno;
 			}
 			socket_FD = -1;
 		}
-	}
-
-	//returns errno that resulted from a send/recv error, or 0 if no error
-	int error() const
-	{
-		return _error;
 	}
 
 	//returns true if we can send/recv data
@@ -66,7 +57,6 @@ public:
 		socklen_t addrlen = sizeof(addr);
 		if(getsockname(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
 			LOGGER << errno;
-			_error = errno;
 			close();
 			return "";
 		}
@@ -75,7 +65,6 @@ public:
 			sizeof(buf), NULL, 0, NI_NUMERICHOST) == -1)
 		{
 			LOGGER << errno;
-			_error = errno;
 			close();
 			return "";
 		}
@@ -92,7 +81,6 @@ public:
 		socklen_t addrlen = sizeof(addr);
 		if(getsockname(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
 			LOGGER << errno;
-			_error = errno;
 			close();
 			return "";
 		}
@@ -101,7 +89,6 @@ public:
 			sizeof(buf), NI_NUMERICSERV) == -1)
 		{
 			LOGGER << errno;
-			_error = errno;
 			close();
 			return "";
 		}
@@ -118,7 +105,6 @@ public:
 			E.begin()->ai.ai_protocol)) == -1)
 		{
 			LOGGER << errno;
-			_error = errno;
 			close();
 		}
 	}
@@ -130,12 +116,10 @@ public:
 		close();
 		if((socket_FD = ::socket(E.ai.ai_family, E.ai.ai_socktype, E.ai.ai_protocol)) == -1){
 			LOGGER << errno;
-			_error = errno;
 			close();
 		}
 		if(::bind(socket_FD, E.ai.ai_addr, E.ai.ai_addrlen) == -1){
 			LOGGER << errno;
-			_error = errno;
 			close();
 			return;
 		}
@@ -158,7 +142,6 @@ public:
 			buf.tail_size(), 0, ai.ai_addr, &ai.ai_addrlen);
 		if(n_bytes == -1){
 			LOGGER << errno;
-			_error = errno;
 		}else if(n_bytes == 0){
 			close();
 			buf.tail_reserve(0);
@@ -179,7 +162,6 @@ public:
 			buf.size(), 0, E.ai.ai_addr, E.ai.ai_addrlen);
 		if(n_bytes == -1){
 			LOGGER << errno;
-			_error = errno;
 		}else if(n_bytes == 0){
 			close();
 		}else{
@@ -189,8 +171,8 @@ public:
 	}
 
 private:
-	int socket_FD; //-1 if not connected, or >= 0 if connected
-	int _error;    //most recent error, or 0 if no error
+	//-1 if not connected, or >= 0 if connected
+	int socket_FD;
 };
 }//end of namespace network
 #endif

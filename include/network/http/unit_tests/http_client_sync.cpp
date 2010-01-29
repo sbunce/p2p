@@ -13,14 +13,14 @@ int main()
 	}
 	network::nstream N(*E.begin());
 	if(!N.is_open()){
-		LOGGER << N.error(); exit(1);
+		LOGGER; exit(1);
 	}
 
 	//send request
 	network::buffer B("GET /\r\n\r\n");
 	while(!B.empty() && N.send(B) > 0);
 	if(!N.is_open()){
-		LOGGER << N.error(); exit(1);
+		LOGGER; exit(1);
 	}
 
 	//recv response
