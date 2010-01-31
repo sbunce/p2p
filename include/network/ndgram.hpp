@@ -148,7 +148,7 @@ public:
 		ai.ai_addrlen = sizeof(sockaddr_storage);
 		buf.tail_reserve(MTU);
 		int n_bytes = ::recvfrom(socket_FD, reinterpret_cast<char *>(buf.tail_start()),
-			buf.tail_size(), 0, ai.ai_addr, &ai.ai_addrlen);
+			buf.tail_size(), 0, ai.ai_addr, reinterpret_cast<socklen_t *>(&ai.ai_addrlen));
 		if(n_bytes == -1){
 			LOGGER << errno;
 		}else if(n_bytes == 0){

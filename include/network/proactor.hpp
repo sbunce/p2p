@@ -40,7 +40,7 @@ public:
 		const boost::function<void (connection_info &)> & disconnect_call_back
 	):
 		Call_Back_Dispatcher(connect_call_back, disconnect_call_back),
-		Resolve_TP(1)
+		Thread_Pool(1)
 	{}
 
 	/*
@@ -49,7 +49,7 @@ public:
 	*/
 	void connect(const std::string & host, const std::string & port)
 	{
-		Resolve_TP.queue(boost::bind(&proactor::resolve, this, host, port));
+		Thread_Pool.queue(boost::bind(&proactor::resolve, this, host, port));
 	}
 
 	//disconnect as soon as possible
@@ -170,26 +170,8 @@ public:
 	}
 
 private:
-	//lock for restart(), start(), and stop() functions
 	boost::recursive_mutex start_stop_mutex;
-
-	//thread which runs in network_loop(), does all send/recv
 	boost::thread network_thread;
-
-	call_back_dispatcher Call_Back_Dispatcher;
-	listener Listener;
-	rate_limit Rate_Limit;
-
-	/*
-	Thread pool for DNS resolution.
-	Note: There is async DNS resolution on some platforms but not all.
-	*/
-	thread_pool Resolve_TP;
-
-	select Select;
-
-	//sockets monitored by select
-	std::set<int> read_FDS, write_FDS;
 
 	//all state associated with the socket
 	class state : private boost::noncopyable
@@ -283,6 +265,15 @@ private:
 		int highest_allocated;   //last connection_ID allocated
 		std::set<int> allocated; //set of all connection_IDs allocated
 	} ID_Manager;
+
+	call_back_dispatcher Call_Back_Dispatcher;
+	listener Listener;
+	rate_limit Rate_Limit;
+	thread_pool Thread_Pool;
+
+	//select wrapper and sets of sockets to monitor
+	select Select;
+	std::set<int> read_FDS, write_FDS;
 
 	//socket_FD associated with socket state
 	std::map<int, boost::shared_ptr<state> > Socket;
@@ -581,7 +572,7 @@ private:
 	}
 
 	/*
-	Called by Resolve_TP thread pool thread.
+	Called by Thread_Pool thread pool thread.
 	Resolves host and starts async connect.
 	Note: This function must not access any data member except
 		network_thread_call (after locking network_thread_call_mutex).
@@ -635,7 +626,7 @@ private:
 		Listener.close();
 
 		//stop any pending resolve jobs
-		Resolve_TP.clear();
+		Thread_Pool.clear();
 
 		//erase any pending network_thread_call's
 		{//BEGIN lock scope
