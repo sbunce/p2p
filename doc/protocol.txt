@@ -382,39 +382,3 @@ The maximum file size is 2^64 bytes.
 Hash trees are currently stored in SQLite. SQLite blobs are limited to
 2^31 - 1 bytes. Files which would generate hash trees larger than this won't be
 hashed until this limitation can be addressed.
-
-
-Building
-========
-
-GNU/Linux
----------
-
-There are many different GNU/Linux distributions. Most likely you can use your
-package manager to install the developer versions of these packages: boost, and
-gtkmm.
-
-
-Windows
--------
-
-Visual C++ Express 2008: http://www.microsoft.com/express/vc/
-The command line compiler will be used by scons. It is not necessary to register
-to use the command line compiler.
-
-Boost: http://www.boostpro.com/download
-Select Visual Studio 2008 and multithread static. Install the following libraries
-(the VC9 versions): Date Time, Filesystem, Regex, System, Thread.
-
-gtkmm: http://ftp.gnome.org/pub/GNOME/binaries/win32/gtkmm/"
-Install to "C:\gtkmm" or pkg-config won't work properly.
-
-Python: http://python.org/download/
-This is used to run the build system.
-
-SCons: http://scons.org
-This is the software used to build.
-
-
-After installing the dependencies open cmd.exe, navigate to the source directory
-and run "scons".
