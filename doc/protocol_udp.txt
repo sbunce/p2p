@@ -1,0 +1,111 @@
+Basic Info
+==========
+
+The DHT commands are sent to the same port as the TCP listener. All messages are
+kept to less than 508 bytes to insure none get truncated.
+
+---
+name: ping
+desc: Used to check if a host is up.
+	+---+
+	| C |
+	+---+
+	  0
+C = command (base10: 0)
+
+possible responses: pong
+---
+
+---
+name: pong
+desc: Sent in response to ping.
+	+---+
+	| C |
+	+---+
+	  0
+C = command (base10: 1)
+---
+
+
+
+
+
+
+---
+name: find_node
+desc: Request for closer nodes.
+	+---+---+---+---+
+	| C |     N     |
+	+---+---+---+---+
+	  0   1  ...  20
+C = command (base10: 2), N = node ID we're finding
+
+possible responses: host_list
+---
+
+---
+name: host_list
+desc: A list of nodes which are closer.
+	+---+---+---+   +---+---+---+   +---+---+---+
+	| C | I | J | + |     K     | + |     L     |
+	+---+---+---+   +---+---+---+   +---+---+---+
+	  0   1   2       3  ...  x      x+1 ...  y
+C = command (base10: 3), I = IPv4 address count, J = IPv6 address count,
+K = IPv4 address list, L = IPv6 address list
+
+note: The counts indicate how many addresses will be in the address lists.
+
+A K list element:
+	+---+---+---+---+---+
+	|    IP     | port  |
+	+---+---+---+---+---+
+	  0  ...  3   4   5
+
+	A L list element:
+	+---+---+---+---+---+
+	|    IP     | port  |
+	+---+---+---+---+---+
+	  0  ...  7   8   9
+---
+
+---
+name: store
+desc: Store a mapping from a file hash to our node ID.
+	+---+---+---+---+
+	| C |     F     |
+	+---+---+---+---+
+	  0   1  ...  20
+C = command (base10: 4), N = file hash
+
+note: The host has our node ID from the initial message.
+---
+
+---
+name: find_value
+desc: Request a list of node IDs which have the specified file.
+	+---+---+---+---+
+	| C |     F     |
+	+---+---+---+---+
+	  0   1  ...  20
+C = command (base10: 5), N = file hash
+
+possible responses: node_list
+---
+
+---
+name: node_list
+desc: A list of nodes.
+	+---+---+   +---+---+---+
+	| C | I | + |     K     |
+	+---+---+   +---+---+---+
+	  0   1       2  ...  x
+C = command (base10: 6), I = node count, J = node list
+
+note: The node count indicates how many nodes are in the list.
+
+A J node list element:
++---+---+---+
+|  node ID  |
++---+---+---+
+  0  ... 19
+---

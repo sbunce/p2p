@@ -69,7 +69,7 @@ public:
 
 		//timeout
 		timeval tv;
-		if(timeout_ms > 1000){
+		if(timeout_ms >= 1000){
 			tv.tv_sec = timeout_ms / 1000;
 		}else{
 			tv.tv_sec = 0;

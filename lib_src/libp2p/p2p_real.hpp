@@ -6,6 +6,7 @@
 #include "connection_manager.hpp"
 #include "database.hpp"
 #include "hash_tree.hpp"
+#include "kademlia.hpp"
 #include "path.hpp"
 #include "prime_generator.hpp"
 #include "share_scanner.hpp"
@@ -53,16 +54,9 @@ private:
 	//thread spawned by ctor to do actions on startup
 	boost::thread resume_thread;
 
-	//handles incoming/outgoing connections
 	connection_manager Connection_Manager;
-
-	/*
-	Share_Scan:
-		Scans shared directories looking for new and modified files.
-	*/
+	kademlia Kademlia;
 	share_scanner Share_Scanner;
-
-	//used to schedule long jobs so the GUI doesn't have to wait
 	thread_pool Thread_Pool;
 
 	/*
