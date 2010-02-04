@@ -1,9 +1,17 @@
 GNU/Linux
 =========
 
-There are many different GNU/Linux distributions. Most likely you can use your
-package manager to install the developer versions of these packages: boost, and
-gtkmm.
+Get the packages boost, gtkmm, and SCons.
+
+Run SCons.
+
+
+FreeBSD
+=======
+
+Get the packages (or ports) boost_libs, gtkmm, and SCons.
+
+Run SCons.
 
 
 Windows
@@ -26,5 +34,4 @@ This is used to run the build system.
 SCons: http://scons.org
 This is the software used to build.
 
-After installing the dependencies open cmd.exe, navigate to the source directory
-and run "scons".
+Run SCons.

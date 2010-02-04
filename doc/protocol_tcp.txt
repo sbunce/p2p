@@ -85,7 +85,7 @@ note: This is our node identifier on the DHT.
 ---
 
 
-Commands
+Messages
 ========
 
 Slot commands are used to exchange hash tree blocks and file blocks.
@@ -109,7 +109,7 @@ desc: Request a slot for downloading.
 	  0   1  ...  20
 C = command (base10: 1), H = hash
 
-possible responses: slot, error
+expected response: slot or error
 note: If error response the slot is not opened.
 note: The maximum number of slots that can be opened is 256.
 ---
@@ -155,7 +155,7 @@ desc: Request a block from a hash tree.
 	  0   1   2  ...  n
 C = command (base10: 3), S = slot number, B = block number (VLI)
 
-possible responses: block, error
+expected response: block or error
 note: B is sized such that it can hold the maximum tree block number.
 note: If error response the slot is closed.
 note: It violates the protocol to request a block the peer doesn't have.
@@ -170,7 +170,7 @@ desc: Request a block from a file.
 	  0   1   2  ...  n
 C = command (base10: 4), S = slot number, B = block number (VLI)
 
-possible responses: block, error
+expected response: block or error
 note: B is sized such that it can hold the maximum file block number.
 note: If error response the slot is closed.
 ---

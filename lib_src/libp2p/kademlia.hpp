@@ -22,7 +22,7 @@ private:
 		std::string node_ID;
 		std::string IP;
 		std::string port;
-
+/*
 		bool timed_out()
 		{
 			return std::time(NULL) - last_seen > idle_timeout;
@@ -32,7 +32,7 @@ private:
 		{
 			last_seen = std::time(NULL);
 		}
-
+*/
 	private:
 		std::time_t last_seen;
 	};

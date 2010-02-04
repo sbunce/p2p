@@ -1,59 +1,77 @@
 Basic Info
 ==========
 
+The DHT used is Kademlia.
+
 The DHT commands are sent to the same port as the TCP listener. All messages are
 kept to less than 508 bytes to insure none get truncated.
+
+We assume a message has been lost if we don't receive a reply within 32 seconds.
+
+All request messages include 8 random bytes which must be echo'd back in the
+response. This is to protect against address forgery. The Kademlia spec calls
+for 20bytes but that is excessive.
+
+
+Concurrency
+===========
+
+We do not pipeline. If a request hasn't gotten a response we don't send
+additional requests to a host.
+
+In the kademlia paper the number of concurrent requests on the wire is referred
+to as alpha. An alpha of 3 is recommended.
+
+
+Messages
+========
 
 ---
 name: ping
 desc: Used to check if a host is up.
-	+---+
-	| C |
-	+---+
-	  0
-C = command (base10: 0)
+	+---+---+---+---+---+---+---+
+	| C |     R     |     S     |
+	+---+---+---+---+---+---+---+
+	  0   1  ...  8   9 ...  29
+C = command (base10: 0), R = random bytes, S = node ID of sender
 
-possible responses: pong
+expected response: pong
 ---
 
 ---
 name: pong
 desc: Sent in response to ping.
-	+---+
-	| C |
-	+---+
-	  0
-C = command (base10: 1)
+	+---+---+---+---+---+---+---+
+	| C |     R     |     S     |
+	+---+---+---+---+---+---+---+
+	  0   1  ...  8   9 ...  29
+C = command (base10: 1), R = echo of random bytes, S = node ID of sender
 ---
-
-
-
-
-
 
 ---
 name: find_node
 desc: Request for closer nodes.
-	+---+---+---+---+
-	| C |     N     |
-	+---+---+---+---+
-	  0   1  ...  20
-C = command (base10: 2), N = node ID we're finding
+	+---+---+---+---+---+---+---+
+	| C |     R     |     N     |
+	+---+---+---+---+---+---+---+
+	  0   1  ...  8   9 ...  29
+C = command (base10: 2), R = random bytes, N = node ID to find
 
-possible responses: host_list
+expected response: host_list or node_info
 ---
 
 ---
-name: host_list
+name: node_list
 desc: A list of nodes which are closer.
-	+---+---+---+   +---+---+---+   +---+---+---+
-	| C | I | J | + |     K     | + |     L     |
-	+---+---+---+   +---+---+---+   +---+---+---+
-	  0   1   2       3  ...  x      x+1 ...  y
-C = command (base10: 3), I = IPv4 address count, J = IPv6 address count,
-K = IPv4 address list, L = IPv6 address list
+	+---+---+---+---+---+---+   +---+---+---+   +---+---+---+
+	| C |     R     | I | J | + |     K     | + |     L     |
+	+---+---+---+---+---+---+   +---+---+---+   +---+---+---+
+	  0   1  ...  8  11  12      13  ...  x      x+1 ...  y
+C = command (base10: 3), R = echo of random bytes, I = IPv4 address count,
+J = IPv6 address count, K = IPv4 address list, L = IPv6 address list
 
 note: The counts indicate how many addresses will be in the address lists.
+note: The total length of this message will not exceed 508 bytes.
 
 A K list element:
 	+---+---+---+---+---+
@@ -61,51 +79,62 @@ A K list element:
 	+---+---+---+---+---+
 	  0  ...  3   4   5
 
-	A L list element:
+A L list element:
 	+---+---+---+---+---+
 	|    IP     | port  |
 	+---+---+---+---+---+
-	  0  ...  7   8   9
+	  0  ...  15  16  17
+
+note: The lists are ordered from closest to farthest.
+---
+
+---
+name: node
+desc: IP address and port of node. May be IPv4 or IPv6 address.
+
+IPv4
+	+---+---+---+---+---+---+
+	| C |    IP     | port  |
+	+---+---+---+---+---+---+
+	  0   1  ...  4   5   6
+
+IPv6
+	+---+---+---+---+---+---+
+	| C |    IP     | port  |
+	+---+---+---+---+---+---+
+	  0   1  ...  16  17  18
 ---
 
 ---
 name: store
-desc: Store a mapping from a file hash to our node ID.
-	+---+---+---+---+
-	| C |     F     |
-	+---+---+---+---+
-	  0   1  ...  20
-C = command (base10: 4), N = file hash
-
-note: The host has our node ID from the initial message.
+desc: Store a mapping from a file hash to a node ID.
+	+---+---+---+---+---+---+---+
+	| C |     S     |     F     |
+	+---+---+---+---+---+---+---+
+	  0   1  ...  20  21 ...  40
+C = command (base10: 4), S = node ID of sender, N = file hash
 ---
 
 ---
 name: find_value
 desc: Request a list of node IDs which have the specified file.
+	+---+---+---+---+---+---+---+
+	| C |     S     |     F     |
+	+---+---+---+---+---+---+---+
+	  0   1  ...  20  21 ...  40
+C = command (base10: 5), S = node ID of sender, N = file hash
+
+expected response: node_list or value
+---
+
+---
+name: value
+desc: A list of nodes.
 	+---+---+---+---+
-	| C |     F     |
+	| C |     K     |
 	+---+---+---+---+
 	  0   1  ...  20
-C = command (base10: 5), N = file hash
-
-possible responses: node_list
----
-
----
-name: node_list
-desc: A list of nodes.
-	+---+---+   +---+---+---+
-	| C | I | + |     K     |
-	+---+---+   +---+---+---+
-	  0   1       2  ...  x
-C = command (base10: 6), I = node count, J = node list
+C = command (base10: 6), K = value
 
 note: The node count indicates how many nodes are in the list.
-
-A J node list element:
-+---+---+---+
-|  node ID  |
-+---+---+---+
-  0  ... 19
 ---
