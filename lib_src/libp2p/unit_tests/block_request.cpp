@@ -65,10 +65,7 @@ void all_partial()
 		boost::uint64_t block;
 		int temp = socket_FD++ % 8;
 		if(BR.next_request(temp, block)){
-			std::cout << block << " ";
 			BR.add_block_local(temp, block);
-		}else{
-			std::cout << ". ";
 		}
 	}
 }

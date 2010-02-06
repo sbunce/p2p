@@ -590,16 +590,12 @@ private:
 		}else{
 			//host resolved, proceed to connection
 			boost::shared_ptr<nstream> N(new nstream());
-			bool connected = N->open_async(*E.begin());
+			N->open_async(*E.begin());
 			boost::shared_ptr<connection_info> CI(new connection_info(ID_Manager.allocate(),
 				N->socket(), host, E.begin()->IP(), port, outgoing));
 			std::pair<int, boost::shared_ptr<state> > P(N->socket(),
-				boost::shared_ptr<state>(new state(connected, E, N, CI)));
-			if(connected){
-				//socket connected immediately, rare but can happen
-				boost::mutex::scoped_lock lock(network_thread_call_mutex);
-				network_thread_call.push_back(boost::bind(&proactor::handle_async_connection, this, P));
-			}else if(P.first != -1){
+				boost::shared_ptr<state>(new state(false, E, N, CI)));
+			if(P.first != -1){
 				//in progress of connecting
 				boost::mutex::scoped_lock lock(network_thread_call_mutex);
 				network_thread_call.push_back(boost::bind(&proactor::add_socket, this, P));

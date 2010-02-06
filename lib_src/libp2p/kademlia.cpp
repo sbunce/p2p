@@ -31,7 +31,7 @@ void kademlia::network_loop()
 	while(true){
 		boost::this_thread::interruption_point();
 		tmp_read = read;
-		select(tmp_read, empty, 1000);
+		select(tmp_read, empty, 10);
 		if(tmp_read.empty()){
 			//nothing received
 			continue;

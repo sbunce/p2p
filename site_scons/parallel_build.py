@@ -1,15 +1,15 @@
 #standard
 import platform
 import sys
-import StringIO
+import cStringIO
 
 #source: TTimo
 #http://scons.tigris.org/ds/viewMessage.do?dsForumId=1272&dsMessageId=421609
 #This builder stops parallel build output from getting mixed together.
-class builder_buffer:
-	def buffered_spawn(self, sh, escape, cmd, args, env):
-		stderr = StringIO.StringIO()
-		stdout = StringIO.StringIO()
+class builder_buf:
+	def buf_spawn(self, sh, escape, cmd, args, env):
+		stderr = cStringIO.StringIO()
+		stdout = cStringIO.StringIO()
 		command_string = ''
 		for i in args:
 			if(len(command_string)):
@@ -41,7 +41,8 @@ def CPU_count():
 
 #get a clean error output when running multiple jobs
 def setup(env):
-	BB = builder_buffer()
-	BB.env = env
-	env['SPAWN'] = BB.buffered_spawn
-	env.SetOption('num_jobs', CPU_count())
+	if CPU_count() > 1:
+		BB = builder_buf()
+		BB.env = env
+		env['SPAWN'] = BB.buf_spawn
+		env.SetOption('num_jobs', CPU_count())

@@ -20,7 +20,8 @@ We do not pipeline. If a request hasn't gotten a response we don't send
 additional requests to a host.
 
 In the kademlia paper the number of concurrent requests on the wire is referred
-to as alpha. An alpha of 3 is recommended.
+to as alpha. This can be anything, but a alpha of 3 is recommended in the
+Kademlia paper.
 
 
 Messages
@@ -103,6 +104,7 @@ IPv6
 	| C |    IP     | port  |
 	+---+---+---+---+---+---+
 	  0   1  ...  16  17  18
+C = command (base10: 4)
 ---
 
 ---

@@ -9,7 +9,8 @@ Run SCons.
 FreeBSD
 =======
 
-Get the packages (or ports) boost_libs, gtkmm, and SCons.
+Get the packages (or ports) boost-all (select Python compile option), gtkmm,
+and SCons.
 
 Run SCons.
 

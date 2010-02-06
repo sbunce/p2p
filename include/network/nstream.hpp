@@ -156,11 +156,11 @@ public:
 	}
 
 	/*
-	Start async connection. Returns true if connected, or false if failed to
-	connect or in progress of connecting. When the socket connects or fails to
-	connect it will become writeable.
+	The socket may not be connected when this function returns. The socket must
+	be monitored by select. When it becomes writeable is_open_async() should be
+	called to determine if the socket connected, or failed to connect.
 	*/
-	bool open_async(const endpoint & E)
+	void open_async(const endpoint & E)
 	{
 		close();
 		if((socket_FD = ::socket(E.ai.ai_family, E.ai.ai_socktype,
@@ -170,15 +170,21 @@ public:
 			exit(1);
 		}
 		set_non_blocking();
-		if(::connect(socket_FD, E.ai.ai_addr, E.ai.ai_addrlen) == 0){
-			return true;
-		}else{
+		/*
+		FreeBSD:
+			If connect returns 0 the socket MAY or MAY NOT be connected.
+		Windows/Linux:
+			If connect returns 0 the socket connected immediately.
+
+		Because of the inconsistency above we check for writeability because it
+		works on FreeBSD, Windows, and Linux.
+		*/
+		if(::connect(socket_FD, E.ai.ai_addr, E.ai.ai_addrlen) != 0){
 			//socket in progress of connecting
 			if(errno != EINPROGRESS && errno != EWOULDBLOCK){
 				LOGGER << errno;
 				exit(1);
 			}
-			return false;
 		}
 	}
 
