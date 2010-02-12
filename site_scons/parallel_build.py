@@ -1,15 +1,15 @@
 #standard
 import platform
 import sys
-import cStringIO
+import StringIO
 
 #source: TTimo
 #http://scons.tigris.org/ds/viewMessage.do?dsForumId=1272&dsMessageId=421609
 #This builder stops parallel build output from getting mixed together.
 class builder_buf:
 	def buf_spawn(self, sh, escape, cmd, args, env):
-		stderr = cStringIO.StringIO()
-		stdout = cStringIO.StringIO()
+		stderr = StringIO.StringIO()
+		stdout = StringIO.StringIO()
 		command_string = ''
 		for i in args:
 			if(len(command_string)):

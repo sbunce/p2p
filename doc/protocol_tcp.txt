@@ -80,7 +80,7 @@ on the DHT.
 	|     N     |
 	+---+---+---+
 	  0  ...  20
-N = local node ID
+N = local ID
 note: This is our node identifier on the DHT.
 ---
 

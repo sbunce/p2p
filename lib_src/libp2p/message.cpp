@@ -286,9 +286,9 @@ message::initial::initial(boost::function<bool (boost::shared_ptr<base>)> func_i
 	func = func_in;
 }
 
-message::initial::initial(const std::string peer_ID)
+message::initial::initial(const std::string ID)
 {
-	buf = convert::hex_to_bin(peer_ID);
+	buf = convert::hex_to_bin(ID);
 }
 
 bool message::initial::expects(network::buffer & recv_buf)

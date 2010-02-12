@@ -58,12 +58,13 @@ desc: Request for closer nodes.
 	  0   1  ...  8   9 ...  29
 C = command (base10: 2), R = random bytes, N = node ID to find
 
-expected response: host_list or node_info
+expected response: node_list
 ---
 
 ---
 name: node_list
-desc: A list of nodes which are closer.
+desc: A list of nodes which are closer. This list will contain only one element
+if the node is found.
 	+---+---+---+---+---+---+   +---+---+---+   +---+---+---+
 	| C |     R     | I | J | + |     K     | + |     L     |
 	+---+---+---+---+---+---+   +---+---+---+   +---+---+---+
@@ -73,38 +74,23 @@ J = IPv6 address count, K = IPv4 address list, L = IPv6 address list
 
 note: The counts indicate how many addresses will be in the address lists.
 note: The total length of this message will not exceed 508 bytes.
+note: Multiple node_lists may be sent in response to one request.
 
 A K list element:
-	+---+---+---+---+---+
-	|    IP     | port  |
-	+---+---+---+---+---+
-	  0  ...  3   4   5
+	+---+---+---+---+---+---+---+---+
+	|    IP     |   P   |     N     |
+	+---+---+---+---+---+---+---+---+
+	  0  ...  3   4   5   6  ...  26
+IP = IPv4 address, P = port, N = node ID
 
 A L list element:
-	+---+---+---+---+---+
-	|    IP     | port  |
-	+---+---+---+---+---+
-	  0  ...  15  16  17
+	+---+---+---+---+---+---+---+---+
+	|    IP     |   P   |     N     |
+	+---+---+---+---+---+---+---+---+
+	  0  ...  15  16  17  18 ...  38
+IP = IPv6 address, P = port, N = node ID
 
 note: The lists are ordered from closest to farthest.
----
-
----
-name: node
-desc: IP address and port of node. May be IPv4 or IPv6 address.
-
-IPv4
-	+---+---+---+---+---+---+
-	| C |    IP     | port  |
-	+---+---+---+---+---+---+
-	  0   1  ...  4   5   6
-
-IPv6
-	+---+---+---+---+---+---+
-	| C |    IP     | port  |
-	+---+---+---+---+---+---+
-	  0   1  ...  16  17  18
-C = command (base10: 4)
 ---
 
 ---
@@ -114,29 +100,36 @@ desc: Store a mapping from a file hash to a node ID.
 	| C |     S     |     F     |
 	+---+---+---+---+---+---+---+
 	  0   1  ...  20  21 ...  40
-C = command (base10: 4), S = node ID of sender, N = file hash
+C = command (base10: 4), S = node ID, F = file hash
 ---
 
 ---
 name: find_value
 desc: Request a list of node IDs which have the specified file.
-	+---+---+---+---+---+---+---+
-	| C |     S     |     F     |
-	+---+---+---+---+---+---+---+
-	  0   1  ...  20  21 ...  40
-C = command (base10: 5), S = node ID of sender, N = file hash
+	+---+---+---+---+---+---+---+---+---+---+
+	| C |     R     |     S     |     F     |
+	+---+---+---+---+---+---+---+---+---+---+
+	  0   1  ...  8   9 ...  29  30  ...  50
+C = command (base10: 5), S = node ID, F = file hash
 
-expected response: node_list or value
+expected response: node_list or value_list
 ---
 
 ---
-name: value
+name: value_list
 desc: A list of nodes.
-	+---+---+---+---+
-	| C |     K     |
-	+---+---+---+---+
-	  0   1  ...  20
-C = command (base10: 6), K = value
+	+---+---+---+---+---+---+---+
+	| C |     R     |     K     |
+	+---+---+---+---+---+---+---+
+	  0   1  ...  x
+C = command (base10: 6), R = echo of random bytes, K = node ID list
 
-note: The node count indicates how many nodes are in the list.
+A K list element:
+	+---+---+---+
+	|     N     |
+	+---+---+---+
+	  0  ...  19
+N = node ID that has file
+
+note: Multiple value_lists may be sent in response to one request.
 ---

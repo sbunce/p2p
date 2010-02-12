@@ -37,7 +37,11 @@ public:
 		sp_write->send(B);
 	}
 
-	void operator () (std::set<int> & read, std::set<int> & write, unsigned timeout_ms = 0)
+	/*
+	Works just like the select() system call. If a timeout not specified then
+	block until activity.
+	*/
+	void operator () (std::set<int> & read, std::set<int> & write, int timeout_ms = -1)
 	{
 		//monitor self-pipe (removed from read set later)
 		assert(sp_read->is_open());
@@ -69,16 +73,18 @@ public:
 
 		//timeout
 		timeval tv;
-		if(timeout_ms >= 1000){
-			tv.tv_sec = timeout_ms / 1000;
-		}else{
-			tv.tv_sec = 0;
+		if(timeout_ms >= 0){
+			if(timeout_ms >= 1000){
+				tv.tv_sec = timeout_ms / 1000;
+			}else{
+				tv.tv_sec = 0;
+			}
+			tv.tv_usec = (timeout_ms % 1000) * 1000;
 		}
-		tv.tv_usec = (timeout_ms % 1000) * 1000;
 
 		//select
 		int service = ::select(end_FD, &read_FDS, &write_FDS, NULL,
-			timeout_ms == 0 ? NULL : &tv);
+			timeout_ms < 0 ? NULL : &tv);
 		if(service == -1){
 			//ignore interrupt signal, profilers can cause this
 			if(errno != EINTR){

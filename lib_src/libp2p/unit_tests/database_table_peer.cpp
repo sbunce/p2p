@@ -11,5 +11,37 @@ int main()
 	database::init::drop_all();
 	database::init::create_all();
 
+	database::table::peer::info info(
+		"DEADBEEFDEADBEEFDEAD",
+		"123.123.123.123",
+		"32768"
+	);
+
+	//add
+	database::table::peer::add(info);
+
+	//verify
+	std::deque<database::table::peer::info> resume = database::table::peer::resume();
+	if(resume.size() != 1){
+		LOGGER; ++fail;
+	}else{
+		if(resume.front().ID != "DEADBEEFDEADBEEFDEAD"){
+			LOGGER; ++fail;
+		}
+		if(resume.front().IP != "123.123.123.123"){
+			LOGGER; ++fail;
+		}
+		if(resume.front().port != "32768"){
+			LOGGER; ++fail;
+		}
+	}
+
+	//remove
+	database::table::peer::remove(info.ID);
+	resume = database::table::peer::resume();
+	if(!resume.empty()){
+		LOGGER; ++fail;
+	}
+
 	return fail;
 }

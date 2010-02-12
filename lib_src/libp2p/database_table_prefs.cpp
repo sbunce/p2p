@@ -49,10 +49,10 @@ unsigned database::table::prefs::get_max_upload_rate(database::pool::proxy DB)
 	return upload_rate;
 }
 
-std::string database::table::prefs::get_peer_ID(database::pool::proxy DB)
+std::string database::table::prefs::get_ID(database::pool::proxy DB)
 {
 	std::string peer_ID;
-	DB->query("SELECT value FROM prefs WHERE key = 'peer_ID'",
+	DB->query("SELECT value FROM prefs WHERE key = 'ID'",
 		boost::bind(&get_string_call_back, _1, _2, _3, boost::ref(peer_ID)));
 	assert(peer_ID.size() == SHA1::hex_size);
 	return peer_ID;

@@ -45,7 +45,7 @@ void database::init::create_all()
 	unsigned char buf[SHA1::bin_size];
 	portable_urandom(buf, SHA1::bin_size, NULL);
 	ss.str(""); ss.clear();
-	ss << "INSERT OR IGNORE INTO prefs VALUES('peer_ID', '"
+	ss << "INSERT OR IGNORE INTO prefs VALUES('ID', '"
 		<< convert::bin_to_hex(reinterpret_cast<const char *>(buf), SHA1::bin_size)
 		<< "')";
 	DB->query(ss.str());

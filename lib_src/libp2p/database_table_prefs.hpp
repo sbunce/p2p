@@ -28,7 +28,7 @@ public:
 		database::pool::proxy DB = database::pool::proxy());
 	static unsigned get_max_upload_rate(
 		database::pool::proxy DB = database::pool::proxy());
-	static std::string get_peer_ID(
+	static std::string get_ID(
 		database::pool::proxy DB = database::pool::proxy());
 	static std::string get_port(
 		database::pool::proxy DB = database::pool::proxy());

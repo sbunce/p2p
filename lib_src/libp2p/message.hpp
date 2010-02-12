@@ -146,7 +146,7 @@ public:
 	//ctor to recv message
 	explicit initial(boost::function<bool (boost::shared_ptr<base>)> func_in);
 	//ctor to send message
-	explicit initial(const std::string peer_ID);
+	explicit initial(const std::string ID);
 	virtual bool expects(network::buffer & recv_buf);
 	virtual bool recv(network::connection_info & CI);
 };

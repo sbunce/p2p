@@ -49,8 +49,8 @@ void connection::send_call_back(network::connection_info & CI)
 
 void connection::send_initial()
 {
-	std::string peer_ID = database::table::prefs::get_peer_ID();
-	Exchange.send(boost::shared_ptr<message::base>(new message::initial(peer_ID)));
+	std::string ID = database::table::prefs::get_ID();
+	Exchange.send(boost::shared_ptr<message::base>(new message::initial(ID)));
 	Exchange.expect_response(boost::shared_ptr<message::base>(new message::initial(
 		boost::bind(&connection::recv_initial, this, _1))));
 }

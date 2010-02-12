@@ -7,7 +7,7 @@ p2p_real::p2p_real():
 	max_upload_rate_proxy(0)
 {
 	std::cout << "port: " << database::table::prefs::get_port()
-		<< " peer_ID: " << database::table::prefs::get_peer_ID() << "\n";
+		<< " peer_ID: " << database::table::prefs::get_ID() << "\n";
 	resume_thread = boost::thread(boost::bind(&p2p_real::resume, this));
 }
 
