@@ -72,7 +72,7 @@ int window_transfer::compare_size(const Gtk::TreeModel::iterator & lval,
 	left_ss << (*lval)[column_size];
 	std::stringstream right_ss;
 	right_ss << (*rval)[column_size];
-	return convert::size_SI_cmp(left_ss.str(), right_ss.str());
+	return convert::SI_cmp(left_ss.str(), right_ss.str());
 }
 
 void window_transfer::delete_download()
@@ -144,7 +144,7 @@ bool window_transfer::refresh()
 			//add
 			Gtk::TreeModel::Row row = *(download_list->append());
 			row[column_name] = iter_cur->name;
-			row[column_size] = convert::size_SI(iter_cur->file_size);
+			row[column_size] = convert::bytes_to_SI(iter_cur->file_size);
 			std::stringstream peers;
 			if(Type == download){
 				peers << iter_cur->download_peers;
@@ -153,9 +153,9 @@ bool window_transfer::refresh()
 			}
 			row[column_peers] = peers.str();
 			if(Type == download){
-				row[column_speed] = convert::size_SI(iter_cur->download_speed) + "/s";
+				row[column_speed] = convert::bytes_to_SI(iter_cur->download_speed) + "/s";
 			}else{
-				row[column_speed] = convert::size_SI(iter_cur->upload_speed) + "/s";
+				row[column_speed] = convert::bytes_to_SI(iter_cur->upload_speed) + "/s";
 			}
 			row[column_percent_complete] = iter_cur->percent_complete;
 			row[column_hash] = iter_cur->hash;
@@ -165,7 +165,7 @@ bool window_transfer::refresh()
 			//update
 			Gtk::TreeModel::Row row = iter->second;
 			row[column_name] = iter_cur->name;
-			row[column_size] = convert::size_SI(iter_cur->file_size);
+			row[column_size] = convert::bytes_to_SI(iter_cur->file_size);
 			std::stringstream peers;
 			if(Type == download){
 				peers << iter_cur->download_peers;
@@ -174,9 +174,9 @@ bool window_transfer::refresh()
 			}
 			row[column_peers] = peers.str();
 			if(Type == download){
-				row[column_speed] = convert::size_SI(iter_cur->download_speed) + "/s";
+				row[column_speed] = convert::bytes_to_SI(iter_cur->download_speed) + "/s";
 			}else{
-				row[column_speed] = convert::size_SI(iter_cur->upload_speed) + "/s";
+				row[column_speed] = convert::bytes_to_SI(iter_cur->upload_speed) + "/s";
 			}
 			row[column_percent_complete] = iter_cur->percent_complete;
 			row[column_update] = true;

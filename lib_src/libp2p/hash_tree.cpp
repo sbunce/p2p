@@ -171,7 +171,7 @@ hash_tree::status hash_tree::check_tree_block(const boost::uint64_t block_num,
 		//special requirements to check root_hash, see documentation for root_hash
 		assert(buf.size() == SHA1::bin_size);
 		char special[SHA1::bin_size + 8];
-		std::memcpy(special, convert::encode(file_size).data(), 8);
+		std::memcpy(special, convert::int_to_bin(file_size).data(), 8);
 		std::memcpy(special + 8, const_cast<network::buffer &>(buf).data(), SHA1::bin_size);
 		SHA1 SHA(special, SHA1::bin_size + 8);
 		return SHA.hex() == hash ? good : bad;
@@ -288,7 +288,7 @@ hash_tree::status hash_tree::create()
 	}
 
 	//calculate hash
-	std::memcpy(buf, convert::encode(file_size).data(), 8);
+	std::memcpy(buf, convert::int_to_bin(file_size).data(), 8);
 	std::memcpy(buf + 8, SHA.bin(), SHA1::bin_size);
 	SHA.init();
 	SHA.load(buf, SHA1::bin_size + 8);

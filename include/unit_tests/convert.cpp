@@ -10,7 +10,7 @@ int fail(0);
 int main()
 {
 	//encode/decode
-	if(convert::decode<int>(convert::encode<int>(10)) != 10){
+	if(convert::bin_to_int<int>(convert::int_to_bin<int>(10)) != 10){
 		LOGGER; ++fail;
 	}
 
@@ -24,7 +24,7 @@ int main()
 	if(convert::VLI_size(256) != 2){
 		LOGGER; ++fail;
 	}
-	if(convert::decode_VLI(convert::encode_VLI(10, 11)) != 10){
+	if(convert::bin_VLI_to_int(convert::int_to_bin_VLI(10, 11)) != 10){
 		LOGGER; ++fail;
 	}
 
@@ -35,14 +35,14 @@ int main()
 	}
 
 	//size comparisons
-	std::string size_0 = convert::size_SI(1024);
-	std::string size_1 = convert::size_SI(512);
-	if(convert::size_SI_cmp(size_0, size_1) != 1){
+	std::string size_0 = convert::bytes_to_SI(1024);
+	std::string size_1 = convert::bytes_to_SI(512);
+	if(convert::SI_cmp(size_0, size_1) != 1){
 		LOGGER; ++fail;
 	}
-	size_0 = convert::size_SI(512);
-	size_1 = convert::size_SI(1024);
-	if(convert::size_SI_cmp(size_0, size_1) != -1){
+	size_0 = convert::bytes_to_SI(512);
+	size_1 = convert::bytes_to_SI(1024);
+	if(convert::SI_cmp(size_0, size_1) != -1){
 		LOGGER; ++fail;
 	}
 	return fail;

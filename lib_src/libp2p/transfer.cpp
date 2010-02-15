@@ -258,7 +258,7 @@ void transfer::recv_have_hash_tree_block(const int connection_ID,
 bool transfer::root_hash(std::string & RH)
 {
 	char buf[8 + SHA1::bin_size];
-	std::memcpy(buf, convert::encode(file_size()).data(), 8);
+	std::memcpy(buf, convert::int_to_bin(file_size()).data(), 8);
 	if(!database::pool::get()->blob_read(Hash_Tree.blob, buf+8, SHA1::bin_size, 0)){
 		return false;
 	}
@@ -266,7 +266,7 @@ bool transfer::root_hash(std::string & RH)
 	if(SHA.hex() != hash()){
 		return false;
 	}
-	RH = convert::bin_to_hex(buf+8, SHA1::bin_size);
+	RH = convert::bin_to_hex(std::string(buf+8, SHA1::bin_size));
 	return true;
 }
 

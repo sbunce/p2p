@@ -131,5 +131,5 @@ void kademlia::network_loop()
 
 void kademlia::process_node_cache()
 {
-LOGGER;
+
 }

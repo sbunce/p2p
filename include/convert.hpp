@@ -16,10 +16,11 @@
 #include <string>
 
 namespace convert {
+namespace {
 
-//returns num encoded in big-endian
+//int -> big-endian binary
 template<class T>
-static std::string encode(const T num)
+std::string int_to_bin(const T num)
 {
 	union{
 		T n;
@@ -33,30 +34,34 @@ static std::string encode(const T num)
 }
 
 /*
-Returns num encoded in big-endian. However only returns enough bytes to hold
-range of numbers [0, end). We call this a VLI (variable length interger).
-Note: This only works with unsigned integers.
+int -> bin_VLI
+Note: VLI (variable length interger) is sized such that it can hold a range of
+numbers [0, end)
+Note: The VLI functions should only be used with unsigned ints.
 */
-static std::string encode_VLI(const boost::uint64_t num,
+std::string int_to_bin_VLI(const boost::uint64_t num,
 	const boost::uint64_t end)
 {
 	assert(num < end);
 	//determine index of first used byte for max
 	int index = 0;
-	std::string temp = encode(end);
+	std::string temp = int_to_bin(end);
 	for(; index<temp.size(); ++index){
 		if(temp[index] != 0){
 			break;
 		}
 	}
 	//return bytes for value
-	temp = encode(num);
+	temp = int_to_bin(num);
 	return temp.substr(index);
 }
 
-//decode number encoded in big-endian
+/*
+big-endian binary -> int
+Note: Only works with unsigned ints.
+*/
 template<class T>
-static T decode(const std::string encoded)
+T bin_to_int(const std::string encoded)
 {
 	assert(encoded.size() == sizeof(T));
 	union{
@@ -71,21 +76,21 @@ static T decode(const std::string encoded)
 	return NB.n;
 }
 
-//decode VLI
-static boost::uint64_t decode_VLI(std::string encoded)
+//bin_VLI -> integer
+boost::uint64_t bin_VLI_to_int(std::string encoded)
 {
 	assert(encoded.size() > 0 && encoded.size() <= 8);
 	//prepend zero bytes if needed
 	encoded = std::string(8 - encoded.size(), '\0') + encoded;
-	return decode<boost::uint64_t>(encoded);
+	return bin_to_int<boost::uint64_t>(encoded);
 }
 
-//returns the size of string encode_VLI would return given the specified end
-static unsigned VLI_size(const boost::uint64_t end)
+//size of bin_VLI that int_to_bin_VLI would return
+unsigned VLI_size(const boost::uint64_t end)
 {
 	assert(end > 0);
 	unsigned index = 0;
-	std::string temp = encode(end);
+	std::string temp = int_to_bin(end);
 	for(; index<temp.size(); ++index){
 		if(temp[index] != 0){
 			return temp.size() - index;
@@ -94,62 +99,49 @@ static unsigned VLI_size(const boost::uint64_t end)
 	LOGGER; exit(1);
 }
 
+//returns true if string is valid hex
+bool hex_validate(const std::string & hex)
+{
+	if(hex.size() == 0 || hex.size() % 2 != 0){
+		return false;
+	}
+	for(int x=0; x<hex.size(); ++x){
+		if(!(hex[x] >= '0' && hex[x] <= '9' || hex[x] >= 'A' && hex[x] <= 'F')){
+			return false;
+		}
+	}
+	return true;
+}
+
 /*
-Returns binary version of hex string encoded in big-endian. Returns empty string
-if invalid hex string. The following types of strings are invalid.
-1. Empty string.
-2. String with lower case hex chars (all hex chars must be upper case).
-3. String with length not multiple of 2.
+Returns binary version of hex string encoded in big-endian.
+Precondition: Parameter must be valid hex string.
 */
-static std::string hex_to_bin(const char * hex, const int size)
+std::string hex_to_bin(const std::string & hex)
 {
 	std::string bin;
-
-	//check for invalid size
-	if(size == 0 || size % 2 != 0){
-		return bin;
-	}
-
-	for(int x=0; x<size; x+=2){
-		//make sure hex characters are valid
-		if(!(hex[x] >= '0' && hex[x] <= '9' || hex[x] >= 'A' && hex[x] <= 'F')
-			|| !(hex[x+1] >= '0' && hex[x+1] <= '9' || hex[x+1] >= 'A' && hex[x+1] <= 'F'))
-		{
-			bin.clear();
-			return bin;
-		}
-		//convert
+	assert(hex_validate(hex));
+	for(int x=0; x<hex.size(); x+=2){
 		char ch = (hex[x] >= 'A' ? hex[x] - 'A' + 10 : hex[x] - '0') << 4;
 		bin += ch + (hex[x+1] >= 'A' ? hex[x+1] - 'A' + 10 : hex[x+1] - '0');
 	}
 	return bin;
 }
 
-static std::string hex_to_bin(const std::string & hex)
-{
-	return hex_to_bin(hex.data(), hex.size());
-}
-
 //converts a binary string to hex
-static std::string bin_to_hex(const char * bin, const int size)
+std::string bin_to_hex(const std::string & bin)
 {
 	const char * const hex = "0123456789ABCDEF";
-	std::string temp;
-	for(int x=0; x<size; ++x){
-		temp += hex[static_cast<int>((bin[x] >> 4) & 15)];
-		temp += hex[static_cast<int>(bin[x] & 15)];
+	std::string tmp;
+	for(int x=0; x<bin.size(); ++x){
+		tmp += hex[static_cast<int>((bin[x] >> 4) & 15)];
+		tmp += hex[static_cast<int>(bin[x] & 15)];
 	}
-	return temp;
-}
-
-//converts a binary string to hex
-static std::string bin_to_hex(const std::string & bin)
-{
-	return bin_to_hex(bin.data(), bin.size());
+	return tmp;
 }
 
 //convert bytes to reasonable SI unit, example 1024 -> 1kB
-static std::string size_SI(const boost::uint64_t bytes)
+std::string bytes_to_SI(const boost::uint64_t bytes)
 {
 	std::ostringstream oss;
 	if(bytes < 1024){
@@ -172,20 +164,20 @@ static std::string size_SI(const boost::uint64_t bytes)
 
 /*
 Given two strings obtained from size_unit_select, returns less than (-1),
-equal to (0), or greater than (1). Just like strcmp.
+equal to (0), or greater than (1).
 
-This function doesn't do any converting but it's related to size_SI so it
-goes in the convert namespace.
+Note: Assumes equal if size prefix not found in either left or right.
 
 Note: This function only looks for the beginning of the size unit so it is ok to
 pass it strings obtained from size_SI that have had additional characters
 appended to them. For example it is ok to compare 5kB/s to 10kB/s.
 */
-static int size_SI_cmp(const std::string & left, const std::string & right)
+int SI_cmp(const std::string & left, const std::string & right)
 {
 	//size prefix used for comparison
 	const char * prefix = "Bkmgt";
 
+	//locate the size prefix
 	int left_prefix = -1;
 	for(int x=0; x<left.size(); ++x){
 		if(!(left[x] >= 48 && left[x] <= 57) && left[x] != '.'){
@@ -198,7 +190,6 @@ static int size_SI_cmp(const std::string & left, const std::string & right)
 		}
 	}
 	end_left_find:
-
 	int right_prefix = -1;
 	for(int x=0; x<right.size(); ++x){
 		if(!(right[x] >= 48 && right[x] <= 57) && right[x] != '.'){
@@ -213,6 +204,7 @@ static int size_SI_cmp(const std::string & left, const std::string & right)
 	end_right_find:
 
 	if(left_prefix == -1 || right_prefix == -1){
+		//no prefix found, assume equal
 		return 0;
 	}else if(left_prefix < right_prefix){
 		return -1;
@@ -229,5 +221,6 @@ static int size_SI_cmp(const std::string & left, const std::string & right)
 		return std::strcmp(left_temp.c_str(), right_temp.c_str());		
 	}
 }
+}//end of unnamed namespace
 }//end of namespace convert
 #endif

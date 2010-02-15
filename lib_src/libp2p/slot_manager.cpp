@@ -113,7 +113,7 @@ bool slot_manager::recv_file_block(boost::shared_ptr<message::base> M,
 
 bool slot_manager::recv_have_file_block(boost::shared_ptr<message::base> M)
 {
-	boost::uint64_t block_num = convert::decode_VLI(std::string(
+	boost::uint64_t block_num = convert::bin_VLI_to_int(std::string(
 		reinterpret_cast<char *>(M->buf.data()) + 2, M->buf.size() - 2));
 	LOGGER << block_num;
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
@@ -129,7 +129,7 @@ bool slot_manager::recv_have_file_block(boost::shared_ptr<message::base> M)
 
 bool slot_manager::recv_have_hash_tree_block(boost::shared_ptr<message::base> M)
 {
-	boost::uint64_t block_num = convert::decode_VLI(std::string(
+	boost::uint64_t block_num = convert::bin_VLI_to_int(std::string(
 		reinterpret_cast<char *>(M->buf.data()) + 2, M->buf.size() - 2));
 	LOGGER << block_num;
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
@@ -197,7 +197,7 @@ bool slot_manager::recv_request_hash_tree_block(
 		Exchange.send(boost::shared_ptr<message::base>(new message::error()));
 	}else{
 		assert(iter->second->get_transfer());
-		boost::uint64_t block_num = convert::decode_VLI(M->buf.str(2));
+		boost::uint64_t block_num = convert::bin_VLI_to_int(M->buf.str(2));
 		LOGGER << block_num;
 		boost::shared_ptr<message::base> M_request;
 		transfer::status status = iter->second->get_transfer()->read_tree_block(
@@ -229,7 +229,7 @@ bool slot_manager::recv_request_file_block(
 		Exchange.send(boost::shared_ptr<message::base>(new message::error()));
 	}else{
 		assert(iter->second->get_transfer());
-		boost::uint64_t block_num = convert::decode_VLI(M->buf.str(2));
+		boost::uint64_t block_num = convert::bin_VLI_to_int(M->buf.str(2));
 		LOGGER << block_num;
 		boost::shared_ptr<message::base> M_request;
 		transfer::status status = iter->second->get_transfer()->read_file_block(
@@ -255,8 +255,8 @@ bool slot_manager::recv_request_file_block(
 bool slot_manager::recv_request_slot(boost::shared_ptr<message::base> M)
 {
 	//requested hash
-	std::string hash = convert::bin_to_hex(
-		reinterpret_cast<const char *>(M->buf.data()+1), SHA1::bin_size);
+	std::string hash = convert::bin_to_hex(std::string(
+		reinterpret_cast<const char *>(M->buf.data()+1), SHA1::bin_size));
 	LOGGER << hash;
 
 	//locate requested slot
@@ -356,10 +356,10 @@ bool slot_manager::recv_slot(boost::shared_ptr<message::base> M,
 	}
 
 	//file size and root hash might not be known, set them
-	boost::uint64_t file_size = convert::decode<boost::uint64_t>(
+	boost::uint64_t file_size = convert::bin_to_int<boost::uint64_t>(
 		std::string(reinterpret_cast<char *>(M->buf.data()+3), 8));
-	std::string root_hash = convert::bin_to_hex(
-		reinterpret_cast<char *>(M->buf.data()+11), SHA1::bin_size);
+	std::string root_hash = convert::bin_to_hex(std::string(
+		reinterpret_cast<char *>(M->buf.data()+11), SHA1::bin_size));
 	if(!slot_iter->set_unknown(Exchange.connection_ID, file_size, root_hash)){
 		LOGGER << "error setting file size and root hash";
 		Exchange.send(boost::shared_ptr<message::base>(new message::close_slot(M->buf[1])));

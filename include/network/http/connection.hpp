@@ -169,7 +169,7 @@ private:
 						<< "/</a>\n</td>\n<td>DIR</td>\n</tr>";
 				}else{
 					ss << "<tr>\n<td>\n<a href=\"" << relative_path << "\">" << iter_cur->path().filename()
-						<< "</a>\n</td>\n<td>" << convert::size_SI(fs::file_size(iter_cur->path()))
+						<< "</a>\n</td>\n<td>" << convert::bytes_to_SI(fs::file_size(iter_cur->path()))
 						<< "</td>\n</tr>\n";
 				}
 			}

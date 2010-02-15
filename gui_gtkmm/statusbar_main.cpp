@@ -15,17 +15,17 @@ bool statusbar_main::update_status_bar()
 	//get the total client download speed
 	int download_rate = P2P.download_rate();
 	std::stringstream download_rate_s;
-	download_rate_s << convert::size_SI(download_rate) << "/s";
+	download_rate_s << convert::bytes_to_SI(download_rate) << "/s";
 
 	//get the total server upload speed
 	int upload_rate = P2P.upload_rate();
 	std::stringstream upload_rate_s;
-	upload_rate_s << convert::size_SI(upload_rate) << "/s";
+	upload_rate_s << convert::bytes_to_SI(upload_rate) << "/s";
 
 	std::stringstream ss;
 	ss << " DL: " << download_rate_s.str()
 		<< " UL: " << upload_rate_s.str()
-		<< " Share: " << convert::size_SI(P2P.share_size_bytes())
+		<< " Share: " << convert::bytes_to_SI(P2P.share_size_bytes())
 		<< " (" << P2P.share_size_files() << " files)";
 
 	statusbar->pop();

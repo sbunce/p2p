@@ -182,7 +182,7 @@ message::have_file_block::have_file_block(
 {
 	buf.append(protocol::have_file_block)
 		.append(slot_num)
-		.append(convert::encode_VLI(block_num, file_block_count));
+		.append(convert::int_to_bin_VLI(block_num, file_block_count));
 }
 
 bool message::have_file_block::expects(network::buffer & recv_buf)
@@ -242,7 +242,7 @@ message::have_hash_tree_block::have_hash_tree_block(
 {
 	buf.append(protocol::have_hash_tree_block)
 		.append(slot_num)
-		.append(convert::encode_VLI(block_num, tree_block_count));
+		.append(convert::int_to_bin_VLI(block_num, tree_block_count));
 }
 
 bool message::have_hash_tree_block::expects(network::buffer & recv_buf)
@@ -400,7 +400,7 @@ message::request_hash_tree_block::request_hash_tree_block(
 {
 	buf.append(protocol::request_hash_tree_block)
 		.append(slot_num)
-		.append(convert::encode_VLI(block_num, tree_block_count));
+		.append(convert::int_to_bin_VLI(block_num, tree_block_count));
 }
 
 bool message::request_hash_tree_block::expects(network::buffer & recv_buf)
@@ -450,7 +450,7 @@ message::request_file_block::request_file_block(
 {
 	buf.append(protocol::request_file_block)
 		.append(slot_num)
-		.append(convert::encode_VLI(block_num, file_block_count));
+		.append(convert::int_to_bin_VLI(block_num, file_block_count));
 }
 
 bool message::request_file_block::expects(network::buffer & recv_buf)
@@ -538,7 +538,7 @@ message::slot::slot(const unsigned char slot_num,
 	buf.append(protocol::slot)
 		.append(slot_num)
 		.append(status)
-		.append(convert::encode(file_size))
+		.append(convert::int_to_bin(file_size))
 		.append(convert::hex_to_bin(root_hash));
 	if(!tree_BF.empty()){
 		buf.append(tree_BF.get_buf());
@@ -572,7 +572,7 @@ bool message::slot::recv(network::connection_info & CI)
 			return false;
 		}
 	}
-	boost::uint64_t file_size = convert::decode<boost::uint64_t>(
+	boost::uint64_t file_size = convert::bin_to_int<boost::uint64_t>(
 		std::string(reinterpret_cast<char *>(CI.recv_buf.data()) + 3, 8));
 	if(CI.recv_buf[2] == 0){
 		//no bit_field
