@@ -188,7 +188,7 @@ static int size_SI_cmp(const std::string & left, const std::string & right)
 
 	int left_prefix = -1;
 	for(int x=0; x<left.size(); ++x){
-		if(!((int)left[x] >= 48 && (int)left[x] <= 57) && left[x] != '.'){
+		if(!(left[x] >= 48 && left[x] <= 57) && left[x] != '.'){
 			for(int y=0; y<5; ++y){
 				if(left[x] == prefix[y]){
 					left_prefix = y;
@@ -201,7 +201,7 @@ static int size_SI_cmp(const std::string & left, const std::string & right)
 
 	int right_prefix = -1;
 	for(int x=0; x<right.size(); ++x){
-		if(!((int)right[x] >= 48 && (int)right[x] <= 57) && right[x] != '.'){
+		if(!(right[x] >= 48 && right[x] <= 57) && right[x] != '.'){
 			for(int y=0; y<5; ++y){
 				if(right[x] == prefix[y]){
 					right_prefix = y;

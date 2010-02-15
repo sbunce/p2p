@@ -23,8 +23,8 @@ public:
 
 private:
 	boost::thread network_thread;
-
 	const std::string ID;
+	network::ndgram ndgram;
 
 	/*
 	high_node_cache_mutex:
@@ -77,9 +77,15 @@ private:
 	std::list<contact> Bucket[SHA1::bin_size * 8];
 
 	/*
+	calc_bucket:
+		Returns bucket number 0-159 that ID belongs in.
 	network_loop:
 		Loop to send/recv data.
+	process_node_cache:
+		Called once per second to add nodes to k-buckets.
 	*/
+	unsigned calc_bucket(const std::string & ID);
 	void network_loop();
+	void process_node_cache();
 };
 #endif

@@ -63,15 +63,25 @@ kademlia::~kademlia()
 }
 
 void kademlia::add_node(const std::string & ID, const std::string & IP,
-		const std::string & port)
+	const std::string & port)
 {
 	boost::mutex::scoped_lock lock(high_node_cache_mutex);
 	high_node_cache.push_back(database::table::peer::info(ID, IP, port));
 }
 
+unsigned calc_bucket(const std::string & ID)
+{
+	assert(ID.size() == SHA1::hex_size);
+}
+
 void kademlia::network_loop()
 {
+	/*
+	Read nodes from database to try to put in k-buckets. Randomize them so we
+	use different nodes on each program start.
+	*/
 	low_node_cache = database::table::peer::resume();
+	std::random_shuffle(low_node_cache.begin(), low_node_cache.end());
 
 	//setup UDP listener
 	std::set<network::endpoint> E = network::get_endpoint(
@@ -80,7 +90,7 @@ void kademlia::network_loop()
 		network::udp
 	);
 	assert(!E.empty());
-	network::ndgram ndgram(*E.begin());
+	ndgram.open(*E.begin());
 	assert(ndgram.is_open());
 
 	//setup select to wait on UDP listener
@@ -94,7 +104,7 @@ void kademlia::network_loop()
 
 		if(last_time != std::time(NULL)){
 			//stuff to do once per second
-//DEBUG, add nodes from cache
+			process_node_cache();
 			last_time = std::time(NULL);
 		}
 
@@ -117,4 +127,9 @@ void kademlia::network_loop()
 
 		LOGGER << "kad " << from->IP() << " " << from->port();
 	}
+}
+
+void kademlia::process_node_cache()
+{
+LOGGER;
 }
