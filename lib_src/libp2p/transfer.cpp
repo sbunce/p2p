@@ -200,7 +200,7 @@ unsigned transfer::percent_complete()
 	return ((double)bytes_received / (Hash_Tree.tree_size + Hash_Tree.file_size)) * 100;
 }
 
-transfer::status transfer::read_file_block(boost::shared_ptr<message::base> & M,
+transfer::status transfer::read_file_block(boost::shared_ptr<message_tcp::base> & M,
 		const boost::uint64_t block_num)
 {
 	if(File_Block.have_block(block_num)){
@@ -215,7 +215,7 @@ transfer::status transfer::read_file_block(boost::shared_ptr<message::base> & M,
 				return bad;
 			}
 //DEBUG, large copy
-			M = boost::shared_ptr<message::base>(new message::block(buf, Upload_Speed));
+			M = boost::shared_ptr<message_tcp::base>(new message_tcp::block(buf, Upload_Speed));
 			return good;
 		}else{
 			return bad;
@@ -225,7 +225,7 @@ transfer::status transfer::read_file_block(boost::shared_ptr<message::base> & M,
 	}
 }
 
-transfer::status transfer::read_tree_block(boost::shared_ptr<message::base> & M,
+transfer::status transfer::read_tree_block(boost::shared_ptr<message_tcp::base> & M,
 	const boost::uint64_t block_num)
 {
 	if(Hash_Tree_Block.have_block(block_num)){
@@ -233,7 +233,7 @@ transfer::status transfer::read_tree_block(boost::shared_ptr<message::base> & M,
 		hash_tree::status status = Hash_Tree.read_block(block_num, buf);
 		if(status == hash_tree::good){
 //DEBUG, large copy
-			M = boost::shared_ptr<message::base>(new message::block(buf, Upload_Speed));
+			M = boost::shared_ptr<message_tcp::base>(new message_tcp::block(buf, Upload_Speed));
 			return good;
 		}else{
 			return bad;

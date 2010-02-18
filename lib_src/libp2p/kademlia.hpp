@@ -5,6 +5,7 @@
 #include "database.hpp"
 
 //include
+#include <bit_field.hpp>
 #include <network/network.hpp>
 
 class kademlia
@@ -23,7 +24,7 @@ public:
 
 private:
 	boost::thread network_thread;
-	const std::string ID;
+	bit_field ID_BF;
 	network::ndgram ndgram;
 
 	/*

@@ -26,7 +26,7 @@ void connection::recv_call_back(network::connection_info & CI)
 	Slot_Manager.tick();
 }
 
-bool connection::recv_initial(boost::shared_ptr<message::base> M)
+bool connection::recv_initial(boost::shared_ptr<message_tcp::base> M)
 {
 	std::string peer_ID = convert::bin_to_hex(std::string(
 		reinterpret_cast<const char *>(M->buf.data()), SHA1::bin_size));
@@ -50,8 +50,8 @@ void connection::send_call_back(network::connection_info & CI)
 void connection::send_initial()
 {
 	std::string ID = database::table::prefs::get_ID();
-	Exchange.send(boost::shared_ptr<message::base>(new message::initial(ID)));
-	Exchange.expect_response(boost::shared_ptr<message::base>(new message::initial(
+	Exchange.send(boost::shared_ptr<message_tcp::base>(new message_tcp::initial(ID)));
+	Exchange.expect_response(boost::shared_ptr<message_tcp::base>(new message_tcp::initial(
 		boost::bind(&connection::recv_initial, this, _1))));
 }
 

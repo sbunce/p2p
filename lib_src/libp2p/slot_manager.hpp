@@ -2,8 +2,8 @@
 #define H_SLOT_MANAGER
 
 //custom
-#include "exchange.hpp"
-#include "message.hpp"
+#include "exchange_tcp.hpp"
+#include "message_tcp.hpp"
 #include "share.hpp"
 #include "slot.hpp"
 
@@ -18,7 +18,7 @@ class slot_manager : private boost::noncopyable
 {
 public:
 	slot_manager(
-		exchange & Exchange_in,
+		exchange_tcp & Exchange_in,
 		boost::function<void(const int)> trigger_tick_in
 	);
 	~slot_manager();
@@ -40,7 +40,7 @@ public:
 	void tick();
 
 private:
-	exchange & Exchange;
+	exchange_tcp & Exchange;
 	boost::function<void(const int)> trigger_tick;
 
 	/*
@@ -110,21 +110,21 @@ private:
 		Handles incoming slot messages. The hash parameter is the hash of the file
 		requested.
 	*/
-	bool recv_close_slot(boost::shared_ptr<message::base> M);
-	bool recv_file_block(boost::shared_ptr<message::base> M,
+	bool recv_close_slot(boost::shared_ptr<message_tcp::base> M);
+	bool recv_file_block(boost::shared_ptr<message_tcp::base> M,
 		const unsigned slot_num, const boost::uint64_t block_num);
-	bool recv_have_file_block(boost::shared_ptr<message::base> M);
-	bool recv_have_hash_tree_block(boost::shared_ptr<message::base> M);
-	bool recv_hash_tree_block(boost::shared_ptr<message::base> M,
+	bool recv_have_file_block(boost::shared_ptr<message_tcp::base> M);
+	bool recv_have_hash_tree_block(boost::shared_ptr<message_tcp::base> M);
+	bool recv_hash_tree_block(boost::shared_ptr<message_tcp::base> M,
 		const unsigned slot_num, const boost::uint64_t block_num);
-	bool recv_request_hash_tree_block(boost::shared_ptr<message::base> M,
+	bool recv_request_hash_tree_block(boost::shared_ptr<message_tcp::base> M,
 		const unsigned slot_num);
-	bool recv_request_file_block(boost::shared_ptr<message::base> M,
+	bool recv_request_file_block(boost::shared_ptr<message_tcp::base> M,
 		const unsigned slot_num);
-	bool recv_request_block_failed(boost::shared_ptr<message::base> M,
+	bool recv_request_block_failed(boost::shared_ptr<message_tcp::base> M,
 		const unsigned slot_num);
-	bool recv_request_slot(boost::shared_ptr<message::base> M);
-	bool recv_request_slot_failed(boost::shared_ptr<message::base> M);
-	bool recv_slot(boost::shared_ptr<message::base> M, const std::string hash);
+	bool recv_request_slot(boost::shared_ptr<message_tcp::base> M);
+	bool recv_request_slot_failed(boost::shared_ptr<message_tcp::base> M);
+	bool recv_slot(boost::shared_ptr<message_tcp::base> M, const std::string hash);
 };
 #endif

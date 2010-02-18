@@ -3,8 +3,8 @@
 
 //custom
 #include "encryption.hpp"
-#include "exchange.hpp"
-#include "message.hpp"
+#include "exchange_tcp.hpp"
+#include "message_tcp.hpp"
 #include "share.hpp"
 #include "slot_manager.hpp"
 
@@ -37,7 +37,7 @@ private:
 	//locks all entry points to this object
 	boost::mutex Mutex;
 
-	exchange Exchange;
+	exchange_tcp Exchange;
 	slot_manager Slot_Manager;
 
 	/*
@@ -55,7 +55,7 @@ private:
 	send_initial:
 		Send initial message. Called after key exchange completed.
 	*/
-	bool recv_initial(boost::shared_ptr<message::base> M);
+	bool recv_initial(boost::shared_ptr<message_tcp::base> M);
 	void send_initial();
 };
 #endif

@@ -53,6 +53,9 @@ void kademlia::contact::touch()
 
 kademlia::kademlia()
 {
+	std::string bin = convert::hex_to_bin(database::table::prefs::get_ID());
+	ID_BF.set_buf(reinterpret_cast<const unsigned char *>(bin.data()), bin.size(),
+		SHA1::bin_size * 8, 1);
 	network_thread = boost::thread(boost::bind(&kademlia::network_loop, this));
 }
 
@@ -69,9 +72,18 @@ void kademlia::add_node(const std::string & ID, const std::string & IP,
 	high_node_cache.push_back(database::table::peer::info(ID, IP, port));
 }
 
-unsigned calc_bucket(const std::string & ID)
+unsigned kademlia::calc_bucket(const std::string & ID)
 {
 	assert(ID.size() == SHA1::hex_size);
+	std::string bin = convert::hex_to_bin(ID);
+	bit_field BF(reinterpret_cast<const unsigned char *>(bin.data()), bin.size(),
+		SHA1::bin_size * 8, 1);
+	for(int x=159; x>=0; --x){
+		if(BF[x] != ID_BF[x]){
+			return x;
+		}
+	}
+	return 0;
 }
 
 void kademlia::network_loop()
@@ -131,5 +143,22 @@ void kademlia::network_loop()
 
 void kademlia::process_node_cache()
 {
+	//attempt to add high priority node
+/*
+	{//BEGIN lock scope
+	boost::mutex::scoped_lock lock(high_node_cache_mutex);
+	if(!high_node_cache.empty()){
+		LOGGER << calc_bucket(high_node_cache.front().ID);
+		high_node_cache.pop_front();
+		return;
+	}
+	}//END lock scope
+*/
 
+	//attempt to add low priority node
+	if(!low_node_cache.empty()){
+		LOGGER << calc_bucket(low_node_cache.front().ID);
+		//check if space in bucket
+		low_node_cache.pop_front();
+	}
 }

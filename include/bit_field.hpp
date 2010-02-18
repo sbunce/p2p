@@ -42,6 +42,16 @@ public:
 
 	}
 
+	bit_field(
+		const unsigned char * buf,
+		const unsigned size,
+		const boost::uint64_t groups_in,
+		const boost::uint64_t group_size_in
+	)
+	{
+		set_buf(buf, size, groups_in, group_size_in);
+	}
+
 	static const boost::uint64_t npos = -1;
 
 	//returns size (bytes) of bit_field with specified groups and group_size 
@@ -245,7 +255,7 @@ public:
 	}
 
 	//set internal buffer from big-endian encoded buf
-	void set_buf(unsigned char * buf, const unsigned size,
+	void set_buf(const unsigned char * buf, const unsigned size,
 		const boost::uint64_t groups_in, const boost::uint64_t group_size_in)
 	{
 		groups = groups_in;
