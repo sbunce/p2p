@@ -3,6 +3,7 @@
 
 //custom
 #include "database.hpp"
+#include "exchange_udp.hpp"
 
 //include
 #include <bit_field.hpp>

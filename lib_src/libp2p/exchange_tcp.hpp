@@ -1,18 +1,18 @@
-#ifndef H_EXCHANGE
-#define H_EXCHANGE
+#ifndef H_EXCHANGE_TCP
+#define H_EXCHANGE_TCP
 
 //custom
 #include "encryption.hpp"
-#include "message.hpp"
+#include "message_tcp.hpp"
 
 //include
 #include <boost/shared_ptr.hpp>
 #include <network/network.hpp>
 
-class exchange : private boost::noncopyable
+class exchange_tcp : private boost::noncopyable
 {
 public:
-	exchange(
+	exchange_tcp(
 		network::proactor & Proactor_in,
 		network::connection_info & CI
 	);
@@ -40,10 +40,10 @@ public:
 	send:
 		Sends a message. Handles encryption.
 	*/
-	void expect_response(boost::shared_ptr<message::base> M);
-	void expect_anytime(boost::shared_ptr<message::base> M);
+	void expect_response(boost::shared_ptr<message_tcp::base> M);
+	void expect_anytime(boost::shared_ptr<message_tcp::base> M);
 	void expect_anytime_erase(network::buffer buf);
-	void send(boost::shared_ptr<message::base> M);
+	void send(boost::shared_ptr<message_tcp::base> M);
 
 private:
 	network::proactor & Proactor;
@@ -52,13 +52,13 @@ private:
 	Expected responses are pushed on the back of Expect after a request is sent.
 	When a response arrives it is for the message on the front of Expect.
 	*/
-	std::list<boost::shared_ptr<message::base> > Expect_Response;
+	std::list<boost::shared_ptr<message_tcp::base> > Expect_Response;
 
 	/*
 	Incoming messages that aren't responses are processed by the messages in this
 	container. The message objects in this container are reused.
 	*/
-	std::list<boost::shared_ptr<message::base> > Expect_Anytime;
+	std::list<boost::shared_ptr<message_tcp::base> > Expect_Anytime;
 
 	//key exchange and stream cypher
 	encryption Encryption;
@@ -68,7 +68,7 @@ private:
 	messages that need to be encrypted. When this happens those messages are
 	stored here and sent FIFO when Encryption.ready() = true.
 	*/
-	std::list<boost::shared_ptr<message::base> > Encrypt_Buf;
+	std::list<boost::shared_ptr<message_tcp::base> > Encrypt_Buf;
 
 	/*
 	When we send a message to the proactor we push it's size and a shared_ptr to
@@ -89,8 +89,8 @@ private:
 	send_buffered:
 		Sends messages buffered until key exchange complete.
 	*/
-	bool recv_p_rA(boost::shared_ptr<message::base> M, network::connection_info & CI);
-	bool recv_rB(boost::shared_ptr<message::base> M, network::connection_info & CI);
+	bool recv_p_rA(network::buffer & buf, network::connection_info & CI);
+	bool recv_rB(network::buffer & buf, network::connection_info & CI);
 	void send_buffered();
 };
 #endif

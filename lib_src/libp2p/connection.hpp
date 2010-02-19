@@ -55,7 +55,7 @@ private:
 	send_initial:
 		Send initial message. Called after key exchange completed.
 	*/
-	bool recv_initial(boost::shared_ptr<message_tcp::base> M);
+	bool recv_initial(network::buffer & buf);
 	void send_initial();
 };
 #endif

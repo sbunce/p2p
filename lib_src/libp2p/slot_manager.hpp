@@ -110,21 +110,21 @@ private:
 		Handles incoming slot messages. The hash parameter is the hash of the file
 		requested.
 	*/
-	bool recv_close_slot(boost::shared_ptr<message_tcp::base> M);
-	bool recv_file_block(boost::shared_ptr<message_tcp::base> M,
+	bool recv_close_slot(network::buffer & buf);
+	bool recv_file_block(network::buffer & buf,
 		const unsigned slot_num, const boost::uint64_t block_num);
-	bool recv_have_file_block(boost::shared_ptr<message_tcp::base> M);
-	bool recv_have_hash_tree_block(boost::shared_ptr<message_tcp::base> M);
-	bool recv_hash_tree_block(boost::shared_ptr<message_tcp::base> M,
+	bool recv_have_file_block(network::buffer & buf);
+	bool recv_have_hash_tree_block(network::buffer & buf);
+	bool recv_hash_tree_block(network::buffer & buf,
 		const unsigned slot_num, const boost::uint64_t block_num);
-	bool recv_request_hash_tree_block(boost::shared_ptr<message_tcp::base> M,
+	bool recv_request_hash_tree_block(network::buffer & buf,
 		const unsigned slot_num);
-	bool recv_request_file_block(boost::shared_ptr<message_tcp::base> M,
+	bool recv_request_file_block(network::buffer & buf,
 		const unsigned slot_num);
-	bool recv_request_block_failed(boost::shared_ptr<message_tcp::base> M,
+	bool recv_request_block_failed(network::buffer & buf,
 		const unsigned slot_num);
-	bool recv_request_slot(boost::shared_ptr<message_tcp::base> M);
-	bool recv_request_slot_failed(boost::shared_ptr<message_tcp::base> M);
-	bool recv_slot(boost::shared_ptr<message_tcp::base> M, const std::string hash);
+	bool recv_request_slot(network::buffer & buf);
+	bool recv_request_slot_failed(network::buffer & buf);
+	bool recv_slot(network::buffer & buf, const std::string hash);
 };
 #endif

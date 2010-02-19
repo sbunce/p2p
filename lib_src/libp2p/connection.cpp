@@ -26,10 +26,10 @@ void connection::recv_call_back(network::connection_info & CI)
 	Slot_Manager.tick();
 }
 
-bool connection::recv_initial(boost::shared_ptr<message_tcp::base> M)
+bool connection::recv_initial(network::buffer & buf)
 {
 	std::string peer_ID = convert::bin_to_hex(std::string(
-		reinterpret_cast<const char *>(M->buf.data()), SHA1::bin_size));
+		reinterpret_cast<const char *>(buf.data()), SHA1::bin_size));
 	LOGGER << peer_ID;
 	Slot_Manager.resume(peer_ID);
 	return true;

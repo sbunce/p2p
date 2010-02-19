@@ -13,11 +13,8 @@ volatile sig_atomic_t terminate_program = 0;
 void signal_handler(int sig)
 {
 	signal(sig, signal_handler);
-	{//begin lock scope
-	boost::mutex::scoped_lock lock(terminate_mutex);
 	terminate_program = 1;
 	terminate_cond.notify_one();
-	}//end lock scope
 }
 
 void connect_call_back(network::connection_info &);
