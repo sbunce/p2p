@@ -270,14 +270,14 @@ public:
 	}
 
 	//returns the number of bitgroups in the bitgroup_set
-	unsigned size() const
+	boost::uint64_t size() const
 	{
 		return groups;
 	}
 
 private:
-	boost::uint64_t groups;    //how many bit groups
-	unsigned group_size; //how many bits in each group
+	boost::uint64_t groups; //how many bit groups
+	unsigned group_size;    //how many bits in each group
 
 	/*
 	The bitgroups are stored here.

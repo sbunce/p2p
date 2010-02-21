@@ -65,10 +65,10 @@ void exchange_tcp::recv_call_back(network::connection_info & CI)
 			if(Status == message_tcp::blacklist){
 				database::table::blacklist::add(CI.IP);
 				goto end;
-			}else if(Status == message_tcp::expected_complete){
+			}else if(Status == message_tcp::complete){
 				Expect_Response.pop_front();
 				goto begin;
-			}else if(Status == message_tcp::expected_incomplete){
+			}else if(Status == message_tcp::incomplete){
 				goto end;
 			}
 		}
@@ -82,11 +82,11 @@ void exchange_tcp::recv_call_back(network::connection_info & CI)
 				if(Status == message_tcp::blacklist){
 					database::table::blacklist::add(CI.IP);
 					goto end;
-				}else if(Status == message_tcp::expected_complete){
+				}else if(Status == message_tcp::complete){
 					//clear buffer for reuse
 					(*iter_cur)->buf.clear();
 					goto begin;
-				}else if(Status == message_tcp::expected_incomplete){
+				}else if(Status == message_tcp::incomplete){
 					goto end;
 				}else{
 					++iter_cur;
@@ -140,12 +140,15 @@ void exchange_tcp::send(boost::shared_ptr<message_tcp::base> M)
 	assert(M);
 	assert(!M->buf.empty());
 	if(!Encryption.ready() && M->encrypt()){
+		//buffer messages sent before key exchange complete
 		Encrypt_Buf.push_back(M);
 	}else if(Encryption.ready() && M->encrypt()){
+		//send encrypted message
 		Encryption.crypt_send(M->buf);
 		Send_Speed.push_back(std::make_pair(M->buf.size(), M->Speed_Calculator));
 		Proactor.send(connection_ID, M->buf);
 	}else if(!M->encrypt()){
+		//sent unencrypted message
 		Send_Speed.push_back(std::make_pair(M->buf.size(), M->Speed_Calculator));
 		Proactor.send(connection_ID, M->buf);
 	}

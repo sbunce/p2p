@@ -9,14 +9,14 @@ bool message_tcp::base::encrypt()
 
 //BEGIN block
 message_tcp::block::block(
-	boost::function<bool (network::buffer &)> func_in,
+	handler func_in,
 	const unsigned block_size_in,
 	boost::shared_ptr<network::speed_calculator> Download_Speed
 ):
+	func(func_in),
 	block_size(block_size_in),
 	bytes_seen(1)
 {
-	func = func_in;
 	Speed_Calculator = Download_Speed;
 }
 
@@ -40,24 +40,27 @@ message_tcp::status message_tcp::block::recv(network::buffer & recv_buf)
 	}
 	if(recv_buf.size() >= protocol::block_size(block_size)){
 		Speed_Calculator->add(block_size - bytes_seen);
-		buf.append(recv_buf.data(), protocol::block_size(block_size));
+		buf.append(recv_buf.data() + 1, protocol::block_size(block_size) - 1);
 		recv_buf.erase(0, protocol::block_size(block_size));
 		if(func(buf)){
-			return expected_complete;
+			return complete;
 		}else{
 			return blacklist;
 		}
 	}
 	Speed_Calculator->add(recv_buf.size() - bytes_seen);
 	bytes_seen = recv_buf.size();
-	return expected_incomplete;
+	return incomplete;
 }
 //END block
 
 //BEGIN close_slot
-message_tcp::close_slot::close_slot(boost::function<bool (network::buffer &)> func_in)
+message_tcp::close_slot::close_slot(
+	handler func_in
+):
+	func(func_in)
 {
-	func = func_in;
+
 }
 
 message_tcp::close_slot::close_slot(const unsigned char slot_num)
@@ -77,15 +80,14 @@ message_tcp::status message_tcp::close_slot::recv(network::buffer & recv_buf)
 		return not_expected;
 	}
 	if(recv_buf.size() >= protocol::close_slot_size){
-		buf.append(recv_buf.data(), protocol::close_slot_size);
-		recv_buf.erase(0, protocol::close_slot_size);
-		if(func(buf)){
-			return expected_complete;
+		if(func(recv_buf[1])){
+			return complete;
 		}else{
 			return blacklist;
 		}
+		recv_buf.erase(0, protocol::close_slot_size);
 	}
-	return expected_incomplete;
+	return incomplete;
 }
 //END close_slot
 
@@ -126,9 +128,12 @@ message_tcp::status message_tcp::composite::recv(network::buffer & recv_buf)
 //END composite
 
 //BEGIN error
-message_tcp::error::error(boost::function<bool (network::buffer &)> func_in)
+message_tcp::error::error(
+	handler func_in
+):
+	func(func_in)
 {
-	func = func_in;
+
 }
 
 message_tcp::error::error()
@@ -150,26 +155,27 @@ message_tcp::status message_tcp::error::recv(network::buffer & recv_buf)
 	if(recv_buf[0] == protocol::error){
 		buf.append(recv_buf.data(), protocol::error_size);
 		recv_buf.erase(0, protocol::error_size);
-		if(func(buf)){
-			return expected_complete;
+		if(func()){
+			return complete;
 		}else{
 			return blacklist;
 		}
 	}
-	return expected_incomplete;
+	return incomplete;
 }
 //END error
 
 //BEGIN have_file_block
 message_tcp::have_file_block::have_file_block(
-	boost::function<bool (network::buffer &)> func_in,
+	handler func_in,
 	const unsigned char slot_num_in,
 	const boost::uint64_t file_block_count_in
 ):
+	func(func_in),
 	slot_num(slot_num_in),
 	file_block_count(file_block_count_in)
 {
-	func = func_in;
+
 }
 
 message_tcp::have_file_block::have_file_block(
@@ -208,28 +214,31 @@ message_tcp::status message_tcp::have_file_block::recv(network::buffer & recv_bu
 	unsigned expected_size = protocol::have_file_block_size(
 		convert::VLI_size(file_block_count));
 	if(recv_buf.size() >= expected_size){
-		buf.append(recv_buf.data(), expected_size);
+		unsigned char slot_num = recv_buf[1];
+		boost::uint64_t block_num = convert::bin_VLI_to_int(std::string(
+		reinterpret_cast<char *>(recv_buf.data()) + 2, expected_size - 2));
 		recv_buf.erase(0, expected_size);
-		if(func(buf)){
-			return expected_complete;
+		if(func(slot_num, block_num)){
+			return complete;
 		}else{
 			return blacklist;
 		}
 	}
-	return expected_incomplete;
+	return incomplete;
 }
 //END have_file_block
 
 //BEGIN have_hash_tree_block
 message_tcp::have_hash_tree_block::have_hash_tree_block(
-	boost::function<bool (network::buffer &)> func_in,
+	handler func_in,
 	const unsigned char slot_num_in,
 	const boost::uint64_t tree_block_count_in
 ):
+	func(func_in),
 	slot_num(slot_num_in),
 	tree_block_count(tree_block_count_in)
 {
-	func = func_in;
+
 }
 
 message_tcp::have_hash_tree_block::have_hash_tree_block(
@@ -268,26 +277,32 @@ message_tcp::status message_tcp::have_hash_tree_block::recv(network::buffer & re
 	unsigned expected_size = protocol::have_hash_tree_block_size(
 		convert::VLI_size(tree_block_count));
 	if(recv_buf.size() >= expected_size){
-		buf.append(recv_buf.data(), expected_size);
+		unsigned char slot_num = recv_buf[1];
+		boost::uint64_t block_num = convert::bin_VLI_to_int(std::string(
+		reinterpret_cast<char *>(recv_buf.data()) + 2, expected_size - 2));
 		recv_buf.erase(0, expected_size);
-		if(func(buf)){
-			return expected_complete;
+		if(func(slot_num, block_num)){
+			return complete;
 		}else{
 			return blacklist;
 		}
 	}
-	return expected_incomplete;
+	return incomplete;
 }
 //END have_hash_tree_block
 
 //BEGIN initial
-message_tcp::initial::initial(boost::function<bool (network::buffer &)> func_in)
+message_tcp::initial::initial(
+	handler func_in
+):
+	func(func_in)
 {
-	func = func_in;
+
 }
 
 message_tcp::initial::initial(const std::string ID)
 {
+	assert(ID.size() == SHA1::hex_size);
 	buf = convert::hex_to_bin(ID);
 }
 
@@ -305,20 +320,22 @@ message_tcp::status message_tcp::initial::recv(network::buffer & recv_buf)
 		buf.append(recv_buf.data(), SHA1::bin_size);
 		recv_buf.erase(0, SHA1::bin_size);
 		if(func(buf)){
-			return expected_complete;
+			return complete;
 		}else{
 			return blacklist;
 		}
 	}
-	return expected_incomplete;
+	return incomplete;
 }
 //END initial
 
 //BEGIN key_exchange_p_rA
 message_tcp::key_exchange_p_rA::key_exchange_p_rA(
-	boost::function<bool (network::buffer &)> func_in)
+	handler func_in
+):
+	func(func_in)
 {
-	func = func_in;
+
 }
 
 message_tcp::key_exchange_p_rA::key_exchange_p_rA(encryption & Encryption)
@@ -345,20 +362,22 @@ message_tcp::status message_tcp::key_exchange_p_rA::recv(network::buffer & recv_
 		buf.append(recv_buf.data(), protocol::DH_key_size * 2);
 		recv_buf.erase(0, protocol::DH_key_size * 2);
 		if(func(buf)){
-			return expected_complete;
+			return complete;
 		}else{
 			return blacklist;
 		}
 	}
-	return expected_incomplete;
+	return incomplete;
 }
 //END key_exchange_p_rA
 
 //BEGIN key_exchange_rB
 message_tcp::key_exchange_rB::key_exchange_rB(
-	boost::function<bool (network::buffer &)> func_in)
+	handler func_in
+):
+	func(func_in)
 {
-	func = func_in;
+
 }
 
 message_tcp::key_exchange_rB::key_exchange_rB(encryption & Encryption)
@@ -385,25 +404,26 @@ message_tcp::status message_tcp::key_exchange_rB::recv(network::buffer & recv_bu
 		buf.append(recv_buf.data(), protocol::DH_key_size);
 		recv_buf.erase(0, protocol::DH_key_size);
 		if(func(buf)){
-			return expected_complete;
+			return complete;
 		}else{
 			return blacklist;
 		}
 	}
-	return expected_incomplete;
+	return incomplete;
 }
 //END key_exchange_rB
 
 //BEGIN request_hash_tree_block
 message_tcp::request_hash_tree_block::request_hash_tree_block(
-	boost::function<bool (network::buffer &)> func_in,
+	handler func_in,
 	const unsigned char slot_num_in,
 	const boost::uint64_t tree_block_count
 ):
+	func(func_in),
 	slot_num(slot_num_in),
 	VLI_size(convert::VLI_size(tree_block_count))
 {
-	func = func_in;
+
 }
 
 
@@ -434,28 +454,31 @@ message_tcp::status message_tcp::request_hash_tree_block::recv(network::buffer &
 		return not_expected;
 	}
 	if(recv_buf.size() >= 2 + VLI_size){
-		buf.append(recv_buf.data(), 2 + VLI_size);
+		unsigned char slot_num = recv_buf[1];
+		boost::uint64_t block_num = convert::bin_VLI_to_int(std::string(
+			reinterpret_cast<char *>(recv_buf.data()) + 2, VLI_size));
 		recv_buf.erase(0, 2 + VLI_size);
-		if(func(buf)){
-			return expected_complete;
+		if(func(slot_num, block_num)){
+			return complete;
 		}else{
 			return blacklist;
 		}
 	}
-	return expected_incomplete;
+	return incomplete;
 }
 //END request_hash_tree_block
 
 //BEGIN request_file_block
 message_tcp::request_file_block::request_file_block(
-	boost::function<bool (network::buffer &)> func_in,
+	handler func_in,
 	const unsigned char slot_num_in,
 	const boost::uint64_t tree_block_count
 ):
+	func(func_in),
 	slot_num(slot_num_in),
 	VLI_size(convert::VLI_size(tree_block_count))
 {
-	func = func_in;
+
 }
 
 message_tcp::request_file_block::request_file_block(
@@ -484,23 +507,27 @@ message_tcp::status message_tcp::request_file_block::recv(network::buffer & recv
 		return not_expected;
 	}
 	if(recv_buf.size() >= 2 + VLI_size){
-		buf.append(recv_buf.data(), 2 + VLI_size);
-		recv_buf.erase(0, 2 + VLI_size);
-		if(func(buf)){
-			return expected_complete;
+		unsigned char slot_num = recv_buf[1];
+		boost::uint64_t block_num = convert::bin_VLI_to_int(std::string(
+			reinterpret_cast<char *>(recv_buf.data()) + 2, VLI_size));
+		recv_buf.erase(0, protocol::request_file_block_size(VLI_size));
+		if(func(slot_num, block_num)){
+			return complete;
 		}else{
 			return blacklist;
 		}
 	}
-	return expected_incomplete;
+	return incomplete;
 }
 //END request_file_block
 
 //BEGIN request_slot
 message_tcp::request_slot::request_slot(
-	boost::function<bool (network::buffer &)> func_in)
+	handler func_in
+):
+	func(func_in)
 {
-	func = func_in;
+
 }
 
 message_tcp::request_slot::request_slot(const std::string & hash)
@@ -520,27 +547,29 @@ message_tcp::status message_tcp::request_slot::recv(network::buffer & recv_buf)
 		return not_expected;
 	}
 	if(recv_buf.size() >= protocol::request_slot_size){
-		buf.append(recv_buf.data(), protocol::request_slot_size);
+		std::string hash = convert::bin_to_hex(std::string(
+			reinterpret_cast<const char *>(recv_buf.data()) + 1, SHA1::bin_size));
 		recv_buf.erase(0, protocol::request_slot_size);
-		if(func(buf)){
-			return expected_complete;
+		if(func(hash)){
+			return complete;
 		}else{
 			return blacklist;
 		}
 	}
-	return expected_incomplete;
+	return incomplete;
 }
 //END request_slot
 
 //BEGIN slot
 message_tcp::slot::slot(
-	boost::function<bool (network::buffer &)> func_in,
+	handler func_in,
 	const std::string & hash_in
 ):
+	func(func_in),
 	hash(hash_in),
 	checked(false)
 {
-	func = func_in;
+
 }
 
 message_tcp::slot::slot(const unsigned char slot_num,
@@ -583,7 +612,7 @@ message_tcp::status message_tcp::slot::recv(network::buffer & recv_buf)
 	}
 	if(recv_buf.size() < protocol::slot_size(0, 0)){
 		//do not have the minimum size slot message
-		return expected_incomplete;
+		return incomplete;
 	}
 	if(!checked){
 		SHA1 SHA;
@@ -595,47 +624,51 @@ message_tcp::status message_tcp::slot::recv(network::buffer & recv_buf)
 			return blacklist;
 		}
 	}
+	unsigned char slot_num = recv_buf[1];
 	boost::uint64_t file_size = convert::bin_to_int<boost::uint64_t>(
 		std::string(reinterpret_cast<char *>(recv_buf.data()) + 3, 8));
+	std::string root_hash = convert::bin_to_hex(std::string(
+		reinterpret_cast<char *>(recv_buf.data()+11), SHA1::bin_size));
+	bit_field tree_BF, file_BF;
 	if(recv_buf[2] == 0){
 		//no bit_field
-		buf.append(recv_buf.data(), protocol::slot_size(0, 0));
 		recv_buf.erase(0, protocol::slot_size(0, 0));
 	}else if(recv_buf[2] == 1){
 		//file bit_field
-		boost::uint64_t file_BF_size = bit_field::size_bytes(
-			file::calc_file_block_count(file_size), 1);
+		boost::uint64_t file_block_count = file::calc_file_block_count(file_size);
+		boost::uint64_t file_BF_size = bit_field::size_bytes(file_block_count, 1);
 		if(recv_buf.size() < protocol::slot_size(0, file_BF_size)){
-			return expected_incomplete;
+			return incomplete;
 		}
-		buf.append(recv_buf.data(), protocol::slot_size(0, file_BF_size));
+		file_BF.set_buf(recv_buf.data() + 31, file_BF_size, file_block_count, 1);
 		recv_buf.erase(0, protocol::slot_size(0, file_BF_size));
 	}else if(recv_buf[2] == 2){
 		//tree bit_field
-		boost::uint64_t tree_BF_size = bit_field::size_bytes(
-			hash_tree::calc_tree_block_count(file_size), 1);
+		boost::uint64_t tree_block_count = hash_tree::calc_tree_block_count(file_size);
+		boost::uint64_t tree_BF_size = bit_field::size_bytes(tree_block_count, 1);
 		if(recv_buf.size() < protocol::slot_size(tree_BF_size, 0)){
-			return expected_incomplete;
+			return incomplete;
 		}
-		buf.append(recv_buf.data(), protocol::slot_size(tree_BF_size, 0));
+		tree_BF.set_buf(recv_buf.data() + 31, tree_BF_size, tree_block_count, 1);
 		recv_buf.erase(0, protocol::slot_size(tree_BF_size, 0));
 	}else if(recv_buf[2] == 3){
 		//tree and file bit_field
-		boost::uint64_t tree_BF_size = bit_field::size_bytes(
-			hash_tree::calc_tree_block_count(file_size), 1);
-		boost::uint64_t file_BF_size = bit_field::size_bytes(
-			file::calc_file_block_count(file_size), 1);
+		boost::uint64_t tree_block_count = hash_tree::calc_tree_block_count(file_size);
+		boost::uint64_t file_block_count = file::calc_file_block_count(file_size);
+		boost::uint64_t tree_BF_size = bit_field::size_bytes(tree_block_count, 1);
+		boost::uint64_t file_BF_size = bit_field::size_bytes(file_block_count, 1);
 		if(recv_buf.size() < protocol::slot_size(tree_BF_size, file_BF_size)){
-			return expected_incomplete;
+			return incomplete;
 		}
-		buf.append(recv_buf.data(), protocol::slot_size(tree_BF_size, file_BF_size));
+		tree_BF.set_buf(recv_buf.data() + 31, tree_BF_size, tree_block_count, 1);
+		file_BF.set_buf(recv_buf.data() + 31 + tree_BF_size, file_BF_size, file_block_count, 1);
 		recv_buf.erase(0, protocol::slot_size(tree_BF_size, file_BF_size));
 	}else{
 		LOGGER << "invalid status byte";
 		return blacklist;
 	}
-	if(func(buf)){
-		return expected_complete;
+	if(func(slot_num, file_size, root_hash, tree_BF, file_BF)){
+		return complete;
 	}else{
 		return blacklist;
 	}

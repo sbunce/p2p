@@ -157,7 +157,7 @@ void kademlia::process_node_cache()
 
 	//attempt to add low priority node
 	if(!low_node_cache.empty()){
-		LOGGER << calc_bucket(low_node_cache.front().ID);
+		//LOGGER << calc_bucket(low_node_cache.front().ID);
 		//check if space in bucket
 		low_node_cache.pop_front();
 	}

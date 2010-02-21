@@ -110,21 +110,24 @@ private:
 		Handles incoming slot messages. The hash parameter is the hash of the file
 		requested.
 	*/
-	bool recv_close_slot(network::buffer & buf);
-	bool recv_file_block(network::buffer & buf,
-		const unsigned slot_num, const boost::uint64_t block_num);
-	bool recv_have_file_block(network::buffer & buf);
-	bool recv_have_hash_tree_block(network::buffer & buf);
-	bool recv_hash_tree_block(network::buffer & buf,
-		const unsigned slot_num, const boost::uint64_t block_num);
-	bool recv_request_hash_tree_block(network::buffer & buf,
-		const unsigned slot_num);
-	bool recv_request_file_block(network::buffer & buf,
-		const unsigned slot_num);
-	bool recv_request_block_failed(network::buffer & buf,
-		const unsigned slot_num);
-	bool recv_request_slot(network::buffer & buf);
-	bool recv_request_slot_failed(network::buffer & buf);
-	bool recv_slot(network::buffer & buf, const std::string hash);
+	bool recv_close_slot(const unsigned char slot_num);
+	bool recv_file_block(network::buffer & block, const unsigned char slot_num,
+		const boost::uint64_t block_num);
+	bool recv_have_file_block(const unsigned char slot_num,
+		const boost::uint64_t block_num);
+	bool recv_have_hash_tree_block(const unsigned char slot_num,
+		const boost::uint64_t block_num);
+	bool recv_hash_tree_block(network::buffer & block, const unsigned char slot_num,
+		const boost::uint64_t block_num);
+	bool recv_request_hash_tree_block(const unsigned char slot_num,
+		const boost::uint64_t block_num);
+	bool recv_request_file_block(const unsigned char slot_num,
+		const boost::uint64_t block_num);
+	bool recv_request_block_failed(const unsigned char slot_num);
+	bool recv_request_slot(const std::string & hash);
+	bool recv_request_slot_failed();
+	bool recv_slot(const unsigned char slot_num, const boost::uint64_t file_size,
+		const std::string & root_hash, bit_field & tree_BF, bit_field & file_BF,
+		const std::string hash);
 };
 #endif
