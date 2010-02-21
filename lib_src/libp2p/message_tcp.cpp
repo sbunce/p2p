@@ -80,12 +80,13 @@ message_tcp::status message_tcp::close_slot::recv(network::buffer & recv_buf)
 		return not_expected;
 	}
 	if(recv_buf.size() >= protocol::close_slot_size){
-		if(func(recv_buf[1])){
+		unsigned char slot_num = recv_buf[1];
+		recv_buf.erase(0, protocol::close_slot_size);
+		if(func(slot_num)){
 			return complete;
 		}else{
 			return blacklist;
 		}
-		recv_buf.erase(0, protocol::close_slot_size);
 	}
 	return incomplete;
 }
