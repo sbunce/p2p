@@ -10,28 +10,28 @@ exchange_tcp::exchange_tcp(
 {
 	//start key exchange
 	if(CI.direction == network::outgoing){
-		send(boost::shared_ptr<message_tcp::base>(new message_tcp::key_exchange_p_rA(Encryption)));
-		expect_response(boost::shared_ptr<message_tcp::base>(new message_tcp::key_exchange_rB(
+		send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::key_exchange_p_rA(Encryption)));
+		expect_response(boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::key_exchange_rB(
 			boost::bind(&exchange_tcp::recv_rB, this, _1, boost::ref(CI)))));
 	}else{
-		expect_response(boost::shared_ptr<message_tcp::base>(new message_tcp::key_exchange_p_rA(
+		expect_response(boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::key_exchange_p_rA(
 			boost::bind(&exchange_tcp::recv_p_rA, this, _1, boost::ref(CI)))));
 	}
 }
 
-void exchange_tcp::expect_response(boost::shared_ptr<message_tcp::base> M)
+void exchange_tcp::expect_response(boost::shared_ptr<message_tcp::recv::base> M)
 {
 	Expect_Response.push_back(M);
 }
 
-void exchange_tcp::expect_anytime(boost::shared_ptr<message_tcp::base> M)
+void exchange_tcp::expect_anytime(boost::shared_ptr<message_tcp::recv::base> M)
 {
 	Expect_Anytime.push_back(M);
 }
 
 void exchange_tcp::expect_anytime_erase(network::buffer buf)
 {
-	for(std::list<boost::shared_ptr<message_tcp::base> >::iterator
+	for(std::list<boost::shared_ptr<message_tcp::recv::base> >::iterator
 		iter_cur = Expect_Anytime.begin(), iter_end = Expect_Anytime.end();
 		iter_cur != iter_end; ++iter_cur)
 	{
@@ -40,7 +40,7 @@ void exchange_tcp::expect_anytime_erase(network::buffer buf)
 			Schedule message to be erased. We don't erase element here because it
 			might invalidate iterator in recv loop in exchange::recv_call_back.
 			*/
-			*iter_cur = boost::shared_ptr<message_tcp::base>();
+			*iter_cur = boost::shared_ptr<message_tcp::recv::base>();
 		}
 	}
 }
@@ -73,7 +73,7 @@ void exchange_tcp::recv_call_back(network::connection_info & CI)
 			}
 		}
 		//check if message is expected anytime
-		for(std::list<boost::shared_ptr<message_tcp::base> >::iterator
+		for(std::list<boost::shared_ptr<message_tcp::recv::base> >::iterator
 			iter_cur = Expect_Anytime.begin(), iter_end = Expect_Anytime.end();
 			iter_cur != iter_end;)
 		{
@@ -83,8 +83,6 @@ void exchange_tcp::recv_call_back(network::connection_info & CI)
 					database::table::blacklist::add(CI.IP);
 					goto end;
 				}else if(Status == message_tcp::complete){
-					//clear buffer for reuse
-					(*iter_cur)->buf.clear();
 					goto begin;
 				}else if(Status == message_tcp::incomplete){
 					goto end;
@@ -119,7 +117,7 @@ bool exchange_tcp::recv_p_rA(network::buffer & buf,
 	if(!Encryption.recv_p_rA(buf)){
 		return false;
 	}
-	send(boost::shared_ptr<message_tcp::base>(new message_tcp::key_exchange_rB(Encryption)));
+	send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::key_exchange_rB(Encryption)));
 	//unencrypt any remaining buffer
 	Encryption.crypt_recv(CI.recv_buf);
 	send_buffered();
@@ -135,7 +133,7 @@ bool exchange_tcp::recv_rB(network::buffer & buf, network::connection_info & CI)
 	return true;
 }
 
-void exchange_tcp::send(boost::shared_ptr<message_tcp::base> M)
+void exchange_tcp::send(boost::shared_ptr<message_tcp::send::base> M)
 {
 	assert(M);
 	assert(!M->buf.empty());
@@ -145,18 +143,18 @@ void exchange_tcp::send(boost::shared_ptr<message_tcp::base> M)
 	}else if(Encryption.ready() && M->encrypt()){
 		//send encrypted message
 		Encryption.crypt_send(M->buf);
-		Send_Speed.push_back(std::make_pair(M->buf.size(), M->Speed_Calculator));
+		Send_Speed.push_back(std::make_pair(M->buf.size(), M->Upload_Speed));
 		Proactor.send(connection_ID, M->buf);
 	}else if(!M->encrypt()){
 		//sent unencrypted message
-		Send_Speed.push_back(std::make_pair(M->buf.size(), M->Speed_Calculator));
+		Send_Speed.push_back(std::make_pair(M->buf.size(), M->Upload_Speed));
 		Proactor.send(connection_ID, M->buf);
 	}
 }
 
 void exchange_tcp::send_buffered()
 {
-	for(std::list<boost::shared_ptr<message_tcp::base> >::iterator
+	for(std::list<boost::shared_ptr<message_tcp::send::base> >::iterator
 		iter_cur = Encrypt_Buf.begin(), iter_end = Encrypt_Buf.end();
 		iter_cur != iter_end; ++iter_cur)
 	{

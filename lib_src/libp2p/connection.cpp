@@ -50,8 +50,8 @@ void connection::send_call_back(network::connection_info & CI)
 void connection::send_initial()
 {
 	std::string ID = database::table::prefs::get_ID();
-	Exchange.send(boost::shared_ptr<message_tcp::base>(new message_tcp::initial(ID)));
-	Exchange.expect_response(boost::shared_ptr<message_tcp::base>(new message_tcp::initial(
+	Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::initial(ID)));
+	Exchange.expect_response(boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::initial(
 		boost::bind(&connection::recv_initial, this, _1))));
 }
 

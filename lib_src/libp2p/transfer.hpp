@@ -47,7 +47,7 @@ public:
 	bool next_have_tree(const int connection_ID, boost::uint64_t & block_num);
 	bool next_request_tree(const int connection_ID, boost::uint64_t & block_num,
 		unsigned & block_size);
-	status read_tree_block(boost::shared_ptr<message_tcp::base> & M,
+	status read_tree_block(boost::shared_ptr<message_tcp::send::base> & M,
 		const boost::uint64_t block_num);
 	void recv_have_hash_tree_block(const int connection_ID, const boost::uint64_t block_num);
 	bool root_hash(std::string & RH);
@@ -83,7 +83,7 @@ public:
 	bool next_have_file(const int connection_ID, boost::uint64_t & block_num);
 	bool next_request_file(const int connection_ID, boost::uint64_t & block_num,
 		unsigned & block_size);
-	status read_file_block(boost::shared_ptr<message_tcp::base> & M,
+	status read_file_block(boost::shared_ptr<message_tcp::send::base> & M,
 		const boost::uint64_t block_num);
 	void recv_have_file_block(const int connection_ID, const boost::uint64_t block_num);
 	status write_file_block(const int connection_ID, const boost::uint64_t block_num,

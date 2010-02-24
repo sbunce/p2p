@@ -40,10 +40,13 @@ public:
 	send:
 		Sends a message. Handles encryption.
 	*/
-	void expect_response(boost::shared_ptr<message_tcp::base> M);
-	void expect_anytime(boost::shared_ptr<message_tcp::base> M);
+//DEBUG, can these take references?
+	void expect_response(boost::shared_ptr<message_tcp::recv::base> M);
+	void expect_anytime(boost::shared_ptr<message_tcp::recv::base> M);
+
+//DEBUG, have this take message
 	void expect_anytime_erase(network::buffer buf);
-	void send(boost::shared_ptr<message_tcp::base> M);
+	void send(boost::shared_ptr<message_tcp::send::base> M);
 
 private:
 	network::proactor & Proactor;
@@ -52,13 +55,13 @@ private:
 	Expected responses are pushed on the back of Expect after a request is sent.
 	When a response arrives it is for the message on the front of Expect.
 	*/
-	std::list<boost::shared_ptr<message_tcp::base> > Expect_Response;
+	std::list<boost::shared_ptr<message_tcp::recv::base> > Expect_Response;
 
 	/*
 	Incoming messages that aren't responses are processed by the messages in this
 	container. The message objects in this container are reused.
 	*/
-	std::list<boost::shared_ptr<message_tcp::base> > Expect_Anytime;
+	std::list<boost::shared_ptr<message_tcp::recv::base> > Expect_Anytime;
 
 	//key exchange and stream cypher
 	encryption Encryption;
@@ -68,7 +71,7 @@ private:
 	messages that need to be encrypted. When this happens those messages are
 	stored here and sent FIFO when Encryption.ready() = true.
 	*/
-	std::list<boost::shared_ptr<message_tcp::base> > Encrypt_Buf;
+	std::list<boost::shared_ptr<message_tcp::send::base> > Encrypt_Buf;
 
 	/*
 	When we send a message to the proactor we push it's size and a shared_ptr to

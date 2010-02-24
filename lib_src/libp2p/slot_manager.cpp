@@ -11,9 +11,9 @@ slot_manager::slot_manager(
 	latest_slot(0)
 {
 	//register possible incoming messages
-	Exchange.expect_anytime(boost::shared_ptr<message_tcp::base>(new message_tcp::request_slot(
+	Exchange.expect_anytime(boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::request_slot(
 		boost::bind(&slot_manager::recv_request_slot, this, _1))));
-	Exchange.expect_anytime(boost::shared_ptr<message_tcp::base>(new message_tcp::close_slot(
+	Exchange.expect_anytime(boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::close_slot(
 		boost::bind(&slot_manager::recv_close_slot, this, _1))));
 }
 
@@ -49,8 +49,8 @@ void slot_manager::close_complete()
 			if(iter_cur->second->get_transfer()){
 				iter_cur->second->get_transfer()->outgoing_unsubscribe(Exchange.connection_ID);
 			}
-			Exchange.send(boost::shared_ptr<message_tcp::base>(
-				new message_tcp::close_slot(iter_cur->first)));
+			Exchange.send(boost::shared_ptr<message_tcp::send::base>(
+				new message_tcp::send::close_slot(iter_cur->first)));
 			Outgoing_Slot.erase(iter_cur++);
 			share::singleton().garbage_collect();
 		}else{
@@ -98,8 +98,8 @@ bool slot_manager::recv_file_block(network::buffer & block,
 			if(iter->second->get_transfer()){
 				iter->second->get_transfer()->outgoing_unsubscribe(Exchange.connection_ID);
 			}
-			Exchange.send(boost::shared_ptr<message_tcp::base>(
-				new message_tcp::close_slot(iter->first)));
+			Exchange.send(boost::shared_ptr<message_tcp::send::base>(
+				new message_tcp::send::close_slot(iter->first)));
 			Outgoing_Slot.erase(iter);
 			share::singleton().garbage_collect();
 		}else if(status == transfer::protocol_violated){
@@ -156,8 +156,8 @@ bool slot_manager::recv_hash_tree_block(network::buffer & block,
 			if(iter->second->get_transfer()){
 				iter->second->get_transfer()->outgoing_unsubscribe(Exchange.connection_ID);
 			}
-			Exchange.send(boost::shared_ptr<message_tcp::base>(
-				new message_tcp::close_slot(iter->first)));
+			Exchange.send(boost::shared_ptr<message_tcp::send::base>(
+				new message_tcp::send::close_slot(iter->first)));
 			Outgoing_Slot.erase(iter);
 			share::singleton().garbage_collect();
 		}else if(status == transfer::protocol_violated){
@@ -187,11 +187,11 @@ bool slot_manager::recv_request_hash_tree_block(const unsigned char slot_num,
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter = Incoming_Slot.find(slot_num);
 	if(iter == Incoming_Slot.end()){
-		Exchange.send(boost::shared_ptr<message_tcp::base>(new message_tcp::error()));
+		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 	}else{
 		assert(iter->second->get_transfer());
 		LOGGER << block_num;
-		boost::shared_ptr<message_tcp::base> M_request;
+		boost::shared_ptr<message_tcp::send::base> M_request;
 		transfer::status status = iter->second->get_transfer()->read_tree_block(
 			M_request, block_num);
 		if(status == transfer::good){
@@ -203,7 +203,7 @@ bool slot_manager::recv_request_hash_tree_block(const unsigned char slot_num,
 				iter->second->get_transfer()->incoming_unsubscribe(Exchange.connection_ID);
 			}
 			Incoming_Slot.erase(iter);
-			Exchange.send(boost::shared_ptr<message_tcp::base>(new message_tcp::error()));
+			Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 			return true;
 		}else if(status == transfer::protocol_violated){
 			LOGGER << "violated protocol";
@@ -219,11 +219,11 @@ bool slot_manager::recv_request_file_block(const unsigned char slot_num,
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter = Incoming_Slot.find(slot_num);
 	if(iter == Incoming_Slot.end()){
-		Exchange.send(boost::shared_ptr<message_tcp::base>(new message_tcp::error()));
+		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 	}else{
 		assert(iter->second->get_transfer());
 		LOGGER << block_num;
-		boost::shared_ptr<message_tcp::base> M_request;
+		boost::shared_ptr<message_tcp::send::base> M_request;
 		transfer::status status = iter->second->get_transfer()->read_file_block(
 			M_request, block_num);
 		if(status == transfer::good){
@@ -235,7 +235,7 @@ bool slot_manager::recv_request_file_block(const unsigned char slot_num,
 				iter->second->get_transfer()->incoming_unsubscribe(Exchange.connection_ID);
 			}
 			Incoming_Slot.erase(iter);
-			Exchange.send(boost::shared_ptr<message_tcp::base>(new message_tcp::error()));
+			Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 			return true;
 		}else if(status == transfer::protocol_violated){
 			LOGGER << "violated protocol";
@@ -253,14 +253,14 @@ bool slot_manager::recv_request_slot(const std::string & hash)
 	share::slot_iterator slot_iter = share::singleton().find_slot(hash);
 	if(slot_iter == share::singleton().end_slot()){
 		LOGGER << "failed " << hash;
-		Exchange.send(boost::shared_ptr<message_tcp::base>(new message_tcp::error()));
+		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 		return true;
 	}
 
 	if(!slot_iter->get_transfer()){
 		//we do not yet know file size
 		LOGGER << "failed " << hash;
-		Exchange.send(boost::shared_ptr<message_tcp::base>(new message_tcp::error()));
+		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 		return true;
 	}
 
@@ -285,7 +285,7 @@ bool slot_manager::recv_request_slot(const std::string & hash)
 	boost::uint64_t file_size = slot_iter->file_size();
 	if(file_size == 0){
 		LOGGER << "failed " << hash;
-		Exchange.send(boost::shared_ptr<message_tcp::base>(new message_tcp::error()));
+		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 		return true;
 	}
 
@@ -293,12 +293,12 @@ bool slot_manager::recv_request_slot(const std::string & hash)
 	std::string root_hash;
 	if(!slot_iter->get_transfer()->root_hash(root_hash)){
 		LOGGER << "failed " << hash;
-		Exchange.send(boost::shared_ptr<message_tcp::base>(new message_tcp::error()));
+		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 		return true;
 	}
 
 	//we have all information to send slot message
-	Exchange.send(boost::shared_ptr<message_tcp::base>(new message_tcp::slot(slot_num,
+	Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::slot(slot_num,
 		file_size, root_hash, tree_BF, file_BF)));
 
 	//add slot
@@ -315,12 +315,12 @@ bool slot_manager::recv_request_slot(const std::string & hash)
 	Exchange.expect_anytime_erase(unexpect_buf);
 
 	//expect incoming block requests
-	Exchange.expect_anytime(boost::shared_ptr<message_tcp::base>(
-		new message_tcp::request_hash_tree_block(
+	Exchange.expect_anytime(boost::shared_ptr<message_tcp::recv::base>(
+		new message_tcp::recv::request_hash_tree_block(
 		boost::bind(&slot_manager::recv_request_hash_tree_block, this, _1, _2),
 		slot_num, slot_iter->get_transfer()->tree_block_count())));
-	Exchange.expect_anytime(boost::shared_ptr<message_tcp::base>(
-		new message_tcp::request_file_block(
+	Exchange.expect_anytime(boost::shared_ptr<message_tcp::recv::base>(
+		new message_tcp::recv::request_file_block(
 		boost::bind(&slot_manager::recv_request_file_block, this, _1, _2),
 		slot_num, slot_iter->get_transfer()->file_block_count())));
 
@@ -342,14 +342,14 @@ bool slot_manager::recv_slot(const unsigned char slot_num,
 	share::slot_iterator slot_iter = share::singleton().find_slot(hash);
 	if(slot_iter == share::singleton().end_slot()){
 		LOGGER << "failed " << hash;
-		Exchange.send(boost::shared_ptr<message_tcp::base>(new message_tcp::close_slot(slot_num)));
+		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::close_slot(slot_num)));
 		return true;
 	}
 
 	//file size and root hash might not be known, set them
 	if(!slot_iter->set_unknown(Exchange.connection_ID, file_size, root_hash)){
 		LOGGER << "error setting file size and root hash";
-		Exchange.send(boost::shared_ptr<message_tcp::base>(new message_tcp::close_slot(slot_num)));
+		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::close_slot(slot_num)));
 		return true;
 	}
 
@@ -361,8 +361,8 @@ bool slot_manager::recv_slot(const unsigned char slot_num,
 		Exchange.expect_anytime_erase(unexpect_buf);
 
 		//expect have_hash_tree_block message
-		Exchange.expect_anytime(boost::shared_ptr<message_tcp::base>(new
-			message_tcp::have_hash_tree_block(boost::bind(&slot_manager::recv_have_hash_tree_block,
+		Exchange.expect_anytime(boost::shared_ptr<message_tcp::recv::base>(new
+			message_tcp::recv::have_hash_tree_block(boost::bind(&slot_manager::recv_have_hash_tree_block,
 			this, _1, _2), slot_num, tree_BF.size())));
 
 		//unexpect previous have_file_block message with this slot (if exists)
@@ -371,18 +371,19 @@ bool slot_manager::recv_slot(const unsigned char slot_num,
 		Exchange.expect_anytime_erase(unexpect_buf);
 
 		//expect have_hash_tree_block message
-		Exchange.expect_anytime(boost::shared_ptr<message_tcp::base>(new
-			message_tcp::have_file_block(boost::bind(&slot_manager::recv_have_file_block,
+		Exchange.expect_anytime(boost::shared_ptr<message_tcp::recv::base>(new
+			message_tcp::recv::have_file_block(boost::bind(&slot_manager::recv_have_file_block,
 			this, _1, _2), slot_num, file_BF.size())));
 	}else if(!file_BF.empty()){
 		//unexpect previous have_file_block message with this slot (if exists)
+//DEBUG, redo this to use send::have_file_block
 		network::buffer unexpect_buf;
 		unexpect_buf.append(protocol::have_file_block).append(slot_num);
 		Exchange.expect_anytime_erase(unexpect_buf);
 
 		//expect have_hash_tree_block message
-		Exchange.expect_anytime(boost::shared_ptr<message_tcp::base>(new
-			message_tcp::have_file_block(boost::bind(&slot_manager::recv_have_file_block,
+		Exchange.expect_anytime(boost::shared_ptr<message_tcp::recv::base>(new
+			message_tcp::recv::have_file_block(boost::bind(&slot_manager::recv_have_file_block,
 			this, _1, _2), slot_num, file_BF.size())));
 	}else if(!tree_BF.empty()){
 		//unexpect previous have_hash_tree_block message with this slot (if exists)
@@ -391,8 +392,8 @@ bool slot_manager::recv_slot(const unsigned char slot_num,
 		Exchange.expect_anytime_erase(unexpect_buf);
 
 		//expect have_hash_tree_block message
-		Exchange.expect_anytime(boost::shared_ptr<message_tcp::base>(new
-			message_tcp::have_hash_tree_block(boost::bind(&slot_manager::recv_have_hash_tree_block,
+		Exchange.expect_anytime(boost::shared_ptr<message_tcp::recv::base>(new
+			message_tcp::recv::have_hash_tree_block(boost::bind(&slot_manager::recv_have_hash_tree_block,
 			this, _1, _2), slot_num, tree_BF.size())));
 	}
 	slot_iter->get_transfer()->outgoing_subscribe(Exchange.connection_ID, tree_BF, file_BF);
@@ -433,7 +434,7 @@ void slot_manager::remove(const std::string & hash)
 			if(iter_cur->second->get_transfer()){
 				iter_cur->second->get_transfer()->outgoing_unsubscribe(Exchange.connection_ID);
 			}
-			Exchange.send(boost::shared_ptr<message_tcp::base>(new message_tcp::close_slot(iter_cur->first)));
+			Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::close_slot(iter_cur->first)));
 			--open_slots;
 			Outgoing_Slot.erase(iter_cur++);
 		}else{
@@ -489,13 +490,13 @@ void slot_manager::send_block_requests()
 				++pipeline_size;
 				serviced_one = true;
 				latest_slot = iter_cur->first;
-				Exchange.send(boost::shared_ptr<message_tcp::base>(new message_tcp::request_hash_tree_block(
+				Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::request_hash_tree_block(
 					iter_cur->first, block_num, iter_cur->second->get_transfer()->tree_block_count())));
-				boost::shared_ptr<message_tcp::composite> M_composite(new message_tcp::composite());
-				M_composite->add(boost::shared_ptr<message_tcp::block>(new message_tcp::block(boost::bind(
+				boost::shared_ptr<message_tcp::recv::composite> M_composite(new message_tcp::recv::composite());
+				M_composite->add(boost::shared_ptr<message_tcp::recv::block>(new message_tcp::recv::block(boost::bind(
 					&slot_manager::recv_hash_tree_block, this, _1, iter_cur->first, block_num),
 					block_size, iter_cur->second->get_transfer()->download_speed_calculator())));
-				M_composite->add(boost::shared_ptr<message_tcp::error>(new message_tcp::error(
+				M_composite->add(boost::shared_ptr<message_tcp::recv::error>(new message_tcp::recv::error(
 					boost::bind(&slot_manager::recv_request_block_failed, this, iter_cur->first))));
 				Exchange.expect_response(M_composite);
 			}else if(iter_cur->second->get_transfer()->next_request_file(
@@ -504,13 +505,13 @@ void slot_manager::send_block_requests()
 				++pipeline_size;
 				serviced_one = true;
 				latest_slot = iter_cur->first;
-				Exchange.send(boost::shared_ptr<message_tcp::base>(new message_tcp::request_file_block(
+				Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::request_file_block(
 					iter_cur->first, block_num, iter_cur->second->get_transfer()->file_block_count())));
-				boost::shared_ptr<message_tcp::composite> M_composite(new message_tcp::composite());
-				M_composite->add(boost::shared_ptr<message_tcp::block>(new message_tcp::block(boost::bind(
+				boost::shared_ptr<message_tcp::recv::composite> M_composite(new message_tcp::recv::composite());
+				M_composite->add(boost::shared_ptr<message_tcp::recv::block>(new message_tcp::recv::block(boost::bind(
 					&slot_manager::recv_file_block, this, _1, iter_cur->first, block_num),
 					block_size, iter_cur->second->get_transfer()->download_speed_calculator())));
-				M_composite->add(boost::shared_ptr<message_tcp::error>(new message_tcp::error(
+				M_composite->add(boost::shared_ptr<message_tcp::recv::error>(new message_tcp::recv::error(
 					boost::bind(&slot_manager::recv_request_block_failed, this, iter_cur->first))));
 				Exchange.expect_response(M_composite);
 			}
@@ -542,16 +543,16 @@ void slot_manager::send_have()
 				Exchange.connection_ID, block_num))
 			{
 				LOGGER << "tree: " << block_num;
-				Exchange.send(boost::shared_ptr<message_tcp::base>(
-					new message_tcp::have_hash_tree_block(iter_cur->first, block_num,
+				Exchange.send(boost::shared_ptr<message_tcp::send::base>(
+					new message_tcp::send::have_hash_tree_block(iter_cur->first, block_num,
 					iter_cur->second->get_transfer()->tree_block_count())));
 			}else if(iter_cur->second->get_transfer()
 				&& iter_cur->second->get_transfer()->next_have_file(
 				Exchange.connection_ID, block_num))
 			{
 				LOGGER << "file: " << block_num;
-				Exchange.send(boost::shared_ptr<message_tcp::base>(
-					new message_tcp::have_file_block(iter_cur->first, block_num,
+				Exchange.send(boost::shared_ptr<message_tcp::send::base>(
+					new message_tcp::send::have_file_block(iter_cur->first, block_num,
 					iter_cur->second->get_transfer()->file_block_count())));
 			}else{
 				break;
@@ -569,13 +570,13 @@ void slot_manager::send_slot_requests()
 			continue;
 		}
 		++open_slots;
-		Exchange.send(boost::shared_ptr<message_tcp::base>(new message_tcp::request_slot(
+		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::request_slot(
 			slot_iter->hash())));
-		boost::shared_ptr<message_tcp::composite> M_composite(new message_tcp::composite());
-		M_composite->add(boost::shared_ptr<message_tcp::base>(new message_tcp::slot(
+		boost::shared_ptr<message_tcp::recv::composite> M_composite(new message_tcp::recv::composite());
+		M_composite->add(boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::slot(
 			boost::bind(&slot_manager::recv_slot, this, _1, _2, _3, _4, _5, slot_iter->hash()),
 			slot_iter->hash())));
-		M_composite->add(boost::shared_ptr<message_tcp::base>(new message_tcp::error(
+		M_composite->add(boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::error(
 			boost::bind(&slot_manager::recv_request_slot_failed, this))));
 		Exchange.expect_response(M_composite);
 	}
