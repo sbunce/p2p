@@ -36,16 +36,13 @@ public:
 	expect_anytime:
 		Expect a incoming message at any time.
 	expect_anytime_remove:
-		Removes messages expected anytime that expects the specified buffer.
+		Removes messages expected anytime that expects the specified message.
 	send:
 		Sends a message. Handles encryption.
 	*/
-//DEBUG, can these take references?
 	void expect_response(boost::shared_ptr<message_tcp::recv::base> M);
 	void expect_anytime(boost::shared_ptr<message_tcp::recv::base> M);
-
-//DEBUG, have this take message
-	void expect_anytime_erase(network::buffer buf);
+	void expect_anytime_erase(boost::shared_ptr<message_tcp::send::base> M);
 	void send(boost::shared_ptr<message_tcp::send::base> M);
 
 private:

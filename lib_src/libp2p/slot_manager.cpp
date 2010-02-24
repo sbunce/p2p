@@ -307,12 +307,10 @@ bool slot_manager::recv_request_slot(const std::string & hash)
 	assert(ret.second);
 
 	//unexpect any previous
-	network::buffer unexpect_buf;
-	unexpect_buf.append(protocol::request_hash_tree_block).append(slot_num);
-	Exchange.expect_anytime_erase(unexpect_buf);
-	unexpect_buf.clear();
-	unexpect_buf.append(protocol::request_file_block).append(slot_num);
-	Exchange.expect_anytime_erase(unexpect_buf);
+	Exchange.expect_anytime_erase(boost::shared_ptr<message_tcp::send::base>(
+		new message_tcp::send::request_hash_tree_block(slot_num, 0, 1)));
+	Exchange.expect_anytime_erase(boost::shared_ptr<message_tcp::send::base>(
+		new message_tcp::send::request_file_block(slot_num, 0, 1)));
 
 	//expect incoming block requests
 	Exchange.expect_anytime(boost::shared_ptr<message_tcp::recv::base>(
@@ -356,9 +354,8 @@ bool slot_manager::recv_slot(const unsigned char slot_num,
 	//read bit field(s) (if any exist)
 	if(!tree_BF.empty() && !file_BF.empty()){
 		//unexpect previous have_hash_tree_block message with this slot (if exists)
-		network::buffer unexpect_buf;
-		unexpect_buf.append(protocol::have_hash_tree_block).append(slot_num);
-		Exchange.expect_anytime_erase(unexpect_buf);
+		Exchange.expect_anytime_erase(boost::shared_ptr<message_tcp::send::base>(
+			new message_tcp::send::have_hash_tree_block(slot_num, 0, 1)));
 
 		//expect have_hash_tree_block message
 		Exchange.expect_anytime(boost::shared_ptr<message_tcp::recv::base>(new
@@ -366,9 +363,8 @@ bool slot_manager::recv_slot(const unsigned char slot_num,
 			this, _1, _2), slot_num, tree_BF.size())));
 
 		//unexpect previous have_file_block message with this slot (if exists)
-		unexpect_buf.clear();
-		unexpect_buf.append(protocol::have_file_block).append(slot_num);
-		Exchange.expect_anytime_erase(unexpect_buf);
+		Exchange.expect_anytime_erase(boost::shared_ptr<message_tcp::send::base>(
+			new message_tcp::send::have_file_block(slot_num, 0, 1)));
 
 		//expect have_hash_tree_block message
 		Exchange.expect_anytime(boost::shared_ptr<message_tcp::recv::base>(new
@@ -376,10 +372,8 @@ bool slot_manager::recv_slot(const unsigned char slot_num,
 			this, _1, _2), slot_num, file_BF.size())));
 	}else if(!file_BF.empty()){
 		//unexpect previous have_file_block message with this slot (if exists)
-//DEBUG, redo this to use send::have_file_block
-		network::buffer unexpect_buf;
-		unexpect_buf.append(protocol::have_file_block).append(slot_num);
-		Exchange.expect_anytime_erase(unexpect_buf);
+		Exchange.expect_anytime_erase(boost::shared_ptr<message_tcp::send::base>(
+			new message_tcp::send::have_file_block(slot_num, 0, 1)));
 
 		//expect have_hash_tree_block message
 		Exchange.expect_anytime(boost::shared_ptr<message_tcp::recv::base>(new
@@ -387,9 +381,8 @@ bool slot_manager::recv_slot(const unsigned char slot_num,
 			this, _1, _2), slot_num, file_BF.size())));
 	}else if(!tree_BF.empty()){
 		//unexpect previous have_hash_tree_block message with this slot (if exists)
-		network::buffer unexpect_buf;
-		unexpect_buf.append(protocol::have_hash_tree_block).append(slot_num);
-		Exchange.expect_anytime_erase(unexpect_buf);
+		Exchange.expect_anytime_erase(boost::shared_ptr<message_tcp::send::base>(
+			new message_tcp::send::have_hash_tree_block(slot_num, 0, 1)));
 
 		//expect have_hash_tree_block message
 		Exchange.expect_anytime(boost::shared_ptr<message_tcp::recv::base>(new

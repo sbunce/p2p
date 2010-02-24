@@ -18,16 +18,14 @@
 #include <map>
 
 namespace message_tcp{
+namespace recv{
 
-//DEBUG, consider moving this in to recv::
 enum status{
 	blacklist,   //host needs to be blacklisted
 	incomplete,  //incomplete message on front of buf
 	complete,    //received complete message (stored in base::buf)
 	not_expected //messages doesn't expect bytes on front of buf
 };
-
-namespace recv{
 
 class base
 {
@@ -270,8 +268,7 @@ public:
 class initial : public base
 {
 public:
-//DEBUG, can this be passed by reference?
-	explicit initial(const std::string ID);
+	explicit initial(const std::string & ID);
 };
 
 class key_exchange_p_rA : public base

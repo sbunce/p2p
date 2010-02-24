@@ -26,7 +26,7 @@ bool message_tcp::recv::block::expect(network::buffer & recv_buf)
 	return recv_buf[0] == protocol::block;
 }
 
-message_tcp::status message_tcp::recv::block::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::block::recv(network::buffer & recv_buf)
 {
 	if(!expect(recv_buf)){
 		return not_expected;
@@ -63,7 +63,7 @@ bool message_tcp::recv::close_slot::expect(network::buffer & recv_buf)
 	return recv_buf[0] == protocol::close_slot;
 }
 
-message_tcp::status message_tcp::recv::close_slot::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::close_slot::recv(network::buffer & recv_buf)
 {
 	if(!expect(recv_buf)){
 		return not_expected;
@@ -102,7 +102,7 @@ bool message_tcp::recv::composite::expect(network::buffer & recv_buf)
 	return false;
 }
 
-message_tcp::status message_tcp::recv::composite::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::composite::recv(network::buffer & recv_buf)
 {
 	for(std::vector<boost::shared_ptr<base> >::iterator
 		iter_cur = possible_response.begin(), iter_end = possible_response.end();
@@ -132,7 +132,7 @@ bool message_tcp::recv::error::expect(network::buffer & recv_buf)
 	return recv_buf[0] == protocol::error;
 }
 
-message_tcp::status message_tcp::recv::error::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::error::recv(network::buffer & recv_buf)
 {
 	if(!expect(recv_buf)){
 		return not_expected;
@@ -179,7 +179,7 @@ bool message_tcp::recv::have_file_block::expect(network::buffer & recv_buf)
 	}
 }
 
-message_tcp::status message_tcp::recv::have_file_block::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::have_file_block::recv(network::buffer & recv_buf)
 {
 	if(!expect(recv_buf)){
 		return not_expected;
@@ -229,7 +229,7 @@ bool message_tcp::recv::have_hash_tree_block::expect(network::buffer & recv_buf)
 	}
 }
 
-message_tcp::status message_tcp::recv::have_hash_tree_block::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::have_hash_tree_block::recv(network::buffer & recv_buf)
 {
 	if(!expect(recv_buf)){
 		return not_expected;
@@ -267,7 +267,7 @@ bool message_tcp::recv::initial::expect(network::buffer & recv_buf)
 	return true;
 }
 
-message_tcp::status message_tcp::recv::initial::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::initial::recv(network::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
 	if(recv_buf.size() >= SHA1::bin_size){
@@ -300,7 +300,7 @@ bool message_tcp::recv::key_exchange_p_rA::expect(network::buffer & recv_buf)
 	return true;
 }
 
-message_tcp::status message_tcp::recv::key_exchange_p_rA::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::key_exchange_p_rA::recv(network::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
 	if(recv_buf.size() >= protocol::DH_key_size * 2){
@@ -333,7 +333,7 @@ bool message_tcp::recv::key_exchange_rB::expect(network::buffer & recv_buf)
 	return true;
 }
 
-message_tcp::status message_tcp::recv::key_exchange_rB::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::key_exchange_rB::recv(network::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
 	if(recv_buf.size() >= protocol::DH_key_size){
@@ -373,7 +373,7 @@ bool message_tcp::recv::request_hash_tree_block::expect(network::buffer & recv_b
 	}
 }
 
-message_tcp::status message_tcp::recv::request_hash_tree_block::recv(
+message_tcp::recv::status message_tcp::recv::request_hash_tree_block::recv(
 	network::buffer & recv_buf)
 {
 	if(!expect(recv_buf)){
@@ -417,7 +417,7 @@ bool message_tcp::recv::request_file_block::expect(network::buffer & recv_buf)
 	}
 }
 
-message_tcp::status message_tcp::recv::request_file_block::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::request_file_block::recv(network::buffer & recv_buf)
 {
 	if(!expect(recv_buf)){
 		return not_expected;
@@ -452,7 +452,7 @@ bool message_tcp::recv::request_slot::expect(network::buffer & recv_buf)
 	return recv_buf[0] == protocol::request_slot;
 }
 
-message_tcp::status message_tcp::recv::request_slot::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::request_slot::recv(network::buffer & recv_buf)
 {
 	if(!expect(recv_buf)){
 		return not_expected;
@@ -489,7 +489,7 @@ bool message_tcp::recv::slot::expect(network::buffer & recv_buf)
 	return recv_buf[0] == protocol::slot;
 }
 
-message_tcp::status message_tcp::recv::slot::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::slot::recv(network::buffer & recv_buf)
 {
 	if(!expect(recv_buf)){
 		return not_expected;
@@ -609,7 +609,7 @@ message_tcp::send::have_hash_tree_block::have_hash_tree_block(
 //END send::have_hash_tree_block
 
 //BEGIN send::initial
-message_tcp::send::initial::initial(const std::string ID)
+message_tcp::send::initial::initial(const std::string & ID)
 {
 	assert(ID.size() == SHA1::hex_size);
 	buf = convert::hex_to_bin(ID);

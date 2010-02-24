@@ -29,16 +29,18 @@ void exchange_tcp::expect_anytime(boost::shared_ptr<message_tcp::recv::base> M)
 	Expect_Anytime.push_back(M);
 }
 
-void exchange_tcp::expect_anytime_erase(network::buffer buf)
+void exchange_tcp::expect_anytime_erase(boost::shared_ptr<message_tcp::send::base> M)
 {
 	for(std::list<boost::shared_ptr<message_tcp::recv::base> >::iterator
 		iter_cur = Expect_Anytime.begin(), iter_end = Expect_Anytime.end();
 		iter_cur != iter_end; ++iter_cur)
 	{
-		if((*iter_cur)->expect(buf)){
+		if((*iter_cur)->expect(M->buf)){
 			/*
 			Schedule message to be erased. We don't erase element here because it
-			might invalidate iterator in recv loop in exchange::recv_call_back.
+			might invalidate iterator in recv loop in exchange_tcp::recv_call_back.
+			The control flow is complicated here. We may be calling this function
+			from a call back done in exchange_tcp::recv_call_back.
 			*/
 			*iter_cur = boost::shared_ptr<message_tcp::recv::base>();
 		}
@@ -52,7 +54,7 @@ void exchange_tcp::recv_call_back(network::connection_info & CI)
 	}
 
 	//process incoming messages
-	message_tcp::status Status;
+	message_tcp::recv::status Status;
 	begin:
 	while(!CI.recv_buf.empty()){
 		//check if message is expected response
@@ -62,13 +64,13 @@ void exchange_tcp::recv_call_back(network::connection_info & CI)
 				goto begin;
 			}
 			Status = Expect_Response.front()->recv(CI.recv_buf);
-			if(Status == message_tcp::blacklist){
+			if(Status == message_tcp::recv::blacklist){
 				database::table::blacklist::add(CI.IP);
 				goto end;
-			}else if(Status == message_tcp::complete){
+			}else if(Status == message_tcp::recv::complete){
 				Expect_Response.pop_front();
 				goto begin;
-			}else if(Status == message_tcp::incomplete){
+			}else if(Status == message_tcp::recv::incomplete){
 				goto end;
 			}
 		}
@@ -79,12 +81,12 @@ void exchange_tcp::recv_call_back(network::connection_info & CI)
 		{
 			if(*iter_cur){
 				Status = (*iter_cur)->recv(CI.recv_buf);
-				if(Status == message_tcp::blacklist){
+				if(Status == message_tcp::recv::blacklist){
 					database::table::blacklist::add(CI.IP);
 					goto end;
-				}else if(Status == message_tcp::complete){
+				}else if(Status == message_tcp::recv::complete){
 					goto begin;
-				}else if(Status == message_tcp::incomplete){
+				}else if(Status == message_tcp::recv::incomplete){
 					goto end;
 				}else{
 					++iter_cur;
