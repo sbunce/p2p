@@ -2,67 +2,43 @@
 #define H_BIT_FIELD
 
 //include
-#include <logger.hpp>
+#include <boost/cstdint.hpp>
 
 //standard
-#include <algorithm>
-#include <cmath>
+#include <cassert>
+#include <string>
 #include <vector>
 
 class bit_field
 {
 public:
-	bit_field(
-		const boost::uint64_t groups_in = 0,
-		const unsigned group_size_in = 1
-	):
-		groups(groups_in),
-		group_size(group_size_in),
-		vec((groups * group_size) % 8 == 0 ?
-			((groups * group_size) / 8) : ((groups * group_size) / 8 + 1),
-			0
-		),
-		max_group_value(std::pow(static_cast<const double>(2),
-			static_cast<const int>(group_size)) - 1)
+	bit_field(const boost::uint64_t bits_in = 0):
+		bits(bits_in),
+		vec(bits % 8 == 0 ? bits / 8 : bits / 8 + 1, '\0')
 	{
-		if(group_size < 1 && group_size > 7){
-			LOGGER << "group_size must be greater than 0 and less than 8";
-			exit(1);
-		}
+
 	}
 
-	bit_field(
-		const bit_field & BF
-	):
-		groups(BF.groups),
-		group_size(BF.group_size),
-		vec(BF.vec),
-		max_group_value(BF.max_group_value)
+	bit_field(const bit_field & BF):
+		bits(BF.bits),
+		vec(BF.vec)
 	{
 
 	}
 
 	bit_field(
 		const unsigned char * buf,
-		const unsigned size,
-		const boost::uint64_t groups_in,
-		const boost::uint64_t group_size_in
+		const boost::uint64_t size,
+		const boost::uint64_t bits_in
 	)
 	{
-		set_buf(buf, size, groups_in, group_size_in);
+		set_buf(buf, size, bits_in);
 	}
 
-	static const boost::uint64_t npos = -1;
-
-	//returns size (bytes) of bit_field with specified groups and group_size 
-	static boost::uint64_t size_bytes(boost::uint64_t groups, boost::uint64_t group_size)
+	//returns size (bytes) of bit_field with specified bits and group_size 
+	static boost::uint64_t size_bytes(const boost::uint64_t bits)
 	{
-		boost::uint64_t tmp = groups * group_size;
-		if(tmp % 8 == 0){
-			return tmp / 8;
-		}else{
-			return tmp / 8 + 1;
-		}
+		return bits % 8 == 0 ? bits / 8 : bits / 8 + 1;
 	}
 
 	/*
@@ -75,43 +51,43 @@ public:
 		friend class bit_field;
 	public:
 		//for x = b[i];
-		operator boost::uint64_t() const
+		operator bool () const
 		{
-			return BF.get_num(index);
+			return BF.get(idx);
 		}
 
 		//for b[i] = x;
-		proxy & operator = (const boost::uint64_t num)
+		proxy & operator = (const bool val)
 		{
-			BF.set_num(index, num);
+			BF.set(idx, val);
 			return *this;
 		}
 
 		//for b[i] = b[j]
 		proxy & operator = (const proxy & rval)
 		{
-			BF.set_num(index, rval.BF.get_num(rval.index));
+			BF.set(idx, rval.BF.get(rval.idx));
 			return *this;
 		}
 
 	private:
 		proxy(
 			bit_field & BF_in,
-			const boost::uint64_t index_in
+			const boost::uint64_t idx_in
 		):
 			BF(BF_in),
-			index(index_in)
+			idx(idx_in)
 		{}
 
 		bit_field & BF;
-		const boost::uint64_t index;
+		const boost::uint64_t idx;
 	};
 
 	//returns proxy object (see documentation for proxy)
-	proxy operator [](const boost::uint64_t index)
+	proxy operator [](const boost::uint64_t idx)
 	{
-		assert(index < groups);
-		return proxy(*this, index);
+		assert(idx < bits);
+		return proxy(*this, idx);
 	}
 
 	//returns true if two bitgroup_sets are equal
@@ -168,18 +144,16 @@ public:
 	//assign a bitgroup_set
 	bit_field & operator = (const bit_field & rval)
 	{
-		assert(group_size == rval.group_size);
-		groups = rval.groups;
+		bits = rval.bits;
 		vec = rval.vec;
-		resize(groups);
 		return *this;
 	}
 
 	//returns true if all bits set to one
 	bool all_set() const
 	{
-		for(boost::uint64_t x=0; x<groups; ++x){
-			if(get_num(x) != max_group_value){
+		for(boost::uint64_t x=0; x<bits; ++x){
+			if(get(x) != true){
 				return false;
 			}
 		}
@@ -200,34 +174,31 @@ public:
 		return tmp;
 	}
 
-	//sets the size of the bit_field to zero
+	//set size of the bit_field to zero
 	void clear()
 	{
-		groups = 0;
+		bits = 0;
 		vec.clear();
 	}
 
 	//returns true if the bit_field holds zero elements
 	bool empty() const
 	{
-		return groups == 0;
+		return bits == 0;
 	}
 
 	//return true if all bits set to zero
 	bool none_set() const
 	{
-		for(boost::uint64_t x=0; x<groups; ++x){
-			if(get_num(x) != 0){
+		for(boost::uint64_t x=0; x<bits; ++x){
+			if(get(x) != false){
 				return false;
 			}
 		}
 		return true;
 	}
 
-	/*
-	Sets all bitgroups to zero. The way this function works is faster than
-	looping through the individual bitgroups and setting them to zero.
-	*/
+	//set all bits to zero
 	void reset()
 	{
 		for(boost::uint64_t x=0; x<vec.size(); ++x){
@@ -235,120 +206,56 @@ public:
 		}
 	}
 
-	//changes the number of groups in the bit_field to specified size
-	void resize(const boost::uint64_t size)
+	//change size of bit_field
+	void resize(const boost::uint64_t bits_in)
 	{
-		groups = size;
-		vec.resize(
-			(groups * group_size) % 8 == 0 ?
-			((groups * group_size) / 8) : ((groups * group_size) / 8 + 1),
-			'\0'
-		);
+		bits = bits_in;
+		vec.resize(bits % 8 == 0 ? bits / 8 : bits / 8 + 1, '\0');
 	}
 
-	//sets all groups to their max value (sets all bits to 1)
+	//set all bits
 	void set()
 	{
-		for(boost::uint64_t x=0; x<groups; ++x){
-			set_num(x, max_group_value);
+		for(boost::uint64_t x=0; x<vec.size(); ++x){
+			vec[x] = 255;
 		}
 	}
 
-	//set internal buffer from big-endian encoded buf
-	void set_buf(const unsigned char * buf, const unsigned size,
-		const boost::uint64_t groups_in, const boost::uint64_t group_size_in)
+	//set internal buffer from big-endian source buf
+	void set_buf(const unsigned char * buf, const boost::uint64_t size,
+		const boost::uint64_t bits_in)
 	{
-		groups = groups_in;
-		group_size = group_size_in;
-		max_group_value = std::pow(static_cast<const double>(2),
-			static_cast<const int>(group_size)) - 1;
-		assert(size_bytes(groups, group_size) == size);
+		assert(size_bytes(bits_in) == size);
+		bits = bits_in;
 		vec.resize(size);
 		for(boost::uint64_t x=0, y=vec.size()-1; x<vec.size(); ++x, --y){
 			vec[x] = buf[y];
 		}
 	}
 
-	//returns the number of bitgroups in the bitgroup_set
+	//returns the number of bitbits in the bitgroup_set
 	boost::uint64_t size() const
 	{
-		return groups;
+		return bits;
 	}
 
 private:
-	boost::uint64_t groups; //how many bit groups
-	unsigned group_size;    //how many bits in each group
-
-	/*
-	The bitgroups are stored here.
-	Note: When the group_size > 1 bitgroups can partially span two bytes.
-	*/
+	boost::uint64_t bits;
 	std::vector<unsigned char> vec;
 
-	/*
-	Maximum value a bitgroup can hold.
-		2^group_size - 1
-	*/
-	unsigned max_group_value;
-
 	//get a number from the bitgroup_set
-	unsigned get_num(const boost::uint64_t index) const
+	bool get(const boost::uint64_t idx) const
 	{
-		boost::uint64_t byte_offset = index * group_size / 8;
-		boost::uint64_t bit_offset = index * group_size % 8;
-		unsigned char temp, result = 0;
-		if(bit_offset + group_size < 8){
-			//bits on left don't belong to this bitgroup
-			temp = vec[byte_offset];
-			temp <<= 8 - bit_offset - group_size;
-			temp >>= 8 - group_size;
-			result |= temp;
-		}else{
-			//bits on left all belong to this bitgroup
-			temp = vec[byte_offset];
-			temp >>= bit_offset;
-			result |= temp;
-			if(bit_offset + group_size != 8){
-				//bitgroup spans two bytes
-				temp = vec[byte_offset+1];
-				temp <<= 16 - bit_offset - group_size;
-				temp >>= 16 - bit_offset - group_size;
-				temp <<= -bit_offset + 8;
-				result |= temp;
-			}
-		}
-		return result;
+		return vec[idx / 8] & (1 << idx % 8);
 	}
 
 	//set a number in the bitgroup_set
-	void set_num(const boost::uint64_t index, const unsigned num)
+	void set(const boost::uint64_t idx, const bool val)
 	{
-		assert(num <= max_group_value);
-		boost::uint64_t byte_offset = index * group_size / 8;
-		boost::uint64_t bit_offset = index * group_size % 8;
-		unsigned char temp;
-
-		//use bitmask to clear group bits
-		temp = max_group_value;
-		temp <<= bit_offset;
-		temp = ~temp;
-		vec[byte_offset] &= temp;
-
-		//write bits in first byte
-		temp = num;
-		temp <<= bit_offset;
-		vec[byte_offset] |= temp;
-
-		//if true then bitgroup spans two bytes
-		if(bit_offset + group_size > 8){
-			//clear bits on the right by doing bit shifts
-			vec[byte_offset+1] >>= 8 - bit_offset + group_size;
-			vec[byte_offset+1] <<= 8 - bit_offset + group_size;
-
-			//write bits in second byte
-			temp = num;
-			temp >>= -bit_offset + 8;
-			vec[byte_offset+1] |= temp;
+		if(val){
+			vec[idx / 8] |= (1 << idx % 8);
+		}else{
+			vec[idx / 8] &= ~(1 << idx % 8);
 		}
 	}
 };

@@ -520,32 +520,32 @@ message_tcp::recv::status message_tcp::recv::slot::recv(network::buffer & recv_b
 	}else if(recv_buf[2] == 1){
 		//file bit_field
 		boost::uint64_t file_block_count = file::calc_file_block_count(file_size);
-		boost::uint64_t file_BF_size = bit_field::size_bytes(file_block_count, 1);
+		boost::uint64_t file_BF_size = bit_field::size_bytes(file_block_count);
 		if(recv_buf.size() < protocol::slot_size(0, file_BF_size)){
 			return incomplete;
 		}
-		file_BF.set_buf(recv_buf.data() + 31, file_BF_size, file_block_count, 1);
+		file_BF.set_buf(recv_buf.data() + 31, file_BF_size, file_block_count);
 		recv_buf.erase(0, protocol::slot_size(0, file_BF_size));
 	}else if(recv_buf[2] == 2){
 		//tree bit_field
 		boost::uint64_t tree_block_count = hash_tree::calc_tree_block_count(file_size);
-		boost::uint64_t tree_BF_size = bit_field::size_bytes(tree_block_count, 1);
+		boost::uint64_t tree_BF_size = bit_field::size_bytes(tree_block_count);
 		if(recv_buf.size() < protocol::slot_size(tree_BF_size, 0)){
 			return incomplete;
 		}
-		tree_BF.set_buf(recv_buf.data() + 31, tree_BF_size, tree_block_count, 1);
+		tree_BF.set_buf(recv_buf.data() + 31, tree_BF_size, tree_block_count);
 		recv_buf.erase(0, protocol::slot_size(tree_BF_size, 0));
 	}else if(recv_buf[2] == 3){
 		//tree and file bit_field
 		boost::uint64_t tree_block_count = hash_tree::calc_tree_block_count(file_size);
 		boost::uint64_t file_block_count = file::calc_file_block_count(file_size);
-		boost::uint64_t tree_BF_size = bit_field::size_bytes(tree_block_count, 1);
-		boost::uint64_t file_BF_size = bit_field::size_bytes(file_block_count, 1);
+		boost::uint64_t tree_BF_size = bit_field::size_bytes(tree_block_count);
+		boost::uint64_t file_BF_size = bit_field::size_bytes(file_block_count);
 		if(recv_buf.size() < protocol::slot_size(tree_BF_size, file_BF_size)){
 			return incomplete;
 		}
-		tree_BF.set_buf(recv_buf.data() + 31, tree_BF_size, tree_block_count, 1);
-		file_BF.set_buf(recv_buf.data() + 31 + tree_BF_size, file_BF_size, file_block_count, 1);
+		tree_BF.set_buf(recv_buf.data() + 31, tree_BF_size, tree_block_count);
+		file_BF.set_buf(recv_buf.data() + 31 + tree_BF_size, file_BF_size, file_block_count);
 		recv_buf.erase(0, protocol::slot_size(tree_BF_size, file_BF_size));
 	}else{
 		LOGGER << "invalid status byte";

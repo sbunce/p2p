@@ -214,7 +214,6 @@ transfer::status transfer::read_file_block(boost::shared_ptr<message_tcp::send::
 			if(status != hash_tree::good){
 				return bad;
 			}
-//DEBUG, large copy
 			M = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::block(buf, Upload_Speed));
 			return good;
 		}else{
@@ -232,7 +231,6 @@ transfer::status transfer::read_tree_block(boost::shared_ptr<message_tcp::send::
 		network::buffer buf;
 		hash_tree::status status = Hash_Tree.read_block(block_num, buf);
 		if(status == hash_tree::good){
-//DEBUG, large copy
 			M = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::block(buf, Upload_Speed));
 			return good;
 		}else{

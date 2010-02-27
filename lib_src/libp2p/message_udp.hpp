@@ -5,27 +5,27 @@
 #include <network/network.hpp>
 
 namespace message_udp {
+namespace recv{
 
-//abstract base class for all messages
 class base
 {
 public:
-	//function to handle incoming message (empty if message to send)
-	boost::function<bool (boost::shared_ptr<base>)> func;
-
-	//bytes that have been sent or received
-	network::buffer buf;
-
 	/*
-	expects:
-		Returns true if recv() expects message on front of CI.recv_buf.
+	expect:
+		Returns true if message expected.
 	recv:
-		Returns true if incoming message received. False if incomplete message or
-		host blacklisted.
+		Returns true if incoming message received. False if we don't expect the
+		message.
+		Note: It is not necessary to call expect() before this function.
 	*/
-	virtual bool expects(network::buffer & recv_buf) = 0;
+	virtual bool expect(network::buffer & recv_buf) = 0;
 	virtual bool recv(network::buffer & recv_buf) = 0;
 };
 
+}//end of namespace recv
+
+namespace send{
+
+}//end of namespace send
 }//end of namespace message_udp
 #endif

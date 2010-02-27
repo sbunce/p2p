@@ -55,7 +55,7 @@ kademlia::kademlia()
 {
 	std::string bin = convert::hex_to_bin(database::table::prefs::get_ID());
 	ID_BF.set_buf(reinterpret_cast<const unsigned char *>(bin.data()), bin.size(),
-		SHA1::bin_size * 8, 1);
+		SHA1::bin_size * 8);
 	network_thread = boost::thread(boost::bind(&kademlia::network_loop, this));
 }
 
@@ -77,7 +77,7 @@ unsigned kademlia::calc_bucket(const std::string & ID)
 	assert(ID.size() == SHA1::hex_size);
 	std::string bin = convert::hex_to_bin(ID);
 	bit_field BF(reinterpret_cast<const unsigned char *>(bin.data()), bin.size(),
-		SHA1::bin_size * 8, 1);
+		SHA1::bin_size * 8);
 	for(int x=159; x>=0; --x){
 		if(BF[x] != ID_BF[x]){
 			return x;

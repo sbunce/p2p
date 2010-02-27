@@ -1,5 +1,6 @@
 //include
 #include <bit_field.hpp>
+#include <logger.hpp>
 
 //standard
 #include <cmath>
@@ -8,27 +9,45 @@ int fail(0);
 
 void assignment()
 {
-	unsigned groups = 1024;
-	//try all different group sizes
-	for(unsigned x=1; x<8; ++x){
-		bit_field BF(groups, x);
-		unsigned max = std::pow(static_cast<const double>(2), static_cast<const int>(x)) - 1;
-		unsigned temp = 0;
-		//set all bitgroups to known values
-		for(unsigned y=0; y<groups; ++y){
-			BF[y] = temp++ % max;
+	//starting with every bit off, turn every even bit on
+	int test_size = 16;
+	bit_field BF(test_size);
+	for(int x=0; x<test_size; ++x){
+		if(x % 2 == 0){
+			BF[x] = true;
 		}
-		temp = 0;
-		//test for known values to make sure read/write works
-		for(unsigned y=0; y<groups; ++y){
-			assert(BF[y] == temp++ % max);
-		} 
+	}
+
+	//make sure every even bit on
+	for(int x=0; x<test_size; ++x){
+		if(x % 2 == 0){
+			if(BF[x] != true){
+				LOGGER; ++fail;
+			}
+		}
+	}
+
+	//starting with every bit on, turn every even bit off
+	BF.set();
+	for(int x=0; x<test_size; ++x){
+		if(x % 2 == 0){
+			BF[x] = false;
+		}
+	}
+
+	//make sure every even bit off
+	for(int x=0; x<test_size; ++x){
+		if(x % 2 == 0){
+			if(BF[x] != false){
+				LOGGER; ++fail;
+			}
+		}
 	}
 }
 
 void named_functions()
 {
-	bit_field BF(1, 1);
+	bit_field BF(1);
 
 	//size function
 	if(BF.size() != 1){
@@ -48,8 +67,8 @@ void named_functions()
 
 void operators()
 {
-	bit_field BF_0(2, 1);
-	bit_field BF_1(2, 1);
+	bit_field BF_0(2);
+	bit_field BF_1(2);
 
 	//==
 	if(!(BF_0 == BF_1)){
