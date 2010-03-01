@@ -81,7 +81,7 @@ bool slot_manager::recv_close_slot(const unsigned char slot_num)
 	}
 }
 
-bool slot_manager::recv_file_block(network::buffer & block,
+bool slot_manager::recv_file_block(const network::buffer & block,
 	const unsigned char slot_num, const boost::uint64_t block_num)
 {
 	--pipeline_size;
@@ -139,7 +139,7 @@ bool slot_manager::recv_have_hash_tree_block(const unsigned char slot_num,
 	return true;
 }
 
-bool slot_manager::recv_hash_tree_block(network::buffer & block,
+bool slot_manager::recv_hash_tree_block(const network::buffer & block,
 	const unsigned char slot_num, const boost::uint64_t block_num)
 {
 	--pipeline_size;

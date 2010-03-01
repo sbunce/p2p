@@ -30,19 +30,19 @@ bool encryption::ready()
 	return enable_crypt;
 }
 
-bool encryption::recv_p_rA(network::buffer & buf)
+bool encryption::recv_p_rA(const network::buffer & buf)
 {
 	assert(enable_recv_p_rA);
 	set_enable_false();
 	enable_send_rB = true;
 
 	assert(buf.size() == protocol::DH_key_size * 2);
-	p = mpint(buf.data(), protocol::DH_key_size);
+	p = mpint(buf.const_data(), protocol::DH_key_size);
 	if(!p.is_prime()){
 		//invalid prime
 		return false;
 	}
-	remote_result = mpint(buf.data() + protocol::DH_key_size, protocol::DH_key_size);
+	remote_result = mpint(buf.const_data() + protocol::DH_key_size, protocol::DH_key_size);
 	local_result = g.exptmod(s, p);
 	shared_key = remote_result.exptmod(s, p);
 	if(shared_key.to_bin_size() == protocol::DH_key_size){
@@ -60,14 +60,14 @@ bool encryption::recv_p_rA(network::buffer & buf)
 	return true;
 }
 
-void encryption::recv_rB(network::buffer & buf)
+void encryption::recv_rB(const network::buffer & buf)
 {
 	assert(enable_recv_rB);
 	set_enable_false();
 	enable_crypt = true;
 
 	assert(buf.size() == protocol::DH_key_size);
-	remote_result = mpint(buf.data(), protocol::DH_key_size);
+	remote_result = mpint(buf.const_data(), protocol::DH_key_size);
 	shared_key = remote_result.exptmod(s, p);
 	if(shared_key.to_bin_size() == protocol::DH_key_size){
 		PRNG_send.seed(shared_key.to_bin(), shared_key.to_bin_size());

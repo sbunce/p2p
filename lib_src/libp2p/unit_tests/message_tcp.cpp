@@ -12,10 +12,10 @@ void append_garbage(network::buffer & block)
 }
 
 
-network::buffer test_block("ABC");
-bool block_call_back(network::buffer & block)
+const network::buffer test_block("ABC");
+bool block_call_back(const network::buffer & block)
 {
-	if(block.size() != test_block.size()){
+	if(block != test_block){
 		LOGGER; ++fail;
 	}
 	return true;
@@ -61,7 +61,7 @@ bool initial_call_back(const std::string & ID)
 
 //note, p_rA doesn't contain actual prime
 const network::buffer test_p_rA(portable_urandom(protocol::DH_key_size * 2));
-bool key_exchange_p_rA_call_back(network::buffer & p_rA)
+bool key_exchange_p_rA_call_back(const network::buffer & p_rA)
 {
 	if(p_rA != test_p_rA){
 		LOGGER; ++fail;
@@ -70,7 +70,7 @@ bool key_exchange_p_rA_call_back(network::buffer & p_rA)
 }
 
 const network::buffer test_rB(portable_urandom(protocol::DH_key_size));
-bool key_exchange_rB_call_back(network::buffer & rB)
+bool key_exchange_rB_call_back(const network::buffer & rB)
 {
 	if(rB != test_rB){
 		LOGGER; ++fail;

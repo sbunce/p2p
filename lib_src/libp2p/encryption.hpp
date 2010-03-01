@@ -30,9 +30,9 @@ public:
 	Note: recv_p_rA returns false if invalid prime received.
 	*/
 	network::buffer send_p_rA();
-	bool recv_p_rA(network::buffer & buf);
+	bool recv_p_rA(const network::buffer & buf);
 	network::buffer send_rB();
-	void recv_rB(network::buffer & buf);
+	void recv_rB(const network::buffer & buf);
 
 	/*
 	Used to encrypt/decrypt buffers.

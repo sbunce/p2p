@@ -111,14 +111,14 @@ private:
 		requested.
 	*/
 	bool recv_close_slot(const unsigned char slot_num);
-	bool recv_file_block(network::buffer & block, const unsigned char slot_num,
-		const boost::uint64_t block_num);
+	bool recv_file_block(const network::buffer & block,
+		const unsigned char slot_num, const boost::uint64_t block_num);
 	bool recv_have_file_block(const unsigned char slot_num,
 		const boost::uint64_t block_num);
 	bool recv_have_hash_tree_block(const unsigned char slot_num,
 		const boost::uint64_t block_num);
-	bool recv_hash_tree_block(network::buffer & block, const unsigned char slot_num,
-		const boost::uint64_t block_num);
+	bool recv_hash_tree_block(const network::buffer & block,
+		const unsigned char slot_num, const boost::uint64_t block_num);
 	bool recv_request_hash_tree_block(const unsigned char slot_num,
 		const boost::uint64_t block_num);
 	bool recv_request_file_block(const unsigned char slot_num,

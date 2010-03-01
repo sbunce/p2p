@@ -114,7 +114,7 @@ void exchange_tcp::recv_call_back(network::connection_info & CI)
 	}
 }
 
-bool exchange_tcp::recv_p_rA(network::buffer & buf,
+bool exchange_tcp::recv_p_rA(const network::buffer & buf,
 	network::connection_info & CI)
 {
 	if(!Encryption.recv_p_rA(buf)){
@@ -128,7 +128,7 @@ bool exchange_tcp::recv_p_rA(network::buffer & buf,
 	return true;
 }
 
-bool exchange_tcp::recv_rB(network::buffer & buf, network::connection_info & CI)
+bool exchange_tcp::recv_rB(const network::buffer & buf, network::connection_info & CI)
 {
 	Encryption.recv_rB(buf);
 	//unencrypt any remaining buffer

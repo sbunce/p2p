@@ -17,7 +17,7 @@ public:
 		Returns true if incoming message received. False if we don't expect the
 		message. Message is removed from front of recv_buf if true returned.
 	*/
-	virtual bool expect(network::buffer & recv_buf) = 0;
+	virtual bool expect(const network::buffer & recv_buf) = 0;
 	virtual bool recv(network::buffer & recv_buf) = 0;
 };
 
@@ -26,7 +26,7 @@ class ping
 public:
 	typedef boost::function<void (const std::string & ID)> handler;
 	ping(handler func_in, const std::string & random_in);
-	virtual bool expect(network::buffer & recv_buf);
+	virtual bool expect(const network::buffer & recv_buf);
 	virtual bool recv(network::buffer & recv_buf);
 private:
 	handler func;

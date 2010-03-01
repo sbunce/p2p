@@ -217,9 +217,9 @@ public:
 	}
 
 	//append another buffer to buffer
-	buffer & append(buffer & buf_append)
+	buffer & append(const buffer & buf_append)
 	{
-		append(reinterpret_cast<const unsigned char *>(buf_append.data()),
+		append(reinterpret_cast<const unsigned char *>(buf_append.const_data()),
 			buf_append.size());
 		return *this;
 	}
@@ -236,7 +236,13 @@ public:
 		allocate(bytes, 0);
 	}
 
-	//return pointer to start of buffer internal storage
+	//return const pointer to start of internal buffer
+	const unsigned char * const_data() const
+	{
+		return buf;
+	}
+
+	//return pointer to start of buffer internal buffer
 	unsigned char * data()
 	{
 		return buf;

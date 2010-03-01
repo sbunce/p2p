@@ -155,7 +155,7 @@ hash_tree::status hash_tree::check_file_block(const boost::uint64_t file_block_n
 	{
 		return io_error;
 	}
-	SHA1 SHA(reinterpret_cast<char *>(const_cast<network::buffer &>(buf).data()),
+	SHA1 SHA(reinterpret_cast<const char *>(buf.const_data()),
 		buf.size());
 	if(std::memcmp(parent_buf, SHA.bin(), SHA1::bin_size) == 0){
 		return good;
@@ -172,7 +172,7 @@ hash_tree::status hash_tree::check_tree_block(const boost::uint64_t block_num,
 		assert(buf.size() == SHA1::bin_size);
 		char special[SHA1::bin_size + 8];
 		std::memcpy(special, convert::int_to_bin(file_size).data(), 8);
-		std::memcpy(special + 8, const_cast<network::buffer &>(buf).data(), SHA1::bin_size);
+		std::memcpy(special + 8, buf.const_data(), SHA1::bin_size);
 		SHA1 SHA(special, SHA1::bin_size + 8);
 		return SHA.hex() == hash ? good : bad;
 	}else{
@@ -185,7 +185,7 @@ hash_tree::status hash_tree::check_tree_block(const boost::uint64_t block_num,
 		}
 		assert(buf.size() == info.second);
 		//create hash for children
-		SHA1 SHA(reinterpret_cast<char *>(const_cast<network::buffer &>(buf).data()),
+		SHA1 SHA(reinterpret_cast<const char *>(buf.const_data()),
 			buf.size());
 		//verify parent hash is a hash of the children
 		char parent_hash[SHA1::bin_size];
@@ -530,14 +530,14 @@ hash_tree::status hash_tree::write_block(const boost::uint64_t block_num,
 			if(!database::pool::get()->blob_read(blob, parent_buf, SHA1::bin_size, parent)){
 				return io_error;
 			}
-			SHA1 SHA(reinterpret_cast<char *>(const_cast<network::buffer &>(buf).data()),
+			SHA1 SHA(reinterpret_cast<const char *>(buf.const_data()),
 				info.second);
 			if(std::memcmp(parent_buf, SHA.bin(), SHA1::bin_size) != 0){
 				return bad;
 			}
 		}
 		if(!database::pool::get()->blob_write(blob,
-			reinterpret_cast<char *>(const_cast<network::buffer &>(buf).data()),
+			reinterpret_cast<const char *>(buf.const_data()),
 			buf.size(), info.first))
 		{
 			return io_error;

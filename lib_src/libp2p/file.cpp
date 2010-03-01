@@ -67,7 +67,7 @@ bool file::write_block(const boost::uint64_t block_num, const network::buffer & 
 		return false;
 	}
 	fout.seekp(block_num * protocol::file_block_size);
-	fout.write(reinterpret_cast<char *>(const_cast<network::buffer &>(buf).data()),
+	fout.write(reinterpret_cast<const char *>(buf.const_data()),
 		buf.size());
 	if(!fout.is_open()){
 		LOGGER << "failed to open file";

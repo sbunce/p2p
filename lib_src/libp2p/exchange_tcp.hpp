@@ -89,8 +89,8 @@ private:
 	send_buffered:
 		Sends messages buffered until key exchange complete.
 	*/
-	bool recv_p_rA(network::buffer & buf, network::connection_info & CI);
-	bool recv_rB(network::buffer & buf, network::connection_info & CI);
+	bool recv_p_rA(const network::buffer & buf, network::connection_info & CI);
+	bool recv_rB(const network::buffer & buf, network::connection_info & CI);
 	void send_buffered();
 };
 #endif

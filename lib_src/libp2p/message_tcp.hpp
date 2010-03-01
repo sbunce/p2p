@@ -34,23 +34,23 @@ public:
 
 	/*
 	expect:
-		Returnst true if we expect message on front of recv_buf.
+		Returns true if we expect message on front of recv_buf.
 	recv:
 		Tries to parse message on front of buffer. Returns a status.  Message is
 		removed from front of recv_buf if true returned.
 		Note: It is not necessary to call expect() before this.
 	*/
-	virtual bool expect(network::buffer & recv_buf) = 0;
+	virtual bool expect(const network::buffer & recv_buf) = 0;
 	virtual status recv(network::buffer & recv_buf) = 0;
 };
 
 class block : public base
 {
 public:
-	typedef boost::function<bool (network::buffer & block)> handler;
+	typedef boost::function<bool (const network::buffer & block)> handler;
 	block(handler func_in, const unsigned block_size_in,
 		boost::shared_ptr<network::speed_calculator> Download_Speed_in);
-	virtual bool expect(network::buffer & recv_buf);
+	virtual bool expect(const network::buffer & recv_buf);
 	virtual status recv(network::buffer & recv_buf);
 private:
 	handler func;
@@ -63,7 +63,7 @@ class close_slot : public base
 public:
 	typedef boost::function<bool (const unsigned char slot_num)> handler;
 	explicit close_slot(handler func_in);
-	virtual bool expect(network::buffer & recv_buf);
+	virtual bool expect(const network::buffer & recv_buf);
 	virtual status recv(network::buffer & recv_buf);
 private:
 	handler func;
@@ -75,7 +75,7 @@ class composite : public base
 public:
 	//add messages to expect() and recv()
 	void add(boost::shared_ptr<base> M);
-	virtual bool expect(network::buffer & recv_buf);
+	virtual bool expect(const network::buffer & recv_buf);
 	virtual status recv(network::buffer & recv_buf);
 private:
 	std::vector<boost::shared_ptr<base> > possible_response;
@@ -86,7 +86,7 @@ class error : public base
 public:
 	typedef boost::function<bool ()> handler;
 	explicit error(handler func_in);
-	virtual bool expect(network::buffer & recv_buf);
+	virtual bool expect(const network::buffer & recv_buf);
 	virtual status recv(network::buffer & recv_buf);
 private:
 	handler func;
@@ -99,7 +99,7 @@ public:
 		const boost::uint64_t block_num)> handler;
 	have_file_block(handler func_in,
 		const unsigned char slot_num_in, const boost::uint64_t file_block_count_in);
-	virtual bool expect(network::buffer & recv_buf);
+	virtual bool expect(const network::buffer & recv_buf);
 	virtual status recv(network::buffer & recv_buf);
 private:
 	handler func;
@@ -114,7 +114,7 @@ public:
 		const boost::uint64_t block_num)> handler;
 	have_hash_tree_block(handler func_in,
 		const unsigned char slot_num_in, const boost::uint64_t tree_block_count_in);
-	virtual bool expect(network::buffer & recv_buf);
+	virtual bool expect(const network::buffer & recv_buf);
 	virtual status recv(network::buffer & recv_buf);
 private:
 	handler func;
@@ -127,7 +127,7 @@ class initial : public base
 public:
 	typedef boost::function<bool (const std::string & ID)> handler;
 	explicit initial(handler func_in);
-	virtual bool expect(network::buffer & recv_buf);
+	virtual bool expect(const network::buffer & recv_buf);
 	virtual status recv(network::buffer & recv_buf);
 private:
 	handler func;
@@ -136,9 +136,9 @@ private:
 class key_exchange_p_rA : public base
 {
 public:
-	typedef boost::function<bool (network::buffer &)> handler;
+	typedef boost::function<bool (const network::buffer &)> handler;
 	explicit key_exchange_p_rA(handler func_in);
-	virtual bool expect(network::buffer & recv_buf);
+	virtual bool expect(const network::buffer & recv_buf);
 	virtual status recv(network::buffer & recv_buf);
 private:
 	handler func;
@@ -147,9 +147,9 @@ private:
 class key_exchange_rB : public base
 {
 public:
-	typedef boost::function<bool (network::buffer &)> handler;
+	typedef boost::function<bool (const network::buffer &)> handler;
 	explicit key_exchange_rB(handler func_in);
-	virtual bool expect(network::buffer & recv_buf);
+	virtual bool expect(const network::buffer & recv_buf);
 	virtual status recv(network::buffer & recv_buf);
 private:
 	handler func;
@@ -162,7 +162,7 @@ public:
 		const boost::uint64_t block_num)> handler;
 	request_file_block(handler func_in,
 		const unsigned char slot_num_in, const boost::uint64_t file_block_count);
-	virtual bool expect(network::buffer & recv_buf);
+	virtual bool expect(const network::buffer & recv_buf);
 	virtual status recv(network::buffer & recv_buf);
 private:
 	handler func;
@@ -177,7 +177,7 @@ public:
 		const boost::uint64_t block_num)> handler;
 	request_hash_tree_block(handler func_in, const unsigned char slot_num_in,
 		const boost::uint64_t tree_block_count);
-	virtual bool expect(network::buffer & recv_buf);
+	virtual bool expect(const network::buffer & recv_buf);
 	virtual status recv(network::buffer & recv_buf);
 private:
 	handler func;
@@ -190,7 +190,7 @@ class request_slot : public base
 public:
 	typedef boost::function<bool (const std::string & hash)> handler;
 	explicit request_slot(handler func_in);
-	virtual bool expect(network::buffer & recv_buf);
+	virtual bool expect(const network::buffer & recv_buf);
 	virtual status recv(network::buffer & recv_buf);
 private:
 	handler func;
@@ -203,7 +203,7 @@ public:
 		const boost::uint64_t file_size, const std::string & root_hash,
 		bit_field & tree_BF, bit_field & file_BF)> handler;
 	slot(handler func_in, const std::string & hash_in);
-	virtual bool expect(network::buffer & recv_buf);
+	virtual bool expect(const network::buffer & recv_buf);
 	virtual status recv(network::buffer & recv_buf);
 private:
 	handler func;
@@ -235,7 +235,7 @@ public:
 class block : public base
 {
 public:
-	block(network::buffer & block,
+	block(const network::buffer & block,
 		boost::shared_ptr<network::speed_calculator> Upload_Speed_in);
 };
 

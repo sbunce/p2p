@@ -11,7 +11,7 @@ message_udp::recv::ping::ping(
 
 }
 
-bool message_udp::recv::ping::expect(network::buffer & recv_buf)
+bool message_udp::recv::ping::expect(const network::buffer & recv_buf)
 {
 
 }
