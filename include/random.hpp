@@ -3,6 +3,7 @@
 
 //include
 #include <logger.hpp>
+#include <network/network.hpp>
 
 //standard
 #include <fstream>
@@ -17,6 +18,7 @@
 	#include <wincrypt.h>
 #endif
 
+//tommath requires this function signature
 static int portable_urandom(unsigned char * buf, int size, void * data)
 {
 #ifdef _WIN32
@@ -39,5 +41,13 @@ static int portable_urandom(unsigned char * buf, int size, void * data)
 	}
 #endif
 	return size;
+}
+
+static network::buffer portable_urandom(const int size)
+{
+	network::buffer buf;
+	buf.resize(size);
+	portable_urandom(buf.data(), size, NULL);
+	return buf;
 }
 #endif

@@ -34,7 +34,7 @@ desc: Used to check if a host is up.
 	| C |     R     |     S     |
 	+---+---+---+---+---+---+---+
 	  0   1  ...  8   9 ...  29
-C = command (base10: 0), R = random bytes, S = node ID of sender
+C = command (base10: 0), R = random bytes, S = ID of sender
 
 expected response: pong
 ---
@@ -46,7 +46,7 @@ desc: Sent in response to ping.
 	| C |     R     |     S     |
 	+---+---+---+---+---+---+---+
 	  0   1  ...  8   9 ...  29
-C = command (base10: 1), R = echo of random bytes, S = node ID of sender
+C = command (base10: 1), R = echo of random bytes, S = ID of sender
 ---
 
 ---

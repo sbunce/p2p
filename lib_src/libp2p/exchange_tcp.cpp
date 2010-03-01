@@ -10,7 +10,8 @@ exchange_tcp::exchange_tcp(
 {
 	//start key exchange
 	if(CI.direction == network::outgoing){
-		send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::key_exchange_p_rA(Encryption)));
+		send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::key_exchange_p_rA(
+			Encryption.send_p_rA())));
 		expect_response(boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::key_exchange_rB(
 			boost::bind(&exchange_tcp::recv_rB, this, _1, boost::ref(CI)))));
 	}else{
@@ -119,7 +120,8 @@ bool exchange_tcp::recv_p_rA(network::buffer & buf,
 	if(!Encryption.recv_p_rA(buf)){
 		return false;
 	}
-	send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::key_exchange_rB(Encryption)));
+	send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::key_exchange_rB(
+		Encryption.send_rB())));
 	//unencrypt any remaining buffer
 	Encryption.crypt_recv(CI.recv_buf);
 	send_buffered();

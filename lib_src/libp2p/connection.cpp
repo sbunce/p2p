@@ -26,12 +26,10 @@ void connection::recv_call_back(network::connection_info & CI)
 	Slot_Manager.tick();
 }
 
-bool connection::recv_initial(network::buffer & buf)
+bool connection::recv_initial(const std::string & ID)
 {
-	std::string peer_ID = convert::bin_to_hex(std::string(
-		reinterpret_cast<const char *>(buf.data()), SHA1::bin_size));
-	LOGGER << peer_ID;
-	Slot_Manager.resume(peer_ID);
+	LOGGER << ID;
+	Slot_Manager.resume(ID);
 	return true;
 }
 

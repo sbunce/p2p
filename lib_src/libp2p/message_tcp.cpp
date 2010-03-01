@@ -271,10 +271,10 @@ message_tcp::recv::status message_tcp::recv::initial::recv(network::buffer & rec
 {
 	assert(!recv_buf.empty());
 	if(recv_buf.size() >= SHA1::bin_size){
-		network::buffer buf;
-		buf.append(recv_buf.data(), SHA1::bin_size);
+		std::string ID = convert::bin_to_hex(std::string(
+			reinterpret_cast<const char *>(recv_buf.data()), SHA1::bin_size));
 		recv_buf.erase(0, SHA1::bin_size);
-		if(func(buf)){
+		if(func(ID)){
 			return complete;
 		}else{
 			return blacklist;
@@ -350,6 +350,49 @@ message_tcp::recv::status message_tcp::recv::key_exchange_rB::recv(network::buff
 }
 //END recv::key_exchange_rB
 
+//BEGIN recv::request_file_block
+message_tcp::recv::request_file_block::request_file_block(
+	handler func_in,
+	const unsigned char slot_num_in,
+	const boost::uint64_t tree_block_count
+):
+	func(func_in),
+	slot_num(slot_num_in),
+	VLI_size(convert::VLI_size(tree_block_count))
+{
+
+}
+
+bool message_tcp::recv::request_file_block::expect(network::buffer & recv_buf)
+{
+	assert(!recv_buf.empty());
+	if(recv_buf.size() == 1){
+		return recv_buf[0] == protocol::request_file_block;
+	}else{
+		return recv_buf[0] == protocol::request_file_block && recv_buf[1] == slot_num;
+	}
+}
+
+message_tcp::recv::status message_tcp::recv::request_file_block::recv(network::buffer & recv_buf)
+{
+	if(!expect(recv_buf)){
+		return not_expected;
+	}
+	if(recv_buf.size() >= 2 + VLI_size){
+		unsigned char slot_num = recv_buf[1];
+		boost::uint64_t block_num = convert::bin_VLI_to_int(std::string(
+			reinterpret_cast<char *>(recv_buf.data()) + 2, VLI_size));
+		recv_buf.erase(0, protocol::request_file_block_size(VLI_size));
+		if(func(slot_num, block_num)){
+			return complete;
+		}else{
+			return blacklist;
+		}
+	}
+	return incomplete;
+}
+//END recv::request_file_block
+
 //BEGIN recv::request_hash_tree_block
 message_tcp::recv::request_hash_tree_block::request_hash_tree_block(
 	handler func_in,
@@ -393,49 +436,6 @@ message_tcp::recv::status message_tcp::recv::request_hash_tree_block::recv(
 	return incomplete;
 }
 //END recv::request_hash_tree_block
-
-//BEGIN recv::request_file_block
-message_tcp::recv::request_file_block::request_file_block(
-	handler func_in,
-	const unsigned char slot_num_in,
-	const boost::uint64_t tree_block_count
-):
-	func(func_in),
-	slot_num(slot_num_in),
-	VLI_size(convert::VLI_size(tree_block_count))
-{
-
-}
-
-bool message_tcp::recv::request_file_block::expect(network::buffer & recv_buf)
-{
-	assert(!recv_buf.empty());
-	if(recv_buf.size() == 1){
-		return recv_buf[0] == protocol::request_file_block;
-	}else{
-		return recv_buf[0] == protocol::request_file_block && recv_buf[1] == slot_num;
-	}
-}
-
-message_tcp::recv::status message_tcp::recv::request_file_block::recv(network::buffer & recv_buf)
-{
-	if(!expect(recv_buf)){
-		return not_expected;
-	}
-	if(recv_buf.size() >= 2 + VLI_size){
-		unsigned char slot_num = recv_buf[1];
-		boost::uint64_t block_num = convert::bin_VLI_to_int(std::string(
-			reinterpret_cast<char *>(recv_buf.data()) + 2, VLI_size));
-		recv_buf.erase(0, protocol::request_file_block_size(VLI_size));
-		if(func(slot_num, block_num)){
-			return complete;
-		}else{
-			return blacklist;
-		}
-	}
-	return incomplete;
-}
-//END recv::request_file_block
 
 //BEGIN recv::request_slot
 message_tcp::recv::request_slot::request_slot(
@@ -617,9 +617,9 @@ message_tcp::send::initial::initial(const std::string & ID)
 //END send::initial
 
 //BEGIN send::key_exchange_p_rA
-message_tcp::send::key_exchange_p_rA::key_exchange_p_rA(encryption & Encryption)
+message_tcp::send::key_exchange_p_rA::key_exchange_p_rA(const network::buffer & buf_in)
 {
-	buf = Encryption.send_p_rA();
+	buf = buf_in;
 }
 
 bool message_tcp::send::key_exchange_p_rA::encrypt()
@@ -629,9 +629,9 @@ bool message_tcp::send::key_exchange_p_rA::encrypt()
 //END send::key_exchange_p_rA
 
 //BEGIN send::key_exchange_rB
-message_tcp::send::key_exchange_rB::key_exchange_rB(encryption & Encryption)
+message_tcp::send::key_exchange_rB::key_exchange_rB(const network::buffer & buf_in)
 {
-	buf = Encryption.send_rB();
+	buf = buf_in;
 }
 
 bool message_tcp::send::key_exchange_rB::encrypt()
@@ -639,6 +639,18 @@ bool message_tcp::send::key_exchange_rB::encrypt()
 	return false;
 }
 //END send::key_exchange_rB
+
+//BEGIN send::request_file_block
+message_tcp::send::request_file_block::request_file_block(
+	const unsigned char slot_num,
+	const boost::uint64_t block_num,
+	const boost::uint64_t file_block_count)
+{
+	buf.append(protocol::request_file_block)
+		.append(slot_num)
+		.append(convert::int_to_bin_VLI(block_num, file_block_count));
+}
+//END send::request_file_block
 
 //BEGIN send::request_hash_tree_block
 message_tcp::send::request_hash_tree_block::request_hash_tree_block(
@@ -652,18 +664,6 @@ message_tcp::send::request_hash_tree_block::request_hash_tree_block(
 		.append(convert::int_to_bin_VLI(block_num, tree_block_count));
 }
 //END send::request_hash_tree_block
-
-//BEGIN send::request_file_block
-message_tcp::send::request_file_block::request_file_block(
-	const unsigned char slot_num,
-	const boost::uint64_t block_num,
-	const boost::uint64_t file_block_count)
-{
-	buf.append(protocol::request_file_block)
-		.append(slot_num)
-		.append(convert::int_to_bin_VLI(block_num, file_block_count));
-}
-//END send::request_file_block
 
 //BEGIN send::request_slot
 message_tcp::send::request_slot::request_slot(const std::string & hash)

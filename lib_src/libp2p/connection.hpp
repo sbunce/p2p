@@ -55,7 +55,7 @@ private:
 	send_initial:
 		Send initial message. Called after key exchange completed.
 	*/
-	bool recv_initial(network::buffer & buf);
+	bool recv_initial(const std::string & ID);
 	void send_initial();
 };
 #endif

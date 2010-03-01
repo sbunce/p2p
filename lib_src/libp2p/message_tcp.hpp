@@ -2,7 +2,6 @@
 #define H_MESSAGE_TCP
 
 //custom
-#include "encryption.hpp"
 #include "file.hpp"
 #include "hash_tree.hpp"
 #include "protocol.hpp"
@@ -37,7 +36,8 @@ public:
 	expect:
 		Returnst true if we expect message on front of recv_buf.
 	recv:
-		Tries to parse message on front of buffer. Returns a status.
+		Tries to parse message on front of buffer. Returns a status.  Message is
+		removed from front of recv_buf if true returned.
 		Note: It is not necessary to call expect() before this.
 	*/
 	virtual bool expect(network::buffer & recv_buf) = 0;
@@ -103,8 +103,8 @@ public:
 	virtual status recv(network::buffer & recv_buf);
 private:
 	handler func;
-	const unsigned char slot_num;           //used only for recv
-	const boost::uint64_t file_block_count; //used only for recv
+	const unsigned char slot_num;
+	const boost::uint64_t file_block_count;
 };
 
 class have_hash_tree_block : public base
@@ -118,14 +118,14 @@ public:
 	virtual status recv(network::buffer & recv_buf);
 private:
 	handler func;
-	const unsigned char slot_num;           //used only for recv
-	const boost::uint64_t tree_block_count; //used only for recv
+	const unsigned char slot_num;
+	const boost::uint64_t tree_block_count;
 };
 
 class initial : public base
 {
 public:
-	typedef boost::function<bool (network::buffer &)> handler;
+	typedef boost::function<bool (const std::string & ID)> handler;
 	explicit initial(handler func_in);
 	virtual bool expect(network::buffer & recv_buf);
 	virtual status recv(network::buffer & recv_buf);
@@ -155,21 +155,6 @@ private:
 	handler func;
 };
 
-class request_hash_tree_block : public base
-{
-public:
-	typedef boost::function<bool (const unsigned char slot_num,
-		const boost::uint64_t block_num)> handler;
-	request_hash_tree_block(handler func_in, const unsigned char slot_num_in,
-		const boost::uint64_t tree_block_count);
-	virtual bool expect(network::buffer & recv_buf);
-	virtual status recv(network::buffer & recv_buf);
-private:
-	handler func;
-	unsigned char slot_num; //used only for recv
-	unsigned VLI_size;      //block number field size (bytes)
-};
-
 class request_file_block : public base
 {
 public:
@@ -181,8 +166,23 @@ public:
 	virtual status recv(network::buffer & recv_buf);
 private:
 	handler func;
-	unsigned char slot_num; //used only for recv
-	unsigned VLI_size;      //block number field size (bytes)
+	unsigned char slot_num;
+	unsigned VLI_size;
+};
+
+class request_hash_tree_block : public base
+{
+public:
+	typedef boost::function<bool (const unsigned char slot_num,
+		const boost::uint64_t block_num)> handler;
+	request_hash_tree_block(handler func_in, const unsigned char slot_num_in,
+		const boost::uint64_t tree_block_count);
+	virtual bool expect(network::buffer & recv_buf);
+	virtual status recv(network::buffer & recv_buf);
+private:
+	handler func;
+	unsigned char slot_num;
+	unsigned VLI_size;
 };
 
 class request_slot : public base
@@ -207,7 +207,7 @@ public:
 	virtual status recv(network::buffer & recv_buf);
 private:
 	handler func;
-	std::string hash; //used only for recv
+	std::string hash;
 	bool checked;     //true when file_size/root_hash checked
 };
 
@@ -274,22 +274,15 @@ public:
 class key_exchange_p_rA : public base
 {
 public:
-	explicit key_exchange_p_rA(encryption & Encryption);
+	explicit key_exchange_p_rA(const network::buffer & buf_in);
 	virtual bool encrypt();
 };
 
 class key_exchange_rB : public base
 {
 public:
-	explicit key_exchange_rB(encryption & Encryption);
+	explicit key_exchange_rB(const network::buffer & buf_in);
 	virtual bool encrypt();
-};
-
-class request_hash_tree_block : public base
-{
-public:
-	request_hash_tree_block(const unsigned char slot_num,
-		const boost::uint64_t block_num, const boost::uint64_t tree_block_count);
 };
 
 class request_file_block : public base
@@ -297,6 +290,13 @@ class request_file_block : public base
 public:
 	request_file_block(const unsigned char slot_num,
 		const boost::uint64_t block_num, const boost::uint64_t file_block_count);
+};
+
+class request_hash_tree_block : public base
+{
+public:
+	request_hash_tree_block(const unsigned char slot_num,
+		const boost::uint64_t block_num, const boost::uint64_t tree_block_count);
 };
 
 class request_slot : public base
