@@ -6,14 +6,14 @@ file::file(
 	path(FI.path),
 	file_size(FI.file_size),
 	file_block_count(
-		file_size % protocol::file_block_size == 0 ?
-			file_size / protocol::file_block_size :
-			file_size / protocol::file_block_size + 1
+		file_size % protocol_tcp::file_block_size == 0 ?
+			file_size / protocol_tcp::file_block_size :
+			file_size / protocol_tcp::file_block_size + 1
 	),
 	last_block_size(
-		file_size % protocol::file_block_size == 0 ?
-			protocol::file_block_size :
-			file_size % protocol::file_block_size
+		file_size % protocol_tcp::file_block_size == 0 ?
+			protocol_tcp::file_block_size :
+			file_size % protocol_tcp::file_block_size
 	)
 {
 
@@ -25,23 +25,23 @@ unsigned file::block_size(const boost::uint64_t block_num)
 	if(block_num == file_block_count - 1){
 		return last_block_size;
 	}else{
-		return protocol::file_block_size;
+		return protocol_tcp::file_block_size;
 	}
 }
 
 boost::uint64_t file::calc_file_block_count(boost::uint64_t file_size)
 {
-	if(file_size % protocol::file_block_size == 0){
-		return file_size / protocol::file_block_size;
+	if(file_size % protocol_tcp::file_block_size == 0){
+		return file_size / protocol_tcp::file_block_size;
 	}else{
-		return file_size / protocol::file_block_size + 1;
+		return file_size / protocol_tcp::file_block_size + 1;
 	}		
 }
 
 bool file::read_block(const boost::uint64_t block_num, network::buffer & buf)
 {
 	std::fstream fin(path.c_str(), std::ios::in | std::ios::out | std::ios::binary);
-	fin.seekg(block_num * protocol::file_block_size);
+	fin.seekg(block_num * protocol_tcp::file_block_size);
 	if(fin.is_open()){
 		unsigned size = block_size(block_num);
 		buf.tail_reserve(size);
@@ -66,7 +66,7 @@ bool file::write_block(const boost::uint64_t block_num, const network::buffer & 
 		LOGGER << "failed to open file";
 		return false;
 	}
-	fout.seekp(block_num * protocol::file_block_size);
+	fout.seekp(block_num * protocol_tcp::file_block_size);
 	fout.write(reinterpret_cast<const char *>(buf.const_data()),
 		buf.size());
 	if(!fout.is_open()){

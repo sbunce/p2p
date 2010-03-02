@@ -4,6 +4,7 @@
 //custom
 #include "exchange_tcp.hpp"
 #include "message_tcp.hpp"
+#include "protocol_tcp.hpp"
 #include "share.hpp"
 #include "slot.hpp"
 

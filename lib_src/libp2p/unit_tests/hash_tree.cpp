@@ -2,7 +2,7 @@
 #include "../database.hpp"
 #include "../hash_tree.hpp"
 #include "../path.hpp"
-#include "../protocol.hpp"
+#include "../protocol_tcp.hpp"
 #include "../share.hpp"
 
 //include
@@ -36,7 +36,7 @@ void create_reassemble(const unsigned size)
 	std::stringstream ss;
 	ss << path::share() << size << "_block";
 	FI.path = ss.str();
-	FI.file_size = size * protocol::file_block_size;
+	FI.file_size = size * protocol_tcp::file_block_size;
 	create_file(FI);
 
 	//create hash tree and check it
@@ -84,8 +84,8 @@ void create_reassemble(const unsigned size)
 		return;
 	}
 	for(boost::uint64_t x=0; x<HT_reassemble.file_block_count; ++x){
-		buf.reserve(protocol::file_block_size);
-		fin.read(reinterpret_cast<char *>(buf.data()), protocol::file_block_size);
+		buf.reserve(protocol_tcp::file_block_size);
+		fin.read(reinterpret_cast<char *>(buf.data()), protocol_tcp::file_block_size);
 		if(!fin.good()){
 			LOGGER; ++fail;
 			return;
@@ -101,7 +101,7 @@ void create_reassemble(const unsigned size)
 void child_block()
 {
 	//this test only works with a specific block size
-	assert(protocol::hash_block_size == 512);
+	assert(protocol_tcp::hash_block_size == 512);
 
 	database::init::drop_all();
 	database::init::create_all();
@@ -116,7 +116,7 @@ void child_block()
 	file_info FI(
 		dummy_hash,
 		dummy_path,
-		1 * protocol::file_block_size,
+		1 * protocol_tcp::file_block_size,
 		dummy_last_write_time
 	);
 	hash_tree HT(FI);
@@ -137,7 +137,7 @@ void child_block()
 	file_info FI(
 		dummy_hash,
 		dummy_path,
-		2 * protocol::file_block_size,
+		2 * protocol_tcp::file_block_size,
 		dummy_last_write_time
 	);
 	hash_tree HT(FI);
@@ -163,7 +163,7 @@ void child_block()
 	file_info FI(
 		dummy_hash,
 		dummy_path,
-		513 * protocol::file_block_size,
+		513 * protocol_tcp::file_block_size,
 		dummy_last_write_time
 	);
 	hash_tree HT(FI);

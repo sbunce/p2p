@@ -473,7 +473,7 @@ void slot_manager::send_block_requests()
 	unsigned char start_slot = iter_cur->first;
 	bool serviced_one = false;
 
-	while(pipeline_size <= protocol::max_block_pipeline){
+	while(pipeline_size <= protocol_tcp::max_block_pipeline){
 		if(iter_cur->second->get_transfer()){
 			boost::uint64_t block_num;
 			unsigned block_size;

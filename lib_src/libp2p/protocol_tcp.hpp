@@ -1,10 +1,10 @@
-#ifndef H_PROTOCOL
-#define H_PROTOCOL
+#ifndef H_PROTOCOL_TCP
+#define H_PROTOCOL_TCP
 
 //include
 #include <SHA1.hpp>
 
-namespace protocol
+namespace protocol_tcp
 {
 //hard coded protocol preferences
 const unsigned timeout = 16;            //time after which a block will be rerequested

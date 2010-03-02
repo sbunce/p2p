@@ -4,7 +4,7 @@
 //custom
 #include "file.hpp"
 #include "hash_tree.hpp"
-#include "protocol.hpp"
+#include "protocol_tcp.hpp"
 
 //include
 #include <bit_field.hpp>

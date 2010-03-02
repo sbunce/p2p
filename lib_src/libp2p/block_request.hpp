@@ -7,9 +7,6 @@ This class is threadsafe.
 #ifndef H_BLOCK_REQUEST
 #define H_BLOCK_REQUEST
 
-//custom
-#include "protocol.hpp"
-
 //include
 #include <bit_field.hpp>
 #include <boost/thread.hpp>

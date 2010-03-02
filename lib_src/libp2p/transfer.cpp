@@ -39,7 +39,7 @@ transfer::transfer(const file_info & FI):
 void transfer::check()
 {
 	network::buffer buf;
-	buf.reserve(protocol::file_block_size);
+	buf.reserve(protocol_tcp::file_block_size);
 
 	//only check tree blocks with good parents
 	Hash_Tree_Block.approve_block(0);

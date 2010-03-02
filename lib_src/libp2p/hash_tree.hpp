@@ -10,7 +10,7 @@ this class is exactly like a file.
 #include "database.hpp"
 #include "file_info.hpp"
 #include "path.hpp"
-#include "protocol.hpp"
+#include "protocol_tcp.hpp"
 #include "settings.hpp"
 
 //include

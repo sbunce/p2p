@@ -60,7 +60,7 @@ bool initial_call_back(const std::string & ID)
 }
 
 //note, p_rA doesn't contain actual prime
-const network::buffer test_p_rA(portable_urandom(protocol::DH_key_size * 2));
+const network::buffer test_p_rA(portable_urandom(protocol_tcp::DH_key_size * 2));
 bool key_exchange_p_rA_call_back(const network::buffer & p_rA)
 {
 	if(p_rA != test_p_rA){
@@ -69,7 +69,7 @@ bool key_exchange_p_rA_call_back(const network::buffer & p_rA)
 	return true;
 }
 
-const network::buffer test_rB(portable_urandom(protocol::DH_key_size));
+const network::buffer test_rB(portable_urandom(protocol_tcp::DH_key_size));
 bool key_exchange_rB_call_back(const network::buffer & rB)
 {
 	if(rB != test_rB){
@@ -99,7 +99,7 @@ bool request_slot_call_back(const std::string & hash)
 	return true;
 }
 
-const boost::uint64_t test_file_size(protocol::file_block_size * 128);
+const boost::uint64_t test_file_size(protocol_tcp::file_block_size * 128);
 const std::string test_root_hash("0123456789012345678901234567890123456789");
 std::string test_hash_slot;
 const boost::uint64_t tree_block_count(hash_tree::calc_tree_block_count(test_file_size));

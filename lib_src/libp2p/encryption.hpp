@@ -4,7 +4,7 @@
 
 //custom
 #include "prime_generator.hpp"
-#include "protocol.hpp"
+#include "protocol_tcp.hpp"
 #include "settings.hpp"
 
 //include

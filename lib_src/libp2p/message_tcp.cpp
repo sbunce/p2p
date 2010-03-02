@@ -23,7 +23,7 @@ message_tcp::recv::block::block(
 bool message_tcp::recv::block::expect(const network::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
-	return recv_buf.const_data()[0] == protocol::block;
+	return recv_buf.const_data()[0] == protocol_tcp::block;
 }
 
 message_tcp::recv::status message_tcp::recv::block::recv(network::buffer & recv_buf)
@@ -31,11 +31,11 @@ message_tcp::recv::status message_tcp::recv::block::recv(network::buffer & recv_
 	if(!expect(recv_buf)){
 		return not_expected;
 	}
-	if(recv_buf.size() >= protocol::block_size(block_size)){
+	if(recv_buf.size() >= protocol_tcp::block_size(block_size)){
 		network::buffer buf;
 		Download_Speed->add(block_size - bytes_seen);
-		buf.append(recv_buf.data() + 1, protocol::block_size(block_size) - 1);
-		recv_buf.erase(0, protocol::block_size(block_size));
+		buf.append(recv_buf.data() + 1, protocol_tcp::block_size(block_size) - 1);
+		recv_buf.erase(0, protocol_tcp::block_size(block_size));
 		if(func(buf)){
 			return complete;
 		}else{
@@ -60,7 +60,7 @@ message_tcp::recv::close_slot::close_slot(
 bool message_tcp::recv::close_slot::expect(const network::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
-	return recv_buf.const_data()[0] == protocol::close_slot;
+	return recv_buf.const_data()[0] == protocol_tcp::close_slot;
 }
 
 message_tcp::recv::status message_tcp::recv::close_slot::recv(network::buffer & recv_buf)
@@ -68,9 +68,9 @@ message_tcp::recv::status message_tcp::recv::close_slot::recv(network::buffer & 
 	if(!expect(recv_buf)){
 		return not_expected;
 	}
-	if(recv_buf.size() >= protocol::close_slot_size){
+	if(recv_buf.size() >= protocol_tcp::close_slot_size){
 		unsigned char slot_num = recv_buf[1];
-		recv_buf.erase(0, protocol::close_slot_size);
+		recv_buf.erase(0, protocol_tcp::close_slot_size);
 		if(func(slot_num)){
 			return complete;
 		}else{
@@ -128,7 +128,7 @@ message_tcp::recv::error::error(
 bool message_tcp::recv::error::expect(const network::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
-	return recv_buf.const_data()[0] == protocol::error;
+	return recv_buf.const_data()[0] == protocol_tcp::error;
 }
 
 message_tcp::recv::status message_tcp::recv::error::recv(network::buffer & recv_buf)
@@ -136,10 +136,10 @@ message_tcp::recv::status message_tcp::recv::error::recv(network::buffer & recv_
 	if(!expect(recv_buf)){
 		return not_expected;
 	}
-	if(recv_buf[0] == protocol::error){
+	if(recv_buf[0] == protocol_tcp::error){
 		network::buffer buf;
-		buf.append(recv_buf.data(), protocol::error_size);
-		recv_buf.erase(0, protocol::error_size);
+		buf.append(recv_buf.data(), protocol_tcp::error_size);
+		recv_buf.erase(0, protocol_tcp::error_size);
 		if(func()){
 			return complete;
 		}else{
@@ -166,7 +166,7 @@ message_tcp::recv::have_file_block::have_file_block(
 bool message_tcp::recv::have_file_block::expect(const network::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
-	if(recv_buf.const_data()[0] != protocol::have_file_block){
+	if(recv_buf.const_data()[0] != protocol_tcp::have_file_block){
 		return false;
 	}
 	if(recv_buf.size() == 1){
@@ -183,7 +183,7 @@ message_tcp::recv::status message_tcp::recv::have_file_block::recv(network::buff
 	if(!expect(recv_buf)){
 		return not_expected;
 	}
-	unsigned expected_size = protocol::have_file_block_size(
+	unsigned expected_size = protocol_tcp::have_file_block_size(
 		convert::VLI_size(file_block_count));
 	if(recv_buf.size() >= expected_size){
 		unsigned char slot_num = recv_buf[1];
@@ -216,7 +216,7 @@ message_tcp::recv::have_hash_tree_block::have_hash_tree_block(
 bool message_tcp::recv::have_hash_tree_block::expect(const network::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
-	if(recv_buf.const_data()[0] != protocol::have_hash_tree_block){
+	if(recv_buf.const_data()[0] != protocol_tcp::have_hash_tree_block){
 		return false;
 	}
 	if(recv_buf.size() == 1){
@@ -233,7 +233,7 @@ message_tcp::recv::status message_tcp::recv::have_hash_tree_block::recv(network:
 	if(!expect(recv_buf)){
 		return not_expected;
 	}
-	unsigned expected_size = protocol::have_hash_tree_block_size(
+	unsigned expected_size = protocol_tcp::have_hash_tree_block_size(
 		convert::VLI_size(tree_block_count));
 	if(recv_buf.size() >= expected_size){
 		unsigned char slot_num = recv_buf[1];
@@ -302,10 +302,10 @@ bool message_tcp::recv::key_exchange_p_rA::expect(const network::buffer & recv_b
 message_tcp::recv::status message_tcp::recv::key_exchange_p_rA::recv(network::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
-	if(recv_buf.size() >= protocol::DH_key_size * 2){
+	if(recv_buf.size() >= protocol_tcp::DH_key_size * 2){
 		network::buffer buf;
-		buf.append(recv_buf.data(), protocol::DH_key_size * 2);
-		recv_buf.erase(0, protocol::DH_key_size * 2);
+		buf.append(recv_buf.data(), protocol_tcp::DH_key_size * 2);
+		recv_buf.erase(0, protocol_tcp::DH_key_size * 2);
 		if(func(buf)){
 			return complete;
 		}else{
@@ -335,10 +335,10 @@ bool message_tcp::recv::key_exchange_rB::expect(const network::buffer & recv_buf
 message_tcp::recv::status message_tcp::recv::key_exchange_rB::recv(network::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
-	if(recv_buf.size() >= protocol::DH_key_size){
+	if(recv_buf.size() >= protocol_tcp::DH_key_size){
 		network::buffer buf;
-		buf.append(recv_buf.data(), protocol::DH_key_size);
-		recv_buf.erase(0, protocol::DH_key_size);
+		buf.append(recv_buf.data(), protocol_tcp::DH_key_size);
+		recv_buf.erase(0, protocol_tcp::DH_key_size);
 		if(func(buf)){
 			return complete;
 		}else{
@@ -366,9 +366,9 @@ bool message_tcp::recv::request_file_block::expect(const network::buffer & recv_
 {
 	assert(!recv_buf.empty());
 	if(recv_buf.size() == 1){
-		return recv_buf.const_data()[0] == protocol::request_file_block;
+		return recv_buf.const_data()[0] == protocol_tcp::request_file_block;
 	}else{
-		return recv_buf.const_data()[0] == protocol::request_file_block
+		return recv_buf.const_data()[0] == protocol_tcp::request_file_block
 			&& recv_buf.const_data()[1] == slot_num;
 	}
 }
@@ -382,7 +382,7 @@ message_tcp::recv::status message_tcp::recv::request_file_block::recv(network::b
 		unsigned char slot_num = recv_buf[1];
 		boost::uint64_t block_num = convert::bin_VLI_to_int(std::string(
 			reinterpret_cast<char *>(recv_buf.data()) + 2, VLI_size));
-		recv_buf.erase(0, protocol::request_file_block_size(VLI_size));
+		recv_buf.erase(0, protocol_tcp::request_file_block_size(VLI_size));
 		if(func(slot_num, block_num)){
 			return complete;
 		}else{
@@ -410,9 +410,9 @@ bool message_tcp::recv::request_hash_tree_block::expect(const network::buffer & 
 {
 	assert(!recv_buf.empty());
 	if(recv_buf.size() == 1){
-		return recv_buf.const_data()[0] == protocol::request_hash_tree_block;
+		return recv_buf.const_data()[0] == protocol_tcp::request_hash_tree_block;
 	}else{
-		return recv_buf.const_data()[0] == protocol::request_hash_tree_block
+		return recv_buf.const_data()[0] == protocol_tcp::request_hash_tree_block
 			&& recv_buf.const_data()[1] == slot_num;
 	}
 }
@@ -450,7 +450,7 @@ message_tcp::recv::request_slot::request_slot(
 bool message_tcp::recv::request_slot::expect(const network::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
-	return recv_buf.const_data()[0] == protocol::request_slot;
+	return recv_buf.const_data()[0] == protocol_tcp::request_slot;
 }
 
 message_tcp::recv::status message_tcp::recv::request_slot::recv(network::buffer & recv_buf)
@@ -458,10 +458,10 @@ message_tcp::recv::status message_tcp::recv::request_slot::recv(network::buffer 
 	if(!expect(recv_buf)){
 		return not_expected;
 	}
-	if(recv_buf.size() >= protocol::request_slot_size){
+	if(recv_buf.size() >= protocol_tcp::request_slot_size){
 		std::string hash = convert::bin_to_hex(std::string(
 			reinterpret_cast<const char *>(recv_buf.data()) + 1, SHA1::bin_size));
-		recv_buf.erase(0, protocol::request_slot_size);
+		recv_buf.erase(0, protocol_tcp::request_slot_size);
 		if(func(hash)){
 			return complete;
 		}else{
@@ -487,7 +487,7 @@ message_tcp::recv::slot::slot(
 bool message_tcp::recv::slot::expect(const network::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
-	return recv_buf.const_data()[0] == protocol::slot;
+	return recv_buf.const_data()[0] == protocol_tcp::slot;
 }
 
 message_tcp::recv::status message_tcp::recv::slot::recv(network::buffer & recv_buf)
@@ -495,7 +495,7 @@ message_tcp::recv::status message_tcp::recv::slot::recv(network::buffer & recv_b
 	if(!expect(recv_buf)){
 		return not_expected;
 	}
-	if(recv_buf.size() < protocol::slot_size(0, 0)){
+	if(recv_buf.size() < protocol_tcp::slot_size(0, 0)){
 		//do not have the minimum size slot message
 		return incomplete;
 	}
@@ -517,37 +517,37 @@ message_tcp::recv::status message_tcp::recv::slot::recv(network::buffer & recv_b
 	bit_field tree_BF, file_BF;
 	if(recv_buf[2] == 0){
 		//no bit_field
-		recv_buf.erase(0, protocol::slot_size(0, 0));
+		recv_buf.erase(0, protocol_tcp::slot_size(0, 0));
 	}else if(recv_buf[2] == 1){
 		//file bit_field
 		boost::uint64_t file_block_count = file::calc_file_block_count(file_size);
 		boost::uint64_t file_BF_size = bit_field::size_bytes(file_block_count);
-		if(recv_buf.size() < protocol::slot_size(0, file_BF_size)){
+		if(recv_buf.size() < protocol_tcp::slot_size(0, file_BF_size)){
 			return incomplete;
 		}
 		file_BF.set_buf(recv_buf.data() + 31, file_BF_size, file_block_count);
-		recv_buf.erase(0, protocol::slot_size(0, file_BF_size));
+		recv_buf.erase(0, protocol_tcp::slot_size(0, file_BF_size));
 	}else if(recv_buf[2] == 2){
 		//tree bit_field
 		boost::uint64_t tree_block_count = hash_tree::calc_tree_block_count(file_size);
 		boost::uint64_t tree_BF_size = bit_field::size_bytes(tree_block_count);
-		if(recv_buf.size() < protocol::slot_size(tree_BF_size, 0)){
+		if(recv_buf.size() < protocol_tcp::slot_size(tree_BF_size, 0)){
 			return incomplete;
 		}
 		tree_BF.set_buf(recv_buf.data() + 31, tree_BF_size, tree_block_count);
-		recv_buf.erase(0, protocol::slot_size(tree_BF_size, 0));
+		recv_buf.erase(0, protocol_tcp::slot_size(tree_BF_size, 0));
 	}else if(recv_buf[2] == 3){
 		//tree and file bit_field
 		boost::uint64_t tree_block_count = hash_tree::calc_tree_block_count(file_size);
 		boost::uint64_t file_block_count = file::calc_file_block_count(file_size);
 		boost::uint64_t tree_BF_size = bit_field::size_bytes(tree_block_count);
 		boost::uint64_t file_BF_size = bit_field::size_bytes(file_block_count);
-		if(recv_buf.size() < protocol::slot_size(tree_BF_size, file_BF_size)){
+		if(recv_buf.size() < protocol_tcp::slot_size(tree_BF_size, file_BF_size)){
 			return incomplete;
 		}
 		tree_BF.set_buf(recv_buf.data() + 31, tree_BF_size, tree_block_count);
 		file_BF.set_buf(recv_buf.data() + 31 + tree_BF_size, file_BF_size, file_block_count);
-		recv_buf.erase(0, protocol::slot_size(tree_BF_size, file_BF_size));
+		recv_buf.erase(0, protocol_tcp::slot_size(tree_BF_size, file_BF_size));
 	}else{
 		LOGGER << "invalid status byte";
 		return blacklist;
@@ -564,7 +564,7 @@ message_tcp::recv::status message_tcp::recv::slot::recv(network::buffer & recv_b
 message_tcp::send::block::block(const network::buffer & block,
 	boost::shared_ptr<network::speed_calculator> Upload_Speed_in)
 {
-	buf.append(protocol::block).append(block);
+	buf.append(protocol_tcp::block).append(block);
 	Upload_Speed = Upload_Speed_in;
 }
 //END send::block
@@ -572,14 +572,14 @@ message_tcp::send::block::block(const network::buffer & block,
 //BEGIN send::close_slot
 message_tcp::send::close_slot::close_slot(const unsigned char slot_num)
 {
-	buf.append(protocol::close_slot).append(slot_num);
+	buf.append(protocol_tcp::close_slot).append(slot_num);
 }
 //END send::close_slot
 
 //BEGIN send::error
 message_tcp::send::error::error()
 {
-	buf.append(protocol::error);
+	buf.append(protocol_tcp::error);
 }
 //END send::error
 
@@ -590,7 +590,7 @@ message_tcp::send::have_file_block::have_file_block(
 	const boost::uint64_t file_block_count
 )
 {
-	buf.append(protocol::have_file_block)
+	buf.append(protocol_tcp::have_file_block)
 		.append(slot_num)
 		.append(convert::int_to_bin_VLI(block_num, file_block_count));
 }
@@ -603,7 +603,7 @@ message_tcp::send::have_hash_tree_block::have_hash_tree_block(
 	const boost::uint64_t tree_block_count
 )
 {
-	buf.append(protocol::have_hash_tree_block)
+	buf.append(protocol_tcp::have_hash_tree_block)
 		.append(slot_num)
 		.append(convert::int_to_bin_VLI(block_num, tree_block_count));
 }
@@ -647,7 +647,7 @@ message_tcp::send::request_file_block::request_file_block(
 	const boost::uint64_t block_num,
 	const boost::uint64_t file_block_count)
 {
-	buf.append(protocol::request_file_block)
+	buf.append(protocol_tcp::request_file_block)
 		.append(slot_num)
 		.append(convert::int_to_bin_VLI(block_num, file_block_count));
 }
@@ -660,7 +660,7 @@ message_tcp::send::request_hash_tree_block::request_hash_tree_block(
 	const boost::uint64_t tree_block_count
 )
 {
-	buf.append(protocol::request_hash_tree_block)
+	buf.append(protocol_tcp::request_hash_tree_block)
 		.append(slot_num)
 		.append(convert::int_to_bin_VLI(block_num, tree_block_count));
 }
@@ -670,7 +670,7 @@ message_tcp::send::request_hash_tree_block::request_hash_tree_block(
 message_tcp::send::request_slot::request_slot(const std::string & hash)
 {
 	assert(hash.size() == SHA1::hex_size);
-	buf.append(protocol::request_slot).append(convert::hex_to_bin(hash));
+	buf.append(protocol_tcp::request_slot).append(convert::hex_to_bin(hash));
 }
 //END send::request_slot
 
@@ -689,7 +689,7 @@ message_tcp::send::slot::slot(const unsigned char slot_num,
 	}else if(!tree_BF.empty() && !file_BF.empty()){
 		status = 3;
 	}
-	buf.append(protocol::slot)
+	buf.append(protocol_tcp::slot)
 		.append(slot_num)
 		.append(status)
 		.append(convert::int_to_bin(file_size))

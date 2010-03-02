@@ -12,14 +12,14 @@ hash_tree::hash_tree(
 	file_hash_offset(row_to_file_hash_offset(row)),
 	tree_size(file_size_to_tree_size(file_size)),
 	file_block_count(
-		file_size % protocol::file_block_size == 0 ?
-			file_size / protocol::file_block_size :
-			file_size / protocol::file_block_size + 1
+		file_size % protocol_tcp::file_block_size == 0 ?
+			file_size / protocol_tcp::file_block_size :
+			file_size / protocol_tcp::file_block_size + 1
 	),
 	last_file_block_size(
-		file_size % protocol::file_block_size == 0 ?
-			protocol::file_block_size :
-			file_size % protocol::file_block_size
+		file_size % protocol_tcp::file_block_size == 0 ?
+			protocol_tcp::file_block_size :
+			file_size % protocol_tcp::file_block_size
 	)
 {
 	if(!hash.empty()){
@@ -77,20 +77,20 @@ bool hash_tree::block_info(const boost::uint64_t block,
 	boost::uint64_t block_count = 0;     //total block count in all previous rows
 	boost::uint64_t row_block_count = 0; //total block count in current row
 	for(unsigned x=0; x<row.size(); ++x){
-		if(row[x] % protocol::hash_block_size == 0){
-			row_block_count = row[x] / protocol::hash_block_size;
+		if(row[x] % protocol_tcp::hash_block_size == 0){
+			row_block_count = row[x] / protocol_tcp::hash_block_size;
 		}else{
-			row_block_count = row[x] / protocol::hash_block_size + 1;
+			row_block_count = row[x] / protocol_tcp::hash_block_size + 1;
 		}
 
 		//check if block we're looking for is in row
 		if(block_count + row_block_count > block){
-			info.first = offset + (block - block_count) * protocol::hash_block_size;
+			info.first = offset + (block - block_count) * protocol_tcp::hash_block_size;
 
 			//determine size of block
 			boost::uint64_t delta = offset + row[x] - info.first;
-			if(delta > protocol::hash_block_size){
-				info.second = protocol::hash_block_size;
+			if(delta > protocol_tcp::hash_block_size){
+				info.second = protocol_tcp::hash_block_size;
 			}else{
 				info.second = delta;
 			}
@@ -126,7 +126,7 @@ unsigned hash_tree::block_size(const boost::uint64_t block_num)
 hash_tree::status hash_tree::check()
 {
 	network::buffer buf;
-	buf.reserve(protocol::file_block_size);
+	buf.reserve(protocol_tcp::file_block_size);
 	for(boost::uint32_t block_num=0; block_num<tree_block_count; ++block_num){
 		buf.clear();
 		status Status = read_block(block_num, buf);
@@ -223,7 +223,7 @@ hash_tree::status hash_tree::create()
 		return io_error;
 	}
 
-	char buf[protocol::file_block_size];
+	char buf[protocol_tcp::file_block_size];
 	SHA1 SHA;
 
 	//do file hashes
@@ -246,7 +246,7 @@ hash_tree::status hash_tree::create()
 		if(boost::this_thread::interruption_requested()){
 			return io_error;
 		}
-		file.read(buf, protocol::file_block_size);
+		file.read(buf, protocol_tcp::file_block_size);
 		if(file.gcount() == 0){
 			LOGGER << "error reading file";
 			return io_error;
@@ -327,8 +327,8 @@ hash_tree::status hash_tree::create()
 			database::table::hash::remove(hash);
 			return io_error;
 		}
-		if(bytes_remaining > protocol::file_block_size){
-			read_size = protocol::file_block_size;
+		if(bytes_remaining > protocol_tcp::file_block_size){
+			read_size = protocol_tcp::file_block_size;
 		}else{
 			read_size = bytes_remaining;
 		}
@@ -379,18 +379,18 @@ boost::uint64_t hash_tree::file_hash_to_tree_hash(boost::uint64_t row_hash,
 	row.push_front(row_hash);
 	if(row_hash == 1){
 		return 1;
-	}else if(row_hash % protocol::hash_block_size == 0){
-		row_hash = start_hash / protocol::hash_block_size;
+	}else if(row_hash % protocol_tcp::hash_block_size == 0){
+		row_hash = start_hash / protocol_tcp::hash_block_size;
 	}else{
-		row_hash = start_hash / protocol::hash_block_size + 1;
+		row_hash = start_hash / protocol_tcp::hash_block_size + 1;
 	}
 	return start_hash + file_hash_to_tree_hash(row_hash, row);
 }
 
 boost::uint64_t hash_tree::file_size_to_file_hash(const boost::uint64_t file_size)
 {
-	boost::uint64_t hash_count = file_size / protocol::file_block_size;
-	if(file_size % protocol::file_block_size != 0){
+	boost::uint64_t hash_count = file_size / protocol_tcp::file_block_size;
+	if(file_size % protocol_tcp::file_block_size != 0){
 		//add one for partial last block
 		++hash_count;
 	}
@@ -445,10 +445,10 @@ boost::uint64_t hash_tree::row_to_tree_block_count(
 {
 	boost::uint64_t block_count = 0;
 	for(int x=0; x<row.size(); ++x){
-		if(row[x] % protocol::hash_block_size == 0){
-			block_count += row[x] / protocol::hash_block_size;
+		if(row[x] % protocol_tcp::hash_block_size == 0){
+			block_count += row[x] / protocol_tcp::hash_block_size;
 		}else{
-			block_count += row[x] / protocol::hash_block_size + 1;
+			block_count += row[x] / protocol_tcp::hash_block_size + 1;
 		}
 	}
 	return block_count;
@@ -476,16 +476,16 @@ std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool>
 	boost::uint64_t block_count = 0;     //total block count in all previous rows
 	boost::uint64_t row_block_count = 0; //total block count in current row
 	for(unsigned x=0; x<row.size(); ++x){
-		if(row[x] % protocol::hash_block_size == 0){
-			row_block_count = row[x] / protocol::hash_block_size;
+		if(row[x] % protocol_tcp::hash_block_size == 0){
+			row_block_count = row[x] / protocol_tcp::hash_block_size;
 		}else{
-			row_block_count = row[x] / protocol::hash_block_size + 1;
+			row_block_count = row[x] / protocol_tcp::hash_block_size + 1;
 		}
 		//check if block we're looking for is in row
 		if(block_count + row_block_count > block){
 			//offset to start of block (RRN, hash offset)
 			boost::uint64_t block_offset = offset + (block - block_count)
-				* protocol::hash_block_size;
+				* protocol_tcp::hash_block_size;
 
 			if(block_offset * SHA1::bin_size >= file_hash_offset){
 				//leaf, no hash block children
@@ -497,8 +497,8 @@ std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool>
 			//determine size of block
 			boost::uint64_t delta = offset + row[x] - block_offset;
 			unsigned block_size;
-			if(delta > protocol::hash_block_size){
-				block_size = protocol::hash_block_size;
+			if(delta > protocol_tcp::hash_block_size){
+				block_size = protocol_tcp::hash_block_size;
 			}else{
 				block_size = delta;
 			}

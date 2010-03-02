@@ -28,7 +28,7 @@ void prime_generator::main_loop()
 		}//end lock scope
 
 		//this should not be locked
-		random_prime = mpint::random_prime_fast(protocol::DH_key_size, PRNG);
+		random_prime = mpint::random_prime_fast(protocol_tcp::DH_key_size, PRNG);
 
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(prime_mutex);

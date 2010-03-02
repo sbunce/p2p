@@ -6,6 +6,7 @@
 #include "file.hpp"
 #include "hash_tree.hpp"
 #include "message_tcp.hpp"
+#include "protocol_tcp.hpp"
 
 //include
 #include <atomic_int.hpp>
