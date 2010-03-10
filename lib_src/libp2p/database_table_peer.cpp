@@ -42,7 +42,7 @@ void database::table::peer::remove(const std::string ID,
 }
 
 static int resume_call_back(int columns, char ** response,
-	char ** column_name, std::deque<database::table::peer::info> & peers)
+	char ** column_name, std::vector<database::table::peer::info> & peers)
 {
 	assert(columns == 3);
 	assert(std::strcmp(column_name[0], "ID") == 0);
@@ -52,10 +52,10 @@ static int resume_call_back(int columns, char ** response,
 	return 0;
 }
 
-std::deque<database::table::peer::info> database::table::peer::resume(
+std::vector<database::table::peer::info> database::table::peer::resume(
 	database::pool::proxy DB)
 {
-	std::deque<database::table::peer::info> peers;
+	std::vector<database::table::peer::info> peers;
 	DB->query("SELECT ID, IP, port FROM peer",
 		boost::bind(&resume_call_back, _1, _2, _3, boost::ref(peers)));
 	return peers;

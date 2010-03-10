@@ -13,7 +13,7 @@ const unsigned DH_key_size = 16;        //size exchanged key in Diffie-Hellman-M
 const unsigned hash_block_size = 512;   //number of hashes in hash block
 const unsigned file_block_size = hash_block_size * SHA1::bin_size;
 
-//commands and messages sizes
+//commands and message sizes
 const unsigned char error = 0;
 const unsigned error_size = 1;
 const unsigned char request_slot = 1;
@@ -51,5 +51,5 @@ static unsigned have_file_block_size(const unsigned VLI_size)
 }
 const unsigned char close_slot = 8;
 const unsigned close_slot_size = 2;
-}//end of protocol namespace
+}//end of namespace protocol_tcp
 #endif

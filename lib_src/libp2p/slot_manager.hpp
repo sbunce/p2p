@@ -89,27 +89,7 @@ private:
 	void send_slot_requests();
 
 	/* Receive Functions
-	recv_close_slot:
-		Call back for receiving close slot messages.
-	recv_file_block:
-		Call back for receiving a file block.
-	recv_have_file_block:
-		Called when a have_file_block_message is received.
-	recv_have_hash_tree_block:
-		Called when a have_hash_tree_block message is received.
-	recv_hash_tree_block:
-		Call back for receiving a hash tree block.
-	recv_request_hash_tree_block:
-		Call back for receiving request for hash tree block.
-	recv_request_block_failed:
-		Call back for when a hash tree block request or file block request fails.
-	recv_request_slot:
-		Handles incoming request_slot messages.
-	recv_request_slot_failed:
-		Handles an ERROR in response to a request_slot.
-	recv_slot:
-		Handles incoming slot messages. The hash parameter is the hash of the file
-		requested.
+	Called when message received. Function named after message type it handles.
 	*/
 	bool recv_close_slot(const unsigned char slot_num);
 	bool recv_file_block(const network::buffer & block,

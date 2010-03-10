@@ -1,164 +1,119 @@
 #include "kademlia.hpp"
 
-//BEGIN contact
-kademlia::contact::contact(
-	const std::string & ID_in,
-	const std::string & IP_in,
-	const std::string & port_in
-):
-	ID(ID_in),
-	IP(IP_in),
-	port(port_in),
-	last_seen(std::time(NULL)),
-	ping_sent(false)
+kademlia::kademlia():
+	local_ID(database::table::prefs::get_ID())
 {
+	//messages to expect anytime
+	Exchange.expect_anytime(boost::shared_ptr<message_udp::recv::base>(
+		new message_udp::recv::ping(boost::bind(&kademlia::recv_ping, this, _1, _2))));
 
-}
-
-kademlia::contact::contact(const kademlia::contact & C):
-	ID(C.ID),
-	IP(C.IP),
-	port(C.port),
-	last_seen(C.last_seen),
-	ping_sent(C.ping_sent)
-{
-
-}
-
-//returns true if a ping needs to be sent
-bool kademlia::contact::do_ping()
-{
-	//allow 60s to receive pong
-	if(!ping_sent && std::time(NULL) - last_seen > 3540){
-		ping_sent = true;
-		return true;
-	}else{
-		return false;
-	}
-}
-
-//returns true if contact has timed out and needs to be removed
-bool kademlia::contact::timed_out()
-{
-	return std::time(NULL) - last_seen > 3600;
-}
-
-//updates the last seen time
-void kademlia::contact::touch()
-{
-	last_seen = std::time(NULL);
-	ping_sent = false;
-}
-//END contact
-
-kademlia::kademlia()
-{
-	std::string bin = convert::hex_to_bin(database::table::prefs::get_ID());
-	ID_BF.set_buf(reinterpret_cast<const unsigned char *>(bin.data()), bin.size(),
-		SHA1::bin_size * 8);
-	network_thread = boost::thread(boost::bind(&kademlia::network_loop, this));
+	//start internal thread
+	main_loop_thread = boost::thread(boost::bind(&kademlia::main_loop, this));
 }
 
 kademlia::~kademlia()
 {
-	network_thread.interrupt();
-	network_thread.join();
+	main_loop_thread.interrupt();
+	main_loop_thread.join();
 }
 
-void kademlia::add_node(const std::string & ID, const std::string & IP,
-	const std::string & port)
-{
-	boost::mutex::scoped_lock lock(high_node_cache_mutex);
-	high_node_cache.push_back(database::table::peer::info(ID, IP, port));
-}
-
-unsigned kademlia::calc_bucket(const std::string & ID)
+static bit_field ID_to_bit_field(const std::string & ID)
 {
 	assert(ID.size() == SHA1::hex_size);
 	std::string bin = convert::hex_to_bin(ID);
 	bit_field BF(reinterpret_cast<const unsigned char *>(bin.data()), bin.size(),
-		SHA1::bin_size * 8);
-	for(int x=159; x>=0; --x){
-		if(BF[x] != ID_BF[x]){
+		kademlia::bucket_count);
+	return BF;
+}
+
+unsigned kademlia::calc_bucket(const std::string & remote_ID)
+{
+	assert(remote_ID.size() == SHA1::hex_size);
+	bit_field local_BF = ID_to_bit_field(local_ID);
+	bit_field remote_BF = ID_to_bit_field(remote_ID);
+	for(int x=bucket_count - 1; x>=0; --x){
+		if(remote_BF[x] != local_BF[x]){
 			return x;
 		}
 	}
 	return 0;
 }
 
-void kademlia::network_loop()
+void kademlia::main_loop()
 {
-	/*
-	Read nodes from database to try to put in k-buckets. Randomize them so we
-	use different nodes on each program start.
-	*/
-	low_node_cache = database::table::peer::resume();
-	std::random_shuffle(low_node_cache.begin(), low_node_cache.end());
-
-	//setup UDP listener
-	std::set<network::endpoint> E = network::get_endpoint(
-		"",
-		database::table::prefs::get_port(),
-		network::udp
-	);
-	assert(!E.empty());
-	ndgram.open(*E.begin());
-	assert(ndgram.is_open());
-
-	//setup select to wait on UDP listener
-	std::set<int> read, tmp_read, empty;
-	read.insert(ndgram.socket());
-	network::select select;
-
+	//fill bucket cache
+	std::vector<database::table::peer::info> tmp = database::table::peer::resume();
+	//randomize so we put different contacts in k-buckets each time
+	std::random_shuffle(tmp.begin(), tmp.end());
+/*
+	while(!tmp.empty()){
+		std::set<network::endpoint> E = network::get_endpoint(tmp.back().IP,
+			tmp.back().port, network::udp);
+		if(E.empty()){
+			LOGGER << "invalid " << tmp.back().IP << " " << tmp.back().port;
+		}else{
+			int bucket_num = calc_bucket(tmp.back().ID);
+			Bucket_Cache[bucket_num].push_back(contact(tmp.back().ID, *E.begin()));
+		}
+		tmp.pop_back();
+	}
+*/
 	std::time_t last_time(std::time(NULL));
 	while(true){
 		boost::this_thread::interruption_point();
-
 		if(last_time != std::time(NULL)){
-			//stuff to do once per second
-			process_node_cache();
+			//once per second
+			process_bucket_cache();
 			last_time = std::time(NULL);
 		}
-
-		//receive max of 10 messages per second
-		boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-
-		//poll socket
-		tmp_read = read;
-		select(tmp_read, empty, 0);
-		if(tmp_read.empty()){
-			//nothing received
-			continue;
-		}
-
-		//receive message
-		boost::shared_ptr<network::endpoint> from;
-		network::buffer buf;
-		ndgram.recv(buf, from);
-		assert(from);
-
-		LOGGER << "kad " << from->IP() << " " << from->port();
+		Exchange.recv();
 	}
 }
 
-void kademlia::process_node_cache()
+void kademlia::process_bucket_cache()
 {
-	//attempt to add high priority node
 /*
-	{//BEGIN lock scope
-	boost::mutex::scoped_lock lock(high_node_cache_mutex);
-	if(!high_node_cache.empty()){
-		LOGGER << calc_bucket(high_node_cache.front().ID);
-		high_node_cache.pop_front();
-		return;
+	//give each cached contact and equal chance to be added to a k-bucket
+	for(unsigned x=(bucket_cache_latest + 1) % bucket_count;
+		x != bucket_cache_latest; x = (x + 1) % bucket_count)
+	{
+		if(Bucket[x].size() < max_bucket_size){
+			for(std::list<contact>::iterator iter_cur = Bucket_Cache[x].begin(),
+				iter_end = Bucket_Cache[x].end(); iter_cur != iter_end; ++iter_cur)
+			{
+				if(!iter_cur->ping_sent){
+					LOGGER << "ping " << iter_cur->endpoint.IP() << " "
+						<< iter_cur->endpoint.port();
+					network::buffer random(portable_urandom(8));
+					Exchange.send(boost::shared_ptr<message_udp::send::base>(
+						new message_udp::send::ping(random, local_ID)), iter_cur->endpoint);
+					Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
+						new message_udp::recv::pong(boost::bind(&kademlia::recv_pong,
+						this, _1), random)));
+					iter_cur->ping_sent = true;
+					bucket_cache_latest = x;
+				}
+			}
+		}
 	}
-	}//END lock scope
 */
+}
 
-	//attempt to add low priority node
-	if(!low_node_cache.empty()){
-		//LOGGER << calc_bucket(low_node_cache.front().ID);
-		//check if space in bucket
-		low_node_cache.pop_front();
-	}
+void kademlia::recv_ping(const network::buffer & random, const std::string & remote_ID)
+{
+LOGGER << remote_ID;
+//DEBUG, update k-bucket here
+
+//DEBUG, need IP to send to
+/*
+	Exchange.send(boost::shared_ptr<message_udp::send::base>(
+		new message_udp::send::pong(random, local_ID)));
+*/
+}
+
+void kademlia::recv_pong(const std::string & remote_ID)
+{
+LOGGER << remote_ID;
+//DEBUG, update k-bucket here
+
 }

@@ -4,13 +4,13 @@ Basic Info
 The DHT used is Kademlia.
 
 The DHT commands are sent to the same port as the TCP listener. All messages are
-kept to less than 508 bytes to insure none get truncated.
+kept <= 508 bytes to insure no message gets truncated.
 
-We assume a message has been lost if we don't receive a reply within 32 seconds.
+We assume a message has been lost if we don't receive a reply within 60 seconds.
 
 All request messages include 8 random bytes which must be echo'd back in the
 response. This is to protect against address forgery. The Kademlia spec calls
-for 20bytes but that is excessive.
+for 20 bytes but that is excessive.
 
 
 Concurrency
@@ -33,9 +33,9 @@ desc: Used to check if a host is up.
 	+---+---+---+---+---+---+---+
 	| C |     R     |     S     |
 	+---+---+---+---+---+---+---+
-	  0   1  ...  8   9 ...  29
+	  0   1  ...  8   9  ... 28
 C = command (base10: 0), R = random bytes, S = ID of sender
-
+          
 expected response: pong
 ---
 
@@ -45,7 +45,7 @@ desc: Sent in response to ping.
 	+---+---+---+---+---+---+---+
 	| C |     R     |     S     |
 	+---+---+---+---+---+---+---+
-	  0   1  ...  8   9 ...  29
+	  0   1  ...  8   9  ... 28
 C = command (base10: 1), R = echo of random bytes, S = ID of sender
 ---
 
@@ -55,8 +55,8 @@ desc: Request for closer nodes.
 	+---+---+---+---+---+---+---+
 	| C |     R     |     N     |
 	+---+---+---+---+---+---+---+
-	  0   1  ...  8   9 ...  29
-C = command (base10: 2), R = random bytes, N = node ID to find
+	  0   1  ...  8   9  ... 28
+C = command (base10: 2), R = random bytes, N = ID to find
 
 expected response: node_list
 ---
@@ -80,37 +80,37 @@ A K list element:
 	+---+---+---+---+---+---+---+---+
 	|    IP     |   P   |     N     |
 	+---+---+---+---+---+---+---+---+
-	  0  ...  3   4   5   6  ...  26
-IP = IPv4 address, P = port, N = node ID
+	  0  ...  3   4   5   6  ... 25
+IP = IPv4 address, P = port, N = ID
 
 A L list element:
 	+---+---+---+---+---+---+---+---+
 	|    IP     |   P   |     N     |
 	+---+---+---+---+---+---+---+---+
-	  0  ...  15  16  17  18 ...  38
-IP = IPv6 address, P = port, N = node ID
+	  0  ...  15  16  17  18 ... 37
+IP = IPv6 address, P = port, N = ID
 
 note: The lists are ordered from closest to farthest.
 ---
 
 ---
 name: store
-desc: Store a mapping from a file hash to a node ID.
+desc: Store a mapping from a file hash to a ID.
 	+---+---+---+---+---+---+---+
 	| C |     S     |     F     |
 	+---+---+---+---+---+---+---+
-	  0   1  ...  20  21 ...  40
-C = command (base10: 4), S = node ID, F = file hash
+	  0   1  ... 20  21  ... 40
+C = command (base10: 4), S = ID, F = file hash
 ---
 
 ---
 name: find_value
-desc: Request a list of node IDs which have the specified file.
+desc: Request a list of node which have the specified file.
 	+---+---+---+---+---+---+---+---+---+---+
 	| C |     R     |     S     |     F     |
 	+---+---+---+---+---+---+---+---+---+---+
-	  0   1  ...  8   9 ...  29  30  ...  50
-C = command (base10: 5), S = node ID, F = file hash
+	  0   1  ...  8   9 ...  28  29  ...  48
+C = command (base10: 5), S = ID, F = file hash
 
 expected response: node_list or value_list
 ---
@@ -121,15 +121,15 @@ desc: A list of nodes.
 	+---+---+---+---+---+---+---+
 	| C |     R     |     K     |
 	+---+---+---+---+---+---+---+
-	  0   1  ...  x
-C = command (base10: 6), R = echo of random bytes, K = node ID list
+	  0   1  ...  x  x+1 ...  y
+C = command (base10: 6), R = echo of random bytes, K = ID list
 
 A K list element:
 	+---+---+---+
 	|     N     |
 	+---+---+---+
 	  0  ...  19
-N = node ID that has file
+N = ID that has file
 
 note: Multiple value_lists may be sent in response to one request.
 ---

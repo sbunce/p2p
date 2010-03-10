@@ -18,7 +18,7 @@ class SHA1
 {
 public:
 	SHA1(){}
-	SHA1(const char * data, int len)
+	SHA1(const char * data, std::size_t len)
 	{
 		init();
 		load(data, len);
@@ -26,8 +26,8 @@ public:
 	}
 
 	//size of hash in different forms
-	static const int bin_size = 20;
-	static const int hex_size = 40;
+	static const unsigned bin_size = 20;
+	static const unsigned hex_size = 40;
 
 	//returns generated hash
 	const char * bin()
@@ -42,8 +42,8 @@ public:
 		append_tail();
 
 		//process remaining chunks
-		int ready_chunks = load_buffer.size() / 64;
-		for(int x=0; x<ready_chunks; ++x){
+		std::size_t ready_chunks = load_buffer.size() / 64;
+		for(std::size_t x=0; x<ready_chunks; ++x){
 			process(x*64);
 		}
 		//erase processed chunks
@@ -78,15 +78,15 @@ public:
 	}
 
 	//incremental loading of data
-	void load(const char * data, int len)
+	void load(const char * data, std::size_t len)
 	{
 		//update buffer
 		loaded_bytes += len;
 		load_buffer.append(data, len);
 		if(load_buffer.size() >= 64){
 			//process available chunks and free memory
-			int ready_chunks = (load_buffer.size() - (load_buffer.size() % 64)) / 64;
-			for(int x=0; x<ready_chunks; ++x){
+			std::size_t ready_chunks = (load_buffer.size() - (load_buffer.size() % 64)) / 64;
+			for(std::size_t x=0; x<ready_chunks; ++x){
 				process(x*64);
 			}
 			//erase processed chunks
@@ -115,15 +115,15 @@ private:
 	uint32_byte w[80]; //holds expansion of a chunk
 	uint32_byte h[5];  //collected hash values
 
-	inline void append_tail()
+	void append_tail()
 	{
-		load_buffer += static_cast<char>(128); //append bit 1
+		load_buffer += char(128); //append bit 1
 
 		//append k zero bits such that size (in bits) is congruent to 448 mod(512)
 		if(load_buffer.size() % 64 < 56){
-			load_buffer.append(56 - (load_buffer.size() % 64), static_cast<char>(0));
+			load_buffer.append(56 - (load_buffer.size() % 64), char(0));
 		}else if(load_buffer.size() % 64 > 56){
-			load_buffer.append(64 + (load_buffer.size() % 64), static_cast<char>(0));
+			load_buffer.append(64 + (load_buffer.size() % 64), char(0));
 		}
 
 		//append size of original message (in bits) encoded as 64bit big-endian
@@ -137,11 +137,11 @@ private:
 		#endif
 	}
 
-	void process(const int & chunk_start)
+	void process(const std::size_t chunk_start)
 	{
 		//break 512bit chunk in to 16, 32 bit pieces
 		for(int x=0; x<16; ++x){
-			int offset = chunk_start + x * 4;
+			std::size_t offset = chunk_start + x * 4;
 			#ifdef BOOST_LITTLE_ENDIAN
 			std::reverse_copy(load_buffer.begin() + offset,
 				load_buffer.begin() + offset + 4, w[x].b);

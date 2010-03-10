@@ -190,7 +190,7 @@ bool slot_manager::recv_request_hash_tree_block(const unsigned char slot_num,
 		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 	}else{
 		assert(iter->second->get_transfer());
-		LOGGER << block_num;
+		//LOGGER << block_num;
 		boost::shared_ptr<message_tcp::send::base> M_request;
 		transfer::status status = iter->second->get_transfer()->read_tree_block(
 			M_request, block_num);
@@ -222,7 +222,7 @@ bool slot_manager::recv_request_file_block(const unsigned char slot_num,
 		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 	}else{
 		assert(iter->second->get_transfer());
-		LOGGER << block_num;
+		//LOGGER << block_num;
 		boost::shared_ptr<message_tcp::send::base> M_request;
 		transfer::status status = iter->second->get_transfer()->read_file_block(
 			M_request, block_num);

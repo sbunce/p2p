@@ -36,7 +36,7 @@ public:
 	expect_anytime:
 		Expect a incoming message at any time.
 	expect_anytime_remove:
-		Removes messages expected anytime that expects the specified message.
+		Removes messages expected anytime.
 	send:
 		Sends a message. Handles encryption.
 	*/

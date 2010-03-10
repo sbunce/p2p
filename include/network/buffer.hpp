@@ -20,27 +20,26 @@ public:
 	//returned to indicate <something> not found
 	static const int npos = -1;
 
-	buffer():
-		reserved(0),
-		bytes(0),
-		buf(NULL)
+	buffer()
 	{
-
+		ctor_initialize();
 	}
 
-	buffer(const std::string & S):
-		reserved(0),
-		bytes(0),
-		buf(NULL)
+	buffer(const std::string & S)
 	{
+		ctor_initialize();
 		append(S);
 	}
 
-	buffer(const buffer & B):
-		reserved(0),
-		bytes(0),
-		buf(NULL)
+	buffer(const unsigned char * buf_append, const int size)
 	{
+		ctor_initialize();
+		append(buf_append, size);
+	}
+
+	buffer(const buffer & B)
+	{
+		ctor_initialize();
 		*this = B;
 	}
 
@@ -464,6 +463,14 @@ private:
 				assert(buf);
 			}
 		}
+	}
+
+	//called by all ctor's to initialize data members
+	void ctor_initialize()
+	{
+		reserved = 0;
+		bytes = 0;
+		buf = NULL;
 	}
 };
 }//end of network namespace
