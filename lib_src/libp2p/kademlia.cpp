@@ -5,7 +5,7 @@ kademlia::kademlia():
 {
 	//messages to expect anytime
 	Exchange.expect_anytime(boost::shared_ptr<message_udp::recv::base>(
-		new message_udp::recv::ping(boost::bind(&kademlia::recv_ping, this, _1, _2))));
+		new message_udp::recv::ping(boost::bind(&kademlia::recv_ping, this, _1))));
 
 	//start internal thread
 	main_loop_thread = boost::thread(boost::bind(&kademlia::main_loop, this));
@@ -99,10 +99,9 @@ void kademlia::process_bucket_cache()
 */
 }
 
-void kademlia::recv_ping(const network::buffer & random, const std::string & remote_ID)
+void kademlia::recv_ping(const network::endpoint & endpoint, const network::buffer & random)
 {
-LOGGER << remote_ID;
-//DEBUG, update k-bucket here
+LOGGER;
 
 //DEBUG, need IP to send to
 /*
@@ -111,7 +110,7 @@ LOGGER << remote_ID;
 */
 }
 
-void kademlia::recv_pong(const std::string & remote_ID)
+void kademlia::recv_pong(const network::endpoint & endpoint, const std::string & remote_ID)
 {
 LOGGER << remote_ID;
 //DEBUG, update k-bucket here

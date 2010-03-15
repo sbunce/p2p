@@ -23,6 +23,7 @@ class endpoint
 public:
 	explicit endpoint(const addrinfo * ai_in)
 	{
+		assert(ai_in != NULL);
 		copy(ai_in);
 	}
 
@@ -70,7 +71,8 @@ public:
 
 	bool operator < (const endpoint & rval) const
 	{
-		return (IP() + port()) < (rval.IP() + rval.port());
+		//return std::memcmp(
+		return IP() + port() < rval.IP() + rval.port();
 	}
 
 private:

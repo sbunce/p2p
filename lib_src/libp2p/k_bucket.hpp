@@ -14,6 +14,12 @@ class k_bucket
 public:
 	k_bucket();
 
+	/*
+	ping:
+		Returns a set of endpoints which need to be pinged.
+	*/
+	std::vector<network::endpoint> ping();
+
 private:
 	class contact
 	{

@@ -16,9 +16,6 @@ for 20 bytes but that is excessive.
 Concurrency
 ===========
 
-We do not pipeline. If a request hasn't gotten a response we don't send
-additional requests to a host.
-
 In the kademlia paper the number of concurrent requests on the wire is referred
 to as alpha. This can be anything, but a alpha of 3 is recommended in the
 Kademlia paper.
@@ -29,14 +26,17 @@ Messages
 
 ---
 name: ping
-desc: Used to check if a host is up.
-	+---+---+---+---+---+---+---+
-	| C |     R     |     S     |
-	+---+---+---+---+---+---+---+
-	  0   1  ...  8   9  ... 28
-C = command (base10: 0), R = random bytes, S = ID of sender
+desc: Check if a host is up and/or get ID.
+	+---+---+---+---+
+	| C |     R     |
+	+---+---+---+---+
+	  0   1  ...  8
+C = command (base10: 0), R = random bytes
           
 expected response: pong
+
+note: We do not send our ID in this message because we don't want the remote
+host to be able to know it trivially. This mitigates Sybil attacks.
 ---
 
 ---
@@ -95,22 +95,22 @@ note: The lists are ordered from closest to farthest.
 
 ---
 name: store
-desc: Store a mapping from a file hash to a ID.
+desc: Store a mapping from a ID to a hash.
 	+---+---+---+---+---+---+---+
 	| C |     S     |     F     |
 	+---+---+---+---+---+---+---+
 	  0   1  ... 20  21  ... 40
-C = command (base10: 4), S = ID, F = file hash
+C = command (base10: 4), S = ID, F = hash
 ---
 
 ---
 name: find_value
-desc: Request a list of node which have the specified file.
+desc: Request a list of node which have the specified hash.
 	+---+---+---+---+---+---+---+---+---+---+
 	| C |     R     |     S     |     F     |
 	+---+---+---+---+---+---+---+---+---+---+
 	  0   1  ...  8   9 ...  28  29  ...  48
-C = command (base10: 5), S = ID, F = file hash
+C = command (base10: 5), S = ID, F = hash
 
 expected response: node_list or value_list
 ---

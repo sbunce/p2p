@@ -1,0 +1,50 @@
+Sybil Attack
+============
+A Sybil attack is when one host identifies itself as multiple hosts for the
+purpose of disrupting the normal operation of a network.
+http://en.wikipedia.org/wiki/Sybil_attack
+
+It's trivial to stage a Sybil attack on a stock Kad network. All that's required
+is to send many ping messages with different IDs. The Kad routing table will get
+filled with entries all pointing to the same host.
+
+There are many different ways to mitigate Sybil attacks.
+
+Require Unique Addresses
+------------------------
+Require that every address in the routing table is unique, or close to unique.
+Because UDP source addresses are trivially forged only IDs we get as a result of
+a ping request should be added to the routing table. The randomly generated
+number included in the ping request acts like a token which allows the host to
+add it's ID to our routing table.
+
+Require Unique Networks
+-----------------------
+Populate the routing table such that it has as many networks as possible. In
+other words populate the routing table such that IPs are distributed as close to
+random uniform as possible. An abusive host will likely be on the same network
+as other abusive hosts. One exception to the effectiveness of this is if the
+attacker controls a botnet. Then we're screwed.
+
+Make ID non-Trivial to Acquire
+------------------------------
+If the ID were sent in the ping message it would be easy for an attacker to
+target a specific k-bucket in which to put a Sybil. To mitigate this don't send
+the ID until necessary (after TCP establishment only). This way it becomes more
+difficult to target specific k-buckets.
+
+
+Flooding
+========
+Flooding is when a host sends messages at a very high rate. This can degrade
+performance for everyone if we try to respond to every message. The solution to
+this is to associate a rate limit with the IP addresses of incoming messages.
+
+Because the source address of a UDP packet can be forged this will allow a
+posible DOS. For example if host A (attacker) spoofs B (victim), and then host A
+intentionally floods C (a Kad server host B wants to use), then B will be unable
+to communicate with C. However, this attack is not very practical under real
+world conditions because A generally wouldn't know what address to spoof.
+
+When the rate limit is reached for a host incoming messages from them can be
+silently dropped.

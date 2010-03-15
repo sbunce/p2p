@@ -21,18 +21,21 @@ public:
 		Returns true if incoming message received. False if we don't expect the
 		message. Message is removed from front of recv_buf if true returned.
 	*/
-	virtual bool expect(const network::buffer & recv_buf) = 0;
-	virtual bool recv(network::buffer & recv_buf) = 0;
+	virtual bool expect(const network::buffer & recv_buf,
+		const network::endpoint & endpoint) = 0;
+	virtual bool recv(const network::buffer & recv_buf,
+		const network::endpoint & endpoint) = 0;
 };
 
 class ping : public base
 {
 public:
-	typedef boost::function<void (const network::buffer & random,
-		const std::string & ID)> handler;
+	typedef boost::function<void (const network::endpoint & endpoint,
+		const network::buffer & random)> handler;
 	ping(handler func_in);
 	virtual bool expect(const network::buffer & recv_buf);
-	virtual bool recv(network::buffer & recv_buf);
+	virtual bool recv(const network::buffer & recv_buf,
+		const network::endpoint & endpoint);
 private:
 	handler func;
 	const network::buffer random;
@@ -41,10 +44,12 @@ private:
 class pong : public base
 {
 public:
-	typedef boost::function<void (const std::string & ID)> handler;
+	typedef boost::function<void (const network::endpoint & endpoint,
+		const std::string & ID)> handler;
 	pong(handler func_in, const network::buffer & random_in);
 	virtual bool expect(const network::buffer & recv_buf);
-	virtual bool recv(network::buffer & recv_buf);
+	virtual bool recv(const network::buffer & recv_buf,
+		const network::endpoint & endpoint);
 private:
 	handler func;
 	const network::buffer random;
@@ -64,7 +69,7 @@ public:
 class ping : public base
 {
 public:
-	ping(const network::buffer & random, const std::string & ID);
+	ping(const network::buffer & random);
 };
 
 class pong : public base

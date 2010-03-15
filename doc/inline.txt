@@ -3,6 +3,7 @@ What is 'inline'?
 The inline keyword is a hint to the compiler that a function should be inlined.
 It is a hint because even if you specify it the function may not be inlined.
 
+
 When should I use 'inline'?
 ===========================
 Like any optimization inline should not be used unless a performance advantage

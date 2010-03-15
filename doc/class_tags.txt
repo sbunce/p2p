@@ -1,0 +1,29 @@
+What is a class tag?
+====================
+A class tag is a comment near the top of a class header file which lists basic
+attributes of a class.
+
+Grammar of tags:
+<base> = "//tags: "<tag_line>
+<tag_line> = <tag>|<tag><tag_line>|""
+
+Example:
+//tags: monitor
+
+
+Types of class tags.
+====================
+
+disk_access
+-----------
+Class does disk access. This tag is important because the programmer may have
+to consider the implications of disk latency on the calling thread.
+
+montior
+-------
+Class is internally locked. Multiple threads may call member functions
+concurrently.
+
+threaded_call_back
+-----
+Class has internal threads which it uses to do call backs.

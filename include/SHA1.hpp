@@ -192,12 +192,14 @@ private:
 	}
 
 	//bit rotation
-	boost::uint32_t rotate_right(boost::uint32_t data, int bits)
+	boost::uint32_t rotate_right(boost::uint32_t data, unsigned bits)
 	{
+		assert(bits <= 32);
 		return ((data >> bits) | (data << (32 - bits)));
 	}
-	boost::uint32_t rotate_left(boost::uint32_t data, int bits)
+	boost::uint32_t rotate_left(boost::uint32_t data, unsigned bits)
 	{
+		assert(bits <= 32);
 		return ((data << bits) | (data >> (32 - bits)));
 	}
 };

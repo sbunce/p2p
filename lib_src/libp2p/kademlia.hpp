@@ -42,7 +42,7 @@ private:
 	/* Receive Functions
 	Called when message received. Function named after message type it handles.
 	*/
-	void recv_ping(const network::buffer & random, const std::string & remote_ID);
-	void recv_pong(const std::string & remote_ID);
+	void recv_ping(const network::endpoint & endpoint, const network::buffer & random);
+	void recv_pong(const network::endpoint & endpoint, const std::string & remote_ID);
 };
 #endif

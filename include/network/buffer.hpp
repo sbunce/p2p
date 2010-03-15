@@ -187,7 +187,7 @@ public:
 
 		}
 
-		int pos;              //offset from start of buffer iterator is at
+		int pos;             //offset from start of buffer iterator is at
 		unsigned char * buf; //buf that exists in buffer which spawned this iterator
 	};
 
