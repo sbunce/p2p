@@ -21,8 +21,7 @@ public:
 		Returns true if incoming message received. False if we don't expect the
 		message. Message is removed from front of recv_buf if true returned.
 	*/
-	virtual bool expect(const network::buffer & recv_buf,
-		const network::endpoint & endpoint) = 0;
+	virtual bool expect(const network::buffer & recv_buf) = 0;
 	virtual bool recv(const network::buffer & recv_buf,
 		const network::endpoint & endpoint) = 0;
 };

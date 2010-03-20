@@ -1,5 +1,23 @@
 #include "exchange_udp.hpp"
 
+//BEGIN expect_response_element
+exchange_udp::expect_response_element::expect_response_element(
+	boost::shared_ptr<message_udp::recv::base> message_in,
+	boost::function<void()> timeout_call_back_in
+):
+	message(message_in),
+	timeout_call_back(timeout_call_back_in),
+	time_first_expected(std::time(NULL))
+{
+
+}
+
+bool exchange_udp::expect_response_element::timed_out()
+{
+	return std::time(NULL) - time_first_expected > 60;
+}
+//END expect_response_element
+
 exchange_udp::exchange_udp()
 {
 	//setup UDP listener
@@ -32,12 +50,15 @@ void exchange_udp::expect_anytime_remove(boost::shared_ptr<message_udp::send::ba
 	}
 }
 
-void exchange_udp::expect_response(boost::shared_ptr<message_udp::recv::base> M)
+void exchange_udp::expect_response(boost::shared_ptr<message_udp::recv::base> M,
+	const network::endpoint & endpoint,
+	boost::function<void()> timeout_call_back)
 {
-	Expect_Response.push_back(M);
+	Expect_Response.insert(std::make_pair(endpoint,
+		expect_response_element(M, timeout_call_back)));
 }
 
-void exchange_udp::recv()
+void exchange_udp::tick()
 {
 	//wait for message to arrive
 	std::set<int> read, write;
@@ -55,12 +76,12 @@ void exchange_udp::recv()
 	assert(from);
 
 	//check if expected response
-	for(std::list<boost::shared_ptr<message_udp::recv::base> >::iterator
-		iter_cur = Expect_Response.begin(), iter_end = Expect_Response.end();
-		iter_cur != iter_end; ++iter_cur)
-	{
-		if((*iter_cur)->recv(recv_buf)){
-			Expect_Response.erase(iter_cur);
+	std::pair<std::multimap<network::endpoint, expect_response_element>::iterator,
+		std::multimap<network::endpoint, expect_response_element>::iterator >
+		range = Expect_Response.equal_range(*from);
+	for(; range.first != range.second; ++range.first){
+		if(range.first->second.message->recv(recv_buf, *from)){
+			Expect_Response.erase(range.first);
 			return;
 		}
 	}
@@ -70,8 +91,23 @@ void exchange_udp::recv()
 		iter_cur = Expect_Anytime.begin(), iter_end = Expect_Anytime.end();
 		iter_cur != iter_end; ++iter_cur)
 	{
-		if((*iter_cur)->recv(recv_buf)){
+		if((*iter_cur)->recv(recv_buf, *from)){
 			return;
+		}
+	}
+
+	//check timeouts
+	for(std::multimap<network::endpoint, expect_response_element>::iterator
+		iter_cur = Expect_Response.begin(), iter_end = Expect_Response.end();
+		iter_cur != iter_end;)
+	{
+		if(iter_cur->second.timed_out()){
+			if(iter_cur->second.timeout_call_back){
+				iter_cur->second.timeout_call_back();
+			}
+			Expect_Response.erase(iter_cur++);
+		}else{
+			++iter_cur;
 		}
 	}
 }

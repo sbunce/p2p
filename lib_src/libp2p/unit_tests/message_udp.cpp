@@ -8,6 +8,7 @@
 int fail(0);
 const network::buffer test_random(portable_urandom(8));
 const std::string test_ID("0123456789012345678901234567890123456789");
+boost::shared_ptr<network::endpoint> endpoint;
 
 void ping_call_back(const network::endpoint & endpoint,
 	const network::buffer & random)
@@ -26,6 +27,9 @@ void pong_call_back(const network::endpoint & endpoint, const std::string & ID)
 
 int main()
 {
+	std::set<network::endpoint> endpoint_set = network::get_endpoint("localhost", "1234", network::udp);
+	assert(!endpoint_set.empty());
+	endpoint = boost::shared_ptr<network::endpoint>(new network::endpoint(*endpoint_set.begin()));
 	boost::shared_ptr<message_udp::recv::base> M_recv;
 	boost::shared_ptr<message_udp::send::base> M_send;
 
@@ -34,7 +38,7 @@ int main()
 		&ping_call_back));
 	M_send = boost::shared_ptr<message_udp::send::base>(new message_udp::send::ping(
 		test_random));
-	if(!M_recv->recv(M_send->buf)){
+	if(!M_recv->recv(M_send->buf, *endpoint)){
 		LOGGER; ++fail;
 	}
 
@@ -43,7 +47,7 @@ int main()
 		&pong_call_back, test_random));
 	M_send = boost::shared_ptr<message_udp::send::base>(new message_udp::send::pong(
 		test_random, test_ID));
-	if(!M_recv->recv(M_send->buf)){
+	if(!M_recv->recv(M_send->buf, *endpoint)){
 		LOGGER; ++fail;
 	}
 

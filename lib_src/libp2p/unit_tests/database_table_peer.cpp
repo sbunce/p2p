@@ -21,7 +21,7 @@ int main()
 	database::table::peer::add(info);
 
 	//verify
-	std::vector<database::table::peer::info> resume = database::table::peer::resume();
+	std::list<database::table::peer::info> resume = database::table::peer::resume();
 	if(resume.size() != 1){
 		LOGGER; ++fail;
 	}else{

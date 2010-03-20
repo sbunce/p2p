@@ -12,9 +12,12 @@
 #include <set>
 
 namespace network{
+
+//classes which need access to private addrinfo
 class listener;
 class ndgram;
 class nstream;
+
 class endpoint
 {
 	friend class listener;
@@ -71,8 +74,17 @@ public:
 
 	bool operator < (const endpoint & rval) const
 	{
-		//return std::memcmp(
 		return IP() + port() < rval.IP() + rval.port();
+	}
+
+	bool operator == (const endpoint & rval) const
+	{
+		return !(*this < rval) && !(rval < *this);
+	}
+
+	bool operator != (const endpoint & rval) const
+	{
+		return !(*this == rval);
 	}
 
 private:
