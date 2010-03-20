@@ -1,8 +1,7 @@
 #include "kademlia.hpp"
 
 kademlia::kademlia():
-	local_ID(database::table::prefs::get_ID()),
-	Known_Reserve_Ping(protocol_udp::bucket_count)
+	local_ID(database::table::prefs::get_ID())
 {
 	//messages to expect anytime
 	Exchange.expect_anytime(boost::shared_ptr<message_udp::recv::base>(

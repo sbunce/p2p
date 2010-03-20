@@ -23,7 +23,7 @@ message_tcp::recv::block::block(
 bool message_tcp::recv::block::expect(const network::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
-	return recv_buf.const_data()[0] == protocol_tcp::block;
+	return recv_buf[0] == protocol_tcp::block;
 }
 
 message_tcp::recv::status message_tcp::recv::block::recv(network::buffer & recv_buf)
@@ -60,7 +60,7 @@ message_tcp::recv::close_slot::close_slot(
 bool message_tcp::recv::close_slot::expect(const network::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
-	return recv_buf.const_data()[0] == protocol_tcp::close_slot;
+	return recv_buf[0] == protocol_tcp::close_slot;
 }
 
 message_tcp::recv::status message_tcp::recv::close_slot::recv(network::buffer & recv_buf)
@@ -128,7 +128,7 @@ message_tcp::recv::error::error(
 bool message_tcp::recv::error::expect(const network::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
-	return recv_buf.const_data()[0] == protocol_tcp::error;
+	return recv_buf[0] == protocol_tcp::error;
 }
 
 message_tcp::recv::status message_tcp::recv::error::recv(network::buffer & recv_buf)
@@ -166,7 +166,7 @@ message_tcp::recv::have_file_block::have_file_block(
 bool message_tcp::recv::have_file_block::expect(const network::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
-	if(recv_buf.const_data()[0] != protocol_tcp::have_file_block){
+	if(recv_buf[0] != protocol_tcp::have_file_block){
 		return false;
 	}
 	if(recv_buf.size() == 1){
@@ -174,7 +174,7 @@ bool message_tcp::recv::have_file_block::expect(const network::buffer & recv_buf
 		return true;
 	}else{
 		//recv_buf.size() >= 2
-		return recv_buf.const_data()[1] == slot_num;
+		return recv_buf[1] == slot_num;
 	}
 }
 
@@ -216,7 +216,7 @@ message_tcp::recv::have_hash_tree_block::have_hash_tree_block(
 bool message_tcp::recv::have_hash_tree_block::expect(const network::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
-	if(recv_buf.const_data()[0] != protocol_tcp::have_hash_tree_block){
+	if(recv_buf[0] != protocol_tcp::have_hash_tree_block){
 		return false;
 	}
 	if(recv_buf.size() == 1){
@@ -224,7 +224,7 @@ bool message_tcp::recv::have_hash_tree_block::expect(const network::buffer & rec
 		return true;
 	}else{
 		//recv_buf.size() >= 2
-		return recv_buf.const_data()[1] == slot_num;
+		return recv_buf[1] == slot_num;
 	}
 }
 
@@ -366,10 +366,10 @@ bool message_tcp::recv::request_file_block::expect(const network::buffer & recv_
 {
 	assert(!recv_buf.empty());
 	if(recv_buf.size() == 1){
-		return recv_buf.const_data()[0] == protocol_tcp::request_file_block;
+		return recv_buf[0] == protocol_tcp::request_file_block;
 	}else{
-		return recv_buf.const_data()[0] == protocol_tcp::request_file_block
-			&& recv_buf.const_data()[1] == slot_num;
+		return recv_buf[0] == protocol_tcp::request_file_block
+			&& recv_buf[1] == slot_num;
 	}
 }
 
@@ -410,10 +410,10 @@ bool message_tcp::recv::request_hash_tree_block::expect(const network::buffer & 
 {
 	assert(!recv_buf.empty());
 	if(recv_buf.size() == 1){
-		return recv_buf.const_data()[0] == protocol_tcp::request_hash_tree_block;
+		return recv_buf[0] == protocol_tcp::request_hash_tree_block;
 	}else{
-		return recv_buf.const_data()[0] == protocol_tcp::request_hash_tree_block
-			&& recv_buf.const_data()[1] == slot_num;
+		return recv_buf[0] == protocol_tcp::request_hash_tree_block
+			&& recv_buf[1] == slot_num;
 	}
 }
 
@@ -450,7 +450,7 @@ message_tcp::recv::request_slot::request_slot(
 bool message_tcp::recv::request_slot::expect(const network::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
-	return recv_buf.const_data()[0] == protocol_tcp::request_slot;
+	return recv_buf[0] == protocol_tcp::request_slot;
 }
 
 message_tcp::recv::status message_tcp::recv::request_slot::recv(network::buffer & recv_buf)
@@ -487,7 +487,7 @@ message_tcp::recv::slot::slot(
 bool message_tcp::recv::slot::expect(const network::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
-	return recv_buf.const_data()[0] == protocol_tcp::slot;
+	return recv_buf[0] == protocol_tcp::slot;
 }
 
 message_tcp::recv::status message_tcp::recv::slot::recv(network::buffer & recv_buf)

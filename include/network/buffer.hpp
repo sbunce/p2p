@@ -218,7 +218,7 @@ public:
 	//append another buffer to buffer
 	buffer & append(const buffer & buf_append)
 	{
-		append(reinterpret_cast<const unsigned char *>(buf_append.const_data()),
+		append(reinterpret_cast<const unsigned char *>(buf_append.data()),
 			buf_append.size());
 		return *this;
 	}
@@ -236,7 +236,7 @@ public:
 	}
 
 	//return const pointer to start of internal buffer
-	const unsigned char * const_data() const
+	const unsigned char * data() const
 	{
 		return buf;
 	}
@@ -345,6 +345,12 @@ public:
 	{
 		assert(reserved >= bytes);
 		return reserved - bytes;
+	}
+
+	const unsigned char operator [] (const int index) const
+	{
+		assert(index < bytes && index >= 0);
+		return buf[index];
 	}
 
 	unsigned char & operator [] (const int index)

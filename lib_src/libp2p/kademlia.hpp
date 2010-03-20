@@ -27,9 +27,6 @@ private:
 	//nodes that don't fit in k_bucket
 	std::set<network::endpoint> Known_Reserve[protocol_udp::bucket_count];
 
-	//
-	bit_field Known_Reserve_Ping;
-
 	//nodes we don't know the ID of
 	std::set<network::endpoint> Unknown_Reserve;
 

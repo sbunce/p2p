@@ -12,7 +12,7 @@ message_udp::recv::ping::ping(
 bool message_udp::recv::ping::expect(const network::buffer & recv_buf)
 {
 	return recv_buf.size() == protocol_udp::ping_size
-		&& recv_buf.const_data()[0] == protocol_udp::ping;
+		&& recv_buf[0] == protocol_udp::ping;
 }
 
 bool message_udp::recv::ping::recv(const network::buffer & recv_buf,
@@ -21,7 +21,7 @@ bool message_udp::recv::ping::recv(const network::buffer & recv_buf,
 	if(!expect(recv_buf)){
 		return false;
 	}
-	network::buffer random(recv_buf.const_data()+1, 8);
+	network::buffer random(recv_buf.data()+1, 8);
 	func(endpoint, random);
 	return true;
 }
@@ -43,10 +43,10 @@ bool message_udp::recv::pong::expect(const network::buffer & recv_buf)
 	if(recv_buf.size() != protocol_udp::pong_size){
 		return false;
 	}
-	if(recv_buf.const_data()[0] != protocol_udp::pong){
+	if(recv_buf[0] != protocol_udp::pong){
 		return false;
 	}
-	return std::memcmp(recv_buf.const_data()+1, random.const_data(), 8) == 0;
+	return std::memcmp(recv_buf.data()+1, random.data(), 8) == 0;
 }
 
 bool message_udp::recv::pong::recv(const network::buffer & recv_buf,
@@ -56,7 +56,7 @@ bool message_udp::recv::pong::recv(const network::buffer & recv_buf,
 		return false;
 	}
 	std::string ID(convert::bin_to_hex(std::string(reinterpret_cast<const char *>(
-		recv_buf.const_data())+9, 20)));
+		recv_buf.data())+9, 20)));
 	func(endpoint, ID);
 	return true;
 }

@@ -37,12 +37,12 @@ bool encryption::recv_p_rA(const network::buffer & buf)
 	enable_send_rB = true;
 
 	assert(buf.size() == protocol_tcp::DH_key_size * 2);
-	p = mpint(buf.const_data(), protocol_tcp::DH_key_size);
+	p = mpint(buf.data(), protocol_tcp::DH_key_size);
 	if(!p.is_prime()){
 		//invalid prime
 		return false;
 	}
-	remote_result = mpint(buf.const_data() + protocol_tcp::DH_key_size, protocol_tcp::DH_key_size);
+	remote_result = mpint(buf.data() + protocol_tcp::DH_key_size, protocol_tcp::DH_key_size);
 	local_result = g.exptmod(s, p);
 	shared_key = remote_result.exptmod(s, p);
 	if(shared_key.to_bin_size() == protocol_tcp::DH_key_size){
@@ -67,7 +67,7 @@ void encryption::recv_rB(const network::buffer & buf)
 	enable_crypt = true;
 
 	assert(buf.size() == protocol_tcp::DH_key_size);
-	remote_result = mpint(buf.const_data(), protocol_tcp::DH_key_size);
+	remote_result = mpint(buf.data(), protocol_tcp::DH_key_size);
 	shared_key = remote_result.exptmod(s, p);
 	if(shared_key.to_bin_size() == protocol_tcp::DH_key_size){
 		PRNG_send.seed(shared_key.to_bin(), shared_key.to_bin_size());
