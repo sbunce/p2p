@@ -75,5 +75,11 @@ private:
 	Incoming messages that we expect anytime. These messages are not responses.
 	*/
 	std::list<boost::shared_ptr<message_udp::recv::base> > Expect_Anytime;
+
+	/*
+	check_timeouts:
+		Checks for timeouts and does timeout call backs.
+	*/
+	void check_timeouts();
 };
 #endif

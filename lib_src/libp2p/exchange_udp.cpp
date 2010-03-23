@@ -31,6 +31,25 @@ exchange_udp::exchange_udp()
 	assert(ndgram.is_open());
 }
 
+void exchange_udp::check_timeouts()
+{
+	for(std::multimap<network::endpoint, expect_response_element>::iterator
+		iter_cur = Expect_Response.begin(), iter_end = Expect_Response.end();
+		iter_cur != iter_end;)
+	{
+		if(iter_cur->second.timed_out()){
+LOGGER;
+			if(iter_cur->second.timeout_call_back){
+LOGGER;
+				iter_cur->second.timeout_call_back();
+			}
+			Expect_Response.erase(iter_cur++);
+		}else{
+			++iter_cur;
+		}
+	}
+}
+
 void exchange_udp::expect_anytime(boost::shared_ptr<message_udp::recv::base> M)
 {
 	Expect_Anytime.push_back(M);
@@ -63,9 +82,11 @@ void exchange_udp::tick()
 	//wait for message to arrive
 	std::set<int> read, write;
 	read.insert(ndgram.socket());
-	select(read, write, 100);
+	select(read, write, 1000);
+
 	if(read.empty()){
 		//nothing received
+		check_timeouts();
 		return;
 	}
 
@@ -84,6 +105,7 @@ void exchange_udp::tick()
 			Expect_Response.erase(range.first);
 			return;
 		}
+
 	}
 
 	//check if expected anytime
@@ -96,20 +118,7 @@ void exchange_udp::tick()
 		}
 	}
 
-	//check timeouts
-	for(std::multimap<network::endpoint, expect_response_element>::iterator
-		iter_cur = Expect_Response.begin(), iter_end = Expect_Response.end();
-		iter_cur != iter_end;)
-	{
-		if(iter_cur->second.timed_out()){
-			if(iter_cur->second.timeout_call_back){
-				iter_cur->second.timeout_call_back();
-			}
-			Expect_Response.erase(iter_cur++);
-		}else{
-			++iter_cur;
-		}
-	}
+	check_timeouts();
 }
 
 void exchange_udp::send(boost::shared_ptr<message_udp::send::base> M,

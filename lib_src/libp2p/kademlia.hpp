@@ -25,10 +25,14 @@ private:
 	k_bucket Bucket[protocol_udp::bucket_count];
 
 	//nodes that don't fit in k_bucket
+//DEBUG, possible DOS because we use .begin() each time. A list would insure we
+//try new nodes instead of readd'ing/retrying same endpoint over and over.
 	std::set<network::endpoint> Known_Reserve[protocol_udp::bucket_count];
+	unsigned Known_Reserve_Ping[protocol_udp::bucket_count]; //pending pings
 
 	//nodes we don't know the ID of
 	std::set<network::endpoint> Unknown_Reserve;
+	unsigned Unknown_Reserve_Ping;
 
 	/*
 	calc_bucket:
@@ -44,19 +48,30 @@ private:
 	*/
 	unsigned calc_bucket(const std::string & remote_ID);
 	void do_pings();
-	bool endpoint_exists_in_k_bucket(const network::endpoint & endpoint);
-	bool endpoint_exists_in_reserve(const network::endpoint & endpoint);
 	void main_loop();
 
 	/* Receive Functions
 	Called when message received. Function named after message type it handles.
+	recv_ping:
+		Received ping.
+	recv_pong:
+		Received pong that's result of pinging contact in k_bucket.
+	recv_pong_known_reserve:
+		Received pong that's result of pinging contact in known_reserve.
+	recv_pong_unknown_reserve:
+		Received pong that's result of pinging contact in unknown_reserve.
 	*/
 	void recv_ping(const network::endpoint & endpoint, const network::buffer & random);
 	void recv_pong(const network::endpoint & endpoint, const std::string & remote_ID);
+	void recv_pong_known_reserve(const network::endpoint & endpoint, const std::string & remote_ID,
+		const unsigned expected_bucket_num);
+	void recv_pong_unknown_reserve(const network::endpoint & endpoint, const std::string & remote_ID);
 
 	/* Timeout Functions
 	Called when a request times out.
 	*/
-	void timeout_ping(const network::endpoint endpoint);
+	void timeout_ping_bucket(const network::endpoint endpoint, const unsigned bucket_num);
+	void timeout_ping_known_reserve(const network::endpoint endpoint, const unsigned bucket_num);
+	void timeout_ping_unknown_reserve(const network::endpoint endpoint);
 };
 #endif
