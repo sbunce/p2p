@@ -1,0 +1,9 @@
+#standard
+import glob
+
+SConscript([
+	'unit_tests/SConscript'
+])
+
+Import('env_base')
+env_base.StaticLibrary('#lib/mpa', glob.glob('*.cpp'))

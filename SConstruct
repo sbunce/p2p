@@ -6,7 +6,7 @@ env_base = Environment()
 main.setup(env_base)
 Export('env_base')
 
-print 'scons: starting',env_base.GetOption('num_jobs'),'builder'
+print 'scons: starting',env_base.GetOption('num_jobs'),'builders'
 
 SConscript([
 	'gui_gtkmm/SConscript',

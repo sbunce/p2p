@@ -1,4 +1,3 @@
-//THREADSAFE, SINGLETON, THREAD SPAWNING
 #ifndef H_PRIME_GENERATOR
 #define H_PRIME_GENERATOR
 
@@ -11,9 +10,9 @@
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
+#include <mpa.hpp>
 #include <random.hpp>
 #include <RC4.hpp>
-#include <tommath/mpint.hpp>
 
 //standard
 #include <cstdlib>
@@ -34,7 +33,7 @@ public:
 		Returns prime in prime cache. Size of prime is always settings::DH_KEY_SIZE.
 	*/
 	unsigned prime_count();
-	mpint random_prime();
+	mpa::mpint random_prime();
 
 private:
 	prime_generator();
@@ -51,7 +50,7 @@ private:
 	boost::mutex prime_mutex;
 
 	//cache of primes, all access must be locked with prime_mutex
-	std::vector<mpint> Prime_Cache;
+	std::vector<mpa::mpint> Prime_Cache;
 
 	/*
 	main_loop:

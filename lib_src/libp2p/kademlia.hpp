@@ -25,8 +25,6 @@ private:
 	k_bucket Bucket[protocol_udp::bucket_count];
 
 	//nodes that don't fit in k_bucket
-//DEBUG, possible DOS because we use .begin() each time. A list would insure we
-//try new nodes instead of readd'ing/retrying same endpoint over and over.
 	std::set<network::endpoint> Known_Reserve[protocol_udp::bucket_count];
 	unsigned Known_Reserve_Ping[protocol_udp::bucket_count]; //pending pings
 

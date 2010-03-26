@@ -22,7 +22,7 @@ public:
 		seed(buf, max_seed);
 	}
 
-	void seed(unsigned char * buf, int size)
+	void seed(const unsigned char * buf, int size)
 	{
 		/*
 		Seed must be at least one byte. It can be longer than 256 but the extra

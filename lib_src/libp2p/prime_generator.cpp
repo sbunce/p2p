@@ -15,9 +15,7 @@ prime_generator::~prime_generator()
 
 void prime_generator::main_loop()
 {
-	RC4 PRNG;
-	PRNG.seed();
-	mpint random_prime;
+	mpa::mpint random_prime;
 	while(true){
 		boost::this_thread::interruption_point();
 		{//begin lock scope
@@ -28,7 +26,7 @@ void prime_generator::main_loop()
 		}//end lock scope
 
 		//this should not be locked
-		random_prime = mpint::random_prime_fast(protocol_tcp::DH_key_size, PRNG);
+		random_prime = mpa::random_prime(protocol_tcp::DH_key_size);
 
 		{//begin lock scope
 		boost::mutex::scoped_lock lock(prime_mutex);
@@ -52,15 +50,15 @@ unsigned prime_generator::prime_count()
 	return Prime_Cache.size();
 }
 
-mpint prime_generator::random_prime()
+mpa::mpint prime_generator::random_prime()
 {
-	mpint temp;
+	mpa::mpint tmp;
 	boost::mutex::scoped_lock lock(prime_mutex);
 	while(Prime_Cache.empty()){
 		prime_remove_cond.wait(prime_mutex);
 	}
-	temp = Prime_Cache.back();
+	tmp = Prime_Cache.back();
 	Prime_Cache.pop_back();
 	prime_generate_cond.notify_one();
-	return temp;
+	return tmp;
 }

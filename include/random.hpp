@@ -19,7 +19,7 @@
 #endif
 
 //tommath requires this function signature
-static int portable_urandom(unsigned char * buf, int size, void * data)
+static int portable_urandom(unsigned char * buf, int size, void * data = NULL)
 {
 #ifdef _WIN32
 	HCRYPTPROV hProvider = 0;

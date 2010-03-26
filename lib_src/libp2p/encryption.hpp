@@ -10,9 +10,9 @@
 //include
 #include <boost/utility.hpp>
 #include <RC4.hpp>
+#include <mpa.hpp>
 #include <network/network.hpp>
 #include <random.hpp>
-#include <tommath/mpint.hpp>
 
 //std
 #include <cassert>
@@ -47,12 +47,12 @@ public:
 
 private:
 	//Diffie-Hellman key exchange components. (g^s % p)
-	mpint g; //agreed upon base (the generator, always 2)
-	mpint p; //agreed upon prime
-	mpint s; //secret exponent
-	mpint local_result;  //result of g^s % p with our secret s
-	mpint remote_result; //result of remote host g^s % p
-	mpint shared_key;    //agreed upon key (used as seed for PRNG)
+	mpa::mpint g; //agreed upon base (the generator, always 2)
+	mpa::mpint p; //agreed upon prime
+	mpa::mpint s; //secret exponent
+	mpa::mpint local_result;  //result of g^s % p with our secret s
+	mpa::mpint remote_result; //result of remote host g^s % p
+	mpa::mpint shared_key;    //agreed upon key (used as seed for PRNG)
 
 	//stream cypher
 	RC4 PRNG_send;

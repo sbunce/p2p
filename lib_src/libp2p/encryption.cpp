@@ -2,7 +2,7 @@
 
 encryption::encryption():
 	g("2"),
-	s(mpint::random(protocol_tcp::DH_key_size, &portable_urandom))
+	s(mpa::random(protocol_tcp::DH_key_size))
 {
 	set_enable_false();
 	enable_send_p_rA = true;
@@ -37,26 +37,18 @@ bool encryption::recv_p_rA(const network::buffer & buf)
 	enable_send_rB = true;
 
 	assert(buf.size() == protocol_tcp::DH_key_size * 2);
-	p = mpint(buf.data(), protocol_tcp::DH_key_size);
-	if(!p.is_prime()){
+	p = mpa::mpint(buf.data(), protocol_tcp::DH_key_size);
+	if(!mpa::is_prime(p)){
 		//invalid prime
 		return false;
 	}
-	remote_result = mpint(buf.data() + protocol_tcp::DH_key_size, protocol_tcp::DH_key_size);
-	local_result = g.exptmod(s, p);
-	shared_key = remote_result.exptmod(s, p);
-	if(shared_key.to_bin_size() == protocol_tcp::DH_key_size){
-		PRNG_send.seed(shared_key.to_bin(), shared_key.to_bin_size());
-		PRNG_recv.seed(shared_key.to_bin(), shared_key.to_bin_size());
-	}else{
-		//high order byte(s) empty, pad big-endian representation of mpint
-		unsigned char tmp[protocol_tcp::DH_key_size];
-		std::memset(tmp, 0, protocol_tcp::DH_key_size);
-		std::memcpy(tmp + (protocol_tcp::DH_key_size - shared_key.to_bin_size()),
-			shared_key.to_bin(), shared_key.to_bin_size());
-		PRNG_send.seed(tmp, protocol_tcp::DH_key_size);
-		PRNG_recv.seed(tmp, protocol_tcp::DH_key_size);
-	}
+	remote_result = mpa::mpint(buf.data() + protocol_tcp::DH_key_size, protocol_tcp::DH_key_size);
+	local_result = mpa::exptmod(g, s, p);
+	shared_key = mpa::exptmod(remote_result, s, p);
+
+	std::string bin = shared_key.bin(protocol_tcp::DH_key_size);
+	PRNG_send.seed(reinterpret_cast<const unsigned char *>(bin.data()), bin.size());
+	PRNG_recv.seed(reinterpret_cast<const unsigned char *>(bin.data()), bin.size());
 	return true;
 }
 
@@ -67,20 +59,12 @@ void encryption::recv_rB(const network::buffer & buf)
 	enable_crypt = true;
 
 	assert(buf.size() == protocol_tcp::DH_key_size);
-	remote_result = mpint(buf.data(), protocol_tcp::DH_key_size);
-	shared_key = remote_result.exptmod(s, p);
-	if(shared_key.to_bin_size() == protocol_tcp::DH_key_size){
-		PRNG_send.seed(shared_key.to_bin(), shared_key.to_bin_size());
-		PRNG_recv.seed(shared_key.to_bin(), shared_key.to_bin_size());
-	}else{
-		//high order byte(s) empty, pad big-endian representation of mpint
-		unsigned char tmp[protocol_tcp::DH_key_size];
-		std::memset(tmp, 0, protocol_tcp::DH_key_size);
-		std::memcpy(tmp + (protocol_tcp::DH_key_size - shared_key.to_bin_size()),
-			shared_key.to_bin(), shared_key.to_bin_size());
-		PRNG_send.seed(tmp, protocol_tcp::DH_key_size);
-		PRNG_recv.seed(tmp, protocol_tcp::DH_key_size);
-	}
+	remote_result = mpa::mpint(buf.data(), protocol_tcp::DH_key_size);
+	shared_key = mpa::exptmod(remote_result, s, p);
+
+	std::string bin = shared_key.bin(protocol_tcp::DH_key_size);
+	PRNG_send.seed(reinterpret_cast<const unsigned char *>(bin.data()), bin.size());
+	PRNG_recv.seed(reinterpret_cast<const unsigned char *>(bin.data()), bin.size());
 }
 
 network::buffer encryption::send_p_rA()
@@ -91,27 +75,9 @@ network::buffer encryption::send_p_rA()
 
 	network::buffer buf;
 	p = prime_generator::singleton().random_prime();
-	if(p.to_bin_size() == protocol_tcp::DH_key_size){
-		buf.append(p.to_bin(), p.to_bin_size());
-	}else{
-		//high order byte(s) empty, pad big-endian representation of mpint
-		unsigned char tmp[protocol_tcp::DH_key_size];
-		std::memset(tmp, 0, protocol_tcp::DH_key_size);
-		std::memcpy(tmp + (protocol_tcp::DH_key_size - p.to_bin_size()), p.to_bin(),
-			p.to_bin_size());
-		buf.append(tmp, protocol_tcp::DH_key_size);
-	}
-	local_result = g.exptmod(s, p);
-	if(local_result.to_bin_size() == protocol_tcp::DH_key_size){
-		buf.append(local_result.to_bin(), local_result.to_bin_size());
-	}else{
-		//high order byte(s) empty, pad big-endian representation of mpint
-		unsigned char tmp[protocol_tcp::DH_key_size];
-		std::memset(tmp, 0, protocol_tcp::DH_key_size);
-		std::memcpy(tmp + (protocol_tcp::DH_key_size - local_result.to_bin_size()),
-			local_result.to_bin(), local_result.to_bin_size());
-		buf.append(tmp, protocol_tcp::DH_key_size);
-	}
+	buf.append(p.bin(protocol_tcp::DH_key_size));
+	local_result = mpa::exptmod(g, s, p);
+	buf.append(local_result.bin(protocol_tcp::DH_key_size));
 	return buf;
 }
 
@@ -122,16 +88,7 @@ network::buffer encryption::send_rB()
 	enable_crypt = true;
 
 	network::buffer buf;
-	if(local_result.to_bin_size() == protocol_tcp::DH_key_size){
-		buf.append(local_result.to_bin(), local_result.to_bin_size());
-	}else{
-		//high order byte(s) empty, pad big-endian representation of mpint
-		unsigned char tmp[protocol_tcp::DH_key_size];
-		std::memset(tmp, 0, protocol_tcp::DH_key_size);
-		std::memcpy(tmp + (protocol_tcp::DH_key_size - local_result.to_bin_size()),
-			local_result.to_bin(), local_result.to_bin_size());
-		buf.append(tmp, protocol_tcp::DH_key_size);
-	}
+	buf.append(local_result.bin(protocol_tcp::DH_key_size));
 	return buf;
 }
 
