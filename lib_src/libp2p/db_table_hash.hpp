@@ -1,8 +1,8 @@
-#ifndef H_DATABASE_TABLE_HASH
-#define H_DATABASE_TABLE_HASH
+#ifndef H_DB_TABLE_HASH
+#define H_DB_TABLE_HASH
 
 //custom
-#include "database.hpp"
+#include "db_all.hpp"
 #include "path.hpp"
 #include "settings.hpp"
 
@@ -15,7 +15,7 @@
 #include <cstring>
 #include <sstream>
 
-namespace database{
+namespace db{
 namespace table{
 class hash
 {
@@ -32,7 +32,7 @@ public:
 		std::string hash;
 		boost::uint64_t tree_size;
 		state tree_state;
-		database::blob blob;
+		db::blob blob;
 	};
 
 	/*
@@ -49,13 +49,13 @@ public:
 		Sets the state of the hash tree.
 	*/
 	static bool add(const std::string & hash, const boost::uint64_t tree_size,
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 	static boost::shared_ptr<info> find(const std::string & hash,
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 	static void remove(const std::string & hash,
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 	static void set_state(const std::string & hash, const state tree_state,
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 private:
 	hash(){}
 };

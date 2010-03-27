@@ -1,6 +1,6 @@
 /*
 ************************** Open: ***********************************************
- database::connection DB("database");
+ db::connection DB("database");
 
 ************************** Query: **********************************************
 The call back must have this signature:
@@ -26,7 +26,7 @@ Resizing blob is not possible, but you can replace a blob:
 	boost::int64_t rowid = DB.blob_allocate("UPDATE test SET test_blob = ?", 2);
 
 Open a blob:
-	database::blob Blob("test", "test_blob", rowid);
+	db::blob Blob("test", "test_blob", rowid);
 
 Write blob:
 	const char * write_buff = "ABC";
@@ -36,8 +36,8 @@ Read blob:
 	char read_buff[4];
 	DB.blob_read(Blob, read_buff, 4, 0);
 */
-#ifndef H_DATABASE_CONNECTION
-#define H_DATABASE_CONNECTION
+#ifndef H_DB_CONNECTION
+#define H_DB_CONNECTION
 
 //include
 #include <atomic_int.hpp>
@@ -46,7 +46,7 @@ Read blob:
 #include <boost/thread.hpp>
 #include <logger.hpp>
 
-namespace database{
+namespace db{
 
 //predecl for PIMPL
 #ifndef _SQLITE3_H_
@@ -136,5 +136,5 @@ private:
 //function to return std::string with control characters escaped
 std::string escape(const std::string & str);
 
-}//end of database namespace
+}//end of namespace db
 #endif

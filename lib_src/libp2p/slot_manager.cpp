@@ -447,7 +447,7 @@ void slot_manager::remove(const std::string & hash)
 
 void slot_manager::resume(const std::string & peer_ID)
 {
-	std::set<std::string> hash = database::table::join::resume_hash(peer_ID);
+	std::set<std::string> hash = db::table::join::resume_hash(peer_ID);
 	for(std::set<std::string>::iterator iter_cur = hash.begin(), iter_end = hash.end();
 		iter_cur != iter_end; ++iter_cur)
 	{

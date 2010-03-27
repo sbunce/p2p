@@ -1,8 +1,8 @@
-#ifndef H_DATABASE_TABLE_PEER
-#define H_DATABASE_TABLE_PEER
+#ifndef H_DB_TABLE_PEER
+#define H_DB_TABLE_PEER
 
 //custom
-#include "database.hpp"
+#include "db_all.hpp"
 
 //include
 #include <boost/shared_ptr.hpp>
@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-namespace database{
+namespace db{
 namespace table{
 class peer
 {
@@ -43,11 +43,11 @@ public:
 		Returns all peers in table.
 	*/
 	static void add(const info & Info,
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 	static void remove(const std::string ID,
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 	static std::list<info> resume(
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 
 private:
 	peer(){}

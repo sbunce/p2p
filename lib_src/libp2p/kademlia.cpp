@@ -1,7 +1,7 @@
 #include "kademlia.hpp"
 
 kademlia::kademlia():
-	local_ID(database::table::prefs::get_ID()),
+	local_ID(db::table::prefs::get_ID()),
 	Unknown_Reserve_Ping(0)
 {
 	for(int x=0; x<protocol_udp::bucket_count; ++x){
@@ -100,7 +100,7 @@ void kademlia::do_pings()
 void kademlia::main_loop()
 {
 	//read in hosts from database
-	std::list<database::table::peer::info> tmp = database::table::peer::resume();
+	std::list<db::table::peer::info> tmp = db::table::peer::resume();
 	while(!tmp.empty()){
 		std::set<network::endpoint> E = network::get_endpoint(tmp.back().IP,
 			tmp.back().port, network::udp);

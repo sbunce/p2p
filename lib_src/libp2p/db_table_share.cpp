@@ -1,18 +1,18 @@
-#include "database_table_share.hpp"
+#include "db_table_share.hpp"
 
-void database::table::share::add(const info & Info,
-	database::pool::proxy DB)
+void db::table::share::add(const info & Info,
+	db::pool::proxy DB)
 {
 	std::stringstream ss;
 	ss << "INSERT INTO share(hash, path, file_size, last_write_time, state) VALUES('"
-		<< Info.hash << "', '" << database::escape(Info.path) << "', '" << Info.file_size
+		<< Info.hash << "', '" << db::escape(Info.path) << "', '" << Info.file_size
 		<< "', '" << Info.last_write_time << "', " << Info.file_state << ")";
 	DB->query(ss.str());
 }
 
 //Note: throws exception if bad data
 static void unmarshal_info(int columns, char ** response, char ** column_name,
-	database::table::share::info & Info)
+	db::table::share::info & Info)
 {
 	assert(columns == 5);
 	assert(std::strcmp(column_name[0], "hash") == 0);
@@ -25,25 +25,25 @@ static void unmarshal_info(int columns, char ** response, char ** column_name,
 	Info.file_size = boost::lexical_cast<boost::uint64_t>(response[2]);
 	Info.last_write_time = boost::lexical_cast<std::time_t>(response[3]);
 	int temp = boost::lexical_cast<int>(response[4]);
-	Info.file_state = reinterpret_cast<database::table::share::state &>(temp);
+	Info.file_state = reinterpret_cast<db::table::share::state &>(temp);
 }
 
 static int find_hash_call_back(int columns, char ** response, char ** column_name,
-	boost::shared_ptr<database::table::share::info> & Info)
+	boost::shared_ptr<db::table::share::info> & Info)
 {
-	Info = boost::shared_ptr<database::table::share::info>(
-		new database::table::share::info());
+	Info = boost::shared_ptr<db::table::share::info>(
+		new db::table::share::info());
 	try{
 		unmarshal_info(columns, response, column_name, *Info);
 	}catch(const std::exception & e){
 		LOGGER << e.what();
-		Info = boost::shared_ptr<database::table::share::info>();
+		Info = boost::shared_ptr<db::table::share::info>();
 	}
 	return 0;
 }
 
-boost::shared_ptr<database::table::share::info> database::table::share::find(
-	const std::string & hash, database::pool::proxy DB)
+boost::shared_ptr<db::table::share::info> db::table::share::find(
+	const std::string & hash, db::pool::proxy DB)
 {
 	std::stringstream ss;
 	ss << "SELECT hash, path, file_size, last_write_time, state FROM share WHERE hash = '"
@@ -53,24 +53,24 @@ boost::shared_ptr<database::table::share::info> database::table::share::find(
 	return Info;
 }
 
-void database::table::share::remove(const std::string & path,
-	database::pool::proxy DB)
+void db::table::share::remove(const std::string & path,
+	db::pool::proxy DB)
 {
-	std::string path_escaped = database::escape(path);
+	std::string path_escaped = db::escape(path);
 	std::stringstream ss;
 	ss << "DELETE FROM share WHERE path = '" << path_escaped << "'";
 	DB->query(ss.str());
 }
 
 static int resume_call_back(int columns, char ** response, char ** column_name,
-	std::deque<database::table::share::info> & info_container)
+	std::deque<db::table::share::info> & info_container)
 {
 	if(boost::this_thread::interruption_requested()){
 		//resume query can take a long time, give a chance to end early
 		return -1;
 	}
 	try{
-		database::table::share::info Info;
+		db::table::share::info Info;
 		unmarshal_info(columns, response, column_name, Info);
 		info_container.push_back(Info);
 	}catch(const std::exception & e){
@@ -79,8 +79,8 @@ static int resume_call_back(int columns, char ** response, char ** column_name,
 	return 0;
 }
 
-std::deque<database::table::share::info> database::table::share::resume(
-	database::pool::proxy DB)
+std::deque<db::table::share::info> db::table::share::resume(
+	db::pool::proxy DB)
 {
 	std::deque<info> info_container;
 	DB->query("SELECT hash, path, file_size, last_write_time, state FROM share",
@@ -88,19 +88,19 @@ std::deque<database::table::share::info> database::table::share::resume(
 	return info_container;
 }
 
-void database::table::share::set_state(const std::string & hash,
-	const state file_state, database::pool::proxy DB)
+void db::table::share::set_state(const std::string & hash,
+	const state file_state, db::pool::proxy DB)
 {
 	std::stringstream ss;
 	ss << "UPDATE share SET state = " << file_state << " WHERE hash = '" << hash << "'";
 	DB->query(ss.str());
 }
 
-void database::table::share::update_file_size(const std::string & path,
-	const boost::uint64_t file_size, database::pool::proxy DB)
+void db::table::share::update_file_size(const std::string & path,
+	const boost::uint64_t file_size, db::pool::proxy DB)
 {
 	std::stringstream ss;
 	ss << "UPDATE OR IGNORE share SET file_size = '" << file_size
-		<< "' WHERE path = '" << database::escape(path) << "'";
+		<< "' WHERE path = '" << db::escape(path) << "'";
 	DB->query(ss.str()); 
 }

@@ -1,8 +1,8 @@
-#ifndef H_DATABASE_TABLE_PREFS
-#define H_DATABASE_TABLE_PREFS
+#ifndef H_DB_TABLE_PREFS
+#define H_DB_TABLE_PREFS
 
 //custom
-#include "database.hpp"
+#include "db_all.hpp"
 #include "path.hpp"
 #include "settings.hpp"
 
@@ -12,7 +12,7 @@
 //standard
 #include <string>
 
-namespace database{
+namespace db{
 namespace table{
 class prefs
 {
@@ -23,25 +23,25 @@ public:
 
 	//get a value
 	static unsigned get_max_download_rate(
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 	static unsigned get_max_connections(
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 	static unsigned get_max_upload_rate(
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 	static std::string get_ID(
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 	static std::string get_port(
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 
 	//set a value
 	static void set_max_download_rate(const unsigned rate,
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 	static void set_max_connections(const unsigned connections,
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 	static void set_max_upload_rate(const unsigned rate,
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 	static void set_port(const std::string & port,
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 
 private:
 	prefs(){}

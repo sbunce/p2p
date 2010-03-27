@@ -12,10 +12,10 @@ transfer::transfer(const file_info & FI):
 	assert(FI.file_size != 0);
 
 	//see if tree complete
-	boost::shared_ptr<database::table::hash::info>
-		hash_info = database::table::hash::find(FI.hash);
+	boost::shared_ptr<db::table::hash::info>
+		hash_info = db::table::hash::find(FI.hash);
 	if(hash_info){
-		if(hash_info->tree_state == database::table::hash::complete){
+		if(hash_info->tree_state == db::table::hash::complete){
 			Hash_Tree_Block.add_block_local_all();
 			bytes_received += Hash_Tree.tree_size;
 		}
@@ -24,10 +24,10 @@ transfer::transfer(const file_info & FI):
 	}
 
 	//see if file complete
-	boost::shared_ptr<database::table::share::info>
-		share_info = database::table::share::find(FI.hash);
+	boost::shared_ptr<db::table::share::info>
+		share_info = db::table::share::find(FI.hash);
 	if(share_info){
-		if(share_info->file_state == database::table::share::complete){
+		if(share_info->file_state == db::table::share::complete){
 			File_Block.add_block_local_all();
 			bytes_received += Hash_Tree.file_size;
 		}
@@ -257,7 +257,7 @@ bool transfer::root_hash(std::string & RH)
 {
 	char buf[8 + SHA1::bin_size];
 	std::memcpy(buf, convert::int_to_bin(file_size()).data(), 8);
-	if(!database::pool::get()->blob_read(Hash_Tree.blob, buf+8, SHA1::bin_size, 0)){
+	if(!db::pool::get()->blob_read(Hash_Tree.blob, buf+8, SHA1::bin_size, 0)){
 		return false;
 	}
 	SHA1 SHA(buf, 8 + SHA1::bin_size);
@@ -301,7 +301,7 @@ transfer::status transfer::write_file_block(const int connection_ID,
 			File_Block.add_block_local(connection_ID, block_num);
 			bytes_received += buf.size();
 			if(File_Block.complete()){
-				database::table::share::set_state(Hash_Tree.hash, database::table::share::complete);
+				db::table::share::set_state(Hash_Tree.hash, db::table::share::complete);
 			}
 			return good;
 		}else{
@@ -346,7 +346,7 @@ transfer::status transfer::write_tree_block(const int connection_ID,
 			}
 		}
 		if(Hash_Tree_Block.complete()){
-			database::table::hash::set_state(Hash_Tree.hash, database::table::hash::complete);
+			db::table::hash::set_state(Hash_Tree.hash, db::table::hash::complete);
 		}
 		return good;
 	}else if(status == hash_tree::bad){

@@ -7,7 +7,7 @@ this class is exactly like a file.
 
 //custom
 #include "block_request.hpp"
-#include "database.hpp"
+#include "db_all.hpp"
 #include "file_info.hpp"
 #include "path.hpp"
 #include "protocol_tcp.hpp"
@@ -39,7 +39,7 @@ public:
 	*/
 	hash_tree(
 		const file_info & FI,
-		database::pool::proxy DB = database::pool::proxy()
+		db::pool::proxy DB = db::pool::proxy()
 	);
 
 	enum status{
@@ -53,7 +53,7 @@ public:
 	const std::string hash;                     //hash the file is tracked by
 	const std::string path;                     //path to file the hash tree is for
 	const boost::uint64_t file_size;            //size of file hash tree is for
-	const database::blob blob;                  //blob handle for hash tree in database
+	const db::blob blob;                        //blob handle for hash tree in database
 
 	//info generated based on file_info
 	const std::deque<boost::uint64_t> row;      //number of hashes in each row

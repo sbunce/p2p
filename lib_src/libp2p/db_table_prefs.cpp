@@ -1,4 +1,4 @@
-#include "database_table_prefs.hpp"
+#include "db_table_prefs.hpp"
 
 //call back for all get_* functions which get unsigned int
 static int get_unsigned_call_back(int columns, char ** response,
@@ -25,7 +25,7 @@ static int get_string_call_back(int columns, char ** response,
 	return 0;
 }
 
-unsigned database::table::prefs::get_max_download_rate(database::pool::proxy DB)
+unsigned db::table::prefs::get_max_download_rate(db::pool::proxy DB)
 {
 	unsigned download_rate;
 	DB->query("SELECT value FROM prefs WHERE key = 'max_download_rate'",
@@ -33,7 +33,7 @@ unsigned database::table::prefs::get_max_download_rate(database::pool::proxy DB)
 	return download_rate;
 }
 
-unsigned database::table::prefs::get_max_connections(database::pool::proxy DB)
+unsigned db::table::prefs::get_max_connections(db::pool::proxy DB)
 {
 	unsigned server_connections;
 	DB->query("SELECT value FROM prefs WHERE key = 'max_connections'",
@@ -41,7 +41,7 @@ unsigned database::table::prefs::get_max_connections(database::pool::proxy DB)
 	return server_connections;
 }
 
-unsigned database::table::prefs::get_max_upload_rate(database::pool::proxy DB)
+unsigned db::table::prefs::get_max_upload_rate(db::pool::proxy DB)
 {
 	unsigned upload_rate;
 	DB->query("SELECT value FROM prefs WHERE key = 'max_upload_rate'",
@@ -49,7 +49,7 @@ unsigned database::table::prefs::get_max_upload_rate(database::pool::proxy DB)
 	return upload_rate;
 }
 
-std::string database::table::prefs::get_ID(database::pool::proxy DB)
+std::string db::table::prefs::get_ID(db::pool::proxy DB)
 {
 	std::string peer_ID;
 	DB->query("SELECT value FROM prefs WHERE key = 'ID'",
@@ -58,7 +58,7 @@ std::string database::table::prefs::get_ID(database::pool::proxy DB)
 	return peer_ID;
 }
 
-std::string database::table::prefs::get_port(database::pool::proxy DB)
+std::string db::table::prefs::get_port(db::pool::proxy DB)
 {
 	std::string port;
 	DB->query("SELECT value FROM prefs WHERE key = 'port'",
@@ -68,32 +68,32 @@ std::string database::table::prefs::get_port(database::pool::proxy DB)
 	return port;
 }
 
-void database::table::prefs::set_max_download_rate(const unsigned rate,
-	database::pool::proxy DB)
+void db::table::prefs::set_max_download_rate(const unsigned rate,
+	db::pool::proxy DB)
 {
 	std::stringstream ss;
 	ss << "UPDATE prefs SET value = '" << rate << "' WHERE key = 'max_download_rate'";
 	DB->query(ss.str());
 }
 
-void database::table::prefs::set_max_connections(const unsigned connections,
-	database::pool::proxy DB)
+void db::table::prefs::set_max_connections(const unsigned connections,
+	db::pool::proxy DB)
 {
 	std::stringstream ss;
 	ss << "UPDATE prefs SET value = '" << connections << "' WHERE key = 'max_connections'";
 	DB->query(ss.str());
 }
 
-void database::table::prefs::set_max_upload_rate(const unsigned rate,
-	database::pool::proxy DB)
+void db::table::prefs::set_max_upload_rate(const unsigned rate,
+	db::pool::proxy DB)
 {
 	std::stringstream ss;
 	ss << "UPDATE prefs SET value = '" << rate << "' WHERE key = 'max_upload_rate'";
 	DB->query(ss.str());
 }
 
-void database::table::prefs::set_port(const std::string & port,
-		database::pool::proxy DB)
+void db::table::prefs::set_port(const std::string & port,
+		db::pool::proxy DB)
 {
 	assert(port.size() <= 5 && std::atoi(port.c_str()) > 0
 		&& std::atoi(port.c_str()) < 65536);

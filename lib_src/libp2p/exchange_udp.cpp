@@ -23,7 +23,7 @@ exchange_udp::exchange_udp()
 	//setup UDP listener
 	std::set<network::endpoint> E = network::get_endpoint(
 		"",
-		database::table::prefs::get_port(),
+		db::table::prefs::get_port(),
 		network::udp
 	);
 	assert(!E.empty());
@@ -38,9 +38,7 @@ void exchange_udp::check_timeouts()
 		iter_cur != iter_end;)
 	{
 		if(iter_cur->second.timed_out()){
-LOGGER;
 			if(iter_cur->second.timeout_call_back){
-LOGGER;
 				iter_cur->second.timeout_call_back();
 			}
 			Expect_Response.erase(iter_cur++);

@@ -8,8 +8,8 @@ int main()
 {
 	path::override_database_name("encryption.db");
 	path::override_program_directory("");
-	database::init::drop_all();
-	database::init::create_all();
+	db::init::drop_all();
+	db::init::create_all();
 
 	//encryption for hosts A and B
 	encryption Encryption_A;

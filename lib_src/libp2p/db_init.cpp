@@ -1,14 +1,14 @@
-#include "database_init.hpp"
+#include "db_init.hpp"
 
-database::init::init()
+db::init::init()
 {
 	path::create_required_directories();
 	create_all();
 }
 
-void database::init::create_all()
+void db::init::create_all()
 {
-	database::pool::proxy DB;
+	db::pool::proxy DB;
 
 	//blacklist
 	DB->query("CREATE TABLE IF NOT EXISTS blacklist(IP TEXT)");
@@ -76,9 +76,9 @@ void database::init::create_all()
 	DB->query("CREATE INDEX IF NOT EXISTS source_hash_index ON source(hash)");
 }
 
-void database::init::drop_all()
+void db::init::drop_all()
 {
-	database::pool::proxy DB;
+	db::pool::proxy DB;
 	DB->query("DROP TABLE IF EXISTS blacklist");
 	DB->query("DROP TABLE IF EXISTS hash");
 	DB->query("DROP TABLE IF EXISTS host");

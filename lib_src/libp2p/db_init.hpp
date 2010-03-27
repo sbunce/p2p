@@ -1,8 +1,8 @@
-#ifndef H_DATABASE_INIT
-#define H_DATABASE_INIT
+#ifndef H_DB_INIT
+#define H_DB_INIT
 
 //custom
-#include "database.hpp"
+#include "db_all.hpp"
 #include "path.hpp"
 
 //include
@@ -13,7 +13,7 @@
 //standard
 #include <sstream>
 
-namespace database{
+namespace db{
 class init
 {
 public:

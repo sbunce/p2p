@@ -6,8 +6,8 @@ p2p_real::p2p_real():
 	max_download_rate_proxy(0),
 	max_upload_rate_proxy(0)
 {
-	std::cout << "port: " << database::table::prefs::get_port()
-		<< " peer_ID: " << database::table::prefs::get_ID() << "\n";
+	std::cout << "port: " << db::table::prefs::get_port()
+		<< " peer_ID: " << db::table::prefs::get_ID() << "\n";
 	resume_thread = boost::thread(boost::bind(&p2p_real::resume, this));
 }
 
@@ -33,8 +33,8 @@ void p2p_real::max_connections(unsigned connections)
 //DEBUG, add support for this
 	//Proactor.max_connections(connections / 2, connections / 2);
 	max_connections_proxy = connections;
-	Thread_Pool.queue(boost::bind(&database::table::prefs::set_max_connections,
-		connections, database::pool::get()));
+	Thread_Pool.queue(boost::bind(&db::table::prefs::set_max_connections,
+		connections, db::pool::get()));
 }
 
 unsigned p2p_real::max_download_rate()
@@ -46,8 +46,8 @@ void p2p_real::max_download_rate(const unsigned rate)
 {
 	Connection_Manager.Proactor.max_download_rate(rate);
 	max_download_rate_proxy = rate;
-	Thread_Pool.queue(boost::bind(&database::table::prefs::set_max_download_rate,
-		rate, database::pool::get()));
+	Thread_Pool.queue(boost::bind(&db::table::prefs::set_max_download_rate,
+		rate, db::pool::get()));
 }
 
 unsigned p2p_real::max_upload_rate()
@@ -59,8 +59,8 @@ void p2p_real::max_upload_rate(const unsigned rate)
 {
 	Connection_Manager.Proactor.max_upload_rate(rate);
 	max_upload_rate_proxy = rate;
-	Thread_Pool.queue(boost::bind(&database::table::prefs::set_max_upload_rate,
-		rate, database::pool::get()));
+	Thread_Pool.queue(boost::bind(&db::table::prefs::set_max_upload_rate,
+		rate, db::pool::get()));
 }
 
 void p2p_real::resume()
@@ -69,16 +69,16 @@ void p2p_real::resume()
 	boost::this_thread::yield();
 
 	//setup proxies
-	max_connections_proxy = database::table::prefs::get_max_connections();
-	max_download_rate_proxy = database::table::prefs::get_max_download_rate();
-	max_upload_rate_proxy = database::table::prefs::get_max_upload_rate();
+	max_connections_proxy = db::table::prefs::get_max_connections();
+	max_download_rate_proxy = db::table::prefs::get_max_download_rate();
+	max_upload_rate_proxy = db::table::prefs::get_max_upload_rate();
 
 	//set prefs with proactor
 	max_download_rate(max_download_rate_proxy);
 	max_upload_rate(max_upload_rate_proxy);
 
 	//repopulate share from database
-	std::deque<database::table::share::info> resume = database::table::share::resume();
+	std::deque<db::table::share::info> resume = db::table::share::resume();
 	while(!resume.empty()){
 		file_info FI(
 			resume.front().hash,
@@ -87,7 +87,7 @@ void p2p_real::resume()
 			resume.front().last_write_time
 		);
 		share::singleton().insert(FI);
-		if(resume.front().file_state == database::table::share::downloading){
+		if(resume.front().file_state == db::table::share::downloading){
 			//trigger slot creation for downloading file
 			share::singleton().find_slot(FI.hash);
 		}
@@ -108,7 +108,7 @@ void p2p_real::resume()
 
 	//connect to peers that have files we need
 	std::set<std::pair<std::string, std::string> >
-		peers = database::table::join::resume_peers();
+		peers = db::table::join::resume_peers();
 	for(std::set<std::pair<std::string, std::string> >::iterator
 		iter_cur = peers.begin(), iter_end = peers.end(); iter_cur != iter_end;
 		++iter_cur)
@@ -119,7 +119,7 @@ void p2p_real::resume()
 	//bring up networking
 	std::set<network::endpoint> E = network::get_endpoint(
 		"",
-		database::table::prefs::get_port(),
+		db::table::prefs::get_port(),
 		network::tcp
 	);
 	assert(!E.empty());

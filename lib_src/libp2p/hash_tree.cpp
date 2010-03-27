@@ -2,7 +2,7 @@
 
 hash_tree::hash_tree(
 	const file_info & FI,
-	database::pool::proxy DB
+	db::pool::proxy DB
 ):
 	hash(FI.hash),
 	path(FI.path),
@@ -23,12 +23,12 @@ hash_tree::hash_tree(
 	)
 {
 	if(!hash.empty()){
-		boost::shared_ptr<database::table::hash::info>
-			info = database::table::hash::find(hash, DB);
+		boost::shared_ptr<db::table::hash::info>
+			info = db::table::hash::find(hash, DB);
 		if(info){
 			//opened existing hash tree
 			boost::uint64_t size;
-			if(!database::pool::get()->blob_size(info->blob, size)){
+			if(!db::pool::get()->blob_size(info->blob, size)){
 				throw std::runtime_error("error checking tree size");
 			}
 			//only open tree if the size is what we expect
@@ -40,15 +40,15 @@ hash_tree::hash_tree(
 				*/
 				throw std::runtime_error("incorrect tree size");
 			}
-			const_cast<database::blob &>(blob) = info->blob;
+			const_cast<db::blob &>(blob) = info->blob;
 		}else{
 			//allocate space to reconstruct hash tree
-			if(database::table::hash::add(hash, tree_size, DB)){
-				database::table::hash::set_state(hash,
-					database::table::hash::downloading, DB);
-				info = database::table::hash::find(hash, DB);
+			if(db::table::hash::add(hash, tree_size, DB)){
+				db::table::hash::set_state(hash,
+					db::table::hash::downloading, DB);
+				info = db::table::hash::find(hash, DB);
 				if(info){
-					const_cast<database::blob &>(blob) = info->blob;
+					const_cast<db::blob &>(blob) = info->blob;
 				}else{
 					throw std::runtime_error("failed hash tree open");
 				}
@@ -140,7 +140,7 @@ hash_tree::status hash_tree::check()
 			return io_error;
 		}else if(block_num == tree_block_count - 1){
 			//last block checked good
-			database::table::hash::set_state(hash, database::table::hash::complete);
+			db::table::hash::set_state(hash, db::table::hash::complete);
 		}
 	}
 	return good;
@@ -150,7 +150,7 @@ hash_tree::status hash_tree::check_file_block(const boost::uint64_t file_block_n
 	const network::buffer & buf)
 {
 	char parent_buf[SHA1::bin_size];
-	if(!database::pool::get()->blob_read(blob, parent_buf,
+	if(!db::pool::get()->blob_read(blob, parent_buf,
 		SHA1::bin_size, file_hash_offset + file_block_num * SHA1::bin_size))
 	{
 		return io_error;
@@ -189,7 +189,7 @@ hash_tree::status hash_tree::check_tree_block(const boost::uint64_t block_num,
 			buf.size());
 		//verify parent hash is a hash of the children
 		char parent_hash[SHA1::bin_size];
-		if(!database::pool::get()->blob_read(blob, parent_hash, SHA1::bin_size, parent)){
+		if(!db::pool::get()->blob_read(blob, parent_hash, SHA1::bin_size, parent)){
 			return io_error;
 		}
 		if(std::memcmp(parent_hash, SHA.bin(), SHA1::bin_size) == 0){
@@ -303,28 +303,28 @@ hash_tree::status hash_tree::create()
 	*/
 
 	//check if tree already exists
-	if(database::table::hash::find(hash)){
+	if(db::table::hash::find(hash)){
 		return good;
 	}
 
 	//tree doesn't exist, allocate space for it
-	if(!database::table::hash::add(hash, tree_size)){
+	if(!db::table::hash::add(hash, tree_size)){
 		LOGGER << "error adding hash tree";
 		return io_error;
 	}
 
 	//copy tree to database using large buffer for performance
-	boost::shared_ptr<database::table::hash::info>
-		Info = database::table::hash::find(hash);
+	boost::shared_ptr<db::table::hash::info>
+		Info = db::table::hash::find(hash);
 
 	//set blob to one we just created
-	const_cast<database::blob &>(blob) = Info->blob;
+	const_cast<db::blob &>(blob) = Info->blob;
 
 	temp.seekg(0, std::ios::beg);
 	boost::uint64_t offset = 0, bytes_remaining = tree_size, read_size;
 	while(bytes_remaining){
 		if(boost::this_thread::interruption_requested()){
-			database::table::hash::remove(hash);
+			db::table::hash::remove(hash);
 			return io_error;
 		}
 		if(bytes_remaining > protocol_tcp::file_block_size){
@@ -335,12 +335,12 @@ hash_tree::status hash_tree::create()
 		temp.read(buf, read_size);
 		if(temp.gcount() != read_size){
 			LOGGER << "error reading temp file";
-			database::table::hash::remove(hash);
+			db::table::hash::remove(hash);
 			return io_error;
 		}else{
-			if(!database::pool::get()->blob_write(blob, buf, read_size, offset)){
+			if(!db::pool::get()->blob_write(blob, buf, read_size, offset)){
 				LOGGER << "error doing incremental write to blob";
-				database::table::hash::remove(hash);
+				db::table::hash::remove(hash);
 				return io_error;
 			}
 			offset += read_size;
@@ -426,7 +426,7 @@ hash_tree::status hash_tree::read_block(const boost::uint64_t block_num,
 	std::pair<boost::uint64_t, unsigned> info;
 	if(block_info(block_num, info)){
 		buf.tail_reserve(info.second);
-		if(!database::pool::get()->blob_read(blob,
+		if(!db::pool::get()->blob_read(blob,
 			reinterpret_cast<char *>(buf.tail_start()), info.second, info.first))
 		{
 			buf.tail_resize(0);
@@ -527,7 +527,7 @@ hash_tree::status hash_tree::write_block(const boost::uint64_t block_num,
 		assert(info.second == buf.size());
 		if(block_num != 0){
 			char parent_buf[SHA1::bin_size];
-			if(!database::pool::get()->blob_read(blob, parent_buf, SHA1::bin_size, parent)){
+			if(!db::pool::get()->blob_read(blob, parent_buf, SHA1::bin_size, parent)){
 				return io_error;
 			}
 			SHA1 SHA(reinterpret_cast<const char *>(buf.data()),
@@ -536,7 +536,7 @@ hash_tree::status hash_tree::write_block(const boost::uint64_t block_num,
 				return bad;
 			}
 		}
-		if(!database::pool::get()->blob_write(blob,
+		if(!db::pool::get()->blob_write(blob,
 			reinterpret_cast<const char *>(buf.data()), buf.size(), info.first))
 		{
 			return io_error;

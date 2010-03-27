@@ -18,7 +18,7 @@ int call_back(int columns, char ** response, char ** column_name)
 
 int main()
 {
-	database::connection DB("database_connection.db");
+	db::connection DB("db.db");
 	DB.query("DROP TABLE IF EXISTS sqlite3_wrapper");
 	DB.query("CREATE TABLE sqlite3_wrapper(test_text TEXT)");
 	DB.query("INSERT INTO sqlite3_wrapper(test_text) VALUES ('abc')");

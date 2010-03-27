@@ -1,5 +1,5 @@
 //custom
-#include "../database.hpp"
+#include "../db_all.hpp"
 #include "../hash_tree.hpp"
 #include "../path.hpp"
 #include "../protocol_tcp.hpp"
@@ -28,8 +28,8 @@ void create_file(const file_info & FI)
 
 void create_reassemble(const unsigned size)
 {
-	database::init::drop_all();
-	database::init::create_all();
+	db::init::drop_all();
+	db::init::create_all();
 
 	//setup test file
 	file_info FI;
@@ -61,8 +61,8 @@ void create_reassemble(const unsigned size)
 		block.push_back(buf);
 	}
 
-	database::init::drop_all();
-	database::init::create_all();
+	db::init::drop_all();
+	db::init::create_all();
 
 	//reassemble
 	hash_tree HT_reassemble(FI);
@@ -103,8 +103,8 @@ void child_block()
 	//this test only works with a specific block size
 	assert(protocol_tcp::hash_block_size == 512);
 
-	database::init::drop_all();
-	database::init::create_all();
+	db::init::drop_all();
+	db::init::create_all();
 
 	//for this test we only care about file size
 	std::string dummy_hash = ""; //causes database space to not be allocated

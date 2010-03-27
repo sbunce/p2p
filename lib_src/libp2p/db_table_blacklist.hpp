@@ -1,8 +1,8 @@
-#ifndef H_DATABASE_TABLE_BLACKLIST
-#define H_DATABASE_TABLE_BLACKLIST
+#ifndef H_DB_TABLE_BLACKLIST
+#define H_DB_TABLE_BLACKLIST
 
 //custom
-#include "database.hpp"
+#include "db_all.hpp"
 #include "path.hpp"
 #include "settings.hpp"
 
@@ -16,7 +16,7 @@
 #include <sstream>
 #include <string>
 
-namespace database{
+namespace db{
 namespace table{
 class blacklist
 {
@@ -33,9 +33,9 @@ public:
 		Postcondition: last_state_seen = blacklist_state.
 	*/
 	static void add(const std::string & IP,
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 	static bool is_blacklisted(const std::string & IP,
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 	static bool modified(int & last_state_seen);
 
 private:

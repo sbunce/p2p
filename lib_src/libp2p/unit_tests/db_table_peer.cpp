@@ -1,5 +1,5 @@
 //custom
-#include "../database.hpp"
+#include "../db_all.hpp"
 
 int fail(0);
 
@@ -8,20 +8,20 @@ int main()
 	//setup database and make sure blacklist table clear
 	path::override_database_name("database_table_peer.db");
 	path::override_program_directory("");
-	database::init::drop_all();
-	database::init::create_all();
+	db::init::drop_all();
+	db::init::create_all();
 
-	database::table::peer::info info(
+	db::table::peer::info info(
 		"DEADBEEFDEADBEEFDEAD",
 		"123.123.123.123",
 		"32768"
 	);
 
 	//add
-	database::table::peer::add(info);
+	db::table::peer::add(info);
 
 	//verify
-	std::list<database::table::peer::info> resume = database::table::peer::resume();
+	std::list<db::table::peer::info> resume = db::table::peer::resume();
 	if(resume.size() != 1){
 		LOGGER; ++fail;
 	}else{
@@ -37,8 +37,8 @@ int main()
 	}
 
 	//remove
-	database::table::peer::remove(info.ID);
-	resume = database::table::peer::resume();
+	db::table::peer::remove(info.ID);
+	resume = db::table::peer::resume();
 	if(!resume.empty()){
 		LOGGER; ++fail;
 	}

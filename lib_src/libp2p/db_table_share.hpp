@@ -1,8 +1,8 @@
-#ifndef H_DATABASE_TABLE_SHARE
-#define H_DATABASE_TABLE_SHARE
+#ifndef H_DB_TABLE_SHARE
+#define H_DB_TABLE_SHARE
 
 //custom
-#include "database.hpp"
+#include "db_all.hpp"
 #include "settings.hpp"
 
 //include
@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-namespace database{
+namespace db{
 namespace table{
 class share
 {
@@ -70,16 +70,16 @@ public:
 		we start a download and receive the file size in the slot message.
 	*/
 	static void add(const info & FI,
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 	static boost::shared_ptr<info> find(const std::string & hash,
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 	static void remove(const std::string & path,
-		database::pool::proxy DB = database::pool::proxy());
-	static std::deque<info> resume(database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
+	static std::deque<info> resume(db::pool::proxy DB = db::pool::proxy());
 	static void set_state(const std::string & hash, const state file_state,
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 	static void update_file_size(const std::string & path, const boost::uint64_t file_size,
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 
 private:
 	share(){}

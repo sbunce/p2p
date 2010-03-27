@@ -1,5 +1,5 @@
-#ifndef H_DATABASE_POOL
-#define H_DATABASE_POOL
+#ifndef H_DB_POOL
+#define H_DB_POOL
 
 //custom
 #include "path.hpp"
@@ -13,7 +13,7 @@
 //standard
 #include <stack>
 
-namespace database{
+namespace db{
 class pool : public singleton_base<pool>
 {
 	friend class singleton_base<pool>;

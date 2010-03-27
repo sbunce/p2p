@@ -70,8 +70,8 @@ void p2p::test(const std::string & port, const std::string & program_directory)
 {
 	path::override_database_name("DB_"+port);
 	path::override_program_directory(program_directory);
-	database::init::create_all();
-	database::table::prefs::set_port(port);
+	db::init::create_all();
+	db::table::prefs::set_port(port);
 }
 
 void p2p::transfers(std::vector<p2p::transfer> & T)

@@ -2,7 +2,7 @@
 #define H_PRIME_GENERATOR
 
 //custom
-#include "database.hpp"
+#include "db_all.hpp"
 #include "protocol_tcp.hpp"
 #include "settings.hpp"
 

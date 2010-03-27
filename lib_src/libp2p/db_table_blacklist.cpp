@@ -1,8 +1,8 @@
-#include "database_table_blacklist.hpp"
+#include "db_table_blacklist.hpp"
 
-boost::once_flag database::table::blacklist::once_flag = BOOST_ONCE_INIT;
+boost::once_flag db::table::blacklist::once_flag = BOOST_ONCE_INIT;
 
-void database::table::blacklist::add(const std::string & IP, database::pool::proxy DB)
+void db::table::blacklist::add(const std::string & IP, db::pool::proxy DB)
 {
 	boost::call_once(init, once_flag);
 	std::stringstream ss;
@@ -14,13 +14,13 @@ void database::table::blacklist::add(const std::string & IP, database::pool::pro
 	}
 }
 
-atomic_int<int> & database::table::blacklist::blacklist_state()
+atomic_int<int> & db::table::blacklist::blacklist_state()
 {
 	static atomic_int<int> b(0);
 	return b;
 }
 
-void database::table::blacklist::init()
+void db::table::blacklist::init()
 {
 	blacklist_state();
 }
@@ -32,8 +32,8 @@ static int is_blacklisted_call_back(int columns, char ** response,
 	return 0;
 }
 
-bool database::table::blacklist::is_blacklisted(const std::string & IP,
-	database::pool::proxy DB)
+bool db::table::blacklist::is_blacklisted(const std::string & IP,
+	db::pool::proxy DB)
 {
 	boost::call_once(init, once_flag);
 	bool found = false;
@@ -43,7 +43,7 @@ bool database::table::blacklist::is_blacklisted(const std::string & IP,
 	return found;
 }
 
-bool database::table::blacklist::modified(int & last_state_seen)
+bool db::table::blacklist::modified(int & last_state_seen)
 {
 	boost::call_once(init, once_flag);
 	if(last_state_seen == blacklist_state()){

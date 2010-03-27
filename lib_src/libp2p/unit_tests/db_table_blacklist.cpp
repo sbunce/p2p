@@ -1,15 +1,15 @@
 //custom
-#include "../database.hpp"
+#include "../db_all.hpp"
 
 int fail(0);
 
 int main()
 {
 	//setup database and make sure blacklist table clear
-	path::override_database_name("database_table_blacklist.db");
+	path::override_database_name("db_table_blacklist.db");
 	path::override_program_directory("");
-	database::init::drop_all();
-	database::init::create_all();
+	db::init::drop_all();
+	db::init::create_all();
 
 	/*
 	The default blacklist state is 0. The blacklist state tells us if the
@@ -20,23 +20,23 @@ int main()
 	int state = 0;
 
 	//the blacklist should not be modified by default
-	if(database::table::blacklist::modified(state)){
+	if(db::table::blacklist::modified(state)){
 		LOGGER; ++fail;
 	}
 
 	//after adding an IP the blacklist should be modified
-	database::table::blacklist::add("1.1.1.1");
-	if(!database::table::blacklist::modified(state)){
+	db::table::blacklist::add("1.1.1.1");
+	if(!db::table::blacklist::modified(state)){
 		LOGGER; ++fail;
 	}
 
 	//the IP we added should be now blacklisted
-	if(!database::table::blacklist::is_blacklisted("1.1.1.1")){
+	if(!db::table::blacklist::is_blacklisted("1.1.1.1")){
 		LOGGER; ++fail;
 	}
 
 	//we didn't add this IP, it shouldn't be blacklisted
-	if(database::table::blacklist::is_blacklisted("2.2.2.2")){
+	if(db::table::blacklist::is_blacklisted("2.2.2.2")){
 		LOGGER; ++fail;
 	}
 	return fail;

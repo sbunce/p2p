@@ -1,10 +1,9 @@
-//THREADSAFE, CTOR THREAD SPAWNING
 #ifndef H_P2P_REAL
 #define H_P2P_REAL
 
 //custom
 #include "connection_manager.hpp"
-#include "database.hpp"
+#include "db_all.hpp"
 #include "hash_tree.hpp"
 #include "kademlia.hpp"
 #include "path.hpp"
@@ -29,7 +28,7 @@
 class p2p_real : private boost::noncopyable
 {
 	//set up all directories and database before anything else
-	database::init init;
+	db::init init;
 
 public:
 	p2p_real();

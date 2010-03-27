@@ -1,8 +1,8 @@
-#ifndef H_DATABASE_TABLE_SOURCE
-#define H_DATABASE_TABLE_SOURCE
+#ifndef H_DB_TABLE_SOURCE
+#define H_DB_TABLE_SOURCE
 
 //custom
-#include "database.hpp"
+#include "db_all.hpp"
 
 //include
 #include <boost/shared_ptr.hpp>
@@ -12,7 +12,7 @@
 #include <sstream>
 #include <string>
 
-namespace database{
+namespace db{
 namespace table{
 class source
 {

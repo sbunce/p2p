@@ -2,11 +2,11 @@
 #include <db.hpp>
 
 //BEGIN blob
-database::blob::blob():
+db::blob::blob():
 	rowid(0)
 {}
 
-database::blob::blob(
+db::blob::blob(
 	const std::string & table_in,
 	const std::string & column_in,
 	const boost::int64_t rowid_in
@@ -16,7 +16,7 @@ database::blob::blob(
 	rowid(rowid_in)
 {}
 
-database::blob::blob(const blob & Blob):
+db::blob::blob(const blob & Blob):
 	table(Blob.table),
 	column(Blob.column),
 	rowid(Blob.rowid)
@@ -26,7 +26,7 @@ database::blob::blob(const blob & Blob):
 //END blob
 
 //BEGIN connection
-database::connection::connection(
+db::connection::connection(
 	const std::string & path_in
 ):
 	path(path_in),
@@ -35,7 +35,7 @@ database::connection::connection(
 
 }
 
-database::connection::~connection()
+db::connection::~connection()
 {
 	if(connected){
 		if(sqlite3_close(DB_handle) != SQLITE_OK){
@@ -44,7 +44,7 @@ database::connection::~connection()
 	}
 }
 
-bool database::connection::blob_allocate(const std::string & query, const int size)
+bool db::connection::blob_allocate(const std::string & query, const int size)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	connect();
@@ -96,7 +96,7 @@ bool database::connection::blob_allocate(const std::string & query, const int si
 	}
 }
 
-bool database::connection::blob_read(const blob & Blob, char * const buff, const int size, const int offset)
+bool db::connection::blob_read(const blob & Blob, char * const buff, const int size, const int offset)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	connect();
@@ -111,7 +111,7 @@ bool database::connection::blob_read(const blob & Blob, char * const buff, const
 	return blob_close(blob_handle);
 }
 
-bool database::connection::blob_size(const blob & Blob, boost::uint64_t & size)
+bool db::connection::blob_size(const blob & Blob, boost::uint64_t & size)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	connect();
@@ -123,7 +123,7 @@ bool database::connection::blob_size(const blob & Blob, boost::uint64_t & size)
 	return blob_close(blob_handle);
 }
 
-bool database::connection::blob_write(const blob & Blob, const char * const buf, const int size, const int offset)
+bool db::connection::blob_write(const blob & Blob, const char * const buf, const int size, const int offset)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	connect();
@@ -140,7 +140,7 @@ bool database::connection::blob_write(const blob & Blob, const char * const buf,
 	return blob_close(blob_handle);
 }
 
-int database::connection::query(const std::string & query,
+int db::connection::query(const std::string & query,
 	boost::function<int (int, char **, char **)> func)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
@@ -157,7 +157,7 @@ int database::connection::query(const std::string & query,
 	return code;
 }
 
-void database::connection::connect()
+void db::connection::connect()
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	if(!connected){
@@ -191,7 +191,7 @@ void database::connection::connect()
 	}
 }
 
-int database::connection::call_back_wrapper(void * ptr, int columns, char ** response,
+int db::connection::call_back_wrapper(void * ptr, int columns, char ** response,
 	char ** column_name)
 {
 	boost::function<int (int, char **, char **)> &
@@ -199,7 +199,7 @@ int database::connection::call_back_wrapper(void * ptr, int columns, char ** res
 	return func(columns, response, column_name);
 }
 
-bool database::connection::blob_close(sqlite3_blob * blob_handle)
+bool db::connection::blob_close(sqlite3_blob * blob_handle)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	if(sqlite3_blob_close(blob_handle) == SQLITE_OK){
@@ -210,7 +210,7 @@ bool database::connection::blob_close(sqlite3_blob * blob_handle)
 	}
 }
 
-bool database::connection::blob_open(const blob & Blob, const bool writeable, sqlite3_blob *& blob_handle)
+bool db::connection::blob_open(const blob & Blob, const bool writeable, sqlite3_blob *& blob_handle)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	int code;
@@ -235,7 +235,7 @@ bool database::connection::blob_open(const blob & Blob, const bool writeable, sq
 //END connection
 
 //BEGIN free functions
-std::string database::escape(const std::string & str)
+std::string db::escape(const std::string & str)
 {
 	char * sqlite3_path = sqlite3_mprintf("%q", str.c_str());
 	std::string tmp(sqlite3_path);

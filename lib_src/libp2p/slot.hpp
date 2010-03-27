@@ -2,7 +2,7 @@
 #define H_SLOT
 
 //custom
-#include "database.hpp"
+#include "db_all.hpp"
 #include "file_info.hpp"
 #include "transfer.hpp"
 

@@ -3,7 +3,7 @@
 
 //custom
 #include "block_request.hpp"
-#include "database.hpp"
+#include "db_all.hpp"
 #include "file_info.hpp"
 #include "protocol_tcp.hpp"
 

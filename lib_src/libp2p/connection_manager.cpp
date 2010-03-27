@@ -21,7 +21,7 @@ void connection_manager::connect_call_back(network::connection_info & CI)
 	boost::mutex::scoped_lock lock(Connection_mutex);
 
 //DEBUG, disable persistent blacklist
-	database::pool::get()->query("DELETE FROM blacklist");
+	db::pool::get()->query("DELETE FROM blacklist");
 
 	LOGGER << "connect " << CI.IP << " " << CI.port;
 	std::pair<std::map<int, boost::shared_ptr<connection> >::iterator, bool>
@@ -87,7 +87,7 @@ void connection_manager::remove(const std::string hash)
 		can proceed to remove the database entry and file (because we know that no
 		one is using the file).
 		*/
-		database::table::share::remove(S_iter->path());
+		db::table::share::remove(S_iter->path());
 		boost::filesystem::remove(S_iter->path());
 	}
 }

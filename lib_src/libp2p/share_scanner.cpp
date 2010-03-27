@@ -57,10 +57,10 @@ void share_scanner::hash_loop()
 			FI.hash = HT.hash;
 			if(Status == hash_tree::good){
 				share::singleton().insert(FI);
-				database::table::share::add(database::table::share::info(FI.hash, FI.path,
-					FI.file_size, FI.last_write_time, database::table::share::complete));
-				database::table::hash::set_state(FI.hash,
-					database::table::hash::complete);
+				db::table::share::add(db::table::share::info(FI.hash, FI.path,
+					FI.file_size, FI.last_write_time, db::table::share::complete));
+				db::table::hash::set_state(FI.hash,
+					db::table::hash::complete);
 			}else{
 				//error hashing, retry later
 				LOGGER << "error hashing file " << FI.path;
@@ -155,7 +155,7 @@ void share_scanner::scan_loop()
 			}
 			if(!boost::filesystem::exists(iter_cur->path.get())){
 				share::singleton().erase(iter_cur->path);
-				database::table::share::remove(iter_cur->path);
+				db::table::share::remove(iter_cur->path);
 				skip_sleep = true;
 			}
 		}

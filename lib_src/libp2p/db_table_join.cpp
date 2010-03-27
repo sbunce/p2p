@@ -1,4 +1,4 @@
-#include "database_table_join.hpp"
+#include "db_table_join.hpp"
 
 static int resume_hash_call_back(int columns, char ** response,
 	char ** column_name, std::set<std::string> & hash)
@@ -9,8 +9,8 @@ static int resume_hash_call_back(int columns, char ** response,
 	return 0;
 }
 
-std::set<std::string> database::table::join::resume_hash(const std::string & peer_ID,
-	database::pool::proxy DB)
+std::set<std::string> db::table::join::resume_hash(const std::string & peer_ID,
+	db::pool::proxy DB)
 {
 	std::stringstream ss;
 	ss << "SELECT DISTINCT share.hash FROM share, source WHERE share.state = 0 "
@@ -31,8 +31,8 @@ static int resume_peers_call_back(int columns, char ** response,
 	return 0;
 }
 
-std::set<std::pair<std::string, std::string> > database::table::join::resume_peers(
-	database::pool::proxy DB)
+std::set<std::pair<std::string, std::string> > db::table::join::resume_peers(
+	db::pool::proxy DB)
 {
 	std::set<std::pair<std::string, std::string> > peers;
 	DB->query("SELECT DISTINCT peer.IP, peer.port FROM peer, share, source "

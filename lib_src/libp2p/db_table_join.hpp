@@ -1,15 +1,15 @@
-#ifndef H_DATABASE_TABLE_JOIN
-#define H_DATABASE_TABLE_JOIN
+#ifndef H_DB_TABLE_JOIN
+#define H_DB_TABLE_JOIN
 
 //custom
-#include "database.hpp"
+#include "db_all.hpp"
 
 //standard
 #include <set>
 #include <sstream>
 #include <string>
 
-namespace database{
+namespace db{
 namespace table{
 class join
 {
@@ -24,9 +24,9 @@ public:
 		called to determine what slots to open.
 	*/
 	static std::set<std::pair<std::string, std::string> > resume_peers(
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 	static std::set<std::string> resume_hash(const std::string & peer_ID,
-		database::pool::proxy DB = database::pool::proxy());
+		db::pool::proxy DB = db::pool::proxy());
 
 private:
 	join(){}
