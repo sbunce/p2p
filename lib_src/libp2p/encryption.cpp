@@ -39,7 +39,6 @@ bool encryption::recv_p_rA(const network::buffer & buf)
 	assert(buf.size() == protocol_tcp::DH_key_size * 2);
 	p = mpa::mpint(buf.data(), protocol_tcp::DH_key_size);
 	if(!mpa::is_prime(p)){
-		//invalid prime
 		return false;
 	}
 	remote_result = mpa::mpint(buf.data() + protocol_tcp::DH_key_size, protocol_tcp::DH_key_size);

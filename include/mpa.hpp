@@ -1,20 +1,3 @@
-/* LibTomMath, multiple-precision integer library -- Tom St Denis
- *
- * LibTomMath is a library that provides multiple-precision
- * integer arithmetic as well as number theoretic functionality.
- *
- * The library was designed directly after the MPI library by
- * Michael Fromberger but has been written from scratch with
- * additional optimizations in place.
- *
- * The library is free for all purposes without any express
- * guarantee it works.
- *
- * Tom St Denis, tomstdenis@gmail.com, http://math.libtomcrypt.com
- */
-/* This wrapper is based on the wrapper by Tom St Denis. As such it inherits
- * the copyright.
- */
 #ifndef H_BOOST_MPINT
 #define H_BOOST_MPINT
 

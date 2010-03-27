@@ -1,0 +1,8 @@
+#standard
+import glob
+
+Import('env_base')
+env_tommath = env_base.Clone()
+
+env_tommath['CPPPATH'].append('#'+Dir('.').path);
+env_tommath.StaticLibrary('#lib/tommath', glob.glob('*.c*'))
