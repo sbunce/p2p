@@ -1,5 +1,5 @@
 //includes entire database namespace
-#include <database_connection.hpp>
+#include <db.hpp>
 #include "database_init.hpp"
 #include "database_pool.hpp"
 #include "database_table_blacklist.hpp"

@@ -4,7 +4,6 @@
 //include
 #include <boost/cstdint.hpp>
 #include <boost/flyweight.hpp>
-#include <database_connection.hpp>
 
 //standard
 #include <ctime>

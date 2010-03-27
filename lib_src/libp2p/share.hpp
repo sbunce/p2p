@@ -15,7 +15,6 @@
 #include <boost/thread.hpp>
 #include <boost/thread/once.hpp>
 #include <boost/utility.hpp>
-#include <database_connection.hpp>
 #include <singleton.hpp>
 
 //standard

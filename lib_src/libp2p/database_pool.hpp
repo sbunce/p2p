@@ -7,7 +7,7 @@
 
 //include
 #include <boost/shared_ptr.hpp>
-#include <database_connection.hpp>
+#include <db.hpp>
 #include <singleton.hpp>
 
 //standard

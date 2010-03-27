@@ -1,4 +1,5 @@
 #standard
+import glob
 import platform
 
 Import('env_base')
@@ -10,8 +11,8 @@ env_sqlite = env_base.Clone()
 env_sqlite['CPPDEFINES'].append('SQLITE_THREADSAFE=2')
 
 #enable full text search
-env_sqlite['CPPDEFINES'].append('SQLITE_ENABLE_FTS3')
-env_sqlite['CPPDEFINES'].append('SQLITE_ENABLE_FTS3_PARENTHESIS')
+#env_sqlite['CPPDEFINES'].append('SQLITE_ENABLE_FTS3')
+#env_sqlite['CPPDEFINES'].append('SQLITE_ENABLE_FTS3_PARENTHESIS')
 
 #remove libdl dependency by disabling dynamic module loading (not used anyways)
 env_sqlite['CPPDEFINES'].append('SQLITE_OMIT_LOAD_EXTENSION');
@@ -24,5 +25,6 @@ if platform.system() != 'Windows':
 	env_sqlite['LIBS'].append('readline');
 	env_sqlite['CPPDEFINES'].append('HAVE_READLINE=1');
 
-env_sqlite.StaticLibrary('#lib/sqlite3', 'sqlite3.c')
+env_sqlite['CPPPATH'].append('#'+Dir('.').path);
+env_sqlite.StaticLibrary('#lib/sqlite3', glob.glob('*.c*'))
 env_sqlite.Program('#bin/sqlite3', 'shell.c')
