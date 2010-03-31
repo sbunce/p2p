@@ -13,7 +13,7 @@ connection_manager::connection_manager():
 connection_manager::~connection_manager()
 {
 	Proactor.stop();
-	Thread_Pool.interrupt_join();
+	Thread_Pool.stop();
 }
 
 void connection_manager::connect_call_back(network::connection_info & CI)
@@ -98,6 +98,6 @@ void connection_manager::trigger_tick(const int connection_ID)
 	//if cannot insert then we know job already scheduled
 	std::pair<std::set<int>::iterator, bool> P = filter.insert(connection_ID);
 	if(P.second){
-		Thread_Pool.queue(boost::bind(&connection_manager::do_tick, this, connection_ID));
+		Thread_Pool.enqueue(boost::bind(&connection_manager::do_tick, this, connection_ID));
 	}
 }

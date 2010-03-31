@@ -49,7 +49,7 @@ public:
 	*/
 	void connect(const std::string & host, const std::string & port)
 	{
-		Thread_Pool.queue(boost::bind(&proactor::resolve, this, host, port));
+		Thread_Pool.enqueue(boost::bind(&proactor::resolve, this, host, port));
 	}
 
 	//disconnect as soon as possible
@@ -622,7 +622,8 @@ private:
 		Listener.close();
 
 		//stop any pending resolve jobs
-		Thread_Pool.clear();
+//DEBUG, consider impact of disabling this
+		//Thread_Pool.clear();
 
 		//erase any pending network_thread_call's
 		{//BEGIN lock scope

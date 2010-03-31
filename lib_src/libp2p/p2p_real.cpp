@@ -13,7 +13,7 @@ p2p_real::p2p_real():
 
 p2p_real::~p2p_real()
 {
-	Thread_Pool.interrupt_join();
+	Thread_Pool.stop();
 	resume_thread.interrupt();
 	resume_thread.join();
 }
@@ -33,7 +33,7 @@ void p2p_real::max_connections(unsigned connections)
 //DEBUG, add support for this
 	//Proactor.max_connections(connections / 2, connections / 2);
 	max_connections_proxy = connections;
-	Thread_Pool.queue(boost::bind(&db::table::prefs::set_max_connections,
+	Thread_Pool.enqueue(boost::bind(&db::table::prefs::set_max_connections,
 		connections, db::pool::get()));
 }
 
@@ -46,7 +46,7 @@ void p2p_real::max_download_rate(const unsigned rate)
 {
 	Connection_Manager.Proactor.max_download_rate(rate);
 	max_download_rate_proxy = rate;
-	Thread_Pool.queue(boost::bind(&db::table::prefs::set_max_download_rate,
+	Thread_Pool.enqueue(boost::bind(&db::table::prefs::set_max_download_rate,
 		rate, db::pool::get()));
 }
 
@@ -59,7 +59,7 @@ void p2p_real::max_upload_rate(const unsigned rate)
 {
 	Connection_Manager.Proactor.max_upload_rate(rate);
 	max_upload_rate_proxy = rate;
-	Thread_Pool.queue(boost::bind(&db::table::prefs::set_max_upload_rate,
+	Thread_Pool.enqueue(boost::bind(&db::table::prefs::set_max_upload_rate,
 		rate, db::pool::get()));
 }
 
@@ -147,7 +147,7 @@ void p2p_real::start_download(const p2p::download & D)
 void p2p_real::remove_download(const std::string & hash)
 {
 	LOGGER << hash;
-	Thread_Pool.queue(boost::bind(&connection_manager::remove,
+	Thread_Pool.enqueue(boost::bind(&connection_manager::remove,
 		&Connection_Manager, hash));
 }
 

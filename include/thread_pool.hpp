@@ -7,13 +7,14 @@
 #include <boost/thread.hpp>
 
 //standard
-#include <list>
-#include <set>
+#include <queue>
 
-class thread_pool
+class thread_pool : private boost::noncopyable
 {
 public:
-	thread_pool(const unsigned threads = boost::thread::hardware_concurrency())
+	thread_pool(const unsigned threads = boost::thread::hardware_concurrency()):
+		running_jobs(0),
+		is_stopped(false)
 	{
 		for(unsigned x=0; x<threads; ++x){
 			workers.create_thread(boost::bind(&thread_pool::dispatcher, this));
@@ -22,44 +23,48 @@ public:
 
 	~thread_pool()
 	{
-		interrupt_join();
-	}
-
-	//remove all jobs
-	void clear()
-	{
-		boost::mutex::scoped_lock lock(job_mutex);
-		job_queue.clear();
-	}
-
-	//interrupt all threads and block until they terminate
-	void interrupt_join()
-	{
 		workers.interrupt_all();
 		workers.join_all();
 	}
 
-	//queue a job
-	void queue(const boost::function<void ()> & func)
+	//place function in job queue
+	void enqueue(const boost::function<void ()> & func)
 	{
 		boost::mutex::scoped_lock lock(job_mutex);
-		job_queue.push_back(func);
-		job_cond.notify_one();
+		if(!is_stopped){
+			job_queue.push_back(func);
+			job_cond.notify_one();
+		}
+	}
+
+	//block until all jobs completed
+	void join()
+	{
+		boost::mutex::scoped_lock lock(job_mutex);
+		while(!job_queue.empty() || running_jobs){
+			join_cond.wait(job_mutex);
+		}
+	}
+
+	//stop new jobs from being added and block until existing jobs complete
+	void stop()
+	{
+		boost::mutex::scoped_lock lock(job_mutex);
+		//insure no new jobs get added and wait for existing jobs to finish
+		is_stopped = true;
+		while(!job_queue.empty() || running_jobs){
+			join_cond.wait(job_mutex);
+		}
 	}
 
 private:
-	/*
-	workers:
-		All threads in the thread_pool.
-	job_mutex:
-		Locks access to all in this section.
-	job_queue:
-		New jobs added to the back, jobs to run are taken from front.
-	*/
-	boost::thread_group workers;
-	boost::mutex job_mutex;
-	boost::condition_variable_any job_cond;
-	std::deque<boost::function<void ()> > job_queue;
+	boost::thread_group workers;                     //all threads in thread_pool
+	boost::mutex job_mutex;                          //locks everyting in this section
+	boost::condition_variable_any job_cond;          //cond notified when job added
+	std::deque<boost::function<void ()> > job_queue; //jobs to run
+	unsigned running_jobs;                           //number of jobs in progress
+	boost::condition_variable_any join_cond;         //cond used for join
+	bool is_stopped;                                 //when true no jobs can be added
 	
 	void dispatcher()
 	{
@@ -72,8 +77,14 @@ private:
 			}
 			job = job_queue.front();
 			job_queue.pop_front();
+			++running_jobs;
 			}//end lock scope
 			job();
+			{//begin lock scope
+			boost::mutex::scoped_lock lock(job_mutex);
+			--running_jobs;
+			}//end lock scope
+			join_cond.notify_all();
 		}
 	}
 };
