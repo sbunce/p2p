@@ -7,18 +7,16 @@
 #include <boost/thread.hpp>
 
 //standard
-#include <iostream>
-#include <limits>
-#include <queue>
+#include <list>
+#include <set>
 
 class thread_pool
 {
 public:
-	thread_pool(const int threads):
-		stop_threads(false)
+	thread_pool(const unsigned threads = boost::thread::hardware_concurrency())
 	{
-		for(int x=0; x<threads; ++x){
-			Workers.create_thread(boost::bind(&thread_pool::dispatcher, this));
+		for(unsigned x=0; x<threads; ++x){
+			workers.create_thread(boost::bind(&thread_pool::dispatcher, this));
 		}
 	}
 
@@ -27,74 +25,50 @@ public:
 		interrupt_join();
 	}
 
-	/*
-	Clears all pending jobs.
-	Note: This is often called before interrupt_join() if we don't want to finish
-		jobs befroe stopping the thread_pool.
-	*/
+	//remove all jobs
 	void clear()
 	{
-		boost::mutex::scoped_lock lock(job_queue_mutex);
+		boost::mutex::scoped_lock lock(job_mutex);
 		job_queue.clear();
 	}
 
-	/*
-	Add job to thread pool.
-	Note: boost::bind can be used to make this totally general.
-	*/
-	void queue(const boost::function<void ()> & func)
-	{
-		boost::mutex::scoped_lock lock(job_queue_mutex);
-		job_queue.push_back(func);
-		job_queue_cond.notify_one();
-	}
-
-	/*
-	Ends all threads in thread_pool after they finish all pending jobs. This is
-	often necessary to call in a dtor of a class that has a thread_pool as a
-	member function. Destruction order must be carefully considered to make sure
-	that the thread_pool doesn't use an object after it has been destroyed.
-	*/
+	//interrupt all threads and block until they terminate
 	void interrupt_join()
 	{
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(job_queue_mutex);
-		stop_threads = true;
-		}//end lock scope
-		job_queue_cond.notify_all();
-		Workers.join_all();
+		workers.interrupt_all();
+		workers.join_all();
+	}
+
+	//queue a job
+	void queue(const boost::function<void ()> & func)
+	{
+		boost::mutex::scoped_lock lock(job_mutex);
+		job_queue.push_back(func);
+		job_cond.notify_one();
 	}
 
 private:
-	boost::thread_group Workers;
-
 	/*
-	job_queue_mutex:
-		Locks access to everything in this section.
-	job_queue_cond:
-		Used by queue() to signal dispatcher() thread that a job needs to be done.
+	workers:
+		All threads in the thread_pool.
+	job_mutex:
+		Locks access to all in this section.
 	job_queue:
-		Functions to call back to.
-	stop_threads:
-		Triggers termination 
+		New jobs added to the back, jobs to run are taken from front.
 	*/
-	boost::mutex job_queue_mutex;
-	boost::condition_variable_any job_queue_cond;
+	boost::thread_group workers;
+	boost::mutex job_mutex;
+	boost::condition_variable_any job_cond;
 	std::deque<boost::function<void ()> > job_queue;
-	bool stop_threads;
-
-	//threads wait here for jobs
+	
 	void dispatcher()
 	{
 		boost::function<void ()> job;
 		while(true){
 			{//begin lock scope
-			boost::mutex::scoped_lock lock(job_queue_mutex);
+			boost::mutex::scoped_lock lock(job_mutex);
 			while(job_queue.empty()){
-				if(stop_threads){
-					return;
-				}
-				job_queue_cond.wait(job_queue_mutex);
+				job_cond.wait(job_mutex);
 			}
 			job = job_queue.front();
 			job_queue.pop_front();

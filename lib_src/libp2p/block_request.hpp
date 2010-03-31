@@ -18,6 +18,7 @@ This class is threadsafe.
 #include <algorithm>
 #include <limits>
 #include <map>
+#include <queue>
 #include <set>
 
 class block_request : private boost::noncopyable
