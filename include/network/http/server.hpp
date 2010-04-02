@@ -35,7 +35,9 @@ public:
 
 	~server()
 	{
+LOGGER;
 		Proactor.stop();
+LOGGER;
 	}
 
 	//return port server is listening on

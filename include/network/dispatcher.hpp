@@ -1,5 +1,5 @@
-#ifndef H_NETWORK_CALL_BACK_DISPATCHER
-#define H_NETWORK_CALL_BACK_DISPATCHER
+#ifndef H_NETWORK_DISPATCHER
+#define H_NETWORK_DISPATCHER
 
 //custom
 #include "connection_info.hpp"
@@ -12,10 +12,12 @@
 #include <list>
 
 namespace network{
-class call_back_dispatcher : private boost::noncopyable
+class dispatcher : private boost::noncopyable
 {
+	//number of threads to use to do call backs
+	static const unsigned dispatcher_threads = 4;
 public:
-	call_back_dispatcher(
+	dispatcher(
 		const boost::function<void (connection_info &)> & connect_call_back_in,
 		const boost::function<void (connection_info &)> & disconnect_call_back_in
 	):
@@ -34,7 +36,7 @@ public:
 	{
 		boost::mutex::scoped_lock lock(job_mutex);
 		job.push_front(std::make_pair(CI->connection_ID, boost::bind(
-			&call_back_dispatcher::connect_call_back_wrapper, this, CI)));
+			&dispatcher::connect_call_back_wrapper, this, CI)));
 		job_cond.notify_one();
 	}
 
@@ -47,7 +49,7 @@ public:
 	{
 		boost::mutex::scoped_lock lock(job_mutex);
 		job.push_back(std::make_pair(CI->connection_ID, boost::bind(
-			&call_back_dispatcher::disconnect_call_back_wrapper, this, CI)));
+			&dispatcher::disconnect_call_back_wrapper, this, CI)));
 		job_cond.notify_one();
 	}
 
@@ -60,7 +62,7 @@ public:
 	{
 		boost::mutex::scoped_lock lock(job_mutex);
 		job.push_back(std::make_pair(CI->connection_ID, boost::bind(
-			&call_back_dispatcher::recv_call_back_wrapper, this, CI, recv_buf)));
+			&dispatcher::recv_call_back_wrapper, this, CI, recv_buf)));
 		job_cond.notify_one();
 	}
 
@@ -73,47 +75,30 @@ public:
 	{
 		boost::mutex::scoped_lock lock(job_mutex);
 		job.push_back(std::make_pair(CI->connection_ID, boost::bind(
-			&call_back_dispatcher::send_call_back_wrapper, this, CI, latest_send,
+			&dispatcher::send_call_back_wrapper, this, CI, latest_send,
 			send_buf_size)));
 		job_cond.notify_one();
 	}
 
-	/*
-	Starts threads to do call backs.
-	Precondition: Call_Back_Dispatcher must be stopped.
-	*/
+	//start dispatcher
 	void start()
 	{
-		boost::mutex::scoped_lock lock(start_stop_mutex);
-		assert(!Workers); //assert stopped
-		Workers = boost::shared_ptr<boost::thread_group>(new boost::thread_group());
-		int threads = boost::thread::hardware_concurrency() < 4 ?
-			4 : boost::thread::hardware_concurrency();
-		for(int x=0; x<threads; ++x){
-			Workers->create_thread(boost::bind(&call_back_dispatcher::dispatch, this));
+		for(int x=0; x<dispatcher_threads; ++x){
+			workers.create_thread(boost::bind(&dispatcher::dispatch, this));
 		}
 	}
 
-	/*
-	Stops all call back threads. Cancels all pending jobs.
-	Precondition: Call_Back_Dispatcher must be started.
-	*/
+	//stop dispatcher
 	void stop()
 	{
-		boost::mutex::scoped_lock lock(start_stop_mutex);
-		assert(Workers); //assert started
-		Workers->interrupt_all();
-		Workers->join_all();
-		Workers = boost::shared_ptr<boost::thread_group>();
+		workers.interrupt_all();
+		workers.join_all();
 		job.clear();
 		memoize.clear();
 	}
 
 private:
-	boost::mutex start_stop_mutex;
-
-	//threads which wait in call_back_dispatch
-	boost::shared_ptr<boost::thread_group> Workers;
+	boost::thread_group workers;
 
 	const boost::function<void (connection_info &)> connect_call_back;
 	const boost::function<void (connection_info &)> disconnect_call_back;
@@ -141,7 +126,7 @@ private:
 	//worker threads which do call backs reside in this function
 	void dispatch()
 	{
-		std::pair<int, boost::function<void ()> > temp;
+		std::pair<int, boost::function<void ()> > tmp;
 		while(true){
 			{//begin lock scope
 			boost::mutex::scoped_lock lock(job_mutex);
@@ -153,22 +138,22 @@ private:
 					std::pair<std::set<int>::iterator, bool>
 						ret = memoize.insert(iter_cur->first);
 					if(ret.second){
-						temp = *iter_cur;
+						tmp = *iter_cur;
 						job.erase(iter_cur);
-						goto run_dispatch;
+						goto run_job;
 					}
 				}
 				job_cond.wait(job_mutex);
 			}
 			}//end lock scope
-			run_dispatch:
+			run_job:
 
 			//run call back
-			temp.second();
+			tmp.second();
 
 			{//begin lock scope
 			boost::mutex::scoped_lock lock(job_mutex);
-			memoize.erase(temp.first);
+			memoize.erase(tmp.first);
 			}//end lock scope
 			job_cond.notify_all();
 		}

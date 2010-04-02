@@ -27,6 +27,17 @@ public:
 		workers.join_all();
 	}
 
+	//remove all jobs and stop
+	void clear_stop()
+	{
+		boost::mutex::scoped_lock lock(job_mutex);
+		job_queue.clear();
+		is_stopped = true;
+		while(!job_queue.empty() || running_jobs){
+			join_cond.wait(job_mutex);
+		}
+	}
+
 	//place function in job queue
 	void enqueue(const boost::function<void ()> & func)
 	{
@@ -46,11 +57,10 @@ public:
 		}
 	}
 
-	//stop new jobs from being added and block until existing jobs complete
+	//don't allow new jobs, block until running jobs finish
 	void stop()
 	{
 		boost::mutex::scoped_lock lock(job_mutex);
-		//insure no new jobs get added and wait for existing jobs to finish
 		is_stopped = true;
 		while(!job_queue.empty() || running_jobs){
 			join_cond.wait(job_mutex);

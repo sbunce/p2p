@@ -2,7 +2,7 @@
 #define H_NETWORK_PROACTOR
 
 //custom
-#include "call_back_dispatcher.hpp"
+#include "dispatcher.hpp"
 #include "connection_info.hpp"
 #include "listener.hpp"
 #include "protocol.hpp"
@@ -39,8 +39,7 @@ public:
 		const boost::function<void (connection_info &)> & connect_call_back,
 		const boost::function<void (connection_info &)> & disconnect_call_back
 	):
-		Call_Back_Dispatcher(connect_call_back, disconnect_call_back),
-		Thread_Pool(1)
+		Dispatcher(connect_call_back, disconnect_call_back)
 	{}
 
 	/*
@@ -70,6 +69,42 @@ public:
 		Select.interrupt();
 	}
 
+	//returns download rate averaged over a few seconds (B/s)
+	unsigned download_rate()
+	{
+		return Rate_Limit.download();
+	}
+
+	//returns port listening on (empty if not listening)
+	std::string listen_port()
+	{
+		return Listener.port();
+	}
+
+	//get maximum download rate
+	unsigned max_download_rate()
+	{
+		return Rate_Limit.max_download();
+	}
+
+	//set maximum download rate
+	void max_download_rate(const unsigned rate)
+	{
+		Rate_Limit.max_download(rate);
+	}
+
+	//get maximum upload rate
+	unsigned max_upload_rate()
+	{
+		return Rate_Limit.max_upload();
+	}
+
+	//set maximum upload rate
+	void max_upload_rate(const unsigned rate)
+	{
+		Rate_Limit.max_upload(rate);
+	}
+
 	//send data to specified connection
 	void send(const int connection_ID, buffer & send_buf)
 	{
@@ -83,46 +118,17 @@ public:
 		}
 	}
 
-	/* Info / Options
-	download_rate:
-		Returns download rate (averaged over a few seconds).
-	listen_port:
-		Returns port we're listening on, or empty string if not listening on any
-		port.
-	max_download_rate:
-		Get or set maximum allowed download rate.
-	max_upload_rate:
-		Get or set maximum allowed upload rate.
-	upload_rate:
-		Returns upload rate (averaged over a few seconds).
-	*/
-	unsigned download_rate(){ return Rate_Limit.download(); }
-	std::string listen_port(){ return Listener.port(); }
-	unsigned max_download_rate(){ return Rate_Limit.max_download(); }
-	void max_download_rate(const unsigned rate){ Rate_Limit.max_download(rate); }
-	unsigned max_upload_rate(){ return Rate_Limit.max_upload(); }
-	void max_upload_rate(const unsigned rate){ Rate_Limit.max_upload(rate); }
-	unsigned upload_rate(){ return Rate_Limit.upload(); }
-
-	//start proactor, return false if fail to start
+	//start proactor
 	bool start()
 	{
-		network_thread = boost::thread(boost::bind(&proactor::startup, this));
+		network_thread = boost::thread(boost::bind(&proactor::network_loop, this));
+		Dispatcher.start();
 		return true;
 	}
 
-	/*
-	Start proactor, and optionally start a listener. Returns false if proactor
-	failed to start.
-	Precondition: proactor must be stopped.
-	*/
+	//start proactor with listening socket, return false if failed to start
 	bool start(const endpoint & E)
 	{
-		boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
-		if(network_thread.get_id() != boost::thread::id()){
-			//proactor already started
-			return false;
-		}
 		assert(E.type() == tcp);
 		Listener.open(E);
 		if(!Listener.is_open()){
@@ -130,92 +136,29 @@ public:
 			return false;
 		}
 		Listener.set_non_blocking();
-		add_socket(std::make_pair(Listener.socket(), boost::shared_ptr<state>()));
+		add_socket(std::make_pair(Listener.socket(), boost::shared_ptr<connection>()));
 		return start();
 	}
 
 	/*
 	Stop proactor.
-	Precondition: proactor must be started.
+	Note: It's not supported to start the proactor after it has been stopped.
 	*/
 	void stop()
 	{
-		boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
-		if(network_thread.get_id() == boost::thread::id()){
-			//proactor already stopped
-			return;
-		}
-		{//BEGIN lock scope
-		boost::mutex::scoped_lock lock(network_thread_call_mutex);
-		network_thread_call.push_front(boost::bind(&proactor::shutdown, this));
-		}//END lock scope
-		Select.interrupt();
+		Thread_Pool.clear_stop();
+		Dispatcher.stop();
+		network_thread.interrupt();
 		network_thread.join();
 	}
 
-	//restart proactor, return false if fail to start
-	bool restart()
+	//returns upload rate averaged over a few seconds (B/s)
+	unsigned upload_rate()
 	{
-		boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
-		stop();
-		return start();
-	}
-
-	//restart proactor and start a listener, return false if fail to start
-	bool restart(const endpoint & E)
-	{
-		boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
-		stop();
-		return start(E);
+		return Rate_Limit.upload();
 	}
 
 private:
-	boost::recursive_mutex start_stop_mutex;
-	boost::thread network_thread;
-
-	//all state associated with the socket
-	class state : private boost::noncopyable
-	{
-	public:
-		state(
-			const bool connected_in,
-			const std::set<endpoint> & E_in,
-			const boost::shared_ptr<nstream> & N_in,
-			const boost::shared_ptr<connection_info> & CI_in
-		):
-			connected(connected_in),
-			E(E_in),
-			N(N_in),
-			disconnect_on_empty(false),
-			CI(CI_in),
-			last_seen(std::time(NULL))
-		{}
-
-		bool connected;               //false if async connect in progress
-		std::set<endpoint> E;         //endpoints to connect to (E.begin() tried first)
-		boost::shared_ptr<nstream> N; //the connection
-		bool disconnect_on_empty;     //if true, disconnect when send_buf becomes empty
-		buffer send_buf;
-
-		/*
-		Connection info passed to call backs.
-		Note: Once this is instantiated it is not be modified except by the
-			Call_Back_Dispatcher when it knows it's safe.
-		*/
-		boost::shared_ptr<connection_info> CI;
-
-		/*
-		timed_out:
-			Returns true if connection timed out.
-		touch:
-			Updates the last time connection was active (used for timeout).
-		*/
-		bool timed_out(){ return std::time(NULL) - last_seen > idle_timeout; }
-		void touch(){ last_seen = std::time(NULL); }
-
-	private:
-		std::time_t last_seen;
-	};
 
 	/*
 	This class allocates connection_IDs. There are a few problems this class
@@ -264,29 +207,154 @@ private:
 		boost::mutex Mutex;      //locks all access to object
 		int highest_allocated;   //last connection_ID allocated
 		std::set<int> allocated; //set of all connection_IDs allocated
-	} ID_Manager;
+	};
 
-	call_back_dispatcher Call_Back_Dispatcher;
+	class connection : private boost::noncopyable
+	{
+	private:
+		bool connected;          //false if async connect in progress
+		ID_manager & ID_Manager; //allocates and deallocates connection_ID
+		std::set<endpoint> E;    //endpoints to try to connect to
+		std::time_t last_seen;   //last time there was activity on socket
+		int socket_FD;           //file descriptor, will change after open_async()
+
+	public:
+		/*
+		Ctor for outgoing connection.
+		Note: This ctor does DNS resolution if needed.
+		*/
+		connection(
+			ID_manager & ID_Manager_in,
+			const std::string & host_in,
+			const std::string & port_in
+		):
+			connected(false),
+			ID_Manager(ID_Manager_in),
+			last_seen(std::time(NULL)),
+			disc_on_empty(false),
+			N(new nstream()),
+			host(host_in),
+			port(port_in),
+			connection_ID(ID_Manager.allocate())
+		{
+			E = get_endpoint(host, port, tcp);
+		}
+
+		//ctor for incoming connection
+		connection(
+			ID_manager & ID_Manager_in,
+			const boost::shared_ptr<nstream> & N_in
+		):
+			connected(true),
+			ID_Manager(ID_Manager_in),
+			last_seen(std::time(NULL)),
+			socket_FD(N_in->socket()),
+			disc_on_empty(false),
+			N(N_in),
+			host(""),
+			port(N_in->remote_port()),
+			connection_ID(ID_Manager.allocate())
+		{
+			CI = boost::shared_ptr<connection_info>(new connection_info(connection_ID,
+				N->socket(), "", N->remote_IP(), N->remote_port(), incoming));
+		}
+
+		~connection()
+		{
+			ID_Manager.deallocate(connection_ID);
+		}
+
+		//modified by proactor
+		bool disc_on_empty; //if true we disconnect when send_buf is empty
+		buffer send_buf;    //bytes to send appended to this
+
+		//const
+		const boost::shared_ptr<nstream> N; //connection object
+		const std::string host;             //hostname or IP to connect to
+		const std::string port;             //port number
+		const int connection_ID;            //see above
+
+		/* WARNING
+		This should not be modified by any thread other than the dispatcher
+		threads. Modifying this from the network thread is not thread safe unless
+		it hasn't yet been passed to dispatcher
+		*/
+		boost::shared_ptr<connection_info> CI;
+
+		//returns true if async connect in progress
+		bool half_open()
+		{
+			return !connected;
+		}
+
+		/*
+		Returns true if async connecte succeeded. This is called after half open
+		socket becomes writeable.
+		Postcondition: If true returned then half_open() will return false.
+		*/
+		bool is_open()
+		{
+			if(N->is_open_async()){
+				connected = true;
+				return true;
+			}
+			return false;
+		}
+
+		/*
+		Open async connection, returns false if couldn't allocate socket.
+		Postcondition: socket_FD, and CI will change.
+		*/
+		bool open_async()
+		{
+			//assert this connection is outgoing
+			assert(!host.empty());
+			if(E.empty()){
+				//no more endpoints to try
+				return false;
+			}
+			N->open_async(*E.begin());
+			socket_FD = N->socket();
+			CI = boost::shared_ptr<connection_info>(new connection_info(
+				connection_ID, N->socket(), host, E.begin()->IP(), port, outgoing));
+			E.erase(E.begin());
+			return socket_FD != -1;
+		}
+
+		/*
+		Returns file descriptor.
+		Note: Will return different file descriptor after open_async().
+		*/
+		int socket()
+		{
+			return socket_FD;
+		}
+
+		//returns true if connection timed out
+		bool timed_out()
+		{
+			return std::time(NULL) - last_seen > idle_timeout;
+		}
+
+		//resets timer used for timeout
+		void touch()
+		{
+			last_seen = std::time(NULL);
+		}
+	};
+
+	boost::thread network_thread;
+	ID_manager ID_Manager;
+	dispatcher Dispatcher;
 	listener Listener;
 	rate_limit Rate_Limit;
 	thread_pool Thread_Pool;
-
-	//select wrapper and sets of sockets to monitor
 	select Select;
-	std::set<int> read_FDS, write_FDS;
+	std::set<int> read_FDS, write_FDS;                    //sets to monitor with select
+	std::map<int, boost::shared_ptr<connection> > Socket; //socket_FD associated with connection
+	std::map<int, boost::shared_ptr<connection> > ID;     //connection_ID associated with connection
 
-	//socket_FD associated with socket state
-	std::map<int, boost::shared_ptr<state> > Socket;
-
-	//connection_ID associated with socket state
-	std::map<int, boost::shared_ptr<state> > ID;
-
-	/*
-	When a thread that is not the network_thread needs to modify data that
-	is only accessible to the network_thread is pushes a function object on
-	the back of this. The network_thread will then make the call.
-	Note: network_thread_call_mutex must lock all access to container.
-	*/
+	//function proxy, function calls for network_thread to make
 	boost::mutex network_thread_call_mutex;
 	std::deque<boost::function<void ()> > network_thread_call;
 
@@ -294,36 +362,36 @@ private:
 	Add socket. P.first must be set to socket_FD.
 	Precondition: N and CI must not be empty shared_ptrs.
 	*/
-	void add_socket(std::pair<int, boost::shared_ptr<state> > P)
+	void add_socket(std::pair<int, boost::shared_ptr<connection> > P)
 	{
 		assert(P.first != -1);
 		if(P.second){
 			assert(P.second->N);
 			assert(P.second->CI);
-			if(P.second->connected){
-				read_FDS.insert(P.first);
-			}else{
+			if(P.second->half_open()){
 				//async connection in progress
 				write_FDS.insert(P.first);
+			}else{
+				read_FDS.insert(P.first);
 			}
-			std::pair<std::map<int, boost::shared_ptr<state> >::iterator, bool>
+			std::pair<std::map<int, boost::shared_ptr<connection> >::iterator, bool>
 				ret = Socket.insert(P);
 			assert(ret.second);
-			P.first = P.second->CI->connection_ID;
+			P.first = P.second->connection_ID;
 			ret = ID.insert(P);
 			assert(ret.second);
 		}else{
-			//the listen socket doesn't have state associated with it
+			//the listen socket doesn't have connection associated with it
 			read_FDS.insert(P.first);
 		}
 	}
 
 	void append_send_buf(const int connection_ID, boost::shared_ptr<buffer> B)
 	{
-		std::pair<int, boost::shared_ptr<state> > P = lookup_ID(connection_ID);
+		std::pair<int, boost::shared_ptr<connection> > P = lookup_ID(connection_ID);
 		if(P.second){
 			P.second->send_buf.append(*B);
-			write_FDS.insert(P.second->CI->socket_FD);
+			write_FDS.insert(P.second->socket());
 		}
 	}
 
@@ -334,8 +402,8 @@ private:
 		We save the elements we want to erase because calling remove_socket
 		invalidates iterators for the Socket container.
 		*/
-		std::vector<std::pair<int, boost::shared_ptr<state> > > timed_out;
-		for(std::map<int, boost::shared_ptr<state> >::iterator
+		std::vector<std::pair<int, boost::shared_ptr<connection> > > timed_out;
+		for(std::map<int, boost::shared_ptr<connection> >::iterator
 			iter_cur = Socket.begin(), iter_end = Socket.end(); iter_cur != iter_end;
 			++iter_cur)
 		{
@@ -344,56 +412,56 @@ private:
 			}
 		}
 
-		for(std::vector<std::pair<int, boost::shared_ptr<state> > >::iterator
+		for(std::vector<std::pair<int, boost::shared_ptr<connection> > >::iterator
 			iter_cur = timed_out.begin(), iter_end = timed_out.end();
 			iter_cur != iter_end; ++iter_cur)
 		{
 			LOGGER << "timed out " << iter_cur->second->N->remote_IP();
 			remove_socket(iter_cur->first);
-			Call_Back_Dispatcher.disconnect(iter_cur->second->CI);
+			Dispatcher.disconnect(iter_cur->second->CI);
 		}
 	}
 
 	//disconnect socket, or schedule disconnect when send_buf empty
 	void disconnect(const int connection_ID, const bool on_empty)
 	{
-		std::pair<int, boost::shared_ptr<state> > P = lookup_ID(connection_ID);
+		std::pair<int, boost::shared_ptr<connection> > P = lookup_ID(connection_ID);
 		if(P.second){
 			if(on_empty){
 				//disconnect when send_buf empty
 				if(P.second->send_buf.empty()){
-					remove_socket(P.second->CI->socket_FD);
-					Call_Back_Dispatcher.disconnect(P.second->CI);
+					remove_socket(P.second->socket());
+					Dispatcher.disconnect(P.second->CI);
 				}else{
-					P.second->disconnect_on_empty = true;
+					P.second->disc_on_empty = true;
 				}
 			}else{
 				//disconnect regardless of whether send_buf empty
-				remove_socket(P.second->CI->socket_FD);
-				Call_Back_Dispatcher.disconnect(P.second->CI);
+				remove_socket(P.second->socket());
+				Dispatcher.disconnect(P.second->CI);
 			}
 		}
 	}
 
-	//return state associated with the socket file descriptor
-	std::pair<int, boost::shared_ptr<state> > lookup_socket(const int socket_FD)
+	//return connection associated with the socket file descriptor
+	std::pair<int, boost::shared_ptr<connection> > lookup_socket(const int socket_FD)
 	{
-		std::map<int, boost::shared_ptr<state> >::iterator
+		std::map<int, boost::shared_ptr<connection> >::iterator
 			iter = Socket.find(socket_FD);
 		if(iter == Socket.end()){
-			return std::pair<int, boost::shared_ptr<state> >();
+			return std::pair<int, boost::shared_ptr<connection> >();
 		}else{
 			return *iter;
 		}
 	}
 
-	//return state associated with connection ID
-	std::pair<int, boost::shared_ptr<state> > lookup_ID(const int connection_ID)
+	//return connection associated with connection ID
+	std::pair<int, boost::shared_ptr<connection> > lookup_ID(const int connection_ID)
 	{
-		std::map<int, boost::shared_ptr<state> >::iterator
+		std::map<int, boost::shared_ptr<connection> >::iterator
 			iter = ID.find(connection_ID);
 		if(iter == ID.end()){
-			return std::pair<int, boost::shared_ptr<state> >();
+			return std::pair<int, boost::shared_ptr<connection> >();
 		}else{
 			return *iter;
 		}
@@ -403,38 +471,25 @@ private:
 	Called when a async connecting socket becomes writeable. P.first must be
 	socket_FD.
 	*/
-	void handle_async_connection(std::pair<int, boost::shared_ptr<state> > P)
+	void handle_async_connection(std::pair<int, boost::shared_ptr<connection> > P)
 	{
 		assert(P.first != -1);
 		P.second->touch();
-		if(P.second->N->is_open_async()){
+		if(P.second->is_open()){
+			//async connection suceeded
 			read_FDS.insert(P.first); //monitor socket for incoming data
 			write_FDS.erase(P.first); //send_buf will be empty after connect
-			P.second->connected = true;
-			P.second->E.clear();
-			Call_Back_Dispatcher.connect(P.second->CI);
+			Dispatcher.connect(P.second->CI);
 		}else{
-			P.second->E.erase(P.second->E.begin());
+			//async connection failed, try next endpoint
 			remove_socket(P.first);
-			if(P.second->E.empty()){
-				//no more endpoints to try
-				remove_socket(P.first);
-				Call_Back_Dispatcher.disconnect(P.second->CI);
+			if(P.second->open_async()){
+				//async connection in progress
+				P.first = P.second->socket();
+				add_socket(P);
 			}else{
-				//try next endpoint
-				P.second->N->open_async(*P.second->E.begin());
-				P.first = P.second->N->socket();
-				//recreate connection_info with new IP
-				P.second->CI = boost::shared_ptr<connection_info>(new connection_info(
-					ID_Manager.allocate(), P.first, P.second->CI->host, P.second->E.begin()->IP(),
-					P.second->CI->port, outgoing));
-				if(P.first == -1){
-					//couldn't allocate socket
-					remove_socket(P.first);
-					Call_Back_Dispatcher.disconnect(P.second->CI);
-				}else{
-					add_socket(P);
-				}
+				//failed to allocate socket
+				Dispatcher.disconnect(P.second->CI);
 			}
 		}
 	}
@@ -470,22 +525,19 @@ private:
 			if(Listener.is_open() && tmp_read_FDS.find(Listener.socket()) != tmp_read_FDS.end()){
 				//handle incoming connections
 				while(boost::shared_ptr<nstream> N = Listener.accept()){
-					boost::shared_ptr<connection_info> CI(new connection_info(
-						ID_Manager.allocate(), N->socket(), "", N->remote_IP(),
-						N->remote_port(), incoming));
-					std::pair<int, boost::shared_ptr<state> > P(N->socket(),
-						boost::shared_ptr<state>(new state(true, std::set<endpoint>(), N, CI)));
+					std::pair<int, boost::shared_ptr<connection> > P(N->socket(),
+						boost::shared_ptr<connection>(new connection(ID_Manager, N)));
 					add_socket(P);
-					Call_Back_Dispatcher.connect(P.second->CI);
+					Dispatcher.connect(P.second->CI);
 				}
 				tmp_read_FDS.erase(Listener.socket());
 			}
 
 			//handle all writes
 			while(!tmp_write_FDS.empty()){
-				std::pair<int, boost::shared_ptr<state> > P = lookup_socket(*tmp_write_FDS.begin());
+				std::pair<int, boost::shared_ptr<connection> > P = lookup_socket(*tmp_write_FDS.begin());
 				P.second->touch();
-				if(!P.second->connected){
+				if(P.second->half_open()){
 					handle_async_connection(P);
 				}else{
 					//n_bytes initially set to max send, then set to how much sent
@@ -494,20 +546,20 @@ private:
 						n_bytes = P.second->N->send(P.second->send_buf, n_bytes);
 						if(n_bytes == -1 || n_bytes == 0){
 							remove_socket(P.first);
-							Call_Back_Dispatcher.disconnect(P.second->CI);
+							Dispatcher.disconnect(P.second->CI);
 						}else{
 							Rate_Limit.add_upload(n_bytes);
 							if(P.second->send_buf.empty()){
-								if(P.second->disconnect_on_empty){
+								if(P.second->disc_on_empty){
 									remove_socket(P.first);
-									Call_Back_Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
-									Call_Back_Dispatcher.disconnect(P.second->CI);
+									Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
+									Dispatcher.disconnect(P.second->CI);
 								}else{
 									write_FDS.erase(P.first);
-									Call_Back_Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
+									Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
 								}
 							}else{
-								Call_Back_Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
+								Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
 							}
 						}
 					}
@@ -517,7 +569,7 @@ private:
 
 			//handle all reads
 			while(!tmp_read_FDS.empty()){
-				std::pair<int, boost::shared_ptr<state> > P = lookup_socket(*tmp_read_FDS.begin());
+				std::pair<int, boost::shared_ptr<connection> > P = lookup_socket(*tmp_read_FDS.begin());
 				if(P.second){
 					P.second->touch();
 					//n_bytes initially set to max read, then set to how much read
@@ -530,10 +582,10 @@ private:
 					n_bytes = P.second->N->recv(*recv_buf, n_bytes);
 					if(n_bytes == -1 || n_bytes == 0){
 						remove_socket(P.first);
-						Call_Back_Dispatcher.disconnect(P.second->CI);
+						Dispatcher.disconnect(P.second->CI);
 					}else{
 						Rate_Limit.add_download(n_bytes);
-						Call_Back_Dispatcher.recv(P.second->CI, recv_buf);
+						Dispatcher.recv(P.second->CI, recv_buf);
 					}
 				}
 				tmp_read_FDS.erase(tmp_read_FDS.begin());
@@ -544,112 +596,52 @@ private:
 	void process_network_thread_call()
 	{
 		while(true){
-			boost::function<void ()> F;
+			boost::function<void ()> tmp;
 			{//begin lock scope
 			boost::mutex::scoped_lock lock(network_thread_call_mutex);
 			if(network_thread_call.empty()){
 				break;
 			}
-			F = network_thread_call.front();
+			tmp = network_thread_call.front();
 			network_thread_call.pop_front();
 			}//end lock scope
-			F();
+			tmp();
 		}
 	}
 
-	//remove socket and state
+	//remove socket and connection
 	void remove_socket(const int socket_FD)
 	{
 		assert(socket_FD != -1);
 		read_FDS.erase(socket_FD);
 		write_FDS.erase(socket_FD);
-		std::pair<int, boost::shared_ptr<state> > P = lookup_socket(socket_FD);
+		std::pair<int, boost::shared_ptr<connection> > P = lookup_socket(socket_FD);
 		if(P.second){
 			Socket.erase(socket_FD);
-			ID_Manager.deallocate(P.second->CI->connection_ID);
-			ID.erase(P.second->CI->connection_ID);
+			ID.erase(P.second->connection_ID);
 		}
 	}
 
 	/*
 	Called by Thread_Pool thread pool thread.
 	Resolves host and starts async connect.
-	Note: This function must not access any data member except
-		network_thread_call (after locking network_thread_call_mutex).
+	Note: Threads run here. Be careful of data shared with network_thread.
 	*/
 	void resolve(const std::string & host, const std::string & port)
 	{
-		std::set<endpoint> E = get_endpoint(host, port, tcp);
-		if(E.empty()){
-			//host did not resolve
-			boost::shared_ptr<connection_info> CI(new connection_info(ID_Manager.allocate(),
-				-1, host, "", port, outgoing));
-			//deallocate connection_ID right away, it won't be stored outside proactor
-			ID_Manager.deallocate(CI->connection_ID);
-			Call_Back_Dispatcher.disconnect(CI);
+		boost::shared_ptr<connection> Connection(new connection(ID_Manager, host, port));
+		if(Connection->open_async()){
+			//in progress of connecting
+			std::pair<int, boost::shared_ptr<connection> > P(Connection->socket(), Connection);
+			{//BEGIN lock scope
+			boost::mutex::scoped_lock lock(network_thread_call_mutex);
+			network_thread_call.push_back(boost::bind(&proactor::add_socket, this, P));
+			}//END lock scope
 		}else{
-			//host resolved, proceed to connection
-			boost::shared_ptr<nstream> N(new nstream());
-			N->open_async(*E.begin());
-			boost::shared_ptr<connection_info> CI(new connection_info(ID_Manager.allocate(),
-				N->socket(), host, E.begin()->IP(), port, outgoing));
-			std::pair<int, boost::shared_ptr<state> > P(N->socket(),
-				boost::shared_ptr<state>(new state(false, E, N, CI)));
-			if(P.first != -1){
-				//in progress of connecting
-				boost::mutex::scoped_lock lock(network_thread_call_mutex);
-				network_thread_call.push_back(boost::bind(&proactor::add_socket, this, P));
-			}else{
-				Call_Back_Dispatcher.disconnect(P.second->CI);
-			}
+			//failed to resolve or failed to allocate socket
+			Dispatcher.disconnect(Connection->CI);
 		}
 		Select.interrupt();
-	}
-
-	/*
-	Shutdown proactor.
-	Disconnects all sockets and does cleanup.
-	*/
-	void shutdown()
-	{
-		//disconnect all sockets, except listener
-		while(!ID.empty()){
-			disconnect(ID.begin()->first, false);
-		}
-
-		//disconnect listener
-		remove_socket(Listener.socket());
-		Listener.close();
-
-		//stop any pending resolve jobs
-//DEBUG, consider impact of disabling this
-		//Thread_Pool.clear();
-
-		//erase any pending network_thread_call's
-		{//BEGIN lock scope
-		boost::mutex::scoped_lock lock(network_thread_call_mutex);
-		network_thread_call.clear();
-		}//end lock scope
-
-		//stop call back threads
-		Call_Back_Dispatcher.stop();
-
-		//terminate this thread
-		network_thread.interrupt();
-		boost::this_thread::interruption_point();
-	}
-
-	/*
-	The network_thread starts in this function.
-	Do setup and start listener.
-	*/
-	void startup()
-	{
-		//start call back threads
-		Call_Back_Dispatcher.start();
-
-		//send/recv
-		network_loop();
 	}
 };
 }//end namespace network

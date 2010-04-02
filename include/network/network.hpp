@@ -7,6 +7,5 @@
 #include "nstream.hpp"
 #include "protocol.hpp"
 #include "proactor.hpp"
-//#include "reactor.hpp"
 #include "select.hpp"
 #include "system_include.hpp"

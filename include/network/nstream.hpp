@@ -200,7 +200,6 @@ public:
 		}else{
 			buf.tail_reserve(max_transfer);
 		}
-
 		if(socket_FD == -1){
 			//socket previously disconnected, errno might not be valid here
 			return 0;
