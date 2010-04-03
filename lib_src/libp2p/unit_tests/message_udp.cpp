@@ -27,7 +27,8 @@ void pong_call_back(const network::endpoint & endpoint, const std::string & ID)
 
 int main()
 {
-	std::set<network::endpoint> endpoint_set = network::get_endpoint("localhost", "1234", network::udp);
+	network::start();
+	std::set<network::endpoint> endpoint_set = network::get_endpoint("localhost", "0", network::udp);
 	assert(!endpoint_set.empty());
 	endpoint = boost::shared_ptr<network::endpoint>(new network::endpoint(*endpoint_set.begin()));
 	boost::shared_ptr<message_udp::recv::base> M_recv;
