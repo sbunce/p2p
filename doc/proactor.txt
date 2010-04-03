@@ -1,0 +1,53 @@
+What is a Reactor?
+==================
+The Reactor is a design pattern used for I/O.
+
+A Reactor is an object that encapsulates what is needed to do I/O. Generally a
+reactor will have a public blocking function a client thread can call to wait
+for events (such as connect, send/recv, or disconnect). A Reactor may or may not
+have a internal thread to do networking (the client does not need to know).
+
+One advantage of a Reactor with a internal thread is that it increases
+performance by decoupling I/O processing from application processing. This also
+allows the application logic to remain single threaded (easier to implement, and
+maintain).
+
+Another advantage of a Reactor is that it can be used to encapsulate the I/O
+multiplexing code needed to deal with multiple sockets. Because of inverted
+control flow, I/O multiplexing code is generally nasty and is better separated
+from application logic as much as possible.
+
+The Reactor provides a clean abstraction for I/O. This makes it possible to
+implement different Reactor backends. With cross-platform code this is
+especially important because each platform has it's own high performance APIs. A
+Reactor which aims to be portable with one backend for most platforms is
+generally built around the select() system call (a synchronous I/O multiplexer).
+
+
+What is a Proactor?
+===================
+The Proactor is a design pattern used for asynchronous I/O.
+
+The Proactor contains a Reactor plus a dispatcher (basically a thread pool)
+which calls event handlers whenever an event happens (such as a connection,
+send/recv, or disconnection).
+
+The long answer can be found in proactor.pdf.
+
+The Proactor is more difficult to use but can achieve higher performance. The
+application code has to be multithreaded to deal with event handler call backs
+from the proactor thread(s).
+
+
+The Proactor in this Program
+============================
+The proactor in this program includes a select() based backend. It does
+concurrent call backs to handle events. However, the dispatcher is smart enough
+to not do multiple call backs for the same connection concurrently. If there is
+a state associated with the connection outside the Proactor it does not need
+locking so long as that state is not shared with other connections. An example
+of an application which requires no sharing between connections is a HTTP
+server.
+
+This Proactor is clearly higher performing than a basic Reactor and does not
+have the draw backs of the one-thread-per-connection approach.
