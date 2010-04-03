@@ -9,7 +9,7 @@ int main()
 	const char * argv[] = {"./a.out", "-b", "--x=123"};
 	CLI_args CLI_Args(3, const_cast<char **>(argv));
 
-	if(!CLI_Args.bool_flag("-b")){
+	if(!CLI_Args.flag("-b")){
 		LOGGER; ++fail;
 	}
 	std::string str;

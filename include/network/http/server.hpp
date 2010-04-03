@@ -16,6 +16,7 @@ class server
 public:
 	server(
 		const std::string & web_root_in,
+		const std::string & port = "0",
 		bool localhost_only = false
 	):
 		Proactor(
@@ -26,7 +27,7 @@ public:
 	{
 		std::set<network::endpoint> E = network::get_endpoint(
 			localhost_only ? "localhost" : "",
-			"8080",
+			port,
 			network::tcp
 		);
 		assert(!E.empty());
@@ -35,9 +36,7 @@ public:
 
 	~server()
 	{
-LOGGER;
 		Proactor.stop();
-LOGGER;
 	}
 
 	//return port server is listening on

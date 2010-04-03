@@ -25,7 +25,7 @@ public:
 	Returns true if specified bool flag present.
 	Example: "./a.out -b" requires param = "-b"
 	*/
-	bool bool_flag(const std::string & param)
+	bool flag(const std::string & param)
 	{
 		return std::find(argv.begin(), argv.end(), param) != argv.end();
 	}
@@ -70,7 +70,7 @@ public:
 	*/
 	void help_message(const std::string & help_param, const std::string & help_message)
 	{
-		if(bool_flag(help_param)){
+		if(flag(help_param)){
 			std::cout << help_message;
 			exit(0);
 		}

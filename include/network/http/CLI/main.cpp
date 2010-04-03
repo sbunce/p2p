@@ -24,15 +24,10 @@ void signal_handler(int sig)
 
 int main(int argc, char ** argv)
 {
-	if(argc != 2){
-		std::cout << "usage: " << argv[0] << " <path>\n";
-		return 1;
-	}
-
 	//register signal handlers
 	signal(SIGINT, signal_handler);
 
-	network::http::server HTTP(argv[1]);
+	network::http::server HTTP(argv[1], "8080");
 	LOGGER << "listening on " << HTTP.port();
 
 	{//begin lock scope
