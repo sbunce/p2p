@@ -275,9 +275,9 @@ private:
 		const int connection_ID;            //see above
 
 		/* WARNING
-		This should not be modified by any thread other than the dispatcher
-		threads. Modifying this from the network thread is not thread safe unless
-		it hasn't yet been passed to dispatcher
+		This should not be modified by any thread other than a dispatcher
+		thread. Modifying this from the network_thread is not thread safe unless
+		it hasn't yet been passed to dispatcher.
 		*/
 		boost::shared_ptr<connection_info> CI;
 
