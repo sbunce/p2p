@@ -13,21 +13,17 @@
 #include <string>
 
 namespace network{
-class proactor;
 class connection_info : private boost::noncopyable
 {
-	friend class proactor;
 public:
 	connection_info(
 		const int connection_ID_in,
-		const int socket_FD_in,
 		const std::string & host_in,
 		const std::string & IP_in,
 		const std::string & port_in,
 		const dir direction_in
 	):
 		connection_ID(connection_ID_in),
-		socket_FD(socket_FD_in),
 		host(host_in),
 		IP(IP_in),
 		port(port_in),
@@ -41,7 +37,7 @@ public:
 	const std::string host;  //unresolved host name
 	const std::string IP;    //remote IP
 	const std::string port;  //remote port
-	const dir direction;
+	const dir direction;     //incoming (remote host initiated connection) or outgoing
 
 	/*
 	The recv_call_back must be set in the connect call back to recieve incoming
@@ -52,8 +48,13 @@ public:
 	boost::function<void (connection_info &)> send_call_back;
 
 	/*
-	recv'd data will be appended to this buffer before recv_call_back called. The
-	number of bytes appended are stored in latest_recv.
+	recv_buf:
+		Received data appended to this buffer.
+	latest_recv:
+		How much data was appended last.
+	latest_send:
+		Size of the latest send. This value will be stale during all but
+		send_call_back.
 	*/
 	buffer recv_buf;
 	unsigned latest_recv;
@@ -66,10 +67,6 @@ public:
 	then a call back will happen whenever this value decreases.
 	*/
 	unsigned send_buf_size;
-
-private:
-	//socket file descriptor only used internally to proactor
-	const int socket_FD;
 };
 }
 #endif

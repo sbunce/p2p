@@ -256,7 +256,7 @@ private:
 			connection_ID(ID_Manager.allocate())
 		{
 			CI = boost::shared_ptr<connection_info>(new connection_info(connection_ID,
-				N->socket(), "", N->remote_IP(), N->remote_port(), incoming));
+				"", N->remote_IP(), N->remote_port(), incoming));
 		}
 
 		~connection()
@@ -316,7 +316,7 @@ private:
 			N->open_async(*E.begin());
 			socket_FD = N->socket();
 			CI = boost::shared_ptr<connection_info>(new connection_info(
-				connection_ID, N->socket(), host, E.begin()->IP(), port, outgoing));
+				connection_ID, host, E.begin()->IP(), port, outgoing));
 			E.erase(E.begin());
 			return socket_FD != -1;
 		}
