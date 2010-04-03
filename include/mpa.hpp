@@ -52,17 +52,17 @@ public:
 	//operators
 	mpint & operator = (const mpint & b);
 	mpint operator + (const mpint & b) const;
-   mpint operator - (const mpint & b) const;
+	mpint operator - (const mpint & b) const;
 	mpint operator * (const mpint & b) const;
 	mpint operator / (const mpint & b) const;
 	mpint operator & (const mpint & b) const;
 	mpint operator | (const mpint & b) const;
-   mpint operator ^ (const mpint & b) const;
+	mpint operator ^ (const mpint & b) const;
 	mpint operator % (const mpint & b) const;
-   mpint operator - () const;
+	mpint operator - () const;
 	mpint & operator += (const mpint & b);
 	mpint & operator -= (const mpint & b);
-   mpint & operator *= (const mpint & b);
+	mpint & operator *= (const mpint & b);
 	mpint & operator /= (const mpint & b);
 	mpint & operator &= (const mpint & b);
 	mpint & operator |= (const mpint & b);
@@ -70,18 +70,18 @@ public:
 	mpint & operator %= (const mpint & b);
 	mpint & operator <<= (const int n);
 	mpint & operator >>= (const int n);
-   mpint & operator ++ ();
+	mpint & operator ++ ();
 	mpint & operator -- ();
 	mpint operator ++ (int);
 	mpint operator -- (int);
-   bool operator == (const mpint & b) const;
-   bool operator != (const mpint & b) const;
-   bool operator > (const mpint & b) const;
-   bool operator < (const mpint & b) const;
-   bool operator >= (const mpint & b) const;
-   bool operator <= (const mpint & b) const;
+	bool operator == (const mpint & b) const;
+	bool operator != (const mpint & b) const;
+	bool operator > (const mpint & b) const;
+	bool operator < (const mpint & b) const;
+	bool operator >= (const mpint & b) const;
+	bool operator <= (const mpint & b) const;
 	mpint operator << (const int n) const;
-   mpint operator >> (const int n) const;
+	mpint operator >> (const int n) const;
 
 	//ostream
 	friend std::ostream & operator << (std::ostream & lval, const mpint & b)
@@ -90,25 +90,25 @@ public:
 	}
 
 	//friends
-	friend mpint mpa::sqr(const mpint & a);
-	friend mpint mpa::sqrt(const mpint & a);
-	friend mpint mpa::n_root(const mpint & a, const boost::uint32_t & b);
-	friend mpint mpa::mul_2(const mpint & a);
-	friend mpint mpa::div_2(const mpint & a);
-	friend mpint mpa::mul_2d(const mpint & a, const boost::uint32_t b);
-	friend void mpa::div_2d(const mpint & a, const boost::uint32_t b, mpint & c, mpint & d);
-	friend mpint mpa::mod_2d(const mpint & a, const boost::uint32_t b);
-	friend mpint mpa::addmod(const mpint & a, const mpint & b, const mpint & c);
-	friend mpint mpa::submod(const mpint & a, const mpint & b, const mpint & c);
-	friend mpint mpa::mulmod(const mpint & a, const mpint & b, const mpint & c);
-	friend mpint mpa::sqrmod(const mpint & a, const mpint & b);
-	friend mpint mpa::invmod(const mpint & a, const mpint & b);
-	friend mpint mpa::exptmod(const mpint & a, const mpint & b, const mpint & c);
-	friend bool mpa::is_prime(const mpint & a, const int t);
-	friend mpint mpa::next_prime(const mpint & a, const int t, const bool bbs_style);
-	friend mpint mpa::gcd(const mpint & a, const mpint & b);
-	friend mpint mpa::lcm(const mpint & a, const mpint & b);
-	friend mpint mpa::random_prime(const std::size_t bytes);
+	friend mpint sqr(const mpint & a);
+	friend mpint sqrt(const mpint & a);
+	friend mpint n_root(const mpint & a, const boost::uint32_t & b);
+	friend mpint mul_2(const mpint & a);
+	friend mpint div_2(const mpint & a);
+	friend mpint mul_2d(const mpint & a, const boost::uint32_t b);
+	friend void div_2d(const mpint & a, const boost::uint32_t b, mpint & c, mpint & d);
+	friend mpint mod_2d(const mpint & a, const boost::uint32_t b);
+	friend mpint addmod(const mpint & a, const mpint & b, const mpint & c);
+	friend mpint submod(const mpint & a, const mpint & b, const mpint & c);
+	friend mpint mulmod(const mpint & a, const mpint & b, const mpint & c);
+	friend mpint sqrmod(const mpint & a, const mpint & b);
+	friend mpint invmod(const mpint & a, const mpint & b);
+	friend mpint exptmod(const mpint & a, const mpint & b, const mpint & c);
+	friend bool is_prime(const mpint & a, const int t);
+	friend mpint next_prime(const mpint & a, const int t, const bool bbs_style);
+	friend mpint gcd(const mpint & a, const mpint & b);
+	friend mpint lcm(const mpint & a, const mpint & b);
+	friend mpint random_prime(const std::size_t bytes);
 
 private:
 	boost::shared_ptr<mp_int> data;
