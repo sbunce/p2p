@@ -73,7 +73,8 @@ C = command (base10: 3), R = echo of random bytes, I = IPv4 address count,
 J = IPv6 address count, K = IPv4 address list, L = IPv6 address list
 
 note: The counts indicate how many addresses will be in the address lists.
-note: The total length of this message will not exceed 508 bytes.
+note: The total length of this message will not exceed 508 bytes. The maximum
+      number of list elements in 27 to keep the message under 508 bytes.
 note: Multiple node_lists may be sent in response to one request.
 
 A K list element:

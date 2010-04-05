@@ -44,7 +44,7 @@ class pong : public base
 {
 public:
 	typedef boost::function<void (const network::endpoint & endpoint,
-		const std::string & ID)> handler;
+		const std::string & remote_ID)> handler;
 	pong(handler func_in, const network::buffer & random_in);
 	virtual bool expect(const network::buffer & recv_buf);
 	virtual bool recv(const network::buffer & recv_buf,
@@ -52,6 +52,19 @@ public:
 private:
 	handler func;
 	const network::buffer random;
+};
+
+class find_node : public base
+{
+public:
+	typedef boost::function<void (const network::endpoint & endpoint,
+		const network::buffer & random, const std::string & ID_to_find)> handler;
+	find_node(handler func_in);
+	virtual bool expect(const network::buffer & recv_buf);
+	virtual bool recv(const network::buffer & recv_buf,
+		const network::endpoint & endpoint);
+private:
+	handler func;
 };
 
 }//end of namespace recv
@@ -74,7 +87,13 @@ public:
 class pong : public base
 {
 public:
-	pong(const network::buffer & random, const std::string & ID);
+	pong(const network::buffer & random, const std::string & local_ID);
+};
+
+class find_node : public base
+{
+public:
+	find_node(const network::buffer & random, const std::string & ID_to_find);
 };
 
 }//end of namespace send

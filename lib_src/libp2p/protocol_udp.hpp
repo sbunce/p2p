@@ -16,5 +16,7 @@ const unsigned char ping = 0;
 const unsigned ping_size = 9;
 const unsigned char pong = 1;
 const unsigned pong_size = 29;
+const unsigned char find_node = 2;
+const unsigned find_node_size = 29;
 }//end of namespace protocol_udp
 #endif
