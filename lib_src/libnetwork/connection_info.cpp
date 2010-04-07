@@ -5,7 +5,7 @@ network::connection_info::connection_info(
 	const std::string & host_in,
 	const std::string & IP_in,
 	const std::string & port_in,
-	const dir direction_in
+	const direction_t direction_in
 ):
 	connection_ID(connection_ID_in),
 	host(host_in),

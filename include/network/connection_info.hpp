@@ -21,14 +21,14 @@ public:
 		const std::string & host_in,
 		const std::string & IP_in,
 		const std::string & port_in,
-		const dir direction_in
+		const direction_t direction_in
 	);
 
-	const int connection_ID; //unique identifier for connection
-	const std::string host;  //unresolved host name
-	const std::string IP;    //remote IP
-	const std::string port;  //remote port
-	const dir direction;     //incoming (remote host initiated connection) or outgoing
+	const int connection_ID;     //unique identifier for connection
+	const std::string host;      //unresolved host name
+	const std::string IP;        //remote IP
+	const std::string port;      //remote port
+	const direction_t direction; //incoming (remote host initiated connection) or outgoing
 
 	/*
 	The recv_call_back must be set in the connect call back to recieve incoming

@@ -8,6 +8,13 @@
 	#include <ws2tcpip.h>
 
 	/*
+	ws2tcpip.h defines the macro max which conflicts with std::numeric_limits<int>::max().
+	Disable the macro.
+	*/
+	#undef max
+	#undef min
+
+	/*
 	Macros for BSD errno compatability.
 	http://msdn.microsoft.com/en-us/library/ms740668(VS.85).aspx
 	Note: Use the BSD style macro then redefine it here.

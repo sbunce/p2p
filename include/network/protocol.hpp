@@ -2,11 +2,11 @@
 #define H_NETWORK_PROTOCOL
 
 namespace network{
-enum sock_type{
+enum socket_t{
 	tcp,
 	udp
 };
-enum dir{
+enum direction_t{
 	incoming, //we accepted connection
 	outgoing  //we initiated connect
 };

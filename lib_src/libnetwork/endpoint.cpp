@@ -33,7 +33,7 @@ std::string network::endpoint::port() const
 	return buf;
 }
 
-network::sock_type network::endpoint::type() const
+network::socket_t network::endpoint::type() const
 {
 	if(ai.ai_socktype == SOCK_STREAM){
 		return tcp;
@@ -73,7 +73,7 @@ void network::endpoint::copy(const addrinfo * ai_in)
 }
 
 std::set<network::endpoint> network::get_endpoint(const std::string & host,
-	const std::string & port, const sock_type type)
+	const std::string & port, const socket_t type)
 {
 	std::set<endpoint> E;
 	if(port.empty() || host.size() > 255 || port.size() > 33){
