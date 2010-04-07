@@ -1,7 +1,6 @@
 #include "buffer.hpp"
 #include "connection_info.hpp"
 #include "endpoint.hpp"
-#include "http/server.hpp"
 #include "listener.hpp"
 #include "ndgram.hpp"
 #include "nstream.hpp"

@@ -12,165 +12,46 @@ class listener : private boost::noncopyable
 {
 public:
 
-	listener():
-		socket_FD(-1)
-	{
-
-	}
-
-	listener(const endpoint & E):
-		socket_FD(-1)
-	{
-		open(E);
-	}
-
-	~listener()
-	{
-		close();
-	}
+	listener();
+	listener(const endpoint & E); //open listener on local endpoint
+	~listener();
 
 	/*
-	Blocks until connection can be accepted.
-	Returns shared_ptr to nstream or empty shared_ptr if error. If the socket is
-		non-blocking then an emtpy shared_ptr is returned if there are no more
-		incoming connections.
-	Precondition: is_open() = true.
-	*/
-	boost::shared_ptr<nstream> accept()
-	{
-		assert(is_open());
-		addrinfo ai;
-		sockaddr_storage sas;
-		ai.ai_addr = reinterpret_cast<sockaddr *>(&sas);
-		ai.ai_addrlen = sizeof(sockaddr_storage);
-		int new_socket = ::accept(socket_FD, ai.ai_addr,
-			reinterpret_cast<socklen_t *>(&ai.ai_addrlen));
-		if(new_socket == -1){
-			return boost::shared_ptr<nstream>();
-		}
-		boost::shared_ptr<nstream> N(new nstream(new_socket));
-		return N;
-	}
-
-	//close the socket
-	void close()
-	{
-		if(socket_FD != -1){
-			if(::close(socket_FD) == -1){
-				LOGGER << errno;
-			}
-			socket_FD = -1;
-		}
-	}
-
-	//returns true if listener listening
-	bool is_open()
-	{
-		return socket_FD != -1;
-	}
-
-	/*
-	Start listener listening. The endpoint has a different purpose than with
-	nstream. With a nstream we are connect to a endpoint on another host.
-	With a listener we are the endpoint.
-	Common Endpoints:
-
+	accept:
+		Blocks until connection can be accepted. Returns shared_ptr to nstream or
+		empty shared_ptr if error. If the socket is non-blocking then an emtpy
+		shared_ptr is returned if there are no more incoming connections.
+		Precondition: is_open() = true.
+	close:
+		Close the socket.
+	is_open:
+		Returns true if listener listening.
+	open:
+		Start listener listening. The endpoint has a different purpose than with
+		nstream. With a nstream we are connect to a endpoint on another host.
+		With a listener we are the endpoint.
+		Precondition: E must be tcp endpoint.
+		Example:
 		Only accept connections from localhost. Choose random port to listen on.
-		network::get_endpoint("localhost", "0", network::tcp);
-
+			network::get_endpoint("localhost", "0", network::tcp);
 		Accept connections on all interfaces. Use port 1234.
-		network::get_endpoint("", "1234", network::tcp);
-
-	Precondition: E must be tcp endpoint.
+			network::get_endpoint("", "1234", network::tcp);
+	port:
+		Returns port of listener on localhost, or empty string if not listening or
+		error.
+		Postcondition: If error socket is closed.
+	set_non_blocking:
+		Set the socket to be non-blocking.
+	socket:
+		Returns socket file descriptor, or -1 if not listening.
 	*/
-	void open(const endpoint & E)
-	{
-		assert(E.type() == tcp);
-		close();
-		if((socket_FD = ::socket(E.ai.ai_family, E.ai.ai_socktype,
-			E.ai.ai_protocol)) == -1)
-		{
-			LOGGER << errno;
-			close();
-			return;
-		}
-		/*
-		This takes care of "address already in use" errors that can happen when
-		trying to bind to a port that wasn't properly closed and hasn't timed
-		out.
-		*/
-		int optval = 1;
-		socklen_t optlen = sizeof(optval);
-		if(::setsockopt(socket_FD, SOL_SOCKET, SO_REUSEADDR,
-			reinterpret_cast<char *>(&optval), optlen) == -1)
-		{
-			LOGGER << errno;
-			close();
-			return;
-		}
-		if(::bind(socket_FD, E.ai.ai_addr, E.ai.ai_addrlen) == -1){
-			LOGGER << errno;
-			close();
-			return;
-		}
-		int backlog = 512; //max pending accepts
-		if(::listen(socket_FD, backlog) == -1){
-			LOGGER << errno;
-			close();
-			return;
-		}
-	}
-
-	/*
-	Returns port of listener on localhost, or empty string if not listening or
-	error.
-	*/
-	std::string port()
-	{
-		if(socket_FD == -1){
-			return "";
-		}
-		sockaddr_storage addr;
-		socklen_t addrlen = sizeof(addr);
-		if(getsockname(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
-			LOGGER << errno;
-			close();
-			return "";
-		}
-		char buf[6];
-		if(getnameinfo(reinterpret_cast<sockaddr *>(&addr), addrlen, NULL, 0, buf,
-			sizeof(buf), NI_NUMERICSERV) == -1)
-		{
-			LOGGER << errno;
-			close();
-			return "";
-		}
-		return buf;
-	}
-
-	void set_non_blocking()
-	{
-		if(socket_FD != -1){
-			#ifdef _WIN32
-			u_long mode = 1;
-			if(ioctlsocket(socket_FD, FIONBIO, &mode) == -1){
-				LOGGER << errno;
-				close();
-			}
-			#else
-			if(fcntl(socket_FD, F_SETFL, O_NONBLOCK) == -1){
-				LOGGER << errno;
-				close();
-			}
-			#endif
-		}
-	}
-
-	//returns socket file descriptor, or -1 if not listening
-	int socket()
-	{
-		return socket_FD;
-	}
+	boost::shared_ptr<nstream> accept();
+	void close();
+	bool is_open();
+	void open(const endpoint & E);
+	std::string port();
+	void set_non_blocking();
+	int socket();
 
 private:
 	//-1 if not open, or >= 0 if open

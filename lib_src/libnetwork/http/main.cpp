@@ -1,3 +1,6 @@
+//custom
+#include "http.hpp"
+
 //include
 #include <boost/thread.hpp>
 #include <logger.hpp>
@@ -27,7 +30,7 @@ int main(int argc, char ** argv)
 	//register signal handlers
 	signal(SIGINT, signal_handler);
 
-	network::http::server HTTP(argv[1], "8080");
+	http HTTP(argv[1], "8080");
 	LOGGER << "listening on " << HTTP.port();
 
 	{//begin lock scope

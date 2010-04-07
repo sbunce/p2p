@@ -1,0 +1,10 @@
+#standard
+import glob
+
+SConscript([
+	'http/SConscript',
+	'unit_tests/SConscript'
+])
+
+Import('env_base')
+env_base.StaticLibrary('#lib/network', glob.glob('*.cpp'))

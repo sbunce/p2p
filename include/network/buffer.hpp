@@ -20,411 +20,116 @@ public:
 	//returned to indicate <something> not found
 	static const int npos = -1;
 
-	buffer()
-	{
-		ctor_initialize();
-	}
-
-	buffer(const std::string & S)
-	{
-		ctor_initialize();
-		append(S);
-	}
-
-	buffer(const unsigned char * buf_append, const int size)
-	{
-		ctor_initialize();
-		append(buf_append, size);
-	}
-
-	buffer(const buffer & B)
-	{
-		ctor_initialize();
-		*this = B;
-	}
-
-	~buffer()
-	{
-		if(buf != NULL){
-			free(buf);
-		}
-	}
+	buffer();
+	buffer(const std::string & S);
+	buffer(const unsigned char * buf_append, const int size);
+	buffer(const buffer & B);
+	~buffer();
 
 	class iterator : public std::iterator<std::random_access_iterator_tag, unsigned char>
 	{
 		friend class buffer;
 	public:
-		iterator()
-		{
-
-		}
-
-		iterator & operator = (const iterator & rval)
-		{
-			pos = rval.pos;
-			buf = rval.buf;
-			return *this;
-		}
-
-		bool operator == (const iterator & rval) const
-		{
-			return pos == rval.pos;
-		}
-
-		bool operator != (const iterator & rval) const
-		{
-			return pos != rval.pos;
-		}
-
-		unsigned char & operator * ()
-		{
-			return buf[pos];
-		}
-
-		iterator & operator ++ ()
-		{
-			++pos;
-			return *this;
-		}
-
-		iterator operator ++ (int)
-		{
-			int pos_tmp = pos;
-			++pos;
-			return iterator(pos_tmp, buf);
-		}
-
-		iterator & operator -- ()
-		{
-			--pos;
-			return *this;
-		}
-
-		iterator operator -- (int)
-		{
-			int pos_tmp = pos;
-			--pos;
-			return iterator(pos_tmp, buf);
-		}
-
-		iterator operator + (const int rval)
-		{
-			return iterator(pos + rval, buf);
-		}
-
-		iterator operator + (const iterator & rval)
-		{
-			return iterator(pos + rval.pos, buf);
-		}
-
-		iterator operator - (const int rval)
-		{
-			return iterator(pos - rval, buf);
-		}
-
-		ptrdiff_t operator - (const iterator & rval)
-		{
-			return pos - rval.pos;
-		}
-
-		iterator & operator += (const int rval)
-		{
-			pos += rval;
-			return *this;
-		}
-
-		iterator & operator += (const iterator & rval)
-		{
-			pos += rval.pos;
-			return *this;
-		}
-
-		iterator & operator -= (const int rval)
-		{
-			pos -= rval;
-			return *this;
-		}
-
-		iterator & operator -= (const iterator & rval)
-		{
-			pos -= rval.pos;
-			return *this;
-		}
-
-		unsigned char & operator [] (const int idx)
-		{
-			return buf[pos + idx];
-		}
-
-		bool operator < (const iterator & rval) const
-		{
-			return pos < rval.pos;
-		}
-
-		bool operator > (const iterator & rval) const
-		{
-			return pos > rval.pos;
-		}
-
-		bool operator >= (const iterator & rval) const
-		{
-			return pos >= rval.pos;
-		}
-
-		bool operator <= (const iterator & rval) const
-		{
-			return pos <= rval.pos;
-		}
+		iterator();
+		iterator & operator = (const iterator & rval);
+		bool operator == (const iterator & rval) const;
+		bool operator != (const iterator & rval) const;
+		unsigned char & operator * ();
+		iterator & operator ++ ();
+		iterator operator ++ (int);
+		iterator & operator -- ();
+		iterator operator -- (int);
+		iterator operator + (const int rval);
+		iterator operator + (const iterator & rval);
+		iterator operator - (const int rval);
+		ptrdiff_t operator - (const iterator & rval);
+		iterator & operator += (const int rval);
+		iterator & operator += (const iterator & rval);
+		iterator & operator -= (const int rval);
+		iterator & operator -= (const iterator & rval);
+		unsigned char & operator [] (const int idx);
+		bool operator < (const iterator & rval) const;
+		bool operator > (const iterator & rval) const;
+		bool operator >= (const iterator & rval) const;
+		bool operator <= (const iterator & rval) const;
 
 	private:
 		iterator(
 			const int pos_in,
 			unsigned char * buf_in
-		):
-			pos(pos_in),
-			buf(buf_in)
-		{
-
-		}
+		);
 
 		int pos;             //offset from start of buffer iterator is at
 		unsigned char * buf; //buf that exists in buffer which spawned this iterator
 	};
 
-	//append one character to buffer
-	buffer & append(const unsigned char ch)
-	{
-		allocate(bytes, bytes + 1);
-		buf[bytes - 1] = ch;
-		return *this;
-	}
+	/*
+	append:
+		Many different functions to append various things.
+	begin:
+		Return iterator to beginning of buffer.
+	clear:
+		Clears buffer.
+	data:
+		Returns pointer to internal buffer. Both const and non const versions
+		available.
+	empty:
+		Returns true if buffer empty.
+	end:
+		Return iterator to end of buffer.
+	erase:
+		Erase bytes in buffer starting at index and size chars long.
+	swap:
+		Swap one buffer with another without copying internal buffer.
+	reserve:
+		Specified amount of memory will be left allocated.
+	resize:
+		Change the size of the buffer.
+	size:
+		Returns size (bytes) of buffer.
+	str:
+		Returns std::string of buffer starting at index and len chars long.
+	tail_start:
+		Returns pointer to start of unused space at end of buffer.
+	tail_reserve:
+		Reserve space at end of buffer.
+	tail_resize:
+		Use space at end of buffer.
+	tail_size:
+		Size of unused space at end of buffer.
+	*/
+	buffer & append(const unsigned char ch);
+	buffer & append(const unsigned char * buf_append, const int size);
+	buffer & append(const std::string & buf_append);
+	buffer & append(const buffer & buf_append);
+	iterator begin() const;
+	void clear();
+	const unsigned char * data() const;
+	unsigned char * data();
+	bool empty() const;
+	iterator end() const;
+	void erase(const int index, const int size = npos);
+	void swap(buffer & rval);
+	void reserve(const int size);
+	void resize(const int size);
+	int size() const;
+	std::string str(const int index = 0, const int len = npos) const;
+	unsigned char * tail_start() const;
+	void tail_reserve(const int size);
+	void tail_resize(const int size);
+	int tail_size() const;
 
-	//append buffer of specified size to buffer
-	buffer & append(const unsigned char * buf_append, const int size)
-	{
-		allocate(bytes, bytes + size);
-		std::memcpy(buf + bytes - size, buf_append, size);
-		return *this;
-	}
-
-	//append std::string to buffer
-	buffer & append(const std::string & buf_append)
-	{
-		append(reinterpret_cast<const unsigned char *>(buf_append.data()),
-			buf_append.size());
-		return *this;
-	}
-
-	//append another buffer to buffer
-	buffer & append(const buffer & buf_append)
-	{
-		append(reinterpret_cast<const unsigned char *>(buf_append.data()),
-			buf_append.size());
-		return *this;
-	}
-
-	//return iterator to beginning of buffer
-	iterator begin() const
-	{
-		return iterator(0, buf);
-	}
-
-	//empties buffer
-	void clear()
-	{
-		allocate(bytes, 0);
-	}
-
-	//return const pointer to start of internal buffer
-	const unsigned char * data() const
-	{
-		return buf;
-	}
-
-	//return pointer to start of buffer internal buffer
-	unsigned char * data()
-	{
-		return buf;
-	}
-
-	//returns true if buffer empty
-	bool empty() const
-	{
-		return bytes == 0;
-	}
-
-	//return iterator to end of buffer
-	iterator end() const
-	{
-		return iterator(bytes, buf);
-	}
-
-	//erase bytes in buffer starting at index and size chars long
-	void erase(const int index, const int size = npos)
-	{
-		if(size == npos){
-			assert(index < bytes);
-			allocate(bytes, index);
-		}else{
-			assert(index + size <= bytes);
-			std::memmove(buf + index, buf + index + size, bytes - index - size);
-			allocate(bytes, bytes - size);
-		}
-	}
-
-	//swap one buffer with another without copying buf
-	void swap(buffer & rval)
-	{
-		//save current lval
-		int tmp_reserved = reserved;
-		int tmp_bytes = bytes;
-		unsigned char * tmp_buf = buf;
-
-		//copy rval to lval
-		reserved = rval.reserved;
-		bytes = rval.bytes;
-		buf = rval.buf;
-
-		//copy old lval to rval
-		rval.reserved = tmp_reserved;
-		rval.bytes = tmp_bytes;
-		rval.buf = tmp_buf;
-	}
-
-	//specified amount of memory will be left allocated
-	void reserve(const int size)
-	{
-		allocate(reserved, size);
-	}
-
-	//change the size of the buffer
-	void resize(const int size)
-	{
-		allocate(bytes, size);
-	}
-
-	//returns size (bytes) of buffer
-	int size() const
-	{
-		return bytes;
-	}
-
-	//returns std::string of buffer starting at index and len chars long
-	std::string str(const int index = 0, const int len = npos) const
-	{
-		if(len == npos){
-			assert(index <= bytes);
-			return std::string(reinterpret_cast<const char *>(buf + index), bytes - index);
-		}else{
-			assert(index + len <= bytes);
-			return std::string(reinterpret_cast<const char *>(buf + index), len);
-		}
-	}
-
-	//returns pointer to start of unused space at end of buffer
-	unsigned char * tail_start() const
-	{
-		assert(reserved > bytes);
-		return buf + bytes;
-	}
-
-	//reserve space at end of buffer
-	void tail_reserve(const int size)
-	{
-		allocate(reserved, bytes + size);
-	}
-
-	//use space at end of buffer
-	void tail_resize(const int size)
-	{
-		allocate(bytes, bytes + size);
-	}
-
-	//size of unused space at end of buffer
-	int tail_size() const
-	{
-		assert(reserved >= bytes);
-		return reserved - bytes;
-	}
-
-	const unsigned char operator [] (const int index) const
-	{
-		assert(index < bytes && index >= 0);
-		return buf[index];
-	}
-
-	unsigned char & operator [] (const int index)
-	{
-		assert(index < bytes && index >= 0);
-		return buf[index];
-	}
-
-	buffer & operator = (const buffer & B)
-	{
-		allocate(bytes, B.bytes);
-		std::memcpy(buf, B.buf, bytes);
-		return *this;
-	}
-
-	buffer & operator = (const char * str)
-	{
-		int len = std::strlen(str);
-		allocate(bytes, len);
-		std::memcpy(buf, str, bytes);
-		return *this;
-	}
-
-	bool operator == (const buffer & B) const
-	{
-		if(bytes != B.bytes){
-			return false;
-		}else{
-			return std::memcmp(buf, B.buf, bytes) == 0;
-		}
-	}
-
-	bool operator == (const char * str) const
-	{
-		int len = std::strlen(str);
-		if(bytes != len){
-			return false;
-		}else{
-			return std::memcmp(buf, str, bytes) == 0;
-		}
-	}
-
-	bool operator != (const buffer & B) const
-	{
-		return !(*this == B);
-	}
-
-	bool operator != (const char * str) const
-	{
-		return !(*this == str);
-	}
-
-	bool operator < (const buffer & B) const
-	{
-		if(bytes < B.bytes){
-			return true;
-		}else if(bytes > B.bytes){
-			return false;
-		}else{
-			return std::memcmp(buf, B.buf, bytes) < 0;
-		}
-	}
-
-	bool operator < (const char * str) const
-	{
-		int len = std::strlen(str);
-		if(bytes < len){
-			return true;
-		}else if(bytes > len){
-			return false;
-		}else{
-			return std::memcmp(buf, str, bytes) < 0;
-		}
-	}
+	//operators
+	const unsigned char operator [] (const int index) const;
+	unsigned char & operator [] (const int index);
+	buffer & operator = (const buffer & B);
+	buffer & operator = (const char * str);
+	bool operator == (const buffer & B) const;
+	bool operator == (const char * str) const;
+	bool operator != (const buffer & B) const;
+	bool operator != (const char * str) const;
+	bool operator < (const buffer & B) const;
+	bool operator < (const char * str) const;
 
 	friend std::ostream & operator << (std::ostream & lval, const buffer & rval)
 	{
@@ -441,43 +146,11 @@ private:
 		Resizes or reserves the buffer. To resize pass in bytes for the var
 		parameter. To reserve pass in reserved for the var parameter. The size
 		parameter is the size to resize to or reserve.
+	ctor_initialize:
+		Called by all ctor's to initialize data members.
 	*/
-	void allocate(int & var, const int size)
-	{
-		if(var == size){
-			//requested allocation is equal to what's already allocated
-			return;
-		}else{
-			var = size;
-			if(reserved == 0 && bytes == 0){
-				//no reserve, nothing in buffer, set buf = NULL to signify empty
-				if(buf != NULL){
-					//free any memory currently in buffer
-					std::free(buf);
-					buf = NULL;
-				}
-			}else if(buf == NULL){
-				//requested allocation non-zero and currently nothing is allocated
-				buf = static_cast<unsigned char *>(std::malloc(var));
-				assert(buf);
-			}else if(var >= reserved){
-				/*
-				Either reserve needs to be increased, or bytes are above what is
-				reserved so we need to allocate beyond what is reserved.
-				*/
-				buf = static_cast<unsigned char *>(std::realloc(buf, var));
-				assert(buf);
-			}
-		}
-	}
-
-	//called by all ctor's to initialize data members
-	void ctor_initialize()
-	{
-		reserved = 0;
-		bytes = 0;
-		buf = NULL;
-	}
+	void allocate(int & var, const int size);
+	void ctor_initialize();
 };
 }//end of network namespace
 #endif

@@ -53,6 +53,9 @@ def system_libraries(env):
 def setup(env):
 	environment.define_keys(env)
 
+	#cache dir for object reuse
+	env.CacheDir('.cache')
+
 	#enable parallel building
 	parallel_build.setup(env)
 
@@ -69,6 +72,7 @@ def setup(env):
 	#libraries to link
 	system_libraries(env)
 	env['LIBS'].append('p2p')
+	env['LIBS'].append('network')
 	env['LIBS'].append('tommath')
 	env['LIBS'].append('sqlite3')
 	env['LIBS'].append(boost.library('boost_system'))

@@ -17,4 +17,3 @@ SConscript([
 
 Clean('bin','bin') #directory for built binaries
 Clean('lib','lib') #directory for built libraries
-Clean('.sconsign.dblite','.sconsign.dblite') #sqlite hash database

@@ -13,49 +13,31 @@
 namespace network{
 class speed_calculator : private boost::noncopyable
 {
-public:
 	//must be >= 1
 	static const unsigned AVERAGE = 8;
 
-	speed_calculator():
-		average_speed(0)
-	{
-		for(int x=0; x<AVERAGE + 1; ++x){
-			Second[x].first = Second[x].second = 0;
-		}
-	}
-
-	//returns how much has been seen in the current second
-	unsigned current_second()
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		add_priv(0);
-		return Second[0].second;
-	}
+public:
+	speed_calculator();
 
 	/*
-	Returns average speed for the previous AVERAGE seconds. This does not include
-	the bytes for the current incomplete second.
-	*/
-	unsigned speed()
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		add_priv(0);
-		return average_speed;
-	}
+	add:
+		Add bytes to the average.
+	current_second:
+		Returns how many bytes have been seen in the current second.
+	speed:
+		Returns average speed for the previous AVERAGE seconds. This does not
+		include the bytes for the current incomplete second.
 
-	//add n_bytes to the average
-	void add(const unsigned n_bytes)
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		add_priv(n_bytes);
-	}
+	*/
+	void add(const unsigned n_bytes);
+	unsigned current_second();
+	unsigned speed();
 
 private:
 	//mutex for all public functions
 	boost::mutex Mutex;
 
-	//most recently calculated average speed, updated by update()
+	//most recently calculated average speed
 	unsigned average_speed;
 
 	/*
@@ -66,46 +48,11 @@ private:
 	std::pair<std::time_t, unsigned> Second[AVERAGE + 1];
 
 	/*
-	Add bytes in to the average.
-	Precondition: Mutex must be locked.
+	add_prive:
+		Add bytes in to the average.
+		Precondition: Mutex must be locked.
 	*/
-	void add_priv(const unsigned n_bytes)
-	{
-		std::time_t current_second = std::time(NULL);
-		if(Second[0].first == current_second){
-			//most recent second is already current second
-			Second[0].second += n_bytes;
-		}else{
-			//most recent second is not current second
-			unsigned shift = current_second - Second[0].first;
-			if(shift > AVERAGE){
-				//most recent second too old for shifting, make as new
-				for(int x=1; x<AVERAGE + 1; ++x){
-					Second[x].first = Second[x].second = 0;
-				}
-				Second[0].first = current_second;
-				Second[0].second = n_bytes;
-			}else{
-				//a shift can be done
-				for(int x=AVERAGE - shift; x>=0; --x){
-					Second[x + shift] = Second[x];
-				}
-				//fill in any gap
-				for(int x=0; x<shift; ++x){
-					Second[x].first = current_second - x;
-					Second[x].second = 0;
-				}
-				Second[0].second += n_bytes;
-			}
-		}
-
-		//update the average_speed
-		average_speed = 0;
-		for(int x=1; x<AVERAGE + 1; ++x){
-			average_speed += Second[x].second;
-		}
-		average_speed /= AVERAGE;
-	}
+	void add_priv(const unsigned n_bytes);
 };
 }
 #endif

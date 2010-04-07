@@ -22,16 +22,7 @@ public:
 		const std::string & IP_in,
 		const std::string & port_in,
 		const dir direction_in
-	):
-		connection_ID(connection_ID_in),
-		host(host_in),
-		IP(IP_in),
-		port(port_in),
-		direction(direction_in),
-		latest_recv(0),
-		latest_send(0),
-		send_buf_size(0)
-	{}
+	);
 
 	const int connection_ID; //unique identifier for connection
 	const std::string host;  //unresolved host name

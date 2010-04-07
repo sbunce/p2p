@@ -6,7 +6,7 @@ int main()
 	network::start();
 
 	//setup echo server
-	std::set<network::endpoint> E = network::get_endpoint("", "0", network::udp);
+	std::set<network::endpoint> E = network::get_endpoint("localhost", "0", network::udp);
 	assert(!E.empty());
 	network::ndgram N_serv(*E.begin());
 	assert(N_serv.is_open());
