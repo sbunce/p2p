@@ -8,8 +8,8 @@
 	#include <ws2tcpip.h>
 
 	/*
-	ws2tcpip.h defines the macro max which conflicts with std::numeric_limits<int>::max().
-	Disable the macro.
+	The ws2tcpip.h header defines the macros max/min which conflicts with
+	std::numeric_limits<int>::max(). Disable the macros.
 	*/
 	#undef max
 	#undef min

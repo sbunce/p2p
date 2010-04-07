@@ -6,6 +6,8 @@
 #include "system_include.hpp"
 
 namespace network{
+
+//abstract base makes it possible to create test harness to simulate networking
 class ndgram_base
 {
 public:
@@ -60,15 +62,15 @@ public:
 	ndgram(const endpoint & E); //open and bind (used for send/recv)
 	~ndgram();
 
-	void close();
-	bool is_open() const;
-	std::string local_IP();
-	std::string local_port();
-	void open();
-	void open(const endpoint & E);
-	int recv(network::buffer & buf, boost::shared_ptr<endpoint> & E);
-	int send(network::buffer & buf, const endpoint & E);
-	int socket();
+	virtual void close();
+	virtual bool is_open() const;
+	virtual std::string local_IP();
+	virtual std::string local_port();
+	virtual void open();
+	virtual void open(const endpoint & E);
+	virtual int recv(network::buffer & buf, boost::shared_ptr<endpoint> & E);
+	virtual int send(network::buffer & buf, const endpoint & E);
+	virtual int socket();
 
 private:
 	//-1 if not connected, or >= 0 if connected
