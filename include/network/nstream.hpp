@@ -12,12 +12,15 @@
 #include <set>
 
 namespace network{
-
-//abstract base makes it possible to create test harness to simulate networking
-class nstream_base
+class nstream : private boost::noncopyable
 {
+	//max we attempt to send/recv in one go
+	static const int MTU = 8192;
 public:
-	virtual ~nstream_base(){}
+	nstream();
+	explicit nstream(const endpoint & E);     //sync connect to endpoint
+	explicit nstream(const int socket_FD_in); //create out of already connected socket
+	~nstream();
 
 	/*
 	close:
@@ -60,31 +63,6 @@ public:
 	socket:
 		Returns socket file descriptor, or -1 if disconnected.
 	*/
-	virtual void close() = 0;
-	virtual bool is_open() const = 0;
-	virtual bool is_open_async() = 0;
-	virtual std::string local_IP() = 0;
-	virtual std::string local_port() = 0;
-	virtual void open(const endpoint & E) = 0;
-	virtual void open_async(const endpoint & E) = 0;
-	virtual int recv(buffer & buf, const int max_transfer) = 0;
-	virtual std::string remote_IP() = 0;
-	virtual std::string remote_port() = 0;
-	virtual int send(buffer & buf, int max_transfer) = 0;
-	virtual void set_non_blocking() = 0;
-	virtual int socket() = 0;
-};
-
-class nstream : public nstream_base, private boost::noncopyable
-{
-	//max we attempt to send/recv in one go
-	static const int MTU = 8192;
-public:
-	nstream();
-	explicit nstream(const endpoint & E);     //sync connect to endpoint
-	explicit nstream(const int socket_FD_in); //create out of already connected socket
-	~nstream();
-
 	virtual void close();
 	virtual bool is_open() const;
 	virtual bool is_open_async();

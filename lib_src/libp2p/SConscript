@@ -3,7 +3,6 @@ import glob
 
 SConscript([
 	'CLI/SConscript',
-	'udp_sim/SConscript',
 	'unit_tests/SConscript'
 ])
 
