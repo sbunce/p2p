@@ -6,6 +6,7 @@
 #include "system_include.hpp"
 
 //include
+#include <convert.hpp>
 #include <logger.hpp>
 
 //standard
@@ -27,18 +28,29 @@ class endpoint
 	const std::string & port, const socket_t type);
 
 public:
+	//construct endpoint from IP_bin() and port_bin()
+	endpoint(const std::string & addr, const std::string & port, const socket_t type);
+
+	//copy ctor
 	endpoint(const endpoint & E);
 
 	/*
 	IP:
 		Returns IP address.
+	IP_bin:
+		Returns binary IP address in big-endian. This will be 4 bytes for IPv4 and
+		16 bytes for IPv6.
 	port:
 		Returns port.
+	port_bin:
+		Returns binary port in big-endian. This will always be 2 bytes.
 	type:
 		Returns type. (tcp or udp)
 	*/
 	std::string IP() const;
+	std::string IP_bin() const;
 	std::string port() const;
+	std::string port_bin() const;
 	socket_t type() const;
 
 	//operators

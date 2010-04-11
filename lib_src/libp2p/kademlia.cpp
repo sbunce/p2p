@@ -11,6 +11,9 @@ kademlia::kademlia():
 	//messages to expect anytime
 	Exchange.expect_anytime(boost::shared_ptr<message_udp::recv::base>(
 		new message_udp::recv::ping(boost::bind(&kademlia::recv_ping, this, _1, _2))));
+	Exchange.expect_anytime(boost::shared_ptr<message_udp::recv::base>(
+		new message_udp::recv::find_node(boost::bind(&kademlia::recv_find_node,
+		this, _1, _2, _3))));
 
 	//start internal thread
 	main_loop_thread = boost::thread(boost::bind(&kademlia::main_loop, this));
@@ -128,6 +131,12 @@ void kademlia::main_loop()
 		}
 		Exchange.tick();
 	}
+}
+
+void kademlia::recv_find_node(const network::endpoint & endpoint,
+	const network::buffer & random, const std::string & ID_to_find)
+{
+
 }
 
 void kademlia::recv_ping(const network::endpoint & endpoint, const network::buffer & random)

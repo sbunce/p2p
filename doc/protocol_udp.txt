@@ -56,42 +56,69 @@ desc: Request for closer nodes.
 	| C |     R     |     N     |
 	+---+---+---+---+---+---+---+
 	  0   1  ...  8   9  ... 28
-C = command (base10: 2), R = random bytes, N = ID to find
+C = command (base10: 2), R = random bytes, N = node ID to find
 
-expected response: node_list
+expected response: host_list
+---
+
+---
+name: find_file
+desc: Request a list of nodes which have the specified hash.
+	+---+---+---+---+---+---+---+
+	| C |     R     |     F     |
+	+---+---+---+---+---+---+---+
+	  0   1  ...  8   9 ...  28
+C = command (base10: 3), R = random bytes, F = file hash
+
+expected response: host_list or node_list
+---
+
+---
+name: host_list
+desc: A list of nodes which are closer. This list will contain only one element
+if the node is found.
+	+---+---+---+---+---+   +---+---+---+   +---+---+---+
+	| C |     R     | I | + |     K     | + |     L     |
+	+---+---+---+---+---+   +---+---+---+   +---+---+---+
+	  0   1  ...  8  11      13  ...  x      x+1 ...  y
+C = command (base10: 4), R = echo of random bytes, I = IPv4 address count,
+K = IPv4 address list, L = IPv6 address list
+
+note: Multiple node_lists may be sent in response to one request.
+note: The max size of the K+L list is 16 elements.
+
+A K list element:
+	+---+---+---+---+---+
+	|    IP     |   P   |
+	+---+---+---+---+---+
+	  0  ...  3   4   5
+IP = IPv4 address, P = port
+
+A L list element:
+	+---+---+---+---+---+
+	|    IP     |   P   |
+	+---+---+---+---+---+
+	  0  ...  15  16  17
+IP = IPv6 address, P = port
 ---
 
 ---
 name: node_list
-desc: A list of nodes which are closer. This list will contain only one element
-if the node is found.
-	+---+---+---+---+---+---+   +---+---+---+   +---+---+---+
-	| C |     R     | I | J | + |     K     | + |     L     |
-	+---+---+---+---+---+---+   +---+---+---+   +---+---+---+
-	  0   1  ...  8  11  12      13  ...  x      x+1 ...  y
-C = command (base10: 3), R = echo of random bytes, I = IPv4 address count,
-J = IPv6 address count, K = IPv4 address list, L = IPv6 address list
-
-note: The counts indicate how many addresses will be in the address lists.
-note: The total length of this message will not exceed 508 bytes. The maximum
-      number of list elements in 27 to keep the message under 508 bytes.
-note: Multiple node_lists may be sent in response to one request.
+desc: A list of nodes.
+	+---+---+---+---+---+---+---+
+	| C |     R     |     K     |
+	+---+---+---+---+---+---+---+
+	  0   1  ...  x  x+1 ...  y
+C = command (base10: 5), R = echo of random bytes, K = ID list
 
 A K list element:
-	+---+---+---+---+---+---+---+---+
-	|    IP     |   P   |     N     |
-	+---+---+---+---+---+---+---+---+
-	  0  ...  3   4   5   6  ... 25
-IP = IPv4 address, P = port, N = ID
+	+---+---+---+
+	|     N     |
+	+---+---+---+
+	  0  ...  19
+N = ID that has file
 
-A L list element:
-	+---+---+---+---+---+---+---+---+
-	|    IP     |   P   |     N     |
-	+---+---+---+---+---+---+---+---+
-	  0  ...  15  16  17  18 ... 37
-IP = IPv6 address, P = port, N = ID
-
-note: The lists are ordered from closest to farthest.
+note: Multiple node_lists may be sent in response to one request.
 ---
 
 ---
@@ -101,36 +128,5 @@ desc: Store a mapping from a ID to a hash.
 	| C |     S     |     F     |
 	+---+---+---+---+---+---+---+
 	  0   1  ... 20  21  ... 40
-C = command (base10: 4), S = ID, F = hash
----
-
----
-name: find_value
-desc: Request a list of node which have the specified hash.
-	+---+---+---+---+---+---+---+---+---+---+
-	| C |     R     |     S     |     F     |
-	+---+---+---+---+---+---+---+---+---+---+
-	  0   1  ...  8   9 ...  28  29  ...  48
-C = command (base10: 5), S = ID, F = hash
-
-expected response: node_list or value_list
----
-
----
-name: value_list
-desc: A list of nodes.
-	+---+---+---+---+---+---+---+
-	| C |     R     |     K     |
-	+---+---+---+---+---+---+---+
-	  0   1  ...  x  x+1 ...  y
-C = command (base10: 6), R = echo of random bytes, K = ID list
-
-A K list element:
-	+---+---+---+
-	|     N     |
-	+---+---+---+
-	  0  ...  19
-N = ID that has file
-
-note: Multiple value_lists may be sent in response to one request.
+C = command (base10: 6), S = ID, F = hash
 ---

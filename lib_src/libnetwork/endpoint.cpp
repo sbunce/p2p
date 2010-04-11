@@ -6,6 +6,36 @@ network::endpoint::endpoint(const addrinfo * ai_in)
 	copy(ai_in);
 }
 
+network::endpoint::endpoint(const std::string & addr, const std::string & port,
+	const socket_t type)
+{
+	assert(addr.size() == 4 || addr.size() == 16);
+	assert(port.size() == 2);
+
+	//create endpoint
+	std::set<endpoint> E = get_endpoint(addr.size() == 4 ? "127.0.0.1" : "::1", "0", type);
+	assert(!E.empty());
+	copy(&E.begin()->ai);
+
+	//replace localhost address and port
+	if(ai.ai_addr->sa_family == AF_INET){
+		assert(addr.size() == 4);
+		reinterpret_cast<sockaddr_in *>(ai.ai_addr)->sin_addr.s_addr
+			= convert::bin_to_int<boost::uint32_t>(addr);
+		reinterpret_cast<sockaddr_in *>(ai.ai_addr)->sin_port
+			= convert::bin_to_int<boost::uint16_t>(port);
+	}else if(ai.ai_addr->sa_family == AF_INET6){
+		assert(addr.size() == 16);
+		std::memcpy(reinterpret_cast<sockaddr_in6 *>(ai.ai_addr)->sin6_addr.s6_addr,
+			addr.data(), addr.size());
+		reinterpret_cast<sockaddr_in6 *>(ai.ai_addr)->sin6_port
+			= convert::bin_to_int<boost::uint16_t>(port);
+	}else{
+		LOGGER << "unknown address family";
+		exit(1);
+	}
+}
+
 network::endpoint::endpoint(const endpoint & E)
 {
 	copy(&E.ai);
@@ -22,6 +52,19 @@ std::string network::endpoint::IP() const
 	return buf;
 }
 
+std::string network::endpoint::IP_bin() const
+{
+	if(ai.ai_addr->sa_family == AF_INET){
+		return convert::int_to_bin(reinterpret_cast<sockaddr_in *>(ai.ai_addr)->sin_addr.s_addr);
+	}else if(ai.ai_addr->sa_family == AF_INET6){
+		return std::string(reinterpret_cast<const char *>(
+			reinterpret_cast<sockaddr_in6 *>(ai.ai_addr)->sin6_addr.s6_addr), 16);
+	}else{
+		LOGGER << "unknown address family";
+		exit(1);
+	}
+}
+
 std::string network::endpoint::port() const
 {
 	char buf[6];
@@ -31,6 +74,18 @@ std::string network::endpoint::port() const
 		return "";
 	}
 	return buf;
+}
+
+std::string network::endpoint::port_bin() const
+{
+	if(ai.ai_addr->sa_family == AF_INET){
+		return convert::int_to_bin(reinterpret_cast<sockaddr_in *>(ai.ai_addr)->sin_port);
+	}else if(ai.ai_addr->sa_family == AF_INET6){
+		return convert::int_to_bin(reinterpret_cast<sockaddr_in6 *>(ai.ai_addr)->sin6_port);
+	}else{
+		LOGGER << "unknown address family";
+		exit(1);
+	}
 }
 
 network::socket_t network::endpoint::type() const

@@ -96,6 +96,13 @@ public:
 	find_node(const network::buffer & random, const std::string & ID_to_find);
 };
 
+class host_list : public base
+{
+public:
+	host_list(const network::buffer & random,
+		const std::list<network::endpoint> & hosts);
+};
+
 }//end of namespace send
 }//end of namespace message_udp
 #endif

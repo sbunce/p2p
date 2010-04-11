@@ -98,6 +98,17 @@ message_udp::send::find_node::find_node(const network::buffer & random,
 }
 //END send::find_node
 
+//BEGIN send::host_list
+message_udp::send::host_list::host_list(const network::buffer & random,
+	const std::list<network::endpoint> & hosts)
+{
+	assert(hosts.size() <= 16);
+	buf.append(protocol_udp::host_list);
+
+
+}
+//END send::host_list
+
 //BEGIN send::ping
 message_udp::send::ping::ping(const network::buffer & random)
 {
