@@ -1,24 +1,38 @@
 Basic Info
 ==========
-
-The DHT used is Kademlia.
+The DHT used is based on Kademlia.
 
 The DHT commands are sent to the same port as the TCP listener. All messages are
 kept <= 508 bytes to insure no message gets truncated.
 
 We assume a message has been lost if we don't receive a reply within 60 seconds.
 
-All request messages include 8 random bytes which must be echo'd back in the
+All request messages include 4 random bytes which must be echo'd back in the
 response. This is to protect against address forgery. The Kademlia spec calls
 for 20 bytes but that is excessive.
 
 
 Concurrency
 ===========
-
 In the kademlia paper the number of concurrent requests on the wire is referred
-to as alpha. This can be anything, but a alpha of 3 is recommended in the
-Kademlia paper.
+to as alpha. The alpha is unspecified.
+
+
+Routing Table Updates
+=====================
+The routing table should only be updated when we receive a pong message. This is
+to make Sybil attacks more difficult.
+
+
+Store DOS
+=========
+To stop anyone from being able to Sybil and DOS using the store_* commands it is
+required that the store_* commands contain random bytes received by a pong
+message that are no more than 4 minutes old. This provides a very minimal
+assurance that the sender address of the store_* command has not been forged.
+
+All nodes must maintain mappings between the random bytes (sent in pong
+messages) and the IP/port they were sent to.
 
 
 Messages
@@ -27,106 +41,126 @@ Messages
 ---
 name: ping
 desc: Check if a host is up and/or get ID.
-	+---+---+---+---+
-	| C |     R     |
-	+---+---+---+---+
-	  0   1  ...  8
-C = command (base10: 0), R = random bytes
+	+---+---+---+---+---+---+---+
+	| A |     B     |     C     |
+	+---+---+---+---+---+---+---+
+	  0   1  ...  4   5  ... 24
+A = command (base10: 0), B = random bytes, C = ID of sender
           
 expected response: pong
-
-note: We do not send our ID in this message because we don't want the remote
-host to be able to know it trivially. This mitigates Sybil attacks.
 ---
 
 ---
 name: pong
 desc: Sent in response to ping.
 	+---+---+---+---+---+---+---+
-	| C |     R     |     S     |
+	| A |     B     |     C     |
 	+---+---+---+---+---+---+---+
-	  0   1  ...  8   9  ... 28
-C = command (base10: 1), R = echo of random bytes, S = ID of sender
+	  0   1  ...  4   5  ... 24
+A = command (base10: 1), B = echo of random bytes, C = ID of sender
+
+note: The ID should be used to update routing tables. When we send random bytes
+in a ping message it acts as permission for the remote host to potentially
+update our routing table (by sending us a pong).
 ---
 
 ---
 name: find_node
 desc: Request for closer nodes.
-	+---+---+---+---+---+---+---+
-	| C |     R     |     N     |
-	+---+---+---+---+---+---+---+
-	  0   1  ...  8   9  ... 28
-C = command (base10: 2), R = random bytes, N = node ID to find
+	+---+---+---+---+---+---+---+---+---+---+
+	| A |     B     |     C     |     D     |
+	+---+---+---+---+---+---+---+---+---+---+
+	  0   1  ...  4   5  ... 24  25  ... 44
+A = command (base10: 2), B = random bytes, C = ID of sender, D = ID to find
 
 expected response: host_list
----
-
----
-name: find_file
-desc: Request a list of nodes which have the specified hash.
-	+---+---+---+---+---+---+---+
-	| C |     R     |     F     |
-	+---+---+---+---+---+---+---+
-	  0   1  ...  8   9 ...  28
-C = command (base10: 3), R = random bytes, F = file hash
-
-expected response: host_list or node_list
 ---
 
 ---
 name: host_list
 desc: A list of nodes which are closer. This list will contain only one element
 if the node is found.
-	+---+---+---+---+---+   +---+---+---+   +---+---+---+
-	| C |     R     | I | + |     K     | + |     L     |
-	+---+---+---+---+---+   +---+---+---+   +---+---+---+
-	  0   1  ...  8  11      13  ...  x      x+1 ...  y
-C = command (base10: 4), R = echo of random bytes, I = IPv4 address count,
-K = IPv4 address list, L = IPv6 address list
+	+---+---+---+---+---+---+---+---+   +---+---+---+   +---+---+---+
+	| A |     B     |     C     | D | + |     E     | + |     F     |
+	+---+---+---+---+---+---+---+---+   +---+---+---+   +---+---+---+
+	  0   1  ...  4   5      24  25      26  ...  x      x+1 ...  y
+A = command (base10: 4), B = echo of random bytes, C = ID of sender,
+D = IPv4 address count, E = IPv4 address list, F = IPv6 address list
 
-note: Multiple node_lists may be sent in response to one request.
-note: The max size of the K+L list is 16 elements.
+note: The max size of the D+E list is 26 elements.
+note: Only the IPv4 address count is included because the IPv6 address count can
+be inferred.
 
-A K list element:
-	+---+---+---+---+---+
-	|    IP     |   P   |
-	+---+---+---+---+---+
-	  0  ...  3   4   5
-IP = IPv4 address, P = port
+A E list element:
+	+---+---+---+---+---+---+
+	|     A     |   B   | C |
+	+---+---+---+---+---+---+
+	  0  ...  3   4   5   6
+A = IPv4 address, B = port, C = bucket number
 
-A L list element:
-	+---+---+---+---+---+
-	|    IP     |   P   |
-	+---+---+---+---+---+
-	  0  ...  15  16  17
-IP = IPv6 address, P = port
+A F list element:
+	+---+---+---+---+---+---+
+	|     A     |   B   | C |
+	+---+---+---+---+---+---+
+	  0  ... 15  16  17  18
+A = IPv6 address, B = port, C = bucket number
+
+note: C will equal 255 (base 10) if the node is an exact match.
+---
+
+---
+name: query_file
+desc: Request IDs of nodes that have the specified file.
+	+---+---+---+---+---+---+---+---+---+---+
+	| A |     B     |     C     |     D     |
+	+---+---+---+---+---+---+---+---+---+---+
+	  0   1  ...  4   5  ... 24  25  ... 44
+A = command (base10: 5), B = random bytes, C = ID of sender, D = file hash
+
+expected response: node_list
 ---
 
 ---
 name: node_list
-desc: A list of nodes.
+desc: A list of node IDs.
 	+---+---+---+---+---+---+---+
-	| C |     R     |     K     |
+	| A |     B     |     C     |
 	+---+---+---+---+---+---+---+
-	  0   1  ...  x  x+1 ...  y
-C = command (base10: 5), R = echo of random bytes, K = ID list
+	  0   1  ...  4   9  ...  y
+A = command (base10: 5), B = echo of random bytes, C = ID list
 
-A K list element:
+A C list element:
 	+---+---+---+
-	|     N     |
+	|     A     |
 	+---+---+---+
 	  0  ...  19
-N = ID that has file
+A = ID of node that has file
 
-note: Multiple node_lists may be sent in response to one request.
+note: The max size of the C list is 25 elements.
 ---
 
 ---
-name: store
-desc: Store a mapping from a ID to a hash.
-	+---+---+---+---+---+---+---+
-	| C |     S     |     F     |
-	+---+---+---+---+---+---+---+
-	  0   1  ... 20  21  ... 40
-C = command (base10: 6), S = ID, F = hash
+name: store_file
+desc: Store a mapping from node ID to file hash.
+	+---+---+---+---+---+---+---+---+---+---+
+	| A |     B     |     C     |     D     |
+	+---+---+---+---+---+---+---+---+---+---+
+	  0   1  ...  4   5  ... 24  25  ... 44
+A = command (base10: 6), B = random bytes from a pong in the last 4 minutes,
+C = ID of sender, D = file hash
+
+note: If B is needed a ping should be sent.
+---
+
+---
+name: store_node
+desc: Store a mapping from node ID to address.
+	+---+---+---+---+---+---+---+---+---+---+
+	| A |     B     |     C     |     D     |
+	+---+---+---+---+---+---+---+---+---+---+
+	  0   1  ...  4   5  ... 24  25  ...  x
+A = command (base10: 7), B = random bytes from a pong in the last 4 minutes,
+C = ID of sender
+
+note: If B is needed a ping should be sent.
 ---

@@ -10,10 +10,10 @@ kademlia::kademlia():
 
 	//messages to expect anytime
 	Exchange.expect_anytime(boost::shared_ptr<message_udp::recv::base>(
-		new message_udp::recv::ping(boost::bind(&kademlia::recv_ping, this, _1, _2))));
+		new message_udp::recv::ping(boost::bind(&kademlia::recv_ping, this, _1, _2, _3))));
 	Exchange.expect_anytime(boost::shared_ptr<message_udp::recv::base>(
 		new message_udp::recv::find_node(boost::bind(&kademlia::recv_find_node,
-		this, _1, _2, _3))));
+		this, _1, _2, _3, _4))));
 
 	//start internal thread
 	main_loop_thread = boost::thread(boost::bind(&kademlia::main_loop, this));
@@ -58,7 +58,7 @@ void kademlia::do_pings()
 			LOGGER << iter_cur->IP() << " " << iter_cur->port();
 			network::buffer random(portable_urandom(8));
 			Exchange.send(boost::shared_ptr<message_udp::send::base>(
-				new message_udp::send::ping(random)), *iter_cur);
+				new message_udp::send::ping(random, local_ID)), *iter_cur);
 			Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
 				new message_udp::recv::pong(boost::bind(&kademlia::recv_pong, this, _1, _2), random)),
 				*iter_cur, boost::bind(&kademlia::timeout_ping_bucket, this, *iter_cur, x));
@@ -74,7 +74,7 @@ void kademlia::do_pings()
 				<< " " << Known_Reserve[x].begin()->port();
 			network::buffer random(portable_urandom(8));
 			Exchange.send(boost::shared_ptr<message_udp::send::base>(
-				new message_udp::send::ping(random)), *Known_Reserve[x].begin());
+				new message_udp::send::ping(random, local_ID)), *Known_Reserve[x].begin());
 			Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
 				new message_udp::recv::pong(boost::bind(&kademlia::recv_pong_known_reserve, this, _1, _2, x), random)),
 				*Known_Reserve[x].begin(), boost::bind(&kademlia::timeout_ping_known_reserve, this,
@@ -90,7 +90,7 @@ void kademlia::do_pings()
 			<< " " << Unknown_Reserve.begin()->port();
 		network::buffer random(portable_urandom(8));
 		Exchange.send(boost::shared_ptr<message_udp::send::base>(
-			new message_udp::send::ping(random)), *Unknown_Reserve.begin());
+			new message_udp::send::ping(random, local_ID)), *Unknown_Reserve.begin());
 		Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
 			new message_udp::recv::pong(boost::bind(&kademlia::recv_pong_unknown_reserve, this, _1, _2), random)),
 			*Unknown_Reserve.begin(), boost::bind(&kademlia::timeout_ping_unknown_reserve, this,
@@ -134,14 +134,17 @@ void kademlia::main_loop()
 }
 
 void kademlia::recv_find_node(const network::endpoint & endpoint,
-	const network::buffer & random, const std::string & ID_to_find)
+	const network::buffer & random, const std::string & remote_ID,
+	const std::string & ID_to_find)
 {
-
+	LOGGER << endpoint.IP() << " " << endpoint.port() << " remote_ID: "
+		<< remote_ID << " find: " << ID_to_find;
 }
 
-void kademlia::recv_ping(const network::endpoint & endpoint, const network::buffer & random)
+void kademlia::recv_ping(const network::endpoint & endpoint, const network::buffer & random,
+	const std::string & remote_ID)
 {
-	LOGGER << endpoint.IP() << " " << endpoint.port();
+	LOGGER << endpoint.IP() << " " << endpoint.port() << " " << remote_ID;
 	Exchange.send(boost::shared_ptr<message_udp::send::base>(
 		new message_udp::send::pong(random, local_ID)), endpoint);
 }

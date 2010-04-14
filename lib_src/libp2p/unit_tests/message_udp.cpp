@@ -6,14 +6,17 @@
 #include <random.hpp>
 
 int fail(0);
-const network::buffer test_random(portable_urandom(8));
+const network::buffer test_random(portable_urandom(4));
 const std::string test_ID("0123456789012345678901234567890123456789");
 boost::shared_ptr<network::endpoint> endpoint;
 
 void ping_call_back(const network::endpoint & endpoint,
-	const network::buffer & random)
+	const network::buffer & random, const std::string & remote_ID)
 {
 	if(random != test_random){
+		LOGGER; ++fail;
+	}
+	if(remote_ID != test_ID){
 		LOGGER; ++fail;
 	}
 }
@@ -27,9 +30,13 @@ void pong_call_back(const network::endpoint & endpoint,
 }
 
 void find_node_call_back(const network::endpoint & endpoint,
-	const network::buffer & random, const std::string & ID_to_find)
+	const network::buffer & random, const std::string & remote_ID,
+	const std::string & ID_to_find)
 {
 	if(random != test_random){
+		LOGGER; ++fail;
+	}
+	if(remote_ID != test_ID){
 		LOGGER; ++fail;
 	}
 	if(ID_to_find != test_ID){
@@ -37,12 +44,25 @@ void find_node_call_back(const network::endpoint & endpoint,
 	}
 }
 
+std::list<std::pair<network::endpoint, unsigned char> > test_hosts;
+void host_list_call_back(const network::endpoint & endpoint,
+	const std::string & remote_ID,
+	const std::list<std::pair<network::endpoint, unsigned char> > & hosts)
+{
+	if(remote_ID != test_ID){
+		LOGGER; ++fail;
+	}
+	if(hosts != test_hosts){
+		LOGGER; ++fail;
+	}
+}
+
 int main()
 {
 	network::start();
-	std::set<network::endpoint> endpoint_set = network::get_endpoint("localhost", "0", network::udp);
-	assert(!endpoint_set.empty());
-	endpoint = boost::shared_ptr<network::endpoint>(new network::endpoint(*endpoint_set.begin()));
+	std::set<network::endpoint> E = network::get_endpoint("localhost", "0", network::udp);
+	assert(!E.empty());
+	endpoint = boost::shared_ptr<network::endpoint>(new network::endpoint(*E.begin()));
 	boost::shared_ptr<message_udp::recv::base> M_recv;
 	boost::shared_ptr<message_udp::send::base> M_send;
 
@@ -50,7 +70,7 @@ int main()
 	M_recv = boost::shared_ptr<message_udp::recv::base>(new message_udp::recv::ping(
 		&ping_call_back));
 	M_send = boost::shared_ptr<message_udp::send::base>(new message_udp::send::ping(
-		test_random));
+		test_random, test_ID));
 	if(!M_recv->recv(M_send->buf, *endpoint)){
 		LOGGER; ++fail;
 	}
@@ -68,7 +88,32 @@ int main()
 	M_recv = boost::shared_ptr<message_udp::recv::base>(new message_udp::recv::find_node(
 		&find_node_call_back));
 	M_send = boost::shared_ptr<message_udp::send::base>(new message_udp::send::find_node(
-		test_random, test_ID));
+		test_random, test_ID, test_ID));
+	if(!M_recv->recv(M_send->buf, *endpoint)){
+		LOGGER; ++fail;
+	}
+
+	//host_list
+	/*
+	Note: host_list can be reordered when sent. For this test we intentionally
+		put all IPv4 addresses first in the list so they don't get reordered.
+	*/
+	E = network::get_endpoint("127.0.0.1", "0", network::tcp);
+	assert(!E.empty());
+	test_hosts.push_back(std::make_pair(*E.begin(), 0));
+	E = network::get_endpoint("127.0.0.2", "0", network::tcp);
+	assert(!E.empty());
+	test_hosts.push_back(std::make_pair(*E.begin(), 0));
+	E = network::get_endpoint("::1", "0", network::tcp);
+	assert(!E.empty());
+	test_hosts.push_back(std::make_pair(*E.begin(), 0));
+	E = network::get_endpoint("::2", "0", network::tcp);
+	assert(!E.empty());
+	test_hosts.push_back(std::make_pair(*E.begin(), 0));
+	M_recv = boost::shared_ptr<message_udp::recv::base>(new message_udp::recv::host_list(
+		&host_list_call_back, test_random));
+	M_send = boost::shared_ptr<message_udp::send::base>(new message_udp::send::host_list(
+		test_random, test_ID, test_hosts));
 	if(!M_recv->recv(M_send->buf, *endpoint)){
 		LOGGER; ++fail;
 	}

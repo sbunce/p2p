@@ -46,12 +46,14 @@ public:
 		Returns binary port in big-endian. This will always be 2 bytes.
 	type:
 		Returns type. (tcp or udp)
+
 	*/
 	std::string IP() const;
 	std::string IP_bin() const;
 	std::string port() const;
 	std::string port_bin() const;
 	socket_t type() const;
+	version_t version() const;
 
 	//operators
 	endpoint & operator = (const endpoint & rval);

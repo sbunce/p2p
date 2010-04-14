@@ -48,3 +48,17 @@ world conditions because A generally wouldn't know what address to spoof.
 
 When the rate limit is reached for a host incoming messages from them can be
 silently dropped.
+
+
+Amplification
+=============
+Amplification is when we can send host A 1 byte and cause it to send host B 2
+bytes. This allows someone to amplify the amount of data they're sending in a
+denial of service.
+
+There is no good way to prevent this unless we insure that all requests are the
+same size as responses.
+
+One thing to note is that there are some widely deployed programs/protocols with
+high amplification potential. For example it's possible to get an amplification
+factor of 60 from DNS.

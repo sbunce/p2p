@@ -303,13 +303,15 @@ int network::buffer::tail_size() const
 
 const unsigned char network::buffer::operator [] (const int index) const
 {
-	assert(index < bytes && index >= 0);
+	assert(index >= 0);
+	assert(index < bytes);
 	return buf[index];
 }
 
 unsigned char & network::buffer::operator [] (const int index)
 {
-	assert(index < bytes && index >= 0);
+	assert(index >= 0);
+	assert(index < bytes);
 	return buf[index];
 }
 

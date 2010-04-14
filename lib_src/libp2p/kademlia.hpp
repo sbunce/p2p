@@ -61,8 +61,10 @@ private:
 		Received pong that's result of pinging contact in unknown_reserve.
 	*/
 	void recv_find_node(const network::endpoint & endpoint,
-		const network::buffer & random, const std::string & ID_to_find);
-	void recv_ping(const network::endpoint & endpoint, const network::buffer & random);
+		const network::buffer & random, const std::string & remote_ID,
+		const std::string & ID_to_find);
+	void recv_ping(const network::endpoint & endpoint, const network::buffer & random,
+		const std::string & remote_ID);
 	void recv_pong(const network::endpoint & endpoint, const std::string & remote_ID);
 	void recv_pong_known_reserve(const network::endpoint & endpoint, const std::string & remote_ID,
 		const unsigned expected_bucket_num);

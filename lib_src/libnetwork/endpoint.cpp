@@ -97,6 +97,15 @@ network::socket_t network::endpoint::type() const
 	}
 }
 
+network::version_t network::endpoint::version() const
+{
+	if(ai.ai_addr->sa_family == AF_INET){
+		return IPv4;
+	}else{
+		return IPv6;
+	}
+}
+
 network::endpoint & network::endpoint::operator = (const endpoint & rval)
 {
 	copy(&rval.ai);
