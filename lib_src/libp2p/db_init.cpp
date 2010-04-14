@@ -1,13 +1,8 @@
 #include "db_init.hpp"
 
-db::init::init()
-{
-	path::create_required_directories();
-	create_all();
-}
-
 void db::init::create_all()
 {
+	path::create_required_directories();
 	db::pool::proxy DB;
 
 	//blacklist
@@ -43,7 +38,7 @@ void db::init::create_all()
 	DB->query(ss.str());
 	//generate our peer_ID
 	unsigned char buf[SHA1::bin_size];
-	portable_urandom(buf, SHA1::bin_size, NULL);
+	portable_urandom(buf, SHA1::bin_size);
 	ss.str(""); ss.clear();
 	ss << "INSERT OR IGNORE INTO prefs VALUES('ID', '"
 		<< convert::bin_to_hex(std::string(reinterpret_cast<const char *>(buf), SHA1::bin_size))
@@ -54,7 +49,7 @@ void db::init::create_all()
 		unsigned num;
 		unsigned char byte[sizeof(unsigned)];
 	} NB;
-	portable_urandom(NB.byte, sizeof(unsigned), NULL);
+	portable_urandom(NB.byte, sizeof(unsigned));
 	ss.str(""); ss.clear();
 	ss << "INSERT OR IGNORE INTO prefs VALUES('port', '"
 		<< NB.num % 64512 + 1024 << "')";

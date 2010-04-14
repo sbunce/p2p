@@ -1,0 +1,26 @@
+Can a static data member be instantiated in a header?
+=====================================================
+yes!
+
+
+Const integral types
+====================
+If the static data member is of const integral type it can be done like this.
+
+class test
+{
+	static const int i(2);
+};
+
+
+Other types
+===========
+If the static data member is not of const integral type a dummy template type
+can be used. Note that this is not thread safe.
+
+template<typename DUMMY=int>
+class test
+{
+	static std::string str;
+};
+template<typename DUMMY> std::string test<DUMMY>::str("ABC");

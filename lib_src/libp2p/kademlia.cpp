@@ -56,7 +56,7 @@ void kademlia::do_pings()
 			iter_end = tmp.end(); iter_cur != iter_end; ++iter_cur)
 		{
 			LOGGER << iter_cur->IP() << " " << iter_cur->port();
-			network::buffer random(portable_urandom(8));
+			network::buffer random(portable_urandom(4));
 			Exchange.send(boost::shared_ptr<message_udp::send::base>(
 				new message_udp::send::ping(random, local_ID)), *iter_cur);
 			Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
@@ -72,7 +72,7 @@ void kademlia::do_pings()
 		{
 			LOGGER << Known_Reserve[x].begin()->IP()
 				<< " " << Known_Reserve[x].begin()->port();
-			network::buffer random(portable_urandom(8));
+			network::buffer random(portable_urandom(4));
 			Exchange.send(boost::shared_ptr<message_udp::send::base>(
 				new message_udp::send::ping(random, local_ID)), *Known_Reserve[x].begin());
 			Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
@@ -88,7 +88,7 @@ void kademlia::do_pings()
 	if(Unknown_Reserve_Ping < 5 && !Unknown_Reserve.empty()){
 		LOGGER << Unknown_Reserve.begin()->IP()
 			<< " " << Unknown_Reserve.begin()->port();
-		network::buffer random(portable_urandom(8));
+		network::buffer random(portable_urandom(4));
 		Exchange.send(boost::shared_ptr<message_udp::send::base>(
 			new message_udp::send::ping(random, local_ID)), *Unknown_Reserve.begin());
 		Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(

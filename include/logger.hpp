@@ -10,11 +10,12 @@
 #include <iostream>
 #include <sstream>
 
-#define LOGGER logger<>::create(__FILE__, __FUNCTION__, __LINE__)
+#define LOGGER logger<>::create(__FILE__, __FUNCTION__, __LINE__, "deprecated")
 #define LOG(LEVEL) logger<>::create(__FILE__, __FUNCTION__, __LINE__, (LEVEL))
 
 /*
-Template type only needed to initialize static members in header.
+Template type only used to initialize static data members in header. This is
+used for the once_flag.
 */
 template<typename DUMMY=int>
 class logger
@@ -22,11 +23,12 @@ class logger
 public:
 	~logger()
 	{
-		std::cout << file << ":" << func << ":" << line << " " << buf.str() << std::endl;
+		boost::mutex::scoped_lock lock(stdout_mutex());
+		std::cout << level << ":" << file << ":" << func << ":" << line << " " << buf.str() << "\n";
 	}
 
 	static logger<> create(const std::string & file, const std::string & func,
-		const int line, const std::string & level = "normal")
+		const int line, const std::string & level)
 	{
 		return logger<>(file, func, line, level);
 	}
@@ -50,7 +52,7 @@ private:
 		line(line_in),
 		level(level_in)
 	{
-
+		boost::call_once(init, once_flag);
 	}
 
 	logger(const logger & L):
@@ -68,7 +70,22 @@ private:
 	std::string level;
 	std::stringstream buf;
 
+	//used to instantiate static data members in thread safe way
 	static boost::once_flag once_flag;
+	static void init()
+	{
+		stdout_mutex();
+	}
+
+	/*
+	Mutex to lock access to stdout, stop threads from stepping on eachothers
+	output to stdout.
+	*/
+	static boost::mutex & stdout_mutex()
+	{
+		static boost::mutex M;
+		return M;
+	}
 };
 
 template<typename DUMMY> boost::once_flag logger<DUMMY>::once_flag = BOOST_ONCE_INIT;

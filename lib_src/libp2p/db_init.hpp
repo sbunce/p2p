@@ -17,9 +17,6 @@ namespace db{
 class init
 {
 public:
-	//this ctor calls create_all()
-	init();
-
 	/*
 	create_all:
 		Create tables that don't yet exist.
@@ -28,6 +25,9 @@ public:
 	*/
 	static void create_all();
 	static void drop_all();
+
+private:
+	init(){}
 };
 }//end of namespace database
 #endif
