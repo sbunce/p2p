@@ -41,19 +41,25 @@ public:
 private:
 	blacklist(){}
 
-	/*
-	The init function is called with boost::call_once at the top of every
-	function to make sure the static variables are initialized in a thread safe
-	way.
-	*/
-	static boost::once_flag once_flag;
-	static void init();
+	class static_wrap
+	{
+	public:
+		static_wrap();
 
-	/*
-	Incremented whenever IP added to blacklist. This makes it possible to
-	determine if blacklist has changed without doing a database query.
-	*/
-	static atomic_int<int> & blacklist_state();
+		/*
+		blacklist_state:
+			Incremented whenever IP added to blacklist. This makes it possible to
+			determine if blacklist has changed without doing a database query.
+		*/
+		atomic_int<int> & blacklist_state();
+	private:
+		static boost::once_flag once_flag;
+
+		//initialize all static objects, called by ctor
+		static void init();
+
+		static atomic_int<int> & _blacklist_state();
+	};
 };
 }//end of namespace table
 }//end of namespace database

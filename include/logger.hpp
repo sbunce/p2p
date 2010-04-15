@@ -2,35 +2,48 @@
 #define H_LOGGER
 
 //include
-#include <boost/scoped_ptr.hpp>
 #include <boost/thread.hpp>
-#include <boost/utility.hpp>
 
 //standard
 #include <iostream>
 #include <sstream>
 
-#define LOGGER logger<>::create(__FILE__, __FUNCTION__, __LINE__, "deprecated")
-#define LOG(LEVEL) logger<>::create(__FILE__, __FUNCTION__, __LINE__, (LEVEL))
+#define LOGGER logger::create(logger::debug, __FILE__, __FUNCTION__, __LINE__)
+//#define LOGGER(LEVEL) logger::create(__FILE__, __FUNCTION__, __LINE__, (LEVEL))
 
-/*
-Template type only used to initialize static data members in header. This is
-used for the once_flag.
-*/
-template<typename DUMMY=int>
 class logger
 {
 public:
+	enum level
+	{
+		trace, //trace control flow (removed after debuging)
+		debug, //insignificant event (left in code)
+		event, //significant event (key press, network connection, etc)
+		error, //unusual event (may or may not indicate a problem)
+		fatal  //bad error (indicates definite problem)
+	};
+
 	~logger()
 	{
-		boost::mutex::scoped_lock lock(stdout_mutex());
-		std::cout << level << ":" << file << ":" << func << ":" << line << " " << buf.str() << "\n";
+		boost::mutex::scoped_lock lock(Static_Wrap.stdout_mutex());
+		if(Level == trace){
+			std::cout << "trace|";
+		}else if(Level == debug){
+			std::cout << "debug|";
+		}else if(Level == event){
+			std::cout << "event|";
+		}else if(Level == error){
+			std::cout << "error|";
+		}else if(Level == fatal){
+			std::cout << "fatal|";
+		}
+		std::cout << file << "|" << func << "|" << line << "|" << buf.str() << "\n";
 	}
 
-	static logger<> create(const std::string & file, const std::string & func,
-		const int line, const std::string & level)
+	static logger create(const level Level, const std::string & file,
+		const std::string & func, const int line)
 	{
-		return logger<>(file, func, line, level);
+		return logger(Level, file, func, line);
 	}
 
 	template<typename T>
@@ -42,51 +55,67 @@ public:
 
 private:
 	logger(
+		const level Level_in,
 		const std::string & file_in,
 		const std::string & func_in,
-		const int line_in,
-		const std::string & level_in
+		const int line_in
 	):
+		Level(Level_in),
 		file(file_in),
 		func(func_in),
-		line(line_in),
-		level(level_in)
+		line(line_in)
 	{
-		boost::call_once(init, once_flag);
+
 	}
 
 	logger(const logger & L):
+		Level(L.Level),
 		file(L.file),
 		func(L.func),
-		line(L.line),
-		level(L.level)
+		line(L.line)
 	{
 		buf << L.buf.str();
 	}
 
+	level Level;
 	std::string file;
 	std::string func;
 	int line;
-	std::string level;
 	std::stringstream buf;
 
-	//used to instantiate static data members in thread safe way
-	static boost::once_flag once_flag;
-	static void init()
+	//dummy template used to make initialization of once_flag in header possible
+	template<typename T=int>
+	class static_wrap
 	{
-		stdout_mutex();
-	}
+	public:
+		static_wrap()
+		{
+			//thread safe initialization of static data members
+			boost::call_once(init, once_flag);
+		}
 
-	/*
-	Mutex to lock access to stdout, stop threads from stepping on eachothers
-	output to stdout.
-	*/
-	static boost::mutex & stdout_mutex()
-	{
-		static boost::mutex M;
-		return M;
-	}
+		//lock for all access to stdout
+		boost::mutex & stdout_mutex()
+		{
+			return _stdout_mutex();
+		}
+	private:
+		static boost::once_flag once_flag;
+
+		//initialize all static objects, called by ctor
+		static void init()
+		{
+			_stdout_mutex();
+		}
+
+		static boost::mutex & _stdout_mutex()
+		{
+			static boost::mutex M;
+			return M;
+		}
+	};
+	static_wrap<> Static_Wrap;
 };
 
-template<typename DUMMY> boost::once_flag logger<DUMMY>::once_flag = BOOST_ONCE_INIT;
+template<typename T> boost::once_flag logger::static_wrap<T>::once_flag = BOOST_ONCE_INIT;
 #endif

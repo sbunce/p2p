@@ -69,7 +69,27 @@ private:
 	static boost::once_flag once_flag;
 	static void init();
 
-	static std::string & database_name();
-	static std::string & program_directory();
+	class static_wrap
+	{
+	public:
+		static_wrap();
+
+		/*
+		database_name:
+			Returns file name of database.
+		program_directory:
+			Returns full path to directory that stores program information.
+		*/
+		std::string & database_name();
+		std::string & program_directory();
+	private:
+		static boost::once_flag once_flag;
+
+		//initializes all static variables
+		static void init();
+
+		static std::string & _database_name();
+		static std::string & _program_directory();
+	};
 };
 #endif
