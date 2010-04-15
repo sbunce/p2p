@@ -14,10 +14,10 @@ void ping_call_back(const network::endpoint & endpoint,
 	const network::buffer & random, const std::string & remote_ID)
 {
 	if(random != test_random){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	if(remote_ID != test_ID){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 }
 
@@ -25,7 +25,7 @@ void pong_call_back(const network::endpoint & endpoint,
 	const std::string & remote_ID)
 {
 	if(remote_ID != test_ID){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 }
 
@@ -34,13 +34,13 @@ void find_node_call_back(const network::endpoint & endpoint,
 	const std::string & ID_to_find)
 {
 	if(random != test_random){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	if(remote_ID != test_ID){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	if(ID_to_find != test_ID){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 }
 
@@ -50,10 +50,10 @@ void host_list_call_back(const network::endpoint & endpoint,
 	const std::list<std::pair<network::endpoint, unsigned char> > & hosts)
 {
 	if(remote_ID != test_ID){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	if(hosts != test_hosts){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 }
 
@@ -72,7 +72,7 @@ int main()
 	M_send = boost::shared_ptr<message_udp::send::base>(new message_udp::send::ping(
 		test_random, test_ID));
 	if(!M_recv->recv(M_send->buf, *endpoint)){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//pong
@@ -81,7 +81,7 @@ int main()
 	M_send = boost::shared_ptr<message_udp::send::base>(new message_udp::send::pong(
 		test_random, test_ID));
 	if(!M_recv->recv(M_send->buf, *endpoint)){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//find_node
@@ -90,7 +90,7 @@ int main()
 	M_send = boost::shared_ptr<message_udp::send::base>(new message_udp::send::find_node(
 		test_random, test_ID, test_ID));
 	if(!M_recv->recv(M_send->buf, *endpoint)){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//host_list
@@ -115,7 +115,7 @@ int main()
 	M_send = boost::shared_ptr<message_udp::send::base>(new message_udp::send::host_list(
 		test_random, test_ID, test_hosts));
 	if(!M_recv->recv(M_send->buf, *endpoint)){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	return fail;

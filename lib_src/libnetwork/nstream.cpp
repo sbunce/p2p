@@ -27,7 +27,7 @@ void network::nstream::close()
 {
 	if(socket_FD != -1){
 		if(::close(socket_FD) == -1){
-			LOGGER << errno;
+			LOGGER(logger::error) << errno;
 		}
 		socket_FD = -1;
 	}
@@ -49,12 +49,12 @@ bool network::nstream::is_open_async()
 		if(opt_val == 0){
 			return true;
 		}else{
-			LOGGER << errno;
+			LOGGER(logger::error) << errno;
 			return false;
 		}
 	}else{
 		//error getting option
-		LOGGER << errno;
+		LOGGER(logger::error) << errno;
 		return false;
 	}
 }
@@ -67,7 +67,7 @@ std::string network::nstream::local_IP()
 	sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
 	if(getsockname(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
-		LOGGER << errno;
+		LOGGER(logger::error) << errno;
 		close();
 		return "";
 	}
@@ -75,7 +75,7 @@ std::string network::nstream::local_IP()
 	if(getnameinfo(reinterpret_cast<sockaddr *>(&addr), addrlen, buf,
 		sizeof(buf), NULL, 0, NI_NUMERICHOST) == -1)
 	{
-		LOGGER << errno;
+		LOGGER(logger::error) << errno;
 		close();
 		return "";
 	}
@@ -90,7 +90,7 @@ std::string network::nstream::local_port()
 	sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
 	if(getsockname(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
-		LOGGER << errno;
+		LOGGER(logger::error) << errno;
 		close();
 		return "";
 	}
@@ -98,7 +98,7 @@ std::string network::nstream::local_port()
 	if(getnameinfo(reinterpret_cast<sockaddr *>(&addr), addrlen, NULL, 0, buf,
 		sizeof(buf), NI_NUMERICSERV) == -1)
 	{
-		LOGGER << errno;
+		LOGGER(logger::error) << errno;
 		close();
 		return "";
 	}
@@ -110,11 +110,11 @@ void network::nstream::open(const endpoint & E)
 	assert(E.type() == tcp);
 	close();
 	if((socket_FD = ::socket(E.ai.ai_family, E.ai.ai_socktype, E.ai.ai_protocol)) == -1){
-		LOGGER << errno;
+		LOGGER(logger::error) << errno;
 		close();
 	}
 	if(::connect(socket_FD, E.ai.ai_addr, E.ai.ai_addrlen) != 0){
-		LOGGER << errno;
+		LOGGER(logger::error) << errno;
 		close();
 	}
 }
@@ -125,7 +125,7 @@ void network::nstream::open_async(const endpoint & E)
 	if((socket_FD = ::socket(E.ai.ai_family, E.ai.ai_socktype,
 		E.ai.ai_protocol)) == -1)
 	{
-		LOGGER << errno;
+		LOGGER(logger::fatal) << errno;
 		exit(1);
 	}
 	set_non_blocking();
@@ -141,7 +141,7 @@ void network::nstream::open_async(const endpoint & E)
 	if(::connect(socket_FD, E.ai.ai_addr, E.ai.ai_addrlen) != 0){
 		//socket in progress of connecting
 		if(errno != EINPROGRESS && errno != EWOULDBLOCK){
-			LOGGER << errno;
+			LOGGER(logger::fatal) << errno;
 			exit(1);
 		}
 	}
@@ -162,7 +162,7 @@ int network::nstream::recv(buffer & buf, const int max_transfer)
 		int n_bytes = ::recv(socket_FD, reinterpret_cast<char *>(buf.tail_start()),
 			buf.tail_size(), MSG_NOSIGNAL);
 		if(n_bytes == -1){
-			LOGGER << errno;
+			LOGGER(logger::error) << errno;
 		}else if(n_bytes == 0){
 			close();
 			buf.tail_reserve(0);
@@ -178,7 +178,7 @@ std::string network::nstream::remote_IP()
 	sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
 	if(getpeername(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
-		LOGGER << errno;
+		LOGGER(logger::error) << errno;
 		close();
 		return "";
 	}
@@ -186,7 +186,7 @@ std::string network::nstream::remote_IP()
 	if(getnameinfo(reinterpret_cast<sockaddr *>(&addr), addrlen, buf,
 		sizeof(buf), NULL, 0, NI_NUMERICHOST) == -1)
 	{
-		LOGGER << errno;
+		LOGGER(logger::error) << errno;
 		close();
 		return "";
 	}
@@ -198,7 +198,7 @@ std::string network::nstream::remote_port()
 	sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
 	if(getpeername(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
-		LOGGER << errno;
+		LOGGER(logger::error) << errno;
 		close();
 		return "";
 	}
@@ -206,7 +206,7 @@ std::string network::nstream::remote_port()
 	if(getnameinfo(reinterpret_cast<sockaddr *>(&addr), addrlen, NULL, 0, buf,
 		sizeof(buf), NI_NUMERICSERV) == -1)
 	{
-		LOGGER << errno;
+		LOGGER(logger::error) << errno;
 		close();
 		return "";
 	}
@@ -230,7 +230,7 @@ int network::nstream::send(buffer & buf, int max_transfer)
 		int n_bytes = ::send(socket_FD, reinterpret_cast<char *>(buf.data()),
 			max_transfer, MSG_NOSIGNAL);
 		if(n_bytes == -1){
-			LOGGER << errno;
+			LOGGER(logger::error) << errno;
 		}else if(n_bytes == 0){
 			close();
 		}else{
@@ -246,12 +246,12 @@ void network::nstream::set_non_blocking()
 		#ifdef _WIN32
 		u_long mode = 1;
 		if(ioctlsocket(socket_FD, FIONBIO, &mode) == -1){
-			LOGGER << errno;
+			LOGGER(logger::error) << errno;
 			close();
 		}
 		#else
 		if(fcntl(socket_FD, F_SETFL, O_NONBLOCK) == -1){
-			LOGGER << errno;
+			LOGGER(logger::error) << errno;
 			close();
 		}
 		#endif

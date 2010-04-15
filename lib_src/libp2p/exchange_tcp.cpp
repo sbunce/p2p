@@ -107,7 +107,7 @@ void exchange_tcp::recv_call_back(network::connection_info & CI)
 	if(db::table::blacklist::modified(blacklist_state)
 		&& db::table::blacklist::is_blacklisted(CI.IP))
 	{
-		LOGGER << "disconnecting blacklisted " << CI.IP;
+		LOGGER(logger::event) << "disconnecting blacklisted " << CI.IP;
 		Proactor.disconnect(connection_ID);
 		CI.recv_call_back.clear();
 		return;

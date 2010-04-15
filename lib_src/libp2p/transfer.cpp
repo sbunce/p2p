@@ -51,7 +51,7 @@ void transfer::check()
 		buf.clear();
 		hash_tree::status status = Hash_Tree.read_block(block_num, buf);
 		if(status == hash_tree::io_error){
-			LOGGER << "stub: handle io_error when hash checking";
+			LOGGER(logger::fatal) << "stub: handle io_error when hash checking";
 			exit(1);
 		}
 		status = Hash_Tree.check_tree_block(block_num, buf);
@@ -74,7 +74,7 @@ void transfer::check()
 				}
 			}
 		}else if(status == hash_tree::io_error){
-			LOGGER << "stub: handle io_error when hash checking";
+			LOGGER(logger::fatal) << "stub: handle io_error when hash checking";
 			exit(1);
 		}
 	}
@@ -92,7 +92,7 @@ void transfer::check()
 			bytes_received += buf.size();
 			File_Block.add_block_local(block_num);
 		}else if(status == hash_tree::io_error){
-			LOGGER << "stub: handle io_error when hash checking";
+			LOGGER(logger::fatal) << "stub: handle io_error when hash checking";
 			exit(1);
 		}
 	}

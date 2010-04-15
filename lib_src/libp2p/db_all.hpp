@@ -1,7 +1,4 @@
 //includes entire database namespace
-#ifndef H_DB_ALL
-#define H_DB_ALL
-
 #include <db.hpp>
 #include "db_init.hpp"
 #include "db_pool.hpp"
@@ -12,5 +9,3 @@
 #include "db_table_prefs.hpp"
 #include "db_table_share.hpp"
 #include "db_table_source.hpp"
-
-#endif

@@ -14,7 +14,7 @@ int main()
 	SHA.load(text.data(), text.size());
 	SHA.end();
 	if(SHA.hex() != "0F31DE89A79556B8AA85B35763A4A7655193828B"){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//test empty string
@@ -22,7 +22,7 @@ int main()
 	SHA.load("", 0);
 	SHA.end();
 	if(SHA.hex() != "DA39A3EE5E6B4B0D3255BFEF95601890AFD80709"){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	return fail;
 }

@@ -38,28 +38,13 @@
 #endif
 
 namespace network{
-
-//must be called before using any network function
-static void start()
-{
-	#ifdef _WIN32
-	WORD wsock_ver = MAKEWORD(2,2);
-	WSADATA wsock_data;
-	int startup;
-	if((startup = WSAStartup(wsock_ver, &wsock_data)) != 0){
-		LOGGER << "winsock startup error " << startup;
-		exit(1);
-	}
-	#endif
-}
-
-//for every call to start() this function must be called
-static void stop()
-{
-	#ifdef _WIN32
-	WSACleanup();
-	#endif
-}
-
+/*
+start:
+	Must be called before using any network function.
+stop:
+	For every call to start() this function must be called.
+*/
+extern void start();
+extern void stop();
 }//end namespace network
 #endif

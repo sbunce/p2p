@@ -17,7 +17,7 @@ int main()
 		data[x] = data[x] ^ PRNG.byte();
 	}
 	if(convert::bin_to_hex(data) != "857047028B192029FD"){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	return fail;
 }

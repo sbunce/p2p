@@ -118,7 +118,7 @@ unsigned hash_tree::block_size(const boost::uint64_t block_num)
 	if(block_info(block_num, info)){
 		return info.second;
 	}else{
-		LOGGER << "programmer error, invalid block specified";
+		LOGGER(logger::fatal) << "programmer error, invalid block specified";
 		exit(1);
 	}
 }
@@ -180,7 +180,7 @@ hash_tree::status hash_tree::check_tree_block(const boost::uint64_t block_num,
 		boost::uint64_t parent;
 		if(!block_info(block_num, info, parent)){
 			//invalid block
-			LOGGER << "invalid block";
+			LOGGER(logger::fatal) << "invalid block";
 			exit(1);
 		}
 		assert(buf.size() == info.second);
@@ -208,7 +208,7 @@ hash_tree::status hash_tree::create()
 	//open file to generate hash tree for
 	std::fstream file(path.c_str(), std::ios::in | std::ios::binary);
 	if(!file.good()){
-		LOGGER << "error opening file " << path;
+		LOGGER(logger::error) << "error opening file " << path;
 		return io_error;
 	}
 
@@ -219,7 +219,7 @@ hash_tree::status hash_tree::create()
 	std::fstream temp(path::hash_tree_temp().c_str(), std::ios::in |
 		std::ios::out | std::ios::trunc | std::ios::binary);
 	if(!temp.good()){
-		LOGGER << "error opening temp file";
+		LOGGER(logger::error) << "error opening temp file";
 		return io_error;
 	}
 
@@ -233,12 +233,12 @@ hash_tree::status hash_tree::create()
 		if(std::time(NULL) != T){
 			try{
 				if(file_size < boost::filesystem::file_size(path)){
-					LOGGER << "copying file " << path;
+					LOGGER(logger::event) << "copying file " << path;
 					return copying;
 				}
 				T = std::time(NULL);
 			}catch(const std::exception & e){
-				LOGGER << "error reading file";
+				LOGGER(logger::error) << "error reading file";
 				return io_error;
 			}
 		}
@@ -248,7 +248,7 @@ hash_tree::status hash_tree::create()
 		}
 		file.read(buf, protocol_tcp::file_block_size);
 		if(file.gcount() == 0){
-			LOGGER << "error reading file";
+			LOGGER(logger::error) << "error reading file";
 			return io_error;
 		}
 		SHA.init();
@@ -257,7 +257,7 @@ hash_tree::status hash_tree::create()
 		temp.seekp(file_hash_offset + x * SHA1::bin_size, std::ios::beg);
 		temp.write(SHA.bin(), SHA1::bin_size);
 		if(!temp.good()){
-			LOGGER << "error writing temp file";
+			LOGGER(logger::error) << "error writing temp file";
 			return io_error;
 		}
 	}
@@ -267,13 +267,13 @@ hash_tree::status hash_tree::create()
 		std::pair<boost::uint64_t, unsigned> info;
 		boost::uint64_t parent;
 		if(!block_info(x, info, parent)){
-			LOGGER << "programmer error";
+			LOGGER(logger::fatal) << "programmer error";
 			exit(1);
 		}
 		temp.seekg(info.first, std::ios::beg);
 		temp.read(buf, info.second);
 		if(temp.gcount() != info.second){
-			LOGGER << "error reading temp file";
+			LOGGER(logger::error) << "error reading temp file";
 			return io_error;
 		}
 		SHA.init();
@@ -282,7 +282,7 @@ hash_tree::status hash_tree::create()
 		temp.seekp(parent, std::ios::beg);
 		temp.write(SHA.bin(), SHA1::bin_size);
 		if(!temp.good()){
-			LOGGER << "error writing temp file";
+			LOGGER(logger::error) << "error writing temp file";
 			return io_error;
 		}
 	}
@@ -309,7 +309,7 @@ hash_tree::status hash_tree::create()
 
 	//tree doesn't exist, allocate space for it
 	if(!db::table::hash::add(hash, tree_size)){
-		LOGGER << "error adding hash tree";
+		LOGGER(logger::error) << "error adding hash tree";
 		return io_error;
 	}
 
@@ -334,12 +334,12 @@ hash_tree::status hash_tree::create()
 		}
 		temp.read(buf, read_size);
 		if(temp.gcount() != read_size){
-			LOGGER << "error reading temp file";
+			LOGGER(logger::error) << "error reading temp file";
 			db::table::hash::remove(hash);
 			return io_error;
 		}else{
 			if(!db::pool::get()->blob_write(blob, buf, read_size, offset)){
-				LOGGER << "error doing incremental write to blob";
+				LOGGER(logger::error) << "error doing incremental write to blob";
 				db::table::hash::remove(hash);
 				return io_error;
 			}
@@ -367,7 +367,7 @@ std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool>
 			return pair;
 		}
 	}else{
-		LOGGER << "invalid block number, programming error";
+		LOGGER(logger::fatal) << "invalid block number, programming error";
 		exit(1);
 	}
 }
@@ -435,7 +435,7 @@ hash_tree::status hash_tree::read_block(const boost::uint64_t block_num,
 		buf.tail_resize(info.second);
 		return good;
 	}else{
-		LOGGER << "invalid block number, programming error";
+		LOGGER(logger::fatal) << "invalid block number, programming error";
 		exit(1);
 	}
 }
@@ -514,7 +514,7 @@ std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool>
 		block_count += row_block_count;
 		offset += row[x];
 	}
-	LOGGER << "invalid block number";
+	LOGGER(logger::fatal) << "invalid block number";
 	exit(1);
 }
 
@@ -543,6 +543,7 @@ hash_tree::status hash_tree::write_block(const boost::uint64_t block_num,
 		}
 		return good;
 	}else{
-		LOGGER; exit(1);
+		LOGGER(logger::fatal);
+		exit(1);
 	}
 }

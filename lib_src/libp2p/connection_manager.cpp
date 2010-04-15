@@ -23,7 +23,7 @@ void connection_manager::connect_call_back(network::connection_info & CI)
 //DEBUG, disable persistent blacklist
 	db::pool::get()->query("DELETE FROM blacklist");
 
-	LOGGER << "connect " << CI.IP << " " << CI.port;
+	LOGGER(logger::event) << "connect " << CI.IP << " " << CI.port;
 	std::pair<std::map<int, boost::shared_ptr<connection> >::iterator, bool>
 		ret = Connection.insert(std::make_pair(CI.connection_ID,
 		new connection(Proactor, CI, boost::bind(&connection_manager::trigger_tick,
@@ -34,7 +34,7 @@ void connection_manager::connect_call_back(network::connection_info & CI)
 void connection_manager::disconnect_call_back(network::connection_info & CI)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
-	LOGGER << "disconnect " << CI.IP << " " << CI.port;
+	LOGGER(logger::event) << "disconnect " << CI.IP << " " << CI.port;
 	Connection.erase(CI.connection_ID);
 }
 

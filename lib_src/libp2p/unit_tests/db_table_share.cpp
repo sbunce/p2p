@@ -21,7 +21,7 @@ int main()
 
 	//file not yet added, lookups shouldn't work
 	if(db::table::share::find(SI.hash)){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//add file
@@ -31,13 +31,23 @@ int main()
 	if(boost::shared_ptr<db::table::share::info>
 		lookup_SI = db::table::share::find(SI.hash))
 	{
-		if(lookup_SI->hash != SI.hash){ LOGGER; ++fail; }
-		if(lookup_SI->path != SI.path){ LOGGER; ++fail; }
-		if(lookup_SI->file_size != SI.file_size){ LOGGER; ++fail; }
-		if(lookup_SI->last_write_time != SI.last_write_time){ LOGGER; ++fail; }
-		if(lookup_SI->file_state != SI.file_state){ LOGGER; ++fail; }
+		if(lookup_SI->hash != SI.hash){
+			LOGGER(logger::utest); ++fail;
+		}
+		if(lookup_SI->path != SI.path){
+			LOGGER(logger::utest); ++fail;
+		}
+		if(lookup_SI->file_size != SI.file_size){
+			LOGGER(logger::utest); ++fail;
+		}
+		if(lookup_SI->last_write_time != SI.last_write_time){
+			LOGGER(logger::utest); ++fail;
+		}
+		if(lookup_SI->file_state != SI.file_state){
+			LOGGER(logger::utest); ++fail;
+		}
 	}else{
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//remove file
@@ -45,7 +55,7 @@ int main()
 
 	//file was deleted, make sure lookups don't work
 	if(db::table::share::find(SI.hash)){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	return fail;
 }

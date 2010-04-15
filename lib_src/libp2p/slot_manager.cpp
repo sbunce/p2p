@@ -69,14 +69,14 @@ bool slot_manager::recv_close_slot(const unsigned char slot_num)
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter = Incoming_Slot.find(slot_num);
 	if(iter != Incoming_Slot.end()){
-		LOGGER;
+		LOGGER(logger::event);
 		if(iter->second->get_transfer()){
 			iter->second->get_transfer()->incoming_unsubscribe(Exchange.connection_ID);
 		}
 		Incoming_Slot.erase(iter);
 		return true;
 	}else{
-		LOGGER << "slot already closed";
+		LOGGER(logger::error) << "slot already closed";
 		return false;
 	}
 }
@@ -94,7 +94,7 @@ bool slot_manager::recv_file_block(const network::buffer & block,
 		if(status == transfer::good){
 			return true;
 		}else if(status == transfer::bad){
-			LOGGER << "error writing file, closing slot";
+			LOGGER(logger::error) << "error writing file, closing slot";
 			if(iter->second->get_transfer()){
 				iter->second->get_transfer()->outgoing_unsubscribe(Exchange.connection_ID);
 			}
@@ -103,7 +103,7 @@ bool slot_manager::recv_file_block(const network::buffer & block,
 			Outgoing_Slot.erase(iter);
 			share::singleton().garbage_collect();
 		}else if(status == transfer::protocol_violated){
-			LOGGER << "block arrived late";
+			LOGGER(logger::error) << "block arrived late";
 		}
 	}
 	return true;
@@ -112,7 +112,7 @@ bool slot_manager::recv_file_block(const network::buffer & block,
 bool slot_manager::recv_have_file_block(const unsigned char slot_num,
 	const boost::uint64_t block_num)
 {
-	LOGGER << block_num;
+	LOGGER(logger::debug) << block_num;
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter = Outgoing_Slot.find(slot_num);
 	if(iter != Outgoing_Slot.end()){
@@ -127,7 +127,7 @@ bool slot_manager::recv_have_file_block(const unsigned char slot_num,
 bool slot_manager::recv_have_hash_tree_block(const unsigned char slot_num,
 	const boost::uint64_t block_num)
 {
-	LOGGER << block_num;
+	LOGGER(logger::debug) << block_num;
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter = Outgoing_Slot.find(slot_num);
 	if(iter != Outgoing_Slot.end()){
@@ -152,7 +152,7 @@ bool slot_manager::recv_hash_tree_block(const network::buffer & block,
 		if(status == transfer::good){
 			return true;
 		}else if(status == transfer::bad){
-			LOGGER << "error writing hash tree, closing slot";
+			LOGGER(logger::error) << "error writing hash tree, closing slot";
 			if(iter->second->get_transfer()){
 				iter->second->get_transfer()->outgoing_unsubscribe(Exchange.connection_ID);
 			}
@@ -161,7 +161,7 @@ bool slot_manager::recv_hash_tree_block(const network::buffer & block,
 			Outgoing_Slot.erase(iter);
 			share::singleton().garbage_collect();
 		}else if(status == transfer::protocol_violated){
-			LOGGER << "block arrived late";
+			LOGGER(logger::error) << "block arrived late";
 		}
 	}
 	return true;
@@ -169,7 +169,7 @@ bool slot_manager::recv_hash_tree_block(const network::buffer & block,
 
 bool slot_manager::recv_request_block_failed(const unsigned char slot_num)
 {
-	LOGGER;
+	LOGGER(logger::event);
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter = Outgoing_Slot.find(slot_num);
 	if(iter != Outgoing_Slot.end()){
@@ -190,7 +190,7 @@ bool slot_manager::recv_request_hash_tree_block(const unsigned char slot_num,
 		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 	}else{
 		assert(iter->second->get_transfer());
-		//LOGGER << block_num;
+		LOGGER(logger::debug) << block_num;
 		boost::shared_ptr<message_tcp::send::base> M_request;
 		transfer::status status = iter->second->get_transfer()->read_tree_block(
 			M_request, block_num);
@@ -198,7 +198,7 @@ bool slot_manager::recv_request_hash_tree_block(const unsigned char slot_num,
 			Exchange.send(M_request);
 			return true;
 		}else if(status == transfer::bad){
-			LOGGER << "error reading tree block";
+			LOGGER(logger::error) << "error reading tree block";
 			if(iter->second->get_transfer()){
 				iter->second->get_transfer()->incoming_unsubscribe(Exchange.connection_ID);
 			}
@@ -206,7 +206,7 @@ bool slot_manager::recv_request_hash_tree_block(const unsigned char slot_num,
 			Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 			return true;
 		}else if(status == transfer::protocol_violated){
-			LOGGER << "violated protocol";
+			LOGGER(logger::error) << "violated protocol";
 			return false;
 		}
 	}
@@ -222,7 +222,7 @@ bool slot_manager::recv_request_file_block(const unsigned char slot_num,
 		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 	}else{
 		assert(iter->second->get_transfer());
-		//LOGGER << block_num;
+		LOGGER(logger::debug) << block_num;
 		boost::shared_ptr<message_tcp::send::base> M_request;
 		transfer::status status = iter->second->get_transfer()->read_file_block(
 			M_request, block_num);
@@ -230,7 +230,7 @@ bool slot_manager::recv_request_file_block(const unsigned char slot_num,
 			Exchange.send(M_request);
 			return true;
 		}else if(status == transfer::bad){
-			LOGGER << "error reading file block";
+			LOGGER(logger::error) << "error reading file block";
 			if(iter->second->get_transfer()){
 				iter->second->get_transfer()->incoming_unsubscribe(Exchange.connection_ID);
 			}
@@ -238,7 +238,7 @@ bool slot_manager::recv_request_file_block(const unsigned char slot_num,
 			Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 			return true;
 		}else if(status == transfer::protocol_violated){
-			LOGGER << "violated protocol";
+			LOGGER(logger::error) << "violated protocol";
 			return false;
 		}
 	}
@@ -247,19 +247,19 @@ bool slot_manager::recv_request_file_block(const unsigned char slot_num,
 
 bool slot_manager::recv_request_slot(const std::string & hash)
 {
-	LOGGER << hash;
+	LOGGER(logger::event) << hash;
 
 	//locate requested slot
 	share::slot_iterator slot_iter = share::singleton().find_slot(hash);
 	if(slot_iter == share::singleton().end_slot()){
-		LOGGER << "failed " << hash;
+		LOGGER(logger::error) << "failed " << hash;
 		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 		return true;
 	}
 
 	if(!slot_iter->get_transfer()){
 		//we do not yet know file size
-		LOGGER << "failed " << hash;
+		LOGGER(logger::error) << "failed " << hash;
 		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 		return true;
 	}
@@ -284,7 +284,7 @@ bool slot_manager::recv_request_slot(const std::string & hash)
 	//file size
 	boost::uint64_t file_size = slot_iter->file_size();
 	if(file_size == 0){
-		LOGGER << "failed " << hash;
+		LOGGER(logger::error) << "failed " << hash;
 		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 		return true;
 	}
@@ -292,7 +292,7 @@ bool slot_manager::recv_request_slot(const std::string & hash)
 	//root hash
 	std::string root_hash;
 	if(!slot_iter->get_transfer()->root_hash(root_hash)){
-		LOGGER << "failed " << hash;
+		LOGGER(logger::error) << "failed " << hash;
 		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 		return true;
 	}
@@ -327,7 +327,7 @@ bool slot_manager::recv_request_slot(const std::string & hash)
 
 bool slot_manager::recv_request_slot_failed()
 {
-	LOGGER << "stub: handle request slot failure";
+	LOGGER(logger::debug) << "stub: handle request slot failure";
 	--open_slots;
 	return true;
 }
@@ -336,17 +336,17 @@ bool slot_manager::recv_slot(const unsigned char slot_num,
 	const boost::uint64_t file_size, const std::string & root_hash,
 	bit_field & tree_BF, bit_field & file_BF, const std::string hash)
 {
-	LOGGER << hash;
+	LOGGER(logger::event) << hash;
 	share::slot_iterator slot_iter = share::singleton().find_slot(hash);
 	if(slot_iter == share::singleton().end_slot()){
-		LOGGER << "failed " << hash;
+		LOGGER(logger::error) << "failed " << hash;
 		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::close_slot(slot_num)));
 		return true;
 	}
 
 	//file size and root hash might not be known, set them
 	if(!slot_iter->set_unknown(Exchange.connection_ID, file_size, root_hash)){
-		LOGGER << "error setting file size and root hash";
+		LOGGER(logger::error) << "error setting file size and root hash";
 		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::close_slot(slot_num)));
 		return true;
 	}
@@ -396,7 +396,7 @@ bool slot_manager::recv_slot(const unsigned char slot_num,
 		ret = Outgoing_Slot.insert(std::make_pair(slot_num, slot_iter.get()));
 	if(ret.second == false){
 		//host sent duplicate slot
-		LOGGER << "violated protocol";
+		LOGGER(logger::error) << "violated protocol";
 		return false;
 	}
 	return true;
@@ -535,7 +535,7 @@ void slot_manager::send_have()
 				&& iter_cur->second->get_transfer()->next_have_tree(
 				Exchange.connection_ID, block_num))
 			{
-				LOGGER << "tree: " << block_num;
+				LOGGER(logger::debug) << "tree: " << block_num;
 				Exchange.send(boost::shared_ptr<message_tcp::send::base>(
 					new message_tcp::send::have_hash_tree_block(iter_cur->first, block_num,
 					iter_cur->second->get_transfer()->tree_block_count())));
@@ -543,7 +543,7 @@ void slot_manager::send_have()
 				&& iter_cur->second->get_transfer()->next_have_file(
 				Exchange.connection_ID, block_num))
 			{
-				LOGGER << "file: " << block_num;
+				LOGGER(logger::debug) << "file: " << block_num;
 				Exchange.send(boost::shared_ptr<message_tcp::send::base>(
 					new message_tcp::send::have_file_block(iter_cur->first, block_num,
 					iter_cur->second->get_transfer()->file_block_count())));

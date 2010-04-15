@@ -31,7 +31,7 @@ network::endpoint::endpoint(const std::string & addr, const std::string & port,
 		reinterpret_cast<sockaddr_in6 *>(ai.ai_addr)->sin6_port
 			= convert::bin_to_int<boost::uint16_t>(port);
 	}else{
-		LOGGER << "unknown address family";
+		LOGGER(logger::fatal) << "unknown address family";
 		exit(1);
 	}
 }
@@ -60,7 +60,7 @@ std::string network::endpoint::IP_bin() const
 		return std::string(reinterpret_cast<const char *>(
 			reinterpret_cast<sockaddr_in6 *>(ai.ai_addr)->sin6_addr.s6_addr), 16);
 	}else{
-		LOGGER << "unknown address family";
+		LOGGER(logger::fatal) << "unknown address family";
 		exit(1);
 	}
 }
@@ -83,7 +83,7 @@ std::string network::endpoint::port_bin() const
 	}else if(ai.ai_addr->sa_family == AF_INET6){
 		return convert::int_to_bin(reinterpret_cast<sockaddr_in6 *>(ai.ai_addr)->sin6_port);
 	}else{
-		LOGGER << "unknown address family";
+		LOGGER(logger::fatal) << "unknown address family";
 		exit(1);
 	}
 }

@@ -22,7 +22,7 @@ void assignment()
 	for(int x=0; x<test_size; ++x){
 		if(x % 2 == 0){
 			if(BF[x] != true){
-				LOGGER; ++fail;
+				LOGGER(logger::utest); ++fail;
 			}
 		}
 	}
@@ -39,7 +39,7 @@ void assignment()
 	for(int x=0; x<test_size; ++x){
 		if(x % 2 == 0){
 			if(BF[x] != false){
-				LOGGER; ++fail;
+				LOGGER(logger::utest); ++fail;
 			}
 		}
 	}
@@ -51,17 +51,17 @@ void named_functions()
 
 	//size function
 	if(BF.size() != 1){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//reset function
 	BF[0] = 1;
 	if(BF[0] != 1){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	BF.reset();
 	if(BF[0] == 1){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 }
 
@@ -72,48 +72,48 @@ void operators()
 
 	//==
 	if(!(BF_0 == BF_1)){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//!=
 	if(BF_0 != BF_1){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//&=
 	BF_0 &= BF_1;
 	if(BF_0[0] != 0){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//^=
 	BF_0 ^= BF_1;
 	if(BF_0[0] != 0){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//|=
 	BF_0 |= BF_1;
 	if(BF_0[0] != 0){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//~
 	~BF_0;
 	if(BF_0[0] != 1){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//=
 	BF_0 = BF_1;
 	if(BF_0[0] != 0){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//bitgroup_vector::proxy assignment test
 	BF_0[0] = BF_0[1] = 1;
 	if(BF_0[0] != 1 || BF_0[1] != 1){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 }
 

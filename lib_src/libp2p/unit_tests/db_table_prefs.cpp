@@ -14,19 +14,19 @@ int main()
 	//test set/get of max_download_rate
 	db::table::prefs::set_max_download_rate(123);
 	if(db::table::prefs::get_max_download_rate() != 123){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//test set/get of max_connections
 	db::table::prefs::set_max_connections(123);
 	if(db::table::prefs::get_max_connections() != 123){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//test set/get of max_upload_rate
 	db::table::prefs::set_max_upload_rate(123);
 	if(db::table::prefs::get_max_upload_rate() != 123){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	return fail;
 }

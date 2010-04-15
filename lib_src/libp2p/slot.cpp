@@ -14,7 +14,7 @@ slot::slot(const file_info & FI_in):
 		try{
 			Transfer = boost::shared_ptr<transfer>(new transfer(FI));
 		}catch(std::exception & ex){
-			LOGGER << ex.what();
+			LOGGER(logger::error) << ex.what();
 			Transfer = boost::shared_ptr<transfer>();
 		}
 	}
@@ -93,7 +93,7 @@ bool slot::set_unknown(const int connection_ID, const boost::uint64_t file_size,
 		try{
 			Transfer = boost::shared_ptr<transfer>(new transfer(FI));
 		}catch(std::exception & ex){
-			LOGGER << ex.what();
+			LOGGER(logger::error) << ex.what();
 			Transfer = boost::shared_ptr<transfer>();
 			return false;
 		}

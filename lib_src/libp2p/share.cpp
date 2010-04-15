@@ -272,7 +272,7 @@ share::slot_iterator share::find_slot(const std::string & hash)
 	try{
 		new_slot = boost::shared_ptr<slot>(new slot(*Hash_iter->second));
 	}catch(std::exception & ex){
-		LOGGER << ex.what();
+		LOGGER(logger::error) << ex.what();
 		return end_slot();
 	}
 	std::pair<std::map<flyweight_string, boost::shared_ptr<slot> >::iterator, bool>

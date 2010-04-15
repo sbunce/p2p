@@ -53,4 +53,5 @@ int main()
 			}
 		}
 	}
+	network::stop();
 }

@@ -19,7 +19,7 @@ int main()
 	}
 	TP.join();
 	if(cnt != 1024){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	return fail;
 }

@@ -8,14 +8,14 @@
 #include <iostream>
 #include <sstream>
 
-#define LOGGER logger::create(logger::debug, __FILE__, __FUNCTION__, __LINE__)
-//#define LOGGER(LEVEL) logger::create(__FILE__, __FUNCTION__, __LINE__, (LEVEL))
+#define LOGGER(LEVEL) logger::create((LEVEL), __FILE__, __FUNCTION__, __LINE__)
 
 class logger
 {
 public:
 	enum level
 	{
+		utest, //unit test
 		trace, //trace control flow (removed after debuging)
 		debug, //insignificant event (left in code)
 		event, //significant event (key press, network connection, etc)
@@ -26,7 +26,9 @@ public:
 	~logger()
 	{
 		boost::mutex::scoped_lock lock(Static_Wrap.stdout_mutex());
-		if(Level == trace){
+		if(Level == utest){
+			std::cout << "utest|";
+		}else if(Level == trace){
 			std::cout << "trace|";
 		}else if(Level == debug){
 			std::cout << "debug|";

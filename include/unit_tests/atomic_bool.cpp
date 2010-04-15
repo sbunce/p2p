@@ -12,7 +12,7 @@ void assignment()
 	atomic_bool x = false;
 	x = true;
 	if(x != true){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 }
 
@@ -20,7 +20,7 @@ void emulate()
 {
 	atomic_bool x = false;
 	if(x){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 }
 
@@ -30,11 +30,11 @@ void stream()
 	std::stringstream ss;
 	ss << x;
 	if(ss.str() != "0"){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	ss >> x;
 	if(x){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 }
 

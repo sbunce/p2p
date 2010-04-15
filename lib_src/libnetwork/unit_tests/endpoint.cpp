@@ -4,12 +4,6 @@
 
 int fail(0);
 
-void test(const std::string & addr, const std::string & port)
-{
-	LOGGER << "testing: " << addr << " " << port;
-
-}
-
 int main()
 {
 	network::start();
@@ -26,11 +20,11 @@ int main()
 
 	//check if endpoints are the same
 	if(test_1 != test_2){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	if(test_1.version() != network::IPv4){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	}//END IPv4
 
@@ -46,13 +40,15 @@ int main()
 
 	//check if endpoints are the same
 	if(test_1 != test_2){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	if(test_1.version() != network::IPv6){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	}//END IPv6
+
+	network::stop();
 
 	return fail;
 }

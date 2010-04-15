@@ -10,22 +10,22 @@ int main()
 	CLI_args CLI_Args(3, const_cast<char **>(argv));
 
 	if(!CLI_Args.flag("-b")){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	std::string str;
 	if(!CLI_Args.string("--x", str)){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	if(str != "123"){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	unsigned uint;
 	if(!CLI_Args.uint("--x", uint)){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	if(uint != 123){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	return fail;
 }

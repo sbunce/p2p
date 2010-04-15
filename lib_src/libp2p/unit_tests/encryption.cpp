@@ -19,17 +19,17 @@ int main()
 	//do key exchange
 	buf = Encryption_A.send_p_rA();
 	if(!Encryption_B.recv_p_rA(buf)){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	buf = Encryption_B.send_rB();
 	Encryption_A.recv_rB(buf);
 
 	if(!Encryption_A.ready()){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	if(!Encryption_B.ready()){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//test sending encrypted message A -> B
@@ -38,7 +38,7 @@ int main()
 	Encryption_A.crypt_send(buf);
 	Encryption_B.crypt_recv(buf);
 	if(buf != message){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//test sending encrypted message B -> A
@@ -46,7 +46,7 @@ int main()
 	Encryption_B.crypt_send(buf);
 	Encryption_A.crypt_recv(buf);
 	if(buf != message){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	return fail;
 }

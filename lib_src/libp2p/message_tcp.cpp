@@ -549,7 +549,7 @@ message_tcp::recv::status message_tcp::recv::slot::recv(network::buffer & recv_b
 		file_BF.set_buf(recv_buf.data() + 31 + tree_BF_size, file_BF_size, file_block_count);
 		recv_buf.erase(0, protocol_tcp::slot_size(tree_BF_size, file_BF_size));
 	}else{
-		LOGGER << "invalid status byte";
+		LOGGER(logger::debug) << "invalid status byte";
 		return blacklist;
 	}
 	if(func(slot_num, file_size, root_hash, tree_BF, file_BF)){

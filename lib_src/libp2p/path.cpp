@@ -69,8 +69,7 @@ void path::create_required_directories()
 		boost::filesystem::create_directory(share());
 		boost::filesystem::create_directory(temp());
 	}catch(std::exception & ex){
-		LOGGER << ex.what();
-		LOGGER << "error: could not create required directory";
+		LOGGER(logger::fatal) << ex.what();
 		exit(1);
 	}
 }
@@ -122,7 +121,7 @@ void path::remove_temporary_hash_tree_files()
 				}
 			}
 		}catch(std::exception & ex){
-			LOGGER << ex.what();
+			LOGGER(logger::error) << ex.what();
 		}
 	}
 }

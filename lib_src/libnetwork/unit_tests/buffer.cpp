@@ -10,7 +10,7 @@ int main()
 	B = "ABC";
 	B.erase(1, 1);
 	if(B[0] != 'A' || B[1] != 'C'){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//str()
@@ -18,19 +18,19 @@ int main()
 	B = "ABC";
 	std::string str = B.str();
 	if(str != "ABC"){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	str = B.str(0, 1);
 	if(str != "A"){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	str = B.str(2, 1);
 	if(str != "C"){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	str = B.str(3, 0);
 	if(str != ""){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//tail reserve
@@ -40,7 +40,7 @@ int main()
 	B.tail_start()[0] = 'B';
 	B.tail_resize(1);
 	if(B[1] != 'B'){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//!=
@@ -48,20 +48,20 @@ int main()
 	B0 = "ABC";
 	B1 = "ABC";
 	if(B0 != B1){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	if(B0 != "ABC"){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 
 	//move
 	B0 = "123"; B1 = "ABC";
 	B0.swap(B1);
 	if(B0 != "ABC"){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	if(B1 != "123"){
-		LOGGER; ++fail;
+		LOGGER(logger::utest); ++fail;
 	}
 	return fail;
 }
