@@ -68,8 +68,8 @@ void path::create_required_directories()
 		boost::filesystem::create_directory(download());
 		boost::filesystem::create_directory(share());
 		boost::filesystem::create_directory(temp());
-	}catch(std::exception & ex){
-		LOGGER(logger::fatal) << ex.what();
+	}catch(std::exception & e){
+		LOG << e.what();
 		exit(1);
 	}
 }
@@ -120,8 +120,8 @@ void path::remove_temporary_hash_tree_files()
 					fs::remove(iter_cur->path());
 				}
 			}
-		}catch(std::exception & ex){
-			LOGGER(logger::error) << ex.what();
+		}catch(std::exception & e){
+			LOG << e.what();
 		}
 	}
 }

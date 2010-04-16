@@ -9,7 +9,7 @@ static int get_unsigned_call_back(int columns, char ** response,
 	try{
 		number = boost::lexical_cast<unsigned>(response[0]);
 	}catch(const std::exception & e){
-		LOGGER(logger::fatal) << e.what();
+		LOG << e.what();
 		exit(1);
 	}
 	return 0;

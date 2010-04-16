@@ -80,10 +80,10 @@ int main()
 	Proactor.stop();
 
 	if(echo_count != test_echo){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	if(disconnect_count != test_echo * 2){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	return fail;
 }

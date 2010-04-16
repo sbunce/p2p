@@ -20,11 +20,11 @@ int main()
 
 	//check if endpoints are the same
 	if(test_1 != test_2){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	if(test_1.version() != network::IPv4){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	}//END IPv4
 
@@ -40,11 +40,11 @@ int main()
 
 	//check if endpoints are the same
 	if(test_1 != test_2){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	if(test_1.version() != network::IPv6){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	}//END IPv6
 

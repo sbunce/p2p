@@ -30,7 +30,7 @@ std::string version()
 	}else if(month == "Dec"){
 		month = "12";
 	}else{
-		LOGGER(logger::fatal) << "unknown month";
+		LOG << "unknown month";
 		exit(1);
 	}
 	std::string day(__DATE__, 4, 2);

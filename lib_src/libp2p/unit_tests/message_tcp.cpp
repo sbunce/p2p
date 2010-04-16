@@ -16,7 +16,7 @@ const network::buffer test_block("ABC");
 bool block_call_back(const network::buffer & block)
 {
 	if(block != test_block){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	return true;
 }
@@ -25,7 +25,7 @@ const unsigned char test_slot_num(0);
 bool close_slot_call_back(const unsigned char slot_num)
 {
 	if(slot_num != test_slot_num){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	return true;
 }
@@ -42,10 +42,10 @@ bool have_call_back(const unsigned char slot_num,
 	const boost::uint64_t block_num)
 {
 	if(slot_num != test_slot_num){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	if(block_num != test_block_num){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	return true;
 }
@@ -54,7 +54,7 @@ const std::string test_ID("0123456789012345678901234567890123456789");
 bool initial_call_back(const std::string & ID)
 {
 	if(ID != test_ID){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	return true;
 }
@@ -64,7 +64,7 @@ const network::buffer test_p_rA(portable_urandom(protocol_tcp::DH_key_size * 2))
 bool key_exchange_p_rA_call_back(const network::buffer & p_rA)
 {
 	if(p_rA != test_p_rA){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	return true;
 }
@@ -73,7 +73,7 @@ const network::buffer test_rB(portable_urandom(protocol_tcp::DH_key_size));
 bool key_exchange_rB_call_back(const network::buffer & rB)
 {
 	if(rB != test_rB){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	return true;
 }
@@ -82,10 +82,10 @@ bool request_call_back(const unsigned char slot_num,
 	const boost::uint64_t block_num)
 {
 	if(slot_num != test_slot_num){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	if(block_num != test_block_num){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	return true;
 }
@@ -94,7 +94,7 @@ const std::string test_hash_request_slot("01234567890123456789012345678901234567
 bool request_slot_call_back(const std::string & hash)
 {
 	if(hash != test_hash_request_slot){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	return true;
 }
@@ -115,19 +115,19 @@ bool slot_00_call_back(const unsigned char slot_num,
 	bit_field & tree_BF, bit_field & file_BF)
 {
 	if(slot_num != test_slot_num){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	if(file_size != test_file_size){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	if(root_hash != test_root_hash){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	if(!tree_BF.empty()){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	if(!file_BF.empty()){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	return true;
 }
@@ -138,19 +138,19 @@ bool slot_01_call_back(const unsigned char slot_num,
 	bit_field & tree_BF, bit_field & file_BF)
 {
 	if(slot_num != test_slot_num){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	if(file_size != test_file_size){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	if(root_hash != test_root_hash){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	if(!tree_BF.empty()){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	if(file_BF != test_file_BF){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	return true;
 }
@@ -161,19 +161,19 @@ bool slot_10_call_back(const unsigned char slot_num,
 	bit_field & tree_BF, bit_field & file_BF)
 {
 	if(slot_num != test_slot_num){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	if(file_size != test_file_size){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	if(root_hash != test_root_hash){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	if(tree_BF != test_tree_BF){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	if(!file_BF.empty()){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	return true;
 }
@@ -184,19 +184,19 @@ bool slot_11_call_back(const unsigned char slot_num,
 	bit_field & tree_BF, bit_field & file_BF)
 {
 	if(slot_num != test_slot_num){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	if(file_size != test_file_size){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	if(root_hash != test_root_hash){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	if(tree_BF != test_tree_BF){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	if(file_BF != test_file_BF){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	return true;
 }
@@ -214,7 +214,7 @@ int main()
 		test_block, SC));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	//close_slot
@@ -224,7 +224,7 @@ int main()
 		test_slot_num));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	//composite holding block and close_slot
@@ -239,13 +239,13 @@ int main()
 		test_block, SC));
 	append_garbage(M_send->buf);
 	if(M_composite->recv(M_send->buf) != message_tcp::recv::complete){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	M_send = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::close_slot(
 		test_slot_num));
 	append_garbage(M_send->buf);
 	if(M_composite->recv(M_send->buf) != message_tcp::recv::complete){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	//error
@@ -254,7 +254,7 @@ int main()
 	M_send = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error());
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	//have_file_block
@@ -264,7 +264,7 @@ int main()
 		test_slot_num, test_block_num, test_block_count));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	//have_hash_tree_block
@@ -274,7 +274,7 @@ int main()
 		test_slot_num, test_block_num, test_block_count));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	//initial
@@ -284,7 +284,7 @@ int main()
 		test_ID));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	//key_exchange_p_rA
@@ -294,7 +294,7 @@ int main()
 		test_p_rA));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	//key_exchange_rB
@@ -304,7 +304,7 @@ int main()
 		test_rB));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	//request_file_block
@@ -314,7 +314,7 @@ int main()
 		test_slot_num, test_block_num, test_block_count));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	//request_hash_tree_block
@@ -324,7 +324,7 @@ int main()
 		test_slot_num, test_block_num, test_block_count));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	//request_slot
@@ -334,7 +334,7 @@ int main()
 		test_hash_request_slot));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	//slot
@@ -355,7 +355,7 @@ int main()
 		test_slot_num, test_file_size, test_root_hash, test_tree_BF_empty, test_file_BF_empty));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	//file bit_field
@@ -365,7 +365,7 @@ int main()
 		test_slot_num, test_file_size, test_root_hash, test_tree_BF_empty, test_file_BF));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	//tree bit_field
@@ -375,7 +375,7 @@ int main()
 		test_slot_num, test_file_size, test_root_hash, test_tree_BF, test_file_BF_empty));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	//tree and file bit_field
@@ -385,7 +385,7 @@ int main()
 		test_slot_num, test_file_size, test_root_hash, test_tree_BF, test_file_BF));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	return fail;

@@ -36,7 +36,7 @@ static int find_hash_call_back(int columns, char ** response, char ** column_nam
 	try{
 		unmarshal_info(columns, response, column_name, *Info);
 	}catch(const std::exception & e){
-		LOGGER(logger::error) << e.what();
+		LOG << e.what();
 		Info = boost::shared_ptr<db::table::share::info>();
 	}
 	return 0;
@@ -74,7 +74,7 @@ static int resume_call_back(int columns, char ** response, char ** column_name,
 		unmarshal_info(columns, response, column_name, Info);
 		info_container.push_back(Info);
 	}catch(const std::exception & e){
-		LOGGER(logger::error) << e.what();
+		LOG << e.what();
 	}
 	return 0;
 }

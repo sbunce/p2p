@@ -96,8 +96,7 @@ unsigned VLI_size(const boost::uint64_t end)
 			return temp.size() - index;
 		}
 	}
-	LOGGER(logger::fatal) << "programmer error";
-	exit(1);
+	LOG; exit(1);
 }
 
 //returns true if string is valid hex

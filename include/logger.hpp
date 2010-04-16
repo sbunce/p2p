@@ -8,44 +8,21 @@
 #include <iostream>
 #include <sstream>
 
-#define LOGGER(LEVEL) logger::create((LEVEL), __FILE__, __FUNCTION__, __LINE__)
+#define LOG logger::create(__FILE__, __FUNCTION__, __LINE__)
 
 class logger
 {
 public:
-	enum level
-	{
-		utest, //unit test
-		trace, //trace control flow (removed after debuging)
-		debug, //insignificant event (left in code)
-		event, //significant event (key press, network connection, etc)
-		error, //unusual event (may or may not indicate a problem)
-		fatal  //bad error (indicates definite problem)
-	};
-
 	~logger()
 	{
 		boost::mutex::scoped_lock lock(Static_Wrap.stdout_mutex());
-		if(Level == utest){
-			std::cout << "utest|";
-		}else if(Level == trace){
-			std::cout << "trace|";
-		}else if(Level == debug){
-			std::cout << "debug|";
-		}else if(Level == event){
-			std::cout << "event|";
-		}else if(Level == error){
-			std::cout << "error|";
-		}else if(Level == fatal){
-			std::cout << "fatal|";
-		}
-		std::cout << file << "|" << func << "|" << line << "|" << buf.str() << "\n";
+		std::cout << "[" << file << "][" << func << "][" << line << "] " << buf.str() << "\n";
 	}
 
-	static logger create(const level Level, const std::string & file,
-		const std::string & func, const int line)
+	static logger create(const std::string & file, const std::string & func,
+		const int line)
 	{
-		return logger(Level, file, func, line);
+		return logger(file, func, line);
 	}
 
 	template<typename T>
@@ -57,12 +34,10 @@ public:
 
 private:
 	logger(
-		const level Level_in,
 		const std::string & file_in,
 		const std::string & func_in,
 		const int line_in
 	):
-		Level(Level_in),
 		file(file_in),
 		func(func_in),
 		line(line_in)
@@ -71,7 +46,6 @@ private:
 	}
 
 	logger(const logger & L):
-		Level(L.Level),
 		file(L.file),
 		func(L.func),
 		line(L.line)
@@ -79,7 +53,6 @@ private:
 		buf << L.buf.str();
 	}
 
-	level Level;
 	std::string file;
 	std::string func;
 	int line;

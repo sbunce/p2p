@@ -21,7 +21,7 @@ int main()
 
 	//file not yet added, lookups shouldn't work
 	if(db::table::share::find(SI.hash)){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	//add file
@@ -32,22 +32,22 @@ int main()
 		lookup_SI = db::table::share::find(SI.hash))
 	{
 		if(lookup_SI->hash != SI.hash){
-			LOGGER(logger::utest); ++fail;
+			LOG; ++fail;
 		}
 		if(lookup_SI->path != SI.path){
-			LOGGER(logger::utest); ++fail;
+			LOG; ++fail;
 		}
 		if(lookup_SI->file_size != SI.file_size){
-			LOGGER(logger::utest); ++fail;
+			LOG; ++fail;
 		}
 		if(lookup_SI->last_write_time != SI.last_write_time){
-			LOGGER(logger::utest); ++fail;
+			LOG; ++fail;
 		}
 		if(lookup_SI->file_state != SI.file_state){
-			LOGGER(logger::utest); ++fail;
+			LOG; ++fail;
 		}
 	}else{
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	//remove file
@@ -55,7 +55,7 @@ int main()
 
 	//file was deleted, make sure lookups don't work
 	if(db::table::share::find(SI.hash)){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	return fail;
 }

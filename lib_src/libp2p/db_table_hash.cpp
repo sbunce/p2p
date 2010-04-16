@@ -26,7 +26,7 @@ static int find_call_back(int columns, char ** response, char ** column_name,
 		int temp = boost::lexical_cast<int>(response[1]);
 		Info->tree_state = reinterpret_cast<db::table::hash::state &>(temp);
 	}catch(const std::exception & e){
-		LOGGER(logger::error) << e.what();
+		LOG << e.what();
 		Info = boost::shared_ptr<db::table::hash::info>();
 	}
 	return 0;

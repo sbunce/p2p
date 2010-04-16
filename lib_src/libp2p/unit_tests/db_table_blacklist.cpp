@@ -21,23 +21,23 @@ int main()
 
 	//the blacklist should not be modified by default
 	if(db::table::blacklist::modified(state)){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	//after adding an IP the blacklist should be modified
 	db::table::blacklist::add("1.1.1.1");
 	if(!db::table::blacklist::modified(state)){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	//the IP we added should be now blacklisted
 	if(!db::table::blacklist::is_blacklisted("1.1.1.1")){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	//we didn't add this IP, it shouldn't be blacklisted
 	if(db::table::blacklist::is_blacklisted("2.2.2.2")){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	return fail;
 }

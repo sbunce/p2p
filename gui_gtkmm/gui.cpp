@@ -132,7 +132,7 @@ bool gui::on_delete_event(GdkEventAny * event)
 
 void gui::process_URI(const std::string & URI)
 {
-	LOGGER(logger::event) << URI;
+	LOG << URI;
 }
 
 void gui::settings_preferences()

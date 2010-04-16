@@ -37,7 +37,7 @@ void network::listener::close()
 {
 	if(socket_FD != -1){
 		if(::close(socket_FD) == -1){
-			LOGGER(logger::error) << errno;
+			LOG << errno;
 		}
 		socket_FD = -1;
 	}
@@ -55,7 +55,7 @@ void network::listener::open(const endpoint & E)
 	if((socket_FD = ::socket(E.ai.ai_family, E.ai.ai_socktype,
 		E.ai.ai_protocol)) == -1)
 	{
-		LOGGER(logger::error) << errno;
+		LOG << errno;
 		close();
 		return;
 	}
@@ -69,18 +69,18 @@ void network::listener::open(const endpoint & E)
 	if(::setsockopt(socket_FD, SOL_SOCKET, SO_REUSEADDR,
 		reinterpret_cast<char *>(&optval), optlen) == -1)
 	{
-		LOGGER(logger::error) << errno;
+		LOG << errno;
 		close();
 		return;
 	}
 	if(::bind(socket_FD, E.ai.ai_addr, E.ai.ai_addrlen) == -1){
-		LOGGER(logger::error) << errno;
+		LOG << errno;
 		close();
 		return;
 	}
 	int backlog = 512; //max pending accepts
 	if(::listen(socket_FD, backlog) == -1){
-		LOGGER(logger::error) << errno;
+		LOG << errno;
 		close();
 		return;
 	}
@@ -94,7 +94,7 @@ std::string network::listener::port()
 	sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
 	if(getsockname(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
-		LOGGER(logger::error) << errno;
+		LOG << errno;
 		close();
 		return "";
 	}
@@ -102,7 +102,7 @@ std::string network::listener::port()
 	if(getnameinfo(reinterpret_cast<sockaddr *>(&addr), addrlen, NULL, 0, buf,
 		sizeof(buf), NI_NUMERICSERV) == -1)
 	{
-		LOGGER(logger::error) << errno;
+		LOG << errno;
 		close();
 		return "";
 	}
@@ -115,12 +115,12 @@ void network::listener::set_non_blocking()
 		#ifdef _WIN32
 		u_long mode = 1;
 		if(ioctlsocket(socket_FD, FIONBIO, &mode) == -1){
-			LOGGER(logger::error) << errno;
+			LOG << errno;
 			close();
 		}
 		#else
 		if(fcntl(socket_FD, F_SETFL, O_NONBLOCK) == -1){
-			LOGGER(logger::error) << errno;
+			LOG << errno;
 			close();
 		}
 		#endif

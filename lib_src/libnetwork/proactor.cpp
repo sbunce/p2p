@@ -23,7 +23,7 @@ void network::proactor::ID_manager::deallocate(int connection_ID)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	if(allocated.erase(connection_ID) != 1){
-		LOGGER(logger::fatal) << "double free of connection_ID";
+		LOG << "double free of connection_ID";
 		exit(1);
 	}
 }
@@ -195,7 +195,7 @@ void network::proactor::check_timeouts()
 		iter_cur = timed_out.begin(), iter_end = timed_out.end();
 		iter_cur != iter_end; ++iter_cur)
 	{
-		LOGGER(logger::event) << "timed out " << iter_cur->second->N->remote_IP();
+		LOG << "timed out " << iter_cur->second->N->remote_IP();
 		remove_socket(iter_cur->first);
 		Dispatcher.disconnect(iter_cur->second->CI);
 	}
@@ -487,7 +487,7 @@ bool network::proactor::start(const endpoint & E)
 	assert(E.type() == tcp);
 	Listener.open(E);
 	if(!Listener.is_open()){
-		LOGGER(logger::error) << "failed to start listener";
+		LOG << "failed to start listener";
 		return false;
 	}
 	Listener.set_non_blocking();

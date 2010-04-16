@@ -39,7 +39,7 @@ db::connection::~connection()
 {
 	if(connected){
 		if(sqlite3_close(DB_handle) != SQLITE_OK){
-			LOGGER(logger::error) << "sqlite error: " << sqlite3_errmsg(DB_handle);
+			LOG << sqlite3_errmsg(DB_handle);
 		}
 	}
 }
@@ -105,7 +105,7 @@ bool db::connection::blob_read(const blob & Blob, char * const buff, const int s
 		return false;
 	}
 	if(sqlite3_blob_read(blob_handle, static_cast<void *>(buff), size, offset) != SQLITE_OK){
-		LOGGER(logger::error) << sqlite3_errmsg(DB_handle);
+		LOG << sqlite3_errmsg(DB_handle);
 		return false;
 	}
 	return blob_close(blob_handle);
@@ -134,7 +134,7 @@ bool db::connection::blob_write(const blob & Blob, const char * const buf, const
 	if(sqlite3_blob_write(blob_handle, static_cast<const void *>(buf), size,
 		offset) != SQLITE_OK)
 	{
-		LOGGER(logger::error) << sqlite3_errmsg(DB_handle);
+		LOG << sqlite3_errmsg(DB_handle);
 		return false;
 	}
 	return blob_close(blob_handle);
@@ -152,7 +152,7 @@ int db::connection::query(const std::string & query,
 		boost::this_thread::yield();
 	}
 	if(code != SQLITE_OK){
-		LOGGER(logger::error) << sqlite3_errmsg(DB_handle) << ", query \"" << query << "\"";
+		LOG << sqlite3_errmsg(DB_handle) << ", query \"" << query << "\"";
 	}
 	return code;
 }
@@ -165,13 +165,13 @@ void db::connection::connect()
 			SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX,
 			0) != SQLITE_OK)
 		{
-			LOGGER(logger::fatal) << "sqlite error: " << sqlite3_errmsg(DB_handle);
+			LOG << sqlite3_errmsg(DB_handle);
 			exit(1);
 		}
 
 		//timeout in ms, this should not be zero with concurrency
 		if(sqlite3_busy_timeout(DB_handle, 4000) != SQLITE_OK){
-			LOGGER(logger::fatal) << "sqlite error: " << sqlite3_errmsg(DB_handle);
+			LOG << sqlite3_errmsg(DB_handle);
 			exit(1);
 		}
 
@@ -183,7 +183,7 @@ void db::connection::connect()
 			if(code == SQLITE_BUSY){
 				boost::this_thread::yield();
 			}else{
-				LOGGER(logger::fatal) << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle);
+				LOG << code << ": " << sqlite3_errmsg(DB_handle);
 				exit(1);
 			}
 		}
@@ -205,7 +205,7 @@ bool db::connection::blob_close(sqlite3_blob * blob_handle)
 	if(sqlite3_blob_close(blob_handle) == SQLITE_OK){
 		return true;
 	}else{
-		LOGGER(logger::error) << "sqlite error: " << sqlite3_errmsg(DB_handle);
+		LOG << sqlite3_errmsg(DB_handle);
 		return false;
 	}
 }
@@ -226,7 +226,7 @@ bool db::connection::blob_open(const blob & Blob, const bool writeable, sqlite3_
 		if(code == SQLITE_BUSY){
 			boost::this_thread::yield();
 		}else{
-			LOGGER(logger::error) << "sqlite error " << code << ": " << sqlite3_errmsg(DB_handle);
+			LOG << code << ": " << sqlite3_errmsg(DB_handle);
 			return false;
 		}
 	}

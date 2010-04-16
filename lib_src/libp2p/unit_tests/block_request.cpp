@@ -27,7 +27,7 @@ void all_complete()
 			BR.add_block_local(temp, block);
 		}else{
 			//exit immediately to avoid infinite loop on error
-			LOGGER(logger::utest); exit(1);
+			LOG; exit(1);
 		}
 	}
 }

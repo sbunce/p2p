@@ -63,7 +63,7 @@ void share_scanner::hash_loop()
 					db::table::hash::complete);
 			}else{
 				//error hashing, retry later
-				LOGGER(logger::error) << "error hashing file " << FI.path;
+				LOG << "error hashing " << FI.path;
 				share::singleton().erase(FI.path);
 			}
 		}
@@ -139,8 +139,8 @@ void share_scanner::scan_loop()
 					++iter_cur;
 				}
 			}
-		}catch(std::exception & ex){
-			LOGGER(logger::error) << ex.what();
+		}catch(std::exception & e){
+			LOG << e.what();
 		}
 
 		//remove missing files

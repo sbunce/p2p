@@ -42,14 +42,14 @@ void create_reassemble(const unsigned size)
 	//create hash tree and check it
 	hash_tree HT(FI);
 	if(HT.create() != hash_tree::good){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 		return;
 	}
 	FI.hash = HT.hash;
 
 	//hash tree should be good
 	if(HT.check() != hash_tree::good){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 		return;
 	}
 
@@ -72,7 +72,7 @@ void create_reassemble(const unsigned size)
 
 	//hash tree should be good
 	if(HT_reassemble.check() != hash_tree::good){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 		return;
 	}
 
@@ -80,19 +80,19 @@ void create_reassemble(const unsigned size)
 	network::buffer buf;
 	std::fstream fin(FI.path.get().c_str(), std::ios::in | std::ios::binary);
 	if(!fin.good()){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 		return;
 	}
 	for(boost::uint64_t x=0; x<HT_reassemble.file_block_count; ++x){
 		buf.reserve(protocol_tcp::file_block_size);
 		fin.read(reinterpret_cast<char *>(buf.data()), protocol_tcp::file_block_size);
 		if(!fin.good()){
-			LOGGER(logger::utest); ++fail;
+			LOG; ++fail;
 			return;
 		}
 		buf.resize(fin.gcount());
 		if(HT_reassemble.check_file_block(x, buf) != hash_tree::good){
-			LOGGER(logger::utest); ++fail;
+			LOG; ++fail;
 			return;
 		}
 	}

@@ -80,7 +80,7 @@ void connection::file_send_call_back(network::connection_info & CI)
 		try{
 			size = boost::filesystem::file_size(path);
 		}catch(std::exception & ex){
-			LOGGER(logger::error) << "exception: " << ex.what();
+			LOG << ex.what();
 			CI.send_call_back.clear();
 			Proactor.disconnect(CI.connection_ID);
 			return;
@@ -136,7 +136,7 @@ void connection::read_directory(network::connection_info & CI)
 			}
 		}
 	}catch(std::exception & ex){
-		LOGGER(logger::error) << "exception: " << ex.what();
+		LOG << ex.what();
 		Proactor.disconnect(CI.connection_ID);
 		return;
 	}
@@ -165,7 +165,7 @@ void connection::recv_call_back(network::connection_info & CI)
 	if(boost::regex_search(req.begin(), req.end(), what, expression)){
 		std::string temp = what[1];
 		decode_chars(temp);
-		LOGGER(logger::event) << "req " << temp;
+		LOG << "request: " << temp;
 		path = fs::system_complete(fs::path(web_root + temp, fs::native));
 		if(path.string().find("..") != std::string::npos){
 			//stop directory traversal

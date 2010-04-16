@@ -23,16 +23,16 @@ int main()
 	//verify
 	std::list<db::table::peer::info> resume = db::table::peer::resume();
 	if(resume.size() != 1){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}else{
 		if(resume.front().ID != "DEADBEEFDEADBEEFDEAD"){
-			LOGGER(logger::utest); ++fail;
+			LOG; ++fail;
 		}
 		if(resume.front().IP != "123.123.123.123"){
-			LOGGER(logger::utest); ++fail;
+			LOG; ++fail;
 		}
 		if(resume.front().port != "32768"){
-			LOGGER(logger::utest); ++fail;
+			LOG; ++fail;
 		}
 	}
 
@@ -40,7 +40,7 @@ int main()
 	db::table::peer::remove(info.ID);
 	resume = db::table::peer::resume();
 	if(!resume.empty()){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 
 	return fail;

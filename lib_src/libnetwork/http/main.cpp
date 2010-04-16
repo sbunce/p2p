@@ -31,7 +31,7 @@ int main(int argc, char ** argv)
 	signal(SIGINT, signal_handler);
 
 	http HTTP(argv[1], "8080");
-	LOGGER(logger::event) << "listening on " << HTTP.port();
+	LOG << "listen on " << HTTP.port();
 
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(terminate_mutex);

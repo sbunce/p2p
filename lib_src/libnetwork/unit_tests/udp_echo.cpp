@@ -10,7 +10,7 @@ int main()
 	assert(!E.empty());
 	network::ndgram N_serv(*E.begin());
 	assert(N_serv.is_open());
-	LOGGER(logger::utest) << "local_IP: " << N_serv.local_IP() << " local_port: " << N_serv.local_port();
+	LOG << "local_IP: " << N_serv.local_IP() << " local_port: " << N_serv.local_port();
 
 	//setup echo client
 	E = network::get_endpoint("localhost", N_serv.local_port(), network::udp);

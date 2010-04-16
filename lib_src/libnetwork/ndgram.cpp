@@ -21,7 +21,7 @@ void network::ndgram::close()
 {
 	if(socket_FD != -1){
 		if(::close(socket_FD) == -1){
-			LOGGER(logger::error) << errno;
+			LOG << errno;
 		}
 		socket_FD = -1;
 	}
@@ -40,7 +40,7 @@ std::string network::ndgram::local_IP()
 	sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
 	if(getsockname(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
-		LOGGER(logger::error) << errno;
+		LOG << errno;
 		close();
 		return "";
 	}
@@ -48,7 +48,7 @@ std::string network::ndgram::local_IP()
 	if(getnameinfo(reinterpret_cast<sockaddr *>(&addr), addrlen, buf,
 		sizeof(buf), NULL, 0, NI_NUMERICHOST) == -1)
 	{
-		LOGGER(logger::error) << errno;
+		LOG << errno;
 		close();
 		return "";
 	}
@@ -63,7 +63,7 @@ std::string network::ndgram::local_port()
 	sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
 	if(getsockname(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
-		LOGGER(logger::error) << errno;
+		LOG << errno;
 		close();
 		return "";
 	}
@@ -71,7 +71,7 @@ std::string network::ndgram::local_port()
 	if(getnameinfo(reinterpret_cast<sockaddr *>(&addr), addrlen, NULL, 0, buf,
 		sizeof(buf), NI_NUMERICSERV) == -1)
 	{
-		LOGGER(logger::error) << errno;
+		LOG << errno;
 		close();
 		return "";
 	}
@@ -86,7 +86,7 @@ void network::ndgram::open()
 	if((socket_FD = ::socket(E.begin()->ai.ai_family, E.begin()->ai.ai_socktype,
 		E.begin()->ai.ai_protocol)) == -1)
 	{
-		LOGGER(logger::error) << errno;
+		LOG << errno;
 		close();
 	}
 }
@@ -96,11 +96,11 @@ void network::ndgram::open(const endpoint & E)
 	assert(E.type() == udp);
 	close();
 	if((socket_FD = ::socket(E.ai.ai_family, E.ai.ai_socktype, E.ai.ai_protocol)) == -1){
-		LOGGER(logger::error) << errno;
+		LOG << errno;
 		close();
 	}
 	if(::bind(socket_FD, E.ai.ai_addr, E.ai.ai_addrlen) == -1){
-		LOGGER(logger::error) << errno;
+		LOG << errno;
 		close();
 		return;
 	}
@@ -117,7 +117,7 @@ int network::ndgram::recv(network::buffer & buf, boost::shared_ptr<endpoint> & E
 	int n_bytes = ::recvfrom(socket_FD, reinterpret_cast<char *>(buf.tail_start()),
 		buf.tail_size(), 0, ai.ai_addr, reinterpret_cast<socklen_t *>(&ai.ai_addrlen));
 	if(n_bytes == -1){
-		LOGGER(logger::error) << errno;
+		LOG << errno;
 	}else if(n_bytes == 0){
 		close();
 		buf.tail_reserve(0);
@@ -133,7 +133,7 @@ int network::ndgram::send(network::buffer & buf, const endpoint & E)
 	int n_bytes = ::sendto(socket_FD, reinterpret_cast<char *>(buf.data()),
 		buf.size(), 0, E.ai.ai_addr, E.ai.ai_addrlen);
 	if(n_bytes == -1){
-		LOGGER(logger::error) << errno;
+		LOG << errno;
 	}else if(n_bytes == 0){
 		close();
 	}else{

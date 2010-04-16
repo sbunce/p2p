@@ -6,8 +6,7 @@ p2p_real::p2p_real():
 	max_download_rate_proxy(0),
 	max_upload_rate_proxy(0)
 {
-	LOGGER(logger::event) << "starting, port: " << db::table::prefs::get_port()
-		<< " peer_ID: " << db::table::prefs::get_ID();
+	LOG << "port: " << db::table::prefs::get_port() << " peer_ID: " << db::table::prefs::get_ID();
 	resume_thread = boost::thread(boost::bind(&p2p_real::resume, this));
 }
 
@@ -124,7 +123,7 @@ void p2p_real::resume()
 	);
 	assert(!E.empty());
 	if(!Connection_Manager.Proactor.start(*E.begin())){
-		LOGGER(logger::fatal) << "stub: handle failed listener start";
+		LOG << "stub: handle failed listener start";
 		exit(1);
 	}
 }
@@ -141,12 +140,12 @@ boost::uint64_t p2p_real::share_size_files()
 
 void p2p_real::start_download(const p2p::download & D)
 {
-	LOGGER(logger::event);
+	LOG;
 }
 
 void p2p_real::remove_download(const std::string & hash)
 {
-	LOGGER(logger::event) << hash;
+	LOG << hash;
 	Thread_Pool.enqueue(boost::bind(&connection_manager::remove,
 		&Connection_Manager, hash));
 }

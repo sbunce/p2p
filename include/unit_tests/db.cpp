@@ -11,7 +11,7 @@ int fail(0);
 int call_back(int columns, char ** response, char ** column_name)
 {
 	if(std::strcmp(response[0], "abc") != 0){
-		LOGGER(logger::utest); ++fail;
+		LOG; ++fail;
 	}
 	return 0;
 }
