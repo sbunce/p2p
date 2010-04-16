@@ -5,17 +5,11 @@
 //standard
 #include <csignal>
 
+int fail(0);
+
 boost::mutex terminate_mutex;
 boost::condition_variable_any terminate_cond;
-
-volatile sig_atomic_t terminate_program = 0;
-
-void signal_handler(int sig)
-{
-	signal(sig, signal_handler);
-	terminate_program = 1;
-	terminate_cond.notify_one();
-}
+bool terminate = false;
 
 void connect_call_back(network::connection_info &);
 void disconnect_call_back(network::connection_info &);
@@ -24,7 +18,7 @@ network::proactor Proactor(
 	&disconnect_call_back
 );
 
-const unsigned test_echo(8);
+const unsigned test_echo(512);
 atomic_int<unsigned> echo_count(0);
 atomic_int<unsigned> disconnect_count(0);
 
@@ -32,17 +26,14 @@ void recv_call_back(network::connection_info & CI)
 {
 	if(CI.direction == network::incoming){
 		assert(CI.recv_buf.size() == 1);
+		assert(CI.recv_buf[0] == 'x');
 		Proactor.send(CI.connection_ID, CI.recv_buf);
 		Proactor.disconnect_on_empty(CI.connection_ID);
+		++echo_count;
 	}else{
 		assert(CI.recv_buf.size() == 1);
+		assert(CI.recv_buf[0] == 'x');
 		Proactor.disconnect(CI.connection_ID);
-	}
-	++echo_count;
-	if(echo_count == test_echo){
-		boost::mutex::scoped_lock lock(terminate_mutex);
-		terminate_program = 1;
-		terminate_cond.notify_one();
 	}
 }
 
@@ -59,28 +50,40 @@ void connect_call_back(network::connection_info & CI)
 void disconnect_call_back(network::connection_info & CI)
 {
 	++disconnect_count;
+	if(disconnect_count == test_echo * 2){
+		boost::mutex::scoped_lock lock(terminate_mutex);
+		terminate = true;
+		terminate_cond.notify_one();
+	}
 }
 
 int main()
 {
 	std::set<network::endpoint> E = network::get_endpoint(
-		"localhost",
+		"127.0.0.1",
 		"0",
 		network::tcp
 	);
 	assert(!E.empty());
 	Proactor.start(*E.begin());
-
 	for(int x=0; x<test_echo; ++x){
 		Proactor.connect("localhost", Proactor.listen_port());
 	}
 
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(terminate_mutex);
-	while(!terminate_program){
+	while(!terminate){
 		terminate_cond.wait(terminate_mutex);
 	}
 	}//end lock scope
 
 	Proactor.stop();
+
+	if(echo_count != test_echo){
+		LOGGER(logger::utest); ++fail;
+	}
+	if(disconnect_count != test_echo * 2){
+		LOGGER(logger::utest); ++fail;
+	}
+	return fail;
 }

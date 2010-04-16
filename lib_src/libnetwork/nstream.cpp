@@ -125,8 +125,8 @@ void network::nstream::open_async(const endpoint & E)
 	if((socket_FD = ::socket(E.ai.ai_family, E.ai.ai_socktype,
 		E.ai.ai_protocol)) == -1)
 	{
-		LOGGER(logger::fatal) << errno;
-		exit(1);
+		LOGGER(logger::error) << errno;
+		return;
 	}
 	set_non_blocking();
 	/*

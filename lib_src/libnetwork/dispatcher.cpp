@@ -35,8 +35,8 @@ void network::dispatcher::recv(const boost::shared_ptr<connection_info> & CI,
 	job_cond.notify_one();
 }
 
-void network::dispatcher::send(const boost::shared_ptr<connection_info> & CI, const unsigned latest_send,
-	const unsigned send_buf_size)
+void network::dispatcher::send(const boost::shared_ptr<connection_info> & CI,
+	const unsigned latest_send, const unsigned send_buf_size)
 {
 	boost::mutex::scoped_lock lock(job_mutex);
 	job.push_back(std::make_pair(CI->connection_ID, boost::bind(

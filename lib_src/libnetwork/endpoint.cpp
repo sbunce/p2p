@@ -158,12 +158,17 @@ std::set<network::endpoint> network::get_endpoint(const std::string & host,
 		*/
 		hints.ai_flags = AI_PASSIVE;
 	}
+	int err;
 	addrinfo * result;
-	if(getaddrinfo(host.empty() ? NULL : host.c_str(), port.c_str(), &hints, &result) == 0){
+	if((err = getaddrinfo(host.empty() ? NULL : host.c_str(), port.c_str(),
+		&hints, &result)) == 0)
+	{
 		for(addrinfo * cur = result; cur != NULL; cur = cur->ai_next){			
 			E.insert(endpoint(cur));
 		}
 		freeaddrinfo(result);
+	}else{
+		LOGGER(logger::error) << "\"" << gai_strerror(err) << "\"";
 	}
 	return E;
 }

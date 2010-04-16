@@ -57,6 +57,10 @@ network::proactor::connection::connection(
 	connection_ID(ID_Manager.allocate())
 {
 	E = get_endpoint(host, port, tcp);
+	if(E.empty()){
+		CI = boost::shared_ptr<connection_info>(new connection_info(connection_ID,
+		host, "", port, incoming));
+	}
 }
 
 network::proactor::connection::connection(
