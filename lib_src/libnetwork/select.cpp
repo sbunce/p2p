@@ -77,7 +77,7 @@ void network::select::operator () (std::set<int> & read, std::set<int> & write,
 	if(service == -1){
 		//ignore interrupt signal, profilers can cause this
 		if(errno != EINTR){
-			LOG << errno;
+			LOG << strerror(errno);
 			exit(1);
 		}
 	}else if(service == 0){

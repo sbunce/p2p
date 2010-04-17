@@ -7,9 +7,9 @@
 
 int fail(0);
 
-boost::mutex terminate_mutex;
-boost::condition_variable_any terminate_cond;
-bool terminate = false;
+boost::mutex test_mutex;
+boost::condition_variable_any test_cond;
+bool test_finished = false;
 
 void connect_call_back(network::connection_info &);
 void disconnect_call_back(network::connection_info &);
@@ -51,9 +51,9 @@ void disconnect_call_back(network::connection_info & CI)
 {
 	++disconnect_count;
 	if(disconnect_count == test_echo * 2){
-		boost::mutex::scoped_lock lock(terminate_mutex);
-		terminate = true;
-		terminate_cond.notify_one();
+		boost::mutex::scoped_lock lock(test_mutex);
+		test_finished = true;
+		test_cond.notify_one();
 	}
 }
 
@@ -71,9 +71,9 @@ int main()
 	}
 
 	{//begin lock scope
-	boost::mutex::scoped_lock lock(terminate_mutex);
-	while(!terminate){
-		terminate_cond.wait(terminate_mutex);
+	boost::mutex::scoped_lock lock(test_mutex);
+	while(!test_finished){
+		test_cond.wait(test_mutex);
 	}
 	}//end lock scope
 

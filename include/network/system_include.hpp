@@ -37,6 +37,9 @@
 	#include <unistd.h>
 #endif
 
+//include
+#include <logger.hpp>
+
 namespace network{
 /*
 start:

@@ -7,7 +7,7 @@ void network::start()
 	WSADATA wsock_data;
 	int err;
 	if((err = WSAStartup(wsock_ver, &wsock_data)) != 0){
-		LOGGER(logger::fatal) << "winsock error " << err;
+		LOG << "winsock error " << err;
 		exit(1);
 	}
 	#endif

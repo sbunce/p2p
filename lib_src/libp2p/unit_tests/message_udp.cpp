@@ -105,11 +105,13 @@ int main()
 	assert(!E.empty());
 	test_hosts.push_back(std::make_pair(*E.begin(), 0));
 	E = network::get_endpoint("::1", "0", network::tcp);
-	assert(!E.empty());
-	test_hosts.push_back(std::make_pair(*E.begin(), 0));
+	if(!E.empty()){
+		test_hosts.push_back(std::make_pair(*E.begin(), 0));
+	}
 	E = network::get_endpoint("::2", "0", network::tcp);
-	assert(!E.empty());
-	test_hosts.push_back(std::make_pair(*E.begin(), 0));
+	if(!E.empty()){
+		test_hosts.push_back(std::make_pair(*E.begin(), 0));
+	}
 	M_recv = boost::shared_ptr<message_udp::recv::base>(new message_udp::recv::host_list(
 		&host_list_call_back, test_random));
 	M_send = boost::shared_ptr<message_udp::send::base>(new message_udp::send::host_list(

@@ -34,7 +34,7 @@ void connection_manager::connect_call_back(network::connection_info & CI)
 void connection_manager::disconnect_call_back(network::connection_info & CI)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
-	LOG << "disconnect " << CI.IP << " " << CI.port;
+	LOG << "disconnect \"" << (!CI.host.empty() ? CI.host : CI.IP) << "\" " << CI.port;
 	Connection.erase(CI.connection_ID);
 }
 

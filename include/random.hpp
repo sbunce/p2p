@@ -27,7 +27,7 @@ static int portable_urandom(unsigned char * buf, int size, void * data = NULL)
 		if(CryptGenRandom(hProvider, size, buf)){
 			CryptReleaseContext(hProvider, 0); 
 		}else{
-			LOGGER(logger::fatal) << "error generating random number";
+			LOG << "error generating random number";
 			exit(1);
 		}
 	}

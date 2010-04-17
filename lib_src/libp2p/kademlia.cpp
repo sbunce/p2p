@@ -108,7 +108,7 @@ void kademlia::main_loop()
 		std::set<network::endpoint> E = network::get_endpoint(tmp.back().IP,
 			tmp.back().port, network::udp);
 		if(E.empty()){
-			LOG << "invalid " << tmp.back().IP << " " << tmp.back().port;
+			LOG << "failed \"" << tmp.back().IP << "\" " << tmp.back().port;
 		}else{
 			if(tmp.back().ID.empty()){
 				Unknown_Reserve.insert(*E.begin());

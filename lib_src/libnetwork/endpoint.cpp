@@ -168,7 +168,7 @@ std::set<network::endpoint> network::get_endpoint(const std::string & host,
 		}
 		freeaddrinfo(result);
 	}else{
-		LOG << "\"" << gai_strerror(err) << "\"";
+		LOG << "\"" << host << "\" \"" << gai_strerror(err) << "\"";
 	}
 	return E;
 }

@@ -244,7 +244,6 @@ bool slot_manager::recv_request_file_block(const unsigned char slot_num,
 bool slot_manager::recv_request_slot(const std::string & hash)
 {
 	LOG << hash;
-
 	//locate requested slot
 	share::slot_iterator slot_iter = share::singleton().find_slot(hash);
 	if(slot_iter == share::singleton().end_slot()){
@@ -531,7 +530,6 @@ void slot_manager::send_have()
 				&& iter_cur->second->get_transfer()->next_have_tree(
 				Exchange.connection_ID, block_num))
 			{
-				LOG << "tree: " << block_num;
 				Exchange.send(boost::shared_ptr<message_tcp::send::base>(
 					new message_tcp::send::have_hash_tree_block(iter_cur->first, block_num,
 					iter_cur->second->get_transfer()->tree_block_count())));
@@ -539,7 +537,6 @@ void slot_manager::send_have()
 				&& iter_cur->second->get_transfer()->next_have_file(
 				Exchange.connection_ID, block_num))
 			{
-				LOG << "file: " << block_num;
 				Exchange.send(boost::shared_ptr<message_tcp::send::base>(
 					new message_tcp::send::have_file_block(iter_cur->first, block_num,
 					iter_cur->second->get_transfer()->file_block_count())));

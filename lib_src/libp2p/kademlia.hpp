@@ -28,7 +28,7 @@ private:
 	std::set<network::endpoint> Known_Reserve[protocol_udp::bucket_count];
 	unsigned Known_Reserve_Ping[protocol_udp::bucket_count]; //pending pings
 
-	//nodes we don't know the ID of
+	//nodes we don't know the bucket of
 	std::set<network::endpoint> Unknown_Reserve;
 	unsigned Unknown_Reserve_Ping;
 
