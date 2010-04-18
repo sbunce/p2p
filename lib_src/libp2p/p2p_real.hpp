@@ -63,17 +63,6 @@ private:
 	connection_manager Connection_Manager;
 	kademlia Kademlia;
 	share_scanner Share_Scanner;
-	thread_pool Thread_Pool;
-
-	/*
-	The values to store in the database are stored here and a job is scheduled
-	with Thread_Pool to do the actual database read/write. This allows the
-	functions which get/set these to return immediately instead of having to wait
-	for database access.
-	*/
-	atomic_int<unsigned> max_connections_proxy;
-	atomic_int<unsigned> max_download_rate_proxy;
-	atomic_int<unsigned> max_upload_rate_proxy;
 
 	/*
 	remove_download_thread:

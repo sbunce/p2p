@@ -11,22 +11,29 @@ int main()
 	db::init::drop_all();
 	db::init::create_all();
 
-	//test set/get of max_download_rate
+	//max_download_rate
 	db::table::prefs::set_max_download_rate(123);
 	if(db::table::prefs::get_max_download_rate() != 123){
 		LOG; ++fail;
 	}
 
-	//test set/get of max_connections
+	//max_connections
 	db::table::prefs::set_max_connections(123);
 	if(db::table::prefs::get_max_connections() != 123){
 		LOG; ++fail;
 	}
 
-	//test set/get of max_upload_rate
+	//max_upload_rate
 	db::table::prefs::set_max_upload_rate(123);
 	if(db::table::prefs::get_max_upload_rate() != 123){
 		LOG; ++fail;
 	}
+
+	//port
+	db::table::prefs::set_port("1234");
+	if(db::table::prefs::get_port() != "1234"){
+		LOG; ++fail;
+	}
+
 	return fail;
 }

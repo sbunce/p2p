@@ -1,18 +1,14 @@
 #include "p2p_real.hpp"
 
-p2p_real::p2p_real():
-	Thread_Pool(1),
-	max_connections_proxy(0),
-	max_download_rate_proxy(0),
-	max_upload_rate_proxy(0)
+p2p_real::p2p_real()
 {
-	LOG << "port: " << db::table::prefs::get_port() << " peer_ID: " << db::table::prefs::get_ID();
+	LOG << "port: " << db::table::prefs::get_port() << " peer_ID: "
+		<< db::table::prefs::get_ID();
 	resume_thread = boost::thread(boost::bind(&p2p_real::resume, this));
 }
 
 p2p_real::~p2p_real()
 {
-	Thread_Pool.stop();
 	resume_thread.interrupt();
 	resume_thread.join();
 }
@@ -24,57 +20,48 @@ unsigned p2p_real::download_rate()
 
 unsigned p2p_real::max_connections()
 {
-	return max_connections_proxy;
+	return db::table::prefs::get_max_connections();
 }
 
 void p2p_real::max_connections(unsigned connections)
 {
 //DEBUG, add support for this
 	//Proactor.max_connections(connections / 2, connections / 2);
-	max_connections_proxy = connections;
-	Thread_Pool.enqueue(boost::bind(&db::table::prefs::set_max_connections,
-		connections, db::pool::get()));
+	db::table::prefs::set_max_connections(connections);
 }
 
 unsigned p2p_real::max_download_rate()
 {
-	return max_download_rate_proxy;
+	return db::table::prefs::get_max_download_rate();
 }
 
 void p2p_real::max_download_rate(const unsigned rate)
 {
 	Connection_Manager.Proactor.max_download_rate(rate);
-	max_download_rate_proxy = rate;
-	Thread_Pool.enqueue(boost::bind(&db::table::prefs::set_max_download_rate,
-		rate, db::pool::get()));
+	db::table::prefs::set_max_download_rate(rate);
 }
 
 unsigned p2p_real::max_upload_rate()
 {
-	return max_upload_rate_proxy;
+	return db::table::prefs::get_max_upload_rate();
 }
 
 void p2p_real::max_upload_rate(const unsigned rate)
 {
 	Connection_Manager.Proactor.max_upload_rate(rate);
-	max_upload_rate_proxy = rate;
-	Thread_Pool.enqueue(boost::bind(&db::table::prefs::set_max_upload_rate,
-		rate, db::pool::get()));
+	db::table::prefs::set_max_upload_rate(rate);
 }
 
 void p2p_real::resume()
 {
+	db::table::prefs::warm_up_cache();
+
 	//delay helps GUI have responsive startup
 	boost::this_thread::yield();
 
-	//setup proxies
-	max_connections_proxy = db::table::prefs::get_max_connections();
-	max_download_rate_proxy = db::table::prefs::get_max_download_rate();
-	max_upload_rate_proxy = db::table::prefs::get_max_upload_rate();
-
 	//set prefs with proactor
-	max_download_rate(max_download_rate_proxy);
-	max_upload_rate(max_upload_rate_proxy);
+	max_download_rate(db::table::prefs::get_max_download_rate());
+	max_upload_rate(db::table::prefs::get_max_upload_rate());
 
 	//repopulate share from database
 	std::deque<db::table::share::info> resume = db::table::share::resume();
@@ -146,8 +133,10 @@ void p2p_real::start_download(const p2p::download & D)
 void p2p_real::remove_download(const std::string & hash)
 {
 	LOG << hash;
+/*
 	Thread_Pool.enqueue(boost::bind(&connection_manager::remove,
 		&Connection_Manager, hash));
+*/
 }
 
 void p2p_real::transfers(std::vector<p2p::transfer> & T)
