@@ -36,7 +36,7 @@ void db::init::create_all()
 	ss << "INSERT OR IGNORE INTO prefs VALUES('max_upload_rate', '"
 		<< settings::MAX_UPLOAD_RATE << "')";
 	DB->query(ss.str());
-	//generate our peer_ID
+	//generate our node ID
 	unsigned char buf[SHA1::bin_size];
 	portable_urandom(buf, SHA1::bin_size);
 	ss.str(""); ss.clear();

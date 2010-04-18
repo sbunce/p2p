@@ -15,7 +15,7 @@ class logger
 public:
 	~logger()
 	{
-		boost::mutex::scoped_lock lock(Static_Wrap.stdout_mutex());
+		boost::mutex::scoped_lock lock(static_wrap<>::get().stdout_mutex);
 		std::cout << "[" << file << "][" << func << "][" << line << "] " << buf.str() << "\n";
 	}
 
@@ -41,9 +41,7 @@ private:
 		file(file_in),
 		func(func_in),
 		line(line_in)
-	{
-
-	}
+	{}
 
 	logger(const logger & L):
 		file(L.file),
@@ -58,38 +56,31 @@ private:
 	int line;
 	std::stringstream buf;
 
-	//dummy template used to make initialization of once_flag in header possible
 	template<typename T=int>
 	class static_wrap
 	{
 	public:
-		static_wrap()
+		class static_objects
 		{
-			//thread safe initialization of static data members
-			boost::call_once(init, once_flag);
-		}
+		public:
+			//locks all access to stdout
+			boost::mutex stdout_mutex;
+		};
 
-		//lock for all access to stdout
-		boost::mutex & stdout_mutex()
+		//get access to static objects
+		static static_objects & get()
 		{
-			return _stdout_mutex();
+			boost::call_once(once_flag, _get);
+			return _get();
 		}
 	private:
 		static boost::once_flag once_flag;
-
-		//initialize all static objects, called by ctor
-		static void init()
+		static static_objects & _get()
 		{
-			_stdout_mutex();
-		}
-
-		static boost::mutex & _stdout_mutex()
-		{
-			static boost::mutex M;
-			return M;
+			static static_objects SO;
+			return SO;
 		}
 	};
-	static_wrap<> Static_Wrap;
 };
 
 template<typename T> boost::once_flag logger::static_wrap<T>::once_flag = BOOST_ONCE_INIT;

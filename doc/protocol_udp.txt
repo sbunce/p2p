@@ -40,12 +40,12 @@ Messages
 
 ---
 name: ping
-desc: Check if a host is up and/or get ID.
+desc: Check if a host is up and/or get node ID.
 	+---+---+---+---+---+---+---+
 	| A |     B     |     C     |
 	+---+---+---+---+---+---+---+
 	  0   1  ...  4   5  ... 24
-A = command (base10: 0), B = random bytes, C = ID of sender
+A = command (base10: 0), B = random bytes, C = node ID of sender
           
 expected response: pong
 ---
@@ -57,10 +57,10 @@ desc: Sent in response to ping.
 	| A |     B     |     C     |
 	+---+---+---+---+---+---+---+
 	  0   1  ...  4   5  ... 24
-A = command (base10: 1), B = echo of random bytes, C = ID of sender
+A = command (base10: 1), B = echo of random bytes, C = node ID of sender
 
-note: The ID should be used to update routing tables. When we send random bytes
-in a ping message it acts as permission for the remote host to potentially
+note: The node ID should be used to update routing tables. When we send random
+bytes in a ping message it acts as permission for the remote host to potentially
 update our routing table (by sending us a pong).
 ---
 
@@ -71,7 +71,7 @@ desc: Request for closer nodes.
 	| A |     B     |     C     |     D     |
 	+---+---+---+---+---+---+---+---+---+---+
 	  0   1  ...  4   5  ... 24  25  ... 44
-A = command (base10: 2), B = random bytes, C = ID of sender, D = ID to find
+A = command (base10: 2), B = random bytes, C = node ID of sender, D = ID to find
 
 expected response: host_list
 ---
@@ -84,7 +84,7 @@ if the node is found.
 	| A |     B     |     C     | D | + |     E     | + |     F     |
 	+---+---+---+---+---+---+---+---+   +---+---+---+   +---+---+---+
 	  0   1  ...  4   5      24  25      26  ...  x      x+1 ...  y
-A = command (base10: 4), B = echo of random bytes, C = ID of sender,
+A = command (base10: 4), B = echo of random bytes, C = node ID of sender,
 D = IPv4 address count, E = IPv4 address list, F = IPv6 address list
 
 note: The max size of the D+E list is 26 elements.
@@ -115,7 +115,7 @@ desc: Request IDs of nodes that have the specified file.
 	| A |     B     |     C     |     D     |
 	+---+---+---+---+---+---+---+---+---+---+
 	  0   1  ...  4   5  ... 24  25  ... 44
-A = command (base10: 5), B = random bytes, C = ID of sender, D = file hash
+A = command (base10: 5), B = random bytes, C = node ID of sender, D = file hash
 
 expected response: node_list
 ---
@@ -127,14 +127,14 @@ desc: A list of node IDs.
 	| A |     B     |     C     |
 	+---+---+---+---+---+---+---+
 	  0   1  ...  4   9  ...  y
-A = command (base10: 5), B = echo of random bytes, C = ID list
+A = command (base10: 5), B = echo of random bytes, C = node ID list
 
 A C list element:
 	+---+---+---+
 	|     A     |
 	+---+---+---+
 	  0  ...  19
-A = ID of node that has file
+A = node ID that has file
 
 note: The max size of the C list is 25 elements.
 ---
@@ -147,7 +147,7 @@ desc: Store a mapping from node ID to file hash.
 	+---+---+---+---+---+---+---+---+---+---+
 	  0   1  ...  4   5  ... 24  25  ... 44
 A = command (base10: 6), B = random bytes from a pong in the last 4 minutes,
-C = ID of sender, D = file hash
+C = node ID of sender, D = file hash
 
 note: If B is needed a ping should be sent.
 ---
@@ -160,7 +160,7 @@ desc: Store a mapping from node ID to address.
 	+---+---+---+---+---+---+---+---+---+---+
 	  0   1  ...  4   5  ... 24  25  ...  x
 A = command (base10: 7), B = random bytes from a pong in the last 4 minutes,
-C = ID of sender
+C = node ID of sender
 
 note: If B is needed a ping should be sent.
 ---

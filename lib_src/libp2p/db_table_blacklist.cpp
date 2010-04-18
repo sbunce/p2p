@@ -3,38 +3,29 @@
 //BEGIN static_wrap
 boost::once_flag db::table::blacklist::static_wrap::once_flag = BOOST_ONCE_INIT;
 
-db::table::blacklist::static_wrap::static_wrap()
+db::table::blacklist::static_wrap::static_objects &
+	db::table::blacklist::static_wrap::get()
 {
-	//thread safe initialization of static data members
-	boost::call_once(init, once_flag);
+	boost::call_once(once_flag, _get);
+	return _get();
 }
 
-atomic_int<int> & db::table::blacklist::static_wrap::blacklist_state()
+db::table::blacklist::static_wrap::static_objects &
+	db::table::blacklist::static_wrap::_get()
 {
-	return _blacklist_state();
-}
-
-void db::table::blacklist::static_wrap::init()
-{
-	_blacklist_state();
-}
-
-atomic_int<int> & db::table::blacklist::static_wrap::_blacklist_state()
-{
-	static atomic_int<int> BS(0);
-	return BS;
+	static static_objects SO;
+	return SO;
 }
 //END static_wrap
 
 void db::table::blacklist::add(const std::string & IP, db::pool::proxy DB)
 {
-	static_wrap Static_Wrap;
 	std::stringstream ss;
 	ss << "INSERT OR IGNORE INTO blacklist VALUES ('" << IP << "')";
 	DB->query(ss.str());
-	++Static_Wrap.blacklist_state();
-	if(Static_Wrap.blacklist_state() == 0){
-		++Static_Wrap.blacklist_state();
+	++static_wrap::get().blacklist_state;
+	if(static_wrap::get().blacklist_state == 0){
+		++static_wrap::get().blacklist_state;
 	}
 }
 
@@ -57,11 +48,10 @@ bool db::table::blacklist::is_blacklisted(const std::string & IP,
 
 bool db::table::blacklist::modified(int & last_state_seen)
 {
-	static_wrap Static_Wrap;
-	if(last_state_seen == Static_Wrap.blacklist_state()){
+	if(last_state_seen == static_wrap::get().blacklist_state){
 		return false;
 	}else{
-		last_state_seen = Static_Wrap.blacklist_state();
+		last_state_seen = static_wrap::get().blacklist_state;
 		return true;
 	}
 }

@@ -44,21 +44,22 @@ private:
 	class static_wrap
 	{
 	public:
-		static_wrap();
+		class static_objects
+		{
+		public:
+			/*
+			blacklist_state:
+				Incremented whenever IP added to blacklist. This makes it possible to
+				determine if blacklist has changed without doing a database query.
+			*/
+			atomic_int<int> blacklist_state;
+		};
 
-		/*
-		blacklist_state:
-			Incremented whenever IP added to blacklist. This makes it possible to
-			determine if blacklist has changed without doing a database query.
-		*/
-		atomic_int<int> & blacklist_state();
+		//get access to static objects
+		static static_objects & get();
 	private:
 		static boost::once_flag once_flag;
-
-		//initialize all static objects, called by ctor
-		static void init();
-
-		static atomic_int<int> & _blacklist_state();
+		static static_objects & _get();
 	};
 };
 }//end of namespace table
