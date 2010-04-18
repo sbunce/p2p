@@ -133,10 +133,7 @@ void p2p_real::start_download(const p2p::download & D)
 void p2p_real::remove_download(const std::string & hash)
 {
 	LOG << hash;
-/*
-	Thread_Pool.enqueue(boost::bind(&connection_manager::remove,
-		&Connection_Manager, hash));
-*/
+	Connection_Manager.remove(hash);
 }
 
 void p2p_real::transfers(std::vector<p2p::transfer> & T)

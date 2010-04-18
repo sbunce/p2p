@@ -38,24 +38,7 @@ void connection_manager::disconnect_call_back(network::connection_info & CI)
 	Connection.erase(CI.connection_ID);
 }
 
-void connection_manager::do_tick(const int connection_ID)
-{
-	{//BEGIN lock scope
-	boost::mutex::scoped_lock lock(filter_mutex);
-	filter.erase(connection_ID);
-	}//end lock scope
-	{//BEGIN lock scope
-
-	boost::mutex::scoped_lock lock(Connection_mutex);
-	std::map<int, boost::shared_ptr<connection> >::iterator
-		iter = Connection.find(connection_ID);
-	if(iter != Connection.end()){
-		iter->second->tick();
-	}
-	}//END lock scope
-}
-
-void connection_manager::remove(const std::string hash)
+void connection_manager::do_remove(const std::string hash)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	share::slot_iterator S_iter = share::singleton().remove_slot(hash);
@@ -90,6 +73,28 @@ void connection_manager::remove(const std::string hash)
 		db::table::share::remove(S_iter->path());
 		boost::filesystem::remove(S_iter->path());
 	}
+}
+
+void connection_manager::do_tick(const int connection_ID)
+{
+	{//BEGIN lock scope
+	boost::mutex::scoped_lock lock(filter_mutex);
+	filter.erase(connection_ID);
+	}//end lock scope
+	{//BEGIN lock scope
+
+	boost::mutex::scoped_lock lock(Connection_mutex);
+	std::map<int, boost::shared_ptr<connection> >::iterator
+		iter = Connection.find(connection_ID);
+	if(iter != Connection.end()){
+		iter->second->tick();
+	}
+	}//END lock scope
+}
+
+void connection_manager::remove(const std::string hash)
+{
+	Thread_Pool.enqueue(boost::bind(&connection_manager::do_remove, this, hash));
 }
 
 void connection_manager::trigger_tick(const int connection_ID)

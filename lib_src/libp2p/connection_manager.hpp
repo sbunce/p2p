@@ -35,15 +35,14 @@ public:
 	void remove(const std::string hash);
 
 private:
+	thread_pool Thread_Pool;
+
 	/*
 	The connection_ID associated with a connection (the state each connection
 	needs). The Connection_mutex locks all access to the Connection container.
 	*/
 	boost::mutex Connection_mutex;
 	std::map<int, boost::shared_ptr<connection> > Connection;
-
-	//used to tick() connections
-	thread_pool Thread_Pool;
 
 	/*
 	We use the filter set to eliminate unnecessary tick()s from being scheduled
@@ -53,11 +52,14 @@ private:
 	std::set<int> filter;
 
 	/*
+	do_remove:
+		Removes downloading file. Scheduled by remove().
 	do_tick:
 		Do tick() of connection if it exists.
 	trigger_tick:
 		Schedule a job with the thread pool to tick a connection.
 	*/
+	void do_remove(const std::string hash);
 	void do_tick(const int connection_ID);
 	void trigger_tick(const int connection_ID);
 };
