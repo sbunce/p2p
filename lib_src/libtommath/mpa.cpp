@@ -51,6 +51,18 @@ mpa::mpint::mpint(const char * str, const int radix):
 	}
 }
 
+mpa::mpint::mpint(const std::string & str, const int radix):
+	data(new mp_int())
+{
+	int err;
+	if(::mp_init(data.get()) != MP_OKAY){
+		throw ::exception(MP_MEM);
+	}
+	if((err = ::mp_read_radix(data.get(), str.data(), radix)) != MP_OKAY){
+		throw ::exception(err);
+	}
+}
+
 mpa::mpint::mpint(const unsigned char * bin, const int len):
 	data(new mp_int())
 {
@@ -105,14 +117,14 @@ std::string mpa::mpint::str(const int radix) const
 	if((err = ::mp_radix_size(data.get(), radix, &n)) != MP_OKAY){
 		throw ::exception(err);
 	}
-	char * tmp = new char[n+1];
+	char * tmp = new char[n];
 	if(tmp == NULL){
 		throw ::exception(MP_MEM);
 	}
 	if((err = ::mp_toradix(data.get(), tmp, radix)) != MP_OKAY){
 		throw ::exception(err);
 	}
-	std::string result(tmp, n);
+	std::string result(tmp);
 	delete[] tmp;
 	return result;
 }

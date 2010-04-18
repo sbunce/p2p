@@ -1,6 +1,11 @@
 #include "k_func.hpp"
 
-extern bit_field k_func::ID_to_bit_field(const std::string & ID)
+mpa::mpint k_func::distance(const std::string & ID_0, const std::string & ID_1)
+{
+	return ID_to_mpint(ID_0) ^ ID_to_mpint(ID_1);
+}
+
+bit_field k_func::ID_to_bit_field(const std::string & ID)
 {
 	assert(ID.size() == SHA1::hex_size);
 	std::string bin = convert::hex_to_bin(ID);
@@ -9,7 +14,7 @@ extern bit_field k_func::ID_to_bit_field(const std::string & ID)
 	return BF;
 }
 
-extern unsigned k_func::ID_to_bucket_num(const std::string & ID_0,
+unsigned k_func::ID_to_bucket_num(const std::string & ID_0,
 	const std::string & ID_1)
 {
 	assert(ID_0.size() == SHA1::hex_size);
@@ -22,4 +27,10 @@ extern unsigned k_func::ID_to_bucket_num(const std::string & ID_0,
 		}
 	}
 	return 0;
+}
+
+mpa::mpint k_func::ID_to_mpint(const std::string & ID)
+{
+	assert(ID.size() == SHA1::hex_size);
+	return mpa::mpint(ID, 16);
 }

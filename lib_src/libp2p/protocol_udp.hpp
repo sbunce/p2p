@@ -8,7 +8,7 @@ namespace protocol_udp
 {
 //kademlia
 const unsigned bucket_count = SHA1::bin_size * 8;
-const unsigned bucket_size = 26; //also max host_list size
+const unsigned bucket_size = 26;   //also max host_list size
 const unsigned timeout = 3600;
 
 //commands and message sizes

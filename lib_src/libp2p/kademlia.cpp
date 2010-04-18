@@ -93,7 +93,6 @@ void kademlia::recv_find_node(const network::endpoint & endpoint,
 {
 	LOG << endpoint.IP() << " " << endpoint.port() << " remote_ID: " << remote_ID
 		<< " find: " << ID_to_find;
-
 	std::list<std::pair<network::endpoint, unsigned char> > hosts;
 
 

@@ -1,5 +1,5 @@
-#ifndef H_BOOST_MPINT
-#define H_BOOST_MPINT
+#ifndef H_MPA
+#define H_MPA
 
 //include
 #include <boost/cstdint.hpp>
@@ -35,6 +35,7 @@ public:
 	mpint(const mpint & M);
 	//initialize from str in specified base
 	mpint(const char * str, const int radix = 10);
+	mpint(const std::string & str, const int radix = 10);
 	//initialize from big endian encoded bytes
 	mpint(const unsigned char * bin, const int len);
 	~mpint();
