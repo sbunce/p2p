@@ -18,7 +18,8 @@ distance:
 ID_to_bit_field:
 	Converts a ID to a bit_field.
 ID_to_bucket_num:
-	Returns what bucket a ID belongs in.
+	Returns what bucket a ID belongs in. The bucket numbers are symmetric so it
+	doesn't matter what order the IDs are in.
 	Note: One of the IDs should be local, and one remote.
 ID_to_mpint:
 	Converts a ID to a mpint.

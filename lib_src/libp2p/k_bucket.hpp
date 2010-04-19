@@ -2,14 +2,17 @@
 #define H_K_BUCKET
 
 //custom
+#include "k_func.hpp"
 #include "protocol_udp.hpp"
 
 //include
+#include <mpa.hpp>
 #include <network/network.hpp>
 
 //standard
 #include <ctime>
 #include <list>
+#include <map>
 #include <string>
 
 class k_bucket
@@ -25,7 +28,10 @@ public:
 	ping:
 		Returns a set of endpoints which need to be pinged.
 	find_node:
-		
+		Calculates distance on all nodes in bucket and adds them to the hosts
+		container. Highest distance elements are removed from the hosts container
+		such that it is no larger than protocol_udp::bucket_size.
+		std::map<distance, std::pair<remote_ID, endpoint> >
 	size:
 		Returns number of contacts in k_bucket.
 	update:
@@ -36,14 +42,9 @@ public:
 	*/
 	void erase(const network::endpoint & endpoint);
 	bool exists(const network::endpoint & endpoint);
-	std::vector<network::endpoint> ping();
-
-//IDEA, make set containing results stay bucket_size big. Since a set is sorted low to
-//high we can always pop the back when we exceed bucket_size elements.
-//calculate remote bucket number after getting top 26
-	//void find_node(const std::string & remote_ID, const std::string & ID_to_find,
-		//std::map<mpint, std::pair<std::string, network::endpoint> & hosts);
-
+	std::list<network::endpoint> ping();
+	void find_node(const std::string & ID_to_find,
+		std::map<mpa::mpint, std::pair<std::string, network::endpoint> > & hosts);
 	unsigned size();
 	bool update(const std::string remote_ID, const network::endpoint & endpoint);
 

@@ -65,17 +65,36 @@ bool k_bucket::exists(const network::endpoint & endpoint)
 	return false;
 }
 
-std::vector<network::endpoint> k_bucket::ping()
+void k_bucket::find_node(const std::string & ID_to_find,
+		std::map<mpa::mpint, std::pair<std::string, network::endpoint> > & hosts)
 {
-	std::vector<network::endpoint> vec;
+	//calculate distances of all contacts
+	for(std::list<contact>::iterator iter_cur = Bucket.begin(),
+		iter_end = Bucket.end(); iter_cur != iter_end; ++iter_cur)
+	{
+		hosts.insert(std::make_pair(k_func::distance(ID_to_find, iter_cur->remote_ID),
+			std::make_pair(iter_cur->remote_ID, iter_cur->endpoint)));
+	}
+	//get rid of all but closest protocol_udp::bucket_size elements
+	while(!hosts.empty() && hosts.size() > protocol_udp::bucket_size){
+		std::map<mpa::mpint, std::pair<std::string, network::endpoint> >::iterator
+			iter = hosts.end();
+			--iter;
+		hosts.erase(iter);
+	}
+}
+
+std::list<network::endpoint> k_bucket::ping()
+{
+	std::list<network::endpoint> tmp;
 	for(std::list<contact>::iterator iter_cur = Bucket.begin(),
 		iter_end = Bucket.end(); iter_cur != iter_end; ++iter_cur)
 	{
 		if(iter_cur->need_ping()){
-			vec.push_back(iter_cur->endpoint);
+			tmp.push_back(iter_cur->endpoint);
 		}
 	}
-	return vec;
+	return tmp;
 }
 
 unsigned k_bucket::size()

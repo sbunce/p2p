@@ -69,7 +69,7 @@ bool slot_manager::recv_close_slot(const unsigned char slot_num)
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter = Incoming_Slot.find(slot_num);
 	if(iter != Incoming_Slot.end()){
-		LOG << "close slot";
+		LOG << "close slot " << slot_num;
 		if(iter->second->get_transfer()){
 			iter->second->get_transfer()->incoming_unsubscribe(Exchange.connection_ID);
 		}

@@ -3,6 +3,10 @@
 kademlia::kademlia():
 	local_ID(db::table::prefs::get_ID())
 {
+	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
+		Bucket_Reserve_Ping[x] = 0;
+	}
+
 	//messages to expect anytime
 	Exchange.expect_anytime(boost::shared_ptr<message_udp::recv::base>(
 		new message_udp::recv::ping(boost::bind(&kademlia::recv_ping, this, _1, _2, _3))));
@@ -20,12 +24,32 @@ kademlia::~kademlia()
 	main_loop_thread.join();
 }
 
+void kademlia::add_reserve(const std::string & remote_ID,
+	const network::endpoint & endpoint)
+{
+	unsigned bucket_num = k_func::ID_to_bucket_num(local_ID, remote_ID);
+
+	//don't add if endpoint already exists in another bucket or reserve bucket
+	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
+		if(Bucket[x].exists(endpoint)){
+			return;
+		}
+		if(Bucket_Reserve[x].find(endpoint) != Bucket_Reserve[x].end()){
+			return;
+		}
+	}
+
+	//add new endpoint
+	LOG << "reserve: " << endpoint.IP() << " " << endpoint.port();
+	Bucket_Reserve[bucket_num].insert(endpoint);
+}
+
 void kademlia::do_pings()
 {
 	//ping hosts in Bucket that are about to time out
 	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
-		std::vector<network::endpoint> tmp = Bucket[x].ping();
-		for(std::vector<network::endpoint>::iterator iter_cur = tmp.begin(),
+		std::list<network::endpoint> tmp = Bucket[x].ping();
+		for(std::list<network::endpoint>::iterator iter_cur = tmp.begin(),
 			iter_end = tmp.end(); iter_cur != iter_end; ++iter_cur)
 		{
 			LOG << iter_cur->IP() << " " << iter_cur->port();
@@ -38,22 +62,22 @@ void kademlia::do_pings()
 		}
 	}
 
-	//ping hosts in Bucket_Overflow to try to fill buckets
+	//ping hosts in Bucket_Reserve to try to fill buckets
 	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
-		if(Bucket[x].size() + Bucket_Overflow_Ping[x] < protocol_udp::bucket_size
-			&& !Bucket_Overflow[x].empty())
+		if(Bucket[x].size() + Bucket_Reserve_Ping[x] < protocol_udp::bucket_size
+			&& !Bucket_Reserve[x].empty())
 		{
-			LOG << Bucket_Overflow[x].begin()->IP()
-				<< " " << Bucket_Overflow[x].begin()->port();
+			LOG << Bucket_Reserve[x].begin()->IP()
+				<< " " << Bucket_Reserve[x].begin()->port();
 			network::buffer random(portable_urandom(4));
 			Exchange.send(boost::shared_ptr<message_udp::send::base>(
-				new message_udp::send::ping(random, local_ID)), *Bucket_Overflow[x].begin());
+				new message_udp::send::ping(random, local_ID)), *Bucket_Reserve[x].begin());
 			Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
-				new message_udp::recv::pong(boost::bind(&kademlia::recv_pong_bucket_overflow, this, _1, _2, x), random)),
-				*Bucket_Overflow[x].begin(), boost::bind(&kademlia::timeout_ping_bucket_overflow, this,
-				*Bucket_Overflow[x].begin(), x));
-			Bucket_Overflow[x].erase(Bucket_Overflow[x].begin());
-			++Bucket_Overflow_Ping[x];
+				new message_udp::recv::pong(boost::bind(&kademlia::recv_pong_bucket_reserve, this, _1, _2, x), random)),
+				*Bucket_Reserve[x].begin(), boost::bind(&kademlia::timeout_ping_bucket_reserve, this,
+				*Bucket_Reserve[x].begin(), x));
+			Bucket_Reserve[x].erase(Bucket_Reserve[x].begin());
+			++Bucket_Reserve_Ping[x];
 		}
 	}
 }
@@ -69,7 +93,7 @@ void kademlia::main_loop()
 			LOG << "failed \"" << tmp.back().IP << "\" " << tmp.back().port;
 		}else{
 			unsigned bucket_num = k_func::ID_to_bucket_num(local_ID, tmp.back().ID);
-			Bucket_Overflow[bucket_num].insert(*E.begin());
+			Bucket_Reserve[bucket_num].insert(*E.begin());
 		}
 		tmp.pop_back();
 	}
@@ -93,34 +117,49 @@ void kademlia::recv_find_node(const network::endpoint & endpoint,
 {
 	LOG << endpoint.IP() << " " << endpoint.port() << " remote_ID: " << remote_ID
 		<< " find: " << ID_to_find;
-	std::list<std::pair<network::endpoint, unsigned char> > hosts;
+	add_reserve(remote_ID, endpoint);
 
+	//get up to protocol_udp::bucket_size hosts which are closer
+	std::map<mpa::mpint, std::pair<std::string, network::endpoint> > hosts;
+	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
+		Bucket[x].find_node(ID_to_find, hosts);
+	}
+
+	//calculate buckets the remote host should expect to put the hosts in
+	std::list<std::pair<network::endpoint, unsigned char> > hosts_final;
+	for(std::map<mpa::mpint, std::pair<std::string, network::endpoint> >::iterator
+		iter_cur = hosts.begin(), iter_end = hosts.end(); iter_cur != iter_end; ++iter_cur)
+	{
+		if(iter_cur->first == ID_to_find){
+			hosts_final.push_back(std::make_pair(iter_cur->second.second, 255));
+		}else{
+			hosts_final.push_back(std::make_pair(iter_cur->second.second,
+				k_func::ID_to_bucket_num(remote_ID, iter_cur->second.first)));
+		}
+	}
 
 	Exchange.send(boost::shared_ptr<message_udp::send::base>(
-		new message_udp::send::host_list(random, local_ID, hosts)), endpoint);
-
-/*
-	host_list(const network::buffer & random, const std::string & local_ID,
-		const std::list<std::pair<network::endpoint, unsigned char> > & hosts);
-*/
+		new message_udp::send::host_list(random, local_ID, hosts_final)), endpoint);
 }
 
 void kademlia::recv_ping(const network::endpoint & endpoint, const network::buffer & random,
 	const std::string & remote_ID)
 {
 	LOG << endpoint.IP() << " " << endpoint.port() << " " << remote_ID;
+	add_reserve(remote_ID, endpoint);
 	Exchange.send(boost::shared_ptr<message_udp::send::base>(
 		new message_udp::send::pong(random, local_ID)), endpoint);
 }
 
 void kademlia::recv_pong(const network::endpoint & endpoint, const std::string & remote_ID)
 {
-	LOG << endpoint.IP() << " " << endpoint.port() << " " << remote_ID;
 	unsigned bucket_num = k_func::ID_to_bucket_num(local_ID, remote_ID);
-	for(int x=0; x<protocol_udp::bucket_count; ++x){
+	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
 		if(Bucket[x].exists(endpoint)){
 			if(x == bucket_num){
 				//host updating current location in bucket
+				LOG << "update: " << endpoint.IP() << " " << endpoint.port()
+					<< " " << remote_ID;
 				Bucket[x].update(remote_ID, endpoint);
 			}else{
 				/*
@@ -130,10 +169,14 @@ void kademlia::recv_pong(const network::endpoint & endpoint, const std::string &
 				Bucket[x].erase(endpoint);
 				if(Bucket[bucket_num].size() < protocol_udp::bucket_size){
 					//room in new bucket
+					LOG << "move_add: " << endpoint.IP() << " " << endpoint.port()
+						<< " " << remote_ID;
 					Bucket[bucket_num].update(remote_ID, endpoint);
 				}else{
 					//no room in new bucket
-					Bucket_Overflow[bucket_num].insert(endpoint);
+					LOG << "move_reserve: " << endpoint.IP() << " " << endpoint.port()
+						<< " " << remote_ID;
+					Bucket_Reserve[bucket_num].insert(endpoint);
 				}
 			}
 			return;
@@ -142,18 +185,22 @@ void kademlia::recv_pong(const network::endpoint & endpoint, const std::string &
 	//at this point we know the contact doesn't exist in any bucket
 	if(Bucket[bucket_num].size() < protocol_udp::bucket_size){
 		//room in bucket
+		LOG << "add: " << endpoint.IP() << " " << endpoint.port()
+			<< " " << remote_ID;
 		Bucket[bucket_num].update(remote_ID, endpoint);
 	}else{
 		//no room in bucket
-		Bucket_Overflow[bucket_num].insert(endpoint);
+		LOG << "reserve: " << endpoint.IP() << " " << endpoint.port()
+			<< " " << remote_ID;
+		Bucket_Reserve[bucket_num].insert(endpoint);
 	}
 }
 
-void kademlia::recv_pong_bucket_overflow(const network::endpoint & endpoint,
+void kademlia::recv_pong_bucket_reserve(const network::endpoint & endpoint,
 	const std::string & remote_ID, const unsigned expected_bucket_num)
 {
 	assert(expected_bucket_num < protocol_udp::bucket_count);
-	--Bucket_Overflow_Ping[expected_bucket_num];
+	--Bucket_Reserve_Ping[expected_bucket_num];
 	recv_pong(endpoint, remote_ID);
 }
 
@@ -165,10 +212,10 @@ void kademlia::timeout_ping_bucket(const network::endpoint endpoint,
 	Bucket[bucket_num].erase(endpoint);
 }
 
-void kademlia::timeout_ping_bucket_overflow(const network::endpoint endpoint,
+void kademlia::timeout_ping_bucket_reserve(const network::endpoint endpoint,
 	const unsigned bucket_num)
 {
 	assert(bucket_num < protocol_udp::bucket_count);
 	LOG << endpoint.IP() << " " << endpoint.port();
-	--Bucket_Overflow_Ping[bucket_num];
+	--Bucket_Reserve_Ping[bucket_num];
 }
