@@ -18,8 +18,6 @@
 class k_bucket
 {
 public:
-	k_bucket();
-
 	/*
 	erase:
 		Remove element with corresponding endpoint.
@@ -35,10 +33,8 @@ public:
 	size:
 		Returns number of contacts in k_bucket.
 	update:
-		Update last seen time of the contact. If contact not in k_bucket attempt
-		to add it. Return true if contact was updated or added, false if k_bucket
-		was full.
-		Note: This function is allowed to change the remote_ID.
+		Update last seen time, or add if doesn't exist. Returns false if failed to
+		add or update.
 	*/
 	void erase(const network::endpoint & endpoint);
 	bool exists(const network::endpoint & endpoint);
@@ -66,9 +62,12 @@ private:
 			Returns true if ping needs to be sent.
 		timed_out:
 			Returns true if contact has timed out and needs to be removed.
+		touch:
+			Updates last seen time of element.
 		*/
 		bool need_ping();
 		bool timed_out();
+		void touch();
 
 	private:
 		std::time_t last_seen;

@@ -54,7 +54,7 @@ bool message_udp::recv::host_list::expect(const network::buffer & recv_buf)
 
 	//verify length makes sense
 	unsigned IPv4_cnt = recv_buf[25];
-	if(IPv4_cnt > protocol_udp::bucket_size){
+	if(IPv4_cnt > protocol_udp::host_list_elements){
 		return false;
 	}
 	unsigned tmp = recv_buf.size();
@@ -67,7 +67,7 @@ bool message_udp::recv::host_list::expect(const network::buffer & recv_buf)
 		return false;
 	}
 	unsigned IPv6_cnt = tmp / 19;
-	if(IPv4_cnt + IPv6_cnt > protocol_udp::bucket_size){
+	if(IPv4_cnt + IPv6_cnt > protocol_udp::host_list_elements){
 		return false;
 	}
 
@@ -218,7 +218,7 @@ message_udp::send::host_list::host_list(const network::buffer & random,
 	const std::list<std::pair<network::endpoint, unsigned char> > & hosts)
 {
 	assert(random.size() == 4);
-	assert(hosts.size() <= protocol_udp::bucket_size);
+	assert(hosts.size() <= protocol_udp::host_list_elements);
 
 	//separate IPv4 and IPv6 endpoints
 	std::list<std::pair<network::endpoint, unsigned char> > IPv4_endpoint, IPv6_endpoint;

@@ -34,12 +34,13 @@ bool k_bucket::contact::timed_out()
 {
 	return std::time(NULL) - last_seen > protocol_udp::timeout;
 }
-//END contact
 
-k_bucket::k_bucket()
+void k_bucket::contact::touch()
 {
-
+	last_seen = std::time(NULL);
+	ping_sent = false;
 }
+//END contact
 
 void k_bucket::erase(const network::endpoint & endpoint)
 {
@@ -76,7 +77,7 @@ void k_bucket::find_node(const std::string & ID_to_find,
 			std::make_pair(iter_cur->remote_ID, iter_cur->endpoint)));
 	}
 	//get rid of all but closest protocol_udp::bucket_size elements
-	while(!hosts.empty() && hosts.size() > protocol_udp::bucket_size){
+	while(!hosts.empty() && hosts.size() > protocol_udp::host_list_elements){
 		std::map<mpa::mpint, std::pair<std::string, network::endpoint> >::iterator
 			iter = hosts.end();
 			--iter;
@@ -105,11 +106,24 @@ unsigned k_bucket::size()
 bool k_bucket::update(const std::string remote_ID,
 	const network::endpoint & endpoint)
 {
-	//erase if exists, and re-add
-	erase(endpoint);
+	//try to update
+	for(std::list<contact>::iterator iter_cur = Bucket.begin(),
+		iter_end = Bucket.end(); iter_cur != iter_end; ++iter_cur)
+	{
+		if(iter_cur->remote_ID == remote_ID && iter_cur->endpoint == endpoint){
+			iter_cur->touch();
+			return true;
+		}else if(iter_cur->remote_ID != remote_ID && iter_cur->endpoint == endpoint){
+			//host changed it's node ID, do not allow update
+			return false;
+		}
+	}
+
+	//try to add
 	if(Bucket.size() < protocol_udp::bucket_size){
 		Bucket.push_back(contact(remote_ID, endpoint));
 		return true;
+	}else{
+		return false;
 	}
-	return false;
 }

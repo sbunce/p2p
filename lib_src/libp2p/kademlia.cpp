@@ -155,44 +155,18 @@ void kademlia::recv_pong(const network::endpoint & endpoint, const std::string &
 {
 	unsigned bucket_num = k_func::ID_to_bucket_num(local_ID, remote_ID);
 	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
-		if(Bucket[x].exists(endpoint)){
-			if(x == bucket_num){
-				//host updating current location in bucket
-				LOG << "update: " << endpoint.IP() << " " << endpoint.port()
-					<< " " << remote_ID;
-				Bucket[x].update(remote_ID, endpoint);
-			}else{
-				/*
-				The host is responding with a different remote ID that belongs in a
-				different k_bucket. Move the contact
-				*/
-				Bucket[x].erase(endpoint);
-				if(Bucket[bucket_num].size() < protocol_udp::bucket_size){
-					//room in new bucket
-					LOG << "move_add: " << endpoint.IP() << " " << endpoint.port()
-						<< " " << remote_ID;
-					Bucket[bucket_num].update(remote_ID, endpoint);
-				}else{
-					//no room in new bucket
-					LOG << "move_reserve: " << endpoint.IP() << " " << endpoint.port()
-						<< " " << remote_ID;
-					Bucket_Reserve[bucket_num].insert(endpoint);
-				}
-			}
+		if(x != bucket_num && Bucket[x].exists(endpoint)){
+			/*
+			Don't let same endpoint exist in two buckets. If the remote host has
+			changed it's node ID let it time out.
+			*/
 			return;
 		}
 	}
-	//at this point we know the contact doesn't exist in any bucket
-	if(Bucket[bucket_num].size() < protocol_udp::bucket_size){
-		//room in bucket
-		LOG << "add: " << endpoint.IP() << " " << endpoint.port()
-			<< " " << remote_ID;
-		Bucket[bucket_num].update(remote_ID, endpoint);
+	if(Bucket[bucket_num].update(remote_ID, endpoint)){
+		LOG << "add: " << endpoint.IP() << " " << endpoint.port() << " " << remote_ID;
 	}else{
-		//no room in bucket
-		LOG << "reserve: " << endpoint.IP() << " " << endpoint.port()
-			<< " " << remote_ID;
-		Bucket_Reserve[bucket_num].insert(endpoint);
+		add_reserve(remote_ID, endpoint);
 	}
 }
 
