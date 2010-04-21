@@ -31,10 +31,7 @@ class p2p_real : private boost::noncopyable
 	class init
 	{
 	public:
-		init()
-		{
-			db::init::create_all();
-		}
+		init();
 	}Init;
 
 public:

@@ -2,10 +2,11 @@
 #define H_KADEMLIA
 
 //custom
+#include "bucket.hpp"
 #include "db_all.hpp"
 #include "exchange_udp.hpp"
-#include "k_bucket.hpp"
-#include "k_func.hpp"
+#include "kad_func.hpp"
+#include "route_table.hpp"
 
 //include
 #include <bit_field.hpp>
@@ -21,25 +22,15 @@ private:
 	boost::thread main_loop_thread;
 	exchange_udp Exchange;
 	const std::string local_ID;
-
-	//the k-buckets, the kademlia routing table
-	k_bucket Bucket[protocol_udp::bucket_count];
-
-	//nodes that don't fit in a k_bucket
-	std::set<network::endpoint> Bucket_Reserve[protocol_udp::bucket_count];
-	unsigned Bucket_Reserve_Ping[protocol_udp::bucket_count]; //pings sent
+	route_table Route_Table;
 
 	/*
-	add_reserve:
-		Whenever we receive a remote_ID/endpoint we call this function to add it
-		to Bucket_Reserve.
-	do_pings:
+	ping:
 		Pings hosts which are about to timeout.
 	main_loop:
 		Loop to handle timed events and network recv.
 	*/
-	void add_reserve(const std::string & remote_ID, const network::endpoint & endpoint);
-	void do_pings();
+	void ping();
 	void main_loop();
 
 	/* Receive Functions
@@ -62,11 +53,5 @@ private:
 	void recv_pong(const network::endpoint & endpoint, const std::string & remote_ID);
 	void recv_pong_bucket_reserve(const network::endpoint & endpoint, const std::string & remote_ID,
 		const unsigned expected_bucket_num);
-
-	/* Timeout Functions
-	Called when a request times out.
-	*/
-	void timeout_ping_bucket(const network::endpoint endpoint, const unsigned bucket_num);
-	void timeout_ping_bucket_reserve(const network::endpoint endpoint, const unsigned bucket_num);
 };
 #endif

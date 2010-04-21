@@ -1,9 +1,16 @@
 #include "p2p_real.hpp"
 
-p2p_real::p2p_real()
+//BEGIN init
+p2p_real::init::init()
 {
+	db::init::create_all();
 	LOG << "port: " << db::table::prefs::get_port() << " peer_ID: "
 		<< db::table::prefs::get_ID();
+}
+//END init
+
+p2p_real::p2p_real()
+{
 	resume_thread = boost::thread(boost::bind(&p2p_real::resume, this));
 }
 

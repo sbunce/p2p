@@ -46,7 +46,7 @@ public:
 		db::pool::proxy DB = db::pool::proxy());
 	static void remove(const std::string ID,
 		db::pool::proxy DB = db::pool::proxy());
-	static std::list<info> resume(
+	static std::vector<info> resume(
 		db::pool::proxy DB = db::pool::proxy());
 
 private:

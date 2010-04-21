@@ -3,10 +3,6 @@
 kademlia::kademlia():
 	local_ID(db::table::prefs::get_ID())
 {
-	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
-		Bucket_Reserve_Ping[x] = 0;
-	}
-
 	//messages to expect anytime
 	Exchange.expect_anytime(boost::shared_ptr<message_udp::recv::base>(
 		new message_udp::recv::ping(boost::bind(&kademlia::recv_ping, this, _1, _2, _3))));
@@ -24,78 +20,36 @@ kademlia::~kademlia()
 	main_loop_thread.join();
 }
 
-void kademlia::add_reserve(const std::string & remote_ID,
-	const network::endpoint & endpoint)
+void kademlia::ping()
 {
-	unsigned bucket_num = k_func::ID_to_bucket_num(local_ID, remote_ID);
-
-	//don't add if endpoint already exists in another bucket or reserve bucket
-	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
-		if(Bucket[x].exists(endpoint)){
-			return;
-		}
-		if(Bucket_Reserve[x].find(endpoint) != Bucket_Reserve[x].end()){
-			return;
-		}
-	}
-
-	//add new endpoint
-	LOG << "reserve: " << endpoint.IP() << " " << endpoint.port();
-	Bucket_Reserve[bucket_num].insert(endpoint);
-}
-
-void kademlia::do_pings()
-{
-	//ping hosts in Bucket that are about to time out
-	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
-		std::list<network::endpoint> tmp = Bucket[x].ping();
-		for(std::list<network::endpoint>::iterator iter_cur = tmp.begin(),
-			iter_end = tmp.end(); iter_cur != iter_end; ++iter_cur)
-		{
-			LOG << iter_cur->IP() << " " << iter_cur->port();
-			network::buffer random(portable_urandom(4));
-			Exchange.send(boost::shared_ptr<message_udp::send::base>(
-				new message_udp::send::ping(random, local_ID)), *iter_cur);
-			Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
-				new message_udp::recv::pong(boost::bind(&kademlia::recv_pong, this, _1, _2), random)),
-				*iter_cur, boost::bind(&kademlia::timeout_ping_bucket, this, *iter_cur, x));
-		}
-	}
-
-	//ping hosts in Bucket_Reserve to try to fill buckets
-	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
-		if(Bucket[x].size() + Bucket_Reserve_Ping[x] < protocol_udp::bucket_size
-			&& !Bucket_Reserve[x].empty())
-		{
-			LOG << Bucket_Reserve[x].begin()->IP()
-				<< " " << Bucket_Reserve[x].begin()->port();
-			network::buffer random(portable_urandom(4));
-			Exchange.send(boost::shared_ptr<message_udp::send::base>(
-				new message_udp::send::ping(random, local_ID)), *Bucket_Reserve[x].begin());
-			Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
-				new message_udp::recv::pong(boost::bind(&kademlia::recv_pong_bucket_reserve, this, _1, _2, x), random)),
-				*Bucket_Reserve[x].begin(), boost::bind(&kademlia::timeout_ping_bucket_reserve, this,
-				*Bucket_Reserve[x].begin(), x));
-			Bucket_Reserve[x].erase(Bucket_Reserve[x].begin());
-			++Bucket_Reserve_Ping[x];
-		}
+	std::set<network::endpoint> hosts = Route_Table.ping();
+	for(std::set<network::endpoint>::iterator iter_cur = hosts.begin(),
+		iter_end = hosts.end(); iter_cur != iter_end; ++iter_cur)
+	{
+		LOG << iter_cur->IP() << " " << iter_cur->port();
+		network::buffer random(portable_urandom(4));
+		Exchange.send(boost::shared_ptr<message_udp::send::base>(
+			new message_udp::send::ping(random, local_ID)), *iter_cur);
+		Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
+			new message_udp::recv::pong(boost::bind(&kademlia::recv_pong, this, _1, _2), random)),
+			*iter_cur);
 	}
 }
 
 void kademlia::main_loop()
 {
-	//read in hosts from database
-	std::list<db::table::peer::info> tmp = db::table::peer::resume();
-	while(!tmp.empty()){
-		std::set<network::endpoint> E = network::get_endpoint(tmp.back().IP,
-			tmp.back().port, network::udp);
+	//restore hosts from database, randomize and add to route_table
+	std::vector<db::table::peer::info> hosts = db::table::peer::resume();
+	std::random_shuffle(hosts.begin(), hosts.end());
+	while(!hosts.empty()){
+		std::set<network::endpoint> E = network::get_endpoint(hosts.back().IP,
+			hosts.back().port, network::udp);
 		if(E.empty()){
-			LOG << "failed \"" << tmp.back().IP << "\" " << tmp.back().port;
+			LOG << "failed \"" << hosts.back().IP << "\" " << hosts.back().port;
 		}else{
-			unsigned bucket_num = k_func::ID_to_bucket_num(local_ID, tmp.back().ID);
-			Bucket_Reserve[bucket_num].insert(*E.begin());
+			Route_Table.add_reserve(hosts.back().ID, *E.begin());
 		}
-		tmp.pop_back();
+		hosts.pop_back();
 	}
 
 	//main loop
@@ -104,7 +58,7 @@ void kademlia::main_loop()
 		boost::this_thread::interruption_point();
 		if(last_time != std::time(NULL)){
 			//once per second
-			do_pings();
+			ping();
 			last_time = std::time(NULL);
 		}
 		Exchange.tick();
@@ -117,79 +71,24 @@ void kademlia::recv_find_node(const network::endpoint & endpoint,
 {
 	LOG << endpoint.IP() << " " << endpoint.port() << " remote_ID: " << remote_ID
 		<< " find: " << ID_to_find;
-	add_reserve(remote_ID, endpoint);
-
-	//get up to protocol_udp::bucket_size hosts which are closer
-	std::map<mpa::mpint, std::pair<std::string, network::endpoint> > hosts;
-	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
-		Bucket[x].find_node(ID_to_find, hosts);
-	}
-
-	//calculate buckets the remote host should expect to put the hosts in
-	std::list<std::pair<network::endpoint, unsigned char> > hosts_final;
-	for(std::map<mpa::mpint, std::pair<std::string, network::endpoint> >::iterator
-		iter_cur = hosts.begin(), iter_end = hosts.end(); iter_cur != iter_end; ++iter_cur)
-	{
-		if(iter_cur->first == ID_to_find){
-			hosts_final.push_back(std::make_pair(iter_cur->second.second, 255));
-		}else{
-			hosts_final.push_back(std::make_pair(iter_cur->second.second,
-				k_func::ID_to_bucket_num(remote_ID, iter_cur->second.first)));
-		}
-	}
-
+	Route_Table.add_reserve(remote_ID, endpoint);
+	std::list<std::pair<network::endpoint, unsigned char> >
+		hosts = Route_Table.find_node(remote_ID, ID_to_find);
 	Exchange.send(boost::shared_ptr<message_udp::send::base>(
-		new message_udp::send::host_list(random, local_ID, hosts_final)), endpoint);
+		new message_udp::send::host_list(random, local_ID, hosts)), endpoint);
 }
 
 void kademlia::recv_ping(const network::endpoint & endpoint, const network::buffer & random,
 	const std::string & remote_ID)
 {
 	LOG << endpoint.IP() << " " << endpoint.port() << " " << remote_ID;
-	add_reserve(remote_ID, endpoint);
+	Route_Table.add_reserve(remote_ID, endpoint);
 	Exchange.send(boost::shared_ptr<message_udp::send::base>(
 		new message_udp::send::pong(random, local_ID)), endpoint);
 }
 
 void kademlia::recv_pong(const network::endpoint & endpoint, const std::string & remote_ID)
 {
-	unsigned bucket_num = k_func::ID_to_bucket_num(local_ID, remote_ID);
-	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
-		if(x != bucket_num && Bucket[x].exists(endpoint)){
-			/*
-			Don't let same endpoint exist in two buckets. If the remote host has
-			changed it's node ID let it time out.
-			*/
-			return;
-		}
-	}
-	if(Bucket[bucket_num].update(remote_ID, endpoint)){
-		LOG << "add: " << endpoint.IP() << " " << endpoint.port() << " " << remote_ID;
-	}else{
-		add_reserve(remote_ID, endpoint);
-	}
-}
-
-void kademlia::recv_pong_bucket_reserve(const network::endpoint & endpoint,
-	const std::string & remote_ID, const unsigned expected_bucket_num)
-{
-	assert(expected_bucket_num < protocol_udp::bucket_count);
-	--Bucket_Reserve_Ping[expected_bucket_num];
-	recv_pong(endpoint, remote_ID);
-}
-
-void kademlia::timeout_ping_bucket(const network::endpoint endpoint,
-	const unsigned bucket_num)
-{
-	assert(bucket_num < protocol_udp::bucket_count);
-	LOG << endpoint.IP() << " " << endpoint.port();
-	Bucket[bucket_num].erase(endpoint);
-}
-
-void kademlia::timeout_ping_bucket_reserve(const network::endpoint endpoint,
-	const unsigned bucket_num)
-{
-	assert(bucket_num < protocol_udp::bucket_count);
-	LOG << endpoint.IP() << " " << endpoint.port();
-	--Bucket_Reserve_Ping[bucket_num];
+	LOG << endpoint.IP() << " " << endpoint.port() << " " << remote_ID;
+	Route_Table.pong(remote_ID, endpoint);
 }
