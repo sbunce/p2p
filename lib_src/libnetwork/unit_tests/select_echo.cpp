@@ -22,8 +22,8 @@ int main()
 		tmp_write = write;
 		select(tmp_read, tmp_write);
 
-		for(std::set<int>::iterator iter_cur = tmp_read.begin(), iter_end = tmp_read.end();
-			iter_cur != iter_end; ++iter_cur)
+		for(std::set<int>::iterator it_cur = tmp_read.begin(), it_end = tmp_read.end();
+			it_cur != it_end; ++it_cur)
 		{
 			if(recv){
 				network::buffer buf;
@@ -39,8 +39,8 @@ int main()
 			}
 		}
 
-		for(std::set<int>::iterator iter_cur = tmp_write.begin(), iter_end = tmp_write.end();
-			iter_cur != iter_end; ++iter_cur)
+		for(std::set<int>::iterator it_cur = tmp_write.begin(), it_end = tmp_write.end();
+			it_cur != it_end; ++it_cur)
 		{
 			if(send){
 				network::buffer buf("x");

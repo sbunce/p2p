@@ -183,21 +183,21 @@ void network::proactor::check_timeouts()
 	*/
 	std::vector<std::pair<int, boost::shared_ptr<connection> > > timed_out;
 	for(std::map<int, boost::shared_ptr<connection> >::iterator
-		iter_cur = Socket.begin(), iter_end = Socket.end(); iter_cur != iter_end;
-		++iter_cur)
+		it_cur = Socket.begin(), it_end = Socket.end(); it_cur != it_end;
+		++it_cur)
 	{
-		if(iter_cur->second->timed_out()){
-			timed_out.push_back(*iter_cur);
+		if(it_cur->second->timed_out()){
+			timed_out.push_back(*it_cur);
 		}
 	}
 
 	for(std::vector<std::pair<int, boost::shared_ptr<connection> > >::iterator
-		iter_cur = timed_out.begin(), iter_end = timed_out.end();
-		iter_cur != iter_end; ++iter_cur)
+		it_cur = timed_out.begin(), it_end = timed_out.end();
+		it_cur != it_end; ++it_cur)
 	{
-		LOG << "timed out " << iter_cur->second->N->remote_IP();
-		remove_socket(iter_cur->first);
-		Dispatcher.disconnect(iter_cur->second->CI);
+		LOG << "timed out " << it_cur->second->N->remote_IP();
+		remove_socket(it_cur->first);
+		Dispatcher.disconnect(it_cur->second->CI);
 	}
 }
 

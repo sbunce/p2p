@@ -36,11 +36,11 @@ public:
 	*/
 	bool string(const std::string & param, std::string & str)
 	{
-		for(std::vector<std::string>::iterator iter_cur = argv.begin(),
-			iter_end = argv.end(); iter_cur != iter_end; ++iter_cur)
+		for(std::vector<std::string>::iterator it_cur = argv.begin(),
+			it_end = argv.end(); it_cur != it_end; ++it_cur)
 		{
-			if(iter_cur->compare(0, param.size(), param) == 0){
-				str = iter_cur->substr(iter_cur->find_first_of('=')+1);
+			if(it_cur->compare(0, param.size(), param) == 0){
+				str = it_cur->substr(it_cur->find_first_of('=')+1);
 				return true;
 			}
 		}

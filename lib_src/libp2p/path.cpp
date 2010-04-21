@@ -113,11 +113,11 @@ void path::remove_temporary_hash_tree_files()
 	fs::path path = fs::system_complete(fs::path(temp(), fs::native));
 	if(fs::exists(path)){
 		try{
-			for(fs::directory_iterator iter_cur(path), iter_end; iter_cur != iter_end;
-				++iter_cur)
+			for(fs::directory_iterator it_cur(path), it_end; it_cur != it_end;
+				++it_cur)
 			{
-				if(iter_cur->path().filename().find("hash_tree_", 0) == 0){
-					fs::remove(iter_cur->path());
+				if(it_cur->path().filename().find("hash_tree_", 0) == 0){
+					fs::remove(it_cur->path());
 				}
 			}
 		}catch(std::exception & e){

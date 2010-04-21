@@ -41,18 +41,18 @@ void block_request::add_block_local(const int connection_ID, const boost::uint64
 		also don't tell it we have blocks we know it already has.
 		*/
 		std::set<int> trigger;
-		for(std::map<int, have_info>::iterator iter_cur = have.begin(),
-			iter_end = have.end(); iter_cur != iter_end; ++iter_cur)
+		for(std::map<int, have_info>::iterator it_cur = have.begin(),
+			it_end = have.end(); it_cur != it_end; ++it_cur)
 		{
-			if(iter_cur->first != connection_ID){
-				std::map<int, bit_field>::iterator iter = remote.find(iter_cur->first);
+			if(it_cur->first != connection_ID){
+				std::map<int, bit_field>::iterator iter = remote.find(it_cur->first);
 				if(iter == remote.end()){
 					/*
 					We are downloading from remote host, but it is not downoading from
 					us so we don't know what blocks it has.
 					*/
-					iter_cur->second.block.push(block);
-					trigger.insert(iter_cur->first);
+					it_cur->second.block.push(block);
+					trigger.insert(it_cur->first);
 				}else{
 					/*
 					We are downloading from remote host, so we can check to see if it
@@ -61,19 +61,19 @@ void block_request::add_block_local(const int connection_ID, const boost::uint64
 					*/
 					if(iter->second.empty() || iter->second[block] == false){
 						//remote host doesn't have block
-						iter_cur->second.block.push(block);
-						trigger.insert(iter_cur->first);
+						it_cur->second.block.push(block);
+						trigger.insert(it_cur->first);
 					}
 				}
 			}
 		}
-		for(std::map<int, have_info>::iterator iter_cur = have.begin(),
-			iter_end = have.end(); iter_cur != iter_end; ++iter_cur)
+		for(std::map<int, have_info>::iterator it_cur = have.begin(),
+			it_end = have.end(); it_cur != it_end; ++it_cur)
 		{
-			if(iter_cur->first != connection_ID
-				&& trigger.find(iter_cur->first) != trigger.end())
+			if(it_cur->first != connection_ID
+				&& trigger.find(it_cur->first) != trigger.end())
 			{
-				iter_cur->second.trigger_tick(iter_cur->first);
+				it_cur->second.trigger_tick(it_cur->first);
 			}
 		}
 	}
@@ -155,10 +155,10 @@ bool block_request::find_next_rarest(const int connection_ID, boost::uint64_t & 
 		}
 		//check rarity
 		boost::uint32_t hosts = 0;
-		for(std::map<int, bit_field>::iterator iter_cur = remote.begin(),
-			iter_end = remote.end(); iter_cur != iter_end; ++iter_cur)
+		for(std::map<int, bit_field>::iterator it_cur = remote.begin(),
+			it_end = remote.end(); it_cur != it_end; ++it_cur)
 		{
-			if(iter_cur->second.empty() || iter_cur->second[block]){
+			if(it_cur->second.empty() || it_cur->second[block]){
 				++hosts;
 			}
 		}
@@ -258,13 +258,13 @@ void block_request::outgoing_unsubscribe(const int connection_ID)
 	remote.erase(connection_ID);
 	//erase request elements for this host
 	std::map<boost::uint64_t, std::set<int> >::iterator
-		iter_cur = request.begin(), iter_end = request.end();
-	while(iter_cur != iter_end){
-		iter_cur->second.erase(connection_ID);
-		if(iter_cur->second.empty()){
-			request.erase(iter_cur++);
+		it_cur = request.begin(), it_end = request.end();
+	while(it_cur != it_end){
+		it_cur->second.erase(connection_ID);
+		if(it_cur->second.empty()){
+			request.erase(it_cur++);
 		}else{
-			++iter_cur;
+			++it_cur;
 		}
 	}
 }
@@ -315,10 +315,10 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 
 		//determine if we have any requests pending
 		for(std::map<boost::uint64_t, std::set<int> >::iterator
-			iter_cur = request.begin(), iter_end = request.end();
-			iter_cur != iter_end; ++iter_cur)
+			it_cur = request.begin(), it_end = request.end();
+			it_cur != it_end; ++it_cur)
 		{
-			if(iter_cur->second.find(connection_ID) != iter_cur->second.end()){
+			if(it_cur->second.find(connection_ID) != it_cur->second.end()){
 				//pending request found, make no duplicate request
 				return false;
 			}
@@ -328,17 +328,17 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 		boost::uint64_t rare_block;
 		unsigned min_request = std::numeric_limits<unsigned>::max();
 		for(std::map<boost::uint64_t, std::set<int> >::iterator
-			iter_cur = request.begin(), iter_end = request.end();
-			iter_cur != iter_end; ++iter_cur)
+			it_cur = request.begin(), it_end = request.end();
+			it_cur != it_end; ++it_cur)
 		{
-			if(iter_cur->second.size() == 1){
+			if(it_cur->second.size() == 1){
 				//this block must be at least tied for least requested
-				block = iter_cur->first;
-				iter_cur->second.insert(connection_ID);
+				block = it_cur->first;
+				it_cur->second.insert(connection_ID);
 				return true;
-			}else if(iter_cur->second.size() < min_request){
-				rare_block = iter_cur->first;
-				min_request = iter_cur->second.size();
+			}else if(it_cur->second.size() < min_request){
+				rare_block = it_cur->first;
+				min_request = it_cur->second.size();
 			}
 		}
 		if(min_request != std::numeric_limits<unsigned>::max()){

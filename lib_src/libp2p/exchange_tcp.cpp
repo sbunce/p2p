@@ -33,17 +33,17 @@ void exchange_tcp::expect_anytime(boost::shared_ptr<message_tcp::recv::base> M)
 void exchange_tcp::expect_anytime_erase(boost::shared_ptr<message_tcp::send::base> M)
 {
 	for(std::list<boost::shared_ptr<message_tcp::recv::base> >::iterator
-		iter_cur = Expect_Anytime.begin(), iter_end = Expect_Anytime.end();
-		iter_cur != iter_end; ++iter_cur)
+		it_cur = Expect_Anytime.begin(), it_end = Expect_Anytime.end();
+		it_cur != it_end; ++it_cur)
 	{
-		if((*iter_cur)->expect(M->buf)){
+		if((*it_cur)->expect(M->buf)){
 			/*
 			Schedule message to be erased. We don't erase element here because it
 			might invalidate iterator in recv loop in exchange_tcp::recv_call_back.
 			The control flow is complicated here. We may be calling this function
 			from a call back done in exchange_tcp::recv_call_back.
 			*/
-			*iter_cur = boost::shared_ptr<message_tcp::recv::base>();
+			*it_cur = boost::shared_ptr<message_tcp::recv::base>();
 		}
 	}
 }
@@ -77,11 +77,11 @@ void exchange_tcp::recv_call_back(network::connection_info & CI)
 		}
 		//check if message is expected anytime
 		for(std::list<boost::shared_ptr<message_tcp::recv::base> >::iterator
-			iter_cur = Expect_Anytime.begin(), iter_end = Expect_Anytime.end();
-			iter_cur != iter_end;)
+			it_cur = Expect_Anytime.begin(), it_end = Expect_Anytime.end();
+			it_cur != it_end;)
 		{
-			if(*iter_cur){
-				Status = (*iter_cur)->recv(CI.recv_buf);
+			if(*it_cur){
+				Status = (*it_cur)->recv(CI.recv_buf);
 				if(Status == message_tcp::recv::blacklist){
 					db::table::blacklist::add(CI.IP);
 					goto end;
@@ -90,11 +90,11 @@ void exchange_tcp::recv_call_back(network::connection_info & CI)
 				}else if(Status == message_tcp::recv::incomplete){
 					goto end;
 				}else{
-					++iter_cur;
+					++it_cur;
 				}
 			}else{
 				//message sceduled to be erased
-				iter_cur = Expect_Anytime.erase(iter_cur);
+				it_cur = Expect_Anytime.erase(it_cur);
 			}
 		}
 		//a message was not processed, message on front of recv_buf is not expected
@@ -159,10 +159,10 @@ void exchange_tcp::send(boost::shared_ptr<message_tcp::send::base> M)
 void exchange_tcp::send_buffered()
 {
 	for(std::list<boost::shared_ptr<message_tcp::send::base> >::iterator
-		iter_cur = Encrypt_Buf.begin(), iter_end = Encrypt_Buf.end();
-		iter_cur != iter_end; ++iter_cur)
+		it_cur = Encrypt_Buf.begin(), it_end = Encrypt_Buf.end();
+		it_cur != it_end; ++it_cur)
 	{
-		send(*iter_cur);
+		send(*it_cur);
 	}
 	Encrypt_Buf.clear();
 }

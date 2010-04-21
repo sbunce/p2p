@@ -25,13 +25,13 @@ std::list<std::pair<network::endpoint, unsigned char> > route_table::find_node(
 	//calculate buckets the remote host should expect to put the hosts in
 	std::list<std::pair<network::endpoint, unsigned char> > hosts_final;
 	for(std::map<mpa::mpint, std::pair<std::string, network::endpoint> >::iterator
-		iter_cur = hosts.begin(), iter_end = hosts.end(); iter_cur != iter_end; ++iter_cur)
+		it_cur = hosts.begin(), it_end = hosts.end(); it_cur != it_end; ++it_cur)
 	{
-		if(iter_cur->first == ID_to_find){
-			hosts_final.push_back(std::make_pair(iter_cur->second.second, 255));
+		if(it_cur->first == ID_to_find){
+			hosts_final.push_back(std::make_pair(it_cur->second.second, 255));
 		}else{
-			hosts_final.push_back(std::make_pair(iter_cur->second.second,
-				kad_func::bucket_num(remote_ID, iter_cur->second.first)));
+			hosts_final.push_back(std::make_pair(it_cur->second.second,
+				kad_func::bucket_num(remote_ID, it_cur->second.first)));
 		}
 	}
 	return hosts_final;

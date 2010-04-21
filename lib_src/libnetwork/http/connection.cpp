@@ -122,16 +122,16 @@ void connection::read_directory(network::connection_info & CI)
 	"<td>size</td>\n"
 	"</tr>\n";
 	try{
-		for(fs::directory_iterator iter_cur(path), iter_end; iter_cur != iter_end; ++iter_cur){
-			std::string relative_path = iter_cur->path().directory_string().substr(web_root.size());
+		for(fs::directory_iterator it_cur(path), it_end; it_cur != it_end; ++it_cur){
+			std::string relative_path = it_cur->path().directory_string().substr(web_root.size());
 			encode_chars(relative_path);
-			std::string file_name = iter_cur->path().filename();
-			if(fs::is_directory(iter_cur->path())){
+			std::string file_name = it_cur->path().filename();
+			if(fs::is_directory(it_cur->path())){
 				ss << "<tr>\n<td>\n<a href=\"" << relative_path << "\">" << file_name
 					<< "/</a>\n</td>\n<td>DIR</td>\n</tr>";
 			}else{
-				ss << "<tr>\n<td>\n<a href=\"" << relative_path << "\">" << iter_cur->path().filename()
-					<< "</a>\n</td>\n<td>" << convert::bytes_to_SI(fs::file_size(iter_cur->path()))
+				ss << "<tr>\n<td>\n<a href=\"" << relative_path << "\">" << it_cur->path().filename()
+					<< "</a>\n</td>\n<td>" << convert::bytes_to_SI(fs::file_size(it_cur->path()))
 					<< "</td>\n</tr>\n";
 			}
 		}

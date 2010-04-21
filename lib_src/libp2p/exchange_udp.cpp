@@ -34,16 +34,16 @@ exchange_udp::exchange_udp()
 void exchange_udp::check_timeouts()
 {
 	for(std::multimap<network::endpoint, expect_response_element>::iterator
-		iter_cur = Expect_Response.begin(), iter_end = Expect_Response.end();
-		iter_cur != iter_end;)
+		it_cur = Expect_Response.begin(), it_end = Expect_Response.end();
+		it_cur != it_end;)
 	{
-		if(iter_cur->second.timed_out()){
-			if(iter_cur->second.timeout_call_back){
-				iter_cur->second.timeout_call_back();
+		if(it_cur->second.timed_out()){
+			if(it_cur->second.timeout_call_back){
+				it_cur->second.timeout_call_back();
 			}
-			Expect_Response.erase(iter_cur++);
+			Expect_Response.erase(it_cur++);
 		}else{
-			++iter_cur;
+			++it_cur;
 		}
 	}
 }
@@ -56,13 +56,13 @@ void exchange_udp::expect_anytime(boost::shared_ptr<message_udp::recv::base> M)
 void exchange_udp::expect_anytime_remove(boost::shared_ptr<message_udp::send::base> M)
 {
 	for(std::list<boost::shared_ptr<message_udp::recv::base> >::iterator
-		iter_cur = Expect_Anytime.begin(), iter_end = Expect_Anytime.end();
-		iter_cur != iter_end;)
+		it_cur = Expect_Anytime.begin(), it_end = Expect_Anytime.end();
+		it_cur != it_end;)
 	{
-		if((*iter_cur)->expect(M->buf)){
-			iter_cur = Expect_Anytime.erase(iter_cur);
+		if((*it_cur)->expect(M->buf)){
+			it_cur = Expect_Anytime.erase(it_cur);
 		}else{
-			++iter_cur;
+			++it_cur;
 		}
 	}
 }
@@ -108,10 +108,10 @@ void exchange_udp::tick()
 
 	//check if expected anytime
 	for(std::list<boost::shared_ptr<message_udp::recv::base> >::iterator
-		iter_cur = Expect_Anytime.begin(), iter_end = Expect_Anytime.end();
-		iter_cur != iter_end; ++iter_cur)
+		it_cur = Expect_Anytime.begin(), it_end = Expect_Anytime.end();
+		it_cur != it_end; ++it_cur)
 	{
-		if((*iter_cur)->recv(recv_buf, *from)){
+		if((*it_cur)->recv(recv_buf, *from)){
 			return;
 		}
 	}

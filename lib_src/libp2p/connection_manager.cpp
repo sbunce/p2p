@@ -58,11 +58,11 @@ void connection_manager::do_remove(const std::string hash)
 		thread recreating the slot for a different file with the same hash.
 		*/
 		for(std::map<int, boost::shared_ptr<connection> >::iterator
-			iter_cur = Connection.begin(); iter_cur != Connection.end(); ++iter_cur)
+			it_cur = Connection.begin(); it_cur != Connection.end(); ++it_cur)
 		{
-			iter_cur->second->remove(hash);
-			if(iter_cur->second->empty()){
-				Proactor.disconnect(iter_cur->first);
+			it_cur->second->remove(hash);
+			if(it_cur->second->empty()){
+				Proactor.disconnect(it_cur->first);
 			}
 		}
 		/*

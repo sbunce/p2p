@@ -91,10 +91,10 @@ void message_tcp::recv::composite::add(boost::shared_ptr<base> M)
 bool message_tcp::recv::composite::expect(const network::buffer & recv_buf)
 {
 	for(std::vector<boost::shared_ptr<base> >::iterator
-		iter_cur = possible_response.begin(), iter_end = possible_response.end();
-		iter_cur != iter_end; ++iter_cur)
+		it_cur = possible_response.begin(), it_end = possible_response.end();
+		it_cur != it_end; ++it_cur)
 	{
-		if((*iter_cur)->expect(recv_buf)){
+		if((*it_cur)->expect(recv_buf)){
 			return true;
 		}
 	}
@@ -104,10 +104,10 @@ bool message_tcp::recv::composite::expect(const network::buffer & recv_buf)
 message_tcp::recv::status message_tcp::recv::composite::recv(network::buffer & recv_buf)
 {
 	for(std::vector<boost::shared_ptr<base> >::iterator
-		iter_cur = possible_response.begin(), iter_end = possible_response.end();
-		iter_cur != iter_end; ++iter_cur)
+		it_cur = possible_response.begin(), it_end = possible_response.end();
+		it_cur != it_end; ++it_cur)
 	{
-		status Status = (*iter_cur)->recv(recv_buf);
+		status Status = (*it_cur)->recv(recv_buf);
 		if(Status != not_expected){
 			return Status;
 		}

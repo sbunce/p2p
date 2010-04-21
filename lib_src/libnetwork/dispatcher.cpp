@@ -68,14 +68,14 @@ void network::dispatcher::dispatch()
 		boost::mutex::scoped_lock lock(job_mutex);
 		while(true){
 			for(std::list<std::pair<int, boost::function<void ()> > >::iterator
-				iter_cur = job.begin(), iter_end = job.end(); iter_cur != iter_end;
-				++iter_cur)
+				it_cur = job.begin(), it_end = job.end(); it_cur != it_end;
+				++it_cur)
 			{
 				std::pair<std::set<int>::iterator, bool>
-					ret = memoize.insert(iter_cur->first);
+					ret = memoize.insert(it_cur->first);
 				if(ret.second){
-					tmp = *iter_cur;
-					job.erase(iter_cur);
+					tmp = *it_cur;
+					job.erase(it_cur);
 					goto run_job;
 				}
 			}

@@ -128,79 +128,79 @@ bool window_transfer::refresh()
 	P2P.transfers(T);
 
 	//add and update rows
-	for(std::vector<p2p::transfer>::iterator iter_cur = T.begin(),
-		iter_end = T.end(); iter_cur != iter_end; ++iter_cur)
+	for(std::vector<p2p::transfer>::iterator it_cur = T.begin(),
+		it_end = T.end(); it_cur != it_end; ++it_cur)
 	{
-		if(Type == download && iter_cur->download_peers == 0
-			&& iter_cur->percent_complete == 100)
+		if(Type == download && it_cur->download_peers == 0
+			&& it_cur->percent_complete == 100)
 		{
 			continue;
-		}else if(Type == upload && iter_cur->upload_peers == 0){
+		}else if(Type == upload && it_cur->upload_peers == 0){
 			continue;
 		}
 		std::map<std::string, Gtk::TreeModel::Row>::iterator
-			iter = Row_Index.find(iter_cur->hash);
+			iter = Row_Index.find(it_cur->hash);
 		if(iter == Row_Index.end()){
 			//add
 			Gtk::TreeModel::Row row = *(download_list->append());
-			row[column_name] = iter_cur->name;
-			row[column_size] = convert::bytes_to_SI(iter_cur->file_size);
+			row[column_name] = it_cur->name;
+			row[column_size] = convert::bytes_to_SI(it_cur->file_size);
 			std::stringstream peers;
 			if(Type == download){
-				peers << iter_cur->download_peers;
+				peers << it_cur->download_peers;
 			}else{
-				peers << iter_cur->upload_peers;
+				peers << it_cur->upload_peers;
 			}
 			row[column_peers] = peers.str();
 			if(Type == download){
-				row[column_speed] = convert::bytes_to_SI(iter_cur->download_speed) + "/s";
+				row[column_speed] = convert::bytes_to_SI(it_cur->download_speed) + "/s";
 			}else{
-				row[column_speed] = convert::bytes_to_SI(iter_cur->upload_speed) + "/s";
+				row[column_speed] = convert::bytes_to_SI(it_cur->upload_speed) + "/s";
 			}
-			row[column_percent_complete] = iter_cur->percent_complete;
-			row[column_hash] = iter_cur->hash;
+			row[column_percent_complete] = it_cur->percent_complete;
+			row[column_hash] = it_cur->hash;
 			row[column_update] = true;
-			Row_Index.insert(std::make_pair(iter_cur->hash, row));
+			Row_Index.insert(std::make_pair(it_cur->hash, row));
 		}else{
 			//update
 			Gtk::TreeModel::Row row = iter->second;
-			row[column_name] = iter_cur->name;
-			row[column_size] = convert::bytes_to_SI(iter_cur->file_size);
+			row[column_name] = it_cur->name;
+			row[column_size] = convert::bytes_to_SI(it_cur->file_size);
 			std::stringstream peers;
 			if(Type == download){
-				peers << iter_cur->download_peers;
+				peers << it_cur->download_peers;
 			}else{
-				peers << iter_cur->upload_peers;
+				peers << it_cur->upload_peers;
 			}
 			row[column_peers] = peers.str();
 			if(Type == download){
-				row[column_speed] = convert::bytes_to_SI(iter_cur->download_speed) + "/s";
+				row[column_speed] = convert::bytes_to_SI(it_cur->download_speed) + "/s";
 			}else{
-				row[column_speed] = convert::bytes_to_SI(iter_cur->upload_speed) + "/s";
+				row[column_speed] = convert::bytes_to_SI(it_cur->upload_speed) + "/s";
 			}
-			row[column_percent_complete] = iter_cur->percent_complete;
+			row[column_percent_complete] = it_cur->percent_complete;
 			row[column_update] = true;
 		}
 	}
 
 	//remove rows not updated
-	for(Gtk::TreeModel::Children::iterator iter_cur = download_list->children().begin();
-		iter_cur != download_list->children().end();)
+	for(Gtk::TreeModel::Children::iterator it_cur = download_list->children().begin();
+		it_cur != download_list->children().end();)
 	{
-		if((*iter_cur)[column_update]){
-			++iter_cur;
+		if((*it_cur)[column_update]){
+			++it_cur;
 		}else{
-			Glib::ustring hash = (*iter_cur)[column_hash];
+			Glib::ustring hash = (*it_cur)[column_hash];
 			Row_Index.erase(hash);
-			iter_cur = download_list->erase(iter_cur);
+			it_cur = download_list->erase(it_cur);
 		}
 	}
 
 	//make all rows as not updated for next call to refresh()
-	for(Gtk::TreeModel::Children::iterator iter_cur = download_list->children().begin(),
-		iter_end = download_list->children().end(); iter_cur != iter_end; ++iter_cur)
+	for(Gtk::TreeModel::Children::iterator it_cur = download_list->children().begin(),
+		it_end = download_list->children().end(); it_cur != it_end; ++it_cur)
 	{
-		(*iter_cur)[column_update] = false;
+		(*it_cur)[column_update] = false;
 	}
 
 	return true;

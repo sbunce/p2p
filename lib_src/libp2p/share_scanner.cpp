@@ -99,8 +99,8 @@ void share_scanner::scan_loop()
 		boost::this_thread::sleep(scan_delay);
 		try{
 			//scan share
-			boost::filesystem::recursive_directory_iterator iter_cur(share_path), iter_end;
-			while(iter_cur != iter_end){
+			boost::filesystem::recursive_directory_iterator it_cur(share_path), it_end;
+			while(it_cur != it_end){
 				boost::this_thread::interruption_point();
 				if(skip_sleep){
 					skip_sleep = false;
@@ -116,14 +116,14 @@ void share_scanner::scan_loop()
 				}
 				}//end lock scope
 
-				if(boost::filesystem::is_symlink(iter_cur->path().parent_path())){
+				if(boost::filesystem::is_symlink(it_cur->path().parent_path())){
 					//traversed to symlink directory, go back up and skip
-					iter_cur.pop();
+					it_cur.pop();
 				}else{
-					if(boost::filesystem::is_regular_file(iter_cur->status())){
-						std::string path = iter_cur->path().string();
+					if(boost::filesystem::is_regular_file(it_cur->status())){
+						std::string path = it_cur->path().string();
 						boost::uint64_t file_size = boost::filesystem::file_size(path);
-						std::time_t last_write_time = boost::filesystem::last_write_time(iter_cur->path());
+						std::time_t last_write_time = boost::filesystem::last_write_time(it_cur->path());
 						share::const_file_iterator share_iter = share::singleton().find_path(path);
 						if(share_iter == share::singleton().end_file()
 							|| (!share::singleton().is_downloading(path) && (share_iter->file_size != file_size
@@ -136,7 +136,7 @@ void share_scanner::scan_loop()
 							skip_sleep = true;
 						}
 					}
-					++iter_cur;
+					++it_cur;
 				}
 			}
 		}catch(std::exception & e){
@@ -144,8 +144,8 @@ void share_scanner::scan_loop()
 		}
 
 		//remove missing files
-		for(share::const_file_iterator iter_cur = share::singleton().begin_file(),
-			iter_end = share::singleton().end_file(); iter_cur != iter_end; ++iter_cur)
+		for(share::const_file_iterator it_cur = share::singleton().begin_file(),
+			it_end = share::singleton().end_file(); it_cur != it_end; ++it_cur)
 		{
 			boost::this_thread::interruption_point();
 			if(skip_sleep){
@@ -153,9 +153,9 @@ void share_scanner::scan_loop()
 			}else{
 				boost::this_thread::sleep(scan_delay);
 			}
-			if(!boost::filesystem::exists(iter_cur->path.get())){
-				share::singleton().erase(iter_cur->path);
-				db::table::share::remove(iter_cur->path);
+			if(!boost::filesystem::exists(it_cur->path.get())){
+				share::singleton().erase(it_cur->path);
+				db::table::share::remove(it_cur->path);
 				skip_sleep = true;
 			}
 		}

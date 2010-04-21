@@ -223,12 +223,12 @@ message_udp::send::host_list::host_list(const network::buffer & random,
 	//separate IPv4 and IPv6 endpoints
 	std::list<std::pair<network::endpoint, unsigned char> > IPv4_endpoint, IPv6_endpoint;
 	for(std::list<std::pair<network::endpoint, unsigned char> >::const_iterator
-		iter_cur = hosts.begin(), iter_end = hosts.end(); iter_cur != iter_end; ++iter_cur)
+		it_cur = hosts.begin(), it_end = hosts.end(); it_cur != it_end; ++it_cur)
 	{
-		if(iter_cur->first.version() == network::IPv4){
-			IPv4_endpoint.push_back(*iter_cur);
+		if(it_cur->first.version() == network::IPv4){
+			IPv4_endpoint.push_back(*it_cur);
 		}else{
-			IPv6_endpoint.push_back(*iter_cur);
+			IPv6_endpoint.push_back(*it_cur);
 		}
 	}
 	unsigned char IPv4_count = IPv4_endpoint.size();
@@ -240,22 +240,22 @@ message_udp::send::host_list::host_list(const network::buffer & random,
 
 	//append IPv4 addresses
 	for(std::list<std::pair<network::endpoint, unsigned char> >::iterator
-		iter_cur = IPv4_endpoint.begin(), iter_end = IPv4_endpoint.end();
-		iter_cur != iter_end; ++iter_cur)
+		it_cur = IPv4_endpoint.begin(), it_end = IPv4_endpoint.end();
+		it_cur != it_end; ++it_cur)
 	{
-		buf.append(iter_cur->first.IP_bin())
-			.append(iter_cur->first.port_bin())
-			.append(iter_cur->second);
+		buf.append(it_cur->first.IP_bin())
+			.append(it_cur->first.port_bin())
+			.append(it_cur->second);
 	}
 
 	//append IPv6 addresses
 	for(std::list<std::pair<network::endpoint, unsigned char> >::iterator
-		iter_cur = IPv6_endpoint.begin(), iter_end = IPv6_endpoint.end();
-		iter_cur != iter_end; ++iter_cur)
+		it_cur = IPv6_endpoint.begin(), it_end = IPv6_endpoint.end();
+		it_cur != it_end; ++it_cur)
 	{
-		buf.append(iter_cur->first.IP_bin())
-			.append(iter_cur->first.port_bin())
-			.append(iter_cur->second);
+		buf.append(it_cur->first.IP_bin())
+			.append(it_cur->first.port_bin())
+			.append(it_cur->second);
 	}
 }
 //END send::host_list

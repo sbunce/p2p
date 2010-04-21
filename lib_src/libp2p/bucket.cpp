@@ -58,25 +58,25 @@ void bucket::add_reserve(const std::string remote_ID,
 	const network::endpoint & endpoint)
 {
 	//if node active then touch it
-	for(std::list<contact>::iterator iter_cur = Bucket_Active.begin(),
-		iter_end = Bucket_Active.end(); iter_cur != iter_end; ++iter_cur)
+	for(std::list<contact>::iterator it_cur = Bucket_Active.begin(),
+		it_end = Bucket_Active.end(); it_cur != it_end; ++it_cur)
 	{
-		if(iter_cur->remote_ID == remote_ID && iter_cur->endpoint == endpoint){
-			iter_cur->touch();
-			LOG << "touch: " << iter_cur->endpoint.IP() << " " << iter_cur->endpoint.port()
-				<< iter_cur->remote_ID;
+		if(it_cur->remote_ID == remote_ID && it_cur->endpoint == endpoint){
+			it_cur->touch();
+			LOG << "touch: " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port()
+				<< it_cur->remote_ID;
 			return;
-		}else if(iter_cur->endpoint == endpoint){
-			LOG << "node ID changed, from " << iter_cur->remote_ID << " to " << remote_ID;
+		}else if(it_cur->endpoint == endpoint){
+			LOG << "node ID changed, from " << it_cur->remote_ID << " to " << remote_ID;
 			return;
 		}
 	}
 
 	//node not active, add to reserve if not already in reserve
-	for(std::list<contact>::iterator iter_cur = Bucket_Reserve.begin(),
-		iter_end = Bucket_Reserve.end(); iter_cur != iter_end; ++iter_cur)
+	for(std::list<contact>::iterator it_cur = Bucket_Reserve.begin(),
+		it_end = Bucket_Reserve.end(); it_cur != it_end; ++it_cur)
 	{
-		if(iter_cur->endpoint == endpoint){
+		if(it_cur->endpoint == endpoint){
 			//endpoint already exists in reserve
 			return;
 		}
@@ -89,11 +89,11 @@ void bucket::find_node(const std::string & ID_to_find,
 	std::map<mpa::mpint, std::pair<std::string, network::endpoint> > & hosts)
 {
 	//calculate distances of all contacts
-	for(std::list<contact>::iterator iter_cur = Bucket_Active.begin(),
-		iter_end = Bucket_Active.end(); iter_cur != iter_end; ++iter_cur)
+	for(std::list<contact>::iterator it_cur = Bucket_Active.begin(),
+		it_end = Bucket_Active.end(); it_cur != it_end; ++it_cur)
 	{
-		hosts.insert(std::make_pair(kad_func::distance(ID_to_find, iter_cur->remote_ID),
-			std::make_pair(iter_cur->remote_ID, iter_cur->endpoint)));
+		hosts.insert(std::make_pair(kad_func::distance(ID_to_find, it_cur->remote_ID),
+			std::make_pair(it_cur->remote_ID, it_cur->endpoint)));
 	}
 
 	//get rid of all but closest elements
@@ -108,40 +108,40 @@ void bucket::find_node(const std::string & ID_to_find,
 void bucket::ping(std::set<network::endpoint> & hosts)
 {
 	//remove active nodes that timed out
-	for(std::list<contact>::iterator iter_cur = Bucket_Active.begin();
-		iter_cur != Bucket_Active.end();)
+	for(std::list<contact>::iterator it_cur = Bucket_Active.begin();
+		it_cur != Bucket_Active.end();)
 	{
-		if(iter_cur->timed_out()){
-			LOG << "timed out: " << iter_cur->endpoint.IP() << " " << iter_cur->endpoint.port();
-			iter_cur = Bucket_Active.erase(iter_cur);
+		if(it_cur->timed_out()){
+			LOG << "timed out: " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
+			it_cur = Bucket_Active.erase(it_cur);
 		}else{
-			++iter_cur;
+			++it_cur;
 		}
 	}
 
 	//ping active nodes
-	for(std::list<contact>::iterator iter_cur = Bucket_Active.begin(),
-		iter_end = Bucket_Active.end(); iter_cur != iter_end; ++iter_cur)
+	for(std::list<contact>::iterator it_cur = Bucket_Active.begin(),
+		it_end = Bucket_Active.end(); it_cur != it_end; ++it_cur)
 	{
-		if(iter_cur->active_ping()){
-			hosts.insert(iter_cur->endpoint);
+		if(it_cur->active_ping()){
+			hosts.insert(it_cur->endpoint);
 		}
 	}
 
 	//ping reserve to try to move from reserve to active if there is space
 	unsigned needed = protocol_udp::bucket_size - Bucket_Active.size();
-	for(std::list<contact>::iterator iter_cur = Bucket_Reserve.begin();
-		iter_cur != Bucket_Reserve.end() && needed; --needed)
+	for(std::list<contact>::iterator it_cur = Bucket_Reserve.begin();
+		it_cur != Bucket_Reserve.end() && needed; --needed)
 	{
-		if(iter_cur->reserve_ping()){
-			hosts.insert(iter_cur->endpoint);
-			++iter_cur;
+		if(it_cur->reserve_ping()){
+			hosts.insert(it_cur->endpoint);
+			++it_cur;
 		}else{
-			if(iter_cur->timed_out()){
-				LOG << "timed out: " << iter_cur->endpoint.IP() << " " << iter_cur->endpoint.port();
-				iter_cur = Bucket_Reserve.erase(iter_cur);
+			if(it_cur->timed_out()){
+				LOG << "timed out: " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
+				it_cur = Bucket_Reserve.erase(it_cur);
 			}else{
-				++iter_cur;
+				++it_cur;
 			}
 		}
 	}
@@ -151,34 +151,34 @@ void bucket::pong(const std::string & remote_ID,
 	const network::endpoint & endpoint)
 {
 	//if node active then touch it
-	for(std::list<contact>::iterator iter_cur = Bucket_Active.begin(),
-		iter_end = Bucket_Active.end(); iter_cur != iter_end; ++iter_cur)
+	for(std::list<contact>::iterator it_cur = Bucket_Active.begin(),
+		it_end = Bucket_Active.end(); it_cur != it_end; ++it_cur)
 	{
-		if(iter_cur->remote_ID == remote_ID && iter_cur->endpoint == endpoint){
-			iter_cur->touch();
-			LOG << "touch: " << iter_cur->endpoint.IP() << " " << iter_cur->endpoint.port();
+		if(it_cur->remote_ID == remote_ID && it_cur->endpoint == endpoint){
+			it_cur->touch();
+			LOG << "touch: " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
 			return;
-		}else if(iter_cur->endpoint == endpoint){
-			LOG << "node ID changed, from " << iter_cur->remote_ID << " to " << remote_ID;
+		}else if(it_cur->endpoint == endpoint){
+			LOG << "node ID changed, from " << it_cur->remote_ID << " to " << remote_ID;
 			return;
 		}
 	}
 
 	//if node reserved touch it, and move it to active if there's space
-	for(std::list<contact>::iterator iter_cur = Bucket_Reserve.begin(),
-		iter_end = Bucket_Reserve.end(); iter_cur != iter_end; ++iter_cur)
+	for(std::list<contact>::iterator it_cur = Bucket_Reserve.begin(),
+		it_end = Bucket_Reserve.end(); it_cur != it_end; ++it_cur)
 	{
 		//touch if remote_ID not known, or if it's known and didn't change
-		if((iter_cur->remote_ID.empty() || iter_cur->remote_ID == remote_ID)
-			&& iter_cur->endpoint == endpoint)
+		if((it_cur->remote_ID.empty() || it_cur->remote_ID == remote_ID)
+			&& it_cur->endpoint == endpoint)
 		{
 			if(Bucket_Active.size() < protocol_udp::bucket_size){
-				LOG << "reserve -> active: " << iter_cur->endpoint.IP() << " "
-					<< iter_cur->endpoint.port();
-				iter_cur->remote_ID = remote_ID;
-				iter_cur->touch();
-				Bucket_Active.push_front(*iter_cur);
-				Bucket_Reserve.erase(iter_cur);
+				LOG << "reserve -> active: " << it_cur->endpoint.IP() << " "
+					<< it_cur->endpoint.port();
+				it_cur->remote_ID = remote_ID;
+				it_cur->touch();
+				Bucket_Active.push_front(*it_cur);
+				Bucket_Reserve.erase(it_cur);
 			}
 			return;
 		}

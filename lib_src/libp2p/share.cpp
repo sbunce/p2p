@@ -284,12 +284,12 @@ void share::garbage_collect()
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	for(std::map<flyweight_string, boost::shared_ptr<slot> >::iterator
-		iter_cur = Slot.begin(); iter_cur != Slot.end();)
+		it_cur = Slot.begin(); it_cur != Slot.end();)
 	{
-		if(iter_cur->second.unique()){
-			Slot.erase(iter_cur++);
+		if(it_cur->second.unique()){
+			Slot.erase(it_cur++);
 		}else{
-			++iter_cur;
+			++it_cur;
 		}
 	}
 }
@@ -385,12 +385,12 @@ share::slot_iterator share::remove_slot(const std::string & hash)
 void share::remove_unused_slots()
 {
 	std::map<flyweight_string, boost::shared_ptr<slot> >::iterator
-		iter_cur = Slot.begin(), iter_end = Slot.end();
-	while(iter_cur != iter_end){
-		if(iter_cur->second.unique() && iter_cur->second->complete()){
-			Slot.erase(iter_cur++);
+		it_cur = Slot.begin(), it_end = Slot.end();
+	while(it_cur != it_end){
+		if(it_cur->second.unique() && it_cur->second->complete()){
+			Slot.erase(it_cur++);
 		}else{
-			++iter_cur;
+			++it_cur;
 		}
 	}
 }

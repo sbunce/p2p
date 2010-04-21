@@ -49,15 +49,15 @@ void network::select::operator () (std::set<int> & read, std::set<int> & write,
 	fd_set read_FDS, write_FDS;
 	FD_ZERO(&read_FDS);
 	FD_ZERO(&write_FDS);
-	for(std::set<int>::iterator iter_cur = read.begin(), iter_end = read.end();	
-		iter_cur != iter_end; ++iter_cur)
+	for(std::set<int>::iterator it_cur = read.begin(), it_end = read.end();	
+		it_cur != it_end; ++it_cur)
 	{
-		FD_SET(*iter_cur, &read_FDS);
+		FD_SET(*it_cur, &read_FDS);
 	}
-	for(std::set<int>::iterator iter_cur = write.begin(), iter_end = write.end();	
-		iter_cur != iter_end; ++iter_cur)
+	for(std::set<int>::iterator it_cur = write.begin(), it_end = write.end();	
+		it_cur != it_end; ++it_cur)
 	{
-		FD_SET(*iter_cur, &write_FDS);
+		FD_SET(*it_cur, &write_FDS);
 	}
 
 	//timeout
@@ -90,22 +90,22 @@ void network::select::operator () (std::set<int> & read, std::set<int> & write,
 			sp_read->recv(buf);
 		}
 		//remove sockets that don't need attention
-		for(std::set<int>::iterator iter_cur = read.begin(), iter_end = read.end();	
-			iter_cur != iter_end;)
+		for(std::set<int>::iterator it_cur = read.begin(), it_end = read.end();	
+			it_cur != it_end;)
 		{
-			if(!FD_ISSET(*iter_cur, &read_FDS)){
-				read.erase(iter_cur++);
+			if(!FD_ISSET(*it_cur, &read_FDS)){
+				read.erase(it_cur++);
 			}else{
-				++iter_cur;
+				++it_cur;
 			}
 		}
-		for(std::set<int>::iterator iter_cur = write.begin(), iter_end = write.end();	
-			iter_cur != iter_end;)
+		for(std::set<int>::iterator it_cur = write.begin(), it_end = write.end();	
+			it_cur != it_end;)
 		{
-			if(!FD_ISSET(*iter_cur, &write_FDS)){
-				write.erase(iter_cur++);
+			if(!FD_ISSET(*it_cur, &write_FDS)){
+				write.erase(it_cur++);
 			}else{
-				++iter_cur;
+				++it_cur;
 			}
 		}
 	}

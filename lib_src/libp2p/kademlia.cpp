@@ -23,16 +23,16 @@ kademlia::~kademlia()
 void kademlia::ping()
 {
 	std::set<network::endpoint> hosts = Route_Table.ping();
-	for(std::set<network::endpoint>::iterator iter_cur = hosts.begin(),
-		iter_end = hosts.end(); iter_cur != iter_end; ++iter_cur)
+	for(std::set<network::endpoint>::iterator it_cur = hosts.begin(),
+		it_end = hosts.end(); it_cur != it_end; ++it_cur)
 	{
-		LOG << iter_cur->IP() << " " << iter_cur->port();
+		LOG << it_cur->IP() << " " << it_cur->port();
 		network::buffer random(portable_urandom(4));
 		Exchange.send(boost::shared_ptr<message_udp::send::base>(
-			new message_udp::send::ping(random, local_ID)), *iter_cur);
+			new message_udp::send::ping(random, local_ID)), *it_cur);
 		Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
 			new message_udp::recv::pong(boost::bind(&kademlia::recv_pong, this, _1, _2), random)),
-			*iter_cur);
+			*it_cur);
 	}
 }
 

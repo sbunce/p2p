@@ -58,13 +58,13 @@ int main()
 	}
 
 	//test const_iterator
-	share::const_file_iterator iter_cur = share::singleton().begin_file(),
-		iter_end = share::singleton().end_file();
-	if(iter_cur->path != FI_1.path){
+	share::const_file_iterator it_cur = share::singleton().begin_file(),
+		it_end = share::singleton().end_file();
+	if(it_cur->path != FI_1.path){
 		LOG; ++fail;
 	}
-	++iter_cur;
-	if(iter_cur->path != FI_2.path){
+	++it_cur;
+	if(it_cur->path != FI_2.path){
 		LOG; ++fail;
 	}
 	return fail;

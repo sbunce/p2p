@@ -91,11 +91,11 @@ void p2p_real::resume()
 	Share_Scanner.start();
 
 	//hash check resumed downloads
-	for(share::slot_iterator iter_cur = share::singleton().begin_slot(),
-		iter_end = share::singleton().end_slot(); iter_cur != iter_end; ++iter_cur)
+	for(share::slot_iterator it_cur = share::singleton().begin_slot(),
+		it_end = share::singleton().end_slot(); it_cur != it_end; ++it_cur)
 	{
-		if(iter_cur->get_transfer()){
-			iter_cur->get_transfer()->check();
+		if(it_cur->get_transfer()){
+			it_cur->get_transfer()->check();
 		}
 	}
 
@@ -103,10 +103,10 @@ void p2p_real::resume()
 	std::set<std::pair<std::string, std::string> >
 		peers = db::table::join::resume_peers();
 	for(std::set<std::pair<std::string, std::string> >::iterator
-		iter_cur = peers.begin(), iter_end = peers.end(); iter_cur != iter_end;
-		++iter_cur)
+		it_cur = peers.begin(), it_end = peers.end(); it_cur != it_end;
+		++it_cur)
 	{
-		Connection_Manager.Proactor.connect(iter_cur->first, iter_cur->second);
+		Connection_Manager.Proactor.connect(it_cur->first, it_cur->second);
 	}
 
 	//bring up networking
@@ -146,20 +146,20 @@ void p2p_real::remove_download(const std::string & hash)
 void p2p_real::transfers(std::vector<p2p::transfer> & T)
 {
 	T.clear();
-	for(share::slot_iterator iter_cur = share::singleton().begin_slot(),
-		iter_end = share::singleton().end_slot(); iter_cur != iter_end; ++iter_cur)
+	for(share::slot_iterator it_cur = share::singleton().begin_slot(),
+		it_end = share::singleton().end_slot(); it_cur != it_end; ++it_cur)
 	{
-		iter_cur->touch();
+		it_cur->touch();
 
 		p2p::transfer transfer;
-		transfer.hash = iter_cur->hash();
-		transfer.name = iter_cur->name();
-		transfer.file_size = iter_cur->file_size();
-		transfer.percent_complete = iter_cur->percent_complete();
-		transfer.download_peers = iter_cur->download_peers();
-		transfer.download_speed = iter_cur->download_speed();
-		transfer.upload_peers = iter_cur->upload_peers();
-		transfer.upload_speed = iter_cur->upload_speed();
+		transfer.hash = it_cur->hash();
+		transfer.name = it_cur->name();
+		transfer.file_size = it_cur->file_size();
+		transfer.percent_complete = it_cur->percent_complete();
+		transfer.download_peers = it_cur->download_peers();
+		transfer.download_speed = it_cur->download_speed();
+		transfer.upload_peers = it_cur->upload_peers();
+		transfer.upload_speed = it_cur->upload_speed();
 		T.push_back(transfer);
 	}
 }
