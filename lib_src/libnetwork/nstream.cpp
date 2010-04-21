@@ -49,7 +49,6 @@ bool network::nstream::is_open_async()
 		if(opt_val == 0){
 			return true;
 		}else{
-			LOG << strerror(errno);
 			return false;
 		}
 	}else{

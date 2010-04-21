@@ -79,8 +79,6 @@ void bucket::add_reserve(const std::string remote_ID,
 	{
 		if(it_cur->remote_ID == remote_ID && it_cur->endpoint == endpoint){
 			it_cur->touch();
-			LOG << "touch: " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port()
-				<< it_cur->remote_ID;
 			return;
 		}else if(it_cur->endpoint == endpoint){
 			LOG << "ID change " << it_cur->remote_ID << " " << remote_ID;
@@ -174,7 +172,6 @@ void bucket::pong(const std::string & remote_ID,
 	{
 		if(it_cur->remote_ID == remote_ID && it_cur->endpoint == endpoint){
 			it_cur->touch();
-			LOG << "touch: " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
 			return;
 		}else if(it_cur->endpoint == endpoint){
 			LOG << "ID change " << it_cur->remote_ID << " " << remote_ID;

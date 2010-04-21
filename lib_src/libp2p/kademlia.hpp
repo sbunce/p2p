@@ -25,13 +25,13 @@ private:
 	route_table Route_Table;
 
 	/*
-	ping:
-		Pings hosts which are about to timeout.
 	main_loop:
 		Loop to handle timed events and network recv.
+	send_ping:
+		Pings hosts which are about to timeout.
 	*/
-	void ping();
 	void main_loop();
+	void send_ping();
 
 	/* Receive Functions
 	Called when message received. Function named after message type it handles.
