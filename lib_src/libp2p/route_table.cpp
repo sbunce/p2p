@@ -37,13 +37,16 @@ std::list<std::pair<network::endpoint, unsigned char> > route_table::find_node(
 	return hosts_final;
 }
 
-std::set<network::endpoint> route_table::ping()
+boost::optional<network::endpoint> route_table::ping()
 {
-	std::set<network::endpoint> hosts;
+	boost::optional<network::endpoint> endpoint;
 	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
-		Bucket[x].ping(hosts);
+		endpoint = Bucket[x].ping();
+		if(endpoint){
+			return endpoint;
+		}
 	}
-	return hosts;
+	return boost::optional<network::endpoint>();
 }
 
 void route_table::pong(const std::string & remote_ID,

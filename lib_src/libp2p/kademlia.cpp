@@ -3,6 +3,8 @@
 kademlia::kademlia():
 	local_ID(db::table::prefs::get_ID())
 {
+	assert(protocol_udp::timeout >= protocol_udp::bucket_count * protocol_udp::bucket_size);
+
 	//messages to expect anytime
 	Exchange.expect_anytime(boost::shared_ptr<message_udp::recv::base>(
 		new message_udp::recv::ping(boost::bind(&kademlia::recv_ping, this, _1, _2, _3))));
@@ -22,17 +24,15 @@ kademlia::~kademlia()
 
 void kademlia::ping()
 {
-	std::set<network::endpoint> hosts = Route_Table.ping();
-	for(std::set<network::endpoint>::iterator it_cur = hosts.begin(),
-		it_end = hosts.end(); it_cur != it_end; ++it_cur)
-	{
-		LOG << it_cur->IP() << " " << it_cur->port();
+	boost::optional<network::endpoint> endpoint = Route_Table.ping();
+	if(endpoint){
+		LOG << endpoint->IP() << " " << endpoint->port();
 		network::buffer random(portable_urandom(4));
 		Exchange.send(boost::shared_ptr<message_udp::send::base>(
-			new message_udp::send::ping(random, local_ID)), *it_cur);
+			new message_udp::send::ping(random, local_ID)), *endpoint);
 		Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
 			new message_udp::recv::pong(boost::bind(&kademlia::recv_pong, this, _1, _2), random)),
-			*it_cur);
+			*endpoint);
 	}
 }
 

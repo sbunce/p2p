@@ -6,6 +6,7 @@
 #include "protocol_udp.hpp"
 
 //include
+#include <boost/optional.hpp>
 #include <mpa.hpp>
 #include <network/network.hpp>
 
@@ -28,7 +29,7 @@ public:
 		such that it is no larger than protocol_udp::bucket_size.
 		std::map<distance, std::pair<remote_ID, endpoint> >
 	ping:
-		Returns a set of endpoints which need to be pinged.
+		Returns a endpoint which needs to be pinged.
 	pong:
 		Called when pong received. Updates last_seen time of a contact. If the
 		contact is in reserve it will be moved to active if there is enough space.
@@ -36,7 +37,7 @@ public:
 	void add_reserve(const std::string remote_ID, const network::endpoint & endpoint);
 	void find_node(const std::string & ID_to_find,
 		std::map<mpa::mpint, std::pair<std::string, network::endpoint> > & hosts);
-	void ping(std::set<network::endpoint> & hosts);
+	boost::optional<network::endpoint> ping();
 	void pong(const std::string & remote_ID, const network::endpoint & endpoint);
 
 private:

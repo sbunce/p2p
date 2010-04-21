@@ -8,8 +8,8 @@ namespace protocol_udp
 {
 //kademlia
 const unsigned bucket_count = SHA1::bin_size * 8;
-const unsigned bucket_size = 16;
-const unsigned timeout = 3600;
+const unsigned bucket_size = 24;
+const unsigned timeout = bucket_count * bucket_size;
 
 //commands and message sizes
 const unsigned char ping = 0;

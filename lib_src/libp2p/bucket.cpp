@@ -26,6 +26,12 @@ bucket::contact::contact(const contact & C):
 bool bucket::contact::active_ping()
 {
 	if(!ping_sent && std::time(NULL) - last_seen > protocol_udp::timeout - ping_timeout){
+		/*
+		We may get to pinging a contact long after it times out if multiple
+		contacts get bunched up. We set the last_seen time such that we give the
+		ping <ping_timeout> seconds to timeout.
+		*/
+		last_seen = std::time(NULL) - (protocol_udp::timeout - ping_timeout);
 		ping_sent = true;
 		return true;
 	}
@@ -34,9 +40,14 @@ bool bucket::contact::active_ping()
 
 bool bucket::contact::reserve_ping()
 {
+	//we don't care how long a contact has been in reserve
 	if(!ping_sent){
-		ping_sent = true;
+		/*
+		Pretend to be idle for <ping_timeout seconds> less than protocol_udp::timeout
+		so we can use the same function to check for active and reserve timeouts.
+		*/
 		last_seen = std::time(NULL) - (protocol_udp::timeout - ping_timeout);
+		ping_sent = true;
 		return true;
 	}
 	return false;
@@ -44,6 +55,11 @@ bool bucket::contact::reserve_ping()
 
 bool bucket::contact::timed_out()
 {
+	/*
+	Do not time out connection until we've sent a ping. If multiple pings come
+	at the same time some may be delayed past the normal timeout to spread out
+	pings.
+	*/
 	return ping_sent && std::time(NULL) - last_seen > ping_timeout;
 }
 
@@ -67,7 +83,7 @@ void bucket::add_reserve(const std::string remote_ID,
 				<< it_cur->remote_ID;
 			return;
 		}else if(it_cur->endpoint == endpoint){
-			LOG << "node ID changed, from " << it_cur->remote_ID << " to " << remote_ID;
+			LOG << "ID change " << it_cur->remote_ID << " " << remote_ID;
 			return;
 		}
 	}
@@ -81,7 +97,7 @@ void bucket::add_reserve(const std::string remote_ID,
 			return;
 		}
 	}
-	LOG << "add reserve: " << endpoint.IP() << " " << endpoint.port() << " " << remote_ID;
+	LOG << "reserve: " << endpoint.IP() << " " << endpoint.port() << " " << remote_ID;
 	Bucket_Reserve.push_back(contact(remote_ID, endpoint));
 }
 
@@ -105,7 +121,7 @@ void bucket::find_node(const std::string & ID_to_find,
 	}
 }
 
-void bucket::ping(std::set<network::endpoint> & hosts)
+boost::optional<network::endpoint> bucket::ping()
 {
 	//remove active nodes that timed out
 	for(std::list<contact>::iterator it_cur = Bucket_Active.begin();
@@ -124,7 +140,7 @@ void bucket::ping(std::set<network::endpoint> & hosts)
 		it_end = Bucket_Active.end(); it_cur != it_end; ++it_cur)
 	{
 		if(it_cur->active_ping()){
-			hosts.insert(it_cur->endpoint);
+			return boost::optional<network::endpoint>(it_cur->endpoint);
 		}
 	}
 
@@ -134,9 +150,9 @@ void bucket::ping(std::set<network::endpoint> & hosts)
 		it_cur != Bucket_Reserve.end() && needed; --needed)
 	{
 		if(it_cur->reserve_ping()){
-			hosts.insert(it_cur->endpoint);
-			++it_cur;
+			return boost::optional<network::endpoint>(it_cur->endpoint);
 		}else{
+			//reserve contact won't timeout unless it was pinged
 			if(it_cur->timed_out()){
 				LOG << "timed out: " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
 				it_cur = Bucket_Reserve.erase(it_cur);
@@ -145,6 +161,8 @@ void bucket::ping(std::set<network::endpoint> & hosts)
 			}
 		}
 	}
+
+	return boost::optional<network::endpoint>();
 }
 
 void bucket::pong(const std::string & remote_ID,
@@ -159,7 +177,7 @@ void bucket::pong(const std::string & remote_ID,
 			LOG << "touch: " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
 			return;
 		}else if(it_cur->endpoint == endpoint){
-			LOG << "node ID changed, from " << it_cur->remote_ID << " to " << remote_ID;
+			LOG << "ID change " << it_cur->remote_ID << " " << remote_ID;
 			return;
 		}
 	}

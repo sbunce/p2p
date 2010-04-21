@@ -17,14 +17,14 @@ public:
 		Returns nodes closest to ID_to_find. The returned list is suitable to pass
 		to the message_udp::send::host_list ctor.
 	ping:
-		Returns set of endpoints to ping.
+		Returns endpoint to ping.
 	pong:
 		See bucket::pong for documentation.
 	*/
 	void add_reserve(const std::string & remote_ID, const network::endpoint & endpoint);
 	std::list<std::pair<network::endpoint, unsigned char> > find_node(
 		const std::string & remote_ID, const std::string & ID_to_find);
-	std::set<network::endpoint> ping();
+	boost::optional<network::endpoint> ping();
 	void pong(const std::string & remote_ID, const network::endpoint & endpoint);
 
 private:
