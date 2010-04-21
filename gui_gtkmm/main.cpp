@@ -3,26 +3,31 @@
 
 //include
 #include <boost/shared_ptr.hpp>
+#include <boost/thread.hpp>
 #include <CLI_args.hpp>
 #include <gtkmm.h>
 
 //std
 #include <csignal>
 
-Gtk::Main * Main_ptr;
+boost::shared_ptr<Gtk::Main> gui_main;
+boost::once_flag once_flag = BOOST_ONCE_INIT;
+
+void quit_prog()
+{
+	gui_main->quit();
+}
 
 void signal_handler(int sig)
 {
 	signal(sig, signal_handler);
-	Main_ptr->quit();
+	boost::call_once(once_flag, &quit_prog);
 }
 
 int main(int argc, char ** argv)
 {
 	CLI_args CLI_Args(argc, argv);
-
-	Gtk::Main Main(argc, argv);
-	Main_ptr = &Main;
+	gui_main = boost::shared_ptr<Gtk::Main>(new Gtk::Main(argc, argv));
 
 	//register signal handlers
 	signal(SIGINT, signal_handler);
@@ -36,5 +41,5 @@ int main(int argc, char ** argv)
 	}
 
 	gui GUI;
-	Main.run(GUI);
+	gui_main->run(GUI);
 }
