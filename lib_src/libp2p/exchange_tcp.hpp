@@ -43,6 +43,9 @@ public:
 	void expect_response(boost::shared_ptr<message_tcp::recv::base> M);
 	void expect_anytime(boost::shared_ptr<message_tcp::recv::base> M);
 	void expect_anytime_erase(boost::shared_ptr<message_tcp::send::base> M);
+
+//DEBUG, will need optional call back to say when message finished sending
+//This will be used to enforce pipeline limit.
 	void send(boost::shared_ptr<message_tcp::send::base> M);
 
 private:
@@ -76,6 +79,9 @@ private:
 	update the speed_calculator. The shared_ptr is empty if there is no
 	shared_ptr to update.
 	*/
+
+//DEBUG, make a send_speel_element class
+//members remaining_bytes, speed_calculator, call_back
 	std::list<std::pair<unsigned, boost::shared_ptr<network::speed_calculator> > > Send_Speed;
 
 	//state of blacklist (used as hint to see if we need to check)

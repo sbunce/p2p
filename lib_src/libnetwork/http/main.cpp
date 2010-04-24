@@ -30,6 +30,12 @@ int main(int argc, char ** argv)
 	//register signal handlers
 	signal(SIGINT, signal_handler);
 
+	if(argc != 2){
+		std::cout << "incorrect parameter count\n";
+		std::cout << "usage: " << argv[0] << " <path to web root>\n";
+		exit(1);
+	}
+
 	http HTTP(argv[1], "8080");
 	LOG << "listen on " << HTTP.port();
 

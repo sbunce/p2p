@@ -70,7 +70,6 @@ def setup(env):
 	boost.library_path(env)
 
 	#libraries to link
-	system_libraries(env)
 	env['LIBS'].append('p2p')
 	env['LIBS'].append('network')
 	env['LIBS'].append('tommath')
@@ -79,6 +78,7 @@ def setup(env):
 	env['LIBS'].append(boost.library('boost_filesystem'))
 	env['LIBS'].append(boost.library('boost_regex'))
 	env['LIBS'].append(boost.library('boost_thread'))
+	system_libraries(env)
 
 	#compile flags
 	compile_flags(env)
