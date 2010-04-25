@@ -53,8 +53,11 @@ private:
 	std::map<unsigned char, boost::shared_ptr<slot> > Incoming_Slot;
 	std::map<unsigned char, boost::shared_ptr<slot> > Outgoing_Slot;
 
-	//current pipeline size (unfulfilled requests)
-	unsigned pipeline_size;
+	//unfulfilled block requests we have made
+	unsigned outgoing_pipeline_size;
+
+	//unfulfilled block requests remote host has made
+	unsigned incoming_pipeline_size;
 
 	/*
 	When making requests for blocks we loop through slots. This keeps track of
@@ -110,5 +113,11 @@ private:
 	bool recv_slot(const unsigned char slot_num, const boost::uint64_t file_size,
 		const std::string & root_hash, bit_field & tree_BF, bit_field & file_BF,
 		const std::string hash);
+
+	/* Send Functions (called after message sent)
+	sent_block:
+		Called when we finish sending a block.
+	*/
+	void sent_block();
 };
 #endif

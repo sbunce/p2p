@@ -23,7 +23,7 @@ public:
 
 	/*
 	empty:
-		Returns true if no slots are open and not slots need to be opened.
+		Returns true if no slots are open and no slots need to be opened.
 	remove:
 		Close and remove all outgoing slots with the specified hash.
 	tick:

@@ -137,7 +137,8 @@ bool exchange_tcp::recv_rB(const network::buffer & buf, network::connection_info
 	return true;
 }
 
-void exchange_tcp::send(boost::shared_ptr<message_tcp::send::base> M)
+void exchange_tcp::send(boost::shared_ptr<message_tcp::send::base> M,
+	boost::function<void ()> func)
 {
 	assert(M);
 	assert(!M->buf.empty());
@@ -147,11 +148,11 @@ void exchange_tcp::send(boost::shared_ptr<message_tcp::send::base> M)
 	}else if(Encryption.ready() && M->encrypt()){
 		//send encrypted message
 		Encryption.crypt_send(M->buf);
-		Send_Speed.push_back(std::make_pair(M->buf.size(), M->Upload_Speed));
+		Send_Speed.push_back(send_speed_element(M->buf.size(), M->Upload_Speed, func));
 		Proactor.send(connection_ID, M->buf);
 	}else if(!M->encrypt()){
 		//sent unencrypted message
-		Send_Speed.push_back(std::make_pair(M->buf.size(), M->Upload_Speed));
+		Send_Speed.push_back(send_speed_element(M->buf.size(), M->Upload_Speed, func));
 		Proactor.send(connection_ID, M->buf);
 	}
 }
@@ -172,17 +173,20 @@ void exchange_tcp::send_call_back(network::connection_info & CI)
 	unsigned latest_send = CI.latest_send;
 	while(latest_send){
 		assert(!Send_Speed.empty());
-		if(latest_send >= Send_Speed.front().first){
-			if(Send_Speed.front().second){
-				Send_Speed.front().second->add(Send_Speed.front().first);
+		if(latest_send >= Send_Speed.front().remaining_bytes){
+			if(Send_Speed.front().Speed_Calculator){
+				Send_Speed.front().Speed_Calculator->add(Send_Speed.front().remaining_bytes);
 			}
-			latest_send -= Send_Speed.front().first;
+			latest_send -= Send_Speed.front().remaining_bytes;
+			if(Send_Speed.front().call_back){
+				Send_Speed.front().call_back();
+			}
 			Send_Speed.pop_front();
 		}else{
-			if(Send_Speed.front().second){
-				Send_Speed.front().second->add(latest_send);
+			if(Send_Speed.front().Speed_Calculator){
+				Send_Speed.front().Speed_Calculator->add(latest_send);
 			}
-			Send_Speed.front().first -= latest_send;
+			Send_Speed.front().remaining_bytes -= latest_send;
 			break;
 		}
 	}

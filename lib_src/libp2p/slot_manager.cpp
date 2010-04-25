@@ -6,7 +6,8 @@ slot_manager::slot_manager(
 ):
 	Exchange(Exchange_in),
 	trigger_tick(trigger_tick_in),
-	pipeline_size(0),
+	outgoing_pipeline_size(0),
+	incoming_pipeline_size(0),
 	open_slots(0),
 	latest_slot(0)
 {
@@ -84,7 +85,7 @@ bool slot_manager::recv_close_slot(const unsigned char slot_num)
 bool slot_manager::recv_file_block(const network::buffer & block,
 	const unsigned char slot_num, const boost::uint64_t block_num)
 {
-	--pipeline_size;
+	--outgoing_pipeline_size;
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter = Outgoing_Slot.find(slot_num);
 	if(iter != Outgoing_Slot.end()){
@@ -140,7 +141,7 @@ bool slot_manager::recv_have_hash_tree_block(const unsigned char slot_num,
 bool slot_manager::recv_hash_tree_block(const network::buffer & block,
 	const unsigned char slot_num, const boost::uint64_t block_num)
 {
-	--pipeline_size;
+	--outgoing_pipeline_size;
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter = Outgoing_Slot.find(slot_num);
 	if(iter != Outgoing_Slot.end()){
@@ -182,6 +183,10 @@ bool slot_manager::recv_request_block_failed(const unsigned char slot_num)
 bool slot_manager::recv_request_hash_tree_block(const unsigned char slot_num,
 	const boost::uint64_t block_num)
 {
+	if(incoming_pipeline_size >= protocol_tcp::max_block_pipeline){
+		LOG << "overpipelined";
+		return false;
+	}
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter = Incoming_Slot.find(slot_num);
 	if(iter == Incoming_Slot.end()){
@@ -192,7 +197,8 @@ bool slot_manager::recv_request_hash_tree_block(const unsigned char slot_num,
 		transfer::status status = iter->second->get_transfer()->read_tree_block(
 			M_request, block_num);
 		if(status == transfer::good){
-			Exchange.send(M_request);
+			++incoming_pipeline_size;
+			Exchange.send(M_request, boost::bind(&slot_manager::sent_block, this));
 			return true;
 		}else if(status == transfer::bad){
 			LOG << "error reading tree block";
@@ -213,6 +219,10 @@ bool slot_manager::recv_request_hash_tree_block(const unsigned char slot_num,
 bool slot_manager::recv_request_file_block(const unsigned char slot_num,
 	const boost::uint64_t block_num)
 {
+	if(incoming_pipeline_size >= protocol_tcp::max_block_pipeline){
+		LOG << "overpipelined";
+		return false;
+	}
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter = Incoming_Slot.find(slot_num);
 	if(iter == Incoming_Slot.end()){
@@ -223,7 +233,8 @@ bool slot_manager::recv_request_file_block(const unsigned char slot_num,
 		transfer::status status = iter->second->get_transfer()->read_file_block(
 			M_request, block_num);
 		if(status == transfer::good){
-			Exchange.send(M_request);
+			++incoming_pipeline_size;
+			Exchange.send(M_request, boost::bind(&slot_manager::sent_block, this));
 			return true;
 		}else if(status == transfer::bad){
 			LOG << "error reading file block";
@@ -468,14 +479,14 @@ void slot_manager::send_block_requests()
 	unsigned char start_slot = it_cur->first;
 	bool serviced_one = false;
 
-	while(pipeline_size <= protocol_tcp::max_block_pipeline){
+	while(outgoing_pipeline_size < protocol_tcp::max_block_pipeline){
 		if(it_cur->second->get_transfer()){
 			boost::uint64_t block_num;
 			unsigned block_size;
 			if(it_cur->second->get_transfer()->next_request_tree(
 				Exchange.connection_ID, block_num, block_size))
 			{
-				++pipeline_size;
+				++outgoing_pipeline_size;
 				serviced_one = true;
 				latest_slot = it_cur->first;
 				Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::request_hash_tree_block(
@@ -490,7 +501,7 @@ void slot_manager::send_block_requests()
 			}else if(it_cur->second->get_transfer()->next_request_file(
 				Exchange.connection_ID, block_num, block_size))
 			{
-				++pipeline_size;
+				++outgoing_pipeline_size;
 				serviced_one = true;
 				latest_slot = it_cur->first;
 				Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::request_file_block(
@@ -566,6 +577,12 @@ void slot_manager::send_slot_requests()
 			boost::bind(&slot_manager::recv_request_slot_failed, this))));
 		Exchange.expect_response(M_composite);
 	}
+}
+
+void slot_manager::sent_block()
+{
+	--incoming_pipeline_size;
+	assert(incoming_pipeline_size < protocol_tcp::max_block_pipeline);
 }
 
 void slot_manager::tick()
