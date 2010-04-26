@@ -8,7 +8,7 @@
 namespace settings
 {
 //default settings, may be changed at runtime
-const unsigned MAX_CONNECTIONS = 1024;
+const unsigned MAX_CONNECTIONS = 1000;
 const unsigned MAX_DOWNLOAD_RATE = 0; //no limit
 const unsigned MAX_UPLOAD_RATE = 0;   //no limit
 
