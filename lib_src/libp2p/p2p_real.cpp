@@ -32,8 +32,9 @@ unsigned p2p_real::max_connections()
 
 void p2p_real::max_connections(unsigned connections)
 {
-//DEBUG, add support for this
-	//Proactor.max_connections(connections / 2, connections / 2);
+	//save extra 24 file descriptors for DB and misc other stuff
+	assert(connections <= 1000);
+	Connection_Manager.Proactor.set_connection_limit(connections / 2, connections / 2);
 	db::table::prefs::set_max_connections(connections);
 }
 
@@ -67,6 +68,7 @@ void p2p_real::resume()
 	boost::this_thread::yield();
 
 	//set prefs with proactor
+	max_connections(db::table::prefs::get_max_connections());
 	max_download_rate(db::table::prefs::get_max_download_rate());
 	max_upload_rate(db::table::prefs::get_max_upload_rate());
 
@@ -150,7 +152,6 @@ void p2p_real::transfers(std::vector<p2p::transfer> & T)
 		it_end = share::singleton().end_slot(); it_cur != it_end; ++it_cur)
 	{
 		it_cur->touch();
-
 		p2p::transfer transfer;
 		transfer.hash = it_cur->hash();
 		transfer.name = it_cur->name();

@@ -52,6 +52,8 @@ public:
 		Returns download rate averaged over a few seconds (B/s).
 	listen_port:
 		Returns port listening on (empty if not listening).
+	max_connections:
+		Get or set maximum allowed connections (B/s).
 	max_download_rate:
 		Get or set maximum download rate (B/s).
 	max_upload_rate:
@@ -73,7 +75,18 @@ public:
 	void send(const int connection_ID, buffer & send_buf);
 	unsigned upload_rate();
 
-	/*
+	/* Get Options
+
+	*/
+
+	/* Set Options
+	set_connection_limit:
+		Set connection limit for incoming and outgoing connections.
+		Note: incoming_limit + outgoing_limit <= 1024.
+	*/
+	void set_connection_limit(const unsigned incoming_limit, const unsigned outgoing_limit);
+
+	/* Stop/Start
 	start:
 		Starts the proactor. Optionally specify a local endpoint to start a
 		listener. Returns false if failed to start listener.
@@ -202,12 +215,18 @@ private:
 	std::set<int> read_FDS, write_FDS;                    //sets to monitor with select
 	std::map<int, boost::shared_ptr<connection> > Socket; //socket_FD associated with connection
 	std::map<int, boost::shared_ptr<connection> > ID;     //connection_ID associated with connection
+	unsigned incoming_connection_limit;                   //maximum allowed incoming connections
+	unsigned outgoing_connection_limit;                   //maximum allowed outgoing connections
+	unsigned incoming_connections;                        //current incoming connections
+	unsigned outgoing_connections;                        //current outgoing connections
 
 	//function proxy, function calls for network_thread to make
 	boost::mutex network_thread_call_mutex;
 	std::deque<boost::function<void ()> > network_thread_call;
 
 	/*
+	adjust_connection_limits:
+		Called via network_thread_call proxy to adjust connection limits.
 	add_socket:
 		Add socket to be monitored.
 		Note: P.first must be socket_FD.
@@ -237,6 +256,8 @@ private:
 	remote_socket:
 		Removes connection that corresponds to socket_FD.
 	*/
+	void adjust_connection_limits(const unsigned incoming_limit,
+		const unsigned outgoing_limit);
 	void add_socket(std::pair<int, boost::shared_ptr<connection> > P);
 	void append_send_buf(const int connection_ID, boost::shared_ptr<buffer> B);
 	void check_timeouts();
@@ -249,9 +270,14 @@ private:
 	void remove_socket(const int socket_FD);
 
 	/*
-	Called by Thread_Pool. Resolves host and starts async connect.
-	Note: Threads run here. Be careful of data shared with network_thread.
+	When connect() is called a call to resolve relay is done with the
+	network_thread_call proxy. This is done so the network thread can evaluate
+	connection limits before starting the connection. If the connection can be
+	made then a job is scheduled with the thread pool to do resolution.
+	Note: Thread pool threads run in the resolve() function. Be careful about
+		shared state.
 	*/
+	void resolve_relay(const std::string host, const std::string port);
 	void resolve(const std::string & host, const std::string & port);
 };
 }//end namespace network

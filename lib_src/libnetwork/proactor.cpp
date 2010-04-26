@@ -136,7 +136,11 @@ network::proactor::proactor(
 	const boost::function<void (connection_info &)> & connect_call_back,
 	const boost::function<void (connection_info &)> & disconnect_call_back
 ):
-	Dispatcher(connect_call_back, disconnect_call_back)
+	Dispatcher(connect_call_back, disconnect_call_back),
+	incoming_connection_limit(FD_SETSIZE / 2),
+	outgoing_connection_limit(FD_SETSIZE / 2),
+	incoming_connections(0),
+	outgoing_connections(0)
 {
 
 }
@@ -162,6 +166,55 @@ void network::proactor::add_socket(std::pair<int, boost::shared_ptr<connection> 
 	}else{
 		//the listen socket doesn't have connection associated with it
 		read_FDS.insert(P.first);
+	}
+}
+
+void network::proactor::adjust_connection_limits(const unsigned incoming_limit,
+	const unsigned outgoing_limit)
+{
+	incoming_connection_limit = incoming_limit;
+	outgoing_connection_limit = outgoing_limit;
+
+	//determine if any incoming need to be disconnected
+	if(incoming_connections > incoming_connection_limit){
+		//disconnect random sockets until limit met
+		std::vector<int> incoming_socket;
+		for(std::map<int, boost::shared_ptr<connection> >::iterator it_cur = Socket.begin(),
+			it_end = Socket.end(); it_cur != it_end; ++it_cur)
+		{
+			if(it_cur->second->CI->direction == incoming){
+				incoming_socket.push_back(it_cur->first);
+			}
+		}
+		assert(incoming_socket.size() == incoming_connections);
+		std::random_shuffle(incoming_socket.begin(), incoming_socket.end());
+		while(incoming_socket.size() > incoming_limit){
+			std::pair<int, boost::shared_ptr<connection> > P = lookup_socket(incoming_socket.back());
+			Dispatcher.disconnect(P.second->CI);
+			remove_socket(incoming_socket.back());
+			incoming_socket.pop_back();
+		}
+	}
+
+	//determine if any outgoing need to be disconnected
+	if(outgoing_connections > outgoing_connection_limit){
+		//disconnect random sockets until limit met
+		std::vector<int> outgoing_socket;
+		for(std::map<int, boost::shared_ptr<connection> >::iterator it_cur = Socket.begin(),
+			it_end = Socket.end(); it_cur != it_end; ++it_cur)
+		{
+			if(it_cur->second->CI->direction == outgoing){
+				outgoing_socket.push_back(it_cur->first);
+			}
+		}
+		assert(outgoing_socket.size() == outgoing_connections);
+		std::random_shuffle(outgoing_socket.begin(), outgoing_socket.end());
+		while(outgoing_socket.size() > outgoing_limit){
+			std::pair<int, boost::shared_ptr<connection> > P = lookup_socket(outgoing_socket.back());
+			Dispatcher.disconnect(P.second->CI);
+			remove_socket(outgoing_socket.back());
+			outgoing_socket.pop_back();
+		}
 	}
 }
 
@@ -203,7 +256,9 @@ void network::proactor::check_timeouts()
 
 void network::proactor::connect(const std::string & host, const std::string & port)
 {
-	Thread_Pool.enqueue(boost::bind(&proactor::resolve, this, host, port));
+	boost::mutex::scoped_lock lock(network_thread_call_mutex);
+	network_thread_call.push_back(boost::bind(&proactor::resolve_relay, this,
+		host, port));
 }
 
 void network::proactor::disconnect(const int connection_ID)
@@ -352,8 +407,14 @@ void network::proactor::network_loop()
 			while(boost::shared_ptr<nstream> N = Listener.accept()){
 				std::pair<int, boost::shared_ptr<connection> > P(N->socket(),
 					boost::shared_ptr<connection>(new connection(ID_Manager, N)));
-				add_socket(P);
-				Dispatcher.connect(P.second->CI);
+				if(incoming_connections < incoming_connection_limit){
+					++incoming_connections;
+					add_socket(P);
+					Dispatcher.connect(P.second->CI);
+				}else{
+					N->close();
+					Dispatcher.disconnect(P.second->CI);
+				}
 			}
 			tmp_read_FDS.erase(Listener.socket());
 		}
@@ -441,8 +502,32 @@ void network::proactor::remove_socket(const int socket_FD)
 	write_FDS.erase(socket_FD);
 	std::pair<int, boost::shared_ptr<connection> > P = lookup_socket(socket_FD);
 	if(P.second){
+		if(P.second->CI->direction == incoming){
+			--incoming_connections;
+		}else{
+			--outgoing_connections;
+		}
 		Socket.erase(socket_FD);
 		ID.erase(P.second->connection_ID);
+	}
+}
+
+void network::proactor::resolve_relay(const std::string host, const std::string port)
+{
+	if(outgoing_connections < outgoing_connection_limit){
+		++outgoing_connections;
+		Thread_Pool.enqueue(boost::bind(&proactor::resolve, this, host, port));
+	}else{
+		//connection limit reached
+		boost::shared_ptr<connection_info> CI(new connection_info(
+			ID_Manager.allocate(),
+			host,
+			"",
+			port,
+			outgoing
+		));
+		ID_Manager.deallocate(CI->connection_ID);
+		Dispatcher.disconnect(CI);
 	}
 }
 
@@ -473,6 +558,15 @@ void network::proactor::send(const int connection_ID, buffer & send_buf)
 			connection_ID, buf));
 		Select.interrupt();
 	}
+}
+
+void network::proactor::set_connection_limit(const unsigned incoming_limit,
+	const unsigned outgoing_limit)
+{
+	assert(incoming_limit + outgoing_limit <= FD_SETSIZE);
+	boost::mutex::scoped_lock lock(network_thread_call_mutex);
+	network_thread_call.push_back(boost::bind(&proactor::adjust_connection_limits,
+		this, incoming_limit, outgoing_limit));
 }
 
 bool network::proactor::start()
