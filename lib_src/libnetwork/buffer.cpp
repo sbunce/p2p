@@ -2,7 +2,7 @@
 
 //BEGIN iterator
 network::buffer::iterator::iterator(
-	const int pos_in,
+	const unsigned pos_in,
 	unsigned char * buf_in
 ):
 	pos(pos_in),
@@ -47,7 +47,7 @@ network::buffer::iterator & network::buffer::iterator::operator ++ ()
 
 network::buffer::iterator network::buffer::iterator::operator ++ (int)
 {
-	int pos_tmp = pos;
+	unsigned pos_tmp = pos;
 	++pos;
 	return iterator(pos_tmp, buf);
 }
@@ -60,12 +60,12 @@ network::buffer::iterator & network::buffer::iterator::operator -- ()
 
 network::buffer::iterator network::buffer::iterator::operator -- (int)
 {
-	int pos_tmp = pos;
+	unsigned pos_tmp = pos;
 	--pos;
 	return iterator(pos_tmp, buf);
 }
 
-network::buffer::iterator network::buffer::iterator::operator + (const int rval)
+network::buffer::iterator network::buffer::iterator::operator + (const unsigned rval)
 {
 	return iterator(pos + rval, buf);
 }
@@ -75,7 +75,7 @@ network::buffer::iterator network::buffer::iterator::operator + (const iterator 
 	return iterator(pos + rval.pos, buf);
 }
 
-network::buffer::iterator network::buffer::iterator::operator - (const int rval)
+network::buffer::iterator network::buffer::iterator::operator - (const unsigned rval)
 {
 	return iterator(pos - rval, buf);
 }
@@ -85,7 +85,7 @@ ptrdiff_t network::buffer::iterator::operator - (const iterator & rval)
 	return pos - rval.pos;
 }
 
-network::buffer::iterator & network::buffer::iterator::operator += (const int rval)
+network::buffer::iterator & network::buffer::iterator::operator += (const unsigned rval)
 {
 	pos += rval;
 	return *this;
@@ -97,7 +97,7 @@ network::buffer::iterator & network::buffer::iterator::operator += (const iterat
 	return *this;
 }
 
-network::buffer::iterator & network::buffer::iterator::operator -= (const int rval)
+network::buffer::iterator & network::buffer::iterator::operator -= (const unsigned rval)
 {
 	pos -= rval;
 	return *this;
@@ -109,7 +109,7 @@ network::buffer::iterator & network::buffer::iterator::operator -= (const iterat
 	return *this;
 }
 
-unsigned char & network::buffer::iterator::operator [] (const int idx)
+unsigned char & network::buffer::iterator::operator [] (const unsigned idx)
 {
 	return buf[pos + idx];
 }
@@ -146,7 +146,7 @@ network::buffer::buffer(const std::string & S)
 	append(S);
 }
 
-network::buffer::buffer(const unsigned char * buf_append, const int size)
+network::buffer::buffer(const unsigned char * buf_append, const unsigned size)
 {
 	ctor_initialize();
 	append(buf_append, size);
@@ -172,7 +172,7 @@ network::buffer & network::buffer::append(const unsigned char ch)
 	return *this;
 }
 
-network::buffer & network::buffer::append(const unsigned char * buf_append, const int size)
+network::buffer & network::buffer::append(const unsigned char * buf_append, const unsigned size)
 {
 	allocate(bytes, bytes + size);
 	std::memcpy(buf + bytes - size, buf_append, size);
@@ -223,23 +223,24 @@ network::buffer::iterator network::buffer::end() const
 	return iterator(bytes, buf);
 }
 
-void network::buffer::erase(const int index, const int size)
+void network::buffer::erase(const unsigned idx)
 {
-	if(size == npos){
-		assert(index < bytes);
-		allocate(bytes, index);
-	}else{
-		assert(index + size <= bytes);
-		std::memmove(buf + index, buf + index + size, bytes - index - size);
-		allocate(bytes, bytes - size);
-	}
+	assert(idx < bytes);
+	allocate(bytes, idx);
+}
+
+void network::buffer::erase(const unsigned idx, const unsigned size)
+{
+	assert(idx + size <= bytes);
+	std::memmove(buf + idx, buf + idx + size, bytes - idx - size);
+	allocate(bytes, bytes - size);
 }
 
 void network::buffer::swap(buffer & rval)
 {
 	//save current lval
-	int tmp_reserved = reserved;
-	int tmp_bytes = bytes;
+	unsigned tmp_reserved = reserved;
+	unsigned tmp_bytes = bytes;
 	unsigned char * tmp_buf = buf;
 
 	//copy rval to lval
@@ -253,30 +254,36 @@ void network::buffer::swap(buffer & rval)
 	rval.buf = tmp_buf;
 }
 
-void network::buffer::reserve(const int size)
+void network::buffer::reserve(const unsigned size)
 {
 	allocate(reserved, size);
 }
 
-void network::buffer::resize(const int size)
+void network::buffer::resize(const unsigned size)
 {
 	allocate(bytes, size);
 }
 
-int network::buffer::size() const
+unsigned network::buffer::size() const
 {
 	return bytes;
 }
 
-std::string network::buffer::str(const int index, const int len) const
+std::string network::buffer::str() const
 {
-	if(len == npos){
-		assert(index <= bytes);
-		return std::string(reinterpret_cast<const char *>(buf + index), bytes - index);
-	}else{
-		assert(index + len <= bytes);
-		return std::string(reinterpret_cast<const char *>(buf + index), len);
-	}
+	return std::string(reinterpret_cast<const char *>(buf), bytes);
+}
+
+std::string network::buffer::str(const unsigned idx) const
+{
+	assert(idx <= bytes);
+	return std::string(reinterpret_cast<const char *>(buf + idx), bytes - idx);
+}
+
+std::string network::buffer::str(const unsigned idx, const unsigned len) const
+{
+	assert(idx + len <= bytes);
+	return std::string(reinterpret_cast<const char *>(buf + idx), len);
 }
 
 unsigned char * network::buffer::tail_start() const
@@ -285,34 +292,32 @@ unsigned char * network::buffer::tail_start() const
 	return buf + bytes;
 }
 
-void network::buffer::tail_reserve(const int size)
+void network::buffer::tail_reserve(const unsigned size)
 {
 	allocate(reserved, bytes + size);
 }
 
-void network::buffer::tail_resize(const int size)
+void network::buffer::tail_resize(const unsigned size)
 {
 	allocate(bytes, bytes + size);
 }
 
-int network::buffer::tail_size() const
+unsigned network::buffer::tail_size() const
 {
 	assert(reserved >= bytes);
 	return reserved - bytes;
 }
 
-const unsigned char network::buffer::operator [] (const int index) const
+const unsigned char network::buffer::operator [] (const unsigned idx) const
 {
-	assert(index >= 0);
-	assert(index < bytes);
-	return buf[index];
+	assert(idx < bytes);
+	return buf[idx];
 }
 
-unsigned char & network::buffer::operator [] (const int index)
+unsigned char & network::buffer::operator [] (const unsigned idx)
 {
-	assert(index >= 0);
-	assert(index < bytes);
-	return buf[index];
+	assert(idx < bytes);
+	return buf[idx];
 }
 
 network::buffer & network::buffer::operator = (const buffer & B)
@@ -324,7 +329,7 @@ network::buffer & network::buffer::operator = (const buffer & B)
 
 network::buffer & network::buffer::operator = (const char * str)
 {
-	int len = std::strlen(str);
+	unsigned len = std::strlen(str);
 	allocate(bytes, len);
 	std::memcpy(buf, str, bytes);
 	return *this;
@@ -341,7 +346,7 @@ bool network::buffer::operator == (const buffer & B) const
 
 bool network::buffer::operator == (const char * str) const
 {
-	int len = std::strlen(str);
+	unsigned len = std::strlen(str);
 	if(bytes != len){
 		return false;
 	}else{
@@ -372,7 +377,7 @@ bool network::buffer::operator < (const buffer & B) const
 
 bool network::buffer::operator < (const char * str) const
 {
-	int len = std::strlen(str);
+	unsigned len = std::strlen(str);
 	if(bytes < len){
 		return true;
 	}else if(bytes > len){
@@ -382,7 +387,7 @@ bool network::buffer::operator < (const char * str) const
 	}
 }
 
-void network::buffer::allocate(int & var, const int size)
+void network::buffer::allocate(unsigned & var, const unsigned size)
 {
 	if(var == size){
 		//requested allocation is equal to what's already allocated
