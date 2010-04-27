@@ -40,7 +40,7 @@ public:
 		const boost::function<void (connection_info &)> & disconnect_call_back
 	);
 
-	/*
+	/* Connect/Disconnect/Send
 	connect:
 		Start async connection to host. Connect call back will happen if connects,
 		or disconnect call back if connection fails.
@@ -48,43 +48,48 @@ public:
 		Disconnect as soon as possible.
 	disconnect_on_empty:
 		Disconnect when send buffer becomes empty.
-	download_rate:
-		Returns download rate averaged over a few seconds (B/s).
-	listen_port:
-		Returns port listening on (empty if not listening).
-	max_connections:
-		Get or set maximum allowed connections (B/s).
-	max_download_rate:
-		Get or set maximum download rate (B/s).
-	max_upload_rate:
-		Get or set maximum upload rate (B/s).
 	send:
 		Send data to specified connection if connection still exists.
-	upload_rate:
-		Returns upload rate averaged over a few seconds (B/s).
 	*/
 	void connect(const std::string & host, const std::string & port);
 	void disconnect(const int connection_ID);
 	void disconnect_on_empty(const int connection_ID);
+	void send(const int connection_ID, buffer & send_buf);
+
+
+	/* Info
+	download_rate:
+		Returns download rate averaged over a few seconds (B/s).
+	listen_port:
+		Returns port listening on (empty if not listening).
+	upload_rate:
+		Returns upload rate averaged over a few seconds (B/s).
+	*/
 	unsigned download_rate();
 	std::string listen_port();
-	unsigned max_download_rate();
-	void max_download_rate(const unsigned rate);
-	unsigned max_upload_rate();
-	void max_upload_rate(const unsigned rate);
-	void send(const int connection_ID, buffer & send_buf);
 	unsigned upload_rate();
 
 	/* Get Options
-
+	get_max_download_rate:
+		Get maximum allowed download rate.
+	get_max_upload_rate:
+		Get maximum allowed upload rate.
 	*/
+	unsigned get_max_download_rate();
+	unsigned get_max_upload_rate();
 
 	/* Set Options
 	set_connection_limit:
 		Set connection limit for incoming and outgoing connections.
 		Note: incoming_limit + outgoing_limit <= 1024.
+	set_max_download_rate:
+		Set maximum allowed download rate.
+	set_max_upload_rate:
+		Set maximum allowed upload rate.
 	*/
 	void set_connection_limit(const unsigned incoming_limit, const unsigned outgoing_limit);
+	void set_max_download_rate(const unsigned rate);
+	void set_max_upload_rate(const unsigned rate);
 
 	/* Stop/Start
 	start:

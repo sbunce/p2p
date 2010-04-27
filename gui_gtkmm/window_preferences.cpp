@@ -33,7 +33,7 @@ window_preferences::window_preferences(
 
 	std::stringstream ss;
 	unsigned download_rate, upload_rate;
-	ss << P2P.max_download_rate();
+	ss << P2P.get_max_download_rate();
 	ss >> download_rate;
 	download_rate /= 1024;
 	ss.str(""); ss.clear();
@@ -42,7 +42,7 @@ window_preferences::window_preferences(
 	max_download_rate_entry->set_text(ss.str());
 
 	ss.str(""); ss.clear();
-	ss << P2P.max_upload_rate();
+	ss << P2P.get_max_upload_rate();
 	ss >> upload_rate;
 	upload_rate /= 1024;
 	ss.str(""); ss.clear();
@@ -81,7 +81,7 @@ window_preferences::window_preferences(
 	connections_hscale->set_size_request(200,37);
 	connections_hscale->set_draw_value(true);
 	connections_hscale->set_value_pos(Gtk::POS_TOP);
-	connections_hscale->set_value(P2P.max_connections());
+	connections_hscale->set_value(P2P.get_max_connections());
 
 	button_box->set_spacing(8);
 	button_box->set_border_width(8);
@@ -125,9 +125,9 @@ void window_preferences::apply_settings()
 	ss >> upload_rate;
 	ss.str(""); ss.clear();
 
-	P2P.max_download_rate(download_rate * 1024);
-	P2P.max_connections((int)connections_hscale->get_value());
-	P2P.max_upload_rate(upload_rate * 1024);
+	P2P.set_max_download_rate(download_rate * 1024);
+	P2P.set_max_connections((int)connections_hscale->get_value());
+	P2P.set_max_upload_rate(upload_rate * 1024);
 }
 
 void window_preferences::cancel_click()

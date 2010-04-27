@@ -302,6 +302,16 @@ unsigned network::proactor::download_rate()
 	return Rate_Limit.download();
 }
 
+unsigned network::proactor::get_max_download_rate()
+{
+	return Rate_Limit.max_download();
+}
+
+unsigned network::proactor::get_max_upload_rate()
+{
+	return Rate_Limit.max_upload();
+}
+
 void network::proactor::handle_async_connection(
 	std::pair<int, boost::shared_ptr<connection> > P)
 {
@@ -353,26 +363,6 @@ std::pair<int, boost::shared_ptr<network::proactor::connection> >
 	}else{
 		return *iter;
 	}
-}
-
-unsigned network::proactor::max_download_rate()
-{
-	return Rate_Limit.max_download();
-}
-
-void network::proactor::max_download_rate(const unsigned rate)
-{
-	Rate_Limit.max_download(rate);
-}
-
-unsigned network::proactor::max_upload_rate()
-{
-	return Rate_Limit.max_upload();
-}
-
-void network::proactor::max_upload_rate(const unsigned rate)
-{
-	Rate_Limit.max_upload(rate);
 }
 
 void network::proactor::network_loop()
@@ -567,6 +557,16 @@ void network::proactor::set_connection_limit(const unsigned incoming_limit,
 	boost::mutex::scoped_lock lock(network_thread_call_mutex);
 	network_thread_call.push_back(boost::bind(&proactor::adjust_connection_limits,
 		this, incoming_limit, outgoing_limit));
+}
+
+void network::proactor::set_max_download_rate(const unsigned rate)
+{
+	Rate_Limit.max_download(rate);
+}
+
+void network::proactor::set_max_upload_rate(const unsigned rate)
+{
+	Rate_Limit.max_upload(rate);
 }
 
 bool network::proactor::start()

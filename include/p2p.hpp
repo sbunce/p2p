@@ -45,41 +45,59 @@ public:
 		std::string name;
 	};
 
-	/*
-	download_rate:
-		Returns current download rate (excluding localhost).
-	max_connections:
-		Get or set connection limit.
-	max_download_rate:
-		Get or set download rate limit (bytes).
-	max_upload_rate:
-		Get or set upload rate limit (bytes).
+	/* Transfers
 	remove_download:
 		Removes a running download.
-	share_size_bytes:
-		Size of all shared files.
-	share_size_files:
-		The number of files shared.
 	start_download:
 		Starts a download.
 	transfers:
 		Clears T and populates it with transfer information.
-	upload_rate:
-		Returns current upload rate (excluding localhost).
 	*/
-	unsigned download_rate();
-	unsigned max_connections();
-	void max_connections(const unsigned connections);
-	unsigned max_download_rate();
-	void max_download_rate(const unsigned rate);
-	unsigned max_upload_rate();
-	void max_upload_rate(const unsigned rate);
 	void remove_download(const std::string & hash);
-	boost::uint64_t share_size_bytes();
-	boost::uint64_t share_size_files();
 	void start_download(const p2p::download & D);
 	void transfers(std::vector<p2p::transfer> & T);
+
+	/* Info
+	download_rate:
+		Returns current download rate (B/s).
+	share_size_bytes:
+		Size of all shared files.
+	share_size_files:
+		The number of files shared.
+	upload_rate:
+		Returns current upload rate (B/s).
+	*/
+	unsigned download_rate();
+	boost::uint64_t share_size_bytes();
+	boost::uint64_t share_size_files();
 	unsigned upload_rate();
+
+	/* Get Options
+	get_download_rate:
+		Returns current download rate (B/s).
+	get_max_connections:
+		Returns maximum allowed connections.
+	get_max_download_rate:
+		Returns maximum allowed download rate (B/s).
+	get_max_upload_rate:
+		Returns maximum allowed upload rate (B/s).
+	*/
+
+	unsigned get_max_connections();
+	unsigned get_max_download_rate();
+	unsigned get_max_upload_rate();
+
+	/* Set Options
+	set_max_download_rate:
+		Set maximum allowed download rate (B/s).
+	set_max_connections:
+		Set maximum allowed connections.
+	set_max_upload_rate:
+		Set maximum allowed upload rate (B/s).
+	*/
+	void set_max_download_rate(const unsigned rate);
+	void set_max_connections(const unsigned connections);
+	void set_max_upload_rate(const unsigned rate);
 
 	/* UNSTABLE - MAY BE REMOVED FROM API AT ANYTIME
 	test:

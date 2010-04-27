@@ -1,0 +1,35 @@
+#!/bin/sh
+PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
+BIN=/usr/local/bin/http
+OPTS="-p=80 -r=16384 -pid=34 -uid=33 /var/www"
+PID_FILE="/var/lock/http.lock"
+
+function start()
+{
+  start-stop-daemon --start --quiet --background --make-pidfile \
+    --pidfile $PID_FILE --exec $BIN -- $OPTS
+}
+
+function stop()
+{
+  start-stop-daemon --quiet --stop --pidfile $PID_FILE --exec $BIN
+}
+
+case "$1" in
+  start)
+    start
+  ;;
+  stop)
+    stop
+  ;;
+  restart)
+    start
+    stop
+  ;;
+  *)
+    echo "Usage: $SCRIPTNAME {start|stop|restart}" >&2
+    exit 1
+  ;;
+esac
+
+exit 0

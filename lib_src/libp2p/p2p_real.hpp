@@ -40,13 +40,13 @@ public:
 
 	//documentation for these in p2p.hpp
 	unsigned download_rate();
-	unsigned max_connections();
-	void max_connections(unsigned connections);
-	unsigned max_download_rate();
-	void max_download_rate(const unsigned rate);
-	unsigned max_upload_rate();
-	void max_upload_rate(const unsigned rate);
+	unsigned get_max_connections();
+	unsigned get_max_download_rate();
+	unsigned get_max_upload_rate();
 	void remove_download(const std::string & hash);
+	void set_max_download_rate(const unsigned rate);
+	void set_max_connections(unsigned connections);
+	void set_max_upload_rate(const unsigned rate);
 	boost::uint64_t share_size_bytes();
 	boost::uint64_t share_size_files();
 	void start_download(const p2p::download & D);

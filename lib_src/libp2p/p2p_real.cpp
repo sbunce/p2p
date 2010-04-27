@@ -25,39 +25,19 @@ unsigned p2p_real::download_rate()
 	return Connection_Manager.Proactor.download_rate();
 }
 
-unsigned p2p_real::max_connections()
+unsigned p2p_real::get_max_connections()
 {
 	return db::table::prefs::get_max_connections();
 }
 
-void p2p_real::max_connections(unsigned connections)
-{
-	//save extra 24 file descriptors for DB and misc other stuff
-	assert(connections <= 1000);
-	Connection_Manager.Proactor.set_connection_limit(connections / 2, connections / 2);
-	db::table::prefs::set_max_connections(connections);
-}
-
-unsigned p2p_real::max_download_rate()
+unsigned p2p_real::get_max_download_rate()
 {
 	return db::table::prefs::get_max_download_rate();
 }
 
-void p2p_real::max_download_rate(const unsigned rate)
-{
-	Connection_Manager.Proactor.max_download_rate(rate);
-	db::table::prefs::set_max_download_rate(rate);
-}
-
-unsigned p2p_real::max_upload_rate()
+unsigned p2p_real::get_max_upload_rate()
 {
 	return db::table::prefs::get_max_upload_rate();
-}
-
-void p2p_real::max_upload_rate(const unsigned rate)
-{
-	Connection_Manager.Proactor.max_upload_rate(rate);
-	db::table::prefs::set_max_upload_rate(rate);
 }
 
 void p2p_real::resume()
@@ -68,9 +48,9 @@ void p2p_real::resume()
 	boost::this_thread::yield();
 
 	//set prefs with proactor
-	max_connections(db::table::prefs::get_max_connections());
-	max_download_rate(db::table::prefs::get_max_download_rate());
-	max_upload_rate(db::table::prefs::get_max_upload_rate());
+	set_max_connections(db::table::prefs::get_max_connections());
+	set_max_download_rate(db::table::prefs::get_max_download_rate());
+	set_max_upload_rate(db::table::prefs::get_max_upload_rate());
 
 	//repopulate share from database
 	std::deque<db::table::share::info> resume = db::table::share::resume();
@@ -122,6 +102,26 @@ void p2p_real::resume()
 		LOG << "stub: handle failed listener start";
 		exit(1);
 	}
+}
+
+void p2p_real::set_max_connections(unsigned connections)
+{
+	//save extra 24 file descriptors for DB and misc other stuff
+	assert(connections <= 1000);
+	Connection_Manager.Proactor.set_connection_limit(connections / 2, connections / 2);
+	db::table::prefs::set_max_connections(connections);
+}
+
+void p2p_real::set_max_download_rate(const unsigned rate)
+{
+	Connection_Manager.Proactor.set_max_download_rate(rate);
+	db::table::prefs::set_max_download_rate(rate);
+}
+
+void p2p_real::set_max_upload_rate(const unsigned rate)
+{
+	Connection_Manager.Proactor.set_max_upload_rate(rate);
+	db::table::prefs::set_max_upload_rate(rate);
 }
 
 boost::uint64_t p2p_real::share_size_bytes()

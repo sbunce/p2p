@@ -12,18 +12,23 @@
 class http
 {
 public:
-	http(
-		const std::string & web_root_in, //path to web root
-		const std::string & port = "0",  //port, default is random
-		bool localhost_only = false      //if true only localhost can access http
-	);
+	http(const std::string & web_root_in);
 	~http();
 
 	/*
 	port:
 		Return port server is listening on.
+	set_max_upload_rate:
+		Set maximum allowed upload rate.
 	*/
 	std::string port();
+	void set_max_upload_rate(const unsigned rate);
+
+	/*
+	start:
+		Start the HTTP server.
+	*/
+	void start(const std::string & port = "0", const bool localhost_only = false);
 
 private:
 	network::proactor Proactor;

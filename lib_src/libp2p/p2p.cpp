@@ -16,39 +16,39 @@ unsigned p2p::download_rate()
 	return P2P_Real->download_rate();
 }
 
-unsigned p2p::max_connections()
+unsigned p2p::get_max_connections()
 {
-	return P2P_Real->max_connections();
+	return P2P_Real->get_max_connections();
 }
 
-void p2p::max_connections(const unsigned connections)
+unsigned p2p::get_max_download_rate()
 {
-	P2P_Real->max_connections(connections);
+	return P2P_Real->get_max_download_rate();
 }
 
-unsigned p2p::max_download_rate()
+unsigned p2p::get_max_upload_rate()
 {
-	return P2P_Real->max_download_rate();
-}
-
-void p2p::max_download_rate(const unsigned rate)
-{
-	P2P_Real->max_download_rate(rate);
-}
-
-unsigned p2p::max_upload_rate()
-{
-	return P2P_Real->max_upload_rate();
-}
-
-void p2p::max_upload_rate(const unsigned rate)
-{
-	P2P_Real->max_upload_rate(rate);
+	return P2P_Real->get_max_upload_rate();
 }
 
 void p2p::remove_download(const std::string & hash)
 {
 	P2P_Real->remove_download(hash);
+}
+
+void p2p::set_max_connections(const unsigned connections)
+{
+	P2P_Real->set_max_connections(connections);
+}
+
+void p2p::set_max_download_rate(const unsigned rate)
+{
+	P2P_Real->set_max_download_rate(rate);
+}
+
+void p2p::set_max_upload_rate(const unsigned rate)
+{
+	P2P_Real->set_max_upload_rate(rate);
 }
 
 boost::uint64_t p2p::share_size_bytes()

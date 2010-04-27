@@ -1,9 +1,9 @@
-//THREADSAFE
 #ifndef H_CLI_ARGS
 #define H_CLI_ARGS
 
 //standard
 #include <algorithm>
+#include <cassert>
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
@@ -19,6 +19,12 @@ public:
 		for(int x=0; x<argc; ++x){
 			argv.push_back(std::string(argv_in[x]));
 		}
+	}
+
+	//returns number of arguments
+	int argc()
+	{
+		return argv.size();
 	}
 
 	/*
@@ -64,22 +70,17 @@ public:
 		}
 	}
 
-	/*
-	If help parameter present this function prints help_message and terminates
-	the program.
-	*/
-	void help_message(const std::string & help_param, const std::string & help_message)
-	{
-		if(flag(help_param)){
-			std::cout << help_message;
-			exit(0);
-		}
-	}
-
 	//returns name of program (parameter 0)
 	std::string program_name()
 	{
 		return argv[0];
+	}
+
+	//returns string element of argv
+	const std::string & operator [] (const int idx)
+	{
+		assert(idx < argv.size());
+		return argv[idx];
 	}
 private:
 	std::vector<std::string> argv;

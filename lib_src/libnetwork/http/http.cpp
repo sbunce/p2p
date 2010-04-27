@@ -1,9 +1,7 @@
 #include "http.hpp"
 
 http::http(
-	const std::string & web_root_in,
-	const std::string & port,
-	bool localhost_only
+	const std::string & web_root_in
 ):
 	Proactor(
 		boost::bind(&http::connect_call_back, this, _1),
@@ -11,13 +9,8 @@ http::http(
 	),
 	web_root(web_root_in)
 {
-	std::set<network::endpoint> E = network::get_endpoint(
-		localhost_only ? "localhost" : "",
-		port,
-		network::tcp
-	);
-	assert(!E.empty());
-	Proactor.start(*E.begin());
+	//no need to have a limit on outgoing connections
+	Proactor.set_connection_limit(1000, 0);
 }
 
 http::~http()
@@ -43,4 +36,20 @@ void http::disconnect_call_back(network::connection_info & CI)
 std::string http::port()
 {
 	return Proactor.listen_port();
+}
+
+void http::set_max_upload_rate(const unsigned rate)
+{
+	Proactor.set_max_upload_rate(rate);
+}
+
+void http::start(const std::string & port, const bool localhost_only)
+{
+	std::set<network::endpoint> E = network::get_endpoint(
+		localhost_only ? "localhost" : "",
+		port,
+		network::tcp
+	);
+	assert(!E.empty());
+	Proactor.start(*E.begin());
 }
