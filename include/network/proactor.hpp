@@ -40,6 +40,18 @@ public:
 		const boost::function<void (connection_info &)> & disconnect_call_back
 	);
 
+	/* Stop/Start
+	start:
+		Starts the proactor. Optionally specify a local endpoint to start a
+		listener. Returns false if failed to start listener.
+	stop:
+		Stops the proactor.
+		Note: It's not supported to start the proactor after it has been stopped.
+	*/
+	bool start();
+	bool start(const endpoint & E);
+	void stop();
+
 	/* Connect/Disconnect/Send
 	connect:
 		Start async connection to host. Connect call back will happen if connects,
@@ -91,19 +103,10 @@ public:
 	void set_max_download_rate(const unsigned rate);
 	void set_max_upload_rate(const unsigned rate);
 
-	/* Stop/Start
-	start:
-		Starts the proactor. Optionally specify a local endpoint to start a
-		listener. Returns false if failed to start listener.
-	stop:
-		Stops the proactor.
-		Note: It's not supported to start the proactor after it has been stopped.
-	*/
-	bool start();
-	bool start(const endpoint & E);
-	void stop();
-
 private:
+
+	//lock for starting/stopping proactor
+	boost::recursive_mutex start_stop_mutex;
 
 	/*
 	This class allocates connection_IDs. There are a few problems this class

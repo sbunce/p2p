@@ -571,6 +571,7 @@ void network::proactor::set_max_upload_rate(const unsigned rate)
 
 bool network::proactor::start()
 {
+	boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
 	network_thread = boost::thread(boost::bind(&proactor::network_loop, this));
 	Dispatcher.start();
 	return true;
@@ -578,7 +579,10 @@ bool network::proactor::start()
 
 bool network::proactor::start(const endpoint & E)
 {
+	boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
 	assert(E.type() == tcp);
+
+	//start listener
 	Listener.open(E);
 	if(!Listener.is_open()){
 		LOG << "failed to start listener";
@@ -586,12 +590,17 @@ bool network::proactor::start(const endpoint & E)
 	}
 	Listener.set_non_blocking();
 	add_socket(std::make_pair(Listener.socket(), boost::shared_ptr<connection>()));
+
+	//start network thread
 	return start();
 }
 
 void network::proactor::stop()
 {
-	Thread_Pool.clear_stop();
+	boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
+
+	//cancel all resolve jobs
+	Thread_Pool.stop_clear_join();
 	Dispatcher.stop();
 	network_thread.interrupt();
 	network_thread.join();

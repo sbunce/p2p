@@ -5,7 +5,8 @@ network::dispatcher::dispatcher(
 	const boost::function<void (connection_info &)> & disconnect_call_back_in
 ):
 	connect_call_back(connect_call_back_in),
-	disconnect_call_back(disconnect_call_back_in)
+	disconnect_call_back(disconnect_call_back_in),
+	job_stop(false)
 {
 
 }
@@ -47,24 +48,43 @@ void network::dispatcher::send(const boost::shared_ptr<connection_info> & CI,
 
 void network::dispatcher::start()
 {
+	boost::mutex::scoped_lock lock(start_stop_mutex);
+	assert(!workers);
+	workers = boost::shared_ptr<boost::thread_group>(new boost::thread_group);
 	for(int x=0; x<dispatcher_threads; ++x){
-		workers.create_thread(boost::bind(&dispatcher::dispatch, this));
+		workers->create_thread(boost::bind(&dispatcher::dispatch, this));
 	}
 }
 
 void network::dispatcher::stop()
 {
-	workers.interrupt_all();
-	workers.join_all();
-	job.clear();
-	memoize.clear();
+	boost::mutex::scoped_lock lock(start_stop_mutex);
+
+	//tell workers to terminate when jobs done
+	{//BEGIN lock scope
+	boost::mutex::scoped_lock lock(job_mutex);
+	job_stop = true;
+	}//END lock scope
+
+	//have all workers check for jobs
+	job_cond.notify_all();
+
+	//wait for workers to terminate
+	workers->join_all();
+
+	//these should be empty if workers terminated properly
+	assert(memoize.empty());
+	assert(job.empty());
+
+	//ready for next start()
+	workers = boost::shared_ptr<boost::thread_group>();
 }
 
 void network::dispatcher::dispatch()
 {
 	std::pair<int, boost::function<void ()> > tmp;
 	while(true){
-		{//begin lock scope
+		{//BEGIN lock scope
 		boost::mutex::scoped_lock lock(job_mutex);
 		while(true){
 			for(std::list<std::pair<int, boost::function<void ()> > >::iterator
@@ -79,9 +99,13 @@ void network::dispatcher::dispatch()
 					goto run_job;
 				}
 			}
+			if(job_stop){
+				//jobs finished, stop worker
+				return;
+			}
 			job_cond.wait(job_mutex);
 		}
-		}//end lock scope
+		}//END lock scope
 		run_job:
 
 		//run call back

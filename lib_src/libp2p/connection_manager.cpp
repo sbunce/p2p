@@ -13,7 +13,7 @@ connection_manager::connection_manager():
 connection_manager::~connection_manager()
 {
 	Proactor.stop();
-	Thread_Pool.stop();
+	Thread_Pool.stop_join();
 }
 
 void connection_manager::connect_call_back(network::connection_info & CI)

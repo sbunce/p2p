@@ -22,6 +22,13 @@ public:
 		const boost::function<void (connection_info &)> & disconnect_call_back_in
 	);
 
+//DEBUG, model this after the thread_pool class
+	/*
+
+	*/
+	void start();
+	void stop();
+
 	/*
 	connect:
 		Schedule call back for connect.
@@ -46,17 +53,15 @@ public:
 	void send(const boost::shared_ptr<connection_info> & CI, const unsigned latest_send,
 		const unsigned send_buf_size);
 
-	/*
-	start:
-		Start dispatcher threads.
-	stop:
-		Stop dispatcher threads.
-	*/
-	void start();
-	void stop();
-
 private:
-	boost::thread_group workers;
+	/*
+	start_stop_mutex:
+		Lock for starting/stopping of dispatcher.
+	workers:
+		Allocated when dispatcher is started. Deallocated when stopped.
+	*/
+	boost::mutex start_stop_mutex;
+	boost::shared_ptr<boost::thread_group> workers;
 
 	const boost::function<void (connection_info &)> connect_call_back;
 	const boost::function<void (connection_info &)> disconnect_call_back;
@@ -80,6 +85,7 @@ private:
 	boost::condition_variable_any job_cond;
 	std::list<std::pair<int, boost::function<void ()> > > job;
 	std::set<int> memoize;  //used to memoize connection_ID
+	bool job_stop;          //if true worker terminates when no more jobs
 
 	/*
 	dispatch:
