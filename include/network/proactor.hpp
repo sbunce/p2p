@@ -104,7 +104,6 @@ public:
 	void set_max_upload_rate(const unsigned rate);
 
 private:
-
 	//lock for starting/stopping proactor
 	boost::recursive_mutex start_stop_mutex;
 

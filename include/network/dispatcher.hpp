@@ -21,13 +21,17 @@ public:
 		const boost::function<void (connection_info &)> & connect_call_back_in,
 		const boost::function<void (connection_info &)> & disconnect_call_back_in
 	);
+	~dispatcher();
 
-//DEBUG, model this after the thread_pool class
 	/*
-
+	start:
+		Allow the dispatcher to accept new jobs.
+	stop_join:
+		Stop dispatcher from accepting new jobs. Block until all existing jobs are
+		finished.
 	*/
 	void start();
-	void stop();
+	void stop_join();
 
 	/*
 	connect:
@@ -54,22 +58,16 @@ public:
 		const unsigned send_buf_size);
 
 private:
-	/*
-	start_stop_mutex:
-		Lock for starting/stopping of dispatcher.
-	workers:
-		Allocated when dispatcher is started. Deallocated when stopped.
-	*/
-	boost::mutex start_stop_mutex;
-	boost::shared_ptr<boost::thread_group> workers;
+	//threads to do call backs
+	boost::thread_group workers;
 
 	const boost::function<void (connection_info &)> connect_call_back;
 	const boost::function<void (connection_info &)> disconnect_call_back;
 
 	/*
-	Call backs to be done by dispatch(). The connect_job container holds connect
-	call back jobs. The other_job container holds send call back and disconnect
-	call back jobs.
+	Call backs to be done by dispatch(). The job container holds all call backs
+	which need to be made. The stopped and dtor_stopped flags are used for
+	assertions to insure the dispatcher is not incorrectly used.
 
 	There are some invariants to the call back system.
 	1. Only one call back for a socket is done concurrently.
@@ -82,10 +80,13 @@ private:
 	Invariant 3 is insured by requiring that disconnect jobs be scheduled last.
 	*/
 	boost::mutex job_mutex; //locks everything in this section
-	boost::condition_variable_any job_cond;
-	std::list<std::pair<int, boost::function<void ()> > > job;
+	boost::condition_variable_any job_cond;  //cond to check for new jobs
+	boost::condition_variable_any join_cond; //cond used for join
+	std::list<std::pair<int, boost::function<void ()> > > job_list;
 	std::set<int> memoize;  //used to memoize connection_ID
-	bool job_stop;          //if true worker terminates when no more jobs
+	unsigned running_jobs;  //number of jobs in progress
+	bool stopped;           //if true worker terminates when no more jobs
+	bool dtor_stopped;      //dtor called, dispatcher cannot be started again
 
 	/*
 	dispatch:

@@ -18,7 +18,7 @@ network::proactor Proactor(
 	&disconnect_call_back
 );
 
-const unsigned test_echo(512);
+const unsigned test_echo(500);
 atomic_int<unsigned> echo_count(0);
 atomic_int<unsigned> disconnect_count(0);
 
@@ -65,7 +65,12 @@ int main()
 		network::tcp
 	);
 	assert(!E.empty());
+
+	//make sure proactor works after start/stop/start
 	Proactor.start(*E.begin());
+	Proactor.stop();
+	Proactor.start(*E.begin());
+
 	for(int x=0; x<test_echo; ++x){
 		Proactor.connect("localhost", Proactor.listen_port());
 	}

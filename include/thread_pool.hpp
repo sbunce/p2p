@@ -112,7 +112,7 @@ private:
 	unsigned running_jobs;                           //number of jobs in progress
 	boost::condition_variable_any join_cond;         //cond used for join
 	bool stopped;                                    //when true no jobs can be added
-	bool dtor_stopped;                               //dtor called, thread_pool can't be started
+	bool dtor_stopped;                               //dtor called, thread_pool can't be started again
 	
 	void dispatcher()
 	{

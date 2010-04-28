@@ -338,6 +338,10 @@ void network::proactor::handle_async_connection(
 
 std::string network::proactor::listen_port()
 {
+	/*
+	It is thread safe to return this because it is connected before the network
+	thread is started and won't disconnect while the network thread is active.
+	*/
 	return Listener.port();
 }
 
@@ -574,6 +578,7 @@ bool network::proactor::start()
 	boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
 	network_thread = boost::thread(boost::bind(&proactor::network_loop, this));
 	Dispatcher.start();
+	Thread_Pool.start();
 	return true;
 }
 
@@ -581,7 +586,6 @@ bool network::proactor::start(const endpoint & E)
 {
 	boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
 	assert(E.type() == tcp);
-
 	//start listener
 	Listener.open(E);
 	if(!Listener.is_open()){
@@ -590,8 +594,6 @@ bool network::proactor::start(const endpoint & E)
 	}
 	Listener.set_non_blocking();
 	add_socket(std::make_pair(Listener.socket(), boost::shared_ptr<connection>()));
-
-	//start network thread
 	return start();
 }
 
@@ -601,9 +603,36 @@ void network::proactor::stop()
 
 	//cancel all resolve jobs
 	Thread_Pool.stop_clear_join();
-	Dispatcher.stop();
+
+	//stop networking thread
 	network_thread.interrupt();
+	Select.interrupt();
 	network_thread.join();
+
+	//Note: At this point we can modify private data since network_thread stopped
+
+	//disconnect everything
+	for(std::map<int, boost::shared_ptr<connection> >::iterator it_cur = Socket.begin(),
+		it_end = Socket.end(); it_cur != it_end; ++it_cur)
+	{
+		if(it_cur->second->CI){
+			Dispatcher.disconnect(it_cur->second->CI);
+			it_cur->second->N->close();
+		}
+	}
+	Listener.close();
+
+	//reset proactor state
+	read_FDS.clear();
+	write_FDS.clear();
+	Socket.clear();
+	ID.clear();
+	incoming_connections = 0;
+	outgoing_connections = 0;
+	network_thread_call.clear();
+
+	//stop dispatcher and wait for dispatcher call backs to finish
+	Dispatcher.stop_join();
 }
 
 unsigned network::proactor::upload_rate()
