@@ -86,7 +86,6 @@ private:
 	std::set<int> memoize;  //used to memoize connection_ID
 	unsigned running_jobs;  //number of jobs in progress
 	bool stopped;           //if true worker terminates when no more jobs
-	bool dtor_stopped;      //dtor called, dispatcher cannot be started again
 
 	/*
 	dispatch:

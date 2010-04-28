@@ -30,8 +30,7 @@ public:
 	//start thread_pool
 	thread_pool(const unsigned threads = boost::thread::hardware_concurrency()):
 		running_jobs(0),
-		stopped(false),
-		dtor_stopped(false)
+		stopped(false)
 	{
 		for(unsigned x=0; x<threads; ++x){
 			workers.create_thread(boost::bind(&thread_pool::dispatcher, this));
@@ -40,12 +39,6 @@ public:
 
 	~thread_pool()
 	{
-		//don't allow any more jobs to be enqueued
-		{//BEGIN lock scope
-		boost::mutex::scoped_lock lock(job_mutex);
-		dtor_stopped = true;
-		}//END lock scope
-
 		//wait for existing jobs to finish
 		join();
 
@@ -58,7 +51,7 @@ public:
 	bool enqueue(const boost::function<void ()> & func)
 	{
 		boost::mutex::scoped_lock lock(job_mutex);
-		if(stopped || dtor_stopped){
+		if(stopped){
 			return false;
 		}else{
 			job_queue.push_back(func);
@@ -112,7 +105,6 @@ private:
 	unsigned running_jobs;                           //number of jobs in progress
 	boost::condition_variable_any join_cond;         //cond used for join
 	bool stopped;                                    //when true no jobs can be added
-	bool dtor_stopped;                               //dtor called, thread_pool can't be started again
 	
 	void dispatcher()
 	{

@@ -7,8 +7,7 @@ network::dispatcher::dispatcher(
 	connect_call_back(connect_call_back_in),
 	disconnect_call_back(disconnect_call_back_in),
 	running_jobs(0),
-	stopped(false),
-	dtor_stopped(false)
+	stopped(false)
 {
 	for(int x=0; x<dispatcher_threads; ++x){
 		workers.create_thread(boost::bind(&dispatcher::dispatch, this));
@@ -17,11 +16,8 @@ network::dispatcher::dispatcher(
 
 network::dispatcher::~dispatcher()
 {
-	//don't allow new jobs
-	{//BEGIN lock scope
-	boost::mutex::scoped_lock lock(job_mutex);
-	dtor_stopped = true;
-	}//END lock scope
+	//wait for existing jobs to finish
+	stop_join();
 
 	//stop threads
 	workers.interrupt_all();
@@ -32,7 +28,6 @@ void network::dispatcher::connect(const boost::shared_ptr<connection_info> & CI)
 {
 	boost::mutex::scoped_lock lock(job_mutex);
 	assert(!stopped);
-	assert(!dtor_stopped);
 	job_list.push_front(std::make_pair(CI->connection_ID, boost::bind(
 		&dispatcher::connect_call_back_wrapper, this, CI)));
 	job_cond.notify_one();
@@ -42,7 +37,6 @@ void network::dispatcher::disconnect(const boost::shared_ptr<connection_info> & 
 {
 	boost::mutex::scoped_lock lock(job_mutex);
 	assert(!stopped);
-	assert(!dtor_stopped);
 	job_list.push_back(std::make_pair(CI->connection_ID, boost::bind(
 		&dispatcher::disconnect_call_back_wrapper, this, CI)));
 	job_cond.notify_one();
@@ -53,7 +47,6 @@ void network::dispatcher::recv(const boost::shared_ptr<connection_info> & CI,
 {
 	boost::mutex::scoped_lock lock(job_mutex);
 	assert(!stopped);
-	assert(!dtor_stopped);
 	job_list.push_back(std::make_pair(CI->connection_ID, boost::bind(
 		&dispatcher::recv_call_back_wrapper, this, CI, recv_buf)));
 	job_cond.notify_one();
@@ -64,7 +57,6 @@ void network::dispatcher::send(const boost::shared_ptr<connection_info> & CI,
 {
 	boost::mutex::scoped_lock lock(job_mutex);
 	assert(!stopped);
-	assert(!dtor_stopped);
 	job_list.push_back(std::make_pair(CI->connection_ID, boost::bind(
 		&dispatcher::send_call_back_wrapper, this, CI, latest_send, send_buf_size)));
 	job_cond.notify_one();
