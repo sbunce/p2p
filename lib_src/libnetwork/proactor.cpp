@@ -573,20 +573,30 @@ void network::proactor::set_max_upload_rate(const unsigned rate)
 	Rate_Limit.max_upload(rate);
 }
 
-bool network::proactor::start()
+void network::proactor::start()
 {
 	boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
+	if(network_thread.get_id() != boost::thread::id()){
+		LOG << "error, network_thread started";
+		exit(1);
+	}
 	network_thread = boost::thread(boost::bind(&proactor::network_loop, this));
 	Dispatcher.start();
 	Thread_Pool.start();
-	return true;
 }
 
 bool network::proactor::start(const endpoint & E)
 {
 	boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
 	assert(E.type() == tcp);
-	//start listener
+	if(Listener.is_open()){
+		LOG << "error, listener started";
+		exit(1);
+	}
+	if(network_thread.get_id() != boost::thread::id()){
+		LOG << "error, network_thread started";
+		exit(1);
+	}
 	Listener.open(E);
 	if(!Listener.is_open()){
 		LOG << "failed to start listener";
@@ -594,7 +604,30 @@ bool network::proactor::start(const endpoint & E)
 	}
 	Listener.set_non_blocking();
 	add_socket(std::make_pair(Listener.socket(), boost::shared_ptr<connection>()));
-	return start();
+	start();
+	return true;
+}
+
+bool network::proactor::start_listener(const endpoint & E)
+{
+	boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
+	assert(E.type() == tcp);
+	if(Listener.is_open()){
+		LOG << "error, listener started";
+		exit(1);
+	}
+	if(network_thread.get_id() != boost::thread::id()){
+		LOG << "error, network_thread started";
+		exit(1);
+	}
+	Listener.open(E);
+	if(!Listener.is_open()){
+		LOG << "failed to start listener";
+		return false;
+	}
+	Listener.set_non_blocking();
+	add_socket(std::make_pair(Listener.socket(), boost::shared_ptr<connection>()));
+	return true;
 }
 
 void network::proactor::stop()

@@ -12,27 +12,48 @@
 class http
 {
 public:
-	http(const std::string & web_root_in);
+	http(
+		const std::string & web_root_in,
+		const std::string & port_in = "0",
+		const bool localhost_only_in = false
+	);
 	~http();
 
-	/*
+	/* Options
+
+	*/
+
+	/* Info
 	port:
 		Return port server is listening on.
 	set_max_upload_rate:
 		Set maximum allowed upload rate.
 	*/
-	std::string port();
+	std::string listen_port();
 	void set_max_upload_rate(const unsigned rate);
 
 	/*
-	start:
-		Start the HTTP server.
+	start_0:
+		Start the listener.
+		Note: Priviledge dropping should be done between steps 0 and 1.
+	start_1:
+		Start the rest of the server. Allow incoming connections.
+	stop:
+		Stop the HTTP server.
 	*/
-	void start(const std::string & port = "0", const bool localhost_only = false);
+	void start_0();
+	void start_1();
+	void stop();
 
 private:
+	const std::string web_root;
+	const std::string port;
+	const bool localhost_only;
+
+	//lock for start()/stop()
+	boost::mutex start_stop_mutex;
+
 	network::proactor Proactor;
-	std::string web_root;
 
 	//connection specific information
 	boost::mutex Connection_mutex;

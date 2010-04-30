@@ -1,13 +1,17 @@
 #include "http.hpp"
 
 http::http(
-	const std::string & web_root_in
+	const std::string & web_root_in,
+	const std::string & port_in,
+	const bool localhost_only_in
 ):
+	web_root(web_root_in),
+	port(port_in),
+	localhost_only(localhost_only_in),
 	Proactor(
 		boost::bind(&http::connect_call_back, this, _1),
 		boost::bind(&http::disconnect_call_back, this, _1)
-	),
-	web_root(web_root_in)
+	)
 {
 	//no need to have a limit on outgoing connections
 	Proactor.set_connection_limit(1000, 0);
@@ -33,8 +37,9 @@ void http::disconnect_call_back(network::connection_info & CI)
 	Connection.erase(CI.connection_ID);
 }
 
-std::string http::port()
+std::string http::listen_port()
 {
+	boost::mutex::scoped_lock lock(start_stop_mutex);
 	return Proactor.listen_port();
 }
 
@@ -43,13 +48,24 @@ void http::set_max_upload_rate(const unsigned rate)
 	Proactor.set_max_upload_rate(rate);
 }
 
-void http::start(const std::string & port, const bool localhost_only)
+void http::start_0()
 {
+	boost::mutex::scoped_lock lock(start_stop_mutex);
 	std::set<network::endpoint> E = network::get_endpoint(
 		localhost_only ? "localhost" : "",
 		port,
 		network::tcp
 	);
 	assert(!E.empty());
-	Proactor.start(*E.begin());
+	if(!Proactor.start_listener(*E.begin())){
+		LOG << "failed to start listener";
+		exit(1);
+	}
+}
+
+void http::start_1()
+{
+	boost::mutex::scoped_lock lock(start_stop_mutex);
+	assert(!Proactor.listen_port().empty());
+	Proactor.start();
 }

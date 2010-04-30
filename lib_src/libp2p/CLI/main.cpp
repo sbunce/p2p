@@ -1,7 +1,7 @@
 //include
 #include <boost/thread.hpp>
-#include <CLI_args.hpp>
 #include <logger.hpp>
+#include <opt_parse.hpp>
 #include <p2p.hpp>
 
 //standard
@@ -26,16 +26,16 @@ void signal_handler(int sig)
 
 int main(int argc, char ** argv)
 {
-	CLI_args CLI_Args(argc, argv);
+	opt_parse Opt_Parse(argc, argv);
 
 	//register signal handlers
 	signal(SIGINT, signal_handler);
 
 	//test server functionality, run multiple servers out of same directory
-	std::string str;
-	if(CLI_Args.string("--test", str)){
-		std::string port = str.substr(0, str.find_first_of(':'));
-		std::string program_directory = str.substr(str.find_first_of(':')+1);
+	boost::optional<std::string> test = Opt_Parse.string("--test");
+	if(test){
+		std::string port = test->substr(0, test->find_first_of(':'));
+		std::string program_directory = test->substr(test->find_first_of(':')+1);
 		p2p::test(port, program_directory);
 	}
 

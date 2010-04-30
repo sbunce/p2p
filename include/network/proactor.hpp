@@ -41,15 +41,24 @@ public:
 	);
 
 	/* Stop/Start
-	start:
-		Starts the proactor. Optionally specify a local endpoint to start a
-		listener. Returns false if failed to start listener.
+	start (no parameters):
+		Start proactor.
+	start (one parameter):
+		Start listener and start proactor. Returns false if failed to start
+		listener. The endpoint is a local endpoint used to start the listener.
+		Precondition: Proactor stopped. Listener not active.
+	start_listener:
+		This function is used to start the listener before the rest of the
+		is started. After this function is called the start() (no parameters)
+		function must be called. Returns false if failed to start listener.
+		Note: This function is provided to allow priveledge dropping after binding
+			to a port < 1024 but before we allow any connections.
 	stop:
 		Stops the proactor.
-		Note: It's not supported to start the proactor after it has been stopped.
 	*/
-	bool start();
+	void start();
 	bool start(const endpoint & E);
+	bool start_listener(const endpoint & E);
 	void stop();
 
 	/* Connect/Disconnect/Send

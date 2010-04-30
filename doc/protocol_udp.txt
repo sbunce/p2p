@@ -20,8 +20,14 @@ to as alpha. The alpha is unspecified.
 
 Routing Table Updates
 =====================
-The routing table should only be updated when we receive a pong message. This is
-to make Sybil attacks more difficult.
+A host should only be added to the routing table when we receive a pong message.
+This is to make Sybil attacks more difficult.
+
+Timeouts should only be reset on hosts in the routing table when we receive a
+response from them.
+
+Timeouts should NOT be reset when we receive a non-response from the host. If
+this were allowed then anyone could keep a dead entry alive.
 
 
 Store DOS
