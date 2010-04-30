@@ -5,11 +5,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
 #include <boost/regex.hpp>
-#include <logger.hpp>
 
 //standard
-#include <algorithm>
-#include <cassert>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -18,6 +15,7 @@ class opt_parse
 {
 public:
 	opt_parse(const int argc, char ** argv):
+		valid_opt_expr("[a-zA-Z0-9_]+"),
 		args(argv+1, argv+argc)
 	{
 
@@ -36,9 +34,9 @@ public:
 			for(std::list<std::string>::iterator it_cur = args.begin(),
 			it_end = args.end(); it_cur != it_end; ++it_cur)
 			{
+				std::cout << *it_cur;
 				std::list<std::string>::iterator it_next = it_cur;
 				++it_next;
-				std::cout << *it_cur;
 				if(it_next != it_end){
 					std::cout << " ";
 				}
@@ -49,16 +47,48 @@ public:
 	}
 
 	/*
-	Returns a boolean flag. An option that doesn't have any string associated
-	with it.
+	Returns true if flag present. Flag option looks like:
+	<base>     = <"-"><opt_list>
+	<opt_list> = <opt><opt_list>|<opt>
 	*/
-	bool flag(const std::string & opt)
+	bool flag(const char opt)
 	{
+		validate_opt(opt);
+		std::stringstream ss;
+		ss << "^-.*(" << opt << ").*";
+		boost::regex expr(ss.str());
 		for(std::list<std::string>::iterator it_cur = args.begin(),
 			it_end = args.end(); it_cur != it_end; ++it_cur)
 		{
-			if(*it_cur == opt){
-				std::string tmp = *it_cur;
+			boost::match_results<std::string::iterator> what;
+			if(boost::regex_search(it_cur->begin(), it_cur->end(), what, expr)){
+				if(it_cur->size() == 2){
+					//flag looks like -f
+					args.erase(it_cur);
+				}else{
+					//flag looks like -fgh (composite flag)
+					it_cur->erase(what.position(1), 1);
+				}
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/*
+	Returns true if flag present. Flag options looks like:
+	<base> = <"--"><opt>
+	*/
+	bool flag(const std::string & opt)
+	{
+		validate_opt(opt);
+		std::stringstream ss;
+		ss << "^--" << opt;
+		boost::regex expr(ss.str());
+		for(std::list<std::string>::iterator it_cur = args.begin(),
+			it_end = args.end(); it_cur != it_end; ++it_cur)
+		{
+			if(boost::regex_match(it_cur->begin(), it_cur->end(), expr)){
 				args.erase(it_cur);
 				return true;
 			}
@@ -67,21 +97,20 @@ public:
 	}
 
 	/*
-	Returns string option of the form:
-	<opt><string>
-	<opt>=<string>
-	<opt> <string>
+	Returns string in string option. String option looks like:
+	<base>   = <"--"><spacer><string>
+	<spacer> = <"">|<" ">|<"=">
 	*/
 	boost::optional<std::string> string(const std::string & opt)
 	{
-		assert(!contains_regex_char(opt));
+		validate_opt(opt);
 		std::stringstream ss;
-		ss << "^" << opt << "(={0,1})(.*)";
+		ss << "^--" << opt << "(={0,1})(.*)";
 		boost::regex expr(ss.str());
+		boost::match_results<std::string::iterator> what;
 		for(std::list<std::string>::iterator it_cur = args.begin(),
 			it_end = args.end(); it_cur != it_end; ++it_cur)
 		{
-			boost::match_results<std::string::iterator> what;
 			if(boost::regex_search(it_cur->begin(), it_cur->end(), what, expr)){
 				if(what[2] != ""){
 					//string in current element (option looks like --opt123 or --opt=123)
@@ -106,10 +135,7 @@ public:
 		return boost::optional<std::string>();
 	}
 
-	/*
-	Does lexical cast on a string option. See string() for how to specify the
-	option.
-	*/
+	//does lexical cast on a string option
 	template<typename T>
 	boost::optional<T> lexical_cast(const std::string & opt)
 	{
@@ -129,11 +155,21 @@ public:
 	}
 
 private:
+	boost::regex valid_opt_expr;
 	std::list<std::string> args;
 
-	bool contains_regex_char(const std::string & opt)
+	void validate_opt(const std::string & opt)
 	{
-		return std::strcspn(opt.c_str(), ".[{()\\*+?|^$") != opt.size();
+		if(!boost::regex_match(opt.begin(), opt.end(), valid_opt_expr)){
+			std::cout << "invalid char in opt \"" << opt << "\"\n";
+		}
+	}
+
+	void validate_opt(const char opt)
+	{
+		std::string tmp;
+		tmp += opt;
+		validate_opt(tmp);
 	}
 };
 #endif

@@ -61,24 +61,24 @@ int main(int argc, char ** argv)
 	;
 
 	//parse options
-	if(Opt_Parse.flag("--help")){
+	if(Opt_Parse.flag("help")){
 		std::cout << help.str();
 		return 0;
 	}
-	boost::optional<std::string> web_root = Opt_Parse.string("--web_root");
+	boost::optional<std::string> web_root = Opt_Parse.string("web_root");
 	if(!web_root){
 		std::cout
 			<< "error, web root not specified\n"
 			<< "--help for usage information\n";
 		return 1;
 	}
-	bool localhost_only = Opt_Parse.flag("-l");
+	bool localhost_only = Opt_Parse.flag("l");
 	#ifndef __WIN32
-	boost::optional<uid_t> uid = Opt_Parse.lexical_cast<uid_t>("--uid");
-	boost::optional<gid_t> gid = Opt_Parse.lexical_cast<gid_t>("--gid");
+	boost::optional<uid_t> uid = Opt_Parse.lexical_cast<uid_t>("uid");
+	boost::optional<gid_t> gid = Opt_Parse.lexical_cast<gid_t>("gid");
 	#endif
-	boost::optional<std::string> port = Opt_Parse.string("--port");
-	boost::optional<unsigned> rate = Opt_Parse.lexical_cast<unsigned>("--rate");
+	boost::optional<std::string> port = Opt_Parse.string("port");
+	boost::optional<unsigned> rate = Opt_Parse.lexical_cast<unsigned>("rate");
 	if(Opt_Parse.unparsed()){
 		std::cout << "--help for usage information\n";
 		return 1;
