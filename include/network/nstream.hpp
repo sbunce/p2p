@@ -3,6 +3,7 @@
 
 //custom
 #include "endpoint.hpp"
+#include "start.hpp"
 #include "system_include.hpp"
 
 //include
@@ -14,6 +15,8 @@
 namespace network{
 class nstream : private boost::noncopyable
 {
+	network::start Start;
+
 	//max we attempt to send/recv in one go
 	static const int MTU = 8192;
 public:
@@ -63,19 +66,19 @@ public:
 	socket:
 		Returns socket file descriptor, or -1 if disconnected.
 	*/
-	virtual void close();
-	virtual bool is_open() const;
-	virtual bool is_open_async();
-	virtual std::string local_IP();
-	virtual std::string local_port();
-	virtual void open(const endpoint & E);
-	virtual void open_async(const endpoint & E);
-	virtual int recv(buffer & buf, const int max_transfer = MTU);
-	virtual std::string remote_IP();
-	virtual std::string remote_port();
-	virtual int send(buffer & buf, int max_transfer = MTU);
-	virtual void set_non_blocking();
-	virtual int socket();
+	void close();
+	bool is_open() const;
+	bool is_open_async();
+	std::string local_IP();
+	std::string local_port();
+	void open(const endpoint & E);
+	void open_async(const endpoint & E);
+	int recv(buffer & buf, const int max_transfer = MTU);
+	std::string remote_IP();
+	std::string remote_port();
+	int send(buffer & buf, int max_transfer = MTU);
+	void set_non_blocking();
+	int socket();
 
 private:
 	//-1 if not connected, or >= 0 if connected

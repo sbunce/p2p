@@ -6,8 +6,6 @@ int fail(0);
 
 int main()
 {
-	network::start();
-
 	{//BEGIN IPv4
 	std::set<network::endpoint> E = network::get_endpoint("127.0.0.1", "0", network::tcp);
 	assert(!E.empty());
@@ -49,8 +47,6 @@ int main()
 		}
 	}
 	}//END IPv6
-
-	network::stop();
 
 	return fail;
 }

@@ -3,6 +3,7 @@
 
 //custom
 #include "protocol.hpp"
+#include "start.hpp"
 #include "system_include.hpp"
 
 //include
@@ -21,12 +22,13 @@ class nstream;
 
 class endpoint
 {
+	network::start Start;
+
 	friend class listener;
 	friend class ndgram;
 	friend class nstream;
 	friend std::set<endpoint> get_endpoint(const std::string & host,
-	const std::string & port, const socket_t type);
-
+		const std::string & port, const socket_t type);
 public:
 	//construct endpoint from IP_bin() and port_bin()
 	endpoint(const std::string & addr, const std::string & port, const socket_t type);

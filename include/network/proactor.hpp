@@ -8,9 +8,9 @@
 #include "protocol.hpp"
 #include "rate_limit.hpp"
 #include "select.hpp"
+#include "start.hpp"
 
 //include
-#include <atomic_int.hpp>
 #include <boost/shared_ptr.hpp>
 #include <thread_pool.hpp>
 
@@ -20,19 +20,13 @@
 namespace network{
 class proactor : private boost::noncopyable
 {
+	network::start Start;
+
 	/*
 	Timeout (seconds) before idle sockets disconnected. This has to be quite high
 	otherwise client that download very slowly will be erroneously disconnected.
 	*/
 	static const unsigned idle_timeout = 600;
-
-	class init
-	{
-	public:
-		init();
-		~init();
-	} Init;
-
 public:
 	//if listener not specified then listener is not started
 	proactor(

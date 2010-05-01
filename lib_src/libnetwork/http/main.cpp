@@ -11,7 +11,7 @@
 #include <csignal>
 
 //needed to priveledge drop
-#ifndef __WIN32
+#ifndef _WIN32
 	//posix
 	#include <sys/types.h> 
 	#include <unistd.h>
@@ -50,7 +50,7 @@ int main(int argc, char ** argv)
 		<< "\n"
 		<< "options:\n"
 		<< " -l                Listen on localhost only.\n"
-		#ifndef __WIN32
+		#ifndef _WIN32
 		<< " --uid <uid>       User ID to priviledge drop to.\n"
 		<< " --gid <gid>       Group ID to priviledge drop to.\n"
 		#endif
@@ -73,7 +73,7 @@ int main(int argc, char ** argv)
 		return 1;
 	}
 	bool localhost_only = Opt_Parse.flag('l');
-	#ifndef __WIN32
+	#ifndef _WIN32
 	boost::optional<uid_t> uid = Opt_Parse.lexical_cast<uid_t>("uid");
 	boost::optional<gid_t> gid = Opt_Parse.lexical_cast<gid_t>("gid");
 	#endif
@@ -102,7 +102,7 @@ int main(int argc, char ** argv)
 	std::cout << "listening on " << Listener->port() << "\n";
 
 	//drop priviledges before allowing incoming connections
-	#ifndef __WIN32
+	#ifndef _WIN32
 	if(uid){
 		if(setuid(*uid) == -1){
 			LOG << errno;

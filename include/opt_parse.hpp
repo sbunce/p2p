@@ -114,8 +114,9 @@ public:
 			if(boost::regex_search(it_cur->begin(), it_cur->end(), what, expr)){
 				if(what[2] != ""){
 					//string in current element (option looks like --opt123 or --opt=123)
+					std::string tmp = what[2];
 					args.erase(it_cur);
-					return boost::optional<std::string>(what[2]);
+					return boost::optional<std::string>(tmp);
 				}else{
 					//string in next element (option looks like --opt 123)
 					std::list<std::string>::iterator it_next = it_cur;

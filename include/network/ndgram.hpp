@@ -3,11 +3,14 @@
 
 //custom
 #include "protocol.hpp"
+#include "start.hpp"
 #include "system_include.hpp"
 
 namespace network{
 class ndgram : private boost::noncopyable
 {
+	network::start Start;
+
 	//max we attempt to send/recv in one go
 	static const int MTU = 1536;
 public:

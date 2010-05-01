@@ -59,7 +59,6 @@ void host_list_call_back(const network::endpoint & endpoint,
 
 int main()
 {
-	network::start();
 	std::set<network::endpoint> E = network::get_endpoint("localhost", "0", network::udp);
 	assert(!E.empty());
 	endpoint = boost::shared_ptr<network::endpoint>(new network::endpoint(*E.begin()));

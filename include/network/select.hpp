@@ -1,12 +1,14 @@
 #ifndef H_NETWORK_SELECT
 #define H_NETWORK_SELECT
 
-//include
+//custom
+#include "start.hpp"
 #include "system_include.hpp"
 
 namespace network{
 class select
 {
+	network::start Start;
 public:
 	select();
 

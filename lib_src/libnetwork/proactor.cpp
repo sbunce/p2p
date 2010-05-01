@@ -29,18 +29,6 @@ void network::proactor::ID_manager::deallocate(int connection_ID)
 }
 //END ID_manager
 
-//BEGIN init
-network::proactor::init::init()
-{
-	network::start();
-}
-
-network::proactor::init::~init()
-{
-	network::stop();
-}
-//END init
-
 //BEGIN connection
 network::proactor::connection::connection(
 	ID_manager & ID_Manager_in,

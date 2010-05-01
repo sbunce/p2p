@@ -2,8 +2,6 @@
 
 int main()
 {
-	network::start();
-
 	std::set<network::endpoint> E = network::get_endpoint("localhost", "0", network::udp);
 	assert(!E.empty());
 	network::ndgram N(*E.begin());
@@ -53,5 +51,4 @@ int main()
 			}
 		}
 	}
-	network::stop();
 }

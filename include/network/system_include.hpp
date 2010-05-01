@@ -36,18 +36,4 @@
 	#include <sys/types.h>
 	#include <unistd.h>
 #endif
-
-//include
-#include <logger.hpp>
-
-namespace network{
-/*
-start:
-	Must be called before using any network function.
-stop:
-	For every call to start() this function must be called.
-*/
-extern void start();
-extern void stop();
-}//end namespace network
 #endif

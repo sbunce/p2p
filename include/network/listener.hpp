@@ -3,6 +3,7 @@
 
 //custom
 #include "nstream.hpp"
+#include "start.hpp"
 
 //include
 #include <boost/shared_ptr.hpp>
@@ -10,8 +11,8 @@
 namespace network{
 class listener : private boost::noncopyable
 {
+	network::start Start;
 public:
-
 	listener();
 	listener(const endpoint & E); //open listener on local endpoint
 	~listener();

@@ -1,6 +1,9 @@
 #site_scons
 import main
 
+#standard
+import os
+
 #base environment(needed by all targets)
 env_base = Environment()
 main.setup(env_base)
@@ -15,5 +18,8 @@ SConscript([
 	'site_scons/SConscript'
 ])
 
-Clean('bin','bin') #directory for built binaries
-Clean('lib','lib') #directory for built libraries
+Clean('bin','bin')
+Clean('lib','lib')
+Clean('.cache','.cache')
+if env_base.GetOption('clean'):
+	os.system('rm .sconsign.dblite')

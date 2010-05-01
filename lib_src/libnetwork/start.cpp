@@ -1,6 +1,6 @@
-#include <network/system_include.hpp>
+#include <network/start.hpp>
 
-void network::start()
+network::start::start()
 {
 	#ifdef _WIN32
 	WORD wsock_ver = MAKEWORD(2,2);
@@ -13,7 +13,7 @@ void network::start()
 	#endif
 }
 
-void network::stop()
+network::start::~start()
 {
 	#ifdef _WIN32
 	WSACleanup();

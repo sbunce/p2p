@@ -139,6 +139,8 @@ void network::endpoint::copy(const addrinfo * ai_in)
 std::set<network::endpoint> network::get_endpoint(const std::string & host,
 	const std::string & port, const socket_t type)
 {
+	network::start Start;
+
 	std::set<endpoint> E;
 	if(port.empty() || host.size() > 255 || port.size() > 33){
 		return E;
