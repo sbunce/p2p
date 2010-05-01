@@ -72,7 +72,7 @@ int main(int argc, char ** argv)
 			<< "--help for usage information\n";
 		return 1;
 	}
-	bool localhost_only = Opt_Parse.flag("l");
+	bool localhost_only = Opt_Parse.flag('l');
 	#ifndef __WIN32
 	boost::optional<uid_t> uid = Opt_Parse.lexical_cast<uid_t>("uid");
 	boost::optional<gid_t> gid = Opt_Parse.lexical_cast<gid_t>("gid");
@@ -84,10 +84,24 @@ int main(int argc, char ** argv)
 		return 1;
 	}
 
-	//start HTTP server
+	//create HTTP server
 	http HTTP(*web_root, port ? *port : "0", localhost_only);
-	HTTP.start_0();
-	//priviledge drop before incoming connections allowed
+	std::set<network::endpoint> E = network::get_endpoint(
+		localhost_only ? "localhost" : "", port ? *port : "0", network::tcp);
+	if(E.empty()){
+		std::cout << "failed to resolve listener endpoint\n";
+		return 1;
+	}
+
+	//bind to port before priviledge drop
+	boost::shared_ptr<network::listener> Listener(new network::listener(*E.begin()));
+	if(!Listener->is_open()){
+		std::cout << "failed to open listener\n";
+		return 1;
+	}
+	std::cout << "listening on " << Listener->port() << "\n";
+
+	//drop priviledges before allowing incoming connections
 	#ifndef __WIN32
 	if(uid){
 		if(setuid(*uid) == -1){
@@ -100,12 +114,13 @@ int main(int argc, char ** argv)
 		}
 	}
 	#endif
+
 	if(rate){
 		HTTP.set_max_upload_rate(*rate);
 	}
-	//allow incoming connections
-	HTTP.start_1();
-	LOG << "listen on " << HTTP.listen_port();
+
+	//start HTTP server
+	HTTP.start(Listener);
 
 	//wait for server to terminate
 	{//begin lock scope

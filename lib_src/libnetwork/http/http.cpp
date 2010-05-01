@@ -37,35 +37,20 @@ void http::disconnect_call_back(network::connection_info & CI)
 	Connection.erase(CI.connection_ID);
 }
 
-std::string http::listen_port()
-{
-	boost::mutex::scoped_lock lock(start_stop_mutex);
-	return Proactor.listen_port();
-}
-
 void http::set_max_upload_rate(const unsigned rate)
 {
 	Proactor.set_max_upload_rate(rate);
 }
 
-void http::start_0()
+void http::start(boost::shared_ptr<network::listener> Listener)
 {
 	boost::mutex::scoped_lock lock(start_stop_mutex);
-	std::set<network::endpoint> E = network::get_endpoint(
-		localhost_only ? "localhost" : "",
-		port,
-		network::tcp
-	);
-	assert(!E.empty());
-	if(!Proactor.start_listener(*E.begin())){
-		LOG << "failed to start listener";
-		exit(1);
-	}
+	assert(Listener);
+	Proactor.start(Listener);
 }
 
-void http::start_1()
+void http::stop()
 {
 	boost::mutex::scoped_lock lock(start_stop_mutex);
-	assert(!Proactor.listen_port().empty());
-	Proactor.start();
+	Proactor.stop();
 }

@@ -41,24 +41,15 @@ public:
 	);
 
 	/* Stop/Start
-	start (no parameters):
-		Start proactor.
-	start (one parameter):
-		Start listener and start proactor. Returns false if failed to start
-		listener. The endpoint is a local endpoint used to start the listener.
-		Precondition: Proactor stopped. Listener not active.
-	start_listener:
-		This function is used to start the listener before the rest of the
-		is started. After this function is called the start() (no parameters)
-		function must be called. Returns false if failed to start listener.
-		Note: This function is provided to allow priveledge dropping after binding
-			to a port < 1024 but before we allow any connections.
+	start:
+		Start the proactor and optionally add a listener.
+		Note: The listener added should not be used after it is passed to the
+			proactor.
 	stop:
-		Stops the proactor.
+		Stop the proactor. Disconnect call back done for all connections.
+		Pending resolve jobs are cancelled.
 	*/
-	void start();
-	bool start(const endpoint & E);
-	bool start_listener(const endpoint & E);
+	void start(boost::shared_ptr<listener> Listener_in = boost::shared_ptr<listener>());
 	void stop();
 
 	/* Connect/Disconnect/Send
@@ -224,7 +215,7 @@ private:
 	boost::thread network_thread;
 	ID_manager ID_Manager;
 	dispatcher Dispatcher;
-	listener Listener;
+	boost::shared_ptr<listener> Listener;
 	rate_limit Rate_Limit;
 	thread_pool Thread_Pool;
 	select Select;

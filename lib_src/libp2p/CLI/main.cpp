@@ -32,7 +32,7 @@ int main(int argc, char ** argv)
 	signal(SIGINT, signal_handler);
 
 	//test server functionality, run multiple servers out of same directory
-	boost::optional<std::string> test = Opt_Parse.string("--test");
+	boost::optional<std::string> test = Opt_Parse.string("test");
 	if(test){
 		std::string port = test->substr(0, test->find_first_of(':'));
 		std::string program_directory = test->substr(test->find_first_of(':')+1);

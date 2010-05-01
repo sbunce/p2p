@@ -20,39 +20,29 @@ public:
 	~http();
 
 	/* Options
-
-	*/
-
-	/* Info
-	port:
-		Return port server is listening on.
 	set_max_upload_rate:
 		Set maximum allowed upload rate.
 	*/
-	std::string listen_port();
 	void set_max_upload_rate(const unsigned rate);
 
 	/*
 	start_0:
 		Start the listener.
 		Note: Priviledge dropping should be done between steps 0 and 1.
-	start_1:
-		Start the rest of the server. Allow incoming connections.
+	start:
+		Start the HTTP server. Listen on specified listener.
+		Note: Listener should not be used after it is passed to this function.
 	stop:
 		Stop the HTTP server.
 	*/
-	void start_0();
-	void start_1();
+	void start(boost::shared_ptr<network::listener> Listener);
 	void stop();
 
 private:
 	const std::string web_root;
 	const std::string port;
 	const bool localhost_only;
-
-	//lock for start()/stop()
 	boost::mutex start_stop_mutex;
-
 	network::proactor Proactor;
 
 	//connection specific information

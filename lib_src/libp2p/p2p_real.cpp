@@ -97,11 +97,16 @@ void p2p_real::resume()
 		db::table::prefs::get_port(),
 		network::tcp
 	);
-	assert(!E.empty());
-	if(!Connection_Manager.Proactor.start(*E.begin())){
-		LOG << "stub: handle failed listener start";
+	if(E.empty()){
+		LOG << "failed to resolve listener";
 		exit(1);
 	}
+	boost::shared_ptr<network::listener> Listener(new network::listener(*E.begin()));
+	if(!Listener->is_open()){
+		LOG << "failed to open listener";
+		exit(1);
+	}
+	Connection_Manager.Proactor.start(Listener);
 }
 
 void p2p_real::set_max_connections(unsigned connections)

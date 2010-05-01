@@ -65,11 +65,16 @@ int main()
 		network::tcp
 	);
 	assert(!E.empty());
+	boost::shared_ptr<network::listener> Listener(new network::listener(*E.begin()));
+	if(!Listener->is_open()){
+		LOG << "failed to open listener";
+		return 1;
+	}
 
 	//make sure proactor works after start/stop/start
-	Proactor.start(*E.begin());
+	Proactor.start(Listener);
 	Proactor.stop();
-	Proactor.start(*E.begin());
+	Proactor.start(Listener);
 
 	for(int x=0; x<test_echo; ++x){
 		Proactor.connect("localhost", Proactor.listen_port());

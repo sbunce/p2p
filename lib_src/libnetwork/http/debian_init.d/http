@@ -1,7 +1,7 @@
 #!/bin/sh
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
 BIN=/usr/local/bin/http
-OPTS="-p=80 -r=16384 -pid=34 -uid=33 /var/www"
+OPTS="--port 80 --uid 33 --gid 33 --rate 16384 --web_root /var/www"
 PID_FILE="/var/lock/http.lock"
 
 function start()
