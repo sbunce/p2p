@@ -3,7 +3,12 @@
 network::ndgram::ndgram():
 	socket_FD(-1)
 {
-	open();
+	std::set<endpoint> E = get_endpoint("", "0");
+	assert(!E.empty());
+	if((socket_FD = ::socket(E.begin()->ai.ai_family, SOCK_DGRAM, IPPROTO_UDP)) == -1){
+		LOG << strerror(errno);
+		close();
+	}
 }
 
 network::ndgram::ndgram(const endpoint & E):
@@ -78,24 +83,10 @@ std::string network::ndgram::local_port()
 	return buf;
 }
 
-void network::ndgram::open()
-{
-	close();
-	std::set<endpoint> E = get_endpoint("", "0", udp);
-	assert(!E.empty());
-	if((socket_FD = ::socket(E.begin()->ai.ai_family, E.begin()->ai.ai_socktype,
-		E.begin()->ai.ai_protocol)) == -1)
-	{
-		LOG << strerror(errno);
-		close();
-	}
-}
-
 void network::ndgram::open(const endpoint & E)
 {
-	assert(E.type() == udp);
 	close();
-	if((socket_FD = ::socket(E.ai.ai_family, E.ai.ai_socktype, E.ai.ai_protocol)) == -1){
+	if((socket_FD = ::socket(E.ai.ai_family, SOCK_DGRAM, IPPROTO_UDP)) == -1){
 		LOG << strerror(errno);
 		close();
 	}

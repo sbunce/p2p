@@ -23,8 +23,7 @@ exchange_udp::exchange_udp()
 	//setup UDP listener
 	std::set<network::endpoint> E = network::get_endpoint(
 		"",
-		db::table::prefs::get_port(),
-		network::udp
+		db::table::prefs::get_port()
 	);
 	assert(!E.empty());
 	ndgram.open(*E.begin());

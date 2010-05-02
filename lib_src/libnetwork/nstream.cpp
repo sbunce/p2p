@@ -106,9 +106,8 @@ std::string network::nstream::local_port()
 
 void network::nstream::open(const endpoint & E)
 {
-	assert(E.type() == tcp);
 	close();
-	if((socket_FD = ::socket(E.ai.ai_family, E.ai.ai_socktype, E.ai.ai_protocol)) == -1){
+	if((socket_FD = ::socket(E.ai.ai_family, SOCK_STREAM, IPPROTO_TCP)) == -1){
 		LOG << strerror(errno);
 		close();
 	}
@@ -121,9 +120,7 @@ void network::nstream::open(const endpoint & E)
 void network::nstream::open_async(const endpoint & E)
 {
 	close();
-	if((socket_FD = ::socket(E.ai.ai_family, E.ai.ai_socktype,
-		E.ai.ai_protocol)) == -1)
-	{
+	if((socket_FD = ::socket(E.ai.ai_family, SOCK_STREAM, IPPROTO_TCP)) == -1){
 		LOG << strerror(errno);
 		return;
 	}

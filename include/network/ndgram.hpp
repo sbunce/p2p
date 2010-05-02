@@ -14,7 +14,7 @@ class ndgram : private boost::noncopyable
 	//max we attempt to send/recv in one go
 	static const int MTU = 1536;
 public:
-	ndgram();                   //open but don't bind (used for send)
+	ndgram();                   //open but don't bind (used for send only)
 	ndgram(const endpoint & E); //open and bind (used for send/recv)
 	~ndgram();
 
@@ -29,9 +29,7 @@ public:
 	local_port:
 		Returns local port, or empty string if error.
 		Postcondition: If error then close() called.
-	open (no parameters):
-		Opens socket for sending. Does not bind to a port.
-	open (one parameter):
+	open:
 		Open for sending/receiving, endpoint is local. Example:
 		Accept only from localhost. Choose random port to listen on.
 			network::get_endpoint("localhost", "0", network::udp);
@@ -51,7 +49,6 @@ public:
 	bool is_open() const;
 	std::string local_IP();
 	std::string local_port();
-	void open();
 	void open(const endpoint & E);
 	int recv(network::buffer & buf, boost::shared_ptr<endpoint> & E);
 	int send(network::buffer & buf, const endpoint & E);

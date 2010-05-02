@@ -7,13 +7,13 @@ network::select::select()
 	select() and the write socket is used to interrupt select().
 	*/
 	//setup listener
-	std::set<network::endpoint> E = network::get_endpoint("localhost", "0", network::tcp);
+	std::set<network::endpoint> E = network::get_endpoint("localhost", "0");
 	assert(!E.empty());
 	network::listener L(*E.begin());
 	assert(L.is_open());
 
 	//connect read_only socket
-	E = network::get_endpoint("localhost", L.port(), network::tcp);
+	E = network::get_endpoint("localhost", L.port());
 	assert(!E.empty());
 	sp_read = boost::shared_ptr<nstream>(new nstream(*E.begin()));
 	assert(sp_read->is_open());

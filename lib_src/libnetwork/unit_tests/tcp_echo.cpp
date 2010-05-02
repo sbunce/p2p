@@ -6,13 +6,13 @@ int main()
 	network::start();
 
 	//setup listener
-	std::set<network::endpoint> E = network::get_endpoint("localhost", "0", network::tcp);
+	std::set<network::endpoint> E = network::get_endpoint("localhost", "0");
 	assert(!E.empty());
 	network::listener L(*E.begin());
 	assert(L.is_open());
 
 	//connect
-	E = network::get_endpoint("localhost", L.port(), network::tcp);
+	E = network::get_endpoint("localhost", L.port());
 	assert(!E.empty());
 	network::nstream N_client(*E.begin());
 	assert(N_client.is_open());

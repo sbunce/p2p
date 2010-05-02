@@ -6,14 +6,14 @@ int main()
 	network::start();
 
 	//setup echo server
-	std::set<network::endpoint> E = network::get_endpoint("localhost", "0", network::udp);
+	std::set<network::endpoint> E = network::get_endpoint("localhost", "0");
 	assert(!E.empty());
 	network::ndgram N_serv(*E.begin());
 	assert(N_serv.is_open());
 	LOG << "local_IP: " << N_serv.local_IP() << " local_port: " << N_serv.local_port();
 
 	//setup echo client
-	E = network::get_endpoint("localhost", N_serv.local_port(), network::udp);
+	E = network::get_endpoint("localhost", N_serv.local_port());
 	assert(!E.empty());
 	network::ndgram N_client;
 	assert(N_client.is_open());

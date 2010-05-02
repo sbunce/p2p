@@ -94,8 +94,7 @@ void p2p_real::resume()
 	//bring up networking
 	std::set<network::endpoint> E = network::get_endpoint(
 		"",
-		db::table::prefs::get_port(),
-		network::tcp
+		db::table::prefs::get_port()
 	);
 	if(E.empty()){
 		LOG << "failed to resolve listener";

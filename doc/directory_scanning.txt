@@ -1,0 +1,32 @@
+Directory scanning is used instead of a event service to monitor shares for file
+updates. This is inefficient. Other systems have not been fully researched but
+what is known is listed in this document.
+
+Linux inotify
+=============
+Limit
+-----
+Available on >= Linux 2.6.13.
+
+Limit
+-----
+Maximum 8192 directories can be watched. This can be increased by
+writing to /proc/sys/fs/inotify/max_user_watches.
+
+From the inotifywatch 3.12 man page.
+"If you use this option while watching the root directory of a large tree, it may
+take quite a while until all inotify watches are established, and events will
+not be received in this time. Also, since one inotify watch will be established
+per subdirectory, it is possible that the maximum amount of inotify watches per
+user will be reached. The default maximum is 8192; it can be increased by
+writing to /proc/sys/fs/inotify/max_user_watches."
+
+
+(FreeBSD/OpenBSD/NetBSD/Mac OSX) kqueue
+=======================================
+This has not been researched.
+
+
+Windows FileSystemWatcher
+=========================
+This has not been researched.

@@ -105,30 +105,22 @@ bool message_udp::recv::host_list::recv(const network::buffer & recv_buf,
 	//read IPv4 addresses
 	int IPv4_start = protocol_udp::host_list_size;
 	for(int RRN=0; RRN < IPv4_cnt; ++RRN){
-		hosts.push_back(
-			std::make_pair(
-				network::endpoint(
-					recv_buf.str(IPv4_start + RRN * 7, 4),
-					recv_buf.str(IPv4_start + RRN * 7 + 4, 2),
-					network::tcp
-				),
-				recv_buf[IPv4_start + RRN * 7 + 6]
-			)
-		);
+		boost::optional<network::endpoint> ep = network::bin_to_endpoint(
+			recv_buf.str(IPv4_start + RRN * 7, 4),
+			recv_buf.str(IPv4_start + RRN * 7 + 4, 2));
+		if(ep){
+			hosts.push_back(std::make_pair(*ep, recv_buf[IPv4_start + RRN * 7 + 6]));
+		}
 	}
 	//read IPv6 addresses
 	int IPv6_start = IPv4_start + IPv4_cnt * 7;
 	for(int RRN=0; IPv6_start + RRN * 19 < recv_buf.size(); ++RRN){
-		hosts.push_back(
-			std::make_pair(
-				network::endpoint(
-					recv_buf.str(IPv6_start + RRN * 19, 16),
-					recv_buf.str(IPv6_start + RRN * 19 + 16, 2),
-					network::tcp
-				),
-				recv_buf[IPv6_start + RRN * 19 + 18]
-			)
-		);
+		boost::optional<network::endpoint> ep = network::bin_to_endpoint(
+			recv_buf.str(IPv6_start + RRN * 19, 16),
+			recv_buf.str(IPv6_start + RRN * 19 + 16, 2));
+		if(ep){
+			hosts.push_back(std::make_pair(*ep, recv_buf[IPv6_start + RRN * 19 + 18]));
+		}
 	}
 	func(endpoint, remote_ID, hosts);
 }

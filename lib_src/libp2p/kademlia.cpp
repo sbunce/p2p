@@ -29,7 +29,7 @@ void kademlia::main_loop()
 	std::random_shuffle(hosts.begin(), hosts.end());
 	while(!hosts.empty()){
 		std::set<network::endpoint> E = network::get_endpoint(hosts.back().IP,
-			hosts.back().port, network::udp);
+			hosts.back().port);
 		if(E.empty()){
 			LOG << "failed \"" << hosts.back().IP << "\" " << hosts.back().port;
 		}else{

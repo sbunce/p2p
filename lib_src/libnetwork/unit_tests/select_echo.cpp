@@ -2,11 +2,11 @@
 
 int main()
 {
-	std::set<network::endpoint> E = network::get_endpoint("localhost", "0", network::udp);
+	std::set<network::endpoint> E = network::get_endpoint("localhost", "0");
 	assert(!E.empty());
 	network::ndgram N(*E.begin());
 	assert(N.is_open());
-	E = network::get_endpoint("localhost", N.local_port(), network::udp);
+	E = network::get_endpoint("localhost", N.local_port());
 	assert(!E.empty());
 
 	std::set<int> read, tmp_read, write, tmp_write;

@@ -61,8 +61,7 @@ int main()
 {
 	std::set<network::endpoint> E = network::get_endpoint(
 		"127.0.0.1",
-		"0",
-		network::tcp
+		"0"
 	);
 	assert(!E.empty());
 	boost::shared_ptr<network::listener> Listener(new network::listener(*E.begin()));

@@ -7,6 +7,7 @@
 #include "system_include.hpp"
 
 //include
+#include <boost/optional.hpp>
 #include <convert.hpp>
 #include <logger.hpp>
 
@@ -28,11 +29,10 @@ class endpoint
 	friend class ndgram;
 	friend class nstream;
 	friend std::set<endpoint> get_endpoint(const std::string & host,
-		const std::string & port, const socket_t type);
+		const std::string & port);
+	friend boost::optional<network::endpoint> bin_to_endpoint(
+		const std::string & addr, const std::string & port);
 public:
-	//construct endpoint from IP_bin() and port_bin()
-	endpoint(const std::string & addr, const std::string & port, const socket_t type);
-
 	//copy ctor
 	endpoint(const endpoint & E);
 
@@ -78,6 +78,14 @@ Returns set of possible endpoints for the specified host and port. The
 std::set is used because the getaddrinfo function can return duplicates.
 */
 extern std::set<endpoint> get_endpoint(const std::string & host,
-	const std::string & port, const socket_t type);
+	const std::string & port);
+
+/*
+Converts bytes to endpoint. A IPv6 endpoing won't be returned if the system
+doesn't support IPv6.
+Note: addr must be 4 or 16 bytes. port must be 2 bytes.
+*/
+extern boost::optional<network::endpoint> bin_to_endpoint(
+	const std::string & addr, const std::string & port);
 }//end of namespace network
 #endif

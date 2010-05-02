@@ -50,9 +50,8 @@ bool network::listener::is_open()
 
 void network::listener::open(const endpoint & E)
 {
-	assert(E.type() == tcp);
 	close();
-	if((socket_FD = ::socket(E.ai.ai_family, E.ai.ai_socktype,
+	if((socket_FD = ::socket(E.ai.ai_family, SOCK_STREAM,
 		E.ai.ai_protocol)) == -1)
 	{
 		LOG << strerror(errno);

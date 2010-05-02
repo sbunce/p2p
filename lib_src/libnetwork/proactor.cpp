@@ -44,10 +44,10 @@ network::proactor::connection::connection(
 	port(port_in),
 	connection_ID(ID_Manager.allocate())
 {
-	E = get_endpoint(host, port, tcp);
+	E = get_endpoint(host, port);
 	if(E.empty()){
 		CI = boost::shared_ptr<connection_info>(new connection_info(connection_ID,
-		host, "", port, incoming));
+			host, "", port, incoming));
 	}
 }
 

@@ -59,7 +59,7 @@ void host_list_call_back(const network::endpoint & endpoint,
 
 int main()
 {
-	std::set<network::endpoint> E = network::get_endpoint("localhost", "0", network::udp);
+	std::set<network::endpoint> E = network::get_endpoint("localhost", "0");
 	assert(!E.empty());
 	endpoint = boost::shared_ptr<network::endpoint>(new network::endpoint(*E.begin()));
 	boost::shared_ptr<message_udp::recv::base> M_recv;
@@ -97,17 +97,17 @@ int main()
 	Note: host_list can be reordered when sent. For this test we intentionally
 		put all IPv4 addresses first in the list so they don't get reordered.
 	*/
-	E = network::get_endpoint("127.0.0.1", "0", network::tcp);
+	E = network::get_endpoint("127.0.0.1", "0");
 	assert(!E.empty());
 	test_hosts.push_back(std::make_pair(*E.begin(), 0));
-	E = network::get_endpoint("127.0.0.2", "0", network::tcp);
+	E = network::get_endpoint("127.0.0.2", "0");
 	assert(!E.empty());
 	test_hosts.push_back(std::make_pair(*E.begin(), 0));
-	E = network::get_endpoint("::1", "0", network::tcp);
+	E = network::get_endpoint("::1", "0");
 	if(!E.empty()){
 		test_hosts.push_back(std::make_pair(*E.begin(), 0));
 	}
-	E = network::get_endpoint("::2", "0", network::tcp);
+	E = network::get_endpoint("::2", "0");
 	if(!E.empty()){
 		test_hosts.push_back(std::make_pair(*E.begin(), 0));
 	}

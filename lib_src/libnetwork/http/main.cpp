@@ -87,7 +87,7 @@ int main(int argc, char ** argv)
 	//create HTTP server
 	http HTTP(*web_root, port ? *port : "0", localhost_only);
 	std::set<network::endpoint> E = network::get_endpoint(
-		localhost_only ? "localhost" : "", port ? *port : "0", network::tcp);
+		localhost_only ? "localhost" : "", port ? *port : "0");
 	if(E.empty()){
 		std::cout << "failed to resolve listener endpoint\n";
 		return 1;
