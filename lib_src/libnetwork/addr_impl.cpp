@@ -34,14 +34,3 @@ void network::addr_impl::copy(const addrinfo * ai_in)
 	//not part of a list
 	ai.ai_next = NULL;
 }
-
-/*
-void network::endpoint::copy(const addrinfo * ai_in)
-{
-	ai = *ai_in;
-	ai.ai_addr = reinterpret_cast<sockaddr *>(&sas);
-	std::memcpy(ai.ai_addr, ai_in->ai_addr, ai_in->ai_addrlen);
-	ai.ai_canonname = NULL;
-	ai.ai_next = NULL;
-}
-*/

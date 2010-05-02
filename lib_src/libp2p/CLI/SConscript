@@ -4,9 +4,4 @@ import main
 import platform
 
 Import('env_base')
-
-#env_CLI = env_base.Clone()
-#if platform.system() != 'Windows':
-	#main.setup_static(env_CLI)
-#env_CLI.Program('#bin/p2p_CLI', glob.glob('*.cpp'))
 env_base.Program('#bin/p2p_CLI', glob.glob('*.cpp'))
