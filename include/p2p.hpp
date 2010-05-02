@@ -9,7 +9,7 @@
 #include <list>
 #include <string>
 
-class p2p_real;
+class p2p_impl;
 class p2p : private boost::noncopyable
 {
 public:
@@ -107,6 +107,6 @@ public:
 	static void test(const std::string & port, const std::string & program_directory);
 
 private:
-	boost::shared_ptr<p2p_real> P2P_Real;
+	boost::shared_ptr<p2p_impl> P2P_impl;
 };
 #endif

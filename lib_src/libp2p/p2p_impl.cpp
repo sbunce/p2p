@@ -1,7 +1,7 @@
-#include "p2p_real.hpp"
+#include "p2p_impl.hpp"
 
 //BEGIN init
-p2p_real::init::init()
+p2p_impl::init::init()
 {
 	db::init::create_all();
 	LOG << "port: " << db::table::prefs::get_port() << " peer_ID: "
@@ -9,38 +9,38 @@ p2p_real::init::init()
 }
 //END init
 
-p2p_real::p2p_real()
+p2p_impl::p2p_impl()
 {
-	resume_thread = boost::thread(boost::bind(&p2p_real::resume, this));
+	resume_thread = boost::thread(boost::bind(&p2p_impl::resume, this));
 }
 
-p2p_real::~p2p_real()
+p2p_impl::~p2p_impl()
 {
 	resume_thread.interrupt();
 	resume_thread.join();
 }
 
-unsigned p2p_real::download_rate()
+unsigned p2p_impl::download_rate()
 {
 	return Connection_Manager.Proactor.download_rate();
 }
 
-unsigned p2p_real::get_max_connections()
+unsigned p2p_impl::get_max_connections()
 {
 	return db::table::prefs::get_max_connections();
 }
 
-unsigned p2p_real::get_max_download_rate()
+unsigned p2p_impl::get_max_download_rate()
 {
 	return db::table::prefs::get_max_download_rate();
 }
 
-unsigned p2p_real::get_max_upload_rate()
+unsigned p2p_impl::get_max_upload_rate()
 {
 	return db::table::prefs::get_max_upload_rate();
 }
 
-void p2p_real::resume()
+void p2p_impl::resume()
 {
 	db::table::prefs::warm_up_cache();
 
@@ -108,7 +108,7 @@ void p2p_real::resume()
 	Connection_Manager.Proactor.start(Listener);
 }
 
-void p2p_real::set_max_connections(unsigned connections)
+void p2p_impl::set_max_connections(unsigned connections)
 {
 	//save extra 24 file descriptors for DB and misc other stuff
 	assert(connections <= 1000);
@@ -116,40 +116,40 @@ void p2p_real::set_max_connections(unsigned connections)
 	db::table::prefs::set_max_connections(connections);
 }
 
-void p2p_real::set_max_download_rate(const unsigned rate)
+void p2p_impl::set_max_download_rate(const unsigned rate)
 {
 	Connection_Manager.Proactor.set_max_download_rate(rate);
 	db::table::prefs::set_max_download_rate(rate);
 }
 
-void p2p_real::set_max_upload_rate(const unsigned rate)
+void p2p_impl::set_max_upload_rate(const unsigned rate)
 {
 	Connection_Manager.Proactor.set_max_upload_rate(rate);
 	db::table::prefs::set_max_upload_rate(rate);
 }
 
-boost::uint64_t p2p_real::share_size_bytes()
+boost::uint64_t p2p_impl::share_size_bytes()
 {
 	return share::singleton().bytes();
 }
 
-boost::uint64_t p2p_real::share_size_files()
+boost::uint64_t p2p_impl::share_size_files()
 {
 	return share::singleton().files();
 }
 
-void p2p_real::start_download(const p2p::download & D)
+void p2p_impl::start_download(const p2p::download & D)
 {
 	LOG;
 }
 
-void p2p_real::remove_download(const std::string & hash)
+void p2p_impl::remove_download(const std::string & hash)
 {
 	LOG << hash;
 	Connection_Manager.remove(hash);
 }
 
-void p2p_real::transfers(std::vector<p2p::transfer> & T)
+void p2p_impl::transfers(std::vector<p2p::transfer> & T)
 {
 	T.clear();
 	for(share::slot_iterator it_cur = share::singleton().begin_slot(),
@@ -169,7 +169,7 @@ void p2p_real::transfers(std::vector<p2p::transfer> & T)
 	}
 }
 
-unsigned p2p_real::upload_rate()
+unsigned p2p_impl::upload_rate()
 {
 	return Connection_Manager.Proactor.upload_rate();
 }

@@ -1,5 +1,5 @@
-#ifndef H_P2P_REAL
-#define H_P2P_REAL
+#ifndef H_P2P_IMPL
+#define H_P2P_IMPL
 
 //custom
 #include "connection_manager.hpp"
@@ -25,7 +25,7 @@
 #include <string>
 #include <vector>
 
-class p2p_real : private boost::noncopyable
+class p2p_impl : private boost::noncopyable
 {
 	//instantiate before anything else
 	class init
@@ -35,8 +35,8 @@ class p2p_real : private boost::noncopyable
 	}Init;
 
 public:
-	p2p_real();
-	~p2p_real();
+	p2p_impl();
+	~p2p_impl();
 
 	//documentation for these in p2p.hpp
 	unsigned download_rate();
