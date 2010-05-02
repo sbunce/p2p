@@ -1,23 +1,20 @@
-#ifndef H_NETWORK_SPEED_CALCULATOR
-#define H_NETWORK_SPEED_CALCULATOR
+#ifndef H_NETWORK_SPEED_CALC
+#define H_NETWORK_SPEED_CALC
 
 //include
-#include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
 
 //standard
 #include <ctime>
-#include <deque>
+#include <vector>
 
 namespace network{
 class speed_calc : private boost::noncopyable
 {
-	//must be >= 1
-	static const unsigned AVERAGE = 8;
-
 public:
-	speed_calc();
+	//seconds to average over (1 to 180)
+	speed_calc(const unsigned average_seconds_in = 8);
 
 	/*
 	add:
@@ -37,6 +34,9 @@ private:
 	//mutex for all public functions
 	boost::mutex Mutex;
 
+	//maximum number of seconds to average over
+	const unsigned average_seconds;
+
 	//most recently calculated average speed
 	unsigned average_speed;
 
@@ -45,7 +45,7 @@ private:
 	recent second. All seconds are associate with a number (of bytes or some
 	other quantity) seen in that second.
 	*/
-	std::pair<std::time_t, unsigned> Second[AVERAGE + 1];
+	std::vector<std::pair<std::time_t, unsigned> > Second;
 
 	/*
 	add_prive:
