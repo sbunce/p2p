@@ -1,14 +1,22 @@
+#include "init.hpp"
 #include <network/network.hpp>
 
 network::endpoint::endpoint(const addrinfo * ai_in)
 {
+	network::init::start();
 	assert(ai_in != NULL);
 	copy(ai_in);
 }
 
 network::endpoint::endpoint(const endpoint & E)
 {
+	network::init::start();
 	copy(&E.ai);
+}
+
+network::endpoint::~endpoint()
+{
+	network::init::stop();
 }
 
 std::string network::endpoint::IP() const
@@ -58,15 +66,6 @@ std::string network::endpoint::port_bin() const
 	}
 }
 
-network::socket_t network::endpoint::type() const
-{
-	if(ai.ai_socktype == SOCK_STREAM){
-		return tcp;
-	}else{
-		return udp;
-	}
-}
-
 network::version_t network::endpoint::version() const
 {
 	if(ai.ai_addr->sa_family == AF_INET){
@@ -109,7 +108,7 @@ void network::endpoint::copy(const addrinfo * ai_in)
 std::set<network::endpoint> network::get_endpoint(const std::string & host,
 	const std::string & port)
 {
-	network::start Start;
+	network::init Init;
 	std::set<endpoint> E;
 	if(port.empty() || host.size() > 255 || port.size() > 33){
 		return E;
@@ -147,6 +146,7 @@ std::set<network::endpoint> network::get_endpoint(const std::string & host,
 boost::optional<network::endpoint> network::bin_to_endpoint(
 	const std::string & addr, const std::string & port)
 {
+	network::init Init;
 	assert(addr.size() == 4 || addr.size() == 16);
 	assert(port.size() == 2);
 

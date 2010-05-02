@@ -1,26 +1,29 @@
+#include "init.hpp"
 #include <network/network.hpp>
 
 network::nstream::nstream():
 	socket_FD(-1)
 {
-
+	network::init::start();
 }
 
 network::nstream::nstream(const endpoint & E):
 	socket_FD(-1)
 {
+	network::init::start();
 	open(E);
 }
 
 network::nstream::nstream(const int socket_FD_in):
 	socket_FD(socket_FD_in)
 {
-
+	network::init::start();
 }
 
 network::nstream::~nstream()
 {
 	close();
+	network::init::stop();
 }
 
 void network::nstream::close()

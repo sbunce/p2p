@@ -1,20 +1,23 @@
+#include "init.hpp"
 #include <network/network.hpp>
 
 network::listener::listener():
 	socket_FD(-1)
 {
-
+	network::init::start();
 }
 
 network::listener::listener(const endpoint & E):
 	socket_FD(-1)
 {
+	network::init::start();
 	open(E);
 }
 
 network::listener::~listener()
 {
 	close();
+	network::init::stop();
 }
 
 boost::shared_ptr<network::nstream> network::listener::accept()

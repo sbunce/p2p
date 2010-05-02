@@ -4,7 +4,6 @@
 //custom
 #include "buffer.hpp"
 #include "endpoint.hpp"
-#include "start.hpp"
 #include "system_include.hpp"
 
 //include
@@ -16,8 +15,6 @@
 namespace network{
 class nstream : private boost::noncopyable
 {
-	network::start Start;
-
 	//max we attempt to send/recv in one go
 	static const int MTU = 8192;
 public:

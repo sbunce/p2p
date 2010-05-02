@@ -73,8 +73,8 @@ private:
 
 	/*
 	When we send a message to the proactor we push it's size and a shared_ptr to
-	a speed_calculator on the back of this container. When bytes are sent we
-	update the speed_calculator. The shared_ptr is empty if there is no
+	a speed_calc on the back of this container. When bytes are sent we
+	update the speed_calc. The shared_ptr is empty if there is no
 	shared_ptr to update.
 	*/
 	class send_speed_element
@@ -82,22 +82,22 @@ private:
 	public:
 		send_speed_element(
 			const unsigned remaining_bytes_in,
-			const boost::shared_ptr<network::speed_calculator> & Speed_Calculator_in,
+			const boost::shared_ptr<network::speed_calc> & Speed_Calc_in,
 			const boost::function<void ()> & call_back_in
 		):
 			remaining_bytes(remaining_bytes_in),
-			Speed_Calculator(Speed_Calculator_in),
+			Speed_Calc(Speed_Calc_in),
 			call_back(call_back_in)
 		{}
 
 		send_speed_element(const send_speed_element & SSE):
 			remaining_bytes(SSE.remaining_bytes),
-			Speed_Calculator(SSE.Speed_Calculator),
+			Speed_Calc(SSE.Speed_Calc),
 			call_back(SSE.call_back)
 		{}
 
 		unsigned remaining_bytes;
-		boost::shared_ptr<network::speed_calculator> Speed_Calculator;
+		boost::shared_ptr<network::speed_calc> Speed_Calc;
 		boost::function<void ()> call_back;
 	};
 	std::list<send_speed_element> Send_Speed;

@@ -5,6 +5,8 @@
 #include "connection.hpp"
 #include "dispatcher.hpp"
 #include "ID_manager.hpp"
+#include "init.hpp"
+#include "rate_limit.hpp"
 
 //include
 #include <boost/shared_ptr.hpp>
@@ -17,7 +19,7 @@
 namespace network{
 class proactor_impl : private boost::noncopyable
 {
-	network::start Start;
+	network::init Init;
 public:
 	//if listener not specified then listener is not started
 	proactor_impl(

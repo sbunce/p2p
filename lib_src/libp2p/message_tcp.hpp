@@ -30,7 +30,7 @@ class base
 {
 public:
 	//speed calculator for download (empty if no speed to track)
-	boost::shared_ptr<network::speed_calculator> Download_Speed;
+	boost::shared_ptr<network::speed_calc> Download_Speed;
 
 	/*
 	expect:
@@ -49,7 +49,7 @@ class block : public base
 public:
 	typedef boost::function<bool (const network::buffer & block)> handler;
 	block(handler func_in, const unsigned block_size_in,
-		boost::shared_ptr<network::speed_calculator> Download_Speed_in);
+		boost::shared_ptr<network::speed_calc> Download_Speed_in);
 	virtual bool expect(const network::buffer & recv_buf);
 	virtual status recv(network::buffer & recv_buf);
 private:
@@ -222,7 +222,7 @@ public:
 	network::buffer buf;
 
 	//speed calculator for upload (empty if no speed to track)
-	boost::shared_ptr<network::speed_calculator> Upload_Speed;
+	boost::shared_ptr<network::speed_calc> Upload_Speed;
 
 	/*
 	encrypt:
@@ -236,7 +236,7 @@ class block : public base
 {
 public:
 	block(const network::buffer & block,
-		boost::shared_ptr<network::speed_calculator> Upload_Speed_in);
+		boost::shared_ptr<network::speed_calc> Upload_Speed_in);
 };
 
 class close_slot : public base

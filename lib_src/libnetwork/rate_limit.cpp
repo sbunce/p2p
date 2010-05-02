@@ -1,4 +1,4 @@
-#include <network/network.hpp>
+#include "rate_limit.hpp"
 
 network::rate_limit::rate_limit()
 {
@@ -74,7 +74,7 @@ void network::rate_limit::max_upload(const unsigned rate)
 	}
 }
 
-int network::rate_limit::available_transfer(speed_calculator & SC,
+int network::rate_limit::available_transfer(speed_calc & SC,
 	const unsigned max_transfer, const int socket_count)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);

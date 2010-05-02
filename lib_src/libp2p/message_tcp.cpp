@@ -11,7 +11,7 @@ bool message_tcp::send::base::encrypt()
 message_tcp::recv::block::block(
 	handler func_in,
 	const unsigned block_size_in,
-	boost::shared_ptr<network::speed_calculator> Download_Speed_in
+	boost::shared_ptr<network::speed_calc> Download_Speed_in
 ):
 	func(func_in),
 	block_size(block_size_in),
@@ -562,7 +562,7 @@ message_tcp::recv::status message_tcp::recv::slot::recv(network::buffer & recv_b
 
 //BEGIN send::block
 message_tcp::send::block::block(const network::buffer & block,
-	boost::shared_ptr<network::speed_calculator> Upload_Speed_in)
+	boost::shared_ptr<network::speed_calc> Upload_Speed_in)
 {
 	buf.append(protocol_tcp::block).append(block);
 	Upload_Speed = Upload_Speed_in;

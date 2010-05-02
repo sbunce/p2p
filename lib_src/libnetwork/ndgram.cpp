@@ -1,8 +1,10 @@
+#include "init.hpp"
 #include <network/network.hpp>
 
 network::ndgram::ndgram():
 	socket_FD(-1)
 {
+	network::init::start();
 	std::set<endpoint> E = get_endpoint("", "0");
 	assert(!E.empty());
 	if((socket_FD = ::socket(E.begin()->ai.ai_family, SOCK_DGRAM, IPPROTO_UDP)) == -1){
@@ -14,12 +16,14 @@ network::ndgram::ndgram():
 network::ndgram::ndgram(const endpoint & E):
 	socket_FD(-1)
 {
+	network::init::start();
 	open(E);
 }
 
 network::ndgram::~ndgram()
 {
 	close();
+	network::init::stop();
 }
 
 void network::ndgram::close()

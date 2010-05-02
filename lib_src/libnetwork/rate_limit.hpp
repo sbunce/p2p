@@ -3,16 +3,13 @@ This class handles rate limiting and can be used to get access to the average
 upload and download rates. It is also used to set maximum upload/download rates.
 This class is generally accessed through the reactor interface.
 */
-//THREADSAFE
 #ifndef H_NETWORK_RATE_LIMIT
 #define H_NETWORK_RATE_LIMIT
-
-//custom
-#include "speed_calculator.hpp"
 
 //include
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
+#include <network/network.hpp>
 
 //standard
 #include <limits>
@@ -66,14 +63,14 @@ private:
 	unsigned _max_download;
 	unsigned _max_upload;
 
-	speed_calculator Download;
-	speed_calculator Upload;
+	speed_calc Download;
+	speed_calc Upload;
 
 	/*
 	available_transfer:
 		Calculates available_download or available_upload.
 	*/
-	int available_transfer(speed_calculator & SC, const unsigned max_transfer,
+	int available_transfer(speed_calc & SC, const unsigned max_transfer,
 		const int socket_count);
 };
 }//end of network namespace

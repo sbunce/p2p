@@ -1,6 +1,6 @@
 #include <network/network.hpp>
 
-network::speed_calculator::speed_calculator():
+network::speed_calc::speed_calc():
 	average_speed(0)
 {
 	for(int x=0; x<AVERAGE + 1; ++x){
@@ -8,13 +8,13 @@ network::speed_calculator::speed_calculator():
 	}
 }
 
-void network::speed_calculator::add(const unsigned n_bytes)
+void network::speed_calc::add(const unsigned n_bytes)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	add_priv(n_bytes);
 }
 
-void network::speed_calculator::add_priv(const unsigned n_bytes)
+void network::speed_calc::add_priv(const unsigned n_bytes)
 {
 	std::time_t current_second = std::time(NULL);
 	if(Second[0].first == current_second){
@@ -52,14 +52,14 @@ void network::speed_calculator::add_priv(const unsigned n_bytes)
 	average_speed /= AVERAGE;
 }
 
-unsigned network::speed_calculator::current_second()
+unsigned network::speed_calc::current_second()
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	add_priv(0);
 	return Second[0].second;
 }
 
-unsigned network::speed_calculator::speed()
+unsigned network::speed_calc::speed()
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	add_priv(0);

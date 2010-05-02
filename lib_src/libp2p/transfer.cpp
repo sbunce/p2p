@@ -6,8 +6,8 @@ transfer::transfer(const file_info & FI):
 	Hash_Tree_Block(Hash_Tree.tree_block_count),
 	File_Block(Hash_Tree.file_block_count),
 	bytes_received(0),
-	Download_Speed(new network::speed_calculator()),
-	Upload_Speed(new network::speed_calculator())
+	Download_Speed(new network::speed_calc()),
+	Upload_Speed(new network::speed_calc())
 {
 	assert(FI.file_size != 0);
 
@@ -108,7 +108,7 @@ unsigned transfer::download_speed()
 	return Download_Speed->speed();
 }
 
-boost::shared_ptr<network::speed_calculator> transfer::download_speed_calculator()
+boost::shared_ptr<network::speed_calc> transfer::download_speed_calc()
 {
 	return Download_Speed;
 }

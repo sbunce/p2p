@@ -205,7 +205,7 @@ int main()
 {
 	boost::shared_ptr<message_tcp::recv::base> M_recv;
 	boost::shared_ptr<message_tcp::send::base> M_send;
-	boost::shared_ptr<network::speed_calculator> SC(new network::speed_calculator());
+	boost::shared_ptr<network::speed_calc> SC(new network::speed_calc());
 
 	//block
 	M_recv = boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::block(

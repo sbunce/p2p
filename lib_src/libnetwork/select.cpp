@@ -1,7 +1,9 @@
+#include "init.hpp"
 #include <network/network.hpp>
 
 network::select::select()
 {
+	network::init::start();
 	/*
 	Create socket pair for self-pipe trick. The read socket is monitored by
 	select() and the write socket is used to interrupt select().
@@ -21,6 +23,11 @@ network::select::select()
 	//accept write_only connection
 	sp_write = L.accept();
 	assert(sp_write);
+}
+
+network::select::~select()
+{
+	network::init::stop();
 }
 
 void network::select::interrupt()

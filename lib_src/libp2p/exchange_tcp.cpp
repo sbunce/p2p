@@ -174,8 +174,8 @@ void exchange_tcp::send_call_back(network::proactor::connection_info & CI)
 	while(latest_send){
 		assert(!Send_Speed.empty());
 		if(latest_send >= Send_Speed.front().remaining_bytes){
-			if(Send_Speed.front().Speed_Calculator){
-				Send_Speed.front().Speed_Calculator->add(Send_Speed.front().remaining_bytes);
+			if(Send_Speed.front().Speed_Calc){
+				Send_Speed.front().Speed_Calc->add(Send_Speed.front().remaining_bytes);
 			}
 			latest_send -= Send_Speed.front().remaining_bytes;
 			if(Send_Speed.front().call_back){
@@ -183,8 +183,8 @@ void exchange_tcp::send_call_back(network::proactor::connection_info & CI)
 			}
 			Send_Speed.pop_front();
 		}else{
-			if(Send_Speed.front().Speed_Calculator){
-				Send_Speed.front().Speed_Calculator->add(latest_send);
+			if(Send_Speed.front().Speed_Calc){
+				Send_Speed.front().Speed_Calc->add(latest_send);
 			}
 			Send_Speed.front().remaining_bytes -= latest_send;
 			break;

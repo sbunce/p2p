@@ -3,7 +3,6 @@
 
 //custom
 #include "protocol.hpp"
-#include "start.hpp"
 #include "system_include.hpp"
 
 //include
@@ -23,8 +22,6 @@ class nstream;
 
 class endpoint
 {
-	network::start Start;
-
 	friend class listener;
 	friend class ndgram;
 	friend class nstream;
@@ -33,8 +30,8 @@ class endpoint
 	friend boost::optional<network::endpoint> bin_to_endpoint(
 		const std::string & addr, const std::string & port);
 public:
-	//copy ctor
 	endpoint(const endpoint & E);
+	~endpoint();
 
 	/*
 	IP:
@@ -46,15 +43,13 @@ public:
 		Returns port.
 	port_bin:
 		Returns binary port in big-endian. This will always be 2 bytes.
-	type:
-		Returns type. (tcp or udp)
-
+	version:
+		IPv4 or IPv6.
 	*/
 	std::string IP() const;
 	std::string IP_bin() const;
 	std::string port() const;
 	std::string port_bin() const;
-	socket_t type() const;
 	version_t version() const;
 
 	//operators
@@ -70,6 +65,8 @@ private:
 	addrinfo ai;
 	sockaddr_storage sas;
 
+	//boost::shared_ptr<addr_impl> AI;
+
 	void copy(const addrinfo * ai_in);
 };
 
@@ -81,7 +78,7 @@ extern std::set<endpoint> get_endpoint(const std::string & host,
 	const std::string & port);
 
 /*
-Converts bytes to endpoint. A IPv6 endpoing won't be returned if the system
+Converts bytes to endpoint. A IPv6 endpoint won't be returned if the system
 doesn't support IPv6.
 Note: addr must be 4 or 16 bytes. port must be 2 bytes.
 */

@@ -1,16 +1,15 @@
 #ifndef H_NETWORK_SELECT
 #define H_NETWORK_SELECT
 
-//custom
-#include "start.hpp"
-#include "system_include.hpp"
+//include
+#include <network/network.hpp>
 
 namespace network{
 class select
 {
-	network::start Start;
 public:
 	select();
+	~select();
 
 	//causes a thread blocked on operator () to return immediately
 	void interrupt();

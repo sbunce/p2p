@@ -11,13 +11,13 @@
 #include <deque>
 
 namespace network{
-class speed_calculator : private boost::noncopyable
+class speed_calc : private boost::noncopyable
 {
 	//must be >= 1
 	static const unsigned AVERAGE = 8;
 
 public:
-	speed_calculator();
+	speed_calc();
 
 	/*
 	add:
