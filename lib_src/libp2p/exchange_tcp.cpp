@@ -2,7 +2,7 @@
 
 exchange_tcp::exchange_tcp(
 	network::proactor & Proactor_in,
-	network::connection_info & CI
+	network::proactor::connection_info & CI
 ):
 	connection_ID(CI.connection_ID),
 	Proactor(Proactor_in),
@@ -48,7 +48,7 @@ void exchange_tcp::expect_anytime_erase(boost::shared_ptr<message_tcp::send::bas
 	}
 }
 
-void exchange_tcp::recv_call_back(network::connection_info & CI)
+void exchange_tcp::recv_call_back(network::proactor::connection_info & CI)
 {
 	if(Encryption.ready()){
 		Encryption.crypt_recv(CI.recv_buf, CI.recv_buf.size() - CI.latest_recv);
@@ -115,7 +115,7 @@ void exchange_tcp::recv_call_back(network::connection_info & CI)
 }
 
 bool exchange_tcp::recv_p_rA(const network::buffer & buf,
-	network::connection_info & CI)
+	network::proactor::connection_info & CI)
 {
 	if(!Encryption.recv_p_rA(buf)){
 		return false;
@@ -128,7 +128,7 @@ bool exchange_tcp::recv_p_rA(const network::buffer & buf,
 	return true;
 }
 
-bool exchange_tcp::recv_rB(const network::buffer & buf, network::connection_info & CI)
+bool exchange_tcp::recv_rB(const network::buffer & buf, network::proactor::connection_info & CI)
 {
 	Encryption.recv_rB(buf);
 	//unencrypt any remaining buffer
@@ -168,7 +168,7 @@ void exchange_tcp::send_buffered()
 	Encrypt_Buf.clear();
 }
 
-void exchange_tcp::send_call_back(network::connection_info & CI)
+void exchange_tcp::send_call_back(network::proactor::connection_info & CI)
 {
 	unsigned latest_send = CI.latest_send;
 	while(latest_send){

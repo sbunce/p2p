@@ -21,8 +21,8 @@ class proactor_impl : private boost::noncopyable
 public:
 	//if listener not specified then listener is not started
 	proactor_impl(
-		const boost::function<void (connection_info &)> & connect_call_back,
-		const boost::function<void (connection_info &)> & disconnect_call_back
+		const boost::function<void (proactor::connection_info &)> & connect_call_back,
+		const boost::function<void (proactor::connection_info &)> & disconnect_call_back
 	);
 
 	/* Stop/Start

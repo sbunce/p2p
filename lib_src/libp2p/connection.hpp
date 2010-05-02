@@ -17,7 +17,7 @@ class connection : private boost::noncopyable
 public:
 	connection(
 		network::proactor & Proactor_in,
-		network::connection_info & CI,
+		network::proactor::connection_info & CI,
 		boost::function<void(const int)> trigger_tick
 	);
 
@@ -46,8 +46,8 @@ private:
 	send_call_back:
 		Called by connection::send_call_back, which is called by proactor.
 	*/
-	void recv_call_back(network::connection_info & CI);
-	void send_call_back(network::connection_info & CI);
+	void recv_call_back(network::proactor::connection_info & CI);
+	void send_call_back(network::proactor::connection_info & CI);
 
 	/*
 	recv_initial:

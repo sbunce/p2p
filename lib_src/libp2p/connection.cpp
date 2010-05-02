@@ -2,7 +2,7 @@
 
 connection::connection(
 	network::proactor & Proactor_in,
-	network::connection_info & CI,
+	network::proactor::connection_info & CI,
 	boost::function<void(const int)> trigger_tick
 ):
 	Exchange(Proactor_in, CI),
@@ -19,7 +19,7 @@ bool connection::empty()
 	return Slot_Manager.empty();
 }
 
-void connection::recv_call_back(network::connection_info & CI)
+void connection::recv_call_back(network::proactor::connection_info & CI)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	Exchange.recv_call_back(CI);
@@ -39,7 +39,7 @@ void connection::remove(const std::string & hash)
 	Slot_Manager.remove(hash);
 }
 
-void connection::send_call_back(network::connection_info & CI)
+void connection::send_call_back(network::proactor::connection_info & CI)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	Exchange.send_call_back(CI);

@@ -1,8 +1,8 @@
 #include "dispatcher.hpp"
 
 network::dispatcher::dispatcher(
-	const boost::function<void (connection_info &)> & connect_call_back_in,
-	const boost::function<void (connection_info &)> & disconnect_call_back_in
+	const boost::function<void (proactor::connection_info &)> & connect_call_back_in,
+	const boost::function<void (proactor::connection_info &)> & disconnect_call_back_in
 ):
 	connect_call_back(connect_call_back_in),
 	disconnect_call_back(disconnect_call_back_in),
@@ -24,7 +24,7 @@ network::dispatcher::~dispatcher()
 	workers.join_all();
 }
 
-void network::dispatcher::connect(const boost::shared_ptr<connection_info> & CI)
+void network::dispatcher::connect(const boost::shared_ptr<proactor::connection_info> & CI)
 {
 	boost::mutex::scoped_lock lock(job_mutex);
 	assert(!stopped);
@@ -33,7 +33,7 @@ void network::dispatcher::connect(const boost::shared_ptr<connection_info> & CI)
 	job_cond.notify_one();
 }
 
-void network::dispatcher::disconnect(const boost::shared_ptr<connection_info> & CI)
+void network::dispatcher::disconnect(const boost::shared_ptr<proactor::connection_info> & CI)
 {
 	boost::mutex::scoped_lock lock(job_mutex);
 	assert(!stopped);
@@ -42,7 +42,7 @@ void network::dispatcher::disconnect(const boost::shared_ptr<connection_info> & 
 	job_cond.notify_one();
 }
 
-void network::dispatcher::recv(const boost::shared_ptr<connection_info> & CI,
+void network::dispatcher::recv(const boost::shared_ptr<proactor::connection_info> & CI,
 	const boost::shared_ptr<buffer> & recv_buf)
 {
 	boost::mutex::scoped_lock lock(job_mutex);
@@ -52,7 +52,7 @@ void network::dispatcher::recv(const boost::shared_ptr<connection_info> & CI,
 	job_cond.notify_one();
 }
 
-void network::dispatcher::send(const boost::shared_ptr<connection_info> & CI,
+void network::dispatcher::send(const boost::shared_ptr<proactor::connection_info> & CI,
 	const unsigned latest_send, const unsigned send_buf_size)
 {
 	boost::mutex::scoped_lock lock(job_mutex);
@@ -115,19 +115,19 @@ void network::dispatcher::dispatch()
 }
 
 void network::dispatcher::connect_call_back_wrapper(
-	boost::shared_ptr<connection_info> CI)
+	boost::shared_ptr<proactor::connection_info> CI)
 {
 	connect_call_back(*CI);
 }
 
 void network::dispatcher::disconnect_call_back_wrapper(
-	boost::shared_ptr<connection_info> CI)
+	boost::shared_ptr<proactor::connection_info> CI)
 {
 	disconnect_call_back(*CI);
 }
 
 void network::dispatcher::recv_call_back_wrapper(
-	boost::shared_ptr<connection_info> CI, boost::shared_ptr<buffer> recv_buf)
+	boost::shared_ptr<proactor::connection_info> CI, boost::shared_ptr<buffer> recv_buf)
 {
 	if(CI->recv_call_back){
 		CI->recv_buf.append(*recv_buf);
@@ -136,7 +136,7 @@ void network::dispatcher::recv_call_back_wrapper(
 	}
 }
 
-void network::dispatcher::send_call_back_wrapper(boost::shared_ptr<connection_info> CI,
+void network::dispatcher::send_call_back_wrapper(boost::shared_ptr<proactor::connection_info> CI,
 	const unsigned latest_send, const int send_buf_size)
 {
 	CI->latest_send = latest_send;

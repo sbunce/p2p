@@ -30,8 +30,8 @@ public:
 	remove:
 		Remove incoming/outgoing slots with the specified hash.
 	*/
-	void connect_call_back(network::connection_info & CI);
-	void disconnect_call_back(network::connection_info & CI);
+	void connect_call_back(network::proactor::connection_info & CI);
+	void disconnect_call_back(network::proactor::connection_info & CI);
 	void remove(const std::string hash);
 
 private:

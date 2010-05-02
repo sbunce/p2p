@@ -62,7 +62,7 @@ public:
 	thread. Modifying this from the network_thread is not thread safe unless
 	it hasn't yet been passed to dispatcher.
 	*/
-	boost::shared_ptr<connection_info> CI;
+	boost::shared_ptr<proactor::connection_info> CI;
 
 	/*
 	half_open:

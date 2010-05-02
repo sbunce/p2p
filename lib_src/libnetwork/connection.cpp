@@ -16,7 +16,7 @@ network::connection::connection(
 {
 	E = get_endpoint(host, port);
 	if(E.empty()){
-		CI = boost::shared_ptr<connection_info>(new connection_info(connection_ID,
+		CI = boost::shared_ptr<proactor::connection_info>(new proactor::connection_info(connection_ID,
 			host, "", port, incoming));
 	}
 }
@@ -35,7 +35,7 @@ network::connection::connection(
 	port(N_in->remote_port()),
 	connection_ID(ID_Manager.allocate())
 {
-	CI = boost::shared_ptr<connection_info>(new connection_info(connection_ID,
+	CI = boost::shared_ptr<proactor::connection_info>(new proactor::connection_info(connection_ID,
 		"", N->remote_IP(), N->remote_port(), incoming));
 }
 
@@ -68,7 +68,7 @@ bool network::connection::open_async()
 	}
 	N->open_async(*E.begin());
 	socket_FD = N->socket();
-	CI = boost::shared_ptr<connection_info>(new connection_info(
+	CI = boost::shared_ptr<proactor::connection_info>(new proactor::connection_info(
 		connection_ID, host, E.begin()->IP(), port, outgoing));
 	E.erase(E.begin());
 	return socket_FD != -1;

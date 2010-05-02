@@ -2,7 +2,7 @@
 
 connection::connection(
 	network::proactor & Proactor_in,
-	network::connection_info & CI,
+	network::proactor::connection_info & CI,
 	const std::string & web_root_in
 ):
 	web_root(boost::filesystem::system_complete(boost::filesystem::path(
@@ -71,7 +71,7 @@ void connection::encode_chars(std::string & str)
 	boost::algorithm::replace_all(str, "'", "%27");
 }
 
-void connection::file_send_call_back(network::connection_info & CI)
+void connection::file_send_call_back(network::proactor::connection_info & CI)
 {
 	network::buffer B;
 	if(index == 0){
@@ -108,7 +108,7 @@ void connection::file_send_call_back(network::connection_info & CI)
 	}
 }
 
-void connection::read_directory(network::connection_info & CI)
+void connection::read_directory(network::proactor::connection_info & CI)
 {
 	namespace fs = boost::filesystem;
 	std::stringstream ss;
@@ -148,7 +148,7 @@ void connection::read_directory(network::connection_info & CI)
 	Proactor.disconnect_on_empty(CI.connection_ID);
 }
 
-void connection::recv_call_back(network::connection_info & CI)
+void connection::recv_call_back(network::proactor::connection_info & CI)
 {
 	namespace fs = boost::filesystem;
 

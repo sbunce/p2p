@@ -1,8 +1,8 @@
 #include "proactor_impl.hpp"
 
 network::proactor_impl::proactor_impl(
-	const boost::function<void (connection_info &)> & connect_call_back,
-	const boost::function<void (connection_info &)> & disconnect_call_back
+	const boost::function<void (proactor::connection_info &)> & connect_call_back,
+	const boost::function<void (proactor::connection_info &)> & disconnect_call_back
 ):
 	Dispatcher(connect_call_back, disconnect_call_back),
 	incoming_connection_limit(FD_SETSIZE / 2),
@@ -383,7 +383,7 @@ void network::proactor_impl::resolve_relay(const std::string host, const std::st
 		Thread_Pool.enqueue(boost::bind(&proactor_impl::resolve, this, host, port));
 	}else{
 		//connection limit reached
-		boost::shared_ptr<connection_info> CI(new connection_info(
+		boost::shared_ptr<proactor::connection_info> CI(new proactor::connection_info(
 			ID_Manager.allocate(),
 			host,
 			"",

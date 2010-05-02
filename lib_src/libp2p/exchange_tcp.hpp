@@ -14,7 +14,7 @@ class exchange_tcp : private boost::noncopyable
 public:
 	exchange_tcp(
 		network::proactor & Proactor_in,
-		network::connection_info & CI
+		network::proactor::connection_info & CI
 	);
 
 	const int connection_ID;
@@ -25,8 +25,8 @@ public:
 	send_call_back:
 		Called when bytes send.
 	*/
-	void recv_call_back(network::connection_info & CI);
-	void send_call_back(network::connection_info & CI);
+	void recv_call_back(network::proactor::connection_info & CI);
+	void send_call_back(network::proactor::connection_info & CI);
 
 	/*
 	expect_response:
@@ -113,8 +113,8 @@ private:
 	send_buffered:
 		Sends messages buffered until key exchange complete.
 	*/
-	bool recv_p_rA(const network::buffer & buf, network::connection_info & CI);
-	bool recv_rB(const network::buffer & buf, network::connection_info & CI);
+	bool recv_p_rA(const network::buffer & buf, network::proactor::connection_info & CI);
+	bool recv_rB(const network::buffer & buf, network::proactor::connection_info & CI);
 	void send_buffered();
 };
 #endif
