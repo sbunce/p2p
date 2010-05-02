@@ -59,35 +59,37 @@ void disconnect_call_back(network::connection_info & CI)
 
 int main()
 {
+LOG;
 	std::set<network::endpoint> E = network::get_endpoint(
 		"127.0.0.1",
 		"0"
 	);
 	assert(!E.empty());
 	boost::shared_ptr<network::listener> Listener(new network::listener(*E.begin()));
+LOG;
 	if(!Listener->is_open()){
 		LOG << "failed to open listener";
 		return 1;
 	}
-
+LOG;
 	//make sure proactor works after start/stop/start
 	Proactor.start(Listener);
 	Proactor.stop();
 	Proactor.start(Listener);
-
+LOG;
 	for(int x=0; x<test_echo; ++x){
 		Proactor.connect("localhost", Proactor.listen_port());
 	}
-
+LOG;
 	{//begin lock scope
 	boost::mutex::scoped_lock lock(test_mutex);
 	while(!test_finished){
 		test_cond.wait(test_mutex);
 	}
 	}//end lock scope
-
+LOG;
 	Proactor.stop();
-
+LOG;
 	if(echo_count != test_echo){
 		LOG; ++fail;
 	}

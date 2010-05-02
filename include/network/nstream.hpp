@@ -2,6 +2,7 @@
 #define H_NETWORK_NSTREAM
 
 //custom
+#include "buffer.hpp"
 #include "endpoint.hpp"
 #include "start.hpp"
 #include "system_include.hpp"

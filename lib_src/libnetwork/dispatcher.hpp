@@ -1,12 +1,10 @@
 #ifndef H_NETWORK_DISPATCHER
 #define H_NETWORK_DISPATCHER
 
-//custom
-#include "connection_info.hpp"
-
 //include
 #include <boost/shared_ptr.hpp>
 #include <boost/utility.hpp>
+#include <network/network.hpp>
 
 //standard
 #include <list>

@@ -1,4 +1,4 @@
-#include <network/network.hpp>
+#include "dispatcher.hpp"
 
 network::dispatcher::dispatcher(
 	const boost::function<void (connection_info &)> & connect_call_back_in,
