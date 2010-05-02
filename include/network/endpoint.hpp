@@ -3,7 +3,6 @@
 
 //custom
 #include "protocol.hpp"
-#include "system_include.hpp"
 
 //include
 #include <boost/optional.hpp>
@@ -14,6 +13,9 @@
 #include <set>
 
 namespace network{
+
+//predecl for PIMPL
+class addr_impl;
 
 //classes which need access to private addrinfo
 class listener;
@@ -59,15 +61,9 @@ public:
 	bool operator != (const endpoint & rval) const;
 
 private:
-	explicit endpoint(const addrinfo * ai_in);
+	explicit endpoint(const boost::scoped_ptr<addr_impl> & AI_in);
 
-	//wrapped info needed to connect to a host
-	addrinfo ai;
-	sockaddr_storage sas;
-
-	//boost::shared_ptr<addr_impl> AI;
-
-	void copy(const addrinfo * ai_in);
+	boost::scoped_ptr<addr_impl> AI;
 };
 
 /*

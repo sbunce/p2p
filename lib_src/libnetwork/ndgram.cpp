@@ -1,4 +1,5 @@
 #include "init.hpp"
+#include "addr_impl.hpp"
 #include <network/network.hpp>
 
 network::ndgram::ndgram():
@@ -7,7 +8,7 @@ network::ndgram::ndgram():
 	network::init::start();
 	std::set<endpoint> E = get_endpoint("", "0");
 	assert(!E.empty());
-	if((socket_FD = ::socket(E.begin()->ai.ai_family, SOCK_DGRAM, IPPROTO_UDP)) == -1){
+	if((socket_FD = ::socket(E.begin()->AI->ai.ai_family, SOCK_DGRAM, IPPROTO_UDP)) == -1){
 		LOG << strerror(errno);
 		close();
 	}
@@ -90,11 +91,11 @@ std::string network::ndgram::local_port()
 void network::ndgram::open(const endpoint & E)
 {
 	close();
-	if((socket_FD = ::socket(E.ai.ai_family, SOCK_DGRAM, IPPROTO_UDP)) == -1){
+	if((socket_FD = ::socket(E.AI->ai.ai_family, SOCK_DGRAM, IPPROTO_UDP)) == -1){
 		LOG << strerror(errno);
 		close();
 	}
-	if(::bind(socket_FD, E.ai.ai_addr, E.ai.ai_addrlen) == -1){
+	if(::bind(socket_FD, E.AI->ai.ai_addr, E.AI->ai.ai_addrlen) == -1){
 		LOG << strerror(errno);
 		close();
 		return;
@@ -117,7 +118,8 @@ int network::ndgram::recv(network::buffer & buf, boost::shared_ptr<endpoint> & E
 		close();
 		buf.tail_reserve(0);
 	}else{
-		E = boost::shared_ptr<endpoint>(new endpoint(&ai));
+		boost::scoped_ptr<addr_impl> AI(new addr_impl(&ai));
+		E = boost::shared_ptr<endpoint>(new endpoint(AI));
 		buf.tail_resize(n_bytes);
 	}
 	return n_bytes;
@@ -126,7 +128,7 @@ int network::ndgram::recv(network::buffer & buf, boost::shared_ptr<endpoint> & E
 int network::ndgram::send(network::buffer & buf, const endpoint & E)
 {
 	int n_bytes = ::sendto(socket_FD, reinterpret_cast<char *>(buf.data()),
-		buf.size(), 0, E.ai.ai_addr, E.ai.ai_addrlen);
+		buf.size(), 0, E.AI->ai.ai_addr, E.AI->ai.ai_addrlen);
 	if(n_bytes == -1){
 		LOG << strerror(errno);
 	}else if(n_bytes == 0){

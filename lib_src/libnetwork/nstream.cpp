@@ -1,4 +1,5 @@
 #include "init.hpp"
+#include "addr_impl.hpp"
 #include <network/network.hpp>
 
 network::nstream::nstream():
@@ -110,11 +111,11 @@ std::string network::nstream::local_port()
 void network::nstream::open(const endpoint & E)
 {
 	close();
-	if((socket_FD = ::socket(E.ai.ai_family, SOCK_STREAM, IPPROTO_TCP)) == -1){
+	if((socket_FD = ::socket(E.AI->ai.ai_family, SOCK_STREAM, IPPROTO_TCP)) == -1){
 		LOG << strerror(errno);
 		close();
 	}
-	if(::connect(socket_FD, E.ai.ai_addr, E.ai.ai_addrlen) != 0){
+	if(::connect(socket_FD, E.AI->ai.ai_addr, E.AI->ai.ai_addrlen) != 0){
 		LOG << strerror(errno);
 		close();
 	}
@@ -123,7 +124,7 @@ void network::nstream::open(const endpoint & E)
 void network::nstream::open_async(const endpoint & E)
 {
 	close();
-	if((socket_FD = ::socket(E.ai.ai_family, SOCK_STREAM, IPPROTO_TCP)) == -1){
+	if((socket_FD = ::socket(E.AI->ai.ai_family, SOCK_STREAM, IPPROTO_TCP)) == -1){
 		LOG << strerror(errno);
 		return;
 	}
@@ -137,7 +138,7 @@ void network::nstream::open_async(const endpoint & E)
 	Because of the inconsistency above we check for writeability because it
 	works on FreeBSD, Windows, and Linux.
 	*/
-	if(::connect(socket_FD, E.ai.ai_addr, E.ai.ai_addrlen) != 0){
+	if(::connect(socket_FD, E.AI->ai.ai_addr, E.AI->ai.ai_addrlen) != 0){
 		//socket in progress of connecting
 		if(errno != EINPROGRESS && errno != EWOULDBLOCK){
 			LOG << strerror(errno);

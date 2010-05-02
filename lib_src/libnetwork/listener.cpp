@@ -1,4 +1,5 @@
 #include "init.hpp"
+#include "addr_impl.hpp"
 #include <network/network.hpp>
 
 network::listener::listener():
@@ -54,8 +55,8 @@ bool network::listener::is_open()
 void network::listener::open(const endpoint & E)
 {
 	close();
-	if((socket_FD = ::socket(E.ai.ai_family, SOCK_STREAM,
-		E.ai.ai_protocol)) == -1)
+	if((socket_FD = ::socket(E.AI->ai.ai_family, SOCK_STREAM,
+		E.AI->ai.ai_protocol)) == -1)
 	{
 		LOG << strerror(errno);
 		close();
@@ -75,7 +76,7 @@ void network::listener::open(const endpoint & E)
 		close();
 		return;
 	}
-	if(::bind(socket_FD, E.ai.ai_addr, E.ai.ai_addrlen) == -1){
+	if(::bind(socket_FD, E.AI->ai.ai_addr, E.AI->ai.ai_addrlen) == -1){
 		LOG << strerror(errno);
 		close();
 		return;
