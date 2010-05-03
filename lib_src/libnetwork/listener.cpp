@@ -2,23 +2,14 @@
 #include "addr_impl.hpp"
 #include <network/network.hpp>
 
-network::listener::listener():
-	socket_FD(-1)
+network::listener::listener()
 {
-	network::init::start();
+
 }
 
-network::listener::listener(const endpoint & E):
-	socket_FD(-1)
+network::listener::listener(const endpoint & E)
 {
-	network::init::start();
 	open(E);
-}
-
-network::listener::~listener()
-{
-	close();
-	network::init::stop();
 }
 
 boost::shared_ptr<network::nstream> network::listener::accept()
@@ -35,21 +26,6 @@ boost::shared_ptr<network::nstream> network::listener::accept()
 	}
 	boost::shared_ptr<nstream> N(new nstream(new_socket));
 	return N;
-}
-
-void network::listener::close()
-{
-	if(socket_FD != -1){
-		if(::close(socket_FD) == -1){
-			LOG << strerror(errno);
-		}
-		socket_FD = -1;
-	}
-}
-
-bool network::listener::is_open()
-{
-	return socket_FD != -1;
 }
 
 void network::listener::open(const endpoint & E)
@@ -110,27 +86,4 @@ std::string network::listener::port()
 		return "";
 	}
 	return buf;
-}
-
-void network::listener::set_non_blocking()
-{
-	if(socket_FD != -1){
-		#ifdef _WIN32
-		u_long mode = 1;
-		if(ioctlsocket(socket_FD, FIONBIO, &mode) == -1){
-			LOG << strerror(errno);
-			close();
-		}
-		#else
-		if(fcntl(socket_FD, F_SETFL, O_NONBLOCK) == -1){
-			LOG << strerror(errno);
-			close();
-		}
-		#endif
-	}
-}
-
-int network::listener::socket()
-{
-	return socket_FD;
 }

@@ -397,11 +397,8 @@ void network::proactor_impl::resolve_relay(const std::string host, const std::st
 
 void network::proactor_impl::resolve(const std::string & host, const std::string & port)
 {
-LOG;
 	boost::shared_ptr<connection> Connection(new connection(ID_Manager, host, port));
-LOG;
 	if(Connection->open_async()){
-LOG;
 		//in progress of connecting
 		std::pair<int, boost::shared_ptr<connection> > P(Connection->socket(), Connection);
 		{//BEGIN lock scope
@@ -409,11 +406,9 @@ LOG;
 		network_thread_call.push_back(boost::bind(&proactor_impl::add_socket, this, P));
 		}//END lock scope
 	}else{
-LOG;
 		//failed to resolve or failed to allocate socket
 		Dispatcher.disconnect(Connection->CI);
 	}
-LOG;
 	Select.interrupt();
 }
 
@@ -458,7 +453,10 @@ void network::proactor_impl::start(boost::shared_ptr<listener> Listener_in)
 	if(Listener_in){
 		assert(Listener_in->is_open());
 		Listener = Listener_in;
-		Listener->set_non_blocking();
+		if(!Listener->set_non_blocking(true)){
+			LOG << "failed to set listener to non-blocking\n";
+			exit(1);
+		}
 		add_socket(std::make_pair(Listener->socket(), boost::shared_ptr<connection>()));
 	}
 	network_thread = boost::thread(boost::bind(&proactor_impl::network_loop, this));
@@ -488,6 +486,10 @@ void network::proactor_impl::stop()
 			Dispatcher.disconnect(it_cur->second->CI);
 			it_cur->second->N->close();
 		}
+	}
+	if(!Listener->set_non_blocking(false)){
+		LOG << "failed to set listener to blocking\n";
+		exit(1);
 	}
 	Listener = boost::shared_ptr<listener>();
 

@@ -6,4 +6,5 @@
 #include "protocol.hpp"
 #include "proactor.hpp"
 #include "select.hpp"
+#include "socket_base.hpp"
 #include "speed_calc.hpp"

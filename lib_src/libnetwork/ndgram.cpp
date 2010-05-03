@@ -2,10 +2,8 @@
 #include "addr_impl.hpp"
 #include <network/network.hpp>
 
-network::ndgram::ndgram():
-	socket_FD(-1)
+network::ndgram::ndgram()
 {
-	network::init::start();
 	std::set<endpoint> E = get_endpoint("", "0");
 	assert(!E.empty());
 	if((socket_FD = ::socket(E.begin()->AI->ai.ai_family, SOCK_DGRAM, IPPROTO_UDP)) == -1){
@@ -14,32 +12,9 @@ network::ndgram::ndgram():
 	}
 }
 
-network::ndgram::ndgram(const endpoint & E):
-	socket_FD(-1)
+network::ndgram::ndgram(const endpoint & E)
 {
-	network::init::start();
 	open(E);
-}
-
-network::ndgram::~ndgram()
-{
-	close();
-	network::init::stop();
-}
-
-void network::ndgram::close()
-{
-	if(socket_FD != -1){
-		if(::close(socket_FD) == -1){
-			LOG << strerror(errno);
-		}
-		socket_FD = -1;
-	}
-}
-
-bool network::ndgram::is_open() const
-{
-	return socket_FD != -1;
 }
 
 std::string network::ndgram::local_IP()
@@ -137,9 +112,4 @@ int network::ndgram::send(network::buffer & buf, const endpoint & E)
 		buf.erase(0, n_bytes);
 	}
 	return n_bytes;
-}
-
-int network::ndgram::socket()
-{
-	return socket_FD;
 }

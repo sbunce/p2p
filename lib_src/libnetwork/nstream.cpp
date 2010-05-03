@@ -2,44 +2,19 @@
 #include "addr_impl.hpp"
 #include <network/network.hpp>
 
-network::nstream::nstream():
-	socket_FD(-1)
+network::nstream::nstream()
 {
-	network::init::start();
+
 }
 
-network::nstream::nstream(const endpoint & E):
-	socket_FD(-1)
+network::nstream::nstream(const endpoint & E)
 {
-	network::init::start();
 	open(E);
 }
 
-network::nstream::nstream(const int socket_FD_in):
-	socket_FD(socket_FD_in)
+network::nstream::nstream(const int socket_FD_in)
 {
-	network::init::start();
-}
-
-network::nstream::~nstream()
-{
-	close();
-	network::init::stop();
-}
-
-void network::nstream::close()
-{
-	if(socket_FD != -1){
-		if(::close(socket_FD) == -1){
-			LOG << strerror(errno);
-		}
-		socket_FD = -1;
-	}
-}
-
-bool network::nstream::is_open() const
-{
-	return socket_FD != -1;
+	socket_FD = socket_FD_in;
 }
 
 bool network::nstream::is_open_async()
@@ -128,7 +103,11 @@ void network::nstream::open_async(const endpoint & E)
 		LOG << strerror(errno);
 		return;
 	}
-	set_non_blocking();
+	if(!set_non_blocking(true)){
+		LOG << strerror(errno);
+		close();
+		return;
+	}
 	/*
 	FreeBSD:
 		If connect returns 0 the socket MAY or MAY NOT be connected.
@@ -238,27 +217,4 @@ int network::nstream::send(buffer & buf, int max_transfer)
 		}
 		return n_bytes;
 	}
-}
-
-void network::nstream::set_non_blocking()
-{
-	if(socket_FD != -1){
-		#ifdef _WIN32
-		u_long mode = 1;
-		if(ioctlsocket(socket_FD, FIONBIO, &mode) == -1){
-			LOG << strerror(errno);
-			close();
-		}
-		#else
-		if(fcntl(socket_FD, F_SETFL, O_NONBLOCK) == -1){
-			LOG << strerror(errno);
-			close();
-		}
-		#endif
-	}
-}
-
-int network::nstream::socket()
-{
-	return socket_FD;
 }

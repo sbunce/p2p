@@ -3,17 +3,17 @@
 
 //custom
 #include "nstream.hpp"
+#include "socket_base.hpp"
 
 //include
 #include <boost/shared_ptr.hpp>
 
 namespace network{
-class listener : private boost::noncopyable
+class listener : public socket_base
 {
 public:
 	listener();
 	listener(const endpoint & E); //open listener on local endpoint
-	~listener();
 
 	/*
 	accept:
@@ -21,10 +21,6 @@ public:
 		empty shared_ptr if error. If the socket is non-blocking then an emtpy
 		shared_ptr is returned if there are no more incoming connections.
 		Precondition: is_open() = true.
-	close:
-		Close the socket.
-	is_open:
-		Returns true if listener listening.
 	open:
 		Start listener listening. The endpoint has a different purpose than with
 		nstream. With a nstream we are connect to a endpoint on another host.
@@ -39,22 +35,10 @@ public:
 		Returns port of listener on localhost, or empty string if not listening or
 		error.
 		Postcondition: If error socket is closed.
-	set_non_blocking:
-		Set the socket to be non-blocking.
-	socket:
-		Returns socket file descriptor, or -1 if not listening.
 	*/
 	boost::shared_ptr<nstream> accept();
-	void close();
-	bool is_open();
-	void open(const endpoint & E);
+	virtual void open(const endpoint & E);
 	std::string port();
-	void set_non_blocking();
-	int socket();
-
-private:
-	//-1 if not open, or >= 0 if open
-	int socket_FD;
 };
 }
 #endif

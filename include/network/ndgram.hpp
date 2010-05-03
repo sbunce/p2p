@@ -3,22 +3,18 @@
 
 //custom
 #include "protocol.hpp"
+#include "socket_base.hpp"
 
 namespace network{
-class ndgram : private boost::noncopyable
+class ndgram : public socket_base
 {
 	//max we attempt to send/recv in one go
 	static const int MTU = 1536;
 public:
 	ndgram();                   //open but don't bind (used for send only)
 	ndgram(const endpoint & E); //open and bind (used for send/recv)
-	~ndgram();
 
 	/*
-	close:
-		Close the socket.
-	is_open:
-		Returns true if can send/recv data.
 	local_IP:
 		Returns local port, or empty string if error.
 		Postcondition: If error then close() called.
@@ -38,21 +34,12 @@ public:
 	send:
 		Writes bytes from buffer. Returns the number of bytes sent or 0 if the
 		host disconnected. The sent bytes are erased from the buffer.
-	socket:
-		Returns socket file descriptor, or -1 if disconnected.
 	*/
-	void close();
-	bool is_open() const;
 	std::string local_IP();
 	std::string local_port();
-	void open(const endpoint & E);
+	virtual void open(const endpoint & E);
 	int recv(network::buffer & buf, boost::shared_ptr<endpoint> & E);
 	int send(network::buffer & buf, const endpoint & E);
-	int socket();
-
-private:
-	//-1 if not connected, or >= 0 if connected
-	int socket_FD;
 };
 }//end of namespace network
 #endif
