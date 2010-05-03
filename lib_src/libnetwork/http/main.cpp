@@ -103,13 +103,13 @@ int main(int argc, char ** argv)
 
 	//drop priviledges before allowing incoming connections
 	#ifndef _WIN32
-	if(uid){
-		if(setuid(*uid) == -1){
+	if(gid){
+		if(setgid(*gid) == -1){
 			LOG << errno;
 		}
 	}
-	if(gid){
-		if(setgid(*gid) == -1){
+	if(uid){
+		if(setuid(*uid) == -1){
 			LOG << errno;
 		}
 	}

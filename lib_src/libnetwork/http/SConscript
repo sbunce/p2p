@@ -1,12 +1,5 @@
 #site_scons
 import glob
-import main
-import platform
 
 Import('env_base')
-env_http = env_base.Clone()
-
-if platform.system() != 'Windows':
-	main.setup_static(env_http)
-
-env_http.Program('#/bin/http', glob.glob('*.cpp'))
+env_base.Program('#/bin/http', glob.glob('*.cpp'))
