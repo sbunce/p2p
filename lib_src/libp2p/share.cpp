@@ -195,16 +195,16 @@ share::slot_iterator share::end_slot()
 void share::erase(const std::string & path)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	std::map<flyweight_string, boost::shared_ptr<file_info> >::iterator
-		Path_iter = Path.find(flyweight_string(path));
+	std::map<std::string, boost::shared_ptr<file_info> >::iterator
+		Path_iter = Path.find(std::string(path));
 	if(Path_iter != Path.end()){
-		if(!Path_iter->second->hash.get().empty()){
+		if(!Path_iter->second->hash.empty()){
 			_bytes -= Path_iter->second->file_size;
 			--_files;
 		}
-		std::pair<std::multimap<flyweight_string, boost::shared_ptr<file_info> >::iterator,
-			std::multimap<flyweight_string, boost::shared_ptr<file_info> >::iterator>
-			Hash_iter_pair = Hash.equal_range(flyweight_string(Path_iter->second->hash));
+		std::pair<std::multimap<std::string, boost::shared_ptr<file_info> >::iterator,
+			std::multimap<std::string, boost::shared_ptr<file_info> >::iterator>
+			Hash_iter_pair = Hash.equal_range(std::string(Path_iter->second->hash));
 		for(; Hash_iter_pair.first != Hash_iter_pair.second; ++Hash_iter_pair.first){
 			if(Hash_iter_pair.first->second == Path_iter->second){
 				Hash.erase(Hash_iter_pair.first);
@@ -228,8 +228,8 @@ boost::uint64_t share::files()
 share::const_file_iterator share::find_hash(const std::string & hash)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	std::multimap<flyweight_string, boost::shared_ptr<file_info> >::iterator
-		iter = Hash.find(flyweight_string(hash));
+	std::multimap<std::string, boost::shared_ptr<file_info> >::iterator
+		iter = Hash.find(std::string(hash));
 	if(iter == Hash.end()){
 		return end_file();
 	}else{
@@ -240,8 +240,8 @@ share::const_file_iterator share::find_hash(const std::string & hash)
 share::const_file_iterator share::find_path(const std::string & path)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	std::map<flyweight_string, boost::shared_ptr<file_info> >::iterator
-		iter = Path.find(flyweight_string(path));
+	std::map<std::string, boost::shared_ptr<file_info> >::iterator
+		iter = Path.find(std::string(path));
 	if(iter == Path.end()){
 		return end_file();
 	}else{
@@ -254,15 +254,15 @@ share::slot_iterator share::find_slot(const std::string & hash)
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 
 	//return existing slot if it exists
-	std::map<flyweight_string, boost::shared_ptr<slot> >::iterator
-		Slot_iter = Slot.find(flyweight_string(hash));
+	std::map<std::string, boost::shared_ptr<slot> >::iterator
+		Slot_iter = Slot.find(std::string(hash));
 	if(Slot_iter != Slot.end()){
 		return slot_iterator(this, Slot_iter->second);
 	}
 
 	//get file_info to create new slot, if it exists
-	std::multimap<flyweight_string, boost::shared_ptr<file_info> >::iterator
-		Hash_iter = Hash.find(flyweight_string(hash));
+	std::multimap<std::string, boost::shared_ptr<file_info> >::iterator
+		Hash_iter = Hash.find(std::string(hash));
 	if(Hash_iter == Hash.end()){
 		return end_slot();
 	}
@@ -275,7 +275,7 @@ share::slot_iterator share::find_slot(const std::string & hash)
 		LOG << e.what();
 		return end_slot();
 	}
-	std::pair<std::map<flyweight_string, boost::shared_ptr<slot> >::iterator, bool>
+	std::pair<std::map<std::string, boost::shared_ptr<slot> >::iterator, bool>
 		ret = Slot.insert(std::make_pair(hash, new_slot));
 	return slot_iterator(this, ret.first->second);
 }
@@ -283,7 +283,7 @@ share::slot_iterator share::find_slot(const std::string & hash)
 void share::garbage_collect()
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	for(std::map<flyweight_string, boost::shared_ptr<slot> >::iterator
+	for(std::map<std::string, boost::shared_ptr<slot> >::iterator
 		it_cur = Slot.begin(); it_cur != Slot.end();)
 	{
 		if(it_cur->second.unique()){
@@ -300,10 +300,10 @@ std::pair<share::const_file_iterator, bool> share::insert(const file_info & FI)
 	const_file_iterator CFI = find_path(FI.path);
 	if(CFI == end_file()){
 		//insert new element
-		std::multimap<flyweight_string, boost::shared_ptr<file_info> >::iterator
+		std::multimap<std::string, boost::shared_ptr<file_info> >::iterator
 			Hash_iter = Hash.insert(std::make_pair(FI.hash,
 			boost::shared_ptr<file_info>(new file_info(FI))));
-		std::pair<std::map<flyweight_string, boost::shared_ptr<file_info> >::iterator,
+		std::pair<std::map<std::string, boost::shared_ptr<file_info> >::iterator,
 			bool> ret = Path.insert(std::make_pair(FI.path, Hash_iter->second));
 		assert(ret.second);
 		_bytes += FI.file_size;
@@ -322,8 +322,8 @@ bool share::is_downloading(const std::string & path)
 	if(CFI == end_file()){
 		return false;
 	}else{
-		std::map<flyweight_string, boost::shared_ptr<slot> >::iterator
-			slot_iter = Slot.find(flyweight_string(CFI->hash));
+		std::map<std::string, boost::shared_ptr<slot> >::iterator
+			slot_iter = Slot.find(std::string(CFI->hash));
 		return slot_iter != Slot.end() && !slot_iter->second->complete();
 	}
 }
@@ -331,8 +331,8 @@ bool share::is_downloading(const std::string & path)
 boost::shared_ptr<const file_info> share::next_file_info(const std::string & path)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	std::map<flyweight_string, boost::shared_ptr<file_info> >::iterator
-		iter = Path.upper_bound(flyweight_string(path));
+	std::map<std::string, boost::shared_ptr<file_info> >::iterator
+		iter = Path.upper_bound(std::string(path));
 	if(iter == Path.end()){
 		return boost::shared_ptr<file_info>();
 	}else{
@@ -344,8 +344,8 @@ boost::shared_ptr<const file_info> share::next_file_info(const std::string & pat
 boost::shared_ptr<slot> share::next_slot(const std::string & hash)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	std::map<flyweight_string, boost::shared_ptr<slot> >::iterator
-		iter = Slot.upper_bound(flyweight_string(hash));
+	std::map<std::string, boost::shared_ptr<slot> >::iterator
+		iter = Slot.upper_bound(std::string(hash));
 	if(iter == Slot.end()){
 		return boost::shared_ptr<slot>();
 	}else{
@@ -356,8 +356,8 @@ boost::shared_ptr<slot> share::next_slot(const std::string & hash)
 share::slot_iterator share::remove_slot(const std::string & hash)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	std::map<flyweight_string, boost::shared_ptr<slot> >::iterator
-		S_iter = Slot.find(flyweight_string(hash));
+	std::map<std::string, boost::shared_ptr<slot> >::iterator
+		S_iter = Slot.find(std::string(hash));
 	if(S_iter == Slot.end()){
 		return end_slot();
 	}else{
@@ -365,9 +365,9 @@ share::slot_iterator share::remove_slot(const std::string & hash)
 		slot_iterator SI(this, S_iter->second);
 		Slot.erase(S_iter);
 		//remove hash element
-		std::pair<std::multimap<flyweight_string, boost::shared_ptr<file_info> >::iterator,
-			std::multimap<flyweight_string, boost::shared_ptr<file_info> >::iterator>
-			Hash_iter_pair = Hash.equal_range(flyweight_string(SI->hash()));
+		std::pair<std::multimap<std::string, boost::shared_ptr<file_info> >::iterator,
+			std::multimap<std::string, boost::shared_ptr<file_info> >::iterator>
+			Hash_iter_pair = Hash.equal_range(std::string(SI->hash()));
 		for(; Hash_iter_pair.first != Hash_iter_pair.second; ++Hash_iter_pair.first){
 			if(Hash_iter_pair.first->second->path == SI->path()){
 				Hash.erase(Hash_iter_pair.first);
@@ -375,7 +375,7 @@ share::slot_iterator share::remove_slot(const std::string & hash)
 			}
 		}
 		//remove path element
-		Path.erase(flyweight_string(SI->path()));
+		Path.erase(std::string(SI->path()));
 		_bytes -= SI->file_size();
 		--_files;
 		return SI;
@@ -384,7 +384,7 @@ share::slot_iterator share::remove_slot(const std::string & hash)
 
 void share::remove_unused_slots()
 {
-	std::map<flyweight_string, boost::shared_ptr<slot> >::iterator
+	std::map<std::string, boost::shared_ptr<slot> >::iterator
 		it_cur = Slot.begin(), it_end = Slot.end();
 	while(it_cur != it_end){
 		if(it_cur->second.unique() && it_cur->second->complete()){

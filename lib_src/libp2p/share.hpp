@@ -9,11 +9,7 @@
 #include <atomic_int.hpp>
 #include <boost/bind.hpp>
 #include <boost/cstdint.hpp>
-#include <boost/flyweight.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/thread.hpp>
-#include <boost/thread/once.hpp>
-#include <boost/utility.hpp>
 #include <singleton.hpp>
 
 //standard
@@ -26,8 +22,6 @@ class share : public singleton_base<share>
 {
 	friend class singleton_base<share>;
 public:
-	typedef boost::flyweights::flyweight<std::string> flyweight_string;
-
 	/*
 	Modifications to share don't invalidate this iterator.
 	Note: This iterator is const because it allows the user access to only copies
@@ -155,9 +149,9 @@ private:
 		we don't want more than one slot per hash.
 	*/
 	boost::recursive_mutex Recursive_Mutex;
-	std::multimap<flyweight_string, boost::shared_ptr<file_info> > Hash;
-	std::map<flyweight_string, boost::shared_ptr<file_info> > Path;
-	std::map<flyweight_string, boost::shared_ptr<slot> > Slot;
+	std::multimap<std::string, boost::shared_ptr<file_info> > Hash;
+	std::map<std::string, boost::shared_ptr<file_info> > Path;
+	std::map<std::string, boost::shared_ptr<slot> > Slot;
 
 	/*
 	_bytes:

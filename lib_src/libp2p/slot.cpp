@@ -3,11 +3,11 @@
 slot::slot(const file_info & FI_in):
 	FI(FI_in),
 	#ifdef _WIN32
-	file_name(FI.path.get().rfind('\\') != std::string::npos ?
-		FI.path.get().substr(FI.path.get().rfind('\\')+1) : "ERROR")
+	file_name(FI.path.rfind('\\') != std::string::npos ?
+		FI.path.substr(FI.path.rfind('\\')+1) : "ERROR")
 	#else
-	file_name(FI.path.get().rfind('/') != std::string::npos ?
-		FI.path.get().substr(FI.path.get().rfind('/')+1) : "ERROR")
+	file_name(FI.path.rfind('/') != std::string::npos ?
+		FI.path.substr(FI.path.rfind('/')+1) : "ERROR")
 	#endif
 {
 	if(FI.file_size != 0){

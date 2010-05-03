@@ -3,7 +3,6 @@
 
 //include
 #include <boost/cstdint.hpp>
-#include <boost/flyweight.hpp>
 
 //standard
 #include <ctime>
@@ -34,8 +33,8 @@ public:
 		last_write_time(FI.last_write_time)
 	{}
 
-	boost::flyweights::flyweight<std::string> hash;
-	boost::flyweights::flyweight<std::string> path;
+	std::string hash;
+	std::string path;
 	boost::uint64_t file_size;
 	std::time_t last_write_time;
 };

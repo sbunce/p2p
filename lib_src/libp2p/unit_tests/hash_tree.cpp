@@ -16,7 +16,7 @@ int fail(0);
 //create test files to hash if they don't already exist
 void create_file(const file_info & FI)
 {
-	std::fstream fout(FI.path.get().c_str(), std::ios::out | std::ios::binary
+	std::fstream fout(FI.path.c_str(), std::ios::out | std::ios::binary
 		| std::ios::trunc);
 	unsigned data = 0;
 	for(boost::uint64_t x=0; x<FI.file_size; ++x){
@@ -78,7 +78,7 @@ void create_reassemble(const unsigned size)
 
 	//check file blocks with rebuilt tree
 	network::buffer buf;
-	std::fstream fin(FI.path.get().c_str(), std::ios::in | std::ios::binary);
+	std::fstream fin(FI.path.c_str(), std::ios::in | std::ios::binary);
 	if(!fin.good()){
 		LOG; ++fail;
 		return;
