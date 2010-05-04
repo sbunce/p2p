@@ -19,7 +19,7 @@ const unsigned pong_size = 25;
 const unsigned char find_node = 2;
 const unsigned find_node_size = 45;
 const unsigned char host_list = 4;
-const unsigned host_list_size = 26;     //minimum size
-const unsigned host_list_elements = 26; //max elements in host_list
+const unsigned host_list_size = 27;     //minimum size
+const unsigned host_list_elements = 16; //max elements in host_list
 }//end of namespace protocol_udp
 #endif

@@ -5,6 +5,7 @@
 #include "protocol_udp.hpp"
 
 //include
+#include <bit_field.hpp>
 #include <network/network.hpp>
 #include <SHA1.hpp>
 

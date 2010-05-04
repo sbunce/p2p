@@ -42,49 +42,45 @@ message_udp::recv::host_list::host_list(
 
 bool message_udp::recv::host_list::expect(const network::buffer & recv_buf)
 {
+	//check minimum size
 	if(recv_buf.size() < protocol_udp::host_list_size || recv_buf.size() > 508){
 		return false;
 	}
+	//check command
 	if(recv_buf[0] != protocol_udp::host_list){
 		return false;
 	}
+	//check random
 	if(std::memcmp(recv_buf.data()+1, random.data(), 4) != 0){
 		return false;
 	}
-
-	//verify length makes sense
-	unsigned IPv4_cnt = recv_buf[25];
-	if(IPv4_cnt > protocol_udp::host_list_elements){
-		return false;
-	}
-	unsigned tmp = recv_buf.size();
-	tmp -= protocol_udp::host_list_size;
-	if(tmp < IPv4_cnt * 7){
-		return false;
-	}
-	tmp -= IPv4_cnt * 7;
-	if(tmp % 19 != 0){
-		return false;
-	}
-	unsigned IPv6_cnt = tmp / 19;
-	if(IPv4_cnt + IPv6_cnt > protocol_udp::host_list_elements){
-		return false;
-	}
-
-	//verify bucket bytes
-	int IPv4_start = protocol_udp::host_list_size;
-	for(int RRN=0; RRN < IPv4_cnt; ++RRN){
-		unsigned char bucket_byte = recv_buf[IPv4_start + RRN * 7 + 6];
-		if(bucket_byte > protocol_udp::bucket_count && bucket_byte != 255){
-			return false;
+	//verify address list makes sense
+	bit_field BF(recv_buf.data()+25, 2, 16);
+	unsigned offset = protocol_udp::host_list_size;
+	for(unsigned x=0; x<16 && offset != recv_buf.size(); ++x){
+		if(BF[x] == 0){
+			//IPv4
+			if(recv_buf.size() < offset + 7){
+				return false;
+			}
+			if(recv_buf[offset + 6] > SHA1::bin_size * 8){
+				return false;
+			}
+			offset += 7;
+		}else{
+			//IPv6
+			if(recv_buf.size() < offset + 19){
+				return false;
+			}
+			if(recv_buf[offset + 18] > SHA1::bin_size * 8){
+				return false;
+			}
+			offset += 19;
 		}
 	}
-	int IPv6_start = IPv4_start + IPv4_cnt * 7;
-	for(int RRN=0; IPv6_start + RRN * 19 < recv_buf.size(); ++RRN){
-		unsigned char bucket_byte = recv_buf[IPv6_start + RRN * 19 + 18];
-		if(bucket_byte > protocol_udp::bucket_count && bucket_byte != 255){
-			return false;
-		}
+	//check if longer than expected
+	if(offset != recv_buf.size()){
+		return false;
 	}
 	return true;
 }
@@ -95,34 +91,32 @@ bool message_udp::recv::host_list::recv(const network::buffer & recv_buf,
 	if(!expect(recv_buf)){
 		return false;
 	}
-
 	std::string remote_ID(convert::bin_to_hex(std::string(
 		reinterpret_cast<const char *>(recv_buf.data())+5, 20)));
-
-	unsigned IPv4_cnt = recv_buf[25];
+	bit_field BF(recv_buf.data()+25, 2, 16);
 	std::list<std::pair<network::endpoint, unsigned char> > hosts;
-
-	//read IPv4 addresses
-	int IPv4_start = protocol_udp::host_list_size;
-	for(int RRN=0; RRN < IPv4_cnt; ++RRN){
-		boost::optional<network::endpoint> ep = network::bin_to_endpoint(
-			recv_buf.str(IPv4_start + RRN * 7, 4),
-			recv_buf.str(IPv4_start + RRN * 7 + 4, 2));
-		if(ep){
-			hosts.push_back(std::make_pair(*ep, recv_buf[IPv4_start + RRN * 7 + 6]));
-		}
-	}
-	//read IPv6 addresses
-	int IPv6_start = IPv4_start + IPv4_cnt * 7;
-	for(int RRN=0; IPv6_start + RRN * 19 < recv_buf.size(); ++RRN){
-		boost::optional<network::endpoint> ep = network::bin_to_endpoint(
-			recv_buf.str(IPv6_start + RRN * 19, 16),
-			recv_buf.str(IPv6_start + RRN * 19 + 16, 2));
-		if(ep){
-			hosts.push_back(std::make_pair(*ep, recv_buf[IPv6_start + RRN * 19 + 18]));
+	unsigned offset = protocol_udp::host_list_size;
+	for(unsigned x=0; x<16 && offset != recv_buf.size(); ++x){
+		if(BF[x] == 0){
+			//IPv4
+			boost::optional<network::endpoint> ep = network::bin_to_endpoint(
+				recv_buf.str(offset, 4), recv_buf.str(offset + 4, 2));
+			if(ep){
+				hosts.push_back(std::make_pair(*ep, recv_buf[offset + 6]));
+			}
+			offset += 7;
+		}else{
+			//IPv6
+			boost::optional<network::endpoint> ep = network::bin_to_endpoint(
+				recv_buf.str(offset, 16), recv_buf.str(offset + 16, 2));
+			if(ep){
+				hosts.push_back(std::make_pair(*ep, recv_buf[offset + 18]));
+			}
+			offset += 19;
 		}
 	}
 	func(endpoint, remote_ID, hosts);
+	return true;
 }
 //END recv::host_list
 
@@ -211,39 +205,25 @@ message_udp::send::host_list::host_list(const network::buffer & random,
 {
 	assert(random.size() == 4);
 	assert(hosts.size() <= protocol_udp::host_list_elements);
-
-	//separate IPv4 and IPv6 endpoints
-	std::list<std::pair<network::endpoint, unsigned char> > IPv4_endpoint, IPv6_endpoint;
+	bit_field BF(16);
+	unsigned cnt = 0;
 	for(std::list<std::pair<network::endpoint, unsigned char> >::const_iterator
 		it_cur = hosts.begin(), it_end = hosts.end(); it_cur != it_end; ++it_cur)
 	{
 		if(it_cur->first.version() == network::IPv4){
-			IPv4_endpoint.push_back(*it_cur);
+			BF[cnt] = 0;
 		}else{
-			IPv6_endpoint.push_back(*it_cur);
+			BF[cnt] = 1;
 		}
+		++cnt;
 	}
-	unsigned char IPv4_count = IPv4_endpoint.size();
-
 	buf.append(protocol_udp::host_list)
 		.append(random)
 		.append(convert::hex_to_bin(local_ID))
-		.append(IPv4_count);
-
-	//append IPv4 addresses
-	for(std::list<std::pair<network::endpoint, unsigned char> >::iterator
-		it_cur = IPv4_endpoint.begin(), it_end = IPv4_endpoint.end();
-		it_cur != it_end; ++it_cur)
-	{
-		buf.append(it_cur->first.IP_bin())
-			.append(it_cur->first.port_bin())
-			.append(it_cur->second);
-	}
-
-	//append IPv6 addresses
-	for(std::list<std::pair<network::endpoint, unsigned char> >::iterator
-		it_cur = IPv6_endpoint.begin(), it_end = IPv6_endpoint.end();
-		it_cur != it_end; ++it_cur)
+		.append(BF.get_buf());
+	//append addresses
+	for(std::list<std::pair<network::endpoint, unsigned char> >::const_iterator
+		it_cur = hosts.begin(), it_end = hosts.end(); it_cur != it_end; ++it_cur)
 	{
 		buf.append(it_cur->first.IP_bin())
 			.append(it_cur->first.port_bin())

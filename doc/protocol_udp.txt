@@ -84,34 +84,29 @@ expected response: host_list
 
 ---
 name: host_list
-desc: A list of nodes which are closer. This list will contain only one element
-if the node is found.
-	+---+---+---+---+---+---+---+---+   +---+---+---+   +---+---+---+
-	| A |     B     |     C     | D | + |     E     | + |     F     |
-	+---+---+---+---+---+---+---+---+   +---+---+---+   +---+---+---+
-	  0   1  ...  4   5      24  25      26  ...  x      x+1 ...  y
+desc: A list of nodes which are closer.
+
+	+---+---+---+---+---+---+---+---+---+   +---+---+---+
+	| A |     B     |     C     |   D   | + |     E     |
+	+---+---+---+---+---+---+---+---+---+   +---+---+---+
+	  0   1  ...  4   5      24  25  26      27  ...  x
 A = command (base10: 4), B = echo of random bytes, C = node ID of sender,
-D = IPv4 address count, E = IPv4 address list, F = IPv6 address list
+D = IP bit_field, E = address list
 
-note: The max size of the D+E list is 26 elements.
-note: Only the IPv4 address count is included because the IPv6 address count can
-be inferred.
+note: The D bit_field indicates whether the address in the E list is a IPv4
+address or IPv6 address.
+note: The max size of the D list is 16 elements.
 
-A E list element:
+E list element:
 	+---+---+---+---+---+---+
 	|     A     |   B   | C |
 	+---+---+---+---+---+---+
-	  0  ...  3   4   5   6
-A = IPv4 address, B = port, C = bucket number
+	  0  ...  x  x+1 x+2 x+3
+A = address, B = port, C = bucket number
 
-A F list element:
-	+---+---+---+---+---+---+
-	|     A     |   B   | C |
-	+---+---+---+---+---+---+
-	  0  ... 15  16  17  18
-A = IPv6 address, B = port, C = bucket number
-
-note: C will equal 255 (base 10) if the node is an exact match.
+note: If IPv4 then x=3. If IPv6 then x=15.
+note: The bucket number is the bucket the remote host should expect to put the
+host in. This is given in place of the full node ID.
 ---
 
 ---

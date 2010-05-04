@@ -27,12 +27,8 @@ std::list<std::pair<network::endpoint, unsigned char> > route_table::find_node(
 	for(std::map<mpa::mpint, std::pair<std::string, network::endpoint> >::iterator
 		it_cur = hosts.begin(), it_end = hosts.end(); it_cur != it_end; ++it_cur)
 	{
-		if(it_cur->first == ID_to_find){
-			hosts_final.push_back(std::make_pair(it_cur->second.second, 255));
-		}else{
-			hosts_final.push_back(std::make_pair(it_cur->second.second,
-				kad_func::bucket_num(remote_ID, it_cur->second.first)));
-		}
+		hosts_final.push_back(std::make_pair(it_cur->second.second,
+			kad_func::bucket_num(remote_ID, it_cur->second.first)));
 	}
 	return hosts_final;
 }
