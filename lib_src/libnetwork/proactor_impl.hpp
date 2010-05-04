@@ -109,23 +109,26 @@ private:
 	unsigned incoming_connections;                        //current incoming connections
 	unsigned outgoing_connections;                        //current outgoing connections
 
-	//function proxy, function calls for network_thread to make
-	boost::mutex network_thread_call_mutex;
-	std::deque<boost::function<void ()> > network_thread_call;
+	/*
+	Function call proxy. A thread adds a function object and the network thread
+	makes the function call. This eliminates a lot of locking.
+	*/
+	boost::mutex relay_job_mutex;
+	std::deque<boost::function<void ()> > relay_job;
 
 	/*
 	adjust_connection_limits:
-		Called via network_thread_call proxy to adjust connection limits.
+		Called via relay_job proxy to adjust connection limits.
 	add_socket:
 		Add socket to be monitored.
 		Note: P.first must be socket_FD.
 	append_send_buf:
-		Proxy-called using network_thread_call to append data to be sent to
+		Proxy-called using relay_job to append data to be sent to
 		send_buf.
 	check_timeouts:
 		Disconnecte connections which have timed out.
 	disconnect:
-		Proxy-called using network_thread_call to disconnect a connection.
+		Proxy-called using relay_job to disconnect a connection.
 		Note: If on_empty = true then connection disconnected when connection
 			send_buf is empty.
 	lookup_socket:
@@ -139,9 +142,9 @@ private:
 		Note: P.first must be socket_FD.
 	network_loop:
 		The network_thread resides in this function.
-	process_network_thread_call:
+	process_relay_job:
 		The network loop calls this to do function calls scheduled by adding an
-		element to network_thread_call.
+		element to relay_job.
 	remote_socket:
 		Removes connection that corresponds to socket_FD.
 	*/
@@ -155,15 +158,14 @@ private:
 	std::pair<int, boost::shared_ptr<connection> > lookup_ID(const int connection_ID);
 	void handle_async_connection(std::pair<int, boost::shared_ptr<connection> > P);
 	void network_loop();
-	void process_network_thread_call();
+	void process_relay_job();
 	void remove_socket(const int socket_FD);
 
 	/*
-	When connect() is called a call to resolve relay is done with the
-	network_thread_call proxy. This is done so the network thread can evaluate
-	connection limits before starting the connection. If the connection can be
-	made then a job is scheduled with the thread pool to do resolution.
-	Note: Thread pool threads run in the resolve() function. Be careful about
+	The public function connect() adds a job to call resolve_realay(). The
+	resolve_relay() function evaluates outgoing connection limit and if the limit
+	has not been reached schedules a job with Thread_Pool to call resolve.
+	Note: Thread_Pool threads run in the resolve() function. Be careful about
 		shared state.
 	*/
 	void resolve_relay(const std::string host, const std::string port);

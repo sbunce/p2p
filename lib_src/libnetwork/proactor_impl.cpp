@@ -124,15 +124,15 @@ void network::proactor_impl::check_timeouts()
 
 void network::proactor_impl::connect(const std::string & host, const std::string & port)
 {
-	boost::mutex::scoped_lock lock(network_thread_call_mutex);
-	network_thread_call.push_back(boost::bind(&proactor_impl::resolve_relay, this,
+	boost::mutex::scoped_lock lock(relay_job_mutex);
+	relay_job.push_back(boost::bind(&proactor_impl::resolve_relay, this,
 		host, port));
 }
 
 void network::proactor_impl::disconnect(const int connection_ID)
 {
-	boost::mutex::scoped_lock lock(network_thread_call_mutex);
-	network_thread_call.push_back(boost::bind(&proactor_impl::disconnect, this,
+	boost::mutex::scoped_lock lock(relay_job_mutex);
+	relay_job.push_back(boost::bind(&proactor_impl::disconnect, this,
 		connection_ID, false));
 	Select.interrupt();
 }
@@ -159,8 +159,8 @@ void network::proactor_impl::disconnect(const int connection_ID, const bool on_e
 
 void network::proactor_impl::disconnect_on_empty(const int connection_ID)
 {
-	boost::mutex::scoped_lock lock(network_thread_call_mutex);
-	network_thread_call.push_back(boost::bind(&proactor_impl::disconnect, this,
+	boost::mutex::scoped_lock lock(relay_job_mutex);
+	relay_job.push_back(boost::bind(&proactor_impl::disconnect, this,
 		connection_ID, true));
 	Select.interrupt();
 }
@@ -248,7 +248,7 @@ void network::proactor_impl::network_loop()
 			check_timeouts();
 			last_loop_time = std::time(NULL);
 		}
-		process_network_thread_call();
+		process_relay_job();
 
 		//only check for reads and writes when there is available download/upload
 		if(Rate_Limit.available_download() == 0){
@@ -343,17 +343,17 @@ void network::proactor_impl::network_loop()
 	}
 }
 
-void network::proactor_impl::process_network_thread_call()
+void network::proactor_impl::process_relay_job()
 {
 	while(true){
 		boost::function<void ()> tmp;
 		{//begin lock scope
-		boost::mutex::scoped_lock lock(network_thread_call_mutex);
-		if(network_thread_call.empty()){
+		boost::mutex::scoped_lock lock(relay_job_mutex);
+		if(relay_job.empty()){
 			break;
 		}
-		tmp = network_thread_call.front();
-		network_thread_call.pop_front();
+		tmp = relay_job.front();
+		relay_job.pop_front();
 		}//end lock scope
 		tmp();
 	}
@@ -402,8 +402,8 @@ void network::proactor_impl::resolve(const std::string & host, const std::string
 		//in progress of connecting
 		std::pair<int, boost::shared_ptr<connection> > P(Connection->socket(), Connection);
 		{//BEGIN lock scope
-		boost::mutex::scoped_lock lock(network_thread_call_mutex);
-		network_thread_call.push_back(boost::bind(&proactor_impl::add_socket, this, P));
+		boost::mutex::scoped_lock lock(relay_job_mutex);
+		relay_job.push_back(boost::bind(&proactor_impl::add_socket, this, P));
 		}//END lock scope
 	}else{
 		//failed to resolve or failed to allocate socket
@@ -415,10 +415,10 @@ void network::proactor_impl::resolve(const std::string & host, const std::string
 void network::proactor_impl::send(const int connection_ID, buffer & send_buf)
 {
 	if(!send_buf.empty()){
-		boost::mutex::scoped_lock lock(network_thread_call_mutex);
+		boost::mutex::scoped_lock lock(relay_job_mutex);
 		boost::shared_ptr<buffer> buf(new buffer());
 		buf->swap(send_buf); //swap buffers to avoid copy
-		network_thread_call.push_back(boost::bind(&proactor_impl::append_send_buf, this,
+		relay_job.push_back(boost::bind(&proactor_impl::append_send_buf, this,
 			connection_ID, buf));
 		Select.interrupt();
 	}
@@ -428,8 +428,8 @@ void network::proactor_impl::set_connection_limit(const unsigned incoming_limit,
 	const unsigned outgoing_limit)
 {
 	assert(incoming_limit + outgoing_limit <= FD_SETSIZE);
-	boost::mutex::scoped_lock lock(network_thread_call_mutex);
-	network_thread_call.push_back(boost::bind(&proactor_impl::adjust_connection_limits,
+	boost::mutex::scoped_lock lock(relay_job_mutex);
+	relay_job.push_back(boost::bind(&proactor_impl::adjust_connection_limits,
 		this, incoming_limit, outgoing_limit));
 }
 
@@ -500,7 +500,7 @@ void network::proactor_impl::stop()
 	ID.clear();
 	incoming_connections = 0;
 	outgoing_connections = 0;
-	network_thread_call.clear();
+	relay_job.clear();
 
 	//stop dispatcher and wait for dispatcher call backs to finish
 	Dispatcher.stop_join();

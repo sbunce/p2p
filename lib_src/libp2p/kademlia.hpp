@@ -18,6 +18,12 @@ public:
 	kademlia();
 	~kademlia();
 
+	/*
+
+	*/
+	//void find_node(const std::string & ID,
+		//const boost::function<void (const network::endpoint)> & call_back);
+
 private:
 	boost::thread main_loop_thread;
 	exchange_udp Exchange;
