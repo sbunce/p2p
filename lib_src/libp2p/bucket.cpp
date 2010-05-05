@@ -11,7 +11,7 @@ bucket::contact::contact(
 	ping_sent(false)
 {
 	//contact starts timed out
-	last_seen -= protocol_udp::timeout;
+	last_seen -= protocol_udp::contact_timeout;
 }
 
 bucket::contact::contact(const contact & C):
@@ -25,13 +25,13 @@ bucket::contact::contact(const contact & C):
 
 bool bucket::contact::active_ping()
 {
-	if(!ping_sent && std::time(NULL) - last_seen > protocol_udp::timeout - ping_timeout){
+	if(!ping_sent && std::time(NULL) - last_seen > protocol_udp::contact_timeout - protocol_udp::ping_timeout){
 		/*
 		We may get to pinging a contact long after it times out if multiple
 		contacts get bunched up. We set the last_seen time such that we give the
 		ping <ping_timeout> seconds to timeout.
 		*/
-		last_seen = std::time(NULL) - (protocol_udp::timeout - ping_timeout);
+		last_seen = std::time(NULL) - (protocol_udp::contact_timeout - protocol_udp::ping_timeout);
 		ping_sent = true;
 		return true;
 	}
@@ -46,7 +46,7 @@ bool bucket::contact::reserve_ping()
 		Pretend to be idle for <ping_timeout seconds> less than protocol_udp::timeout
 		so we can use the same function to check for active and reserve timeouts.
 		*/
-		last_seen = std::time(NULL) - (protocol_udp::timeout - ping_timeout);
+		last_seen = std::time(NULL) - (protocol_udp::contact_timeout - protocol_udp::ping_timeout);
 		ping_sent = true;
 		return true;
 	}
@@ -60,7 +60,7 @@ bool bucket::contact::timed_out()
 	at the same time some may be delayed past the normal timeout to spread out
 	pings.
 	*/
-	return ping_sent && std::time(NULL) - last_seen > ping_timeout;
+	return ping_sent && std::time(NULL) - last_seen > protocol_udp::ping_timeout;
 }
 
 void bucket::contact::touch()

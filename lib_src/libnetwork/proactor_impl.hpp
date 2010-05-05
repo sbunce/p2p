@@ -110,8 +110,8 @@ private:
 	unsigned outgoing_connections;                        //current outgoing connections
 
 	/*
-	Function call proxy. A thread adds a function object and the network thread
-	makes the function call. This eliminates a lot of locking.
+	Function call proxy. A thread adds a function object and network_thread makes
+	the function call. This eliminates a lot of locking.
 	*/
 	boost::mutex relay_job_mutex;
 	std::deque<boost::function<void ()> > relay_job;
@@ -143,8 +143,7 @@ private:
 	network_loop:
 		The network_thread resides in this function.
 	process_relay_job:
-		The network loop calls this to do function calls scheduled by adding an
-		element to relay_job.
+		Called by network_thread to process relay jobs.
 	remote_socket:
 		Removes connection that corresponds to socket_FD.
 	*/

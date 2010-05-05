@@ -29,6 +29,8 @@ public:
 
 private:
 	const std::string local_ID;
-	bucket Bucket[protocol_udp::bucket_count];
+
+	bucket Bucket_4[protocol_udp::bucket_count];
+	bucket Bucket_6[protocol_udp::bucket_count];
 };
 #endif

@@ -10,17 +10,28 @@ void route_table::add_reserve(const std::string & remote_ID,
 	const network::endpoint & endpoint)
 {
 	unsigned bucket_num = kad_func::bucket_num(local_ID, remote_ID);
-	Bucket[bucket_num].add_reserve(remote_ID, endpoint);
+	if(endpoint.version() == network::IPv4){
+		Bucket_4[bucket_num].add_reserve(remote_ID, endpoint);
+	}else{
+		Bucket_6[bucket_num].add_reserve(remote_ID, endpoint);
+	}
 }
 
 std::list<std::pair<network::endpoint, unsigned char> > route_table::find_node(
 	const std::string & remote_ID, const std::string & ID_to_find)
 {
 	//get nodes which are closer
-	std::map<mpa::mpint, std::pair<std::string, network::endpoint> > hosts;
+	std::map<mpa::mpint, std::pair<std::string, network::endpoint> > hosts_4;
+	std::map<mpa::mpint, std::pair<std::string, network::endpoint> > hosts_6;
 	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
-		Bucket[x].find_node(ID_to_find, hosts);
+		Bucket_4[x].find_node(ID_to_find, hosts_4);
+		Bucket_6[x].find_node(ID_to_find, hosts_6);
 	}
+
+	//combine IPv4 and IPv6
+	std::map<mpa::mpint, std::pair<std::string, network::endpoint> > hosts;
+	hosts.insert(hosts_4.begin(), hosts_4.end());
+	hosts.insert(hosts_6.begin(), hosts_6.end());
 
 	//calculate buckets the remote host should expect to put the hosts in
 	std::list<std::pair<network::endpoint, unsigned char> > hosts_final;
@@ -37,7 +48,11 @@ boost::optional<network::endpoint> route_table::ping()
 {
 	boost::optional<network::endpoint> endpoint;
 	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
-		endpoint = Bucket[x].ping();
+		endpoint = Bucket_4[x].ping();
+		if(endpoint){
+			return endpoint;
+		}
+		endpoint = Bucket_6[x].ping();
 		if(endpoint){
 			return endpoint;
 		}
@@ -49,5 +64,9 @@ void route_table::pong(const std::string & remote_ID,
 	const network::endpoint & endpoint)
 {
 	unsigned bucket_num = kad_func::bucket_num(local_ID, remote_ID);
-	Bucket[bucket_num].pong(remote_ID, endpoint);
+	if(endpoint.version() == network::IPv4){
+		Bucket_4[bucket_num].pong(remote_ID, endpoint);
+	}else{
+		Bucket_6[bucket_num].pong(remote_ID, endpoint);
+	}
 }

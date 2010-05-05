@@ -109,8 +109,8 @@ public:
 class find_node : public base
 {
 public:
-	find_node(const network::buffer & random, const std::string & local_ID,
-		const std::string & ID_to_find);
+	find_node(const network::buffer & random,
+		const std::string & local_ID, const std::string & ID_to_find);
 };
 
 class host_list : public base

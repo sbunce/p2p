@@ -25,18 +25,28 @@ public:
 		//const boost::function<void (const network::endpoint)> & call_back);
 
 private:
-	boost::thread main_loop_thread;
+	boost::thread network_thread;
 	exchange_udp Exchange;
 	const std::string local_ID;
 	route_table Route_Table;
 
 	/*
-	main_loop:
-		Loop to handle timed events and network recv.
+	Function call proxy. A thread adds a function object and network_thread makes
+	the function call. This eliminates a lot of locking.
+	*/
+	boost::mutex relay_job_mutex;
+	std::deque<boost::function<void ()> > relay_job;
+
+	/*
+	network_loop:
+		Loop to handle timed events and network events
+	process_relay_job:
+		Called by network_thread to process relay jobs.
 	send_ping:
 		Pings hosts which are about to timeout.
 	*/
-	void main_loop();
+	void network_loop();
+	void process_relay_job();
 	void send_ping();
 
 	/* Receive Functions

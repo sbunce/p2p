@@ -43,7 +43,6 @@ public:
 private:
 	class contact
 	{
-		static const unsigned ping_timeout = 60;
 	public:
 		//contact is timed out by default
 		contact(
@@ -80,11 +79,6 @@ private:
 		std::time_t last_seen;
 		bool ping_sent;
 	};
-
-
-
-//DEBUG, consider sorting these by last touched for efficiency
-
 
 	/*
 	Contacts in Bucket_Active are pinged to make sure they're still up. When a

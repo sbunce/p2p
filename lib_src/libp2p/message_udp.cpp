@@ -9,8 +9,13 @@ message_udp::recv::find_node::find_node(handler func_in):
 
 bool message_udp::recv::find_node::expect(const network::buffer & recv_buf)
 {
-	return recv_buf.size() == protocol_udp::find_node_size
-		&& recv_buf[0] == protocol_udp::find_node;
+	if(recv_buf.size() != protocol_udp::find_node_size){
+		return false;
+	}
+	if(recv_buf[0] != protocol_udp::find_node){
+		return false;
+	}
+	return true;
 }
 
 bool message_udp::recv::find_node::recv(const network::buffer & recv_buf,

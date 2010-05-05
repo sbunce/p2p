@@ -3,8 +3,6 @@
 kademlia::kademlia():
 	local_ID(db::table::prefs::get_ID())
 {
-	assert(protocol_udp::timeout >= protocol_udp::bucket_count * protocol_udp::bucket_size);
-
 	//messages to expect anytime
 	Exchange.expect_anytime(boost::shared_ptr<message_udp::recv::base>(
 		new message_udp::recv::ping(boost::bind(&kademlia::recv_ping, this, _1, _2, _3))));
@@ -12,17 +10,17 @@ kademlia::kademlia():
 		new message_udp::recv::find_node(boost::bind(&kademlia::recv_find_node,
 		this, _1, _2, _3, _4))));
 
-	//start internal thread
-	main_loop_thread = boost::thread(boost::bind(&kademlia::main_loop, this));
+	//start networking
+	network_thread = boost::thread(boost::bind(&kademlia::network_loop, this));
 }
 
 kademlia::~kademlia()
 {
-	main_loop_thread.interrupt();
-	main_loop_thread.join();
+	network_thread.interrupt();
+	network_thread.join();
 }
 
-void kademlia::main_loop()
+void kademlia::network_loop()
 {
 	//restore hosts from database, randomize to try different nodes each time
 	std::vector<db::table::peer::info> hosts = db::table::peer::resume();
@@ -48,6 +46,22 @@ void kademlia::main_loop()
 			last_time = std::time(NULL);
 		}
 		Exchange.tick();
+	}
+}
+
+void kademlia::process_relay_job()
+{
+	while(true){
+		boost::function<void ()> tmp;
+		{//begin lock scope
+		boost::mutex::scoped_lock lock(relay_job_mutex);
+		if(relay_job.empty()){
+			break;
+		}
+		tmp = relay_job.front();
+		relay_job.pop_front();
+		}//end lock scope
+		tmp();
 	}
 }
 
