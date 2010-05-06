@@ -1,5 +1,5 @@
-#ifndef H_NETWORK_PROACTOR_IMPL
-#define H_NETWORK_PROACTOR_IMPL
+#ifndef H_NET_PROACTOR_IMPL
+#define H_NET_PROACTOR_IMPL
 
 //custom
 #include "connection.hpp"
@@ -11,15 +11,15 @@
 //include
 #include <boost/shared_ptr.hpp>
 #include <thread_pool.hpp>
-#include <network/network.hpp>
+#include <net/net.hpp>
 
 //standard
 #include <map>
 
-namespace network{
+namespace net{
 class proactor_impl : private boost::noncopyable
 {
-	network::init Init;
+	net::init Init;
 public:
 	//if listener not specified then listener is not started
 	proactor_impl(
@@ -170,5 +170,5 @@ private:
 	void resolve_relay(const std::string host, const std::string port);
 	void resolve(const std::string & host, const std::string & port);
 };
-}//end namespace network
+}//end namespace net
 #endif

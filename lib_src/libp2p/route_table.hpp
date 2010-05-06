@@ -21,11 +21,11 @@ public:
 	pong:
 		See bucket::pong for documentation.
 	*/
-	void add_reserve(const std::string & remote_ID, const network::endpoint & endpoint);
-	std::list<std::pair<network::endpoint, unsigned char> > find_node(
+	void add_reserve(const std::string & remote_ID, const net::endpoint & endpoint);
+	std::list<std::pair<net::endpoint, unsigned char> > find_node(
 		const std::string & remote_ID, const std::string & ID_to_find);
-	boost::optional<network::endpoint> ping();
-	void pong(const std::string & remote_ID, const network::endpoint & endpoint);
+	boost::optional<net::endpoint> ping();
+	void pong(const std::string & remote_ID, const net::endpoint & endpoint);
 
 private:
 	const std::string local_ID;

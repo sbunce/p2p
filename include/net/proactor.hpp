@@ -1,5 +1,5 @@
-#ifndef H_NETWORK_PROACTOR
-#define H_NETWORK_PROACTOR
+#ifndef H_NET_PROACTOR
+#define H_NET_PROACTOR
 
 //custom
 #include "buffer.hpp"
@@ -12,7 +12,7 @@
 //standard
 #include <map>
 
-namespace network{
+namespace net{
 
 //predecl for PIMPL
 class proactor_impl;
@@ -139,5 +139,5 @@ public:
 private:
 	boost::shared_ptr<proactor_impl> Proactor_impl;
 };
-}//end namespace network
+}//end namespace net
 #endif

@@ -6,14 +6,14 @@
 
 int fail(0);
 
-void append_garbage(network::buffer & block)
+void append_garbage(net::buffer & block)
 {
 	block.append("123");
 }
 
 
-const network::buffer test_block("ABC");
-bool block_call_back(const network::buffer & block)
+const net::buffer test_block("ABC");
+bool block_call_back(const net::buffer & block)
 {
 	if(block != test_block){
 		LOG; ++fail;
@@ -60,8 +60,8 @@ bool initial_call_back(const std::string & ID)
 }
 
 //note, p_rA doesn't contain actual prime
-const network::buffer test_p_rA(portable_urandom(protocol_tcp::DH_key_size * 2));
-bool key_exchange_p_rA_call_back(const network::buffer & p_rA)
+const net::buffer test_p_rA(portable_urandom(protocol_tcp::DH_key_size * 2));
+bool key_exchange_p_rA_call_back(const net::buffer & p_rA)
 {
 	if(p_rA != test_p_rA){
 		LOG; ++fail;
@@ -69,8 +69,8 @@ bool key_exchange_p_rA_call_back(const network::buffer & p_rA)
 	return true;
 }
 
-const network::buffer test_rB(portable_urandom(protocol_tcp::DH_key_size));
-bool key_exchange_rB_call_back(const network::buffer & rB)
+const net::buffer test_rB(portable_urandom(protocol_tcp::DH_key_size));
+bool key_exchange_rB_call_back(const net::buffer & rB)
 {
 	if(rB != test_rB){
 		LOG; ++fail;
@@ -205,7 +205,7 @@ int main()
 {
 	boost::shared_ptr<message_tcp::recv::base> M_recv;
 	boost::shared_ptr<message_tcp::send::base> M_send;
-	boost::shared_ptr<network::speed_calc> SC(new network::speed_calc());
+	boost::shared_ptr<net::speed_calc> SC(new net::speed_calc());
 
 	//block
 	M_recv = boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::block(

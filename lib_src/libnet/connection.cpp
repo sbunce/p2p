@@ -1,6 +1,6 @@
 #include "connection.hpp"
 
-network::connection::connection(
+net::connection::connection(
 	ID_manager & ID_Manager_in,
 	const std::string & host_in,
 	const std::string & port_in
@@ -21,7 +21,7 @@ network::connection::connection(
 	}
 }
 
-network::connection::connection(
+net::connection::connection(
 	ID_manager & ID_Manager_in,
 	const boost::shared_ptr<nstream> & N_in
 ):
@@ -39,17 +39,17 @@ network::connection::connection(
 		"", N->remote_IP(), N->remote_port(), incoming));
 }
 
-network::connection::~connection()
+net::connection::~connection()
 {
 	ID_Manager.deallocate(connection_ID);
 }
 
-bool network::connection::half_open()
+bool net::connection::half_open()
 {
 	return !connected;
 }
 
-bool network::connection::is_open()
+bool net::connection::is_open()
 {
 	if(N->is_open_async()){
 		connected = true;
@@ -58,7 +58,7 @@ bool network::connection::is_open()
 	return false;
 }
 
-bool network::connection::open_async()
+bool net::connection::open_async()
 {
 	//assert this connection is outgoing
 	assert(!host.empty());
@@ -74,17 +74,17 @@ bool network::connection::open_async()
 	return socket_FD != -1;
 }
 
-int network::connection::socket()
+int net::connection::socket()
 {
 	return socket_FD;
 }
 
-bool network::connection::timed_out()
+bool net::connection::timed_out()
 {
 	return std::time(NULL) - last_seen > idle_timeout;
 }
 
-void network::connection::touch()
+void net::connection::touch()
 {
 	last_seen = std::time(NULL);
 }

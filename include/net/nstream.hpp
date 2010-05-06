@@ -1,12 +1,12 @@
-#ifndef H_NETWORK_NSTREAM
-#define H_NETWORK_NSTREAM
+#ifndef H_NET_NSTREAM
+#define H_NET_NSTREAM
 
 //custom
 #include "buffer.hpp"
 #include "endpoint.hpp"
 #include "socket_base.hpp"
 
-namespace network{
+namespace net{
 class nstream : public socket_base
 {
 	//max we attempt to send/recv in one go
@@ -57,5 +57,5 @@ public:
 	std::string remote_port();
 	int send(buffer & buf, int max_transfer = MTU);
 };
-}
+}//end of namespace net
 #endif

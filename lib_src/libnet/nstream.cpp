@@ -1,23 +1,23 @@
 #include "init.hpp"
 #include "addr_impl.hpp"
-#include <network/network.hpp>
+#include <net/net.hpp>
 
-network::nstream::nstream()
+net::nstream::nstream()
 {
 
 }
 
-network::nstream::nstream(const endpoint & E)
+net::nstream::nstream(const endpoint & E)
 {
 	open(E);
 }
 
-network::nstream::nstream(const int socket_FD_in)
+net::nstream::nstream(const int socket_FD_in)
 {
 	socket_FD = socket_FD_in;
 }
 
-bool network::nstream::is_open_async()
+bool net::nstream::is_open_async()
 {
 	int opt_val = 1;
 	socklen_t opt_len = sizeof(opt_val);
@@ -37,7 +37,7 @@ bool network::nstream::is_open_async()
 	}
 }
 
-std::string network::nstream::local_IP()
+std::string net::nstream::local_IP()
 {
 	if(socket_FD == -1){
 		return "";
@@ -60,7 +60,7 @@ std::string network::nstream::local_IP()
 	return buf;
 }
 
-std::string network::nstream::local_port()
+std::string net::nstream::local_port()
 {
 	if(socket_FD == -1){
 		return "";
@@ -83,7 +83,7 @@ std::string network::nstream::local_port()
 	return buf;
 }
 
-void network::nstream::open(const endpoint & E)
+void net::nstream::open(const endpoint & E)
 {
 	close();
 	if((socket_FD = ::socket(E.AI->ai.ai_family, SOCK_STREAM, IPPROTO_TCP)) == -1){
@@ -96,7 +96,7 @@ void network::nstream::open(const endpoint & E)
 	}
 }
 
-void network::nstream::open_async(const endpoint & E)
+void net::nstream::open_async(const endpoint & E)
 {
 	close();
 	if((socket_FD = ::socket(E.AI->ai.ai_family, SOCK_STREAM, IPPROTO_TCP)) == -1){
@@ -126,7 +126,7 @@ void network::nstream::open_async(const endpoint & E)
 	}
 }
 
-int network::nstream::recv(buffer & buf, const int max_transfer)
+int net::nstream::recv(buffer & buf, const int max_transfer)
 {
 	assert(max_transfer > 0);
 	if(max_transfer > MTU){
@@ -152,7 +152,7 @@ int network::nstream::recv(buffer & buf, const int max_transfer)
 	}
 }
 
-std::string network::nstream::remote_IP()
+std::string net::nstream::remote_IP()
 {
 	sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
@@ -172,7 +172,7 @@ std::string network::nstream::remote_IP()
 	return buf;
 }
 
-std::string network::nstream::remote_port()
+std::string net::nstream::remote_port()
 {
 	sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
@@ -192,7 +192,7 @@ std::string network::nstream::remote_port()
 	return buf;
 }
 
-int network::nstream::send(buffer & buf, int max_transfer)
+int net::nstream::send(buffer & buf, int max_transfer)
 {
 	assert(max_transfer > 0);
 	if(max_transfer > buf.size()){

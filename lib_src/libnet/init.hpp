@@ -1,10 +1,10 @@
-#ifndef H_NETWORK_INIT
-#define H_NETWORK_INIT
+#ifndef H_NET_INIT
+#define H_NET_INIT
 
 //include
 #include <logger.hpp>
 
-namespace network{
+namespace net{
 class init
 {
 public:
@@ -21,5 +21,5 @@ public:
 	static void start();
 	static void stop();
 };
-}//end namespace network
+}//end namespace net
 #endif

@@ -125,7 +125,7 @@ unsigned hash_tree::block_size(const boost::uint64_t block_num)
 
 hash_tree::status hash_tree::check()
 {
-	network::buffer buf;
+	net::buffer buf;
 	buf.reserve(protocol_tcp::file_block_size);
 	for(boost::uint32_t block_num=0; block_num<tree_block_count; ++block_num){
 		buf.clear();
@@ -147,7 +147,7 @@ hash_tree::status hash_tree::check()
 }
 
 hash_tree::status hash_tree::check_file_block(const boost::uint64_t file_block_num,
-	const network::buffer & buf)
+	const net::buffer & buf)
 {
 	char parent_buf[SHA1::bin_size];
 	if(!db::pool::get()->blob_read(blob, parent_buf,
@@ -165,7 +165,7 @@ hash_tree::status hash_tree::check_file_block(const boost::uint64_t file_block_n
 }
 
 hash_tree::status hash_tree::check_tree_block(const boost::uint64_t block_num,
-	const network::buffer & buf)
+	const net::buffer & buf)
 {
 	if(block_num == 0){
 		//special requirements to check root_hash, see documentation for root_hash
@@ -421,7 +421,7 @@ boost::uint64_t hash_tree::file_size_to_tree_size(const boost::uint64_t file_siz
 }
 
 hash_tree::status hash_tree::read_block(const boost::uint64_t block_num,
-	network::buffer & buf)
+	net::buffer & buf)
 {
 	std::pair<boost::uint64_t, unsigned> info;
 	if(block_info(block_num, info)){
@@ -519,7 +519,7 @@ std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool>
 }
 
 hash_tree::status hash_tree::write_block(const boost::uint64_t block_num,
-	const network::buffer & buf)
+	const net::buffer & buf)
 {
 	std::pair<boost::uint64_t, unsigned> info;
 	boost::uint64_t parent;

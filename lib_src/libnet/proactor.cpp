@@ -1,8 +1,8 @@
 #include "proactor_impl.hpp"
-#include <network/proactor.hpp>
+#include <net/proactor.hpp>
 
 //BEGIN connection_info
-network::proactor::connection_info::connection_info(
+net::proactor::connection_info::connection_info(
 	const int connection_ID_in,
 	const std::string & host_in,
 	const std::string & IP_in,
@@ -22,7 +22,7 @@ network::proactor::connection_info::connection_info(
 }
 //END connection_info
 
-network::proactor::proactor(
+net::proactor::proactor(
 	const boost::function<void (proactor::connection_info &)> & connect_call_back,
 	const boost::function<void (proactor::connection_info &)> & disconnect_call_back
 ):
@@ -34,73 +34,73 @@ network::proactor::proactor(
 
 }
 
-void network::proactor::connect(const std::string & host, const std::string & port)
+void net::proactor::connect(const std::string & host, const std::string & port)
 {
 	Proactor_impl->connect(host, port);
 }
 
-void network::proactor::disconnect(const int connection_ID)
+void net::proactor::disconnect(const int connection_ID)
 {
 	Proactor_impl->disconnect(connection_ID);
 }
 
-void network::proactor::disconnect_on_empty(const int connection_ID)
+void net::proactor::disconnect_on_empty(const int connection_ID)
 {
 	Proactor_impl->disconnect_on_empty(connection_ID);
 }
 
-unsigned network::proactor::download_rate()
+unsigned net::proactor::download_rate()
 {
 	return Proactor_impl->download_rate();
 }
 
-unsigned network::proactor::get_max_download_rate()
+unsigned net::proactor::get_max_download_rate()
 {
 	return Proactor_impl->get_max_download_rate();
 }
 
-unsigned network::proactor::get_max_upload_rate()
+unsigned net::proactor::get_max_upload_rate()
 {
 	return Proactor_impl->get_max_upload_rate();
 }
 
-std::string network::proactor::listen_port()
+std::string net::proactor::listen_port()
 {
 	return Proactor_impl->listen_port();
 }
 
-void network::proactor::start(boost::shared_ptr<listener> Listener_in)
+void net::proactor::start(boost::shared_ptr<listener> Listener_in)
 {
 	Proactor_impl->start(Listener_in);
 }
 
-void network::proactor::stop()
+void net::proactor::stop()
 {
 	Proactor_impl->stop();
 }
 
-void network::proactor::send(const int connection_ID, buffer & send_buf)
+void net::proactor::send(const int connection_ID, buffer & send_buf)
 {
 	Proactor_impl->send(connection_ID, send_buf);
 }
 
-void network::proactor::set_connection_limit(const unsigned incoming_limit,
+void net::proactor::set_connection_limit(const unsigned incoming_limit,
 	const unsigned outgoing_limit)
 {
 	Proactor_impl->set_connection_limit(incoming_limit, outgoing_limit);
 }
 
-void network::proactor::set_max_download_rate(const unsigned rate)
+void net::proactor::set_max_download_rate(const unsigned rate)
 {
 	Proactor_impl->set_max_download_rate(rate);
 }
 
-void network::proactor::set_max_upload_rate(const unsigned rate)
+void net::proactor::set_max_upload_rate(const unsigned rate)
 {
 	Proactor_impl->set_max_upload_rate(rate);
 }
 
-unsigned network::proactor::upload_rate()
+unsigned net::proactor::upload_rate()
 {
 	return Proactor_impl->upload_rate();
 }

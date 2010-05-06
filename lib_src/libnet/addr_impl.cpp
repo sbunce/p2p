@@ -1,22 +1,22 @@
 #include "addr_impl.hpp"
 
-network::addr_impl::addr_impl(const addrinfo * ai_in)
+net::addr_impl::addr_impl(const addrinfo * ai_in)
 {
 	copy(ai_in);
 }
 
-network::addr_impl::addr_impl(const addr_impl & AI)
+net::addr_impl::addr_impl(const addr_impl & AI)
 {
 	copy(&AI.ai);
 }
 
-network::addr_impl & network::addr_impl::operator = (const addr_impl & AI)
+net::addr_impl & net::addr_impl::operator = (const addr_impl & AI)
 {
 	copy(&AI.ai);
 	return *this;
 }
 
-void network::addr_impl::copy(const addrinfo * ai_in)
+void net::addr_impl::copy(const addrinfo * ai_in)
 {
 	assert(ai_in != NULL);
 	//shallow copy

@@ -7,7 +7,7 @@
 //include
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
-#include <network/network.hpp>
+#include <net/net.hpp>
 #include <thread_pool.hpp>
 
 //standard
@@ -19,7 +19,7 @@ public:
 	connection_manager();
 	~connection_manager();
 
-	network::proactor Proactor;
+	net::proactor Proactor;
 
 	/*
 	connect_call_back:
@@ -30,8 +30,8 @@ public:
 	remove:
 		Remove incoming/outgoing slots with the specified hash.
 	*/
-	void connect_call_back(network::proactor::connection_info & CI);
-	void disconnect_call_back(network::proactor::connection_info & CI);
+	void connect_call_back(net::proactor::connection_info & CI);
+	void disconnect_call_back(net::proactor::connection_info & CI);
 	void remove(const std::string hash);
 
 private:

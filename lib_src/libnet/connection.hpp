@@ -1,18 +1,18 @@
-#ifndef H_NETWORK_CONNECTION
-#define H_NETWORK_CONNECTION
+#ifndef H_NET_CONNECTION
+#define H_NET_CONNECTION
 
 //custom
 #include "ID_manager.hpp"
 
 //include
-#include <network/endpoint.hpp>
-#include <network/nstream.hpp>
-#include <network/proactor.hpp>
+#include <net/endpoint.hpp>
+#include <net/nstream.hpp>
+#include <net/proactor.hpp>
 
 //standard
 #include <set>
 
-namespace network{
+namespace net{
 class connection : private boost::noncopyable
 {
 private:
@@ -89,5 +89,5 @@ public:
 	bool timed_out();
 	void touch();
 };
-}//end namespace network
+}//end namespace net
 #endif

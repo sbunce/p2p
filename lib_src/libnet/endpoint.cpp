@@ -1,25 +1,25 @@
 #include "addr_impl.hpp"
 #include "init.hpp"
-#include <network/network.hpp>
+#include <net/net.hpp>
 
-network::endpoint::endpoint(const boost::scoped_ptr<addr_impl> & AI_in):
+net::endpoint::endpoint(const boost::scoped_ptr<addr_impl> & AI_in):
 	AI(new addr_impl(*AI_in))
 {
-	network::init::start();
+	net::init::start();
 }
 
-network::endpoint::endpoint(const endpoint & E):
+net::endpoint::endpoint(const endpoint & E):
 	AI(new addr_impl(*E.AI))
 {
-	network::init::start();
+	net::init::start();
 }
 
-network::endpoint::~endpoint()
+net::endpoint::~endpoint()
 {
-	network::init::stop();
+	net::init::stop();
 }
 
-std::string network::endpoint::IP() const
+std::string net::endpoint::IP() const
 {
 	char buf[INET6_ADDRSTRLEN];
 	if(getnameinfo(AI->ai.ai_addr, AI->ai.ai_addrlen, buf, sizeof(buf), NULL, 0,
@@ -30,7 +30,7 @@ std::string network::endpoint::IP() const
 	return buf;
 }
 
-std::string network::endpoint::IP_bin() const
+std::string net::endpoint::IP_bin() const
 {
 	if(AI->ai.ai_addr->sa_family == AF_INET){
 		return convert::int_to_bin(reinterpret_cast<sockaddr_in *>(AI->ai.ai_addr)->sin_addr.s_addr);
@@ -43,7 +43,7 @@ std::string network::endpoint::IP_bin() const
 	}
 }
 
-std::string network::endpoint::port() const
+std::string net::endpoint::port() const
 {
 	char buf[6];
 	if(getnameinfo(AI->ai.ai_addr, AI->ai.ai_addrlen, NULL, 0, buf, sizeof(buf),
@@ -54,7 +54,7 @@ std::string network::endpoint::port() const
 	return buf;
 }
 
-std::string network::endpoint::port_bin() const
+std::string net::endpoint::port_bin() const
 {
 	if(AI->ai.ai_addr->sa_family == AF_INET){
 		return convert::int_to_bin(reinterpret_cast<sockaddr_in *>(AI->ai.ai_addr)->sin_port);
@@ -66,7 +66,7 @@ std::string network::endpoint::port_bin() const
 	}
 }
 
-network::version_t network::endpoint::version() const
+net::version_t net::endpoint::version() const
 {
 	if(AI->ai.ai_addr->sa_family == AF_INET){
 		return IPv4;
@@ -75,31 +75,31 @@ network::version_t network::endpoint::version() const
 	}
 }
 
-network::endpoint & network::endpoint::operator = (const endpoint & rval)
+net::endpoint & net::endpoint::operator = (const endpoint & rval)
 {
 	*AI = *rval.AI;
 	return *this;
 }
 
-bool network::endpoint::operator < (const endpoint & rval) const
+bool net::endpoint::operator < (const endpoint & rval) const
 {
 	return IP() + port() < rval.IP() + rval.port();
 }
 
-bool network::endpoint::operator == (const endpoint & rval) const
+bool net::endpoint::operator == (const endpoint & rval) const
 {
 	return !(*this < rval) && !(rval < *this);
 }
 
-bool network::endpoint::operator != (const endpoint & rval) const
+bool net::endpoint::operator != (const endpoint & rval) const
 {
 	return !(*this == rval);
 }
 
-std::set<network::endpoint> network::get_endpoint(const std::string & host,
+std::set<net::endpoint> net::get_endpoint(const std::string & host,
 	const std::string & port)
 {
-	network::init Init;
+	net::init Init;
 	std::set<endpoint> E;
 	if(port.empty() || host.size() > 255 || port.size() > 33){
 		return E;
@@ -135,20 +135,20 @@ std::set<network::endpoint> network::get_endpoint(const std::string & host,
 	return E;
 }
 
-boost::optional<network::endpoint> network::bin_to_endpoint(
+boost::optional<net::endpoint> net::bin_to_endpoint(
 	const std::string & addr, const std::string & port)
 {
-	network::init Init;
+	net::init Init;
 	assert(addr.size() == 4 || addr.size() == 16);
 	assert(port.size() == 2);
 
 	//create endpoint
-	std::set<network::endpoint> ep_set = get_endpoint(addr.size() == 4 ? "127.0.0.1" : "::1", "0");
+	std::set<net::endpoint> ep_set = get_endpoint(addr.size() == 4 ? "127.0.0.1" : "::1", "0");
 	if(ep_set.empty()){
 		//this can happen on a IPv6 address when host doesn't support IPv6
-		return boost::optional<network::endpoint>();
+		return boost::optional<net::endpoint>();
 	}
-	boost::optional<network::endpoint> ep(*ep_set.begin());
+	boost::optional<net::endpoint> ep(*ep_set.begin());
 
 	//replace localhost address and port
 	if(ep->AI->ai.ai_addr->sa_family == AF_INET){

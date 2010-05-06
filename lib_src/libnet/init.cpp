@@ -1,17 +1,17 @@
 #include "system_include.hpp"
 #include "init.hpp"
 
-network::init::init()
+net::init::init()
 {
 	start();
 }
 
-network::init::~init()
+net::init::~init()
 {
 	stop();
 }
 
-void network::init::start()
+void net::init::start()
 {
 	#ifdef _WIN32
 	WORD wsock_ver = MAKEWORD(2,2);
@@ -24,7 +24,7 @@ void network::init::start()
 	#endif
 }
 
-void network::init::stop()
+void net::init::stop()
 {
 	#ifdef _WIN32
 	WSACleanup();

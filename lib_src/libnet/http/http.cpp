@@ -22,7 +22,7 @@ http::~http()
 	Proactor.stop();
 }
 
-void http::connect_call_back(network::proactor::connection_info & CI)
+void http::connect_call_back(net::proactor::connection_info & CI)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	std::pair<std::map<int, boost::shared_ptr<connection> >::iterator, bool>
@@ -31,7 +31,7 @@ void http::connect_call_back(network::proactor::connection_info & CI)
 	assert(ret.second);
 }
 
-void http::disconnect_call_back(network::proactor::connection_info & CI)
+void http::disconnect_call_back(net::proactor::connection_info & CI)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	Connection.erase(CI.connection_ID);
@@ -42,7 +42,7 @@ void http::set_max_upload_rate(const unsigned rate)
 	Proactor.set_max_upload_rate(rate);
 }
 
-void http::start(boost::shared_ptr<network::listener> Listener)
+void http::start(boost::shared_ptr<net::listener> Listener)
 {
 	boost::mutex::scoped_lock lock(start_stop_mutex);
 	assert(Listener);

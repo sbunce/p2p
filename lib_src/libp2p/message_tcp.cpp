@@ -11,7 +11,7 @@ bool message_tcp::send::base::encrypt()
 message_tcp::recv::block::block(
 	handler func_in,
 	const unsigned block_size_in,
-	boost::shared_ptr<network::speed_calc> Download_Speed_in
+	boost::shared_ptr<net::speed_calc> Download_Speed_in
 ):
 	func(func_in),
 	block_size(block_size_in),
@@ -20,19 +20,19 @@ message_tcp::recv::block::block(
 	Download_Speed = Download_Speed_in;
 }
 
-bool message_tcp::recv::block::expect(const network::buffer & recv_buf)
+bool message_tcp::recv::block::expect(const net::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
 	return recv_buf[0] == protocol_tcp::block;
 }
 
-message_tcp::recv::status message_tcp::recv::block::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::block::recv(net::buffer & recv_buf)
 {
 	if(!expect(recv_buf)){
 		return not_expected;
 	}
 	if(recv_buf.size() >= protocol_tcp::block_size(block_size)){
-		network::buffer buf;
+		net::buffer buf;
 		Download_Speed->add(block_size - bytes_seen);
 		buf.append(recv_buf.data() + 1, protocol_tcp::block_size(block_size) - 1);
 		recv_buf.erase(0, protocol_tcp::block_size(block_size));
@@ -57,13 +57,13 @@ message_tcp::recv::close_slot::close_slot(
 
 }
 
-bool message_tcp::recv::close_slot::expect(const network::buffer & recv_buf)
+bool message_tcp::recv::close_slot::expect(const net::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
 	return recv_buf[0] == protocol_tcp::close_slot;
 }
 
-message_tcp::recv::status message_tcp::recv::close_slot::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::close_slot::recv(net::buffer & recv_buf)
 {
 	if(!expect(recv_buf)){
 		return not_expected;
@@ -88,7 +88,7 @@ void message_tcp::recv::composite::add(boost::shared_ptr<base> M)
 	possible_response.push_back(M);
 }
 
-bool message_tcp::recv::composite::expect(const network::buffer & recv_buf)
+bool message_tcp::recv::composite::expect(const net::buffer & recv_buf)
 {
 	for(std::vector<boost::shared_ptr<base> >::iterator
 		it_cur = possible_response.begin(), it_end = possible_response.end();
@@ -101,7 +101,7 @@ bool message_tcp::recv::composite::expect(const network::buffer & recv_buf)
 	return false;
 }
 
-message_tcp::recv::status message_tcp::recv::composite::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::composite::recv(net::buffer & recv_buf)
 {
 	for(std::vector<boost::shared_ptr<base> >::iterator
 		it_cur = possible_response.begin(), it_end = possible_response.end();
@@ -125,19 +125,19 @@ message_tcp::recv::error::error(
 
 }
 
-bool message_tcp::recv::error::expect(const network::buffer & recv_buf)
+bool message_tcp::recv::error::expect(const net::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
 	return recv_buf[0] == protocol_tcp::error;
 }
 
-message_tcp::recv::status message_tcp::recv::error::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::error::recv(net::buffer & recv_buf)
 {
 	if(!expect(recv_buf)){
 		return not_expected;
 	}
 	if(recv_buf[0] == protocol_tcp::error){
-		network::buffer buf;
+		net::buffer buf;
 		buf.append(recv_buf.data(), protocol_tcp::error_size);
 		recv_buf.erase(0, protocol_tcp::error_size);
 		if(func()){
@@ -163,7 +163,7 @@ message_tcp::recv::have_file_block::have_file_block(
 
 }
 
-bool message_tcp::recv::have_file_block::expect(const network::buffer & recv_buf)
+bool message_tcp::recv::have_file_block::expect(const net::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
 	if(recv_buf[0] != protocol_tcp::have_file_block){
@@ -178,7 +178,7 @@ bool message_tcp::recv::have_file_block::expect(const network::buffer & recv_buf
 	}
 }
 
-message_tcp::recv::status message_tcp::recv::have_file_block::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::have_file_block::recv(net::buffer & recv_buf)
 {
 	if(!expect(recv_buf)){
 		return not_expected;
@@ -213,7 +213,7 @@ message_tcp::recv::have_hash_tree_block::have_hash_tree_block(
 
 }
 
-bool message_tcp::recv::have_hash_tree_block::expect(const network::buffer & recv_buf)
+bool message_tcp::recv::have_hash_tree_block::expect(const net::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
 	if(recv_buf[0] != protocol_tcp::have_hash_tree_block){
@@ -228,7 +228,7 @@ bool message_tcp::recv::have_hash_tree_block::expect(const network::buffer & rec
 	}
 }
 
-message_tcp::recv::status message_tcp::recv::have_hash_tree_block::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::have_hash_tree_block::recv(net::buffer & recv_buf)
 {
 	if(!expect(recv_buf)){
 		return not_expected;
@@ -259,14 +259,14 @@ message_tcp::recv::initial::initial(
 
 }
 
-bool message_tcp::recv::initial::expect(const network::buffer & recv_buf)
+bool message_tcp::recv::initial::expect(const net::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
 	//initial message random, no way to verify we expect
 	return true;
 }
 
-message_tcp::recv::status message_tcp::recv::initial::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::initial::recv(net::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
 	if(recv_buf.size() >= SHA1::bin_size){
@@ -292,18 +292,18 @@ message_tcp::recv::key_exchange_p_rA::key_exchange_p_rA(
 
 }
 
-bool message_tcp::recv::key_exchange_p_rA::expect(const network::buffer & recv_buf)
+bool message_tcp::recv::key_exchange_p_rA::expect(const net::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
 	//no way to verify we expect
 	return true;
 }
 
-message_tcp::recv::status message_tcp::recv::key_exchange_p_rA::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::key_exchange_p_rA::recv(net::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
 	if(recv_buf.size() >= protocol_tcp::DH_key_size * 2){
-		network::buffer buf;
+		net::buffer buf;
 		buf.append(recv_buf.data(), protocol_tcp::DH_key_size * 2);
 		recv_buf.erase(0, protocol_tcp::DH_key_size * 2);
 		if(func(buf)){
@@ -325,18 +325,18 @@ message_tcp::recv::key_exchange_rB::key_exchange_rB(
 
 }
 
-bool message_tcp::recv::key_exchange_rB::expect(const network::buffer & recv_buf)
+bool message_tcp::recv::key_exchange_rB::expect(const net::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
 	//no way to verify we expect
 	return true;
 }
 
-message_tcp::recv::status message_tcp::recv::key_exchange_rB::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::key_exchange_rB::recv(net::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
 	if(recv_buf.size() >= protocol_tcp::DH_key_size){
-		network::buffer buf;
+		net::buffer buf;
 		buf.append(recv_buf.data(), protocol_tcp::DH_key_size);
 		recv_buf.erase(0, protocol_tcp::DH_key_size);
 		if(func(buf)){
@@ -362,7 +362,7 @@ message_tcp::recv::request_file_block::request_file_block(
 
 }
 
-bool message_tcp::recv::request_file_block::expect(const network::buffer & recv_buf)
+bool message_tcp::recv::request_file_block::expect(const net::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
 	if(recv_buf.size() == 1){
@@ -373,7 +373,7 @@ bool message_tcp::recv::request_file_block::expect(const network::buffer & recv_
 	}
 }
 
-message_tcp::recv::status message_tcp::recv::request_file_block::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::request_file_block::recv(net::buffer & recv_buf)
 {
 	if(!expect(recv_buf)){
 		return not_expected;
@@ -406,7 +406,7 @@ message_tcp::recv::request_hash_tree_block::request_hash_tree_block(
 
 }
 
-bool message_tcp::recv::request_hash_tree_block::expect(const network::buffer & recv_buf)
+bool message_tcp::recv::request_hash_tree_block::expect(const net::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
 	if(recv_buf.size() == 1){
@@ -418,7 +418,7 @@ bool message_tcp::recv::request_hash_tree_block::expect(const network::buffer & 
 }
 
 message_tcp::recv::status message_tcp::recv::request_hash_tree_block::recv(
-	network::buffer & recv_buf)
+	net::buffer & recv_buf)
 {
 	if(!expect(recv_buf)){
 		return not_expected;
@@ -447,13 +447,13 @@ message_tcp::recv::request_slot::request_slot(
 
 }
 
-bool message_tcp::recv::request_slot::expect(const network::buffer & recv_buf)
+bool message_tcp::recv::request_slot::expect(const net::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
 	return recv_buf[0] == protocol_tcp::request_slot;
 }
 
-message_tcp::recv::status message_tcp::recv::request_slot::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::request_slot::recv(net::buffer & recv_buf)
 {
 	if(!expect(recv_buf)){
 		return not_expected;
@@ -484,13 +484,13 @@ message_tcp::recv::slot::slot(
 
 }
 
-bool message_tcp::recv::slot::expect(const network::buffer & recv_buf)
+bool message_tcp::recv::slot::expect(const net::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
 	return recv_buf[0] == protocol_tcp::slot;
 }
 
-message_tcp::recv::status message_tcp::recv::slot::recv(network::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::slot::recv(net::buffer & recv_buf)
 {
 	if(!expect(recv_buf)){
 		return not_expected;
@@ -561,8 +561,8 @@ message_tcp::recv::status message_tcp::recv::slot::recv(network::buffer & recv_b
 //END recv::slot
 
 //BEGIN send::block
-message_tcp::send::block::block(const network::buffer & block,
-	boost::shared_ptr<network::speed_calc> Upload_Speed_in)
+message_tcp::send::block::block(const net::buffer & block,
+	boost::shared_ptr<net::speed_calc> Upload_Speed_in)
 {
 	buf.append(protocol_tcp::block).append(block);
 	Upload_Speed = Upload_Speed_in;
@@ -618,7 +618,7 @@ message_tcp::send::initial::initial(const std::string & ID)
 //END send::initial
 
 //BEGIN send::key_exchange_p_rA
-message_tcp::send::key_exchange_p_rA::key_exchange_p_rA(const network::buffer & buf_in)
+message_tcp::send::key_exchange_p_rA::key_exchange_p_rA(const net::buffer & buf_in)
 {
 	buf = buf_in;
 }
@@ -630,7 +630,7 @@ bool message_tcp::send::key_exchange_p_rA::encrypt()
 //END send::key_exchange_p_rA
 
 //BEGIN send::key_exchange_rB
-message_tcp::send::key_exchange_rB::key_exchange_rB(const network::buffer & buf_in)
+message_tcp::send::key_exchange_rB::key_exchange_rB(const net::buffer & buf_in)
 {
 	buf = buf_in;
 }

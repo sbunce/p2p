@@ -7,14 +7,14 @@
 
 //include
 #include <boost/shared_ptr.hpp>
-#include <network/network.hpp>
+#include <net/net.hpp>
 
 class exchange_tcp : private boost::noncopyable
 {
 public:
 	exchange_tcp(
-		network::proactor & Proactor_in,
-		network::proactor::connection_info & CI
+		net::proactor & Proactor_in,
+		net::proactor::connection_info & CI
 	);
 
 	const int connection_ID;
@@ -25,8 +25,8 @@ public:
 	send_call_back:
 		Called when bytes send.
 	*/
-	void recv_call_back(network::proactor::connection_info & CI);
-	void send_call_back(network::proactor::connection_info & CI);
+	void recv_call_back(net::proactor::connection_info & CI);
+	void send_call_back(net::proactor::connection_info & CI);
 
 	/*
 	expect_response:
@@ -47,7 +47,7 @@ public:
 		boost::function<void ()> func = boost::function<void()>());
 
 private:
-	network::proactor & Proactor;
+	net::proactor & Proactor;
 
 	/*
 	Expected responses are pushed on the back of Expect after a request is sent.
@@ -82,7 +82,7 @@ private:
 	public:
 		send_speed_element(
 			const unsigned remaining_bytes_in,
-			const boost::shared_ptr<network::speed_calc> & Speed_Calc_in,
+			const boost::shared_ptr<net::speed_calc> & Speed_Calc_in,
 			const boost::function<void ()> & call_back_in
 		):
 			remaining_bytes(remaining_bytes_in),
@@ -97,7 +97,7 @@ private:
 		{}
 
 		unsigned remaining_bytes;
-		boost::shared_ptr<network::speed_calc> Speed_Calc;
+		boost::shared_ptr<net::speed_calc> Speed_Calc;
 		boost::function<void ()> call_back;
 	};
 	std::list<send_speed_element> Send_Speed;
@@ -113,8 +113,8 @@ private:
 	send_buffered:
 		Sends messages buffered until key exchange complete.
 	*/
-	bool recv_p_rA(const network::buffer & buf, network::proactor::connection_info & CI);
-	bool recv_rB(const network::buffer & buf, network::proactor::connection_info & CI);
+	bool recv_p_rA(const net::buffer & buf, net::proactor::connection_info & CI);
+	bool recv_rB(const net::buffer & buf, net::proactor::connection_info & CI);
 	void send_buffered();
 };
 #endif

@@ -1,15 +1,15 @@
-#ifndef H_NETWORK_DISPATCHER
-#define H_NETWORK_DISPATCHER
+#ifndef H_NET_DISPATCHER
+#define H_NET_DISPATCHER
 
 //include
 #include <boost/shared_ptr.hpp>
 #include <boost/utility.hpp>
-#include <network/network.hpp>
+#include <net/net.hpp>
 
 //standard
 #include <list>
 
-namespace network{
+namespace net{
 class dispatcher : private boost::noncopyable
 {
 	//number of threads to use to do call backs
@@ -112,5 +112,5 @@ private:
 	void send_call_back_wrapper(boost::shared_ptr<proactor::connection_info> CI,
 		const unsigned latest_send, const int send_buf_size);
 };
-}
+}//end of namespace net
 #endif

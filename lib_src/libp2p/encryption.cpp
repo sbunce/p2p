@@ -9,7 +9,7 @@ encryption::encryption():
 	enable_recv_p_rA = true;
 }
 
-void encryption::crypt_recv(network::buffer & recv_buff, const int index)
+void encryption::crypt_recv(net::buffer & recv_buff, const int index)
 {
 	assert(enable_crypt);
 	for(int x=index; x<recv_buff.size(); ++x){
@@ -17,7 +17,7 @@ void encryption::crypt_recv(network::buffer & recv_buff, const int index)
 	}
 }
 
-void encryption::crypt_send(network::buffer & send_buff, const int index)
+void encryption::crypt_send(net::buffer & send_buff, const int index)
 {
 	assert(enable_crypt);
 	for(int x=index; x<send_buff.size(); ++x){
@@ -30,7 +30,7 @@ bool encryption::ready()
 	return enable_crypt;
 }
 
-bool encryption::recv_p_rA(const network::buffer & buf)
+bool encryption::recv_p_rA(const net::buffer & buf)
 {
 	assert(enable_recv_p_rA);
 	set_enable_false();
@@ -51,7 +51,7 @@ bool encryption::recv_p_rA(const network::buffer & buf)
 	return true;
 }
 
-void encryption::recv_rB(const network::buffer & buf)
+void encryption::recv_rB(const net::buffer & buf)
 {
 	assert(enable_recv_rB);
 	set_enable_false();
@@ -66,13 +66,13 @@ void encryption::recv_rB(const network::buffer & buf)
 	PRNG_recv.seed(reinterpret_cast<const unsigned char *>(bin.data()), bin.size());
 }
 
-network::buffer encryption::send_p_rA()
+net::buffer encryption::send_p_rA()
 {
 	assert(enable_send_p_rA);
 	set_enable_false();
 	enable_recv_rB = true;
 
-	network::buffer buf;
+	net::buffer buf;
 	p = prime_generator::singleton().random_prime();
 	buf.append(p.bin(protocol_tcp::DH_key_size));
 	local_result = mpa::exptmod(g, s, p);
@@ -80,13 +80,13 @@ network::buffer encryption::send_p_rA()
 	return buf;
 }
 
-network::buffer encryption::send_rB()
+net::buffer encryption::send_rB()
 {
 	assert(enable_send_rB);
 	set_enable_false();
 	enable_crypt = true;
 
-	network::buffer buf;
+	net::buffer buf;
 	buf.append(local_result.bin(protocol_tcp::DH_key_size));
 	return buf;
 }

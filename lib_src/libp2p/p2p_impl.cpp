@@ -92,7 +92,7 @@ void p2p_impl::resume()
 	}
 
 	//bring up networking
-	std::set<network::endpoint> E = network::get_endpoint(
+	std::set<net::endpoint> E = net::get_endpoint(
 		"",
 		db::table::prefs::get_port()
 	);
@@ -100,7 +100,7 @@ void p2p_impl::resume()
 		LOG << "failed to resolve listener";
 		exit(1);
 	}
-	boost::shared_ptr<network::listener> Listener(new network::listener(*E.begin()));
+	boost::shared_ptr<net::listener> Listener(new net::listener(*E.begin()));
 	if(!Listener->is_open()){
 		LOG << "failed to open listener";
 		exit(1);

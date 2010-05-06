@@ -1,6 +1,6 @@
 #include "proactor_impl.hpp"
 
-network::proactor_impl::proactor_impl(
+net::proactor_impl::proactor_impl(
 	const boost::function<void (proactor::connection_info &)> & connect_call_back,
 	const boost::function<void (proactor::connection_info &)> & disconnect_call_back
 ):
@@ -13,7 +13,7 @@ network::proactor_impl::proactor_impl(
 
 }
 
-void network::proactor_impl::add_socket(std::pair<int, boost::shared_ptr<connection> > P)
+void net::proactor_impl::add_socket(std::pair<int, boost::shared_ptr<connection> > P)
 {
 	assert(P.first != -1);
 	if(P.second){
@@ -37,7 +37,7 @@ void network::proactor_impl::add_socket(std::pair<int, boost::shared_ptr<connect
 	}
 }
 
-void network::proactor_impl::adjust_connection_limits(const unsigned incoming_limit,
+void net::proactor_impl::adjust_connection_limits(const unsigned incoming_limit,
 	const unsigned outgoing_limit)
 {
 	incoming_connection_limit = incoming_limit;
@@ -86,7 +86,7 @@ void network::proactor_impl::adjust_connection_limits(const unsigned incoming_li
 	}
 }
 
-void network::proactor_impl::append_send_buf(const int connection_ID,
+void net::proactor_impl::append_send_buf(const int connection_ID,
 	boost::shared_ptr<buffer> B)
 {
 	std::pair<int, boost::shared_ptr<connection> > P = lookup_ID(connection_ID);
@@ -96,7 +96,7 @@ void network::proactor_impl::append_send_buf(const int connection_ID,
 	}
 }
 
-void network::proactor_impl::check_timeouts()
+void net::proactor_impl::check_timeouts()
 {
 	/*
 	We save the elements we want to erase because calling remove_socket
@@ -122,14 +122,14 @@ void network::proactor_impl::check_timeouts()
 	}
 }
 
-void network::proactor_impl::connect(const std::string & host, const std::string & port)
+void net::proactor_impl::connect(const std::string & host, const std::string & port)
 {
 	boost::mutex::scoped_lock lock(relay_job_mutex);
 	relay_job.push_back(boost::bind(&proactor_impl::resolve_relay, this,
 		host, port));
 }
 
-void network::proactor_impl::disconnect(const int connection_ID)
+void net::proactor_impl::disconnect(const int connection_ID)
 {
 	boost::mutex::scoped_lock lock(relay_job_mutex);
 	relay_job.push_back(boost::bind(&proactor_impl::disconnect, this,
@@ -137,7 +137,7 @@ void network::proactor_impl::disconnect(const int connection_ID)
 	Select.interrupt();
 }
 
-void network::proactor_impl::disconnect(const int connection_ID, const bool on_empty)
+void net::proactor_impl::disconnect(const int connection_ID, const bool on_empty)
 {
 	std::pair<int, boost::shared_ptr<connection> > P = lookup_ID(connection_ID);
 	if(P.second){
@@ -157,7 +157,7 @@ void network::proactor_impl::disconnect(const int connection_ID, const bool on_e
 	}
 }
 
-void network::proactor_impl::disconnect_on_empty(const int connection_ID)
+void net::proactor_impl::disconnect_on_empty(const int connection_ID)
 {
 	boost::mutex::scoped_lock lock(relay_job_mutex);
 	relay_job.push_back(boost::bind(&proactor_impl::disconnect, this,
@@ -165,22 +165,22 @@ void network::proactor_impl::disconnect_on_empty(const int connection_ID)
 	Select.interrupt();
 }
 
-unsigned network::proactor_impl::download_rate()
+unsigned net::proactor_impl::download_rate()
 {
 	return Rate_Limit.download();
 }
 
-unsigned network::proactor_impl::get_max_download_rate()
+unsigned net::proactor_impl::get_max_download_rate()
 {
 	return Rate_Limit.max_download();
 }
 
-unsigned network::proactor_impl::get_max_upload_rate()
+unsigned net::proactor_impl::get_max_upload_rate()
 {
 	return Rate_Limit.max_upload();
 }
 
-void network::proactor_impl::handle_async_connection(
+void net::proactor_impl::handle_async_connection(
 	std::pair<int, boost::shared_ptr<connection> > P)
 {
 	assert(P.first != -1);
@@ -204,7 +204,7 @@ void network::proactor_impl::handle_async_connection(
 	}
 }
 
-std::string network::proactor_impl::listen_port()
+std::string net::proactor_impl::listen_port()
 {
 	/*
 	It is thread safe to return this because it is connected before the network
@@ -213,8 +213,8 @@ std::string network::proactor_impl::listen_port()
 	return Listener->port();
 }
 
-std::pair<int, boost::shared_ptr<network::connection> >
-	network::proactor_impl::lookup_socket(const int socket_FD)
+std::pair<int, boost::shared_ptr<net::connection> >
+	net::proactor_impl::lookup_socket(const int socket_FD)
 {
 	std::map<int, boost::shared_ptr<connection> >::iterator
 		iter = Socket.find(socket_FD);
@@ -225,8 +225,8 @@ std::pair<int, boost::shared_ptr<network::connection> >
 	}
 }
 
-std::pair<int, boost::shared_ptr<network::connection> >
-	network::proactor_impl::lookup_ID(const int connection_ID)
+std::pair<int, boost::shared_ptr<net::connection> >
+	net::proactor_impl::lookup_ID(const int connection_ID)
 {
 	std::map<int, boost::shared_ptr<connection> >::iterator
 		iter = ID.find(connection_ID);
@@ -237,7 +237,7 @@ std::pair<int, boost::shared_ptr<network::connection> >
 	}
 }
 
-void network::proactor_impl::network_loop()
+void net::proactor_impl::network_loop()
 {
 	std::time_t last_loop_time(std::time(NULL));
 	std::set<int> tmp_read_FDS, tmp_write_FDS;
@@ -343,7 +343,7 @@ void network::proactor_impl::network_loop()
 	}
 }
 
-void network::proactor_impl::process_relay_job()
+void net::proactor_impl::process_relay_job()
 {
 	while(true){
 		boost::function<void ()> tmp;
@@ -359,7 +359,7 @@ void network::proactor_impl::process_relay_job()
 	}
 }
 
-void network::proactor_impl::remove_socket(const int socket_FD)
+void net::proactor_impl::remove_socket(const int socket_FD)
 {
 	assert(socket_FD != -1);
 	read_FDS.erase(socket_FD);
@@ -376,7 +376,7 @@ void network::proactor_impl::remove_socket(const int socket_FD)
 	}
 }
 
-void network::proactor_impl::resolve_relay(const std::string host, const std::string port)
+void net::proactor_impl::resolve_relay(const std::string host, const std::string port)
 {
 	if(outgoing_connections < outgoing_connection_limit){
 		++outgoing_connections;
@@ -395,7 +395,7 @@ void network::proactor_impl::resolve_relay(const std::string host, const std::st
 	}
 }
 
-void network::proactor_impl::resolve(const std::string & host, const std::string & port)
+void net::proactor_impl::resolve(const std::string & host, const std::string & port)
 {
 	boost::shared_ptr<connection> Connection(new connection(ID_Manager, host, port));
 	if(Connection->open_async()){
@@ -412,7 +412,7 @@ void network::proactor_impl::resolve(const std::string & host, const std::string
 	Select.interrupt();
 }
 
-void network::proactor_impl::send(const int connection_ID, buffer & send_buf)
+void net::proactor_impl::send(const int connection_ID, buffer & send_buf)
 {
 	if(!send_buf.empty()){
 		boost::mutex::scoped_lock lock(relay_job_mutex);
@@ -424,7 +424,7 @@ void network::proactor_impl::send(const int connection_ID, buffer & send_buf)
 	}
 }
 
-void network::proactor_impl::set_connection_limit(const unsigned incoming_limit,
+void net::proactor_impl::set_connection_limit(const unsigned incoming_limit,
 	const unsigned outgoing_limit)
 {
 	assert(incoming_limit + outgoing_limit <= FD_SETSIZE);
@@ -433,17 +433,17 @@ void network::proactor_impl::set_connection_limit(const unsigned incoming_limit,
 		this, incoming_limit, outgoing_limit));
 }
 
-void network::proactor_impl::set_max_download_rate(const unsigned rate)
+void net::proactor_impl::set_max_download_rate(const unsigned rate)
 {
 	Rate_Limit.max_download(rate);
 }
 
-void network::proactor_impl::set_max_upload_rate(const unsigned rate)
+void net::proactor_impl::set_max_upload_rate(const unsigned rate)
 {
 	Rate_Limit.max_upload(rate);
 }
 
-void network::proactor_impl::start(boost::shared_ptr<listener> Listener_in)
+void net::proactor_impl::start(boost::shared_ptr<listener> Listener_in)
 {
 	boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
 	if(network_thread.get_id() != boost::thread::id()){
@@ -464,7 +464,7 @@ void network::proactor_impl::start(boost::shared_ptr<listener> Listener_in)
 	Thread_Pool.start();
 }
 
-void network::proactor_impl::stop()
+void net::proactor_impl::stop()
 {
 	boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
 
@@ -506,7 +506,7 @@ void network::proactor_impl::stop()
 	Dispatcher.stop_join();
 }
 
-unsigned network::proactor_impl::upload_rate()
+unsigned net::proactor_impl::upload_rate()
 {
 	return Rate_Limit.upload();
 }

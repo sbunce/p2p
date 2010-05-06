@@ -1,11 +1,11 @@
-#ifndef H_NETWORK_NDGRAM
-#define H_NETWORK_NDGRAM
+#ifndef H_NET_NDGRAM
+#define H_NET_NDGRAM
 
 //custom
 #include "protocol.hpp"
 #include "socket_base.hpp"
 
-namespace network{
+namespace net{
 class ndgram : public socket_base
 {
 	//max we attempt to send/recv in one go
@@ -24,9 +24,9 @@ public:
 	open:
 		Open for sending/receiving, endpoint is local. Example:
 		Accept only from localhost. Choose random port to listen on.
-			network::get_endpoint("localhost", "0", network::udp);
+			net::get_endpoint("localhost", "0", net::udp);
 		Accept connections on all interfaces. Use port 1234.
-			network::get_endpoint("", "1234", network::udp);
+			net::get_endpoint("", "1234", net::udp);
 	recv:
 		Receive data. Returns number of bytes received or 0 if the host
 		disconnected. E is set to the endpoint of the host that sent the data. E
@@ -38,8 +38,8 @@ public:
 	std::string local_IP();
 	std::string local_port();
 	virtual void open(const endpoint & E);
-	int recv(network::buffer & buf, boost::shared_ptr<endpoint> & E);
-	int send(network::buffer & buf, const endpoint & E);
+	int recv(net::buffer & buf, boost::shared_ptr<endpoint> & E);
+	int send(net::buffer & buf, const endpoint & E);
 };
-}//end of namespace network
+}//end of namespace net
 #endif

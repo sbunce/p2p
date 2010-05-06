@@ -16,7 +16,7 @@ connection_manager::~connection_manager()
 	Thread_Pool.stop_join();
 }
 
-void connection_manager::connect_call_back(network::proactor::connection_info & CI)
+void connection_manager::connect_call_back(net::proactor::connection_info & CI)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
 
@@ -31,7 +31,7 @@ void connection_manager::connect_call_back(network::proactor::connection_info & 
 	assert(ret.second);
 }
 
-void connection_manager::disconnect_call_back(network::proactor::connection_info & CI)
+void connection_manager::disconnect_call_back(net::proactor::connection_info & CI)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	LOG << "disconnect \"" << (!CI.host.empty() ? CI.host : CI.IP) << "\" " << CI.port;

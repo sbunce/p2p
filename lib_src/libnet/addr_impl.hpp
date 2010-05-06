@@ -1,5 +1,5 @@
-#ifndef H_NETWORK_ADDR_IMPL
-#define H_NETWORK_ADDR_IMPL
+#ifndef H_NET_ADDR_IMPL
+#define H_NET_ADDR_IMPL
 
 //custom
 #include "system_include.hpp"
@@ -8,7 +8,7 @@
 #include <cassert>
 #include <cstring>
 
-namespace network{
+namespace net{
 class addr_impl
 {
 public:
@@ -23,5 +23,5 @@ public:
 private:
 	void copy(const addrinfo * ai_in);
 };
-}//end namespace network
+}//end namespace net
 #endif

@@ -21,7 +21,7 @@ bool exchange_udp::expect_response_element::timed_out()
 exchange_udp::exchange_udp()
 {
 	//setup UDP listener
-	std::set<network::endpoint> E = network::get_endpoint(
+	std::set<net::endpoint> E = net::get_endpoint(
 		"",
 		db::table::prefs::get_port()
 	);
@@ -32,7 +32,7 @@ exchange_udp::exchange_udp()
 
 void exchange_udp::check_timeouts()
 {
-	for(std::multimap<network::endpoint, expect_response_element>::iterator
+	for(std::multimap<net::endpoint, expect_response_element>::iterator
 		it_cur = Expect_Response.begin(), it_end = Expect_Response.end();
 		it_cur != it_end;)
 	{
@@ -67,7 +67,7 @@ void exchange_udp::expect_anytime_remove(boost::shared_ptr<message_udp::send::ba
 }
 
 void exchange_udp::expect_response(boost::shared_ptr<message_udp::recv::base> M,
-	const network::endpoint & endpoint,
+	const net::endpoint & endpoint,
 	boost::function<void()> timeout_call_back)
 {
 	Expect_Response.insert(std::make_pair(endpoint,
@@ -88,14 +88,14 @@ void exchange_udp::tick()
 	}
 
 	//recv message
-	boost::shared_ptr<network::endpoint> from;
-	network::buffer recv_buf;
+	boost::shared_ptr<net::endpoint> from;
+	net::buffer recv_buf;
 	ndgram.recv(recv_buf, from);
 	assert(from);
 
 	//check if expected response
-	std::pair<std::multimap<network::endpoint, expect_response_element>::iterator,
-		std::multimap<network::endpoint, expect_response_element>::iterator >
+	std::pair<std::multimap<net::endpoint, expect_response_element>::iterator,
+		std::multimap<net::endpoint, expect_response_element>::iterator >
 		range = Expect_Response.equal_range(*from);
 	for(; range.first != range.second; ++range.first){
 		if(range.first->second.message->recv(recv_buf, *from)){
@@ -119,7 +119,7 @@ void exchange_udp::tick()
 }
 
 void exchange_udp::send(boost::shared_ptr<message_udp::send::base> M,
-	const network::endpoint & endpoint)
+	const net::endpoint & endpoint)
 {
 	ndgram.send(M->buf, endpoint);
 }

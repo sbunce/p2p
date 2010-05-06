@@ -13,7 +13,7 @@
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
 #include <convert.hpp>
-#include <network/network.hpp>
+#include <net/net.hpp>
 
 class slot_manager : private boost::noncopyable
 {
@@ -95,13 +95,13 @@ private:
 	Called when message received. Function named after message type it handles.
 	*/
 	bool recv_close_slot(const unsigned char slot_num);
-	bool recv_file_block(const network::buffer & block,
+	bool recv_file_block(const net::buffer & block,
 		const unsigned char slot_num, const boost::uint64_t block_num);
 	bool recv_have_file_block(const unsigned char slot_num,
 		const boost::uint64_t block_num);
 	bool recv_have_hash_tree_block(const unsigned char slot_num,
 		const boost::uint64_t block_num);
-	bool recv_hash_tree_block(const network::buffer & block,
+	bool recv_hash_tree_block(const net::buffer & block,
 		const unsigned char slot_num, const boost::uint64_t block_num);
 	bool recv_request_hash_tree_block(const unsigned char slot_num,
 		const boost::uint64_t block_num);

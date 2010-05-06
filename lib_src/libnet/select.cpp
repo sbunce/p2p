@@ -1,21 +1,21 @@
 #include "init.hpp"
-#include <network/network.hpp>
+#include <net/net.hpp>
 
-network::select::select()
+net::select::select()
 {
-	network::init::start();
+	net::init::start();
 	/*
 	Create socket pair for self-pipe trick. The read socket is monitored by
 	select() and the write socket is used to interrupt select().
 	*/
 	//setup listener
-	std::set<network::endpoint> E = network::get_endpoint("localhost", "0");
+	std::set<net::endpoint> E = net::get_endpoint("localhost", "0");
 	assert(!E.empty());
-	network::listener L(*E.begin());
+	net::listener L(*E.begin());
 	assert(L.is_open());
 
 	//connect read_only socket
-	E = network::get_endpoint("localhost", L.port());
+	E = net::get_endpoint("localhost", L.port());
 	assert(!E.empty());
 	sp_read = boost::shared_ptr<nstream>(new nstream(*E.begin()));
 	assert(sp_read->is_open());
@@ -25,18 +25,18 @@ network::select::select()
 	assert(sp_write);
 }
 
-network::select::~select()
+net::select::~select()
 {
-	network::init::stop();
+	net::init::stop();
 }
 
-void network::select::interrupt()
+void net::select::interrupt()
 {
 	buffer B("0");
 	sp_write->send(B);
 }
 
-void network::select::operator () (std::set<int> & read, std::set<int> & write,
+void net::select::operator () (std::set<int> & read, std::set<int> & write,
 	int timeout_ms)
 {
 	//monitor self-pipe (removed from read set later)
@@ -93,7 +93,7 @@ void network::select::operator () (std::set<int> & read, std::set<int> & write,
 	}else{
 		read.erase(sp_read->socket());
 		if(FD_ISSET(sp_read->socket(), &read_FDS)){
-			network::buffer buf;
+			net::buffer buf;
 			sp_read->recv(buf);
 		}
 		//remove sockets that don't need attention

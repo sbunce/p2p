@@ -12,7 +12,6 @@ This class is threadsafe.
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
 #include <logger.hpp>
-#include <network/network.hpp>
 
 //standard
 #include <algorithm>

@@ -38,7 +38,7 @@ boost::uint64_t file::calc_file_block_count(boost::uint64_t file_size)
 	}		
 }
 
-bool file::read_block(const boost::uint64_t block_num, network::buffer & buf)
+bool file::read_block(const boost::uint64_t block_num, net::buffer & buf)
 {
 	std::fstream fin(path.c_str(), std::ios::in | std::ios::out | std::ios::binary);
 	fin.seekg(block_num * protocol_tcp::file_block_size);
@@ -59,7 +59,7 @@ bool file::read_block(const boost::uint64_t block_num, network::buffer & buf)
 	}
 }
 
-bool file::write_block(const boost::uint64_t block_num, const network::buffer & buf)
+bool file::write_block(const boost::uint64_t block_num, const net::buffer & buf)
 {
 	std::fstream fout(path.c_str(), std::ios::in | std::ios::out | std::ios::binary);
 	if(!fout.is_open()){

@@ -71,7 +71,7 @@ def setup(env):
 
 	#libraries to link
 	env['LIBS'].append('p2p')
-	env['LIBS'].append('network')
+	env['LIBS'].append('net')
 	env['LIBS'].append('tommath')
 	env['LIBS'].append('sqlite3')
 	env['LIBS'].append(boost.library('boost_system'))
@@ -83,7 +83,6 @@ def setup(env):
 	#compile flags
 	compile_flags(env)
 
-#does static linking
 def setup_static(env):
 	environment.define_keys(env)
 	if platform.system() != 'Windows':

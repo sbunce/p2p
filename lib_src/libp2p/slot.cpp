@@ -100,7 +100,7 @@ bool slot::set_unknown(const int connection_ID, const boost::uint64_t file_size,
 		//set file size in case we don't know it
 		db::table::share::update_file_size(FI.path, file_size);
 	}
-	network::buffer buf(convert::hex_to_bin(root_hash));
+	net::buffer buf(convert::hex_to_bin(root_hash));
 	Transfer->write_tree_block(connection_ID, 0, buf);
 	return true;
 }

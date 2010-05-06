@@ -9,7 +9,7 @@
 #include <boost/algorithm/string.hpp>
 #include <convert.hpp>
 #include <logger.hpp>
-#include <network/network.hpp>
+#include <net/net.hpp>
 
 //standard
 #include <fstream>
@@ -22,14 +22,14 @@ class connection : private boost::noncopyable
 	static const int MTU = 16384;
 public:
 	connection(
-		network::proactor & Proactor_in,
-		network::proactor::connection_info & CI,
+		net::proactor & Proactor_in,
+		net::proactor::connection_info & CI,
 		const std::string & web_root_in
 	);
 
 private:
 	const std::string web_root;
-	network::proactor & Proactor;
+	net::proactor & Proactor;
 
 	//if file requested path and index to end of data sent stored here
 	boost::filesystem::path path;
@@ -48,7 +48,7 @@ private:
 	void encode_chars(std::string & str);
 
 	//default call back
-	void recv_call_back(network::proactor::connection_info & CI);
+	void recv_call_back(net::proactor::connection_info & CI);
 
 	/* Other Call Backs
 	file_send_call_back:
@@ -56,7 +56,7 @@ private:
 	read_directory:
 		Sends directory listing and disconnect.
 	*/
-	void file_send_call_back(network::proactor::connection_info & CI);
-	void read_directory(network::proactor::connection_info & CI);
+	void file_send_call_back(net::proactor::connection_info & CI);
+	void read_directory(net::proactor::connection_info & CI);
 };
 #endif

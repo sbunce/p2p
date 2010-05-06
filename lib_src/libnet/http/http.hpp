@@ -7,7 +7,7 @@
 //include
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
-#include <network/network.hpp>
+#include <net/net.hpp>
 
 class http
 {
@@ -35,7 +35,7 @@ public:
 	stop:
 		Stop the HTTP server.
 	*/
-	void start(boost::shared_ptr<network::listener> Listener);
+	void start(boost::shared_ptr<net::listener> Listener);
 	void stop();
 
 private:
@@ -43,7 +43,7 @@ private:
 	const std::string port;
 	const bool localhost_only;
 	boost::mutex start_stop_mutex;
-	network::proactor Proactor;
+	net::proactor Proactor;
 
 	//connection specific information
 	boost::mutex Connection_mutex;
@@ -55,7 +55,7 @@ private:
 	disconnect_call_back:
 		Proactor calls back to this when disconnect happens.
 	*/
-	void connect_call_back(network::proactor::connection_info & CI);
-	void disconnect_call_back(network::proactor::connection_info & CI);
+	void connect_call_back(net::proactor::connection_info & CI);
+	void disconnect_call_back(net::proactor::connection_info & CI);
 };
 #endif

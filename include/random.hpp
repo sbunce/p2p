@@ -3,7 +3,7 @@
 
 //include
 #include <logger.hpp>
-#include <network/network.hpp>
+#include <net/net.hpp>
 
 //standard
 #include <fstream>
@@ -43,9 +43,9 @@ static int portable_urandom(unsigned char * buf, int size, void * data = NULL)
 	return size;
 }
 
-static network::buffer portable_urandom(const int size)
+static net::buffer portable_urandom(const int size)
 {
-	network::buffer buf;
+	net::buffer buf;
 	buf.resize(size);
 	portable_urandom(buf.data(), size, NULL);
 	return buf;

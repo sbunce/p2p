@@ -1,7 +1,7 @@
-#ifndef H_NETWORK_PROTOCOL
-#define H_NETWORK_PROTOCOL
+#ifndef H_NET_PROTOCOL
+#define H_NET_PROTOCOL
 
-namespace network{
+namespace net{
 enum direction_t{
 	incoming, //we accepted connection
 	outgoing  //we initiated connect
@@ -14,5 +14,5 @@ enum version_t{
 	IPv4,
 	IPv6
 };
-}
+}//end of namespace net
 #endif

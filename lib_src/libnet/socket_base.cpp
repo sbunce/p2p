@@ -1,20 +1,20 @@
 #include "init.hpp"
 #include "system_include.hpp"
-#include <network/network.hpp>
+#include <net/net.hpp>
 
-network::socket_base::socket_base():
+net::socket_base::socket_base():
 	socket_FD(-1)
 {
-	network::init::start();
+	net::init::start();
 }
 
-network::socket_base::~socket_base()
+net::socket_base::~socket_base()
 {
 	close();
-	network::init::stop();
+	net::init::stop();
 }
 
-void network::socket_base::close()
+void net::socket_base::close()
 {
 	if(socket_FD != -1){
 		if(::close(socket_FD) == -1){
@@ -24,12 +24,12 @@ void network::socket_base::close()
 	}
 }
 
-bool network::socket_base::is_open() const
+bool net::socket_base::is_open() const
 {
 	return socket_FD != -1;
 }
 
-bool network::socket_base::set_non_blocking(const bool val)
+bool net::socket_base::set_non_blocking(const bool val)
 {
 	if(socket_FD != -1){
 		if(val){
@@ -81,7 +81,7 @@ bool network::socket_base::set_non_blocking(const bool val)
 	return true;
 }
 
-int network::socket_base::socket()
+int net::socket_base::socket()
 {
 	return socket_FD;
 }

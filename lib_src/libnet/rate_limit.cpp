@@ -1,48 +1,48 @@
 #include "rate_limit.hpp"
 
-network::rate_limit::rate_limit()
+net::rate_limit::rate_limit()
 {
 	max_download(0);
 	max_upload(0);
 }
 
-void network::rate_limit::add_download(const unsigned n_bytes)
+void net::rate_limit::add_download(const unsigned n_bytes)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	Download.add(n_bytes);
 }
 
-void network::rate_limit::add_upload(const unsigned n_bytes)
+void net::rate_limit::add_upload(const unsigned n_bytes)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	Upload.add(n_bytes);
 }
 
-int network::rate_limit::available_upload(const int socket_count)
+int net::rate_limit::available_upload(const int socket_count)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	return available_transfer(Upload, _max_upload, socket_count);
 }
 
-int network::rate_limit::available_download(const int socket_count)
+int net::rate_limit::available_download(const int socket_count)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	return available_transfer(Download, _max_download, socket_count);
 }
 
-unsigned network::rate_limit::download()
+unsigned net::rate_limit::download()
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	return Download.speed();
 }
 
-unsigned network::rate_limit::max_download()
+unsigned net::rate_limit::max_download()
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	return _max_download;
 }
 
-void network::rate_limit::max_download(const unsigned rate)
+void net::rate_limit::max_download(const unsigned rate)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	if(rate == 0){
@@ -52,19 +52,19 @@ void network::rate_limit::max_download(const unsigned rate)
 	}
 }
 
-unsigned network::rate_limit::max_upload()
+unsigned net::rate_limit::max_upload()
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	return _max_upload;
 }
 
-unsigned network::rate_limit::upload()
+unsigned net::rate_limit::upload()
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	return Upload.speed();
 }
 
-void network::rate_limit::max_upload(const unsigned rate)
+void net::rate_limit::max_upload(const unsigned rate)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 	if(rate == 0){
@@ -74,7 +74,7 @@ void network::rate_limit::max_upload(const unsigned rate)
 	}
 }
 
-int network::rate_limit::available_transfer(speed_calc & SC,
+int net::rate_limit::available_transfer(speed_calc & SC,
 	const unsigned max_transfer, const int socket_count)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);

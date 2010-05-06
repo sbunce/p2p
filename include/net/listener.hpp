@@ -1,5 +1,5 @@
-#ifndef H_NETWORK_LISTENER
-#define H_NETWORK_LISTENER
+#ifndef H_NET_LISTENER
+#define H_NET_LISTENER
 
 //custom
 #include "nstream.hpp"
@@ -8,7 +8,7 @@
 //include
 #include <boost/shared_ptr.hpp>
 
-namespace network{
+namespace net{
 class listener : public socket_base
 {
 public:
@@ -28,9 +28,9 @@ public:
 		Precondition: E must be tcp endpoint.
 		Example:
 		Only accept connections from localhost. Choose random port to listen on.
-			network::get_endpoint("localhost", "0", network::tcp);
+			net::get_endpoint("localhost", "0", net::tcp);
 		Accept connections on all interfaces. Use port 1234.
-			network::get_endpoint("", "1234", network::tcp);
+			net::get_endpoint("", "1234", net::tcp);
 	port:
 		Returns port of listener on localhost, or empty string if not listening or
 		error.
@@ -40,5 +40,5 @@ public:
 	virtual void open(const endpoint & E);
 	std::string port();
 };
-}
+}//end of namespace net
 #endif

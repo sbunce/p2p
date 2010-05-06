@@ -10,14 +10,14 @@
 
 //include
 #include <boost/utility.hpp>
-#include <network/network.hpp>
+#include <net/net.hpp>
 
 class connection : private boost::noncopyable
 {
 public:
 	connection(
-		network::proactor & Proactor_in,
-		network::proactor::connection_info & CI,
+		net::proactor & Proactor_in,
+		net::proactor::connection_info & CI,
 		boost::function<void(const int)> trigger_tick
 	);
 
@@ -46,8 +46,8 @@ private:
 	send_call_back:
 		Called by connection::send_call_back, which is called by proactor.
 	*/
-	void recv_call_back(network::proactor::connection_info & CI);
-	void send_call_back(network::proactor::connection_info & CI);
+	void recv_call_back(net::proactor::connection_info & CI);
+	void send_call_back(net::proactor::connection_info & CI);
 
 	/*
 	recv_initial:

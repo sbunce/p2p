@@ -1,5 +1,5 @@
-#ifndef H_NETWORK_BUFFER
-#define H_NETWORK_BUFFER
+#ifndef H_NET_BUFFER
+#define H_NET_BUFFER
 
 //include
 #include <logger.hpp>
@@ -13,7 +13,7 @@
 #include <iterator>
 #include <string>
 
-namespace network{
+namespace net{
 class buffer
 {
 public:
@@ -156,5 +156,5 @@ private:
 	void allocate(unsigned & var, const unsigned size);
 	void ctor_initialize();
 };
-}//end of network namespace
+}//end of namespace net
 #endif

@@ -1,5 +1,5 @@
-#ifndef H_NETWORK_SYSTEM_INCLUDE
-#define H_NETWORK_SYSTEM_INCLUDE
+#ifndef H_NET_SYSTEM_INCLUDE
+#define H_NET_SYSTEM_INCLUDE
 
 //networking
 #ifdef _WIN32

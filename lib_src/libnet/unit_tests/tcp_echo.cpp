@@ -1,26 +1,26 @@
 //include
-#include <network/network.hpp>
+#include <net/net.hpp>
 
 int main()
 {
 	//setup listener
-	std::set<network::endpoint> E = network::get_endpoint("localhost", "0");
+	std::set<net::endpoint> E = net::get_endpoint("localhost", "0");
 	assert(!E.empty());
-	network::listener L(*E.begin());
+	net::listener L(*E.begin());
 	assert(L.is_open());
 
 	//connect
-	E = network::get_endpoint("localhost", L.port());
+	E = net::get_endpoint("localhost", L.port());
 	assert(!E.empty());
-	network::nstream N_client(*E.begin());
+	net::nstream N_client(*E.begin());
 	assert(N_client.is_open());
 
 	//accept connection on listener
-	boost::shared_ptr<network::nstream> N_server = L.accept();
+	boost::shared_ptr<net::nstream> N_server = L.accept();
 	assert(N_server);
 
 	//send test message client -> server
-	network::buffer B("ABC");
+	net::buffer B("ABC");
 	N_client.send(B);
 	assert(B.empty());
 

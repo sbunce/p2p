@@ -1,10 +1,10 @@
-#ifndef H_NETWORK_SELECT
-#define H_NETWORK_SELECT
+#ifndef H_NET_SELECT
+#define H_NET_SELECT
 
 //include
-#include <network/network.hpp>
+#include <net/net.hpp>
 
-namespace network{
+namespace net{
 class select
 {
 public:
@@ -26,5 +26,5 @@ private:
 	boost::shared_ptr<nstream> sp_read;
 	boost::shared_ptr<nstream> sp_write;
 };
-}//end namespace network
+}//end namespace net
 #endif

@@ -17,7 +17,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
-#include <network/network.hpp>
+#include <net/net.hpp>
 #include <p2p.hpp>
 #include <thread_pool.hpp>
 

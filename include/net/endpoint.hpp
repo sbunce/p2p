@@ -1,5 +1,5 @@
-#ifndef H_NETWORK_ENDPOINT
-#define H_NETWORK_ENDPOINT
+#ifndef H_NET_ENDPOINT
+#define H_NET_ENDPOINT
 
 //custom
 #include "protocol.hpp"
@@ -12,7 +12,7 @@
 //standard
 #include <set>
 
-namespace network{
+namespace net{
 
 //predecl for PIMPL
 class addr_impl;
@@ -29,7 +29,7 @@ class endpoint
 	friend class nstream;
 	friend std::set<endpoint> get_endpoint(const std::string & host,
 		const std::string & port);
-	friend boost::optional<network::endpoint> bin_to_endpoint(
+	friend boost::optional<net::endpoint> bin_to_endpoint(
 		const std::string & addr, const std::string & port);
 public:
 	endpoint(const endpoint & E);
@@ -78,7 +78,7 @@ Converts bytes to endpoint. A IPv6 endpoint won't be returned if the system
 doesn't support IPv6.
 Note: addr must be 4 or 16 bytes. port must be 2 bytes.
 */
-extern boost::optional<network::endpoint> bin_to_endpoint(
+extern boost::optional<net::endpoint> bin_to_endpoint(
 	const std::string & addr, const std::string & port);
-}//end of namespace network
+}//end of namespace net
 #endif

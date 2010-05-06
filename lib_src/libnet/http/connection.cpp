@@ -1,8 +1,8 @@
 #include "connection.hpp"
 
 connection::connection(
-	network::proactor & Proactor_in,
-	network::proactor::connection_info & CI,
+	net::proactor & Proactor_in,
+	net::proactor::connection_info & CI,
 	const std::string & web_root_in
 ):
 	web_root(boost::filesystem::system_complete(boost::filesystem::path(
@@ -71,9 +71,9 @@ void connection::encode_chars(std::string & str)
 	boost::algorithm::replace_all(str, "'", "%27");
 }
 
-void connection::file_send_call_back(network::proactor::connection_info & CI)
+void connection::file_send_call_back(net::proactor::connection_info & CI)
 {
-	network::buffer B;
+	net::buffer B;
 	if(index == 0){
 		//prepare header
 		boost::uint64_t size;
@@ -108,7 +108,7 @@ void connection::file_send_call_back(network::proactor::connection_info & CI)
 	}
 }
 
-void connection::read_directory(network::proactor::connection_info & CI)
+void connection::read_directory(net::proactor::connection_info & CI)
 {
 	namespace fs = boost::filesystem;
 	std::stringstream ss;
@@ -142,13 +142,13 @@ void connection::read_directory(network::proactor::connection_info & CI)
 	}
 	ss << "</table>\n</body>\n";
 	std::string header = create_header(ss.str().size());
-	network::buffer B;
+	net::buffer B;
 	B.append(header).append(ss.str());
 	Proactor.send(CI.connection_ID, B);
 	Proactor.disconnect_on_empty(CI.connection_ID);
 }
 
-void connection::recv_call_back(network::proactor::connection_info & CI)
+void connection::recv_call_back(net::proactor::connection_info & CI)
 {
 	namespace fs = boost::filesystem;
 
@@ -196,7 +196,7 @@ void connection::recv_call_back(network::proactor::connection_info & CI)
 				}
 			}else{
 				//file at request path doesn't exist
-				network::buffer B("404");
+				net::buffer B("404");
 				Proactor.send(CI.connection_ID, B);
 				Proactor.disconnect_on_empty(CI.connection_ID);
 			}

@@ -10,7 +10,7 @@
 
 //include
 #include <bit_field.hpp>
-#include <network/network.hpp>
+#include <net/net.hpp>
 
 class kademlia
 {
@@ -22,7 +22,7 @@ public:
 
 	*/
 	//void find_node(const std::string & ID,
-		//const boost::function<void (const network::endpoint)> & call_back);
+		//const boost::function<void (const net::endpoint)> & call_back);
 
 private:
 	boost::thread network_thread;
@@ -61,13 +61,13 @@ private:
 	recv_pong_unknown_reserve:
 		Received pong that's result of pinging contact in unknown_reserve.
 	*/
-	void recv_find_node(const network::endpoint & endpoint,
-		const network::buffer & random, const std::string & remote_ID,
+	void recv_find_node(const net::endpoint & endpoint,
+		const net::buffer & random, const std::string & remote_ID,
 		const std::string & ID_to_find);
-	void recv_ping(const network::endpoint & endpoint, const network::buffer & random,
+	void recv_ping(const net::endpoint & endpoint, const net::buffer & random,
 		const std::string & remote_ID);
-	void recv_pong(const network::endpoint & endpoint, const std::string & remote_ID);
-	void recv_pong_bucket_reserve(const network::endpoint & endpoint, const std::string & remote_ID,
+	void recv_pong(const net::endpoint & endpoint, const std::string & remote_ID);
+	void recv_pong_bucket_reserve(const net::endpoint & endpoint, const std::string & remote_ID,
 		const unsigned expected_bucket_num);
 };
 #endif

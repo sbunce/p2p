@@ -11,7 +11,7 @@
 #include <boost/utility.hpp>
 #include <RC4.hpp>
 #include <mpa.hpp>
-#include <network/network.hpp>
+#include <net/net.hpp>
 #include <random.hpp>
 
 //std
@@ -29,18 +29,18 @@ public:
 	See protocol documentation for more information.
 	Note: recv_p_rA returns false if invalid prime received.
 	*/
-	network::buffer send_p_rA();
-	bool recv_p_rA(const network::buffer & buf);
-	network::buffer send_rB();
-	void recv_rB(const network::buffer & buf);
+	net::buffer send_p_rA();
+	bool recv_p_rA(const net::buffer & buf);
+	net::buffer send_rB();
+	void recv_rB(const net::buffer & buf);
 
 	/*
 	Used to encrypt/decrypt buffers.
 	Decrypts buffer from index to end of buffer.
 	Precondition: read() = true
 	*/
-	void crypt_recv(network::buffer & recv_buff, const int index = 0);
-	void crypt_send(network::buffer & send_buff, const int index = 0);
+	void crypt_recv(net::buffer & recv_buff, const int index = 0);
+	void crypt_send(net::buffer & send_buff, const int index = 0);
 
 	//returns true when ready to encrypt/decrypt
 	bool ready();

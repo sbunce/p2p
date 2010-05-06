@@ -3,18 +3,18 @@ This class handles rate limiting and can be used to get access to the average
 upload and download rates. It is also used to set maximum upload/download rates.
 This class is generally accessed through the reactor interface.
 */
-#ifndef H_NETWORK_RATE_LIMIT
-#define H_NETWORK_RATE_LIMIT
+#ifndef H_NET_RATE_LIMIT
+#define H_NET_RATE_LIMIT
 
 //include
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
-#include <network/network.hpp>
+#include <net/net.hpp>
 
 //standard
 #include <limits>
 
-namespace network{
+namespace net{
 class rate_limit : private boost::noncopyable
 {
 public:
@@ -73,5 +73,5 @@ private:
 	int available_transfer(speed_calc & SC, const unsigned max_transfer,
 		const int socket_count);
 };
-}//end of network namespace
+}//end of namespace net
 #endif

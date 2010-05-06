@@ -3,7 +3,7 @@
 //BEGIN contact
 bucket::contact::contact(
 	const std::string & remote_ID_in,
-	const network::endpoint & endpoint_in
+	const net::endpoint & endpoint_in
 ):
 	remote_ID(remote_ID_in),
 	endpoint(endpoint_in),
@@ -71,7 +71,7 @@ void bucket::contact::touch()
 //END contact
 
 void bucket::add_reserve(const std::string remote_ID,
-	const network::endpoint & endpoint)
+	const net::endpoint & endpoint)
 {
 	//if node active then touch it
 	for(std::list<contact>::iterator it_cur = Bucket_Active.begin(),
@@ -100,7 +100,7 @@ void bucket::add_reserve(const std::string remote_ID,
 }
 
 void bucket::find_node(const std::string & ID_to_find,
-	std::map<mpa::mpint, std::pair<std::string, network::endpoint> > & hosts)
+	std::map<mpa::mpint, std::pair<std::string, net::endpoint> > & hosts)
 {
 	//calculate distances of all contacts
 	for(std::list<contact>::iterator it_cur = Bucket_Active.begin(),
@@ -112,14 +112,14 @@ void bucket::find_node(const std::string & ID_to_find,
 
 	//get rid of all but closest elements
 	while(!hosts.empty() && hosts.size() > protocol_udp::host_list_elements / 2){
-		std::map<mpa::mpint, std::pair<std::string, network::endpoint> >::iterator
+		std::map<mpa::mpint, std::pair<std::string, net::endpoint> >::iterator
 			iter = hosts.end();
 		--iter;
 		hosts.erase(iter);
 	}
 }
 
-boost::optional<network::endpoint> bucket::ping()
+boost::optional<net::endpoint> bucket::ping()
 {
 	//remove active nodes that timed out
 	for(std::list<contact>::iterator it_cur = Bucket_Active.begin();
@@ -138,7 +138,7 @@ boost::optional<network::endpoint> bucket::ping()
 		it_end = Bucket_Active.end(); it_cur != it_end; ++it_cur)
 	{
 		if(it_cur->active_ping()){
-			return boost::optional<network::endpoint>(it_cur->endpoint);
+			return boost::optional<net::endpoint>(it_cur->endpoint);
 		}
 	}
 
@@ -148,7 +148,7 @@ boost::optional<network::endpoint> bucket::ping()
 		it_cur != Bucket_Reserve.end() && needed; --needed)
 	{
 		if(it_cur->reserve_ping()){
-			return boost::optional<network::endpoint>(it_cur->endpoint);
+			return boost::optional<net::endpoint>(it_cur->endpoint);
 		}else{
 			//reserve contact won't timeout unless it was pinged
 			if(it_cur->timed_out()){
@@ -160,11 +160,11 @@ boost::optional<network::endpoint> bucket::ping()
 		}
 	}
 
-	return boost::optional<network::endpoint>();
+	return boost::optional<net::endpoint>();
 }
 
 void bucket::pong(const std::string & remote_ID,
-	const network::endpoint & endpoint)
+	const net::endpoint & endpoint)
 {
 	//if node active then touch it
 	for(std::list<contact>::iterator it_cur = Bucket_Active.begin(),

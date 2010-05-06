@@ -1,12 +1,12 @@
 #include "ID_manager.hpp"
 
-network::ID_manager::ID_manager():
+net::ID_manager::ID_manager():
 	highest_allocated(0)
 {
 
 }
 
-int network::ID_manager::allocate()
+int net::ID_manager::allocate()
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	while(true){
@@ -20,7 +20,7 @@ int network::ID_manager::allocate()
 	exit(1);
 }
 
-void network::ID_manager::deallocate(int connection_ID)
+void net::ID_manager::deallocate(int connection_ID)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	if(allocated.erase(connection_ID) != 1){

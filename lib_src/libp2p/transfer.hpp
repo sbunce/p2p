@@ -10,7 +10,7 @@
 
 //include
 #include <atomic_int.hpp>
-#include <network/network.hpp>
+#include <net/net.hpp>
 
 class transfer : private boost::noncopyable
 {
@@ -54,7 +54,7 @@ public:
 	bool root_hash(std::string & RH);
 	boost::uint64_t tree_block_count();
 	status write_tree_block(const int connection_ID, const boost::uint64_t block_num,
-		const network::buffer & buf);
+		const net::buffer & buf);
 
 	/* File
 	file_block_size:
@@ -88,7 +88,7 @@ public:
 		const boost::uint64_t block_num);
 	void recv_have_file_block(const int connection_ID, const boost::uint64_t block_num);
 	status write_file_block(const int connection_ID, const boost::uint64_t block_num,
-		const network::buffer & buf);
+		const net::buffer & buf);
 
 	/* Hash Tree + File
 	check:
@@ -132,7 +132,7 @@ public:
 		Returns upload speed (bytes/second).
 	*/
 	unsigned download_speed();
-	boost::shared_ptr<network::speed_calc> download_speed_calc();
+	boost::shared_ptr<net::speed_calc> download_speed_calc();
 	void touch();
 	unsigned upload_speed();
 
@@ -154,7 +154,7 @@ private:
 	//number of bytes received (used to calculate percent complete)
 	atomic_int<boost::uint64_t> bytes_received;
 
-	boost::shared_ptr<network::speed_calc> Download_Speed;
-	boost::shared_ptr<network::speed_calc> Upload_Speed;
+	boost::shared_ptr<net::speed_calc> Download_Speed;
+	boost::shared_ptr<net::speed_calc> Upload_Speed;
 };
 #endif

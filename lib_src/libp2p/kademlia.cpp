@@ -26,7 +26,7 @@ void kademlia::network_loop()
 	std::vector<db::table::peer::info> hosts = db::table::peer::resume();
 	std::random_shuffle(hosts.begin(), hosts.end());
 	while(!hosts.empty()){
-		std::set<network::endpoint> E = network::get_endpoint(hosts.back().IP,
+		std::set<net::endpoint> E = net::get_endpoint(hosts.back().IP,
 			hosts.back().port);
 		if(E.empty()){
 			LOG << "failed \"" << hosts.back().IP << "\" " << hosts.back().port;
@@ -65,20 +65,20 @@ void kademlia::process_relay_job()
 	}
 }
 
-void kademlia::recv_find_node(const network::endpoint & endpoint,
-	const network::buffer & random, const std::string & remote_ID,
+void kademlia::recv_find_node(const net::endpoint & endpoint,
+	const net::buffer & random, const std::string & remote_ID,
 	const std::string & ID_to_find)
 {
 	LOG << endpoint.IP() << " " << endpoint.port() << " remote_ID: " << remote_ID
 		<< " find: " << ID_to_find;
 	Route_Table.add_reserve(remote_ID, endpoint);
-	std::list<std::pair<network::endpoint, unsigned char> >
+	std::list<std::pair<net::endpoint, unsigned char> >
 		hosts = Route_Table.find_node(remote_ID, ID_to_find);
 	Exchange.send(boost::shared_ptr<message_udp::send::base>(
 		new message_udp::send::host_list(random, local_ID, hosts)), endpoint);
 }
 
-void kademlia::recv_ping(const network::endpoint & endpoint, const network::buffer & random,
+void kademlia::recv_ping(const net::endpoint & endpoint, const net::buffer & random,
 	const std::string & remote_ID)
 {
 	LOG << endpoint.IP() << " " << endpoint.port() << " " << remote_ID;
@@ -87,7 +87,7 @@ void kademlia::recv_ping(const network::endpoint & endpoint, const network::buff
 		new message_udp::send::pong(random, local_ID)), endpoint);
 }
 
-void kademlia::recv_pong(const network::endpoint & endpoint, const std::string & remote_ID)
+void kademlia::recv_pong(const net::endpoint & endpoint, const std::string & remote_ID)
 {
 	LOG << endpoint.IP() << " " << endpoint.port() << " " << remote_ID;
 	Route_Table.pong(remote_ID, endpoint);
@@ -95,10 +95,10 @@ void kademlia::recv_pong(const network::endpoint & endpoint, const std::string &
 
 void kademlia::send_ping()
 {
-	boost::optional<network::endpoint> endpoint = Route_Table.ping();
+	boost::optional<net::endpoint> endpoint = Route_Table.ping();
 	if(endpoint){
 		LOG << endpoint->IP() << " " << endpoint->port();
-		network::buffer random(portable_urandom(4));
+		net::buffer random(portable_urandom(4));
 		Exchange.send(boost::shared_ptr<message_udp::send::base>(
 			new message_udp::send::ping(random, local_ID)), *endpoint);
 		Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(

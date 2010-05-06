@@ -1,18 +1,18 @@
 #include "init.hpp"
 #include "addr_impl.hpp"
-#include <network/network.hpp>
+#include <net/net.hpp>
 
-network::listener::listener()
+net::listener::listener()
 {
 
 }
 
-network::listener::listener(const endpoint & E)
+net::listener::listener(const endpoint & E)
 {
 	open(E);
 }
 
-boost::shared_ptr<network::nstream> network::listener::accept()
+boost::shared_ptr<net::nstream> net::listener::accept()
 {
 	assert(is_open());
 	addrinfo ai;
@@ -28,7 +28,7 @@ boost::shared_ptr<network::nstream> network::listener::accept()
 	return N;
 }
 
-void network::listener::open(const endpoint & E)
+void net::listener::open(const endpoint & E)
 {
 	close();
 	if((socket_FD = ::socket(E.AI->ai.ai_family, SOCK_STREAM,
@@ -65,7 +65,7 @@ void network::listener::open(const endpoint & E)
 	}
 }
 
-std::string network::listener::port()
+std::string net::listener::port()
 {
 	if(socket_FD == -1){
 		return "";

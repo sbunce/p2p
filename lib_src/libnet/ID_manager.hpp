@@ -1,12 +1,12 @@
-#ifndef H_NETWORK_ID_MANAGER
-#define H_NETWORK_ID_MANAGER
+#ifndef H_NET_ID_MANAGER
+#define H_NET_ID_MANAGER
 
 //include
 #include <boost/thread.hpp>
 #include <logger.hpp>
 #include <set>
 
-namespace network{
+namespace net{
 /*
 This class allocates connection_IDs. There are a few problems this class
 addresses:
@@ -40,5 +40,5 @@ private:
 	int highest_allocated;   //last connection_ID allocated
 	std::set<int> allocated; //set of all connection_IDs allocated
 };
-}//end namespace network
+}//end namespace net
 #endif

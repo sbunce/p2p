@@ -1,12 +1,12 @@
-#include <network/network.hpp>
+#include <net/net.hpp>
 
 int main()
 {
-	std::set<network::endpoint> E = network::get_endpoint("localhost", "0");
+	std::set<net::endpoint> E = net::get_endpoint("localhost", "0");
 	assert(!E.empty());
-	network::ndgram N(*E.begin());
+	net::ndgram N(*E.begin());
 	assert(N.is_open());
-	E = network::get_endpoint("localhost", N.local_port());
+	E = net::get_endpoint("localhost", N.local_port());
 	assert(!E.empty());
 
 	std::set<int> read, tmp_read, write, tmp_write;
@@ -14,7 +14,7 @@ int main()
 	write.insert(N.socket());
 
 	int send = 128, recv = 128;
-	network::select select;
+	net::select select;
 	while(send && recv){
 		tmp_read = read;
 		tmp_write = write;
@@ -24,8 +24,8 @@ int main()
 			it_cur != it_end; ++it_cur)
 		{
 			if(recv){
-				network::buffer buf;
-				boost::shared_ptr<network::endpoint> from;
+				net::buffer buf;
+				boost::shared_ptr<net::endpoint> from;
 				N.recv(buf, from);
 				assert(buf.size() == 1);
 				assert(buf == "x");
@@ -41,7 +41,7 @@ int main()
 			it_cur != it_end; ++it_cur)
 		{
 			if(send){
-				network::buffer buf("x");
+				net::buffer buf("x");
 				N.send(buf, *E.begin());
 				assert(buf.empty());
 				assert(N.is_open());

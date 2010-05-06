@@ -8,7 +8,7 @@
 //include
 #include <boost/optional.hpp>
 #include <mpa.hpp>
-#include <network/network.hpp>
+#include <net/net.hpp>
 
 //standard
 #include <ctime>
@@ -34,11 +34,11 @@ public:
 		Called when pong received. Updates last_seen time of a contact. If the
 		contact is in reserve it will be moved to active if there is enough space.
 	*/
-	void add_reserve(const std::string remote_ID, const network::endpoint & endpoint);
+	void add_reserve(const std::string remote_ID, const net::endpoint & endpoint);
 	void find_node(const std::string & ID_to_find,
-		std::map<mpa::mpint, std::pair<std::string, network::endpoint> > & hosts);
-	boost::optional<network::endpoint> ping();
-	void pong(const std::string & remote_ID, const network::endpoint & endpoint);
+		std::map<mpa::mpint, std::pair<std::string, net::endpoint> > & hosts);
+	boost::optional<net::endpoint> ping();
+	void pong(const std::string & remote_ID, const net::endpoint & endpoint);
 
 private:
 	class contact
@@ -47,12 +47,12 @@ private:
 		//contact is timed out by default
 		contact(
 			const std::string & remote_ID_in,
-			const network::endpoint & endpoint_in
+			const net::endpoint & endpoint_in
 		);
 		contact(const contact & C);
 
 		std::string remote_ID;
-		const network::endpoint endpoint;
+		const net::endpoint endpoint;
 
 		/*
 		active_ping:

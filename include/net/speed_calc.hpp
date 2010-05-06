@@ -1,5 +1,5 @@
-#ifndef H_NETWORK_SPEED_CALC
-#define H_NETWORK_SPEED_CALC
+#ifndef H_NET_SPEED_CALC
+#define H_NET_SPEED_CALC
 
 //include
 #include <boost/thread.hpp>
@@ -9,7 +9,7 @@
 #include <ctime>
 #include <vector>
 
-namespace network{
+namespace net{
 class speed_calc : private boost::noncopyable
 {
 public:
@@ -54,5 +54,5 @@ private:
 	*/
 	void add_priv(const unsigned n_bytes);
 };
-}
+}//end of namespace net
 #endif

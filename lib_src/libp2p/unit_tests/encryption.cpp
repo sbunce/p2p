@@ -14,7 +14,7 @@ int main()
 	//encryption for hosts A and B
 	encryption Encryption_A;
 	encryption Encryption_B;
-	network::buffer buf;
+	net::buffer buf;
 
 	//do key exchange
 	buf = Encryption_A.send_p_rA();

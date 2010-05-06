@@ -6,7 +6,7 @@
 
 //include
 #include <bit_field.hpp>
-#include <network/network.hpp>
+#include <net/net.hpp>
 #include <SHA1.hpp>
 
 namespace message_udp {
@@ -22,20 +22,20 @@ public:
 		Returns true if incoming message received. False if we don't expect the
 		message. Message is removed from front of recv_buf if true returned.
 	*/
-	virtual bool expect(const network::buffer & recv_buf) = 0;
-	virtual bool recv(const network::buffer & recv_buf,
-		const network::endpoint & endpoint) = 0;
+	virtual bool expect(const net::buffer & recv_buf) = 0;
+	virtual bool recv(const net::buffer & recv_buf,
+		const net::endpoint & endpoint) = 0;
 };
 
 class ping : public base
 {
 public:
-	typedef boost::function<void (const network::endpoint & endpoint,
-		const network::buffer & random, const std::string & remote_ID)> handler;
+	typedef boost::function<void (const net::endpoint & endpoint,
+		const net::buffer & random, const std::string & remote_ID)> handler;
 	ping(handler func_in);
-	virtual bool expect(const network::buffer & recv_buf);
-	virtual bool recv(const network::buffer & recv_buf,
-		const network::endpoint & endpoint);
+	virtual bool expect(const net::buffer & recv_buf);
+	virtual bool recv(const net::buffer & recv_buf,
+		const net::endpoint & endpoint);
 private:
 	handler func;
 };
@@ -43,27 +43,27 @@ private:
 class pong : public base
 {
 public:
-	typedef boost::function<void (const network::endpoint & endpoint,
+	typedef boost::function<void (const net::endpoint & endpoint,
 		const std::string & remote_ID)> handler;
-	pong(handler func_in, const network::buffer & random_in);
-	virtual bool expect(const network::buffer & recv_buf);
-	virtual bool recv(const network::buffer & recv_buf,
-		const network::endpoint & endpoint);
+	pong(handler func_in, const net::buffer & random_in);
+	virtual bool expect(const net::buffer & recv_buf);
+	virtual bool recv(const net::buffer & recv_buf,
+		const net::endpoint & endpoint);
 private:
 	handler func;
-	const network::buffer random;
+	const net::buffer random;
 };
 
 class find_node : public base
 {
 public:
-	typedef boost::function<void (const network::endpoint & endpoint,
-		const network::buffer & random, const std::string & remote_ID,
+	typedef boost::function<void (const net::endpoint & endpoint,
+		const net::buffer & random, const std::string & remote_ID,
 		const std::string & ID_to_find)> handler;
 	find_node(handler func_in);
-	virtual bool expect(const network::buffer & recv_buf);
-	virtual bool recv(const network::buffer & recv_buf,
-		const network::endpoint & endpoint);
+	virtual bool expect(const net::buffer & recv_buf);
+	virtual bool recv(const net::buffer & recv_buf,
+		const net::endpoint & endpoint);
 private:
 	handler func;
 };
@@ -71,16 +71,16 @@ private:
 class host_list : public base
 {
 public:
-	typedef boost::function<void (const network::endpoint & endpoint,
+	typedef boost::function<void (const net::endpoint & endpoint,
 		const std::string & remote_ID,
-		const std::list<std::pair<network::endpoint, unsigned char> > & hosts)> handler;
-	host_list(handler func_in, const network::buffer & random_in);
-	virtual bool expect(const network::buffer & recv_buf);
-	virtual bool recv(const network::buffer & recv_buf,
-		const network::endpoint & endpoint);
+		const std::list<std::pair<net::endpoint, unsigned char> > & hosts)> handler;
+	host_list(handler func_in, const net::buffer & random_in);
+	virtual bool expect(const net::buffer & recv_buf);
+	virtual bool recv(const net::buffer & recv_buf,
+		const net::endpoint & endpoint);
 private:
 	handler func;
-	const network::buffer random;
+	const net::buffer random;
 };
 
 }//end of namespace recv
@@ -91,33 +91,33 @@ class base
 {
 public:
 	//contains bytes to send
-	network::buffer buf;
+	net::buffer buf;
 };
 
 class ping : public base
 {
 public:
-	ping(const network::buffer & random, const std::string & local_ID);
+	ping(const net::buffer & random, const std::string & local_ID);
 };
 
 class pong : public base
 {
 public:
-	pong(const network::buffer & random, const std::string & local_ID);
+	pong(const net::buffer & random, const std::string & local_ID);
 };
 
 class find_node : public base
 {
 public:
-	find_node(const network::buffer & random,
+	find_node(const net::buffer & random,
 		const std::string & local_ID, const std::string & ID_to_find);
 };
 
 class host_list : public base
 {
 public:
-	host_list(const network::buffer & random, const std::string & local_ID,
-		const std::list<std::pair<network::endpoint, unsigned char> > & hosts);
+	host_list(const net::buffer & random, const std::string & local_ID,
+		const std::list<std::pair<net::endpoint, unsigned char> > & hosts);
 };
 
 }//end of namespace send

@@ -54,9 +54,9 @@ void create_reassemble(const unsigned size)
 	}
 
 	//read all blocks from the hash tree in to memory
-	std::vector<network::buffer> block; //location in vector is block number
+	std::vector<net::buffer> block; //location in vector is block number
 	for(boost::uint32_t x=0; x<HT.tree_block_count; ++x){
-		network::buffer buf;
+		net::buffer buf;
 		HT.read_block(x, buf);
 		block.push_back(buf);
 	}
@@ -77,7 +77,7 @@ void create_reassemble(const unsigned size)
 	}
 
 	//check file blocks with rebuilt tree
-	network::buffer buf;
+	net::buffer buf;
 	std::fstream fin(FI.path.c_str(), std::ios::in | std::ios::binary);
 	if(!fin.good()){
 		LOG; ++fail;

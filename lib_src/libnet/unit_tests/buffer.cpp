@@ -1,10 +1,10 @@
-#include <network/network.hpp>
+#include <net/net.hpp>
 
 int fail(0);
 
 int main()
 {
-	network::buffer B;
+	net::buffer B;
 
 	//erase
 	B = "ABC";
@@ -44,7 +44,7 @@ int main()
 	}
 
 	//!=
-	network::buffer B0, B1;
+	net::buffer B0, B1;
 	B0 = "ABC";
 	B1 = "ABC";
 	if(B0 != B1){

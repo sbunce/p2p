@@ -20,7 +20,7 @@ this class is exactly like a file.
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include <convert.hpp>
-#include <network/network.hpp>
+#include <net/net.hpp>
 #include <SHA1.hpp>
 
 //standard
@@ -105,16 +105,16 @@ public:
 	unsigned block_size(const boost::uint64_t block_num);
 	status check();
 	status check_file_block(const boost::uint64_t file_block_num,
-		const network::buffer & buf);
-	status check_tree_block(const boost::uint64_t block_num, const network::buffer & buf);
+		const net::buffer & buf);
+	status check_tree_block(const boost::uint64_t block_num, const net::buffer & buf);
 	status create();
 	std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool> file_block_children(
 		const boost::uint64_t block);
-	status read_block(const boost::uint64_t block_num, network::buffer & buf);
+	status read_block(const boost::uint64_t block_num, net::buffer & buf);
 	std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool> tree_block_children(
 		const boost::uint64_t block);
 	status write_block(const boost::uint64_t block_num,
-		const network::buffer & buf);
+		const net::buffer & buf);
 
 	/*
 	file_size_to_tree_block_count:

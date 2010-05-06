@@ -6,8 +6,8 @@ transfer::transfer(const file_info & FI):
 	Hash_Tree_Block(Hash_Tree.tree_block_count),
 	File_Block(Hash_Tree.file_block_count),
 	bytes_received(0),
-	Download_Speed(new network::speed_calc()),
-	Upload_Speed(new network::speed_calc())
+	Download_Speed(new net::speed_calc()),
+	Upload_Speed(new net::speed_calc())
 {
 	assert(FI.file_size != 0);
 
@@ -38,7 +38,7 @@ transfer::transfer(const file_info & FI):
 
 void transfer::check()
 {
-	network::buffer buf;
+	net::buffer buf;
 	buf.reserve(protocol_tcp::file_block_size);
 
 	//only check tree blocks with good parents
@@ -108,7 +108,7 @@ unsigned transfer::download_speed()
 	return Download_Speed->speed();
 }
 
-boost::shared_ptr<network::speed_calc> transfer::download_speed_calc()
+boost::shared_ptr<net::speed_calc> transfer::download_speed_calc()
 {
 	return Download_Speed;
 }
@@ -204,7 +204,7 @@ transfer::status transfer::read_file_block(boost::shared_ptr<message_tcp::send::
 		const boost::uint64_t block_num)
 {
 	if(File_Block.have_block(block_num)){
-		network::buffer buf;
+		net::buffer buf;
 		if(File.read_block(block_num, buf)){
 			/*
 			We can't trust that the local user hasn't modified the file. We hash
@@ -228,7 +228,7 @@ transfer::status transfer::read_tree_block(boost::shared_ptr<message_tcp::send::
 	const boost::uint64_t block_num)
 {
 	if(Hash_Tree_Block.have_block(block_num)){
-		network::buffer buf;
+		net::buffer buf;
 		hash_tree::status status = Hash_Tree.read_block(block_num, buf);
 		if(status == hash_tree::good){
 			M = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::block(buf, Upload_Speed));
@@ -285,7 +285,7 @@ unsigned transfer::upload_speed()
 }
 
 transfer::status transfer::write_file_block(const int connection_ID,
-	const boost::uint64_t block_num, const network::buffer & buf)
+	const boost::uint64_t block_num, const net::buffer & buf)
 {
 	if(File_Block.have_block(block_num)){
 		/*
@@ -316,7 +316,7 @@ transfer::status transfer::write_file_block(const int connection_ID,
 }
 
 transfer::status transfer::write_tree_block(const int connection_ID,
-	const boost::uint64_t block_num, const network::buffer & buf)
+	const boost::uint64_t block_num, const net::buffer & buf)
 {
 	if(Hash_Tree_Block.have_block(block_num)){
 		/*

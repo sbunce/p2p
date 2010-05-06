@@ -4,7 +4,7 @@
 //include
 #include <boost/thread.hpp>
 #include <logger.hpp>
-#include <network/network.hpp>
+#include <net/net.hpp>
 #include <opt_parse.hpp>
 
 //standard
@@ -86,7 +86,7 @@ int main(int argc, char ** argv)
 
 	//create HTTP server
 	http HTTP(*web_root, port ? *port : "0", localhost_only);
-	std::set<network::endpoint> E = network::get_endpoint(
+	std::set<net::endpoint> E = net::get_endpoint(
 		localhost_only ? "localhost" : "", port ? *port : "0");
 	if(E.empty()){
 		std::cout << "failed to resolve listener endpoint\n";
@@ -94,7 +94,7 @@ int main(int argc, char ** argv)
 	}
 
 	//bind to port before priviledge drop
-	boost::shared_ptr<network::listener> Listener(new network::listener(*E.begin()));
+	boost::shared_ptr<net::listener> Listener(new net::listener(*E.begin()));
 	if(!Listener->is_open()){
 		std::cout << "failed to open listener\n";
 		return 1;
