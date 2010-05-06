@@ -2,7 +2,6 @@
 import glob
 
 SConscript([
-	'CLI/SConscript',
 	'unit_tests/SConscript'
 ])
 

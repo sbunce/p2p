@@ -111,7 +111,7 @@ void bucket::find_node(const std::string & ID_to_find,
 	}
 
 	//get rid of all but closest elements
-	while(!hosts.empty() && hosts.size() > protocol_udp::host_list_elements){
+	while(!hosts.empty() && hosts.size() > protocol_udp::host_list_elements / 2){
 		std::map<mpa::mpint, std::pair<std::string, network::endpoint> >::iterator
 			iter = hosts.end();
 		--iter;
