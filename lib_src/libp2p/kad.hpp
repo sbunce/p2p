@@ -1,22 +1,22 @@
-#ifndef H_KADEMLIA
-#define H_KADEMLIA
+#ifndef H_KAD
+#define H_KAD
 
 //custom
-#include "bucket.hpp"
 #include "db_all.hpp"
 #include "exchange_udp.hpp"
-#include "kad_func.hpp"
-#include "route_table.hpp"
+#include "k_bucket.hpp"
+#include "k_func.hpp"
+#include "k_route_table.hpp"
 
 //include
 #include <bit_field.hpp>
 #include <net/net.hpp>
 
-class kademlia
+class kad
 {
 public:
-	kademlia();
-	~kademlia();
+	kad();
+	~kad();
 
 	/*
 
@@ -28,7 +28,7 @@ private:
 	boost::thread network_thread;
 	exchange_udp Exchange;
 	const std::string local_ID;
-	route_table Route_Table;
+	k_route_table Route_Table;
 
 	/*
 	Function call proxy. A thread adds a function object and network_thread makes

@@ -1,8 +1,8 @@
-#ifndef H_BUCKET
-#define H_BUCKET
+#ifndef H_K_BUCKET
+#define H_K_BUCKET
 
 //custom
-#include "kad_func.hpp"
+#include "k_func.hpp"
 #include "protocol_udp.hpp"
 
 //include
@@ -16,7 +16,7 @@
 #include <map>
 #include <string>
 
-class bucket
+class k_bucket
 {
 public:
 	/*
@@ -24,9 +24,9 @@ public:
 		Add node to be considered for routing table inclusion. If the node is
 		already in the routing table the last_seen time will be updated.
 	find_node:
-		Calculates distance on all nodes in bucket and adds them to the hosts
+		Calculates distance on all nodes in k_bucket and adds them to the hosts
 		container. Highest distance elements are removed from the hosts container
-		such that it is no larger than protocol_udp::bucket_size.
+		such that it is no larger than protocol_udp::k_bucket_size.
 		std::map<distance, std::pair<remote_ID, endpoint> >
 	ping:
 		Returns a endpoint which needs to be pinged.

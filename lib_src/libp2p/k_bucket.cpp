@@ -1,7 +1,7 @@
-#include "bucket.hpp"
+#include "k_bucket.hpp"
 
 //BEGIN contact
-bucket::contact::contact(
+k_bucket::contact::contact(
 	const std::string & remote_ID_in,
 	const net::endpoint & endpoint_in
 ):
@@ -14,7 +14,7 @@ bucket::contact::contact(
 	last_seen -= protocol_udp::contact_timeout;
 }
 
-bucket::contact::contact(const contact & C):
+k_bucket::contact::contact(const contact & C):
 	remote_ID(C.remote_ID),
 	endpoint(C.endpoint),
 	ping_sent(C.ping_sent),
@@ -23,7 +23,7 @@ bucket::contact::contact(const contact & C):
 
 }
 
-bool bucket::contact::active_ping()
+bool k_bucket::contact::active_ping()
 {
 	if(!ping_sent && std::time(NULL) - last_seen > protocol_udp::contact_timeout - protocol_udp::ping_timeout){
 		/*
@@ -38,7 +38,7 @@ bool bucket::contact::active_ping()
 	return false;
 }
 
-bool bucket::contact::reserve_ping()
+bool k_bucket::contact::reserve_ping()
 {
 	//we don't care how long a contact has been in reserve
 	if(!ping_sent){
@@ -53,7 +53,7 @@ bool bucket::contact::reserve_ping()
 	return false;
 }
 
-bool bucket::contact::timed_out()
+bool k_bucket::contact::timed_out()
 {
 	/*
 	Do not time out connection until we've sent a ping. If multiple pings come
@@ -63,14 +63,14 @@ bool bucket::contact::timed_out()
 	return ping_sent && std::time(NULL) - last_seen > protocol_udp::ping_timeout;
 }
 
-void bucket::contact::touch()
+void k_bucket::contact::touch()
 {
 	last_seen = std::time(NULL);
 	ping_sent = false;
 }
 //END contact
 
-void bucket::add_reserve(const std::string remote_ID,
+void k_bucket::add_reserve(const std::string remote_ID,
 	const net::endpoint & endpoint)
 {
 	//if node active then touch it
@@ -99,14 +99,14 @@ void bucket::add_reserve(const std::string remote_ID,
 	Bucket_Reserve.push_back(contact(remote_ID, endpoint));
 }
 
-void bucket::find_node(const std::string & ID_to_find,
+void k_bucket::find_node(const std::string & ID_to_find,
 	std::map<mpa::mpint, std::pair<std::string, net::endpoint> > & hosts)
 {
 	//calculate distances of all contacts
 	for(std::list<contact>::iterator it_cur = Bucket_Active.begin(),
 		it_end = Bucket_Active.end(); it_cur != it_end; ++it_cur)
 	{
-		hosts.insert(std::make_pair(kad_func::distance(ID_to_find, it_cur->remote_ID),
+		hosts.insert(std::make_pair(k_func::distance(ID_to_find, it_cur->remote_ID),
 			std::make_pair(it_cur->remote_ID, it_cur->endpoint)));
 	}
 
@@ -119,7 +119,7 @@ void bucket::find_node(const std::string & ID_to_find,
 	}
 }
 
-boost::optional<net::endpoint> bucket::ping()
+boost::optional<net::endpoint> k_bucket::ping()
 {
 	//remove active nodes that timed out
 	for(std::list<contact>::iterator it_cur = Bucket_Active.begin();
@@ -163,7 +163,7 @@ boost::optional<net::endpoint> bucket::ping()
 	return boost::optional<net::endpoint>();
 }
 
-void bucket::pong(const std::string & remote_ID,
+void k_bucket::pong(const std::string & remote_ID,
 	const net::endpoint & endpoint)
 {
 	//if node active then touch it

@@ -1,14 +1,14 @@
-#ifndef H_ROUTE_TABLE
-#define H_ROUTE_TABLE
+#ifndef H_K_ROUTE_TABLE
+#define H_K_ROUTE_TABLE
 
 //custom
-#include "bucket.hpp"
+#include "k_bucket.hpp"
 #include "db_all.hpp"
 
-class route_table
+class k_route_table
 {
 public:
-	route_table();
+	k_route_table();
 
 	/*
 	add_reserve:
@@ -30,7 +30,7 @@ public:
 private:
 	const std::string local_ID;
 
-	bucket Bucket_4[protocol_udp::bucket_count];
-	bucket Bucket_6[protocol_udp::bucket_count];
+	k_bucket Bucket_4[protocol_udp::bucket_count];
+	k_bucket Bucket_6[protocol_udp::bucket_count];
 };
 #endif

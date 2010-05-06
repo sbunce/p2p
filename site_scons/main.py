@@ -11,9 +11,11 @@ import string
 
 def compile_flags(env):
 	if platform.system() == 'Windows':
-		env['CCFLAGS'].append('/EHsc') #exception support
-		env['CCFLAGS'].append('/w')    #disable warnings
-		env['CCFLAGS'].append('/Ox')   #max optimization
+		env['CCFLAGS'].append([
+			'/EHsc', #exception support
+			'/w',    #disable warnings
+			'/Ox'    #max optimization
+		])
 	else:
 		env['CCFLAGS'].append('-O3')   #max optimization
 
@@ -27,8 +29,10 @@ def system_library_path(env):
 		env['LIBPATH'].append(path)
 	else:
 		#make sure local libraries are favored
-		env['LIBPATH'].append('/usr/local/lib')
-		env['LIBPATH'].append('/usr/lib')
+		env['LIBPATH'].append([
+			'/usr/local/lib',
+			'/usr/lib'
+		])
 
 def system_include_path(env):
 	if platform.system() == 'Windows':
@@ -40,13 +44,17 @@ def system_include_path(env):
 		env['CPPPATH'].append(path)
 	else :
 		#make sure local headers are favored
-		env['CPPPATH'].append('/usr/local/include')
-		env['CPPPATH'].append('/usr/include')
+		env['CPPPATH'].append([
+			'/usr/local/include',
+			'/usr/include'
+		])
 
 def system_libraries(env):
 	if platform.system() == 'Windows':
-		env['LIBS'].append('advapi32') #random number gen
-		env['LIBS'].append('ws2_32')   #winsock
+		env['LIBS'].append([
+			'advapi32', #random number gen
+			'ws2_32'    #winsock
+		])   
 	else:
 		env['LIBS'].append('pthread')
 
@@ -70,22 +78,27 @@ def setup(env):
 	boost.library_path(env)
 
 	#libraries to link
-	env['LIBS'].append('p2p')
-	env['LIBS'].append('net')
-	env['LIBS'].append('tommath')
-	env['LIBS'].append('sqlite3')
-	env['LIBS'].append(boost.library('boost_system'))
-	env['LIBS'].append(boost.library('boost_filesystem'))
-	env['LIBS'].append(boost.library('boost_regex'))
-	env['LIBS'].append(boost.library('boost_thread'))
+	env['LIBS'].append([
+		'p2p',
+		'net',
+		'tommath',
+		'sqlite3',
+		'boost_system',
+		'boost_filesystem',
+		'boost_regex',
+		'boost_thread'
+	])
 	system_libraries(env)
 
 	#compile flags
 	compile_flags(env)
 
+#WARNING: this can result in buggy builds (not threadsafe)
 def setup_static(env):
 	environment.define_keys(env)
 	if platform.system() != 'Windows':
-		env['LINKFLAGS'].append('-static')
-		env['LINKFLAGS'].append('-static-libgcc')
-		env['LINKFLAGS'].append('`g++ -print-file-name=libstdc++.a`')
+		env['LINKFLAGS'].append([
+			'-static',
+			'-static-libgcc',
+			'`g++ -print-file-name=libstdc++.a`'
+		])

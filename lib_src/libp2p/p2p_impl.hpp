@@ -5,7 +5,7 @@
 #include "connection_manager.hpp"
 #include "db_all.hpp"
 #include "hash_tree.hpp"
-#include "kademlia.hpp"
+#include "kad.hpp"
 #include "path.hpp"
 #include "prime_generator.hpp"
 #include "share_scanner.hpp"
@@ -58,7 +58,7 @@ private:
 	boost::thread resume_thread;
 
 	connection_manager Connection_Manager;
-	kademlia Kademlia;
+	kad DHT;
 	share_scanner Share_Scanner;
 
 	/*

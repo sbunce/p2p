@@ -1,5 +1,5 @@
-#ifndef H_KAD_FUNC
-#define H_KAD_FUNC
+#ifndef H_K_FUNC
+#define H_K_FUNC
 
 //custom
 #include "protocol_udp.hpp"
@@ -9,7 +9,7 @@
 #include <convert.hpp>
 #include <mpa.hpp>
 
-namespace kad_func
+namespace k_func
 {
 /*
 bucket_num:
