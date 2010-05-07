@@ -44,7 +44,7 @@ void kad::network_loop()
 		if(E.empty()){
 			LOG << "failed \"" << hosts.back().IP << "\" " << hosts.back().port;
 		}else{
-			Route_Table.add_reserve(hosts.back().ID, *E.begin());
+			Route_Table.add_reserve(*E.begin(), hosts.back().ID);
 		}
 		hosts.pop_back();
 	}
@@ -84,9 +84,8 @@ void kad::recv_find_node(const net::endpoint & endpoint,
 {
 	LOG << endpoint.IP() << " " << endpoint.port() << " remote_ID: " << remote_ID
 		<< " find: " << ID_to_find;
-	Route_Table.add_reserve(remote_ID, endpoint);
-	std::list<std::pair<net::endpoint, unsigned char> >
-		hosts = Route_Table.find_node(remote_ID, ID_to_find);
+	Route_Table.add_reserve(endpoint, remote_ID);
+	std::list<net::endpoint> hosts = Route_Table.find_node(remote_ID, ID_to_find);
 	Exchange.send(boost::shared_ptr<message_udp::send::base>(
 		new message_udp::send::host_list(random, local_ID, hosts)), endpoint);
 }
@@ -95,7 +94,7 @@ void kad::recv_ping(const net::endpoint & endpoint, const net::buffer & random,
 	const std::string & remote_ID)
 {
 	LOG << endpoint.IP() << " " << endpoint.port() << " " << remote_ID;
-	Route_Table.add_reserve(remote_ID, endpoint);
+	Route_Table.add_reserve(endpoint, remote_ID);
 	Exchange.send(boost::shared_ptr<message_udp::send::base>(
 		new message_udp::send::pong(random, local_ID)), endpoint);
 }

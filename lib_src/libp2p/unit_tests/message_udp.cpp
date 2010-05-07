@@ -44,10 +44,9 @@ void find_node_call_back(const net::endpoint & endpoint,
 	}
 }
 
-std::list<std::pair<net::endpoint, unsigned char> > test_hosts;
+std::list<net::endpoint> test_hosts;
 void host_list_call_back(const net::endpoint & endpoint,
-	const std::string & remote_ID,
-	const std::list<std::pair<net::endpoint, unsigned char> > & hosts)
+	const std::string & remote_ID, const std::list<net::endpoint> & hosts)
 {
 	if(remote_ID != test_ID){
 		LOG; ++fail;
@@ -99,17 +98,17 @@ int main()
 	*/
 	E = net::get_endpoint("127.0.0.1", "0");
 	assert(!E.empty());
-	test_hosts.push_back(std::make_pair(*E.begin(), 0));
+	test_hosts.push_back(*E.begin());
 	E = net::get_endpoint("127.0.0.2", "0");
 	assert(!E.empty());
-	test_hosts.push_back(std::make_pair(*E.begin(), 0));
+	test_hosts.push_back(*E.begin());
 	E = net::get_endpoint("::1", "0");
 	if(!E.empty()){
-		test_hosts.push_back(std::make_pair(*E.begin(), 0));
+		test_hosts.push_back(*E.begin());
 	}
 	E = net::get_endpoint("::2", "0");
 	if(!E.empty()){
-		test_hosts.push_back(std::make_pair(*E.begin(), 0));
+		test_hosts.push_back(*E.begin());
 	}
 	M_recv = boost::shared_ptr<message_udp::recv::base>(new message_udp::recv::host_list(
 		&host_list_call_back, test_random));

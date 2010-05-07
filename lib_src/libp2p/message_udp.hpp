@@ -72,8 +72,7 @@ class host_list : public base
 {
 public:
 	typedef boost::function<void (const net::endpoint & endpoint,
-		const std::string & remote_ID,
-		const std::list<std::pair<net::endpoint, unsigned char> > & hosts)> handler;
+		const std::string & remote_ID, const std::list<net::endpoint> & hosts)> handler;
 	host_list(handler func_in, const net::buffer & random_in);
 	virtual bool expect(const net::buffer & recv_buf);
 	virtual bool recv(const net::buffer & recv_buf,
@@ -117,7 +116,7 @@ class host_list : public base
 {
 public:
 	host_list(const net::buffer & random, const std::string & local_ID,
-		const std::list<std::pair<net::endpoint, unsigned char> > & hosts);
+		const std::list<net::endpoint> & hosts);
 };
 
 }//end of namespace send

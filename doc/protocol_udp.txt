@@ -96,17 +96,16 @@ D = IP bit_field, E = address list
 note: The D bit_field indicates whether the address in the E list is a IPv4
 address or IPv6 address.
 note: There can be a maximum of 8 IPv4 addresses and 8 IPv6 addresses.
+note: The hosts are supposed to be closer to the node we're trying to find.
 
 E list element:
-	+---+---+---+---+---+---+
-	|     A     |   B   | C |
-	+---+---+---+---+---+---+
-	  0  ...  x  x+1 x+2 x+3
-A = address, B = port, C = bucket number
+	+---+---+---+---+---+
+	|     A     |   B   |
+	+---+---+---+---+---+
+	  0  ...  x  x+1 x+2
+A = address, B = port
 
 note: If IPv4 then x=3. If IPv6 then x=15.
-note: The bucket number is the bucket the remote host should expect to put the
-host in. This is given in place of the full node ID.
 ---
 
 ---

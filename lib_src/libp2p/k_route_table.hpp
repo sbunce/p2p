@@ -21,16 +21,19 @@ public:
 	pong:
 		See bucket::pong for documentation.
 	*/
-	void add_reserve(const std::string & remote_ID, const net::endpoint & endpoint);
-	std::list<std::pair<net::endpoint, unsigned char> > find_node(
-		const std::string & remote_ID, const std::string & ID_to_find);
+	void add_reserve(const net::endpoint & endpoint,
+		const std::string & remote_ID = "");
+	std::list<net::endpoint> find_node(const std::string & remote_ID,
+		const std::string & ID_to_find);
 	boost::optional<net::endpoint> ping();
 	void pong(const std::string & remote_ID, const net::endpoint & endpoint);
 
 private:
 	const std::string local_ID;
-
 	k_bucket Bucket_4[protocol_udp::bucket_count];
 	k_bucket Bucket_6[protocol_udp::bucket_count];
+
+	//we don't know what bucket these hosts belong to
+	std::list<net::endpoint> Unknown;
 };
 #endif

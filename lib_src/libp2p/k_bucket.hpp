@@ -36,7 +36,7 @@ public:
 	*/
 	void add_reserve(const std::string remote_ID, const net::endpoint & endpoint);
 	void find_node(const std::string & ID_to_find, const mpa::mpint & max_dist,
-		std::map<mpa::mpint, std::pair<std::string, net::endpoint> > & hosts);
+		std::map<mpa::mpint, net::endpoint> & hosts);
 	boost::optional<net::endpoint> ping();
 	void pong(const std::string & remote_ID, const net::endpoint & endpoint);
 

@@ -6,23 +6,27 @@ k_route_table::k_route_table():
 
 }
 
-void k_route_table::add_reserve(const std::string & remote_ID,
-	const net::endpoint & endpoint)
+void k_route_table::add_reserve(const net::endpoint & endpoint,
+	const std::string & remote_ID)
 {
-	unsigned bucket_num = k_func::bucket_num(local_ID, remote_ID);
-	if(endpoint.version() == net::IPv4){
-		Bucket_4[bucket_num].add_reserve(remote_ID, endpoint);
+	if(remote_ID.empty()){
+		Unknown.push_back(endpoint);
 	}else{
-		Bucket_6[bucket_num].add_reserve(remote_ID, endpoint);
+		unsigned bucket_num = k_func::bucket_num(local_ID, remote_ID);
+		if(endpoint.version() == net::IPv4){
+			Bucket_4[bucket_num].add_reserve(remote_ID, endpoint);
+		}else{
+			Bucket_6[bucket_num].add_reserve(remote_ID, endpoint);
+		}
 	}
 }
 
-std::list<std::pair<net::endpoint, unsigned char> > k_route_table::find_node(
+std::list<net::endpoint> k_route_table::find_node(
 	const std::string & remote_ID, const std::string & ID_to_find)
 {
 	//get nodes which are closer
-	std::map<mpa::mpint, std::pair<std::string, net::endpoint> > hosts_4;
-	std::map<mpa::mpint, std::pair<std::string, net::endpoint> > hosts_6;
+	std::map<mpa::mpint, net::endpoint> hosts_4;
+	std::map<mpa::mpint, net::endpoint> hosts_6;
 	mpa::mpint max_dist = k_func::distance(local_ID, ID_to_find);
 	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
 		Bucket_4[x].find_node(ID_to_find, max_dist, hosts_4);
@@ -30,17 +34,14 @@ std::list<std::pair<net::endpoint, unsigned char> > k_route_table::find_node(
 	}
 
 	//combine IPv4 and IPv6
-	std::map<mpa::mpint, std::pair<std::string, net::endpoint> > hosts;
+	std::map<mpa::mpint, net::endpoint> hosts;
 	hosts.insert(hosts_4.begin(), hosts_4.end());
 	hosts.insert(hosts_6.begin(), hosts_6.end());
-
-	//calculate buckets the remote host should expect to put the hosts in
-	std::list<std::pair<net::endpoint, unsigned char> > hosts_final;
-	for(std::map<mpa::mpint, std::pair<std::string, net::endpoint> >::iterator
-		it_cur = hosts.begin(), it_end = hosts.end(); it_cur != it_end; ++it_cur)
+	std::list<net::endpoint> hosts_final;
+	for(std::map<mpa::mpint, net::endpoint>::iterator it_cur = hosts.begin(),
+		it_end = hosts.end(); it_cur != it_end; ++it_cur)
 	{
-		hosts_final.push_back(std::make_pair(it_cur->second.second,
-			k_func::bucket_num(remote_ID, it_cur->second.first)));
+		hosts_final.push_back(it_cur->second);
 	}
 	return hosts_final;
 }
@@ -57,6 +58,11 @@ boost::optional<net::endpoint> k_route_table::ping()
 		if(endpoint){
 			return endpoint;
 		}
+	}
+	if(!Unknown.empty()){
+		endpoint = Unknown.front();
+		Unknown.pop_front();
+		return endpoint;
 	}
 	return boost::optional<net::endpoint>();
 }
