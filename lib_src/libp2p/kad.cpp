@@ -20,6 +20,19 @@ kad::~kad()
 	network_thread.join();
 }
 
+void kad::find_node(const std::string & ID_to_find,
+	const boost::function<void (const net::endpoint)> & call_back)
+{
+	boost::mutex::scoped_lock lock(relay_job_mutex);
+	relay_job.push_back(boost::bind(&kad::find_node_relay, this, ID_to_find, call_back));
+}
+
+void kad::find_node_relay(const std::string ID_to_find,
+	const boost::function<void (const net::endpoint)> call_back)
+{
+
+}
+
 void kad::network_loop()
 {
 	//restore hosts from database, randomize to try different nodes each time

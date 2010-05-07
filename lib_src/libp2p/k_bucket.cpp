@@ -100,14 +100,18 @@ void k_bucket::add_reserve(const std::string remote_ID,
 }
 
 void k_bucket::find_node(const std::string & ID_to_find,
+	const mpa::mpint & max_dist,
 	std::map<mpa::mpint, std::pair<std::string, net::endpoint> > & hosts)
 {
 	//calculate distances of all contacts
 	for(std::list<contact>::iterator it_cur = Bucket_Active.begin(),
 		it_end = Bucket_Active.end(); it_cur != it_end; ++it_cur)
 	{
-		hosts.insert(std::make_pair(k_func::distance(ID_to_find, it_cur->remote_ID),
-			std::make_pair(it_cur->remote_ID, it_cur->endpoint)));
+		mpa::mpint dist = k_func::distance(ID_to_find, it_cur->remote_ID);
+		if(dist <= max_dist){
+			hosts.insert(std::make_pair(k_func::distance(ID_to_find, it_cur->remote_ID),
+				std::make_pair(it_cur->remote_ID, it_cur->endpoint)));
+		}
 	}
 
 	//get rid of all but closest elements

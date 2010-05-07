@@ -23,9 +23,10 @@ std::list<std::pair<net::endpoint, unsigned char> > k_route_table::find_node(
 	//get nodes which are closer
 	std::map<mpa::mpint, std::pair<std::string, net::endpoint> > hosts_4;
 	std::map<mpa::mpint, std::pair<std::string, net::endpoint> > hosts_6;
+	mpa::mpint max_dist = k_func::distance(local_ID, ID_to_find);
 	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
-		Bucket_4[x].find_node(ID_to_find, hosts_4);
-		Bucket_6[x].find_node(ID_to_find, hosts_6);
+		Bucket_4[x].find_node(ID_to_find, max_dist, hosts_4);
+		Bucket_6[x].find_node(ID_to_find, max_dist, hosts_6);
 	}
 
 	//combine IPv4 and IPv6

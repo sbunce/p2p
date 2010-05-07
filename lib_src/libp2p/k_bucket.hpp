@@ -35,7 +35,7 @@ public:
 		contact is in reserve it will be moved to active if there is enough space.
 	*/
 	void add_reserve(const std::string remote_ID, const net::endpoint & endpoint);
-	void find_node(const std::string & ID_to_find,
+	void find_node(const std::string & ID_to_find, const mpa::mpint & max_dist,
 		std::map<mpa::mpint, std::pair<std::string, net::endpoint> > & hosts);
 	boost::optional<net::endpoint> ping();
 	void pong(const std::string & remote_ID, const net::endpoint & endpoint);

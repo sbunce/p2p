@@ -5,6 +5,7 @@
 #include "db_all.hpp"
 #include "exchange_udp.hpp"
 #include "k_bucket.hpp"
+#include "k_find.hpp"
 #include "k_func.hpp"
 #include "k_route_table.hpp"
 
@@ -19,10 +20,11 @@ public:
 	~kad();
 
 	/*
-
+	find_node:
+		Find a node ID. The call back is used when the node ID is found.
 	*/
-	//void find_node(const std::string & ID,
-		//const boost::function<void (const net::endpoint)> & call_back);
+	void find_node(const std::string & ID_to_find,
+		const boost::function<void (const net::endpoint)> & call_back);
 
 private:
 	boost::thread network_thread;
@@ -38,6 +40,8 @@ private:
 	std::deque<boost::function<void ()> > relay_job;
 
 	/*
+	find_node_relay:
+		Called as relay job. Starts the find process for a node ID.
 	network_loop:
 		Loop to handle timed events and network events
 	process_relay_job:
@@ -45,6 +49,8 @@ private:
 	send_ping:
 		Pings hosts which are about to timeout.
 	*/
+	void find_node_relay(const std::string ID_to_find,
+		const boost::function<void (const net::endpoint)> call_back);
 	void network_loop();
 	void process_relay_job();
 	void send_ping();
