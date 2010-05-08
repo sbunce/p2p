@@ -14,7 +14,7 @@ exchange_udp::expect_response_element::expect_response_element(
 
 bool exchange_udp::expect_response_element::timed_out()
 {
-	return std::time(NULL) - time_first_expected > 60;
+	return std::time(NULL) - time_first_expected > protocol_udp::response_timeout;
 }
 //END expect_response_element
 

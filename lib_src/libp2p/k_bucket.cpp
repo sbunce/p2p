@@ -2,21 +2,22 @@
 
 //BEGIN contact
 k_bucket::contact::contact(
-	const std::string & remote_ID_in,
-	const net::endpoint & endpoint_in
+	const net::endpoint & endpoint_in,
+	const std::string & remote_ID_in
 ):
-	remote_ID(remote_ID_in),
 	endpoint(endpoint_in),
+	remote_ID(remote_ID_in),
 	last_seen(std::time(NULL)),
 	ping_sent(false)
 {
+	assert(!remote_ID.empty());
 	//contact starts timed out
 	last_seen -= protocol_udp::contact_timeout;
 }
 
 k_bucket::contact::contact(const contact & C):
-	remote_ID(C.remote_ID),
 	endpoint(C.endpoint),
+	remote_ID(C.remote_ID),
 	ping_sent(C.ping_sent),
 	last_seen(C.last_seen)
 {
@@ -25,13 +26,15 @@ k_bucket::contact::contact(const contact & C):
 
 bool k_bucket::contact::active_ping()
 {
-	if(!ping_sent && std::time(NULL) - last_seen > protocol_udp::contact_timeout - protocol_udp::ping_timeout){
+	if(!ping_sent && std::time(NULL) - last_seen >
+		protocol_udp::contact_timeout - protocol_udp::response_timeout)
+	{
 		/*
 		We may get to pinging a contact long after it times out if multiple
 		contacts get bunched up. We set the last_seen time such that we give the
 		ping <ping_timeout> seconds to timeout.
 		*/
-		last_seen = std::time(NULL) - (protocol_udp::contact_timeout - protocol_udp::ping_timeout);
+		last_seen = std::time(NULL) - (protocol_udp::contact_timeout - protocol_udp::response_timeout);
 		ping_sent = true;
 		return true;
 	}
@@ -46,7 +49,7 @@ bool k_bucket::contact::reserve_ping()
 		Pretend to be idle for <ping_timeout seconds> less than protocol_udp::timeout
 		so we can use the same function to check for active and reserve timeouts.
 		*/
-		last_seen = std::time(NULL) - (protocol_udp::contact_timeout - protocol_udp::ping_timeout);
+		last_seen = std::time(NULL) - (protocol_udp::contact_timeout - protocol_udp::response_timeout);
 		ping_sent = true;
 		return true;
 	}
@@ -60,7 +63,7 @@ bool k_bucket::contact::timed_out()
 	at the same time some may be delayed past the normal timeout to spread out
 	pings.
 	*/
-	return ping_sent && std::time(NULL) - last_seen > protocol_udp::ping_timeout;
+	return ping_sent && std::time(NULL) - last_seen > protocol_udp::response_timeout;
 }
 
 void k_bucket::contact::touch()
@@ -70,8 +73,8 @@ void k_bucket::contact::touch()
 }
 //END contact
 
-void k_bucket::add_reserve(const std::string remote_ID,
-	const net::endpoint & endpoint)
+void k_bucket::add_reserve(const net::endpoint & endpoint,
+	const std::string remote_ID)
 {
 	//if node active then touch it
 	for(std::list<contact>::iterator it_cur = Bucket_Active.begin(),
@@ -96,11 +99,11 @@ void k_bucket::add_reserve(const std::string remote_ID,
 		}
 	}
 	LOG << "reserve: " << endpoint.IP() << " " << endpoint.port() << " " << remote_ID;
-	Bucket_Reserve.push_back(contact(remote_ID, endpoint));
+	Bucket_Reserve.push_back(contact(endpoint, remote_ID));
 }
 
 void k_bucket::find_node(const std::string & ID_to_find,
-	const mpa::mpint & max_dist, std::map<mpa::mpint, net::endpoint> & hosts)
+	const mpa::mpint & max_dist, std::multimap<mpa::mpint, net::endpoint> & hosts)
 {
 	//calculate distances of all contacts
 	for(std::list<contact>::iterator it_cur = Bucket_Active.begin(),
@@ -115,7 +118,7 @@ void k_bucket::find_node(const std::string & ID_to_find,
 
 	//get rid of all but closest elements
 	while(!hosts.empty() && hosts.size() > protocol_udp::host_list_elements / 2){
-		std::map<mpa::mpint, net::endpoint>::iterator iter = hosts.end();
+		std::multimap<mpa::mpint, net::endpoint>::iterator iter = hosts.end();
 		--iter;
 		hosts.erase(iter);
 	}
@@ -135,7 +138,8 @@ boost::optional<net::endpoint> k_bucket::ping()
 		}
 	}
 
-	//ping active nodes
+	//check if active node needs ping
+	boost::optional<net::endpoint> ep;
 	for(std::list<contact>::iterator it_cur = Bucket_Active.begin(),
 		it_end = Bucket_Active.end(); it_cur != it_end; ++it_cur)
 	{
@@ -144,7 +148,7 @@ boost::optional<net::endpoint> k_bucket::ping()
 		}
 	}
 
-	//ping reserve to try to move from reserve to active if there is space
+	//if there is space ping reserve to try to move from reserve to active
 	unsigned needed = protocol_udp::bucket_size - Bucket_Active.size();
 	for(std::list<contact>::iterator it_cur = Bucket_Reserve.begin();
 		it_cur != Bucket_Reserve.end() && needed; --needed)
@@ -161,21 +165,19 @@ boost::optional<net::endpoint> k_bucket::ping()
 			}
 		}
 	}
-
 	return boost::optional<net::endpoint>();
 }
 
-void k_bucket::pong(const std::string & remote_ID,
-	const net::endpoint & endpoint)
+void k_bucket::recv_pong(const net::endpoint & from, const std::string & remote_ID)
 {
 	//if node active then touch it
 	for(std::list<contact>::iterator it_cur = Bucket_Active.begin(),
 		it_end = Bucket_Active.end(); it_cur != it_end; ++it_cur)
 	{
-		if(it_cur->remote_ID == remote_ID && it_cur->endpoint == endpoint){
+		if(it_cur->remote_ID == remote_ID && it_cur->endpoint == from){
 			it_cur->touch();
 			return;
-		}else if(it_cur->endpoint == endpoint){
+		}else if(it_cur->endpoint == from){
 			LOG << "ID change " << it_cur->remote_ID << " " << remote_ID;
 			return;
 		}
@@ -187,12 +189,11 @@ void k_bucket::pong(const std::string & remote_ID,
 	{
 		//touch if remote_ID not known, or if it's known and didn't change
 		if((it_cur->remote_ID.empty() || it_cur->remote_ID == remote_ID)
-			&& it_cur->endpoint == endpoint)
+			&& it_cur->endpoint == from)
 		{
 			if(Bucket_Active.size() < protocol_udp::bucket_size){
 				LOG << "reserve -> active: " << it_cur->endpoint.IP() << " "
 					<< it_cur->endpoint.port();
-				it_cur->remote_ID = remote_ID;
 				it_cur->touch();
 				Bucket_Active.push_front(*it_cur);
 				Bucket_Reserve.erase(it_cur);

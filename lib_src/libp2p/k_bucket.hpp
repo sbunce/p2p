@@ -16,7 +16,7 @@
 #include <map>
 #include <string>
 
-class k_bucket
+class k_bucket : private boost::noncopyable
 {
 public:
 	/*
@@ -31,14 +31,18 @@ public:
 	ping:
 		Returns a endpoint which needs to be pinged.
 	pong:
-		Called when pong received. Updates last_seen time of a contact. If the
-		contact is in reserve it will be moved to active if there is enough space.
+		Attempts to send ping. Returns true if ping sent.
 	*/
-	void add_reserve(const std::string remote_ID, const net::endpoint & endpoint);
+	void add_reserve(const net::endpoint & endpoint, const std::string remote_ID);
 	void find_node(const std::string & ID_to_find, const mpa::mpint & max_dist,
-		std::map<mpa::mpint, net::endpoint> & hosts);
+		std::multimap<mpa::mpint, net::endpoint> & hosts);
 	boost::optional<net::endpoint> ping();
-	void pong(const std::string & remote_ID, const net::endpoint & endpoint);
+
+	/* Call Backs
+	recv_pong:
+		Called when pong received.
+	*/
+	void recv_pong(const net::endpoint & from, const std::string & remote_ID);
 
 private:
 	class contact
@@ -46,13 +50,13 @@ private:
 	public:
 		//contact is timed out by default
 		contact(
-			const std::string & remote_ID_in,
-			const net::endpoint & endpoint_in
+			const net::endpoint & endpoint_in,
+			const std::string & remote_ID_in
 		);
 		contact(const contact & C);
 
-		std::string remote_ID;
 		const net::endpoint endpoint;
+		const std::string remote_ID;
 
 		/*
 		active_ping:

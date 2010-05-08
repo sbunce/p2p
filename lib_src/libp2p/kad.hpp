@@ -43,37 +43,26 @@ private:
 	find_node_relay:
 		Called as relay job. Starts the find process for a node ID.
 	network_loop:
-		Loop to handle timed events and network events
+		Loop to handle timed events and network events.
+	ping:
+		Ping endpoints in k_route_table which are about to timeout.
 	process_relay_job:
 		Called by network_thread to process relay jobs.
-	send_ping:
-		Pings hosts which are about to timeout.
 	*/
 	void find_node_relay(const std::string ID_to_find,
 		const boost::function<void (const net::endpoint)> call_back);
 	void network_loop();
+	void ping();
 	void process_relay_job();
-	void send_ping();
 
-	/* Receive Functions
-	Called when message received. Function named after message type it handles.
-	Only unusual functions are documented.
-	recv_ping:
-		Received ping.
-	recv_pong:
-		Received pong that's result of pinging contact in k_bucket.
-	recv_pong_bucket_reserve:
-		Received pong that's result of pinging contact in bucket_reserve.
-	recv_pong_unknown_reserve:
-		Received pong that's result of pinging contact in unknown_reserve.
+	/* Receive Call Back
+	Functions named after the message they receive.
 	*/
-	void recv_find_node(const net::endpoint & endpoint,
+	void recv_find_node(const net::endpoint & from,
 		const net::buffer & random, const std::string & remote_ID,
 		const std::string & ID_to_find);
-	void recv_ping(const net::endpoint & endpoint, const net::buffer & random,
+	void recv_ping(const net::endpoint & from, const net::buffer & random,
 		const std::string & remote_ID);
-	void recv_pong(const net::endpoint & endpoint, const std::string & remote_ID);
-	void recv_pong_bucket_reserve(const net::endpoint & endpoint, const std::string & remote_ID,
-		const unsigned expected_bucket_num);
+	void recv_pong(const net::endpoint & from, const std::string & remote_ID);
 };
 #endif

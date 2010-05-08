@@ -30,7 +30,7 @@ public:
 class ping : public base
 {
 public:
-	typedef boost::function<void (const net::endpoint & endpoint,
+	typedef boost::function<void (const net::endpoint & from,
 		const net::buffer & random, const std::string & remote_ID)> handler;
 	ping(handler func_in);
 	virtual bool expect(const net::buffer & recv_buf);
@@ -43,7 +43,7 @@ private:
 class pong : public base
 {
 public:
-	typedef boost::function<void (const net::endpoint & endpoint,
+	typedef boost::function<void (const net::endpoint & from,
 		const std::string & remote_ID)> handler;
 	pong(handler func_in, const net::buffer & random_in);
 	virtual bool expect(const net::buffer & recv_buf);
@@ -57,7 +57,7 @@ private:
 class find_node : public base
 {
 public:
-	typedef boost::function<void (const net::endpoint & endpoint,
+	typedef boost::function<void (const net::endpoint & from,
 		const net::buffer & random, const std::string & remote_ID,
 		const std::string & ID_to_find)> handler;
 	find_node(handler func_in);
@@ -71,7 +71,7 @@ private:
 class host_list : public base
 {
 public:
-	typedef boost::function<void (const net::endpoint & endpoint,
+	typedef boost::function<void (const net::endpoint & from,
 		const std::string & remote_ID, const std::list<net::endpoint> & hosts)> handler;
 	host_list(handler func_in, const net::buffer & random_in);
 	virtual bool expect(const net::buffer & recv_buf);

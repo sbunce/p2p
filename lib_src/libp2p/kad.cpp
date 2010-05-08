@@ -55,7 +55,7 @@ void kad::network_loop()
 		boost::this_thread::interruption_point();
 		if(last_time != std::time(NULL)){
 			//once per second
-			send_ping();
+			ping();
 			last_time = std::time(NULL);
 		}
 		Exchange.tick();
@@ -78,43 +78,43 @@ void kad::process_relay_job()
 	}
 }
 
-void kad::recv_find_node(const net::endpoint & endpoint,
+void kad::recv_find_node(const net::endpoint & from,
 	const net::buffer & random, const std::string & remote_ID,
 	const std::string & ID_to_find)
 {
-	LOG << endpoint.IP() << " " << endpoint.port() << " remote_ID: " << remote_ID
+	LOG << from.IP() << " " << from.port() << " remote_ID: " << remote_ID
 		<< " find: " << ID_to_find;
-	Route_Table.add_reserve(endpoint, remote_ID);
+	Route_Table.add_reserve(from, remote_ID);
 	std::list<net::endpoint> hosts = Route_Table.find_node(remote_ID, ID_to_find);
 	Exchange.send(boost::shared_ptr<message_udp::send::base>(
-		new message_udp::send::host_list(random, local_ID, hosts)), endpoint);
+		new message_udp::send::host_list(random, local_ID, hosts)), from);
 }
 
-void kad::recv_ping(const net::endpoint & endpoint, const net::buffer & random,
-	const std::string & remote_ID)
+void kad::recv_ping(const net::endpoint & from,
+	const net::buffer & random, const std::string & remote_ID)
 {
-	LOG << endpoint.IP() << " " << endpoint.port() << " " << remote_ID;
-	Route_Table.add_reserve(endpoint, remote_ID);
+	LOG << from.IP() << " " << from.port() << " " << remote_ID;
+	Route_Table.add_reserve(from, remote_ID);
 	Exchange.send(boost::shared_ptr<message_udp::send::base>(
-		new message_udp::send::pong(random, local_ID)), endpoint);
+		new message_udp::send::pong(random, local_ID)), from);
 }
 
-void kad::recv_pong(const net::endpoint & endpoint, const std::string & remote_ID)
+void kad::recv_pong(const net::endpoint & from, const std::string & remote_ID)
 {
-	LOG << endpoint.IP() << " " << endpoint.port() << " " << remote_ID;
-	Route_Table.pong(remote_ID, endpoint);
+	LOG << from.IP() << " " << from.port() << " " << remote_ID;
+	Route_Table.recv_pong(from, remote_ID);
 }
 
-void kad::send_ping()
+void kad::ping()
 {
-	boost::optional<net::endpoint> endpoint = Route_Table.ping();
-	if(endpoint){
-		LOG << endpoint->IP() << " " << endpoint->port();
+	boost::optional<net::endpoint> ep = Route_Table.ping();
+	if(ep){
+		LOG << ep->IP() << " " << ep->port();
 		net::buffer random(portable_urandom(4));
 		Exchange.send(boost::shared_ptr<message_udp::send::base>(
-			new message_udp::send::ping(random, local_ID)), *endpoint);
+			new message_udp::send::ping(random, local_ID)), *ep);
 		Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
 			new message_udp::recv::pong(boost::bind(&kad::recv_pong, this, _1, _2), random)),
-			*endpoint);
+			*ep);
 	}
 }

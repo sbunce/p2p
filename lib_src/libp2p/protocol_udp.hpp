@@ -10,7 +10,9 @@ namespace protocol_udp
 const unsigned bucket_count = SHA1::bin_size * 8;
 const unsigned bucket_size = 16;
 const unsigned contact_timeout = bucket_count * bucket_size * 2;
-const unsigned ping_timeout = 60;
+//const unsigned ping_timeout = 60;
+
+const unsigned response_timeout = 60;
 
 //commands and message sizes
 const unsigned char ping = 0;
