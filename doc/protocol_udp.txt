@@ -97,6 +97,8 @@ note: The D bit_field indicates whether the address in the E list is a IPv4
 address or IPv6 address.
 note: There can be a maximum of 8 IPv4 addresses and 8 IPv6 addresses.
 note: The hosts are supposed to be closer to the node we're trying to find.
+note: If a host puts it's own address in the host list it means the host is the
+node we're looking for.
 
 E list element:
 	+---+---+---+---+---+

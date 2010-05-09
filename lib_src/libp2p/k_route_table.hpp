@@ -12,26 +12,24 @@ public:
 
 	/*
 	add_reserve:
-
-
+		Add endpoint to reserve. Nodes that go in to a k_bucket start in reserve.
 	check_timeouts:
 		Check timeouts on all k_buckets.
 	find_node:
-		Returns nodes closest to ID_to_find. The returned list is suitable to pass
-		to the message_udp::send::host_list ctor.
+		Returns endpoints closest to ID_to_find. The returned list is suitable to
+		pass to the message_udp::send::host_list ctor.
 	find_node_local:
-		When we start searching for a node ID we start searching locally.
+		Like the above function but used for local find_node search. This function
+		returns distance in addition to endpoint.
 	ping:
-
+		Returns endpoint to be pinged.
 	recv_pong:
 		Call back used when pinging endpoint in Unknown. This call back determines
 		what bucket the endpoint belongs in.
 	*/
 	void add_reserve(const net::endpoint & endpoint, const std::string & remote_ID = "");
-	std::list<net::endpoint> find_node(const std::string & remote_ID,
-		const std::string & ID_to_find);
-	std::map<mpa::mpint, net::endpoint> find_node_local(const std::string & local_ID,
-		const std::string & ID_to_find);
+	std::list<net::endpoint> find_node(const std::string & ID_to_find);
+	std::multimap<mpa::mpint, net::endpoint> find_node_local(const std::string & ID_to_find);
 	boost::optional<net::endpoint> ping();
 	void recv_pong(const net::endpoint & from, const std::string & remote_ID);
 

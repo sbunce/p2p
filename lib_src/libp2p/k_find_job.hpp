@@ -14,28 +14,35 @@ class k_find_job : private boost::noncopyable
 public:
 	k_find_job(
 		const std::string & ID_to_find_in,
-		const boost::function<void (const net::endpoint)> & call_back_in
+		const boost::function<void (const net::endpoint &, const std::string &)> & call_back_in
 	);
 
+	//ID this job is looking for
 	const std::string ID_to_find;
-	const boost::function<void (const net::endpoint)> call_back;
 
 	/*
+	Called when we find a node that claims to be the node we're looking for.
+	Note: The node might be lying.
+	*/
+	const boost::function<void (const net::endpoint &, const std::string &)> call_back;
+
+	/*
+	add_local:
+		Add the results of a local find_node search where we know distances.
 	find_node:
 		Returns endpoint to send find_node message to.
 	recv_host_list:
 		Called when host list received.
 	*/
+	void add_local(const std::multimap<mpa::mpint, net::endpoint> & hosts);
 	boost::optional<net::endpoint> find_node();
-	void recv_host_list(const net::endpoint & from,
-		const std::list<net::endpoint> & hosts);
+	void recv_host_list(const net::endpoint & from, const std::list<net::endpoint> & hosts);
 
 private:
-	class contact
+	class contact : private boost::noncopyable
 	{
 	public:
 		explicit contact(const net::endpoint & endpoint_in);
-		contact(const contact & C);
 
 		const net::endpoint endpoint;
 
@@ -58,6 +65,6 @@ private:
 	hosts in the list are less. The furthest node in the host_list will be one
 	less, the second furthest will be two less etc.
 	*/
-	std::multimap<mpa::mpint, contact> Store;
+	std::multimap<mpa::mpint, boost::shared_ptr<contact> > Store;
 };
 #endif

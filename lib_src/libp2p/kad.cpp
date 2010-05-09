@@ -20,17 +20,29 @@ kad::~kad()
 	network_thread.join();
 }
 
-void kad::find_node(const std::string & ID_to_find,
-	const boost::function<void (const net::endpoint)> & call_back)
+void kad::find_node_add(const std::string & ID_to_find,
+	const boost::function<void (const net::endpoint &, const std::string &)> & call_back)
 {
 	boost::mutex::scoped_lock lock(relay_job_mutex);
-	relay_job.push_back(boost::bind(&kad::find_node_relay, this, ID_to_find, call_back));
+	relay_job.push_back(boost::bind(&kad::find_node_add_relay, this, ID_to_find, call_back));
 }
 
-void kad::find_node_relay(const std::string ID_to_find,
-	const boost::function<void (const net::endpoint)> call_back)
+void kad::find_node_remove(const std::string & ID)
 {
+	boost::mutex::scoped_lock lock(relay_job_mutex);
+	relay_job.push_back(boost::bind(&kad::find_node_remove_relay, this, ID));
+}
 
+void kad::find_node_add_relay(const std::string ID_to_find,
+	const boost::function<void (const net::endpoint &, const std::string &)> call_back)
+{
+	std::multimap<mpa::mpint, net::endpoint> hosts = Route_Table.find_node_local(ID_to_find);
+	Find.add_local(ID_to_find, hosts, call_back);
+}
+
+void kad::find_node_remove_relay(const std::string ID)
+{
+	Find.remove(ID);
 }
 
 void kad::network_loop()
@@ -55,10 +67,12 @@ void kad::network_loop()
 		boost::this_thread::interruption_point();
 		if(last_time != std::time(NULL)){
 			//once per second
-			ping();
+			send_find_node();
+			send_ping();
 			last_time = std::time(NULL);
 		}
 		Exchange.tick();
+		process_relay_job();
 	}
 }
 
@@ -85,9 +99,17 @@ void kad::recv_find_node(const net::endpoint & from,
 	LOG << from.IP() << " " << from.port() << " remote_ID: " << remote_ID
 		<< " find: " << ID_to_find;
 	Route_Table.add_reserve(from, remote_ID);
-	std::list<net::endpoint> hosts = Route_Table.find_node(remote_ID, ID_to_find);
+	std::list<net::endpoint> hosts = Route_Table.find_node(ID_to_find);
 	Exchange.send(boost::shared_ptr<message_udp::send::base>(
 		new message_udp::send::host_list(random, local_ID, hosts)), from);
+}
+
+void kad::recv_host_list(const net::endpoint & from,
+	const std::string & remote_ID, const std::list<net::endpoint> & hosts,
+	const std::string ID_to_find)
+{
+	LOG << from.IP() << " " << from.port() << " " << remote_ID;
+	Find.recv_host_list(from, hosts, ID_to_find);
 }
 
 void kad::recv_ping(const net::endpoint & from,
@@ -105,7 +127,21 @@ void kad::recv_pong(const net::endpoint & from, const std::string & remote_ID)
 	Route_Table.recv_pong(from, remote_ID);
 }
 
-void kad::ping()
+void kad::send_find_node()
+{
+	boost::optional<std::pair<net::endpoint, std::string> > info = Find.find_node();
+	if(info){
+		LOG << info->first.IP() << " " << info->first.port();
+		net::buffer random(portable_urandom(4));
+		Exchange.send(boost::shared_ptr<message_udp::send::base>(
+			new message_udp::send::find_node(random, local_ID, info->second)), info->first);
+		Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
+			new message_udp::recv::host_list(boost::bind(&kad::recv_host_list,
+			this, _1, _2, _3, info->second), random)), info->first);
+	}
+}
+
+void kad::send_ping()
 {
 	boost::optional<net::endpoint> ep = Route_Table.ping();
 	if(ep){

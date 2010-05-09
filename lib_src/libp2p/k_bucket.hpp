@@ -25,27 +25,20 @@ public:
 		already in the routing table the last_seen time will be updated.
 	find_node:
 		Calculates distance on all nodes in k_bucket and adds them to the hosts
-		container. Highest distance elements are removed from the hosts container
-		such that it is no larger than protocol_udp::k_bucket_size.
-		std::map<distance, std::pair<remote_ID, endpoint> >
+		container.
 	ping:
 		Returns a endpoint which needs to be pinged.
-	pong:
-		Attempts to send ping. Returns true if ping sent.
-	*/
-	void add_reserve(const net::endpoint & endpoint, const std::string remote_ID);
-	void find_node(const std::string & ID_to_find, const mpa::mpint & max_dist,
-		std::multimap<mpa::mpint, net::endpoint> & hosts);
-	boost::optional<net::endpoint> ping();
-
-	/* Call Backs
 	recv_pong:
 		Called when pong received.
 	*/
+	void add_reserve(const net::endpoint & ep, const std::string remote_ID);
+	void find_node(const std::string & ID_to_find, const mpa::mpint & max_dist,
+		std::multimap<mpa::mpint, net::endpoint> & hosts);
+	boost::optional<net::endpoint> ping();
 	void recv_pong(const net::endpoint & from, const std::string & remote_ID);
 
 private:
-	class contact
+	class contact : private boost::noncopyable
 	{
 	public:
 		//contact is timed out by default
@@ -53,7 +46,6 @@ private:
 			const net::endpoint & endpoint_in,
 			const std::string & remote_ID_in
 		);
-		contact(const contact & C);
 
 		const net::endpoint endpoint;
 		const std::string remote_ID;
@@ -61,13 +53,15 @@ private:
 		/*
 		active_ping:
 			Used on contacts in Bucket_Active. Returns true if ping needs to be
-			sent to keep contact from timing out. Returns true 60 seconds before
-			1 hour timeout.
+			sent to keep contact from timing out.
+			Postcondition: Contact will time out in protocol_udp::response_timeout
+				seconds.
 		reserve_ping:
-			Used on contacts in Bucket_Reserve. Returns true if ping can be sent.
-			This is used when we want to try to move a contact from reserve to
-			active.
-			Postcondition: Enables timeout for 60s.
+			Used on contacts in Bucket_Reserve. Returns true if ping needs to be
+			sent. This is used when we want to try to move a contact from reserve
+			to active.
+			Postcondition: Contact will time out in protocol_udp::response_timeout
+				seconds.
 		timed_out:
 			Returns true if contact has timed out and needs to be removed.
 		touch:
@@ -88,7 +82,7 @@ private:
 	Contacts in Bucket_Active are pinged to make sure they're still up. When a
 	active contact times out a replacement will be gotten from reserve.
 	*/
-	std::list<contact> Bucket_Active;
-	std::list<contact> Bucket_Reserve;
+	std::list<boost::shared_ptr<contact> > Bucket_Active;
+	std::list<boost::shared_ptr<contact> > Bucket_Reserve;
 };
 #endif
