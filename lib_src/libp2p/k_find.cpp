@@ -20,6 +20,18 @@ void k_find::add_local(const std::string & ID_to_find,
 	}
 }
 
+void k_find::cancel(const std::string & ID_to_find)
+{
+	for(std::list<boost::shared_ptr<k_find_job> >::iterator it_cur = Job.begin(),
+		it_end = Job.end(); it_cur != it_end; ++it_cur)
+	{
+		if((*it_cur)->ID_to_find == ID_to_find){
+			Job.erase(it_cur);
+			return;
+		}
+	}
+}
+
 boost::optional<std::pair<net::endpoint, std::string> > k_find::find_node()
 {
 	if(!Job.empty()){
@@ -46,26 +58,18 @@ boost::optional<std::pair<net::endpoint, std::string> > k_find::find_node()
 	return boost::optional<std::pair<net::endpoint, std::string> >();
 }
 
-void k_find::recv_host_list(const net::endpoint & from,
+void k_find::recv_host_list(const net::endpoint & from, const std::string & remote_ID,
 	const std::list<net::endpoint> & hosts, const std::string & ID_to_find)
 {
 	for(std::list<boost::shared_ptr<k_find_job> >::iterator it_cur = Job.begin(),
 		it_end = Job.end(); it_cur != it_end; ++it_cur)
 	{
 		if((*it_cur)->ID_to_find == ID_to_find){
-			(*it_cur)->recv_host_list(from, hosts);
-			return;
-		}
-	}
-}
-
-void k_find::remove(const std::string & ID_to_find)
-{
-	for(std::list<boost::shared_ptr<k_find_job> >::iterator it_cur = Job.begin(),
-		it_end = Job.end(); it_cur != it_end; ++it_cur)
-	{
-		if((*it_cur)->ID_to_find == ID_to_find){
-			Job.erase(it_cur);
+			if(remote_ID == ID_to_find){
+				//remote host claims to be node we're looking for
+				(*it_cur)->call_back(from, ID_to_find);
+			}
+			(*it_cur)->recv_host_list(from, remote_ID, hosts, ID_to_find);
 			return;
 		}
 	}

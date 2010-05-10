@@ -23,6 +23,8 @@ public:
 	add_reserve:
 		Add node to be considered for routing table inclusion. If the node is
 		already in the routing table the last_seen time will be updated.
+	exists_active:
+		Returns true if endpoint exists and is active.
 	find_node:
 		Calculates distance on all nodes in k_bucket and adds them to the hosts
 		container.
@@ -32,7 +34,8 @@ public:
 		Called when pong received.
 	*/
 	void add_reserve(const net::endpoint & ep, const std::string remote_ID);
-	void find_node(const std::string & ID_to_find, const mpa::mpint & max_dist,
+	bool exists_active(const net::endpoint & ep);
+	void find_node(const std::string & ID_to_find,
 		std::multimap<mpa::mpint, net::endpoint> & hosts);
 	boost::optional<net::endpoint> ping();
 	void recv_pong(const net::endpoint & from, const std::string & remote_ID);

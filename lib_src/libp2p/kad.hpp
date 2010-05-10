@@ -20,12 +20,19 @@ public:
 	~kad();
 
 	/*
-	find_node_add:
+	find_node:
 		Find a node ID. The call back is used when the node ID is found.
+		Note: The found endpoint may not be right. The call back may be called
+			multiple times for all hosts that claim to have the specified ID. When
+			sure the correct endpoint has been found find_node_cancel() should be
+			called.
+	find_node_cancel:
+		Once sure that the node has been found this function should be called to
+		stop further find_node requests.
 	*/
-	void find_node_add(const std::string & ID_to_find,
+	void find_node(const std::string & ID_to_find,
 		const boost::function<void (const net::endpoint &, const std::string &)> & call_back);
-	void find_node_remove(const std::string & ID);
+	void find_node_cancel(const std::string & ID);
 
 private:
 	boost::thread network_thread;
@@ -49,9 +56,9 @@ private:
 	process_relay_job:
 		Called by network_thread to process relay jobs.
 	*/
-	void find_node_add_relay(const std::string ID_to_find,
+	void find_node_relay(const std::string ID_to_find,
 		const boost::function<void (const net::endpoint &, const std::string &)> call_back);
-	void find_node_remove_relay(const std::string ID);
+	void find_node_cancel_relay(const std::string ID);
 	void network_loop();
 	void process_relay_job();
 

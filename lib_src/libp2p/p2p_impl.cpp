@@ -118,7 +118,7 @@ void p2p_impl::resume()
 	if("22ED3160421A8D3F99CDEBB4BC32A1EEE9C945C1" == db::table::prefs::get_ID()){
 		sleep(5);
 		LOG << "starting find";
-		DHT.find_node_add("FCB579505C98E11CC2940D37C5D8D489CED63998", &func_local::FOUND);
+		DHT.find_node("FCB579505C98E11CC2940D37C5D8D489CED63998", &func_local::FOUND);
 	}
 }
 

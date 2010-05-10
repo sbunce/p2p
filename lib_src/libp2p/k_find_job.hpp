@@ -2,12 +2,16 @@
 #define H_K_FIND_JOB
 
 //custom
+#include "k_func.hpp"
 #include "protocol_udp.hpp"
 
 //include
 #include <boost/utility.hpp>
 #include <mpa.hpp>
 #include <net/net.hpp>
+
+//standard
+#include <algorithm>
 
 class k_find_job : private boost::noncopyable
 {
@@ -17,13 +21,7 @@ public:
 		const boost::function<void (const net::endpoint &, const std::string &)> & call_back_in
 	);
 
-	//ID this job is looking for
 	const std::string ID_to_find;
-
-	/*
-	Called when we find a node that claims to be the node we're looking for.
-	Note: The node might be lying.
-	*/
 	const boost::function<void (const net::endpoint &, const std::string &)> call_back;
 
 	/*
@@ -36,22 +34,18 @@ public:
 	*/
 	void add_local(const std::multimap<mpa::mpint, net::endpoint> & hosts);
 	boost::optional<net::endpoint> find_node();
-	void recv_host_list(const net::endpoint & from, const std::list<net::endpoint> & hosts);
+	void recv_host_list(const net::endpoint & from, const std::string & remote_ID,
+	const std::list<net::endpoint> & hosts, const std::string & ID_to_find);
 
 private:
 	class contact : private boost::noncopyable
 	{
 	public:
 		explicit contact(const net::endpoint & endpoint_in);
-
 		const net::endpoint endpoint;
 
-		/*
-		send:
-			Returns true if find_node should be sent to endpoint.
-		*/
+		//returns true if find_node should be sent to endpoint
 		bool send();
-
 	private:
 		std::time_t time_sent;  //when find_node was last sent
 		bool find_node_sent;    //true if find_node sent and waiting for response
@@ -66,5 +60,8 @@ private:
 	less, the second furthest will be two less etc.
 	*/
 	std::multimap<mpa::mpint, boost::shared_ptr<contact> > Store;
+
+	//memoize endpoints to eliminate duplicate find_node requests
+	std::set<net::endpoint> Memoize;
 };
 #endif

@@ -92,18 +92,28 @@ void k_bucket::add_reserve(const net::endpoint & endpoint, const std::string rem
 	Bucket_Reserve.push_back(boost::shared_ptr<contact>(new contact(endpoint, remote_ID)));
 }
 
+bool k_bucket::exists_active(const net::endpoint & ep)
+{
+	for(std::list<boost::shared_ptr<contact> >::iterator it_cur = Bucket_Active.begin(),
+		it_end = Bucket_Active.end(); it_cur != it_end; ++it_cur)
+	{
+		if((*it_cur)->endpoint == ep){
+			return true;
+		}
+	}
+	return false;
+}
+
 void k_bucket::find_node(const std::string & ID_to_find,
-	const mpa::mpint & max_dist, std::multimap<mpa::mpint, net::endpoint> & hosts)
+	std::multimap<mpa::mpint, net::endpoint> & hosts)
 {
 	//calculate distances of all contacts
 	for(std::list<boost::shared_ptr<contact> >::iterator it_cur = Bucket_Active.begin(),
 		it_end = Bucket_Active.end(); it_cur != it_end; ++it_cur)
 	{
 		mpa::mpint dist = k_func::distance(ID_to_find, (*it_cur)->remote_ID);
-		if(dist <= max_dist){
-			hosts.insert(std::make_pair(k_func::distance(ID_to_find, (*it_cur)->remote_ID),
-				(*it_cur)->endpoint));
-		}
+		hosts.insert(std::make_pair(k_func::distance(ID_to_find, (*it_cur)->remote_ID),
+			(*it_cur)->endpoint));
 	}
 }
 
@@ -188,5 +198,27 @@ void k_bucket::recv_pong(const net::endpoint & from, const std::string & remote_
 			}
 			return;
 		}
+	}
+
+	/*
+	Node not active or in reserve. This is not a pong, but another type of
+	response which counts as a pong.
+	*/
+	if(Bucket_Active.size() < protocol_udp::bucket_size){
+		//add to routing table
+		LOG << "active: " << from.IP() << " " << from.port() << " " << remote_ID;
+		Bucket_Active.push_front(boost::shared_ptr<contact>(new contact(from, remote_ID)));
+	}else{
+		//add to reserve if not already in reserve
+		for(std::list<boost::shared_ptr<contact> >::iterator it_cur = Bucket_Reserve.begin(),
+			it_end = Bucket_Reserve.end(); it_cur != it_end; ++it_cur)
+		{
+			if((*it_cur)->endpoint == from){
+				//endpoint already exists in reserve
+				return;
+			}
+		}
+		LOG << "reserve: " << from.IP() << " " << from.port() << " " << remote_ID;
+		Bucket_Reserve.push_back(boost::shared_ptr<contact>(new contact(from, remote_ID)));
 	}
 }

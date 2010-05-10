@@ -20,14 +20,14 @@ to as alpha. The alpha is unspecified.
 
 Routing Table Updates
 =====================
-A host should only be added to the routing table when we receive a pong message.
-This is to make Sybil attacks more difficult.
+A host should only be added to the routing table when we receive a response
+message. This is to make Sybil attacks more difficult.
 
-Timeouts should only be reset on hosts in the routing table when we receive a
+Timeouts should only be reset on hosts in the routing table when we receive any
 response from them.
 
-Timeouts should NOT be reset when we receive a non-response from the host. If
-this were allowed then anyone could keep a dead entry alive.
+Timeouts should NOT be reset when we receive a non-response from a host. If this
+were allowed then anyone could keep a dead entry alive.
 
 
 Store DOS
@@ -79,6 +79,9 @@ desc: Request for closer nodes.
 	  0   1  ...  4   5  ... 24  25  ... 44
 A = command (base10: 2), B = random bytes, C = node ID of sender, D = ID to find
 
+note: The endpoint this message is from should not be included in the host_list
+response.
+
 expected response: host_list
 ---
 
@@ -96,9 +99,7 @@ D = IP bit_field, E = address list
 note: The D bit_field indicates whether the address in the E list is a IPv4
 address or IPv6 address.
 note: There can be a maximum of 8 IPv4 addresses and 8 IPv6 addresses.
-note: The hosts are supposed to be closer to the node we're trying to find.
-note: If a host puts it's own address in the host list it means the host is the
-node we're looking for.
+note: The nodes are the closest to the ID_to_find that the sender knows of.
 
 E list element:
 	+---+---+---+---+---+

@@ -27,8 +27,9 @@ public:
 		Call back used when pinging endpoint in Unknown. This call back determines
 		what bucket the endpoint belongs in.
 	*/
-	void add_reserve(const net::endpoint & endpoint, const std::string & remote_ID = "");
-	std::list<net::endpoint> find_node(const std::string & ID_to_find);
+	void add_reserve(const net::endpoint & ep, const std::string & remote_ID = "");
+	std::list<net::endpoint> find_node(const net::endpoint & from,
+		const std::string & ID_to_find);
 	std::multimap<mpa::mpint, net::endpoint> find_node_local(const std::string & ID_to_find);
 	boost::optional<net::endpoint> ping();
 	void recv_pong(const net::endpoint & from, const std::string & remote_ID);
