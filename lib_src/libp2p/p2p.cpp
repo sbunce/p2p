@@ -11,6 +11,11 @@ p2p::p2p():
 
 }
 
+unsigned p2p::DHT_count()
+{
+	return P2P_impl->DHT_count();
+}
+
 unsigned p2p::download_rate()
 {
 	return P2P_impl->download_rate();

@@ -1,19 +1,22 @@
 #include "k_route_table.hpp"
 
-k_route_table::k_route_table():
+k_route_table::k_route_table(atomic_int<unsigned> & active_cnt_in):
 	local_ID(db::table::prefs::get_ID())
 {
-
+	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
+		Bucket_4[x].reset(new k_bucket(active_cnt_in));
+		Bucket_6[x].reset(new k_bucket(active_cnt_in));
+	}
 }
 
 void k_route_table::add_reserve(const net::endpoint & ep, const std::string & remote_ID)
 {
 	if(remote_ID.empty()){
 		for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
-			if(Bucket_4[x].exists_active(ep)){
+			if(Bucket_4[x]->exists_active(ep)){
 				return;
 			}
-			if(Bucket_6[x].exists_active(ep)){
+			if(Bucket_6[x]->exists_active(ep)){
 				return;
 			}
 		}
@@ -22,9 +25,9 @@ void k_route_table::add_reserve(const net::endpoint & ep, const std::string & re
 	}else{
 		unsigned bucket_num = k_func::bucket_num(local_ID, remote_ID);
 		if(ep.version() == net::IPv4){
-			Bucket_4[bucket_num].add_reserve(ep, remote_ID);
+			Bucket_4[bucket_num]->add_reserve(ep, remote_ID);
 		}else{
-			Bucket_6[bucket_num].add_reserve(ep, remote_ID);
+			Bucket_6[bucket_num]->add_reserve(ep, remote_ID);
 		}
 	}
 }
@@ -33,19 +36,6 @@ std::list<net::endpoint> k_route_table::find_node(const net::endpoint & from,
 	const std::string & ID_to_find)
 {
 	struct func_local{
-	//remove endpoint the host won't need
-	static void remove_from(const net::endpoint & from,
-		std::multimap<mpa::mpint, net::endpoint> & hosts)
-	{
-		for(std::multimap<mpa::mpint, net::endpoint>::iterator it_cur = hosts.begin(),
-			it_end = hosts.end(); it_cur != it_end; ++it_cur)
-		{
-			if(it_cur->second == from){
-				hosts.erase(it_cur);
-				return;
-			}
-		}
-	}
 	//trim to host_list size
 	static void trim(std::multimap<mpa::mpint, net::endpoint> & hosts)
 	{
@@ -60,11 +50,9 @@ std::list<net::endpoint> k_route_table::find_node(const net::endpoint & from,
 	std::multimap<mpa::mpint, net::endpoint> hosts_4;
 	std::multimap<mpa::mpint, net::endpoint> hosts_6;
 	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
-		Bucket_4[x].find_node(ID_to_find, hosts_4);
-		func_local::remove_from(from, hosts_4);
+		Bucket_4[x]->find_node(from, ID_to_find, hosts_4);
 		func_local::trim(hosts_4);
-		Bucket_6[x].find_node(ID_to_find, hosts_6);
-		func_local::remove_from(from, hosts_6);
+		Bucket_6[x]->find_node(from, ID_to_find, hosts_6);
 		func_local::trim(hosts_6);
 	}
 	//combine IPv4 and IPv6
@@ -87,8 +75,8 @@ std::multimap<mpa::mpint, net::endpoint> k_route_table::find_node_local(
 	std::multimap<mpa::mpint, net::endpoint> hosts_4;
 	std::multimap<mpa::mpint, net::endpoint> hosts_6;
 	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
-		Bucket_4[x].find_node(ID_to_find, hosts_4);
-		Bucket_6[x].find_node(ID_to_find, hosts_6);
+		Bucket_4[x]->find_node(ID_to_find, hosts_4);
+		Bucket_6[x]->find_node(ID_to_find, hosts_6);
 	}
 	//combine IPv4 and IPv6
 	std::multimap<mpa::mpint, net::endpoint> hosts;
@@ -101,17 +89,16 @@ boost::optional<net::endpoint> k_route_table::ping()
 {
 	boost::optional<net::endpoint> ep;
 	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
-		ep = Bucket_4[x].ping();
+		ep = Bucket_4[x]->ping();
 		if(ep){
 			return boost::optional<net::endpoint>(*ep);
 		}
-		ep = Bucket_6[x].ping();
+		ep = Bucket_6[x]->ping();
 		if(ep){
 			return boost::optional<net::endpoint>(*ep);
 		}
 	}
 	if(!Unknown.empty()){
-//DEBUG, totally getting rid of endpoint after one failed ping is not a good idea
 		ep = Unknown.front();
 		Unknown.pop_front();
 		return ep;
@@ -124,8 +111,8 @@ void k_route_table::recv_pong(const net::endpoint & from,
 {
 	unsigned bucket_num = k_func::bucket_num(local_ID, remote_ID);
 	if(from.version() == net::IPv4){
-		Bucket_4[bucket_num].recv_pong(from, remote_ID);
+		Bucket_4[bucket_num]->recv_pong(from, remote_ID);
 	}else{
-		Bucket_6[bucket_num].recv_pong(from, remote_ID);
+		Bucket_6[bucket_num]->recv_pong(from, remote_ID);
 	}
 }

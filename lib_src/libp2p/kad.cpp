@@ -1,7 +1,9 @@
 #include "kad.hpp"
 
 kad::kad():
-	local_ID(db::table::prefs::get_ID())
+	local_ID(db::table::prefs::get_ID()),
+	active_cnt(0),
+	Route_Table(active_cnt)
 {
 	//messages to expect anytime
 	Exchange.expect_anytime(boost::shared_ptr<message_udp::recv::base>(
@@ -18,6 +20,11 @@ kad::~kad()
 {
 	network_thread.interrupt();
 	network_thread.join();
+}
+
+unsigned kad::count()
+{
+	return active_cnt;
 }
 
 void kad::find_node(const std::string & ID_to_find,

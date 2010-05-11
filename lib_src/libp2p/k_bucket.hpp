@@ -6,6 +6,7 @@
 #include "protocol_udp.hpp"
 
 //include
+#include <atomic_int.hpp>
 #include <boost/optional.hpp>
 #include <mpa.hpp>
 #include <net/net.hpp>
@@ -19,15 +20,20 @@
 class k_bucket : private boost::noncopyable
 {
 public:
+	k_bucket(atomic_int<unsigned> & active_cnt_in);
+
 	/*
 	add_reserve:
 		Add node to be considered for routing table inclusion. If the node is
 		already in the routing table the last_seen time will be updated.
 	exists_active:
 		Returns true if endpoint exists and is active.
-	find_node:
+	find_node (two parameters):
 		Calculates distance on all nodes in k_bucket and adds them to the hosts
 		container.
+	find_node (three parameters):
+		Same as find_node (two parameters) but excludes 'from' endpoint from
+		results.
 	ping:
 		Returns a endpoint which needs to be pinged.
 	recv_pong:
@@ -37,10 +43,14 @@ public:
 	bool exists_active(const net::endpoint & ep);
 	void find_node(const std::string & ID_to_find,
 		std::multimap<mpa::mpint, net::endpoint> & hosts);
+	void find_node(const net::endpoint & from, const std::string & ID_to_find,
+		std::multimap<mpa::mpint, net::endpoint> & hosts);
 	boost::optional<net::endpoint> ping();
 	void recv_pong(const net::endpoint & from, const std::string & remote_ID);
 
 private:
+	atomic_int<unsigned> & active_cnt;
+
 	class contact : private boost::noncopyable
 	{
 	public:

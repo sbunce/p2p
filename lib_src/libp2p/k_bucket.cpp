@@ -64,6 +64,12 @@ void k_bucket::contact::touch()
 }
 //END contact
 
+k_bucket::k_bucket(atomic_int<unsigned> & active_cnt_in):
+	active_cnt(active_cnt_in)
+{
+
+}
+
 void k_bucket::add_reserve(const net::endpoint & endpoint, const std::string remote_ID)
 {
 	//if node active then touch it
@@ -107,13 +113,26 @@ bool k_bucket::exists_active(const net::endpoint & ep)
 void k_bucket::find_node(const std::string & ID_to_find,
 	std::multimap<mpa::mpint, net::endpoint> & hosts)
 {
-	//calculate distances of all contacts
 	for(std::list<boost::shared_ptr<contact> >::iterator it_cur = Bucket_Active.begin(),
 		it_end = Bucket_Active.end(); it_cur != it_end; ++it_cur)
 	{
 		mpa::mpint dist = k_func::distance(ID_to_find, (*it_cur)->remote_ID);
 		hosts.insert(std::make_pair(k_func::distance(ID_to_find, (*it_cur)->remote_ID),
 			(*it_cur)->endpoint));
+	}
+}
+
+void k_bucket::find_node(const net::endpoint & from, const std::string & ID_to_find,
+	std::multimap<mpa::mpint, net::endpoint> & hosts)
+{
+	for(std::list<boost::shared_ptr<contact> >::iterator it_cur = Bucket_Active.begin(),
+		it_end = Bucket_Active.end(); it_cur != it_end; ++it_cur)
+	{
+		if((*it_cur)->endpoint != from){
+			mpa::mpint dist = k_func::distance(ID_to_find, (*it_cur)->remote_ID);
+			hosts.insert(std::make_pair(k_func::distance(ID_to_find, (*it_cur)->remote_ID),
+				(*it_cur)->endpoint));
+		}
 	}
 }
 
@@ -130,6 +149,7 @@ boost::optional<net::endpoint> k_bucket::ping()
 	{
 		if((*it_cur)->timed_out()){
 			LOG << "timed out: " << (*it_cur)->endpoint.IP() << " " << (*it_cur)->endpoint.port();
+			--active_cnt;
 			it_cur = Bucket_Active.erase(it_cur);
 		}else{
 			++it_cur;
@@ -192,6 +212,7 @@ void k_bucket::recv_pong(const net::endpoint & from, const std::string & remote_
 			if(Bucket_Active.size() < protocol_udp::bucket_size){
 				LOG << "reserve -> active: " << (*it_cur)->endpoint.IP() << " "
 					<< (*it_cur)->endpoint.port();
+				++active_cnt;
 				(*it_cur)->touch();
 				Bucket_Active.push_front(*it_cur);
 				Bucket_Reserve.erase(it_cur);
@@ -207,6 +228,7 @@ void k_bucket::recv_pong(const net::endpoint & from, const std::string & remote_
 	if(Bucket_Active.size() < protocol_udp::bucket_size){
 		//add to routing table
 		LOG << "active: " << from.IP() << " " << from.port() << " " << remote_ID;
+		++active_cnt;
 		Bucket_Active.push_front(boost::shared_ptr<contact>(new contact(from, remote_ID)));
 	}else{
 		//add to reserve if not already in reserve

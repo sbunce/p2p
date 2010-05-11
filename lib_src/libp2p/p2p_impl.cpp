@@ -20,6 +20,11 @@ p2p_impl::~p2p_impl()
 	resume_thread.join();
 }
 
+unsigned p2p_impl::DHT_count()
+{
+	return DHT.count();
+}
+
 unsigned p2p_impl::download_rate()
 {
 	return Connection_Manager.Proactor.download_rate();

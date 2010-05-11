@@ -58,6 +58,8 @@ public:
 	void transfers(std::vector<p2p::transfer> & T);
 
 	/* Info
+	DHT_count:
+		Returns number of contacts in DHT routing table.
 	download_rate:
 		Returns current download rate (B/s).
 	share_size_bytes:
@@ -67,6 +69,7 @@ public:
 	upload_rate:
 		Returns current upload rate (B/s).
 	*/
+	unsigned DHT_count();
 	unsigned download_rate();
 	boost::uint64_t share_size_bytes();
 	boost::uint64_t share_size_files();

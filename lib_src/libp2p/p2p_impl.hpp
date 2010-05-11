@@ -39,6 +39,7 @@ public:
 	~p2p_impl();
 
 	//documentation for these in p2p.hpp
+	unsigned DHT_count();
 	unsigned download_rate();
 	unsigned get_max_connections();
 	unsigned get_max_download_rate();

@@ -10,6 +10,7 @@
 #include "k_route_table.hpp"
 
 //include
+#include <atomic_int.hpp>
 #include <bit_field.hpp>
 #include <net/net.hpp>
 
@@ -20,6 +21,8 @@ public:
 	~kad();
 
 	/*
+	contacts:
+		Returns number of active contacts in all k_buckets.
 	find_node:
 		Find a node ID. The call back is used when the node ID is found.
 		Note: The found endpoint may not be right. The call back may be called
@@ -30,14 +33,16 @@ public:
 		Once sure that the node has been found this function should be called to
 		stop further find_node requests.
 	*/
+	unsigned count();
 	void find_node(const std::string & ID_to_find,
 		const boost::function<void (const net::endpoint &, const std::string &)> & call_back);
 	void find_node_cancel(const std::string & ID);
 
 private:
 	boost::thread network_thread;
+	const std::string local_ID;      //our node ID
+	atomic_int<unsigned> active_cnt; //number of active contacts in k_buckets
 	exchange_udp Exchange;
-	const std::string local_ID;
 	k_route_table Route_Table;
 	k_find Find;
 

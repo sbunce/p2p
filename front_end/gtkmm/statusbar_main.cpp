@@ -26,7 +26,8 @@ bool statusbar_main::update_status_bar()
 	ss << " DL: " << download_rate_s.str()
 		<< " UL: " << upload_rate_s.str()
 		<< " Share: " << convert::bytes_to_SI(P2P.share_size_bytes())
-		<< " (" << P2P.share_size_files() << " files)";
+		<< " (" << P2P.share_size_files() << " files)"
+		<< " DHT: " << P2P.DHT_count();
 
 	statusbar->pop();
 	statusbar->push(ss.str());

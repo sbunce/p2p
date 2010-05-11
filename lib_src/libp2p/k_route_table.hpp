@@ -5,10 +5,13 @@
 #include "k_bucket.hpp"
 #include "db_all.hpp"
 
+//include
+#include <atomic_int.hpp>
+
 class k_route_table
 {
 public:
-	k_route_table();
+	k_route_table(atomic_int<unsigned> & active_cnt_in);
 
 	/*
 	add_reserve:
@@ -38,8 +41,8 @@ private:
 	const std::string local_ID;
 
 	//k_buckets for IPv4 and IPv6
-	k_bucket Bucket_4[protocol_udp::bucket_count];
-	k_bucket Bucket_6[protocol_udp::bucket_count];
+	boost::scoped_ptr<k_bucket> Bucket_4[protocol_udp::bucket_count];
+	boost::scoped_ptr<k_bucket> Bucket_6[protocol_udp::bucket_count];
 
 	//we don't know what bucket these hosts belong to
 	std::list<net::endpoint> Unknown;
