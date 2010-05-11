@@ -75,7 +75,7 @@ private:
 			to active.
 			Postcondition: Contact will time out in protocol_udp::response_timeout
 				seconds.
-		timed_out:
+		timeout:
 			Returns true if contact has timed out and needs to be removed.
 		touch:
 			Updates last seen time of element.
@@ -83,7 +83,7 @@ private:
 		*/
 		bool active_ping();
 		bool reserve_ping();
-		bool timed_out();
+		bool timeout();
 		void touch();
 
 	private:

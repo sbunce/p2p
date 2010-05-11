@@ -38,28 +38,49 @@ public:
 	const std::list<net::endpoint> & hosts, const std::string & ID_to_find);
 
 private:
+
 	class contact : private boost::noncopyable
 	{
 	public:
 		explicit contact(const net::endpoint & endpoint_in);
 		const net::endpoint endpoint;
 
-		//returns true if find_node should be sent to endpoint
+		/*
+		send:
+			Returns true if find_node should be sent to endpoint.
+		timeout:
+			Returns true if contact has timed out.
+			Postcondition: timed_out() = false. send() can be called.
+		timeout_cnt:
+			Returns number of times the contact has timed out.
+		*/
 		bool send();
+		bool timeout();
+		unsigned timeout_cnt();
+
 	private:
-		std::time_t time_sent;  //when find_node was last sent
-		bool find_node_sent;    //true if find_node sent and waiting for response
-		unsigned find_node_cnt; //number of find_node messages sent
+		std::time_t time_sent; //when find_node was sent
+		bool sent;             //true if find_node sent and waiting for response
+		unsigned _timeout_cnt;
 	};
 
 	/*
-	This container holds hosts to send find_node requests to. It is sorted by
-	distance. We add to this container when we receive a host_list. We take the
-	node ID of the host that sent the host_list and assume the distances of the
-	hosts in the list are less. The furthest node in the host_list will be one
-	less, the second furthest will be two less etc.
+	Sorts contacts by distance. We add to this when we receive a host_list.
+	Note: We don't know the distance of endpoints in a host list so we assume
+		they're one less than the host that sent the host_list.
+	Note: If a contact times out we set it's distance to maximum, effectively
+		deprioritizing it.
 	*/
 	std::multimap<mpa::mpint, boost::shared_ptr<contact> > Store;
+
+	/*
+	After we receive a host_list we add the endpoint which sent it to this
+	container. This container is kept sized to max number of endpoints we will
+	send store messages to.
+	Note: The distance of the endpoint is recalculated because it may not be
+		accurate (see Store documentation).
+	*/
+	std::multimap<mpa::mpint, net::endpoint> Found;
 
 	//memoize endpoints to eliminate duplicate find_node requests
 	std::set<net::endpoint> Memoize;

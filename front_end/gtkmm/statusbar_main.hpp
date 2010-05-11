@@ -11,6 +11,7 @@
 #include <p2p.hpp>
 
 //standard
+#include <iomanip>
 #include <sstream>
 #include <string>
 

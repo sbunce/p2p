@@ -3,28 +3,35 @@
 //BEGIN contact
 k_find_job::contact::contact(const net::endpoint & endpoint_in):
 	endpoint(endpoint_in),
-	find_node_sent(false),
-	find_node_cnt(0)
+	sent(false),
+	_timeout_cnt(0)
 {
 
 }
 
 bool k_find_job::contact::send()
 {
-	/*
-	Send find_node if one hasn't yet been sent. Or send one if the last find_node
-	message timed out. Progressively increase the amount of time between
-	find_node messages when timeouts happen.
-	*/
-	if(!find_node_sent
-		|| std::time(NULL) - time_sent > protocol_udp::response_timeout * find_node_cnt)
-	{
-		find_node_sent = true;
+	if(!sent){
+		sent = true;
 		time_sent = std::time(NULL);
-		++find_node_cnt;
 		return true;
 	}
 	return false;
+}
+
+bool k_find_job::contact::timeout()
+{
+	if(sent && std::time(NULL) - time_sent > protocol_udp::response_timeout){
+		sent = false;
+		++_timeout_cnt;
+		return true;
+	}
+	return false;
+}
+
+unsigned k_find_job::contact::timeout_cnt()
+{
+	return _timeout_cnt;
 }
 //END contact
 
@@ -53,6 +60,32 @@ void k_find_job::add_local(const std::multimap<mpa::mpint, net::endpoint> & host
 
 boost::optional<net::endpoint> k_find_job::find_node()
 {
+	//check timeouts
+	std::list<boost::shared_ptr<contact> > timeout;
+	for(std::multimap<mpa::mpint, boost::shared_ptr<contact> >::iterator
+		it_cur = Store.begin(); it_cur != Store.end();)
+	{
+		if(it_cur->second->timeout()){
+			timeout.push_back(it_cur->second);
+			Store.erase(it_cur++);
+		}else{
+			++it_cur;
+		}
+	}
+	if(!timeout.empty()){
+		//insert timed out contacts at end by setting distance to maximum
+		mpa::mpint max(std::string(SHA1::hex_size, 'F'), 16);
+		for(std::list<boost::shared_ptr<contact> >::iterator it_cur = timeout.begin(),
+			it_end = timeout.end(); it_cur != it_end; ++it_cur)
+		{
+			if((*it_cur)->timeout_cnt() < protocol_udp::retransmit_limit){
+				LOG << "retransmit limit reached " << (*it_cur)->endpoint.IP()
+					<< " " << (*it_cur)->endpoint.port();
+				Store.insert(std::make_pair(max, *it_cur));
+			}
+		}
+	}
+	//check for endpoint to send find_node to
 	for(std::multimap<mpa::mpint, boost::shared_ptr<contact> >::iterator
 		it_cur = Store.begin(), it_end = Store.end(); it_cur != it_end; ++it_cur)
 	{
@@ -66,21 +99,30 @@ boost::optional<net::endpoint> k_find_job::find_node()
 void k_find_job::recv_host_list(const net::endpoint & from, const std::string & remote_ID,
 	const std::list<net::endpoint> & hosts, const std::string & ID_to_find)
 {
-	//erase endpoint that responded to us
+	//calculate distance, previous distance may not be accurate
+	mpa::mpint dist = k_func::distance(remote_ID, ID_to_find);
+
+	//erase endpoint that sent the host_list
 	for(std::multimap<mpa::mpint, boost::shared_ptr<contact> >::iterator
 		it_cur = Store.begin(), it_end = Store.end(); it_cur != it_end; ++it_cur)
 	{
 		if(it_cur->second->endpoint == from){
+			//insert in to Found and trim
+			Found.insert(std::make_pair(dist, from));
+			while(Found.size() > protocol_udp::max_store){
+				std::multimap<mpa::mpint, net::endpoint>::iterator iter = Found.end();
+				--iter;
+				Found.erase(iter);
+			}
 			Store.erase(it_cur);
 			break;
 		}
 	}
 
-	//assume hosts are closer than remote_ID to ID_to_find
-	mpa::mpint dist = k_func::distance(remote_ID, ID_to_find);
+	//we don't know distance of endpoints, assume one less than sender
 	mpa::mpint new_dist = (dist == "0" ? "0" : dist - "1");
 
-	//add closer nodes that we haven't seen before
+	//add contacts
 	for(std::list<net::endpoint>::const_iterator it_cur = hosts.begin(),
 		it_end = hosts.end(); it_cur != it_end; ++it_cur)
 	{

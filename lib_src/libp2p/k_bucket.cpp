@@ -47,7 +47,7 @@ bool k_bucket::contact::reserve_ping()
 	return false;
 }
 
-bool k_bucket::contact::timed_out()
+bool k_bucket::contact::timeout()
 {
 	/*
 	Do not time out connection until we've sent a ping. If multiple pings come
@@ -147,7 +147,7 @@ boost::optional<net::endpoint> k_bucket::ping()
 	for(std::list<boost::shared_ptr<contact> >::iterator
 		it_cur = Bucket_Active.begin(); it_cur != Bucket_Active.end();)
 	{
-		if((*it_cur)->timed_out()){
+		if((*it_cur)->timeout()){
 			LOG << "timed out: " << (*it_cur)->endpoint.IP() << " " << (*it_cur)->endpoint.port();
 			--active_cnt;
 			it_cur = Bucket_Active.erase(it_cur);
@@ -175,7 +175,7 @@ boost::optional<net::endpoint> k_bucket::ping()
 			return boost::optional<net::endpoint>((*it_cur)->endpoint);
 		}else{
 			//reserve contact won't timeout unless it was pinged
-			if((*it_cur)->timed_out()){
+			if((*it_cur)->timeout()){
 				LOG << "timed out: " << (*it_cur)->endpoint.IP() << " " << (*it_cur)->endpoint.port();
 				it_cur = Bucket_Reserve.erase(it_cur);
 			}else{
