@@ -16,35 +16,36 @@
 class k_find_job : private boost::noncopyable
 {
 public:
-	k_find_job(
-		const std::string & ID_to_find_in,
-		const boost::function<void (const net::endpoint &, const std::string &)> & call_back_in
-	);
-
-	const std::string ID_to_find;
-	const boost::function<void (const net::endpoint &, const std::string &)> call_back;
+	k_find_job(const boost::function<void (const net::endpoint &)> & call_back_in);
 
 	/*
-	add_local:
-		Add the results of a local find_node search where we know distances.
+	When a host is found with distance zero this call back is used.
+	Note: This may be called multiple times if multiple hosts claim to be the
+		ID we're looking for.
+	Note: The ID is bound to this function object in k_find.
+	*/
+	const boost::function<void (const net::endpoint &)> call_back;
+
+	/*
+	add:
+		Add endpoint where we know the distance it is from ID to find.
 	find_node:
 		Returns endpoint to send find_node message to.
 	recv_host_list:
-		Called when host list received.
+		Called when host list received. The dist parameter is distance from remote
+		host to ID to find.
 	*/
-	void add_local(const std::multimap<mpa::mpint, net::endpoint> & hosts);
+	void add(const mpa::mpint & dist, const net::endpoint & ep);
 	boost::optional<net::endpoint> find_node();
-	void recv_host_list(const net::endpoint & from, const std::string & remote_ID,
-	const std::list<net::endpoint> & hosts, const std::string & ID_to_find);
+	void recv_host_list(const net::endpoint & from,
+		const std::list<net::endpoint> & hosts, const mpa::mpint & dist);
 
 private:
-
 	class contact : private boost::noncopyable
 	{
 	public:
 		explicit contact(const net::endpoint & endpoint_in);
 		const net::endpoint endpoint;
-
 		/*
 		send:
 			Returns true if find_node should be sent to endpoint.

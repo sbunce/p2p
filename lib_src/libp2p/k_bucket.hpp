@@ -20,7 +20,10 @@
 class k_bucket : private boost::noncopyable
 {
 public:
-	k_bucket(atomic_int<unsigned> & active_cnt_in);
+	k_bucket(
+		atomic_int<unsigned> & active_cnt_in,
+		const boost::function<void (const net::endpoint &, const std::string &)> & route_table_call_back_in
+	);
 
 	/*
 	add_reserve:
@@ -50,6 +53,7 @@ public:
 
 private:
 	atomic_int<unsigned> & active_cnt;
+	const boost::function<void (const net::endpoint &, const std::string &)> route_table_call_back;
 
 	class contact : private boost::noncopyable
 	{

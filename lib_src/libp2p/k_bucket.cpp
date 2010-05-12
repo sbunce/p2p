@@ -64,8 +64,12 @@ void k_bucket::contact::touch()
 }
 //END contact
 
-k_bucket::k_bucket(atomic_int<unsigned> & active_cnt_in):
-	active_cnt(active_cnt_in)
+k_bucket::k_bucket(
+	atomic_int<unsigned> & active_cnt_in,
+	const boost::function<void (const net::endpoint &, const std::string &)> & route_table_call_back_in
+):
+	active_cnt(active_cnt_in),
+	route_table_call_back(route_table_call_back_in)
 {
 
 }
@@ -216,6 +220,7 @@ void k_bucket::recv_pong(const net::endpoint & from, const std::string & remote_
 				(*it_cur)->touch();
 				Bucket_Active.push_front(*it_cur);
 				Bucket_Reserve.erase(it_cur);
+				route_table_call_back(from, remote_ID);
 			}
 			return;
 		}
@@ -230,6 +235,7 @@ void k_bucket::recv_pong(const net::endpoint & from, const std::string & remote_
 		LOG << "active: " << from.IP() << " " << from.port() << " " << remote_ID;
 		++active_cnt;
 		Bucket_Active.push_front(boost::shared_ptr<contact>(new contact(from, remote_ID)));
+		route_table_call_back(from, remote_ID);
 	}else{
 		//add to reserve if not already in reserve
 		for(std::list<boost::shared_ptr<contact> >::iterator it_cur = Bucket_Reserve.begin(),

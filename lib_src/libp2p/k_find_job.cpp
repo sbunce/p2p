@@ -36,25 +36,18 @@ unsigned k_find_job::contact::timeout_cnt()
 //END contact
 
 k_find_job::k_find_job(
-	const std::string & ID_to_find_in,
-	const boost::function<void (const net::endpoint &, const std::string &)> & call_back_in
+	const boost::function<void (const net::endpoint &)> & call_back_in
 ):
-	ID_to_find(ID_to_find_in),
 	call_back(call_back_in)
 {
 	assert(call_back);
 }
 
-void k_find_job::add_local(const std::multimap<mpa::mpint, net::endpoint> & hosts)
+void k_find_job::add(const mpa::mpint & dist, const net::endpoint & ep)
 {
-	for(std::multimap<mpa::mpint, net::endpoint>::const_iterator
-		it_cur = hosts.begin(), it_end = hosts.end(); it_cur != it_end; ++it_cur)
-	{
-		if(Memoize.find(it_cur->second) == Memoize.end()){
-			Memoize.insert(it_cur->second);
-			Store.insert(std::make_pair(it_cur->first,
-				boost::shared_ptr<contact>(new contact(it_cur->second))));
-		}
+	if(Memoize.find(ep) == Memoize.end()){
+		Memoize.insert(ep);
+		Store.insert(std::make_pair(dist, boost::shared_ptr<contact>(new contact(ep))));
 	}
 }
 
@@ -96,18 +89,18 @@ boost::optional<net::endpoint> k_find_job::find_node()
 	return boost::optional<net::endpoint>();
 }
 
-void k_find_job::recv_host_list(const net::endpoint & from, const std::string & remote_ID,
-	const std::list<net::endpoint> & hosts, const std::string & ID_to_find)
+void k_find_job::recv_host_list(const net::endpoint & from,
+	const std::list<net::endpoint> & hosts, const mpa::mpint & dist)
 {
-	//calculate distance, previous distance may not be accurate
-	mpa::mpint dist = k_func::distance(remote_ID, ID_to_find);
-
-	//erase endpoint that sent the host_list
+	if(dist == "0"){
+		//remote host claims to be node we're looking for
+		call_back(from);
+	}
+	//erase endpoint that sent host_list and add it to found collection
 	for(std::multimap<mpa::mpint, boost::shared_ptr<contact> >::iterator
 		it_cur = Store.begin(), it_end = Store.end(); it_cur != it_end; ++it_cur)
 	{
 		if(it_cur->second->endpoint == from){
-			//insert in to Found and trim
 			Found.insert(std::make_pair(dist, from));
 			while(Found.size() > protocol_udp::max_store){
 				std::multimap<mpa::mpint, net::endpoint>::iterator iter = Found.end();
@@ -118,18 +111,14 @@ void k_find_job::recv_host_list(const net::endpoint & from, const std::string & 
 			break;
 		}
 	}
-
-	//we don't know distance of endpoints, assume one less than sender
+	/*
+	Add endpoints that remote host sent. We don't know the distance of the
+	endpoints to the ID to find so we assume they're one closer.
+	*/
 	mpa::mpint new_dist = (dist == "0" ? "0" : dist - "1");
-
-	//add contacts
 	for(std::list<net::endpoint>::const_iterator it_cur = hosts.begin(),
 		it_end = hosts.end(); it_cur != it_end; ++it_cur)
 	{
-		if(Memoize.find(*it_cur) == Memoize.end()){
-			Memoize.insert(*it_cur);
-			Store.insert(std::make_pair(new_dist, boost::shared_ptr<contact>(
-				new contact(*it_cur))));
-		}
+		add(new_dist, *it_cur);
 	}
 }

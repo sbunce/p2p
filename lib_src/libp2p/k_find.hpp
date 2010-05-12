@@ -7,14 +7,25 @@
 class k_find : private boost::noncopyable
 {
 public:
-	/*
-	add_local:
-		Add a find job, or add endpoints. The map maps distance to endpoint. This
-		function adds the result of a local search where we know the distances.
-		Optionally a call_back can be specified. If a call_back is not specified
-		then a job won't be added if one doesn't already exist.
-	cancel:
+	/* Add or Cancel Job
+	add_job:
+		Add a find job, or if job already exists add endpoints. The map maps
+		distance to endpoint. This function adds the result of a local search
+		where we know the distances. Optionally a call_back can be specified. If a
+		call_back is not specified then a job won't be added if one doesn't
+		already exist.
+	cancel_job:
 		Stop looking for the specified node ID.
+	*/
+	void add_job(const std::string & ID_to_find,
+		const std::multimap<mpa::mpint, net::endpoint> & hosts,
+		const boost::function<void (const net::endpoint &, const std::string)> & call_back);
+	void cancel_job(const std::string & ID_to_find);
+
+	/*
+	add_to_all:
+		Add host for consideration to all find jobs. This is called when a new
+		contact is added to a k_bucket.
 	find_node:
 		Returns std::pair<endpoint, ID_to_find> if find_node message needs to be
 		sent.
@@ -22,17 +33,16 @@ public:
 		Called when host list received.
 		Note: ID is the ID returned from find_node().
 	*/
-	void add_local(const std::string & ID_to_find,
-		const std::multimap<mpa::mpint, net::endpoint> & hosts,
-		const boost::function<void (const net::endpoint &, const std::string &)> & call_back
-			= boost::function<void (const net::endpoint &, const std::string &)>());
-	void cancel(const std::string & ID_to_find);
+	void add_to_all(const net::endpoint & ep, const std::string & remote_ID);
 	boost::optional<std::pair<net::endpoint, std::string> > find_node();
 	void recv_host_list(const net::endpoint & from, const std::string & remote_ID,
 		const std::list<net::endpoint> & hosts, const std::string & ID_to_find);
 
 private:
-	//jobs to find various node IDs
-	std::list<boost::shared_ptr<k_find_job> > Job;
+	//maps ID_to_find to find job
+	std::map<std::string, boost::shared_ptr<k_find_job> > Job;
+
+	//last ID serviced, used to rotate through jobs
+	std::string last_job;
 };
 #endif

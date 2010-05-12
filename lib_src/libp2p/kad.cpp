@@ -3,7 +3,7 @@
 kad::kad():
 	local_ID(db::table::prefs::get_ID()),
 	active_cnt(0),
-	Route_Table(active_cnt)
+	Route_Table(active_cnt, boost::bind(&kad::route_table_call_back, this, _1, _2))
 {
 	//messages to expect anytime
 	Exchange.expect_anytime(boost::shared_ptr<message_udp::recv::base>(
@@ -20,6 +20,12 @@ kad::~kad()
 {
 	network_thread.interrupt();
 	network_thread.join();
+}
+
+void kad::route_table_call_back(const net::endpoint & ep, const std::string & remote_ID)
+{
+	LOG << ep.IP() << " " << ep.port() << " " << remote_ID;
+	Find.add_to_all(ep, remote_ID);
 }
 
 unsigned kad::count()
@@ -44,12 +50,12 @@ void kad::find_node_relay(const std::string ID_to_find,
 	const boost::function<void (const net::endpoint &, const std::string &)> call_back)
 {
 	std::multimap<mpa::mpint, net::endpoint> hosts = Route_Table.find_node_local(ID_to_find);
-	Find.add_local(ID_to_find, hosts, call_back);
+	Find.add_job(ID_to_find, hosts, call_back);
 }
 
 void kad::find_node_cancel_relay(const std::string ID)
 {
-	Find.cancel(ID);
+	Find.cancel_job(ID);
 }
 
 void kad::network_loop()
@@ -106,9 +112,6 @@ void kad::recv_find_node(const net::endpoint & from,
 	LOG << from.IP() << " " << from.port() << " remote_ID: " << remote_ID
 		<< " find: " << ID_to_find;
 	Route_Table.add_reserve(from, remote_ID);
-
-//DEBUG, don't send from to from
-
 	std::list<net::endpoint> hosts;
 	hosts = Route_Table.find_node(from, ID_to_find);
 	Exchange.send(boost::shared_ptr<message_udp::send::base>(

@@ -60,12 +60,15 @@ private:
 		Loop to handle timed events and network events.
 	process_relay_job:
 		Called by network_thread to process relay jobs.
+	route_table_call_back:
+		Called when active contact added to the routing table.
 	*/
 	void find_node_relay(const std::string ID_to_find,
 		const boost::function<void (const net::endpoint &, const std::string &)> call_back);
 	void find_node_cancel_relay(const std::string ID);
 	void network_loop();
 	void process_relay_job();
+	void route_table_call_back(const net::endpoint & ep, const std::string & remote_ID);
 
 	/* Timed Functions
 	Called once per second by network_thread.

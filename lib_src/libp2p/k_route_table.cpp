@@ -1,11 +1,14 @@
 #include "k_route_table.hpp"
 
-k_route_table::k_route_table(atomic_int<unsigned> & active_cnt_in):
+k_route_table::k_route_table(
+	atomic_int<unsigned> & active_cnt,
+	const boost::function<void (const net::endpoint &, const std::string &)> & route_table_call_back
+):
 	local_ID(db::table::prefs::get_ID())
 {
 	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
-		Bucket_4[x].reset(new k_bucket(active_cnt_in));
-		Bucket_6[x].reset(new k_bucket(active_cnt_in));
+		Bucket_4[x].reset(new k_bucket(active_cnt, route_table_call_back));
+		Bucket_6[x].reset(new k_bucket(active_cnt, route_table_call_back));
 	}
 }
 

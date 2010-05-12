@@ -11,7 +11,16 @@
 class k_route_table
 {
 public:
-	k_route_table(atomic_int<unsigned> & active_cnt_in);
+	/*
+	active_cnt:
+		Count of how many active contacts exist in k_buckets.
+	route_table_call_back:
+		Called back whenever a active node added.
+	*/
+	k_route_table(
+		atomic_int<unsigned> & active_cnt,
+		const boost::function<void (const net::endpoint &, const std::string &)> & route_table_call_back
+	);
 
 	/*
 	add_reserve:

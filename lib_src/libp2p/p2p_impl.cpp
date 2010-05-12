@@ -115,13 +115,12 @@ void p2p_impl::resume()
 
 //DEBUG, test find
 	struct func_local{
-	static void FOUND(const net::endpoint & ep, const std::string & s)
+	static void FOUND(const net::endpoint & ep, const std::string s)
 	{
 		LOG << "found: \"" << s << "\" at " << ep.IP() << " " << ep.port();
 	}
 	};
 	if("22ED3160421A8D3F99CDEBB4BC32A1EEE9C945C1" == db::table::prefs::get_ID()){
-		sleep(5);
 		LOG << "starting find";
 		DHT.find_node("FCB579505C98E11CC2940D37C5D8D489CED63998", &func_local::FOUND);
 	}
