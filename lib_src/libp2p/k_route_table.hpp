@@ -8,6 +8,9 @@
 //include
 #include <atomic_int.hpp>
 
+//standard
+#include <algorithm>
+
 class k_route_table
 {
 public:
@@ -54,6 +57,6 @@ private:
 	boost::scoped_ptr<k_bucket> Bucket_6[protocol_udp::bucket_count];
 
 	//we don't know what bucket these hosts belong to
-	std::list<net::endpoint> Unknown;
+	std::set<net::endpoint> Unknown;
 };
 #endif

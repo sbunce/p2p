@@ -16,20 +16,24 @@ void k_route_table::add_reserve(const net::endpoint & ep, const std::string & re
 {
 	if(remote_ID.empty()){
 		for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
-			if(Bucket_4[x]->exists_active(ep)){
+			if(Bucket_4[x]->exists(ep)){
 				return;
 			}
-			if(Bucket_6[x]->exists_active(ep)){
+			if(Bucket_6[x]->exists(ep)){
 				return;
 			}
 		}
+		if(Unknown.find(ep) != Unknown.end()){
+			return;
+		}
 		LOG << "add unknown reserve: " << ep.IP() << " " << ep.port();
-		Unknown.push_back(ep);
+		Unknown.insert(ep);
 	}else{
+		Unknown.erase(ep);
 		unsigned bucket_num = k_func::bucket_num(local_ID, remote_ID);
-		if(ep.version() == net::IPv4){
+		if(ep.version() == net::IPv4 && !Bucket_4[bucket_num]->exists(ep)){
 			Bucket_4[bucket_num]->add_reserve(ep, remote_ID);
-		}else{
+		}else if(!Bucket_6[bucket_num]->exists(ep)){
 			Bucket_6[bucket_num]->add_reserve(ep, remote_ID);
 		}
 	}
@@ -102,8 +106,9 @@ boost::optional<net::endpoint> k_route_table::ping()
 		}
 	}
 	if(!Unknown.empty()){
-		ep = Unknown.front();
-		Unknown.pop_front();
+//DEBUG, needs to be randomized
+		ep = *Unknown.begin();
+		Unknown.erase(Unknown.begin());
 		return ep;
 	}
 	return boost::optional<net::endpoint>();

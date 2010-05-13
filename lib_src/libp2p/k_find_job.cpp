@@ -1,19 +1,24 @@
 #include "k_find_job.hpp"
 
 //BEGIN contact
-k_find_job::contact::contact(const net::endpoint & endpoint_in):
+k_find_job::contact::contact(
+	const net::endpoint & endpoint_in,
+	const unsigned delay_in
+):
 	endpoint(endpoint_in),
+	time(std::time(NULL)),
+	delay(delay_in),
 	sent(false),
-	_timeout_cnt(0)
+	timeout_cnt(0)
 {
 
 }
 
 bool k_find_job::contact::send()
 {
-	if(!sent){
+	if(!sent && std::time(NULL) - time >= delay){
 		sent = true;
-		time_sent = std::time(NULL);
+		time = std::time(NULL);
 		return true;
 	}
 	return false;
@@ -21,17 +26,19 @@ bool k_find_job::contact::send()
 
 bool k_find_job::contact::timeout()
 {
-	if(sent && std::time(NULL) - time_sent > protocol_udp::response_timeout){
+	if(sent && std::time(NULL) - time > protocol_udp::response_timeout){
+		time = std::time(NULL);
+		delay = 0;
 		sent = false;
-		++_timeout_cnt;
+		++timeout_cnt;
 		return true;
 	}
 	return false;
 }
 
-unsigned k_find_job::contact::timeout_cnt()
+unsigned k_find_job::contact::timeout_count()
 {
-	return _timeout_cnt;
+	return timeout_cnt;
 }
 //END contact
 
@@ -51,7 +58,22 @@ void k_find_job::add(const mpa::mpint & dist, const net::endpoint & ep)
 	}
 }
 
-boost::optional<net::endpoint> k_find_job::find_node()
+void k_find_job::add_initial(const std::multimap<mpa::mpint, net::endpoint> & hosts)
+{
+	assert(Memoize.empty());
+	unsigned delay = 10;
+	for(std::multimap<mpa::mpint, net::endpoint>::const_iterator
+		it_cur = hosts.begin(), it_end = hosts.end(); it_cur != it_end; ++it_cur)
+	{
+		if(Memoize.find(it_cur->second) == Memoize.end()){
+			Memoize.insert(it_cur->second);
+			Store.insert(std::make_pair(it_cur->first,
+				boost::shared_ptr<contact>(new contact(it_cur->second, delay++))));
+		}
+	}
+}
+
+std::list<net::endpoint> k_find_job::find_node()
 {
 	//check timeouts
 	std::list<boost::shared_ptr<contact> > timeout;
@@ -71,7 +93,7 @@ boost::optional<net::endpoint> k_find_job::find_node()
 		for(std::list<boost::shared_ptr<contact> >::iterator it_cur = timeout.begin(),
 			it_end = timeout.end(); it_cur != it_end; ++it_cur)
 		{
-			if((*it_cur)->timeout_cnt() < protocol_udp::retransmit_limit){
+			if((*it_cur)->timeout_count() < protocol_udp::retransmit_limit){
 				LOG << "retransmit limit reached " << (*it_cur)->endpoint.IP()
 					<< " " << (*it_cur)->endpoint.port();
 				Store.insert(std::make_pair(max, *it_cur));
@@ -79,14 +101,15 @@ boost::optional<net::endpoint> k_find_job::find_node()
 		}
 	}
 	//check for endpoint to send find_node to
+	std::list<net::endpoint> jobs;
 	for(std::multimap<mpa::mpint, boost::shared_ptr<contact> >::iterator
 		it_cur = Store.begin(), it_end = Store.end(); it_cur != it_end; ++it_cur)
 	{
 		if(it_cur->second->send()){
-			return boost::optional<net::endpoint>(it_cur->second->endpoint);
+			jobs.push_back(it_cur->second->endpoint);
 		}
 	}
-	return boost::optional<net::endpoint>();
+	return jobs;
 }
 
 void k_find_job::recv_host_list(const net::endpoint & from,

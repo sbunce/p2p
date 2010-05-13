@@ -149,15 +149,17 @@ void kad::recv_pong(const net::endpoint & from, const std::string & remote_ID)
 
 void kad::send_find_node()
 {
-	boost::optional<std::pair<net::endpoint, std::string> > info = Find.find_node();
-	if(info){
-		LOG << info->first.IP() << " " << info->first.port();
+	std::list<std::pair<net::endpoint, std::string> > jobs = Find.find_node();
+	for(std::list<std::pair<net::endpoint, std::string> >::iterator
+		it_cur = jobs.begin(), it_end = jobs.end(); it_cur != it_end; ++it_cur)
+	{
+		LOG << it_cur->first.IP() << " " << it_cur->first.port();
 		net::buffer random(portable_urandom(4));
 		Exchange.send(boost::shared_ptr<message_udp::send::base>(
-			new message_udp::send::find_node(random, local_ID, info->second)), info->first);
+			new message_udp::send::find_node(random, local_ID, it_cur->second)), it_cur->first);
 		Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
 			new message_udp::recv::host_list(boost::bind(&kad::recv_host_list,
-			this, _1, _2, _3, info->second), random)), info->first);
+			this, _1, _2, _3, it_cur->second), random)), it_cur->first);
 	}
 }
 

@@ -7,13 +7,13 @@
 class k_find : private boost::noncopyable
 {
 public:
-	/* Add or Cancel Job
+	/* Add or Cancel Jobs
 	add_job:
-		Add a find job, or if job already exists add endpoints. The map maps
-		distance to endpoint. This function adds the result of a local search
-		where we know the distances. Optionally a call_back can be specified. If a
-		call_back is not specified then a job won't be added if one doesn't
-		already exist.
+		Add a find job. If a find job already exists this function does nothing.
+		The call_back is called when a host claiming to have the specified ID is
+		found.
+		Note: The call_back may be used multiple times if multiple hosts claim to
+			have the specified node ID.
 	cancel_job:
 		Stop looking for the specified node ID.
 	*/
@@ -34,13 +34,13 @@ public:
 		Note: ID is the ID returned from find_node().
 	*/
 	void add_to_all(const net::endpoint & ep, const std::string & remote_ID);
-	boost::optional<std::pair<net::endpoint, std::string> > find_node();
+	std::list<std::pair<net::endpoint, std::string> > find_node();
 	void recv_host_list(const net::endpoint & from, const std::string & remote_ID,
 		const std::list<net::endpoint> & hosts, const std::string & ID_to_find);
 
 private:
 	//maps ID_to_find to find job
-	std::map<std::string, boost::shared_ptr<k_find_job> > Job;
+	std::map<std::string, boost::shared_ptr<k_find_job> > Jobs;
 
 	//last ID serviced, used to rotate through jobs
 	std::string last_job;
