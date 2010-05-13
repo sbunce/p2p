@@ -18,7 +18,7 @@ public:
 	void seed()
 	{
 		unsigned char buf[max_seed];
-		portable_urandom(buf, max_seed, NULL);
+		random::urandom(buf, max_seed);
 		seed(buf, max_seed);
 	}
 

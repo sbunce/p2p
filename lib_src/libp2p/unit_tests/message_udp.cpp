@@ -6,7 +6,7 @@
 #include <random.hpp>
 
 int fail(0);
-const net::buffer test_random(portable_urandom(4));
+const net::buffer test_random(random::urandom(4));
 const std::string test_ID("0123456789012345678901234567890123456789");
 boost::shared_ptr<net::endpoint> endpoint;
 

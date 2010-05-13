@@ -154,7 +154,7 @@ void kad::send_find_node()
 		it_cur = jobs.begin(), it_end = jobs.end(); it_cur != it_end; ++it_cur)
 	{
 		LOG << it_cur->first.IP() << " " << it_cur->first.port();
-		net::buffer random(portable_urandom(4));
+		net::buffer random(random::urandom(4));
 		Exchange.send(boost::shared_ptr<message_udp::send::base>(
 			new message_udp::send::find_node(random, local_ID, it_cur->second)), it_cur->first);
 		Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
@@ -168,7 +168,7 @@ void kad::send_ping()
 	boost::optional<net::endpoint> ep = Route_Table.ping();
 	if(ep){
 		LOG << ep->IP() << " " << ep->port();
-		net::buffer random(portable_urandom(4));
+		net::buffer random(random::urandom(4));
 		Exchange.send(boost::shared_ptr<message_udp::send::base>(
 			new message_udp::send::ping(random, local_ID)), *ep);
 		Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(

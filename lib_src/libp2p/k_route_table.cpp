@@ -106,9 +106,12 @@ boost::optional<net::endpoint> k_route_table::ping()
 		}
 	}
 	if(!Unknown.empty()){
-//DEBUG, needs to be randomized
-		ep = *Unknown.begin();
-		Unknown.erase(Unknown.begin());
+		//ping random endpoint
+		boost::uint64_t num = random::roll(Unknown.size());
+		std::set<net::endpoint>::iterator it = Unknown.begin();
+		while(num--){ ++it; }
+		ep = *it;
+		Unknown.erase(it);
 		return ep;
 	}
 	return boost::optional<net::endpoint>();

@@ -594,10 +594,10 @@ mpa::mpint mpa::random_prime(const std::size_t bytes)
 	if((err = mp_prime_random_ex(
 		tmp.data.get(),
 		mp_prime_rabin_miller_trials(bytes * 8),
-		bytes * 8,         //size (bits) of prime to generate
-		0,                 //optional flags
-		&portable_urandom, //random byte source
-		NULL               //optional void * passed to PRNG
+		bytes * 8,        //size (bits) of prime to generate
+		0,                //optional flags
+		&random::urandom, //random byte source
+		NULL              //optional void * passed to PRNG
 	)) != MP_OKAY)
 	{
 		throw ::exception(err);
@@ -611,7 +611,7 @@ mpa::mpint mpa::random(const int bytes)
 	if(buf == NULL){
 		throw ::exception(MP_MEM);
 	}
-	portable_urandom(buf, bytes);
+	random::urandom(buf, bytes);
 	mpint tmp(buf, bytes);
 	delete[] buf;
 	return tmp;

@@ -2,6 +2,7 @@
 #define H_RANDOM
 
 //include
+#include <boost/cstdint.hpp>
 #include <logger.hpp>
 #include <net/net.hpp>
 
@@ -18,9 +19,14 @@
 	#include <wincrypt.h>
 #endif
 
+namespace{
+namespace random{
+
 //tommath requires this function signature
-static int portable_urandom(unsigned char * buf, int size, void * data = NULL)
+int urandom(unsigned char * buf, int size, void * data = NULL)
 {
+	assert(buf);
+	assert(size >= 0);
 #ifdef _WIN32
 	HCRYPTPROV hProvider = 0;
 	if(CryptAcquireContextW(&hProvider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)){
@@ -43,11 +49,40 @@ static int portable_urandom(unsigned char * buf, int size, void * data = NULL)
 	return size;
 }
 
-static net::buffer portable_urandom(const int size)
+//returns random bytes of specified size
+net::buffer urandom(const int size)
 {
+	assert(size >= 0);
 	net::buffer buf;
 	buf.resize(size);
-	portable_urandom(buf.data(), size, NULL);
+	urandom(buf.data(), size);
 	return buf;
 }
+
+boost::uint64_t urandom()
+{
+	union{
+		boost::uint64_t n;
+		unsigned char b[sizeof(boost::uint64_t)];
+	}tmp;
+	urandom(tmp.b, sizeof(boost::uint64_t));
+	return tmp.n;
+}
+
+//returns number between beg, and end - 1
+boost::uint64_t roll(const boost::uint64_t beg, const boost::uint64_t end)
+{
+	assert(beg < end);
+	assert(beg + end > beg);
+	return (urandom() % (end - beg)) + beg;
+}
+
+//returns number between 0 and end - 1
+boost::uint64_t roll(const boost::uint64_t end)
+{
+	return roll(0, end);
+}
+
+}//end of namespace random
+}//end of unnamed namespace
 #endif
