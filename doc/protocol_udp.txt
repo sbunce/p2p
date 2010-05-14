@@ -111,7 +111,47 @@ A = address, B = port
 note: If IPv4 then x=3. If IPv6 then x=15.
 ---
 
+//IMPLEMENT NEXT
+---
+name: store_node
+desc: Store a mapping from node ID to address.
+	+---+---+---+---+---+---+---+
+	| A |     B     |     C     |
+	+---+---+---+---+---+---+---+
+	  0   1  ...  4   5  ... 24
+A = command (base10: 4), B = random bytes from a pong in the last 4 minutes,
+C = node ID of sender
 
+note: If B is needed a ping should be sent.
+---
+
+
+
+//UNIMPLEMENTED
+---
+name: store_file
+desc: Store a mapping from node ID to file hash.
+	+---+---+---+---+---+---+---+---+---+---+
+	| A |     B     |     C     |     D     |
+	+---+---+---+---+---+---+---+---+---+---+
+	  0   1  ...  4   5  ... 24  25  ... 44
+A = command (base10: 5), B = random bytes from a pong in the last 4 minutes,
+C = node ID of sender, D = file hash
+
+note: If B is needed a ping should be sent.
+---
+
+---
+name: query_file
+desc: Request IDs of nodes that have the specified file.
+	+---+---+---+---+---+---+---+---+---+---+
+	| A |     B     |     C     |     D     |
+	+---+---+---+---+---+---+---+---+---+---+
+	  0   1  ...  4   5  ... 24  25  ... 44
+A = command (base10: 6), B = random bytes, C = node ID of sender, D = file hash
+
+expected response: node_list
+---
 
 ---
 name: node_list
@@ -130,42 +170,4 @@ A C list element:
 A = node ID that has file
 
 note: The max size of the C list is 25 elements.
----
-
----
-name: store_file
-desc: Store a mapping from node ID to file hash.
-	+---+---+---+---+---+---+---+---+---+---+
-	| A |     B     |     C     |     D     |
-	+---+---+---+---+---+---+---+---+---+---+
-	  0   1  ...  4   5  ... 24  25  ... 44
-A = command (base10: 5), B = random bytes from a pong in the last 4 minutes,
-C = node ID of sender, D = file hash
-
-note: If B is needed a ping should be sent.
----
-
----
-name: store_node
-desc: Store a mapping from node ID to address.
-	+---+---+---+---+---+---+---+---+---+---+
-	| A |     B     |     C     |     D     |
-	+---+---+---+---+---+---+---+---+---+---+
-	  0   1  ...  4   5  ... 24  25  ...  x
-A = command (base10: 6), B = random bytes from a pong in the last 4 minutes,
-C = node ID of sender
-
-note: If B is needed a ping should be sent.
----
-
----
-name: query_file
-desc: Request IDs of nodes that have the specified file.
-	+---+---+---+---+---+---+---+---+---+---+
-	| A |     B     |     C     |     D     |
-	+---+---+---+---+---+---+---+---+---+---+
-	  0   1  ...  4   5  ... 24  25  ... 44
-A = command (base10: 4), B = random bytes, C = node ID of sender, D = file hash
-
-expected response: node_list
 ---

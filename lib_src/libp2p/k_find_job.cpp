@@ -61,14 +61,15 @@ void k_find_job::add(const mpa::mpint & dist, const net::endpoint & ep)
 void k_find_job::add_initial(const std::multimap<mpa::mpint, net::endpoint> & hosts)
 {
 	assert(Memoize.empty());
-	unsigned delay = 10;
+	unsigned delay = 0;
+	int no_delay_cnt = 16;
 	for(std::multimap<mpa::mpint, net::endpoint>::const_iterator
 		it_cur = hosts.begin(), it_end = hosts.end(); it_cur != it_end; ++it_cur)
 	{
 		if(Memoize.find(it_cur->second) == Memoize.end()){
 			Memoize.insert(it_cur->second);
 			Store.insert(std::make_pair(it_cur->first,
-				boost::shared_ptr<contact>(new contact(it_cur->second, delay++))));
+				boost::shared_ptr<contact>(new contact(it_cur->second, no_delay_cnt-- > 0 ? 0 : delay++))));
 		}
 	}
 }
