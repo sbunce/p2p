@@ -3,11 +3,10 @@
 //BEGIN contact
 k_find_job::contact::contact(
 	const net::endpoint & endpoint_in,
-	const unsigned delay_in
+	const unsigned delay
 ):
 	endpoint(endpoint_in),
-	time(std::time(NULL)),
-	delay(delay_in),
+	time(std::time(NULL) + delay),
 	sent(false),
 	timeout_cnt(0)
 {
@@ -16,9 +15,9 @@ k_find_job::contact::contact(
 
 bool k_find_job::contact::send()
 {
-	if(!sent && std::time(NULL) - time >= delay){
+	if(!sent && std::time(NULL) > time){
+		time = std::time(NULL) + protocol_udp::response_timeout;
 		sent = true;
-		time = std::time(NULL);
 		return true;
 	}
 	return false;
@@ -26,9 +25,8 @@ bool k_find_job::contact::send()
 
 bool k_find_job::contact::timeout()
 {
-	if(sent && std::time(NULL) - time > protocol_udp::response_timeout){
+	if(sent && std::time(NULL) > time){
 		time = std::time(NULL);
-		delay = 0;
 		sent = false;
 		++timeout_cnt;
 		return true;
@@ -81,7 +79,8 @@ std::list<net::endpoint> k_find_job::find_node()
 	for(std::multimap<mpa::mpint, boost::shared_ptr<contact> >::iterator
 		it_cur = Store.begin(); it_cur != Store.end();)
 	{
-		if(it_cur->second->timeout()){
+		if(it_cur->second->timeout()
+			&& it_cur->second->timeout_count() > protocol_udp::retransmit_limit){
 			timeout.push_back(it_cur->second);
 			Store.erase(it_cur++);
 		}else{
@@ -94,11 +93,9 @@ std::list<net::endpoint> k_find_job::find_node()
 		for(std::list<boost::shared_ptr<contact> >::iterator it_cur = timeout.begin(),
 			it_end = timeout.end(); it_cur != it_end; ++it_cur)
 		{
-			if((*it_cur)->timeout_count() < protocol_udp::retransmit_limit){
-				LOG << "retransmit limit reached " << (*it_cur)->endpoint.IP()
-					<< " " << (*it_cur)->endpoint.port();
-				Store.insert(std::make_pair(max, *it_cur));
-			}
+			LOG << "retransmit limit reached " << (*it_cur)->endpoint.IP()
+				<< " " << (*it_cur)->endpoint.port();
+			Store.insert(std::make_pair(max, *it_cur));
 		}
 	}
 	//check for endpoint to send find_node to
@@ -107,6 +104,7 @@ std::list<net::endpoint> k_find_job::find_node()
 		it_cur = Store.begin(), it_end = Store.end(); it_cur != it_end; ++it_cur)
 	{
 		if(it_cur->second->send()){
+			LOG << it_cur->second->endpoint.IP() << " " << it_cur->second->endpoint.port();
 			jobs.push_back(it_cur->second->endpoint);
 		}
 	}

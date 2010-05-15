@@ -7,25 +7,15 @@ k_bucket::contact::contact(
 ):
 	endpoint(endpoint_in),
 	remote_ID(remote_ID_in),
-	last_seen(std::time(NULL)),
-	ping_sent(false)
+	timeout_cnt(0)
 {
-	assert(!remote_ID.empty());
-	//contact starts timed out
-	last_seen -= protocol_udp::contact_timeout;
+	touch();
 }
 
 bool k_bucket::contact::active_ping()
 {
-	if(!ping_sent && std::time(NULL) - last_seen >
-		protocol_udp::contact_timeout - protocol_udp::response_timeout)
-	{
-		/*
-		We may get to pinging a contact long after it times out if multiple
-		contacts get bunched up. We set the last_seen time such that we give the
-		ping <ping_timeout> seconds to timeout.
-		*/
-		last_seen = std::time(NULL) - (protocol_udp::contact_timeout - protocol_udp::response_timeout);
+	if(!ping_sent && std::time(NULL) > time){
+		time = std::time(NULL) + protocol_udp::contact_timeout;
 		ping_sent = true;
 		return true;
 	}
@@ -34,13 +24,8 @@ bool k_bucket::contact::active_ping()
 
 bool k_bucket::contact::reserve_ping()
 {
-	//we don't care how long a contact has been in reserve
 	if(!ping_sent){
-		/*
-		Pretend to be idle for <ping_timeout seconds> less than protocol_udp::timeout
-		so we can use the same function to check for active and reserve timeouts.
-		*/
-		last_seen = std::time(NULL) - (protocol_udp::contact_timeout - protocol_udp::response_timeout);
+		time = std::time(NULL) + protocol_udp::response_timeout;
 		ping_sent = true;
 		return true;
 	}
@@ -49,17 +34,22 @@ bool k_bucket::contact::reserve_ping()
 
 bool k_bucket::contact::timeout()
 {
-	/*
-	Do not time out connection until we've sent a ping. If multiple pings come
-	at the same time some may be delayed past the normal timeout to spread out
-	pings.
-	*/
-	return ping_sent && std::time(NULL) - last_seen > protocol_udp::response_timeout;
+	if(ping_sent && std::time(NULL) > time){
+		touch();
+		++timeout_cnt;
+		return true;
+	}
+	return false;
+}
+
+unsigned k_bucket::contact::timeout_count()
+{
+	return timeout_cnt;
 }
 
 void k_bucket::contact::touch()
 {
-	last_seen = std::time(NULL);
+	time = std::time(NULL) + protocol_udp::contact_timeout;
 	ping_sent = false;
 }
 //END contact
@@ -74,32 +64,13 @@ k_bucket::k_bucket(
 
 }
 
-void k_bucket::add_reserve(const net::endpoint & endpoint, const std::string remote_ID)
+void k_bucket::add_reserve(const net::endpoint & ep, const std::string remote_ID)
 {
-	//if node active then touch it
-	for(std::list<boost::shared_ptr<contact> >::iterator it_cur = Bucket_Active.begin(),
-		it_end = Bucket_Active.end(); it_cur != it_end; ++it_cur)
-	{
-		if((*it_cur)->remote_ID == remote_ID && (*it_cur)->endpoint == endpoint){
-			(*it_cur)->touch();
-			return;
-		}else if((*it_cur)->endpoint == endpoint){
-			LOG << "ID change " << (*it_cur)->remote_ID << " " << remote_ID;
-			return;
-		}
+	if(exists(ep)){
+		return;
 	}
-
-	//node not active, add to reserve if not already in reserve
-	for(std::list<boost::shared_ptr<contact> >::iterator it_cur = Bucket_Reserve.begin(),
-		it_end = Bucket_Reserve.end(); it_cur != it_end; ++it_cur)
-	{
-		if((*it_cur)->endpoint == endpoint){
-			//endpoint already exists in reserve
-			return;
-		}
-	}
-	LOG << "reserve: " << endpoint.IP() << " " << endpoint.port() << " " << remote_ID;
-	Bucket_Reserve.push_back(boost::shared_ptr<contact>(new contact(endpoint, remote_ID)));
+	LOG << "reserve: " << ep.IP() << " " << ep.port() << " " << remote_ID;
+	Bucket_Reserve.push_back(boost::shared_ptr<contact>(new contact(ep, remote_ID)));
 }
 
 bool k_bucket::exists(const net::endpoint & ep)
@@ -149,45 +120,44 @@ void k_bucket::find_node(const net::endpoint & from, const std::string & ID_to_f
 
 boost::optional<net::endpoint> k_bucket::ping()
 {
-	/*
-	Remove active contacts that timed out. Note that contacts which haven't been
-	pinged are not allowed to time out. Once a contact is pinged it's timer is
-	reset so it has adaquate time to wait for a response. This natually spreads
-	out pings.
-	*/
+	//removed active contacts which timed out
 	for(std::list<boost::shared_ptr<contact> >::iterator
 		it_cur = Bucket_Active.begin(); it_cur != Bucket_Active.end();)
 	{
-		if((*it_cur)->timeout()){
-			LOG << "timed out: " << (*it_cur)->endpoint.IP() << " " << (*it_cur)->endpoint.port();
+		if((*it_cur)->timeout()
+			&& (*it_cur)->timeout_count() > protocol_udp::retransmit_limit)
+		{
+			LOG << "timeout: " << (*it_cur)->endpoint.IP() << " " << (*it_cur)->endpoint.port();
 			--active_cnt;
 			it_cur = Bucket_Active.erase(it_cur);
 		}else{
 			++it_cur;
 		}
 	}
-
 	//check if active node needs ping
 	boost::optional<net::endpoint> ep;
 	for(std::list<boost::shared_ptr<contact> >::iterator it_cur = Bucket_Active.begin(),
 		it_end = Bucket_Active.end(); it_cur != it_end; ++it_cur)
 	{
 		if((*it_cur)->active_ping()){
-			return boost::optional<net::endpoint>((*it_cur)->endpoint);
+			LOG << "active: " << (*it_cur)->endpoint.IP() << " " << (*it_cur)->endpoint.port();
+			return (*it_cur)->endpoint;
 		}
 	}
-
 	//if there is space ping reserve to try to move from reserve to active
 	unsigned needed = protocol_udp::bucket_size - Bucket_Active.size();
 	for(std::list<boost::shared_ptr<contact> >::iterator it_cur = Bucket_Reserve.begin();
 		it_cur != Bucket_Reserve.end() && needed; --needed)
 	{
 		if((*it_cur)->reserve_ping()){
-			return boost::optional<net::endpoint>((*it_cur)->endpoint);
+			LOG << "reserve: " << (*it_cur)->endpoint.IP() << " " << (*it_cur)->endpoint.port();
+			return (*it_cur)->endpoint;
 		}else{
 			//reserve contact won't timeout unless it was pinged
-			if((*it_cur)->timeout()){
-				LOG << "timed out: " << (*it_cur)->endpoint.IP() << " " << (*it_cur)->endpoint.port();
+			if((*it_cur)->timeout()
+				&& (*it_cur)->timeout_count() > protocol_udp::retransmit_limit)
+			{
+				LOG << "timeout: " << (*it_cur)->endpoint.IP() << " " << (*it_cur)->endpoint.port();
 				it_cur = Bucket_Reserve.erase(it_cur);
 			}else{
 				++it_cur;
@@ -203,11 +173,15 @@ void k_bucket::recv_pong(const net::endpoint & from, const std::string & remote_
 	for(std::list<boost::shared_ptr<contact> >::iterator it_cur = Bucket_Active.begin(),
 		it_end = Bucket_Active.end(); it_cur != it_end; ++it_cur)
 	{
-		if((*it_cur)->remote_ID == remote_ID && (*it_cur)->endpoint == from){
+		if((*it_cur)->endpoint == from && (*it_cur)->remote_ID == remote_ID){
+			LOG << "touch " << (*it_cur)->endpoint.IP() << " " << (*it_cur)->endpoint.port();
 			(*it_cur)->touch();
 			return;
 		}else if((*it_cur)->endpoint == from){
-			LOG << "ID change " << (*it_cur)->remote_ID << " " << remote_ID;
+			LOG << "ID change " << (*it_cur)->endpoint.IP() << " " << (*it_cur)->endpoint.port();
+			(*it_cur)->touch();
+			Bucket_Reserve.push_back(*it_cur);
+			Bucket_Active.erase(it_cur);
 			return;
 		}
 	}
@@ -215,10 +189,7 @@ void k_bucket::recv_pong(const net::endpoint & from, const std::string & remote_
 	for(std::list<boost::shared_ptr<contact> >::iterator it_cur = Bucket_Reserve.begin(),
 		it_end = Bucket_Reserve.end(); it_cur != it_end; ++it_cur)
 	{
-		//touch if remote_ID not known, or if it's known and didn't change
-		if(((*it_cur)->remote_ID.empty() || (*it_cur)->remote_ID == remote_ID)
-			&& (*it_cur)->endpoint == from)
-		{
+		if((*it_cur)->endpoint == from && (*it_cur)->remote_ID == remote_ID){
 			if(Bucket_Active.size() < protocol_udp::bucket_size){
 				LOG << "reserve -> active: " << (*it_cur)->endpoint.IP() << " "
 					<< (*it_cur)->endpoint.port();
@@ -229,29 +200,25 @@ void k_bucket::recv_pong(const net::endpoint & from, const std::string & remote_
 				route_table_call_back(from, remote_ID);
 			}
 			return;
+		}else if((*it_cur)->endpoint == from){
+			LOG << "ID change " << (*it_cur)->endpoint.IP() << " " << (*it_cur)->endpoint.port();
+			Bucket_Reserve.push_back(*it_cur);
+			Bucket_Reserve.erase(it_cur);
+			return;
 		}
 	}
-	/*
-	Node not active or in reserve. This is not a pong, but another type of
-	response which counts as a pong.
-	*/
+	//not in active or reserve, response message that counts as pong
 	if(Bucket_Active.size() < protocol_udp::bucket_size){
 		//add to routing table
 		LOG << "active: " << from.IP() << " " << from.port() << " " << remote_ID;
 		++active_cnt;
 		Bucket_Active.push_front(boost::shared_ptr<contact>(new contact(from, remote_ID)));
 		route_table_call_back(from, remote_ID);
+		return;
 	}else{
-		//add to reserve if not already in reserve
-		for(std::list<boost::shared_ptr<contact> >::iterator it_cur = Bucket_Reserve.begin(),
-			it_end = Bucket_Reserve.end(); it_cur != it_end; ++it_cur)
-		{
-			if((*it_cur)->endpoint == from){
-				//endpoint already exists in reserve
-				return;
-			}
-		}
+		//add to reserve
 		LOG << "reserve: " << from.IP() << " " << from.port() << " " << remote_ID;
 		Bucket_Reserve.push_back(boost::shared_ptr<contact>(new contact(from, remote_ID)));
+		return;
 	}
 }

@@ -46,6 +46,36 @@ private:
 	k_route_table Route_Table;
 	k_find Find;
 
+	class store_token
+	{
+	public:
+		enum direction_t{
+			incoming,
+			outgoing
+		};
+		explicit store_token(
+			const net::buffer & random_in,
+			const direction_t direction
+		);
+		store_token(const store_token & ST);
+		//random bytes sent or received in pong message
+		const net::buffer random;
+		//returns true if store_token timed out
+		bool timeout();
+	private:
+		std::time_t time;  //time when store_token instantiated
+		unsigned _timeout; //timeout (seconds)
+	};
+
+	/*
+	incoming_store_token:
+		Stores tokens we have received from remote hosts.
+	outgoing_store_token:
+		Stores tokens we have sent to remote hosts.
+	*/
+	std::multimap<net::endpoint, store_token> incoming_store_token;
+	std::multimap<net::endpoint, store_token> outgoing_store_token;
+
 	/*
 	Function call proxy. A thread adds a function object and network_thread makes
 	the function call. This eliminates a lot of locking.
@@ -76,9 +106,12 @@ private:
 		Send find_node messages.
 	send_ping:
 		Send ping messages.
+	store_token_timeout:
+		Checks timeouts on all store_tokens.
 	*/
 	void send_find_node();
 	void send_ping();
+	void store_token_timeout();
 
 	/* Receive Call Back
 	Functions named after the message they receive.
@@ -91,6 +124,7 @@ private:
 		const std::string ID_to_find);
 	void recv_ping(const net::endpoint & from, const net::buffer & random,
 		const std::string & remote_ID);
-	void recv_pong(const net::endpoint & from, const std::string & remote_ID);
+	void recv_pong(const net::endpoint & from, const net::buffer & random,
+		const std::string & remote_ID);
 };
 #endif

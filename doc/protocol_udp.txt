@@ -34,7 +34,7 @@ Store DOS
 =========
 To stop anyone from being able to Sybil and DOS using the store_* commands it is
 required that the store_* commands contain random bytes received by a pong
-message that are no more than 4 minutes old. This provides a very minimal
+message that are no more than 8 minutes old. This provides a very minimal
 assurance that the sender address of the store_* command has not been forged.
 
 All nodes must maintain mappings between the random bytes (sent in pong
@@ -51,7 +51,8 @@ desc: Check if a host is up and/or get node ID.
 	| A |     B     |     C     |
 	+---+---+---+---+---+---+---+
 	  0   1  ...  4   5  ... 24
-A = command (base10: 0), B = random bytes, C = node ID of sender
+A = command (base10: 0), B = random bytes (store_token),
+C = node ID of sender
           
 expected response: pong
 ---
@@ -77,7 +78,8 @@ desc: Request for closer nodes.
 	| A |     B     |     C     |     D     |
 	+---+---+---+---+---+---+---+---+---+---+
 	  0   1  ...  4   5  ... 24  25  ... 44
-A = command (base10: 2), B = random bytes, C = node ID of sender, D = ID to find
+A = command (base10: 2), B = random bytes (store_token),
+C = node ID of sender, D = ID to find
 
 note: The endpoint this message is from should not be included in the host_list
 response.
@@ -119,10 +121,9 @@ desc: Store a mapping from node ID to address.
 	| A |     B     |     C     |
 	+---+---+---+---+---+---+---+
 	  0   1  ...  4   5  ... 24
-A = command (base10: 4), B = random bytes from a pong in the last 4 minutes,
-C = node ID of sender
+A = command (base10: 4), B = store_token, C = node ID of sender
 
-note: If B is needed a ping should be sent.
+note: B must be random bytes received from a pong in the last 8 minutes.
 ---
 
 

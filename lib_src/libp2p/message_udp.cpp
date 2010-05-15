@@ -176,9 +176,10 @@ bool message_udp::recv::pong::recv(const net::buffer & recv_buf,
 	if(!expect(recv_buf)){
 		return false;
 	}
+	net::buffer random(recv_buf.data()+1, 4);
 	std::string remote_ID(convert::bin_to_hex(std::string(
 		reinterpret_cast<const char *>(recv_buf.data())+5, 20)));
-	func(endpoint, remote_ID);
+	func(endpoint, random, remote_ID);
 	return true;
 }
 //END recv::pong

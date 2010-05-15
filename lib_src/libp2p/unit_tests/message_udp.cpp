@@ -22,8 +22,11 @@ void ping_call_back(const net::endpoint & endpoint,
 }
 
 void pong_call_back(const net::endpoint & endpoint,
-	const std::string & remote_ID)
+	const net::buffer & random, const std::string & remote_ID)
 {
+	if(random != test_random){
+		LOG; ++fail;
+	}
 	if(remote_ID != test_ID){
 		LOG; ++fail;
 	}

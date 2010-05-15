@@ -73,14 +73,14 @@ Initial Messages
 After key exchange the following messages are sent by both sides.
 
 ---
-message 0: local node ID
+message 0: node ID
 description: Randomly generated 20 byte number. This number identifies the host
-on the DHT.
+on the DHT. This number is persistent between restarts of the program.
 	+---+---+---+
 	|     N     |
 	+---+---+---+
 	  0  ...  20
-N = local ID
+N = node ID
 note: This is our node identifier on the DHT.
 ---
 
@@ -185,7 +185,7 @@ desc: Either a hash tree block or file block.
 C = command (base10: 5), B = block (maximum size of 10240)
 
 note: It is a violation of the protocol to send a bad block. All blocks should
-be checked before they're sent.
+be checked before they're sent. The file may have been modified.
 ---
 
 
@@ -259,6 +259,10 @@ in the child row).
 The hash on the top of the tree is the root hash. The file size (8 byte
 big-endian) with the root hash appended are then hashed together to get the hash
 the file is tracked by.
+
+The hash blocks sent in the block message is a 512 hash sized contiguous block
+that doesn't span multiple rows. A hash block will be smaller than 512 hashes if
+there is not 512 hashes left in a row.
 
 
 Limits

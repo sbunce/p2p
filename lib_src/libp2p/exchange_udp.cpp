@@ -121,5 +121,6 @@ void exchange_udp::tick()
 void exchange_udp::send(boost::shared_ptr<message_udp::send::base> M,
 	const net::endpoint & endpoint)
 {
+	M->buf.size();
 	ndgram.send(M->buf, endpoint);
 }

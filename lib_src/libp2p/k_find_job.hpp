@@ -46,18 +46,6 @@ public:
 		const std::list<net::endpoint> & hosts, const mpa::mpint & dist);
 
 private:
-
-/* IDEA
-Have delay parameter to contact. The delay is a delay (in second) until find_node
-request will be sent.
-
-Have a add_initial which adds contacts and sets the timeouts in 1 second
-intervals. With the lowest delay going to the lowest distance and the highest
-delay going to the highest distance.
-
-The first few contacts can be set with no delay.
-*/
-
 	class contact : private boost::noncopyable
 	{
 	public:
@@ -74,7 +62,7 @@ The first few contacts can be set with no delay.
 			Returns true if contact has timed out.
 			Postcondition: timeout() will return false. The contact is reset to
 				original state with no delay.
-		timeout_cnt:
+		timeout_count:
 			Returns number of times the contact has timed out.
 		*/
 		bool send();
@@ -86,8 +74,6 @@ The first few contacts can be set with no delay.
 		time:
 			Initially set to the time the contact was instantiated. After send()
 			returns true this is used to check for timeout.
-		delay:
-			The number of seconds to delay send() after instantiation.
 		sent:
 			Set to true when send() has returned true. Enables timeout of the
 			contact.
@@ -96,7 +82,6 @@ The first few contacts can be set with no delay.
 			retransmission limit.
 		*/
 		std::time_t time;
-		unsigned delay;
 		bool sent;
 		unsigned timeout_cnt;
 	};

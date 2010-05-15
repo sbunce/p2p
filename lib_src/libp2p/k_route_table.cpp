@@ -1,5 +1,49 @@
 #include "k_route_table.hpp"
 
+//BEGIN contact
+k_route_table::contact::contact():
+	time(std::time(NULL)),
+	sent(false),
+	timeout_cnt(0)
+{
+
+}
+
+k_route_table::contact::contact(const contact & C):
+	time(C.time),
+	sent(C.sent),
+	timeout_cnt(C.timeout_cnt)
+{
+
+}
+
+bool k_route_table::contact::send()
+{
+	if(!sent && std::time(NULL) > time){
+		time = std::time(NULL) + protocol_udp::response_timeout;
+		sent = true;
+		return true;
+	}
+	return false;
+}
+
+bool k_route_table::contact::timeout()
+{
+	if(sent && std::time(NULL) > time){
+		time = std::time(NULL);
+		sent = false;
+		++timeout_cnt;
+		return true;
+	}
+	return false;
+}
+
+unsigned k_route_table::contact::timeout_count()
+{
+	return timeout_cnt;
+}
+//END contact
+
 k_route_table::k_route_table(
 	atomic_int<unsigned> & active_cnt,
 	const boost::function<void (const net::endpoint &, const std::string &)> & route_table_call_back
@@ -23,17 +67,22 @@ void k_route_table::add_reserve(const net::endpoint & ep, const std::string & re
 				return;
 			}
 		}
-		if(Unknown.find(ep) != Unknown.end()){
+		if(Unknown_Reserve.find(ep) != Unknown_Reserve.end()
+			|| Unknown_Active.find(ep) != Unknown_Active.end())
+		{
 			return;
 		}
-		LOG << "add unknown reserve: " << ep.IP() << " " << ep.port();
-		Unknown.insert(ep);
+		LOG << "add unknown: " << ep.IP() << " " << ep.port();
+		Unknown_Reserve.insert(ep);
 	}else{
-		Unknown.erase(ep);
+		Unknown_Reserve.erase(ep);
+		if(Unknown_Active.find(ep) != Unknown_Active.end()){
+			return;
+		}
 		unsigned bucket_num = k_func::bucket_num(local_ID, remote_ID);
-		if(ep.version() == net::IPv4 && !Bucket_4[bucket_num]->exists(ep)){
+		if(ep.version() == net::IPv4){
 			Bucket_4[bucket_num]->add_reserve(ep, remote_ID);
-		}else if(!Bucket_6[bucket_num]->exists(ep)){
+		}else{
 			Bucket_6[bucket_num]->add_reserve(ep, remote_ID);
 		}
 	}
@@ -94,24 +143,49 @@ std::multimap<mpa::mpint, net::endpoint> k_route_table::find_node_local(
 
 boost::optional<net::endpoint> k_route_table::ping()
 {
+	//erase Unknown_Active endpoints that have timed out
+	for(std::map<net::endpoint, contact>::iterator it_cur = Unknown_Active.begin();
+		it_cur != Unknown_Active.end();)
+	{
+		if(it_cur->second.timeout()
+			&& it_cur->second.timeout_count() > protocol_udp::retransmit_limit)
+		{
+			LOG << "timeout: " << it_cur->first.IP() << " " << it_cur->first.port();
+			Unknown_Active.erase(it_cur++);
+		}else{
+			++it_cur;
+		}
+	}
+	//check buckets for endpoint to ping
 	boost::optional<net::endpoint> ep;
 	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
 		ep = Bucket_4[x]->ping();
 		if(ep){
-			return boost::optional<net::endpoint>(*ep);
+			return ep;
 		}
 		ep = Bucket_6[x]->ping();
 		if(ep){
-			return boost::optional<net::endpoint>(*ep);
+			return ep;
 		}
 	}
-	if(!Unknown.empty()){
+	//check if retransmission needed
+	for(std::map<net::endpoint, contact>::iterator it_cur = Unknown_Active.begin();
+		it_cur != Unknown_Active.end();)
+	{
+		if(it_cur->second.send()){
+			LOG << "retransmit: " << it_cur->first.IP() << " " << it_cur->first.port();
+			return it_cur->first;
+		}
+	}
+	if(!Unknown_Reserve.empty()){
 		//ping random endpoint
-		boost::uint64_t num = random::roll(Unknown.size());
-		std::set<net::endpoint>::iterator it = Unknown.begin();
+		boost::uint64_t num = random::roll(Unknown_Reserve.size());
+		std::set<net::endpoint>::iterator it = Unknown_Reserve.begin();
 		while(num--){ ++it; }
 		ep = *it;
-		Unknown.erase(it);
+		Unknown_Reserve.erase(it);
+		Unknown_Active.insert(std::make_pair(*ep, contact()));
+		LOG << "unknown: " << ep->IP() << " " << ep->port();
 		return ep;
 	}
 	return boost::optional<net::endpoint>();
@@ -120,6 +194,8 @@ boost::optional<net::endpoint> k_route_table::ping()
 void k_route_table::recv_pong(const net::endpoint & from,
 	const std::string & remote_ID)
 {
+	Unknown_Active.erase(from);
+	Unknown_Reserve.erase(from);
 	unsigned bucket_num = k_func::bucket_num(local_ID, remote_ID);
 	if(from.version() == net::IPv4){
 		Bucket_4[bucket_num]->recv_pong(from, remote_ID);

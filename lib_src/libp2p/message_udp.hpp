@@ -44,7 +44,7 @@ class pong : public base
 {
 public:
 	typedef boost::function<void (const net::endpoint & from,
-		const std::string & remote_ID)> handler;
+		const net::buffer & random, const std::string & remote_ID)> handler;
 	pong(handler func_in, const net::buffer & random_in);
 	virtual bool expect(const net::buffer & recv_buf);
 	virtual bool recv(const net::buffer & recv_buf,

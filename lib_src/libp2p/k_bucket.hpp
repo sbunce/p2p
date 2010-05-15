@@ -81,6 +81,9 @@ private:
 				seconds.
 		timeout:
 			Returns true if contact has timed out and needs to be removed.
+			Postcondition: active_ping() and reserve_ping() enabled.
+		timeout_count:
+			Returns number of times contact has timed out.
 		touch:
 			Updates last seen time of element.
 			Postcondition: Sets the contact to timeout to 1 hour.
@@ -88,11 +91,13 @@ private:
 		bool active_ping();
 		bool reserve_ping();
 		bool timeout();
+		unsigned timeout_count();
 		void touch();
 
 	private:
-		std::time_t last_seen;
+		std::time_t time;
 		bool ping_sent;
+		unsigned timeout_cnt;
 	};
 
 	/*
