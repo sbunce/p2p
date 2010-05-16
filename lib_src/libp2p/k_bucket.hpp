@@ -2,6 +2,7 @@
 #define H_K_BUCKET
 
 //custom
+#include "k_contact.hpp"
 #include "k_func.hpp"
 #include "protocol_udp.hpp"
 
@@ -55,56 +56,26 @@ private:
 	atomic_int<unsigned> & active_cnt;
 	const boost::function<void (const net::endpoint &, const std::string &)> route_table_call_back;
 
-	class contact : private boost::noncopyable
+	class bucket_element
 	{
 	public:
-		//contact is timed out by default
-		contact(
+		bucket_element(
 			const net::endpoint & endpoint_in,
-			const std::string & remote_ID_in
+			const std::string & remote_ID_in,
+			const k_contact & contact_in
 		);
+		bucket_element(const bucket_element & BE);
 
 		const net::endpoint endpoint;
 		const std::string remote_ID;
-
-		/*
-		active_ping:
-			Used on contacts in Bucket_Active. Returns true if ping needs to be
-			sent to keep contact from timing out.
-			Postcondition: Contact will time out in protocol_udp::response_timeout
-				seconds.
-		reserve_ping:
-			Used on contacts in Bucket_Reserve. Returns true if ping needs to be
-			sent. This is used when we want to try to move a contact from reserve
-			to active.
-			Postcondition: Contact will time out in protocol_udp::response_timeout
-				seconds.
-		timeout:
-			Returns true if contact has timed out and needs to be removed.
-			Postcondition: active_ping() and reserve_ping() enabled.
-		timeout_count:
-			Returns number of times contact has timed out.
-		touch:
-			Updates last seen time of element.
-			Postcondition: Sets the contact to timeout to 1 hour.
-		*/
-		bool active_ping();
-		bool reserve_ping();
-		bool timeout();
-		unsigned timeout_count();
-		void touch();
-
-	private:
-		std::time_t time;
-		bool ping_sent;
-		unsigned timeout_cnt;
+		k_contact contact;
 	};
 
 	/*
 	Contacts in Bucket_Active are pinged to make sure they're still up. When a
 	active contact times out a replacement will be gotten from reserve.
 	*/
-	std::list<boost::shared_ptr<contact> > Bucket_Active;
-	std::list<boost::shared_ptr<contact> > Bucket_Reserve;
+	std::list<bucket_element> Bucket_Active;
+	std::list<bucket_element> Bucket_Reserve;
 };
 #endif

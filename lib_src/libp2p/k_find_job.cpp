@@ -1,5 +1,6 @@
 #include "k_find_job.hpp"
 
+/*
 //BEGIN contact
 k_find_job::contact::contact(
 	const net::endpoint & endpoint_in,
@@ -39,6 +40,26 @@ unsigned k_find_job::contact::timeout_count()
 	return timeout_cnt;
 }
 //END contact
+*/
+
+//BEGIN store_element
+k_find_job::store_element::store_element(
+	const net::endpoint & endpoint_in,
+	const k_contact & contact_in
+):
+	endpoint(endpoint_in),
+	contact(contact_in)
+{
+
+}
+
+k_find_job::store_element::store_element(const store_element & SE):
+	endpoint(SE.endpoint),
+	contact(SE.contact)
+{
+
+}
+//END store_element
 
 k_find_job::k_find_job(
 	const boost::function<void (const net::endpoint &)> & call_back_in
@@ -52,7 +73,7 @@ void k_find_job::add(const mpa::mpint & dist, const net::endpoint & ep)
 {
 	if(Memoize.find(ep) == Memoize.end()){
 		Memoize.insert(ep);
-		Store.insert(std::make_pair(dist, boost::shared_ptr<contact>(new contact(ep))));
+		Store.insert(std::make_pair(dist, store_element(ep, k_contact())));
 	}
 }
 
@@ -67,7 +88,7 @@ void k_find_job::add_initial(const std::multimap<mpa::mpint, net::endpoint> & ho
 		if(Memoize.find(it_cur->second) == Memoize.end()){
 			Memoize.insert(it_cur->second);
 			Store.insert(std::make_pair(it_cur->first,
-				boost::shared_ptr<contact>(new contact(it_cur->second, no_delay_cnt-- > 0 ? 0 : delay++))));
+				store_element(it_cur->second, k_contact(0, no_delay_cnt-- > 0 ? 0 : delay++))));
 		}
 	}
 }
@@ -75,12 +96,12 @@ void k_find_job::add_initial(const std::multimap<mpa::mpint, net::endpoint> & ho
 std::list<net::endpoint> k_find_job::find_node()
 {
 	//check timeouts
-	std::list<boost::shared_ptr<contact> > timeout;
-	for(std::multimap<mpa::mpint, boost::shared_ptr<contact> >::iterator
-		it_cur = Store.begin(); it_cur != Store.end();)
+	std::list<store_element> timeout;
+	for(std::multimap<mpa::mpint, store_element>::iterator it_cur = Store.begin();
+		it_cur != Store.end();)
 	{
-		if(it_cur->second->timeout()
-			&& it_cur->second->timeout_count() > protocol_udp::retransmit_limit){
+		if(it_cur->second.contact.timeout()
+			&& it_cur->second.contact.timeout_count() > protocol_udp::retransmit_limit){
 			timeout.push_back(it_cur->second);
 			Store.erase(it_cur++);
 		}else{
@@ -90,22 +111,22 @@ std::list<net::endpoint> k_find_job::find_node()
 	if(!timeout.empty()){
 		//insert timed out contacts at end by setting distance to maximum
 		mpa::mpint max(std::string(SHA1::hex_size, 'F'), 16);
-		for(std::list<boost::shared_ptr<contact> >::iterator it_cur = timeout.begin(),
+		for(std::list<store_element>::iterator it_cur = timeout.begin(),
 			it_end = timeout.end(); it_cur != it_end; ++it_cur)
 		{
-			LOG << "retransmit limit reached " << (*it_cur)->endpoint.IP()
-				<< " " << (*it_cur)->endpoint.port();
+			LOG << "retransmit limit reached " << it_cur->endpoint.IP()
+				<< " " << it_cur->endpoint.port();
 			Store.insert(std::make_pair(max, *it_cur));
 		}
 	}
 	//check for endpoint to send find_node to
 	std::list<net::endpoint> jobs;
-	for(std::multimap<mpa::mpint, boost::shared_ptr<contact> >::iterator
+	for(std::multimap<mpa::mpint, store_element>::iterator
 		it_cur = Store.begin(), it_end = Store.end(); it_cur != it_end; ++it_cur)
 	{
-		if(it_cur->second->send()){
-			LOG << it_cur->second->endpoint.IP() << " " << it_cur->second->endpoint.port();
-			jobs.push_back(it_cur->second->endpoint);
+		if(it_cur->second.contact.send()){
+			LOG << it_cur->second.endpoint.IP() << " " << it_cur->second.endpoint.port();
+			jobs.push_back(it_cur->second.endpoint);
 		}
 	}
 	return jobs;
@@ -119,10 +140,10 @@ void k_find_job::recv_host_list(const net::endpoint & from,
 		call_back(from);
 	}
 	//erase endpoint that sent host_list and add it to found collection
-	for(std::multimap<mpa::mpint, boost::shared_ptr<contact> >::iterator
+	for(std::multimap<mpa::mpint, store_element>::iterator
 		it_cur = Store.begin(), it_end = Store.end(); it_cur != it_end; ++it_cur)
 	{
-		if(it_cur->second->endpoint == from){
+		if(it_cur->second.endpoint == from){
 			Found.insert(std::make_pair(dist, from));
 			while(Found.size() > protocol_udp::max_store){
 				std::multimap<mpa::mpint, net::endpoint>::iterator iter = Found.end();

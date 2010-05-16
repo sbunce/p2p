@@ -1,49 +1,5 @@
 #include "k_route_table.hpp"
 
-//BEGIN contact
-k_route_table::contact::contact():
-	time(std::time(NULL)),
-	sent(false),
-	timeout_cnt(0)
-{
-
-}
-
-k_route_table::contact::contact(const contact & C):
-	time(C.time),
-	sent(C.sent),
-	timeout_cnt(C.timeout_cnt)
-{
-
-}
-
-bool k_route_table::contact::send()
-{
-	if(!sent && std::time(NULL) > time){
-		time = std::time(NULL) + protocol_udp::response_timeout;
-		sent = true;
-		return true;
-	}
-	return false;
-}
-
-bool k_route_table::contact::timeout()
-{
-	if(sent && std::time(NULL) > time){
-		time = std::time(NULL);
-		sent = false;
-		++timeout_cnt;
-		return true;
-	}
-	return false;
-}
-
-unsigned k_route_table::contact::timeout_count()
-{
-	return timeout_cnt;
-}
-//END contact
-
 k_route_table::k_route_table(
 	atomic_int<unsigned> & active_cnt,
 	const boost::function<void (const net::endpoint &, const std::string &)> & route_table_call_back
@@ -144,7 +100,7 @@ std::multimap<mpa::mpint, net::endpoint> k_route_table::find_node_local(
 boost::optional<net::endpoint> k_route_table::ping()
 {
 	//erase Unknown_Active endpoints that have timed out
-	for(std::map<net::endpoint, contact>::iterator it_cur = Unknown_Active.begin();
+	for(std::map<net::endpoint, k_contact>::iterator it_cur = Unknown_Active.begin();
 		it_cur != Unknown_Active.end();)
 	{
 		if(it_cur->second.timeout()
@@ -169,7 +125,7 @@ boost::optional<net::endpoint> k_route_table::ping()
 		}
 	}
 	//check if retransmission needed
-	for(std::map<net::endpoint, contact>::iterator it_cur = Unknown_Active.begin();
+	for(std::map<net::endpoint, k_contact>::iterator it_cur = Unknown_Active.begin();
 		it_cur != Unknown_Active.end();)
 	{
 		if(it_cur->second.send()){
@@ -184,7 +140,7 @@ boost::optional<net::endpoint> k_route_table::ping()
 		while(num--){ ++it; }
 		ep = *it;
 		Unknown_Reserve.erase(it);
-		Unknown_Active.insert(std::make_pair(*ep, contact()));
+		Unknown_Active.insert(std::make_pair(*ep, k_contact()));
 		LOG << "unknown: " << ep->IP() << " " << ep->port();
 		return ep;
 	}

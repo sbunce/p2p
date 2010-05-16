@@ -2,6 +2,7 @@
 #define H_K_FIND_JOB
 
 //custom
+#include "k_contact.hpp"
 #include "k_func.hpp"
 #include "protocol_udp.hpp"
 
@@ -46,6 +47,8 @@ public:
 		const std::list<net::endpoint> & hosts, const mpa::mpint & dist);
 
 private:
+
+/*
 	class contact : private boost::noncopyable
 	{
 	public:
@@ -54,7 +57,7 @@ private:
 			const unsigned delay = 0
 		);
 		const net::endpoint endpoint;
-
+*/
 		/*
 		send:
 			Returns true if find_node should be sent to endpoint.
@@ -65,11 +68,13 @@ private:
 		timeout_count:
 			Returns number of times the contact has timed out.
 		*/
+/*
 		bool send();
 		bool timeout();
 		unsigned timeout_count();
 
 	private:
+*/
 		/*
 		time:
 			Initially set to the time the contact was instantiated. After send()
@@ -81,9 +86,23 @@ private:
 			Returns the number of times this contact has timed out. Used for
 			retransmission limit.
 		*/
+/*
 		std::time_t time;
 		bool sent;
 		unsigned timeout_cnt;
+	};
+*/
+	class store_element
+	{
+	public:
+		store_element(
+			const net::endpoint & endpoint_in,
+			const k_contact & contact_in
+		);
+		store_element(const store_element & SE);
+
+		const net::endpoint endpoint;
+		k_contact contact;
 	};
 
 	/*
@@ -93,7 +112,7 @@ private:
 	Note: If a contact times out we set it's distance to maximum, effectively
 		deprioritizing it.
 	*/
-	std::multimap<mpa::mpint, boost::shared_ptr<contact> > Store;
+	std::multimap<mpa::mpint, store_element> Store;
 
 	/*
 	After we receive a host_list we add the endpoint which sent it to this

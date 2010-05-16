@@ -3,6 +3,7 @@
 
 //custom
 #include "k_bucket.hpp"
+#include "k_contact.hpp"
 #include "db_all.hpp"
 
 //include
@@ -54,43 +55,6 @@ private:
 	boost::scoped_ptr<k_bucket> Bucket_4[protocol_udp::bucket_count];
 	boost::scoped_ptr<k_bucket> Bucket_6[protocol_udp::bucket_count];
 
-	class contact
-	{
-	public:
-		explicit contact();
-		contact(const contact & C);
-
-		/*
-		send:
-			Returns true if ping should be sent.
-		timeout:
-			Returns true if contact has timed out.
-			Postcondition: timeout() will return false. The contact is reset to
-				original state.
-		timeout_count:
-			Returns number of times the contact has timed out.
-		*/
-		bool send();
-		bool timeout();
-		unsigned timeout_count();
-
-	private:
-		/*
-		time:
-			Initially set to the time the contact was instantiated. After send()
-			returns true this is used to check for timeout.
-		sent:
-			Set to true when send() has returned true. Enables timeout of the
-			contact.
-		timeout_cnt:
-			Returns the number of times this contact has timed out. Used for
-			retransmission limit.
-		*/
-		std::time_t time;
-		bool sent;
-		unsigned timeout_cnt;
-	};
-
 	/*
 	Unknown_Active:
 		When unknown node is pinged it is placed here, along with the time at
@@ -98,7 +62,7 @@ private:
 	Unknown_Reserve:
 		When we don't know the bucket the endpoint belongs in it's placed here.
 	*/
-	std::map<net::endpoint, contact> Unknown_Active;
+	std::map<net::endpoint, k_contact> Unknown_Active;
 	std::set<net::endpoint> Unknown_Reserve;
 };
 #endif

@@ -30,6 +30,7 @@ store_token_outgoing_timeout:
 */
 const unsigned bucket_count = SHA1::bin_size * 8;
 const unsigned bucket_size = 16;
+//DEBUG, rename to bucket_timeout
 const unsigned contact_timeout = bucket_count * bucket_size * 2;
 const unsigned max_store = 16;
 const unsigned response_timeout = 30;
