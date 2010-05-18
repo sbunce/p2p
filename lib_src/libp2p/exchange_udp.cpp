@@ -47,6 +47,11 @@ void exchange_udp::check_timeouts()
 	}
 }
 
+unsigned exchange_udp::download_rate()
+{
+	return Download.speed();
+}
+
 void exchange_udp::expect_anytime(boost::shared_ptr<message_udp::recv::base> M)
 {
 	Expect_Anytime.push_back(M);
@@ -90,7 +95,13 @@ void exchange_udp::tick()
 	//recv message
 	boost::shared_ptr<net::endpoint> from;
 	net::buffer recv_buf;
-	ndgram.recv(recv_buf, from);
+	int n_bytes = ndgram.recv(recv_buf, from);
+	if(n_bytes > 0){
+		Download.add(n_bytes);
+	}else{
+		LOG << "recv error";
+		exit(1);
+	}
 	assert(from);
 
 	//check if expected response
@@ -120,7 +131,10 @@ void exchange_udp::tick()
 	//try to send any unsent messages
 	while(!Send_Queue.empty()){
 		int n_bytes = ndgram.send(Send_Queue.front().first->buf, Send_Queue.front().second);
-		if(n_bytes <= 0){
+		if(n_bytes > 0){
+			Upload.add(n_bytes);
+			Send_Queue.pop_front();
+		}else{
 			if(ndgram.is_open()){
 				LOG << "OS buffers full";
 				break;
@@ -128,8 +142,12 @@ void exchange_udp::tick()
 				LOG << "UDP send error";
 				exit(1);
 			}
+		}
+
+		if(n_bytes <= 0){
+
 		}else{
-			Send_Queue.pop_front();
+
 		}
 	}
 }
@@ -139,7 +157,9 @@ void exchange_udp::send(boost::shared_ptr<message_udp::send::base> M,
 {
 	assert(!M->buf.empty());
 	int n_bytes = ndgram.send(M->buf, ep);
-	if(n_bytes <= 0){
+	if(n_bytes > 0){
+		Upload.add(n_bytes);
+	}else{
 		if(ndgram.is_open()){
 			LOG << "OS buffers full";
 			Send_Queue.push_back(std::make_pair(M, ep));
@@ -148,4 +168,9 @@ void exchange_udp::send(boost::shared_ptr<message_udp::send::base> M,
 			exit(1);
 		}
 	}
+}
+
+unsigned exchange_udp::upload_rate()
+{
+	return Upload.speed();
 }

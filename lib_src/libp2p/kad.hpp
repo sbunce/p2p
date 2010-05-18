@@ -21,8 +21,6 @@ public:
 	~kad();
 
 	/*
-	contacts:
-		Returns number of active contacts in all k_buckets.
 	find_node:
 		Find a node ID. The call back is used when the node ID is found.
 		Note: The found endpoint may not be right. The call back may be called
@@ -36,10 +34,22 @@ public:
 		Find set of nodes which are closest to ID. The call back is used when the
 		set is found.
 	*/
-	unsigned count();
+
 	void find_node(const std::string & ID_to_find,
 		const boost::function<void (const net::endpoint &)> & call_back);
 	void find_node_cancel(const std::string & ID);
+
+	/* Info
+	count:
+		Returns number of active contacts in all k_buckets.
+	download_rate:
+		Returns average download rate (bytes/second).
+	upload_rate:
+		Returns average upload rate (bytes/second).
+	*/
+	unsigned count();
+	unsigned download_rate();
+	unsigned upload_rate();
 
 private:
 	boost::thread network_thread;
@@ -131,7 +141,7 @@ private:
 	void send_find_node();
 	void send_ping();
 	void send_store_node();
-	void send_store_node_call_back(const std::list<net::endpoint> & ep_list);
+	void send_store_node_call_back(const net::endpoint & ep);
 	void send_store_node_call_back(const net::endpoint & from,
 		const net::buffer & random, const std::string & remote_ID);
 	void store_token_timeout();

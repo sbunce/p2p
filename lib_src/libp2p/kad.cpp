@@ -60,6 +60,11 @@ unsigned kad::count()
 	return active_cnt;
 }
 
+unsigned kad::download_rate()
+{
+	return Exchange.download_rate();
+}
+
 void kad::find_node(const std::string & ID_to_find,
 	const boost::function<void (const net::endpoint &)> & call_back)
 {
@@ -103,7 +108,7 @@ void kad::network_loop()
 
 	//main loop
 	std::time_t second_timeout(std::time(NULL));
-	std::time_t hour_timeout(std::time(NULL) + protocol_udp::response_timeout);
+	std::time_t hour_timeout(std::time(NULL));
 	while(true){
 		boost::this_thread::interruption_point();
 		if(std::time(NULL) > second_timeout){
@@ -256,26 +261,22 @@ void kad::send_store_node_call_back(const net::endpoint & from,
 		new message_udp::send::store_node(random, local_ID)), from);
 }
 
-void kad::send_store_node_call_back(const std::list<net::endpoint> & ep_list)
+void kad::send_store_node_call_back(const net::endpoint & ep)
 {
-	for(std::list<net::endpoint>::const_iterator it_cur = ep_list.begin(),
-		it_end = ep_list.end(); it_cur != it_end; ++it_cur)
-	{
-		std::multimap<net::endpoint, store_token>::iterator it = incoming_store_token.find(*it_cur);
-		if(it == incoming_store_token.end()){
-			//do ping to get store token
-			LOG << "ping: " << it_cur->IP() << " " << it_cur->port();
-			net::buffer random(random::urandom(4));
-			Exchange.send(boost::shared_ptr<message_udp::send::base>(
-				new message_udp::send::ping(random, local_ID)), *it_cur);
-			Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
-				new message_udp::recv::pong(boost::bind(&kad::send_store_node_call_back,
-				this, _1, _2, _3), random)), *it_cur);
-		}else{
-			LOG << "store_node: " << it_cur->IP() << " " << it_cur->port();
-			Exchange.send(boost::shared_ptr<message_udp::send::base>(
-				new message_udp::send::store_node(it->second.random, local_ID)), *it_cur);
-		}
+	std::multimap<net::endpoint, store_token>::iterator it = incoming_store_token.find(ep);
+	if(it == incoming_store_token.end()){
+		//do ping to get store token
+		LOG << "ping: " << ep.IP() << " " << ep.port();
+		net::buffer random(random::urandom(4));
+		Exchange.send(boost::shared_ptr<message_udp::send::base>(
+			new message_udp::send::ping(random, local_ID)), ep);
+		Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
+			new message_udp::recv::pong(boost::bind(&kad::send_store_node_call_back,
+			this, _1, _2, _3), random)), ep);
+	}else{
+		LOG << "store_node: " << ep.IP() << " " << ep.port();
+		Exchange.send(boost::shared_ptr<message_udp::send::base>(
+			new message_udp::send::store_node(it->second.random, local_ID)), ep);
 	}
 }
 
@@ -299,4 +300,9 @@ void kad::store_token_timeout()
 			++it_cur;
 		}
 	}
+}
+
+unsigned kad::upload_rate()
+{
+	return Exchange.upload_rate();
 }

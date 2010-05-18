@@ -16,11 +16,6 @@ unsigned p2p::DHT_count()
 	return P2P_impl->DHT_count();
 }
 
-unsigned p2p::download_rate()
-{
-	return P2P_impl->download_rate();
-}
-
 unsigned p2p::get_max_connections()
 {
 	return P2P_impl->get_max_connections();
@@ -84,7 +79,22 @@ void p2p::transfers(std::vector<p2p::transfer> & T)
 	P2P_impl->transfers(T);
 }
 
-unsigned p2p::upload_rate()
+unsigned p2p::TCP_download_rate()
 {
-	return P2P_impl->upload_rate();
+	return P2P_impl->TCP_download_rate();
+}
+
+unsigned p2p::TCP_upload_rate()
+{
+	return P2P_impl->TCP_upload_rate();
+}
+
+unsigned p2p::UDP_download_rate()
+{
+	return P2P_impl->UDP_download_rate();
+}
+
+unsigned p2p::UDP_upload_rate()
+{
+	return P2P_impl->UDP_upload_rate();
 }

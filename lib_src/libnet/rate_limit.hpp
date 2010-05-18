@@ -63,8 +63,7 @@ private:
 	unsigned _max_download;
 	unsigned _max_upload;
 
-	speed_calc Download;
-	speed_calc Upload;
+	speed_calc Download, Upload;
 
 	/*
 	available_transfer:

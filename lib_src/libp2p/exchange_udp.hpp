@@ -40,9 +40,19 @@ public:
 	void send(boost::shared_ptr<message_udp::send::base> M,
 		const net::endpoint & endpoint);
 
+	/* Info
+	download_rate:
+		Returns average download rate (bytes/second).
+	upload_rate:
+		Returns average upload rate (bytes/second).
+	*/
+	unsigned download_rate();
+	unsigned upload_rate();
+
 private:
 	net::ndgram ndgram;
 	net::select select;
+	net::speed_calc Download, Upload;
 
 	class expect_response_element
 	{
@@ -51,30 +61,25 @@ private:
 			boost::shared_ptr<message_udp::recv::base> message_in,
 			boost::function<void()> timeout_call_back_in
 		);
-
 		boost::shared_ptr<message_udp::recv::base> message;
 		boost::function<void()> timeout_call_back;
-
-		/*
-		timed_out:
-			Returns true if timed out.
-		*/
+		//returns true if timed out
 		bool timed_out();
-
 	private:
 		std::time_t time_first_expected;
 	};
 
 	/*
-	Incoming messages that are expected responses we expect to requests we've
-	made. After a response is received it is removed from this container.
+	Expect_Response:
+		Incoming messages that are expected responses we expect to requests we've
+		made. After a response is received it is removed from this container.
+	Expect_Anytime:
+		Incoming messages that we expect anytime. These are not responses.
+	Send_Queue:
+		If OS buffer becomes full messages to send are queued.
 	*/
 	std::multimap<net::endpoint, expect_response_element> Expect_Response;
-
-	//incoming messages that we expect anytime, these are not responses
 	std::list<boost::shared_ptr<message_udp::recv::base> > Expect_Anytime;
-
-	//if OS buffer becomes full
 	std::list<std::pair<boost::shared_ptr<message_udp::send::base>, net::endpoint> > Send_Queue;
 
 	/*

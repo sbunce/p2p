@@ -21,7 +21,7 @@ k_find::find_node_element::find_node_element(const find_node_element & FNE):
 
 //BEGIN find_set_element
 k_find::find_set_element::find_set_element(
-	const boost::function<void (const std::list<net::endpoint> &)> & call_back_in,
+	const boost::function<void (const net::endpoint &)> & call_back_in,
 	boost::shared_ptr<k_find_job> find_job_in
 ):
 	call_back(call_back_in),
@@ -81,7 +81,7 @@ void k_find::find_node_cancel(const std::string & ID_to_find)
 
 void k_find::find_set(const std::string & ID,
 	const std::multimap<mpa::mpint, net::endpoint> & hosts,
-	const boost::function<void (const std::list<net::endpoint> &)> & call_back)
+	const boost::function<void (const net::endpoint &)> & call_back)
 {
 	std::map<std::string, find_set_element>::iterator
 		FS_it = Find_Set.find(ID);
@@ -118,6 +118,7 @@ void k_find::recv_host_list(const net::endpoint & from, const std::string & remo
 	std::map<std::string, find_set_element>::iterator
 		it = Find_Set.find(ID_to_find);
 	if(it != Find_Set.end()){
+		it->second.call_back(from);
 		mpa::mpint dist = k_func::distance(remote_ID, ID_to_find);
 		it->second.find_job->recv_host_list(from, hosts, dist);
 	}
@@ -157,14 +158,6 @@ void k_find::tick()
 		it_cur = Find_Set.begin(); it_cur != Find_Set.end();)
 	{
 		if(it_cur->second.timeout()){
-			std::multimap<mpa::mpint, net::endpoint> found = it_cur->second.find_job->found();
-			std::list<net::endpoint> found_endpoint;
-			for(std::multimap<mpa::mpint, net::endpoint>::iterator f_it_cur = found.begin(),
-				f_it_end = found.end(); f_it_cur != f_it_end; ++f_it_cur)
-			{
-				found_endpoint.push_back(f_it_cur->second);
-			}
-			it_cur->second.call_back(found_endpoint);
 			Find_Set.erase(it_cur++);
 		}else{
 			++it_cur;

@@ -24,7 +24,7 @@ public:
 	void find_node_cancel(const std::string & ID_to_find);
 	void find_set(const std::string & ID,
 		const std::multimap<mpa::mpint, net::endpoint> & hosts,
-		const boost::function<void (const std::list<net::endpoint> &)> & call_back);
+		const boost::function<void (const net::endpoint &)> & call_back);
 
 	/*
 	add_to_all:
@@ -75,13 +75,13 @@ private:
 	{
 	public:
 		find_set_element(
-			const boost::function<void (const std::list<net::endpoint> &)> & call_back_in,
+			const boost::function<void (const net::endpoint &)> & call_back_in,
 			boost::shared_ptr<k_find_job> find_job_in
 		);
 		find_set_element(const find_set_element & FSE);
 
 		//called when a host claims to be the node we're looking for
-		const boost::function<void (const std::list<net::endpoint> &)> call_back;
+		const boost::function<void (const net::endpoint &)> call_back;
 		boost::shared_ptr<k_find_job> find_job;
 
 		//returned true if timed out

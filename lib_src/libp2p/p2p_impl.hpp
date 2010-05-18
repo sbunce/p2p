@@ -40,7 +40,7 @@ public:
 
 	//documentation for these in p2p.hpp
 	unsigned DHT_count();
-	unsigned download_rate();
+
 	unsigned get_max_connections();
 	unsigned get_max_download_rate();
 	unsigned get_max_upload_rate();
@@ -52,7 +52,10 @@ public:
 	boost::uint64_t share_size_files();
 	void start_download(const p2p::download & D);
 	void transfers(std::vector<p2p::transfer> & T);
-	unsigned upload_rate();
+	unsigned TCP_download_rate();
+	unsigned TCP_upload_rate();
+	unsigned UDP_download_rate();
+	unsigned UDP_upload_rate();
 
 private:
 	//thread spawned by ctor to do actions on startup

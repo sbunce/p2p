@@ -25,11 +25,6 @@ unsigned p2p_impl::DHT_count()
 	return DHT.count();
 }
 
-unsigned p2p_impl::download_rate()
-{
-	return Connection_Manager.Proactor.download_rate();
-}
-
 unsigned p2p_impl::get_max_connections()
 {
 	return db::table::prefs::get_max_connections();
@@ -197,7 +192,22 @@ void p2p_impl::transfers(std::vector<p2p::transfer> & T)
 	}
 }
 
-unsigned p2p_impl::upload_rate()
+unsigned p2p_impl::TCP_download_rate()
+{
+	return Connection_Manager.Proactor.download_rate();
+}
+
+unsigned p2p_impl::TCP_upload_rate()
 {
 	return Connection_Manager.Proactor.upload_rate();
+}
+
+unsigned p2p_impl::UDP_download_rate()
+{
+	return DHT.download_rate();
+}
+
+unsigned p2p_impl::UDP_upload_rate()
+{
+	return DHT.upload_rate();
 }

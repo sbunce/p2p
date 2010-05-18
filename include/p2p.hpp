@@ -60,20 +60,26 @@ public:
 	/* Info
 	DHT_count:
 		Returns number of contacts in DHT routing table.
-	download_rate:
-		Returns current download rate (B/s).
 	share_size_bytes:
 		Size of all shared files.
 	share_size_files:
 		The number of files shared.
-	upload_rate:
-		Returns current upload rate (B/s).
+	TCP_download_rate:
+		Returns current average TCP download rate (B/s).
+	TCP_upload_rate:
+		Returns current average TCP upload rate (B/s).
+	UDP_download_rate:
+		Returns current average UDP download rate (B/s).
+	UDP_upload_rate:
+		Returns current average UDP upload rate (B/s).
 	*/
 	unsigned DHT_count();
-	unsigned download_rate();
 	boost::uint64_t share_size_bytes();
 	boost::uint64_t share_size_files();
-	unsigned upload_rate();
+	unsigned TCP_download_rate();
+	unsigned TCP_upload_rate();
+	unsigned UDP_download_rate();
+	unsigned UDP_upload_rate();
 
 	/* Get Options
 	get_download_rate:
