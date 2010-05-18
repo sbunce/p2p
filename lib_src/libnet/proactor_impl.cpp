@@ -491,7 +491,7 @@ void net::proactor_impl::stop()
 		LOG << "failed to set listener to blocking\n";
 		exit(1);
 	}
-	Listener = boost::shared_ptr<listener>();
+	Listener.reset();
 
 	//reset proactor_impl state
 	read_FDS.clear();

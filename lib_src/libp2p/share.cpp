@@ -270,7 +270,7 @@ share::slot_iterator share::find_slot(const std::string & hash)
 	//create slot
 	boost::shared_ptr<slot> new_slot;
 	try{
-		new_slot = boost::shared_ptr<slot>(new slot(*Hash_iter->second));
+		new_slot.reset(new slot(*Hash_iter->second));
 	}catch(std::exception & e){
 		LOG << e.what();
 		return end_slot();

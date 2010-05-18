@@ -12,10 +12,10 @@ slot::slot(const file_info & FI_in):
 {
 	if(FI.file_size != 0){
 		try{
-			Transfer = boost::shared_ptr<transfer>(new transfer(FI));
+			Transfer.reset(new transfer(FI));
 		}catch(std::exception & e){
 			LOG << e.what();
-			Transfer = boost::shared_ptr<transfer>();
+			Transfer.reset();
 		}
 	}
 }
@@ -91,10 +91,10 @@ bool slot::set_unknown(const int connection_ID, const boost::uint64_t file_size,
 	boost::mutex::scoped_lock lock(Transfer_mutex);
 	if(!Transfer){
 		try{
-			Transfer = boost::shared_ptr<transfer>(new transfer(FI));
+			Transfer.reset(new transfer(FI));
 		}catch(std::exception & e){
 			LOG << e.what();
-			Transfer = boost::shared_ptr<transfer>();
+			Transfer.reset();
 			return false;
 		}
 		//set file size in case we don't know it

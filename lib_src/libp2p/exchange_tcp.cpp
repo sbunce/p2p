@@ -43,7 +43,7 @@ void exchange_tcp::expect_anytime_erase(boost::shared_ptr<message_tcp::send::bas
 			The control flow is complicated here. We may be calling this function
 			from a call back done in exchange_tcp::recv_call_back.
 			*/
-			*it_cur = boost::shared_ptr<message_tcp::recv::base>();
+			it_cur->reset();
 		}
 	}
 }

@@ -19,15 +19,14 @@ static int find_call_back(int columns, char ** response, char ** column_name,
 	assert(columns == 2);
 	assert(std::strcmp(column_name[0], "key") == 0);
 	assert(std::strcmp(column_name[1], "state") == 0);
-	Info = boost::shared_ptr<db::table::hash::info>(
-		new db::table::hash::info());
+	Info.reset(new db::table::hash::info());
 	try{
 		Info->blob.rowid = boost::lexical_cast<boost::int64_t>(response[0]);
 		int temp = boost::lexical_cast<int>(response[1]);
 		Info->tree_state = reinterpret_cast<db::table::hash::state &>(temp);
 	}catch(const std::exception & e){
 		LOG << e.what();
-		Info = boost::shared_ptr<db::table::hash::info>();
+		Info.reset();
 	}
 	return 0;
 }

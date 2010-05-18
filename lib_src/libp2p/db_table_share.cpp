@@ -31,13 +31,12 @@ static void unmarshal_info(int columns, char ** response, char ** column_name,
 static int find_hash_call_back(int columns, char ** response, char ** column_name,
 	boost::shared_ptr<db::table::share::info> & Info)
 {
-	Info = boost::shared_ptr<db::table::share::info>(
-		new db::table::share::info());
+	Info.reset(new db::table::share::info());
 	try{
 		unmarshal_info(columns, response, column_name, *Info);
 	}catch(const std::exception & e){
 		LOG << e.what();
-		Info = boost::shared_ptr<db::table::share::info>();
+		Info.reset();
 	}
 	return 0;
 }

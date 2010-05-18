@@ -17,7 +17,7 @@ net::select::select()
 	//connect read_only socket
 	E = net::get_endpoint("localhost", L.port());
 	assert(!E.empty());
-	sp_read = boost::shared_ptr<nstream>(new nstream(*E.begin()));
+	sp_read.reset(new nstream(*E.begin()));
 	assert(sp_read->is_open());
 
 	//accept write_only connection

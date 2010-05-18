@@ -79,7 +79,7 @@ void net::ndgram::open(const endpoint & E)
 
 int net::ndgram::recv(net::buffer & buf, boost::shared_ptr<endpoint> & E)
 {
-	E = boost::shared_ptr<endpoint>();
+	E.reset();
 	addrinfo ai;
 	sockaddr_storage sas;
 	ai.ai_addr = reinterpret_cast<sockaddr *>(&sas);
@@ -94,7 +94,7 @@ int net::ndgram::recv(net::buffer & buf, boost::shared_ptr<endpoint> & E)
 		buf.tail_reserve(0);
 	}else{
 		boost::scoped_ptr<addr_impl> AI(new addr_impl(&ai));
-		E = boost::shared_ptr<endpoint>(new endpoint(AI));
+		E.reset(new endpoint(AI));
 		buf.tail_resize(n_bytes);
 	}
 	return n_bytes;
