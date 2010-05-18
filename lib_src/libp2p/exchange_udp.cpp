@@ -116,11 +116,36 @@ void exchange_udp::tick()
 	}
 
 	check_timeouts();
+
+	//try to send any unsent messages
+	while(!Send_Queue.empty()){
+		int n_bytes = ndgram.send(Send_Queue.front().first->buf, Send_Queue.front().second);
+		if(n_bytes <= 0){
+			if(ndgram.is_open()){
+				LOG << "OS buffers full";
+				break;
+			}else{
+				LOG << "UDP send error";
+				exit(1);
+			}
+		}else{
+			Send_Queue.pop_front();
+		}
+	}
 }
 
 void exchange_udp::send(boost::shared_ptr<message_udp::send::base> M,
-	const net::endpoint & endpoint)
+	const net::endpoint & ep)
 {
-	M->buf.size();
-	ndgram.send(M->buf, endpoint);
+	assert(!M->buf.empty());
+	int n_bytes = ndgram.send(M->buf, ep);
+	if(n_bytes <= 0){
+		if(ndgram.is_open()){
+			LOG << "OS buffers full";
+			Send_Queue.push_back(std::make_pair(M, ep));
+		}else{
+			LOG << "UDP send error";
+			exit(1);
+		}
+	}
 }

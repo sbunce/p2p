@@ -71,10 +71,11 @@ private:
 	*/
 	std::multimap<net::endpoint, expect_response_element> Expect_Response;
 
-	/*
-	Incoming messages that we expect anytime. These messages are not responses.
-	*/
+	//incoming messages that we expect anytime, these are not responses
 	std::list<boost::shared_ptr<message_udp::recv::base> > Expect_Anytime;
+
+	//if OS buffer becomes full
+	std::list<std::pair<boost::shared_ptr<message_udp::send::base>, net::endpoint> > Send_Queue;
 
 	/*
 	check_timeouts:

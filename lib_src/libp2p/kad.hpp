@@ -49,6 +49,12 @@ private:
 	k_route_table Route_Table;
 	k_find Find;
 
+	/*
+	The first time we call send_ping() we want to ping all nodes we can to update
+	our routing table ASAP.
+	*/
+	bool send_ping_called;
+
 	class store_token
 	{
 	public:

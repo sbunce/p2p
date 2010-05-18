@@ -32,7 +32,8 @@ bool kad::store_token::timeout()
 kad::kad():
 	local_ID(db::table::prefs::get_ID()),
 	active_cnt(0),
-	Route_Table(active_cnt, boost::bind(&kad::route_table_call_back, this, _1, _2))
+	Route_Table(active_cnt, boost::bind(&kad::route_table_call_back, this, _1, _2)),
+	send_ping_called(false)
 {
 	//messages to expect anytime
 	Exchange.expect_anytime(boost::shared_ptr<message_udp::recv::base>(
@@ -102,7 +103,7 @@ void kad::network_loop()
 
 	//main loop
 	std::time_t second_timeout(std::time(NULL));
-	std::time_t hour_timeout(std::time(NULL));
+	std::time_t hour_timeout(std::time(NULL) + protocol_udp::response_timeout);
 	while(true){
 		boost::this_thread::interruption_point();
 		if(std::time(NULL) > second_timeout){
@@ -223,15 +224,20 @@ void kad::send_find_node()
 
 void kad::send_ping()
 {
-	boost::optional<net::endpoint> ep = Route_Table.ping();
-	if(ep){
-		net::buffer random(random::urandom(4));
-		Exchange.send(boost::shared_ptr<message_udp::send::base>(
-			new message_udp::send::ping(random, local_ID)), *ep);
-		Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
-			new message_udp::recv::pong(boost::bind(&kad::recv_pong, this, _1, _2, _3), random)),
-			*ep);
-	}
+	//ping everything possible on the first call
+	boost::optional<net::endpoint> ep;
+	do{
+		ep = Route_Table.ping();
+		if(ep){
+			net::buffer random(random::urandom(4));
+			Exchange.send(boost::shared_ptr<message_udp::send::base>(
+				new message_udp::send::ping(random, local_ID)), *ep);
+			Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
+				new message_udp::recv::pong(boost::bind(&kad::recv_pong, this, _1, _2, _3), random)),
+				*ep);
+		}
+	}while(!send_ping_called && ep);
+	send_ping_called = true;
 }
 
 void kad::send_store_node()
