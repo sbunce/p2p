@@ -39,7 +39,7 @@ void k_bucket::add_reserve(const net::endpoint & ep, const std::string remote_ID
 	}
 	LOG << "reserve: " << ep.IP() << " " << ep.port() << " " << remote_ID;
 	Bucket_Reserve.push_back(bucket_element(ep, remote_ID,
-		k_contact(protocol_udp::contact_timeout)));
+		k_contact(protocol_udp::bucket_timeout)));
 }
 
 bool k_bucket::exists(const net::endpoint & ep)
@@ -182,14 +182,14 @@ void k_bucket::recv_pong(const net::endpoint & from, const std::string & remote_
 		LOG << "active: " << from.IP() << " " << from.port() << " " << remote_ID;
 		++active_cnt;
 		Bucket_Active.push_front(bucket_element(from, remote_ID,
-			k_contact(protocol_udp::contact_timeout)));
+			k_contact(protocol_udp::bucket_timeout)));
 		route_table_call_back(from, remote_ID);
 		return;
 	}else{
 		//add to reserve
 		LOG << "reserve: " << from.IP() << " " << from.port() << " " << remote_ID;
 		Bucket_Reserve.push_back(bucket_element(from, remote_ID,
-			k_contact(protocol_udp::contact_timeout)));
+			k_contact(protocol_udp::bucket_timeout)));
 		return;
 	}
 }

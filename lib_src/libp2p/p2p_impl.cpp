@@ -112,17 +112,27 @@ void p2p_impl::resume()
 	}
 	Connection_Manager.Proactor.start(Listener);
 
-
 //DEBUG, test find
 	struct func_local{
-	static void FOUND(const net::endpoint & ep, const std::string s)
+	static void FOUND_NODE(const net::endpoint & ep)
 	{
-		LOG << "found: \"" << s << "\" at " << ep.IP() << " " << ep.port();
+		LOG << "found node: \"" << ep.IP() << " " << ep.port();
+	}
+	static void FOUND_SET(const std::list<net::endpoint> & ep)
+	{
+		std::stringstream ss;
+		for(std::list<net::endpoint>::const_iterator it_cur = ep.begin(),
+			it_end = ep.end(); it_cur != it_end; ++it_cur)
+		{
+			ss << it_cur->IP() << " " << it_cur->port() << "|";
+		}
+		LOG << "found set: \"" << ss.str();
 	}
 	};
-	if("22ED3160421A8D3F99CDEBB4BC32A1EEE9C945C1" == db::table::prefs::get_ID()){
+	std::string ID_to_find = "22ED3160421A8D3F99CDEBB4BC32A1EEE9C945C1";
+	if(ID_to_find == db::table::prefs::get_ID()){
 		LOG << "starting find";
-		DHT.find_node("FCB579505C98E11CC2940D37C5D8D489CED63998", &func_local::FOUND);
+		DHT.find_node("FCB579505C98E11CC2940D37C5D8D489CED63998", &func_local::FOUND_NODE);
 	}
 }
 

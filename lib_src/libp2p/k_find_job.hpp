@@ -17,81 +17,26 @@
 class k_find_job : private boost::noncopyable
 {
 public:
-	k_find_job(const boost::function<void (const net::endpoint &)> & call_back_in);
-
-	/*
-	When a host is found with distance zero this call back is used.
-	Note: This may be called multiple times if multiple hosts claim to be the
-		ID we're looking for.
-	Note: The ID is bound to this function object in k_find.
-	*/
-	const boost::function<void (const net::endpoint &)> call_back;
+	k_find_job(const std::multimap<mpa::mpint, net::endpoint> & hosts);
 
 	/*
 	add:
 		Add endpoint where we know the distance it is from ID to find.
-	add_initial:
-		Adds endpoints but staggers the delays. Used to add the results of a local
-		find node search after find job is created.
-		Precondition: No endpoints must have been added to the k_find_node.
 	find_node:
 		Returns list of endpoints that find_node needs to be sent to.
+	found:
+		Returns reference to nodes that have been found.
 	recv_host_list:
 		Called when host list received. The dist parameter is distance from remote
 		host to ID to find.
 	*/
 	void add(const mpa::mpint & dist, const net::endpoint & ep);
-	void add_initial(const std::multimap<mpa::mpint, net::endpoint> & hosts);
 	std::list<net::endpoint> find_node();
+	const std::multimap<mpa::mpint, net::endpoint> & found();
 	void recv_host_list(const net::endpoint & from,
 		const std::list<net::endpoint> & hosts, const mpa::mpint & dist);
 
 private:
-
-/*
-	class contact : private boost::noncopyable
-	{
-	public:
-		explicit contact(
-			const net::endpoint & endpoint_in,
-			const unsigned delay = 0
-		);
-		const net::endpoint endpoint;
-*/
-		/*
-		send:
-			Returns true if find_node should be sent to endpoint.
-		timeout:
-			Returns true if contact has timed out.
-			Postcondition: timeout() will return false. The contact is reset to
-				original state with no delay.
-		timeout_count:
-			Returns number of times the contact has timed out.
-		*/
-/*
-		bool send();
-		bool timeout();
-		unsigned timeout_count();
-
-	private:
-*/
-		/*
-		time:
-			Initially set to the time the contact was instantiated. After send()
-			returns true this is used to check for timeout.
-		sent:
-			Set to true when send() has returned true. Enables timeout of the
-			contact.
-		timeout_cnt:
-			Returns the number of times this contact has timed out. Used for
-			retransmission limit.
-		*/
-/*
-		std::time_t time;
-		bool sent;
-		unsigned timeout_cnt;
-	};
-*/
 	class store_element
 	{
 	public:

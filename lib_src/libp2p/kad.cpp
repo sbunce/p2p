@@ -40,6 +40,9 @@ kad::kad():
 	Exchange.expect_anytime(boost::shared_ptr<message_udp::recv::base>(
 		new message_udp::recv::find_node(boost::bind(&kad::recv_find_node,
 		this, _1, _2, _3, _4))));
+	Exchange.expect_anytime(boost::shared_ptr<message_udp::recv::base>(
+		new message_udp::recv::store_node(boost::bind(&kad::recv_store_node,
+		this, _1, _2, _3))));
 
 	//start networking
 	network_thread = boost::thread(boost::bind(&kad::network_loop, this));
@@ -57,7 +60,7 @@ unsigned kad::count()
 }
 
 void kad::find_node(const std::string & ID_to_find,
-	const boost::function<void (const net::endpoint &, const std::string &)> & call_back)
+	const boost::function<void (const net::endpoint &)> & call_back)
 {
 	boost::mutex::scoped_lock lock(relay_job_mutex);
 	relay_job.push_back(boost::bind(&kad::find_node_relay, this, ID_to_find, call_back));
@@ -70,15 +73,15 @@ void kad::find_node_cancel(const std::string & ID)
 }
 
 void kad::find_node_relay(const std::string ID_to_find,
-	const boost::function<void (const net::endpoint &, const std::string &)> call_back)
+	const boost::function<void (const net::endpoint &)> call_back)
 {
 	std::multimap<mpa::mpint, net::endpoint> hosts = Route_Table.find_node_local(ID_to_find);
-	Find.add_job(ID_to_find, hosts, call_back);
+	Find.find_node(ID_to_find, hosts, call_back);
 }
 
 void kad::find_node_cancel_relay(const std::string ID)
 {
-	Find.cancel_job(ID);
+	Find.find_node_cancel(ID);
 }
 
 void kad::network_loop()
@@ -98,15 +101,20 @@ void kad::network_loop()
 	}
 
 	//main loop
-	std::time_t last_time(std::time(NULL));
+	std::time_t second_timeout(std::time(NULL));
+	std::time_t hour_timeout(std::time(NULL));
 	while(true){
 		boost::this_thread::interruption_point();
-		if(last_time != std::time(NULL)){
-			//once per second
+		if(std::time(NULL) > second_timeout){
 			send_find_node();
 			send_ping();
 			store_token_timeout();
-			last_time = std::time(NULL);
+			Find.tick();
+			second_timeout = std::time(NULL) + 1;
+		}
+		if(std::time(NULL) > hour_timeout){
+			send_store_node();
+			hour_timeout = std::time(NULL) + 60 * 60;
 		}
 		Exchange.tick();
 		process_relay_job();
@@ -173,6 +181,26 @@ void kad::recv_pong(const net::endpoint & from, const net::buffer & random,
 	Route_Table.recv_pong(from, remote_ID);
 }
 
+void kad::recv_store_node(const net::endpoint & from, const net::buffer & random,
+	const std::string & remote_ID)
+{
+	typedef std::multimap<net::endpoint, store_token>::iterator it_t;
+	std::pair<it_t, it_t> p = outgoing_store_token.equal_range(from);
+	bool found = false;
+	for(; p.first != p.second; ++p.first){
+		if(p.first->second.random == random){
+			found = true;
+			break;
+		}
+	}
+	if(found){
+		LOG << from.IP() << " " << from.port() << " " << remote_ID;
+		db::table::peer::add(db::table::peer::info(remote_ID, from.IP(), from.port()));
+	}else{
+		LOG << "invalid: " << from.IP() << " " << from.port() << " " << remote_ID;
+	}
+}
+
 void kad::route_table_call_back(const net::endpoint & ep, const std::string & remote_ID)
 {
 	Find.add_to_all(ep, remote_ID);
@@ -180,7 +208,7 @@ void kad::route_table_call_back(const net::endpoint & ep, const std::string & re
 
 void kad::send_find_node()
 {
-	std::list<std::pair<net::endpoint, std::string> > jobs = Find.find_node();
+	std::list<std::pair<net::endpoint, std::string> > jobs = Find.send_find_node();
 	for(std::list<std::pair<net::endpoint, std::string> >::iterator
 		it_cur = jobs.begin(), it_end = jobs.end(); it_cur != it_end; ++it_cur)
 	{
@@ -203,6 +231,45 @@ void kad::send_ping()
 		Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
 			new message_udp::recv::pong(boost::bind(&kad::recv_pong, this, _1, _2, _3), random)),
 			*ep);
+	}
+}
+
+void kad::send_store_node()
+{
+	LOG << "store_node started";
+	std::multimap<mpa::mpint, net::endpoint> hosts = Route_Table.find_node_local(local_ID);
+	Find.find_set(local_ID, hosts, boost::bind(&kad::send_store_node_call_back, this, _1));
+}
+
+void kad::send_store_node_call_back(const net::endpoint & from,
+	const net::buffer & random, const std::string & remote_ID)
+{
+	recv_pong(from, random, remote_ID);
+	LOG << "store_node: " << from.IP() << " " << from.port();
+	Exchange.send(boost::shared_ptr<message_udp::send::base>(
+		new message_udp::send::store_node(random, local_ID)), from);
+}
+
+void kad::send_store_node_call_back(const std::list<net::endpoint> & ep_list)
+{
+	for(std::list<net::endpoint>::const_iterator it_cur = ep_list.begin(),
+		it_end = ep_list.end(); it_cur != it_end; ++it_cur)
+	{
+		std::multimap<net::endpoint, store_token>::iterator it = incoming_store_token.find(*it_cur);
+		if(it == incoming_store_token.end()){
+			//do ping to get store token
+			LOG << "ping: " << it_cur->IP() << " " << it_cur->port();
+			net::buffer random(random::urandom(4));
+			Exchange.send(boost::shared_ptr<message_udp::send::base>(
+				new message_udp::send::ping(random, local_ID)), *it_cur);
+			Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
+				new message_udp::recv::pong(boost::bind(&kad::send_store_node_call_back,
+				this, _1, _2, _3), random)), *it_cur);
+		}else{
+			LOG << "store_node: " << it_cur->IP() << " " << it_cur->port();
+			Exchange.send(boost::shared_ptr<message_udp::send::base>(
+				new message_udp::send::store_node(it->second.random, local_ID)), *it_cur);
+		}
 	}
 }
 

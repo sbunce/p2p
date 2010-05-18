@@ -1,47 +1,5 @@
 #include "k_find_job.hpp"
 
-/*
-//BEGIN contact
-k_find_job::contact::contact(
-	const net::endpoint & endpoint_in,
-	const unsigned delay
-):
-	endpoint(endpoint_in),
-	time(std::time(NULL) + delay),
-	sent(false),
-	timeout_cnt(0)
-{
-
-}
-
-bool k_find_job::contact::send()
-{
-	if(!sent && std::time(NULL) > time){
-		time = std::time(NULL) + protocol_udp::response_timeout;
-		sent = true;
-		return true;
-	}
-	return false;
-}
-
-bool k_find_job::contact::timeout()
-{
-	if(sent && std::time(NULL) > time){
-		time = std::time(NULL);
-		sent = false;
-		++timeout_cnt;
-		return true;
-	}
-	return false;
-}
-
-unsigned k_find_job::contact::timeout_count()
-{
-	return timeout_cnt;
-}
-//END contact
-*/
-
 //BEGIN store_element
 k_find_job::store_element::store_element(
 	const net::endpoint & endpoint_in,
@@ -61,27 +19,10 @@ k_find_job::store_element::store_element(const store_element & SE):
 }
 //END store_element
 
-k_find_job::k_find_job(
-	const boost::function<void (const net::endpoint &)> & call_back_in
-):
-	call_back(call_back_in)
+k_find_job::k_find_job(const std::multimap<mpa::mpint, net::endpoint> & hosts)
 {
-	assert(call_back);
-}
-
-void k_find_job::add(const mpa::mpint & dist, const net::endpoint & ep)
-{
-	if(Memoize.find(ep) == Memoize.end()){
-		Memoize.insert(ep);
-		Store.insert(std::make_pair(dist, store_element(ep, k_contact())));
-	}
-}
-
-void k_find_job::add_initial(const std::multimap<mpa::mpint, net::endpoint> & hosts)
-{
-	assert(Memoize.empty());
 	unsigned delay = 0;
-	int no_delay_cnt = 16;
+	int no_delay_cnt = protocol_udp::no_delay_count;
 	for(std::multimap<mpa::mpint, net::endpoint>::const_iterator
 		it_cur = hosts.begin(), it_end = hosts.end(); it_cur != it_end; ++it_cur)
 	{
@@ -90,6 +31,14 @@ void k_find_job::add_initial(const std::multimap<mpa::mpint, net::endpoint> & ho
 			Store.insert(std::make_pair(it_cur->first,
 				store_element(it_cur->second, k_contact(0, no_delay_cnt-- > 0 ? 0 : delay++))));
 		}
+	}
+}
+
+void k_find_job::add(const mpa::mpint & dist, const net::endpoint & ep)
+{
+	if(Memoize.find(ep) == Memoize.end()){
+		Memoize.insert(ep);
+		Store.insert(std::make_pair(dist, store_element(ep, k_contact())));
 	}
 }
 
@@ -132,13 +81,14 @@ std::list<net::endpoint> k_find_job::find_node()
 	return jobs;
 }
 
+const std::multimap<mpa::mpint, net::endpoint> & k_find_job::found()
+{
+	return Found;
+}
+
 void k_find_job::recv_host_list(const net::endpoint & from,
 	const std::list<net::endpoint> & hosts, const mpa::mpint & dist)
 {
-	if(dist == "0"){
-		//remote host claims to be node we're looking for
-		call_back(from);
-	}
 	//erase endpoint that sent host_list and add it to found collection
 	for(std::multimap<mpa::mpint, store_element>::iterator
 		it_cur = Store.begin(), it_end = Store.end(); it_cur != it_end; ++it_cur)

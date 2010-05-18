@@ -82,6 +82,19 @@ private:
 	const net::buffer random;
 };
 
+class store_node : public base
+{
+public:
+	typedef boost::function<void (const net::endpoint & from,
+		const net::buffer & random, const std::string & remote_ID)> handler;
+	store_node(handler func_in);
+	virtual bool expect(const net::buffer & recv_buf);
+	virtual bool recv(const net::buffer & recv_buf,
+		const net::endpoint & endpoint);
+private:
+	handler func;
+};
+
 }//end of namespace recv
 
 namespace send{
@@ -117,6 +130,12 @@ class host_list : public base
 public:
 	host_list(const net::buffer & random, const std::string & local_ID,
 		const std::list<net::endpoint> & hosts);
+};
+
+class store_node : public base
+{
+public:
+	store_node(const net::buffer & random, const std::string & local_ID);
 };
 
 }//end of namespace send

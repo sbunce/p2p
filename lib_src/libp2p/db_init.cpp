@@ -17,7 +17,6 @@ void db::init::create_all()
 
 	//peer
 	DB->query("CREATE TABLE IF NOT EXISTS peer(ID TEXT, IP TEXT, port TEXT)");
-	DB->query("CREATE UNIQUE INDEX IF NOT EXISTS peer_index ON peer(ID, IP, port)");
 	DB->query("CREATE INDEX IF NOT EXISTS peer_ID_index ON peer(ID)");
 
 	//prefs

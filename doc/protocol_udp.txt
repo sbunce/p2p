@@ -113,7 +113,6 @@ A = address, B = port
 note: If IPv4 then x=3. If IPv6 then x=15.
 ---
 
-//IMPLEMENT NEXT
 ---
 name: store_node
 desc: Store a mapping from node ID to address.

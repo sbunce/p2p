@@ -32,10 +32,13 @@ public:
 	find_node_cancel:
 		Once sure that the node has been found this function should be called to
 		stop further find_node requests.
+	find_set:
+		Find set of nodes which are closest to ID. The call back is used when the
+		set is found.
 	*/
 	unsigned count();
 	void find_node(const std::string & ID_to_find,
-		const boost::function<void (const net::endpoint &, const std::string &)> & call_back);
+		const boost::function<void (const net::endpoint &)> & call_back);
 	void find_node_cancel(const std::string & ID);
 
 private:
@@ -83,9 +86,14 @@ private:
 	boost::mutex relay_job_mutex;
 	std::deque<boost::function<void ()> > relay_job;
 
+	/* Relay Functions
+	Called from relay_job. Refer to public functions to see what these do.
+	*/
+	void find_node_relay(const std::string ID_to_find,
+		const boost::function<void (const net::endpoint &)> call_back);
+	void find_node_cancel_relay(const std::string ID);
+
 	/*
-	find_node_relay:
-		Called as relay job. Starts the find process for a node ID.
 	network_loop:
 		Loop to handle timed events and network events.
 	process_relay_job:
@@ -93,24 +101,33 @@ private:
 	route_table_call_back:
 		Called when active contact added to the routing table.
 	*/
-	void find_node_relay(const std::string ID_to_find,
-		const boost::function<void (const net::endpoint &, const std::string &)> call_back);
-	void find_node_cancel_relay(const std::string ID);
 	void network_loop();
 	void process_relay_job();
 	void route_table_call_back(const net::endpoint & ep, const std::string & remote_ID);
 
 	/* Timed Functions
-	Called once per second by network_thread.
 	send_find_node:
 		Send find_node messages.
 	send_ping:
 		Send ping messages.
+	send_store_node:
+		Sends store_node message.
+	send_store_node_call_back (1 parameter):
+		Call back to send store_node to closest nodes.
+	send_store_node_call_back (3 parameters):
+		If we don't have a store token in send_store_node_call_back (1 parameter)
+		we send a ping and register send_store_node_call_back (3 parameters) as
+		the response handler. This function sends the store after the pong is
+		received.
 	store_token_timeout:
 		Checks timeouts on all store_tokens.
 	*/
 	void send_find_node();
 	void send_ping();
+	void send_store_node();
+	void send_store_node_call_back(const std::list<net::endpoint> & ep_list);
+	void send_store_node_call_back(const net::endpoint & from,
+		const net::buffer & random, const std::string & remote_ID);
 	void store_token_timeout();
 
 	/* Receive Call Back
@@ -125,6 +142,8 @@ private:
 	void recv_ping(const net::endpoint & from, const net::buffer & random,
 		const std::string & remote_ID);
 	void recv_pong(const net::endpoint & from, const net::buffer & random,
+		const std::string & remote_ID);
+	void recv_store_node(const net::endpoint & from, const net::buffer & random,
 		const std::string & remote_ID);
 };
 #endif

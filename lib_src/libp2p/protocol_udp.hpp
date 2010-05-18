@@ -17,6 +17,10 @@ contact_timeout:
 	contact before timeout.
 max_store:
 	Maximum number of endpoints to send store command to.
+no_delay_count:
+	The number of requests to make immediately when starting to find a node.
+	Setting this high will make finds work faster but waste more bandwidth and
+	contact more hosts.
 response_timeout:
 	How long to wait for a response to a request.
 retransmit_limit:
@@ -30,9 +34,10 @@ store_token_outgoing_timeout:
 */
 const unsigned bucket_count = SHA1::bin_size * 8;
 const unsigned bucket_size = 16;
-//DEBUG, rename to bucket_timeout
-const unsigned contact_timeout = bucket_count * bucket_size * 2;
+const unsigned bucket_timeout = bucket_count * bucket_size * 2;
+const unsigned find_set_timeout = 60;
 const unsigned max_store = 16;
+const unsigned no_delay_count = 4;
 const unsigned response_timeout = 30;
 const unsigned retransmit_limit = 2;
 const unsigned store_token_outgoing_timeout = 60 * 8;
@@ -45,8 +50,10 @@ const unsigned char pong = 1;
 const unsigned pong_size = 25;
 const unsigned char find_node = 2;
 const unsigned find_node_size = 45;
-const unsigned char host_list = 5;
+const unsigned char host_list = 3;
 const unsigned host_list_size = 27;     //minimum size
 const unsigned host_list_elements = 16; //max elements in host_list
+const unsigned char store_node = 4;
+const unsigned store_node_size = 25;
 }//end of namespace protocol_udp
 #endif
