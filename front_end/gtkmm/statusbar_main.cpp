@@ -8,6 +8,8 @@ statusbar_main::statusbar_main(
 	statusbar = this;
 	Glib::signal_timeout().connect(sigc::mem_fun(*this,
 		&statusbar_main::update_status_bar), settings::GUI_TICK);
+
+	statusbar->modify_font(Pango::FontDescription("monospace"));
 }
 
 bool statusbar_main::update_status_bar()
@@ -22,9 +24,10 @@ bool statusbar_main::update_status_bar()
 		<< "D: " << convert::bytes_to_SI(P2P.UDP_download_rate()) << "/s "
 		<< "U: " << convert::bytes_to_SI(P2P.UDP_upload_rate()) << "/s"
 	<< ") "
+	<< "C: " << P2P.connections() << " "
 	<< "DHT: " << P2P.DHT_count() << " "
-	<< "S: " << convert::bytes_to_SI(P2P.share_size_bytes()) << " ("
-		<< P2P.share_size_files() << ")";
+	<< "S: " << convert::bytes_to_SI(P2P.share_size()) << " ("
+		<< P2P.share_files() << ")";
 
 	statusbar->pop();
 	statusbar->push(ss.str());

@@ -9,6 +9,7 @@
 #include "rate_limit.hpp"
 
 //include
+#include <atomic_int.hpp>
 #include <boost/shared_ptr.hpp>
 #include <thread_pool.hpp>
 #include <net/net.hpp>
@@ -27,65 +28,29 @@ public:
 		const boost::function<void (proactor::connection_info &)> & disconnect_call_back
 	);
 
-	/* Stop/Start
-	start:
-		Start the proactor and optionally add a listener.
-		Note: The listener added should not be used after it is passed to the
-			proactor.
-	stop:
-		Stop the proactor. Disconnect call back done for all connections.
-		Pending resolve jobs are cancelled.
-	*/
+	//documentation in proactor.hpp
+
+	//stop/start
 	void start(boost::shared_ptr<listener> Listener_in);
 	void stop();
 
-	/* Connect/Disconnect/Send
-	connect:
-		Start async connection to host. Connect call back will happen if connects,
-		or disconnect call back if connection fails.
-	disconnect:
-		Disconnect as soon as possible.
-	disconnect_on_empty:
-		Disconnect when send buffer becomes empty.
-	send:
-		Send data to specified connection if connection still exists.
-	*/
+	//connect/disconnect/send
 	void connect(const std::string & host, const std::string & port);
 	void disconnect(const int connection_ID);
 	void disconnect_on_empty(const int connection_ID);
 	void send(const int connection_ID, buffer & send_buf);
 
-
-	/* Info
-	download_rate:
-		Returns download rate averaged over a few seconds (B/s).
-	listen_port:
-		Returns port listening on (empty if not listening).
-	upload_rate:
-		Returns upload rate averaged over a few seconds (B/s).
-	*/
+	//info
+	unsigned connections();
 	unsigned download_rate();
 	std::string listen_port();
 	unsigned upload_rate();
 
-	/* Get Options
-	get_max_download_rate:
-		Get maximum allowed download rate.
-	get_max_upload_rate:
-		Get maximum allowed upload rate.
-	*/
+	//get options
 	unsigned get_max_download_rate();
 	unsigned get_max_upload_rate();
 
-	/* Set Options
-	set_connection_limit:
-		Set connection limit for incoming and outgoing connections.
-		Note: incoming_limit + outgoing_limit <= 1024.
-	set_max_download_rate:
-		Set maximum allowed download rate.
-	set_max_upload_rate:
-		Set maximum allowed upload rate.
-	*/
+	//set options
 	void set_connection_limit(const unsigned incoming_limit, const unsigned outgoing_limit);
 	void set_max_download_rate(const unsigned rate);
 	void set_max_upload_rate(const unsigned rate);
@@ -108,6 +73,7 @@ private:
 	unsigned outgoing_connection_limit;                   //maximum allowed outgoing connections
 	unsigned incoming_connections;                        //current incoming connections
 	unsigned outgoing_connections;                        //current outgoing connections
+	atomic_int<unsigned> established_connections;         //fully open connections
 
 	/*
 	Function call proxy. A thread adds a function object and network_thread makes

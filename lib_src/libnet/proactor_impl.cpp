@@ -8,7 +8,8 @@ net::proactor_impl::proactor_impl(
 	incoming_connection_limit(FD_SETSIZE / 2),
 	outgoing_connection_limit(FD_SETSIZE / 2),
 	incoming_connections(0),
-	outgoing_connections(0)
+	outgoing_connections(0),
+	established_connections(0)
 {
 
 }
@@ -129,6 +130,11 @@ void net::proactor_impl::connect(const std::string & host, const std::string & p
 		host, port));
 }
 
+unsigned net::proactor_impl::connections()
+{
+	return established_connections;
+}
+
 void net::proactor_impl::disconnect(const int connection_ID)
 {
 	boost::mutex::scoped_lock lock(relay_job_mutex);
@@ -187,6 +193,7 @@ void net::proactor_impl::handle_async_connection(
 	P.second->touch();
 	if(P.second->is_open()){
 		//async connection suceeded
+		++established_connections;
 		read_FDS.insert(P.first); //monitor socket for incoming data
 		write_FDS.erase(P.first); //send_buf will be empty after connect
 		Dispatcher.connect(P.second->CI);
@@ -272,6 +279,7 @@ void net::proactor_impl::network_loop()
 				std::pair<int, boost::shared_ptr<connection> > P(N->socket(),
 					boost::shared_ptr<connection>(new connection(ID_Manager, N)));
 				if(incoming_connections < incoming_connection_limit){
+					++established_connections;
 					++incoming_connections;
 					add_socket(P);
 					Dispatcher.connect(P.second->CI);
@@ -371,6 +379,7 @@ void net::proactor_impl::remove_socket(const int socket_FD)
 		}else{
 			--outgoing_connections;
 		}
+		--established_connections;
 		Socket.erase(socket_FD);
 		ID.erase(P.second->connection_ID);
 	}

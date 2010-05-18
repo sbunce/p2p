@@ -20,6 +20,11 @@ p2p_impl::~p2p_impl()
 	resume_thread.join();
 }
 
+unsigned p2p_impl::connections()
+{
+	return Connection_Manager.Proactor.connections();
+}
+
 unsigned p2p_impl::DHT_count()
 {
 	return DHT.count();
@@ -151,12 +156,12 @@ void p2p_impl::set_max_upload_rate(const unsigned rate)
 	db::table::prefs::set_max_upload_rate(rate);
 }
 
-boost::uint64_t p2p_impl::share_size_bytes()
+boost::uint64_t p2p_impl::share_size()
 {
 	return share::singleton().bytes();
 }
 
-boost::uint64_t p2p_impl::share_size_files()
+boost::uint64_t p2p_impl::share_files()
 {
 	return share::singleton().files();
 }

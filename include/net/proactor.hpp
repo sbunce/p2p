@@ -103,6 +103,9 @@ public:
 
 
 	/* Info
+	connections:
+		Returns how many connections are open. This does not include half-open
+		connections.
 	download_rate:
 		Returns download rate averaged over a few seconds (B/s).
 	listen_port:
@@ -110,6 +113,7 @@ public:
 	upload_rate:
 		Returns upload rate averaged over a few seconds (B/s).
 	*/
+	unsigned connections();
 	unsigned download_rate();
 	std::string listen_port();
 	unsigned upload_rate();

@@ -11,6 +11,11 @@ p2p::p2p():
 
 }
 
+unsigned p2p::connections()
+{
+	return P2P_impl->connections();
+}
+
 unsigned p2p::DHT_count()
 {
 	return P2P_impl->DHT_count();
@@ -51,14 +56,14 @@ void p2p::set_max_upload_rate(const unsigned rate)
 	P2P_impl->set_max_upload_rate(rate);
 }
 
-boost::uint64_t p2p::share_size_bytes()
+boost::uint64_t p2p::share_size()
 {
-	return P2P_impl->share_size_bytes();
+	return P2P_impl->share_size();
 }
 
-boost::uint64_t p2p::share_size_files()
+boost::uint64_t p2p::share_files()
 {
-	return P2P_impl->share_size_files();
+	return P2P_impl->share_files();
 }
 
 void p2p::start_download(const p2p::download & D)

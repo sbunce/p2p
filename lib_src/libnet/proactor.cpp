@@ -39,6 +39,11 @@ void net::proactor::connect(const std::string & host, const std::string & port)
 	Proactor_impl->connect(host, port);
 }
 
+unsigned net::proactor::connections()
+{
+	return Proactor_impl->connections();
+}
+
 void net::proactor::disconnect(const int connection_ID)
 {
 	Proactor_impl->disconnect(connection_ID);

@@ -58,11 +58,13 @@ public:
 	void transfers(std::vector<p2p::transfer> & T);
 
 	/* Info
+	connection:
+		Returns number of hosts we're connected to.
 	DHT_count:
 		Returns number of contacts in DHT routing table.
-	share_size_bytes:
-		Size of all shared files.
-	share_size_files:
+	share_size:
+		Size of all shared files (bytes).
+	share_files:
 		The number of files shared.
 	TCP_download_rate:
 		Returns current average TCP download rate (B/s).
@@ -73,9 +75,10 @@ public:
 	UDP_upload_rate:
 		Returns current average UDP upload rate (B/s).
 	*/
+	unsigned connections();
 	unsigned DHT_count();
-	boost::uint64_t share_size_bytes();
-	boost::uint64_t share_size_files();
+	boost::uint64_t share_size();
+	boost::uint64_t share_files();
 	unsigned TCP_download_rate();
 	unsigned TCP_upload_rate();
 	unsigned UDP_download_rate();
