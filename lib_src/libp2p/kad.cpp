@@ -1,34 +1,5 @@
 #include "kad.hpp"
 
-//BEGIN store_token
-kad::store_token::store_token(
-	const net::buffer & random_in,
-	const direction_t direction
-):
-	random(random_in),
-	time(std::time(NULL)),
-	_timeout(direction == incoming ?
-		protocol_udp::store_token_incoming_timeout :
-		protocol_udp::store_token_outgoing_timeout
-	)
-{
-
-}
-
-kad::store_token::store_token(const store_token & ST):
-	random(ST.random),
-	time(ST.time),
-	_timeout(ST._timeout)
-{
-
-}
-
-bool kad::store_token::timeout()
-{
-	return std::time(NULL) - time > _timeout;
-}
-//END store_token
-
 kad::kad():
 	local_ID(db::table::prefs::get_ID()),
 	active_cnt(0),
@@ -68,18 +39,31 @@ unsigned kad::download_rate()
 	return Exchange.download_rate();
 }
 
-void kad::find_node(const std::string & ID_to_find,
+void kad::find_file(const std::string & hash,
 	const boost::function<void (const net::endpoint &)> & call_back)
 {
 	boost::mutex::scoped_lock lock(relay_job_mutex);
-	relay_job.push_back(boost::bind(&kad::find_node_relay, this, ID_to_find, call_back));
+	relay_job.push_back(boost::bind(&kad::find_file_relay, this, hash, call_back));
 }
 
-void kad::find_node_relay(const std::string ID_to_find,
+void kad::find_file_relay(const std::string hash,
 	const boost::function<void (const net::endpoint &)> call_back)
 {
-	std::multimap<mpa::mpint, net::endpoint> hosts = Route_Table.find_node_local(ID_to_find);
-	Find.node(ID_to_find, hosts, call_back);
+//DEBUG, finish this
+}
+
+void kad::find_node(const std::string & ID,
+	const boost::function<void (const net::endpoint &)> & call_back)
+{
+	boost::mutex::scoped_lock lock(relay_job_mutex);
+	relay_job.push_back(boost::bind(&kad::find_node_relay, this, ID, call_back));
+}
+
+void kad::find_node_relay(const std::string ID,
+	const boost::function<void (const net::endpoint &)> call_back)
+{
+	std::multimap<mpa::mpint, net::endpoint> hosts = Route_Table.find_node_local(ID);
+	Find.node(ID, hosts, call_back);
 }
 
 void kad::network_loop()
@@ -106,8 +90,8 @@ void kad::network_loop()
 		if(std::time(NULL) > second_timeout){
 			send_find_node();
 			send_ping();
-			store_token_timeout();
 			Find.tick();
+			Token.tick();
 			second_timeout = std::time(NULL) + 1;
 		}
 		if(std::time(NULL) > hour_timeout){
@@ -165,8 +149,7 @@ void kad::recv_ping(const net::endpoint & from,
 	const net::buffer & random, const std::string & remote_ID)
 {
 	Route_Table.add_reserve(from, remote_ID);
-	issued_store_token.insert(std::make_pair(from, store_token(random,
-		store_token::outgoing)));
+	Token.issue(from, random);
 	Exchange.send(boost::shared_ptr<message_udp::send::base>(
 		new message_udp::send::pong(random, local_ID)), from);
 }
@@ -174,8 +157,7 @@ void kad::recv_ping(const net::endpoint & from,
 void kad::recv_pong(const net::endpoint & from, const net::buffer & random,
 	const std::string & remote_ID)
 {
-	received_store_token.insert(std::make_pair(from, store_token(random,
-		store_token::incoming)));
+	Token.receive(from, random);
 	Route_Table.recv_pong(from, remote_ID);
 }
 
@@ -184,7 +166,7 @@ void kad::recv_store_file(const net::endpoint & from, const net::buffer & random
 {
 	LOG << from.IP() << " " << from.port() << " " << hash;
 	Route_Table.add_reserve(from, remote_ID);
-	if(store_token_issued(from, random)){
+	if(Token.has_been_issued(from, random)){
 		LOG << from.IP() << " " << from.port() << " " << remote_ID << " " << hash;
 		db::table::source::add(remote_ID, hash);
 	}else{
@@ -195,7 +177,7 @@ void kad::recv_store_file(const net::endpoint & from, const net::buffer & random
 void kad::recv_store_node(const net::endpoint & from, const net::buffer & random,
 	const std::string & remote_ID)
 {
-	if(store_token_issued(from, random)){
+	if(Token.has_been_issued(from, random)){
 		LOG << from.IP() << " " << from.port() << " " << remote_ID;
 		db::table::peer::add(db::table::peer::info(remote_ID, from.IP(), from.port()));
 	}else{
@@ -259,9 +241,14 @@ void kad::send_store_node_call_back(const net::endpoint & from,
 
 void kad::send_store_node_call_back(const net::endpoint & ep)
 {
-	std::multimap<net::endpoint, store_token>::iterator it = received_store_token.find(ep);
-	if(it == received_store_token.end()){
-		//do ping to get store token
+	boost::optional<net::buffer> random = Token.get_token(ep);
+	if(random){
+		//use existing token
+		LOG << "store_node: " << ep.IP() << " " << ep.port();
+		Exchange.send(boost::shared_ptr<message_udp::send::base>(
+			new message_udp::send::store_node(*random, local_ID)), ep);
+	}else{
+		//get token
 		LOG << "ping: " << ep.IP() << " " << ep.port();
 		net::buffer random(random::urandom(4));
 		Exchange.send(boost::shared_ptr<message_udp::send::base>(
@@ -269,10 +256,6 @@ void kad::send_store_node_call_back(const net::endpoint & ep)
 		Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
 			new message_udp::recv::pong(boost::bind(&kad::send_store_node_call_back,
 			this, _1, _2, _3), random)), ep);
-	}else{
-		LOG << "store_node: " << ep.IP() << " " << ep.port();
-		Exchange.send(boost::shared_ptr<message_udp::send::base>(
-			new message_udp::send::store_node(it->second.random, local_ID)), ep);
 	}
 }
 
@@ -301,9 +284,14 @@ void kad::store_file_call_back(const net::endpoint & from,
 
 void kad::store_file_call_back(const net::endpoint & ep, const std::string hash)
 {
-	std::multimap<net::endpoint, store_token>::iterator it = received_store_token.find(ep);
-	if(it == received_store_token.end()){
-		//do ping to get store token
+	boost::optional<net::buffer> random = Token.get_token(ep);
+	if(random){
+		//use existing token
+		LOG << "store_file: " << ep.IP() << " " << ep.port() << " " << hash;
+		Exchange.send(boost::shared_ptr<message_udp::send::base>(
+			new message_udp::send::store_file(*random, local_ID, hash)), ep);
+	}else{
+		//get token
 		LOG << "ping: " << ep.IP() << " " << ep.port();
 		net::buffer random(random::urandom(4));
 		Exchange.send(boost::shared_ptr<message_udp::send::base>(
@@ -311,44 +299,6 @@ void kad::store_file_call_back(const net::endpoint & ep, const std::string hash)
 		Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
 			new message_udp::recv::pong(boost::bind(&kad::store_file_call_back,
 			this, _1, _2, _3, hash), random)), ep);
-	}else{
-		LOG << "store_file: " << ep.IP() << " " << ep.port() << " " << hash;
-		Exchange.send(boost::shared_ptr<message_udp::send::base>(
-			new message_udp::send::store_file(it->second.random, local_ID, hash)), ep);
-	}
-}
-
-bool kad::store_token_issued(const net::endpoint & ep, const net::buffer & random)
-{
-	typedef std::multimap<net::endpoint, store_token>::iterator it_t;
-	std::pair<it_t, it_t> p = issued_store_token.equal_range(ep);
-	for(; p.first != p.second; ++p.first){
-		if(p.first->second.random == random){
-			return true;
-		}
-	}
-	return false;
-}
-
-void kad::store_token_timeout()
-{
-	for(std::multimap<net::endpoint, store_token>::iterator
-		it_cur = received_store_token.begin(); it_cur != received_store_token.end();)
-	{
-		if(it_cur->second.timeout()){
-			received_store_token.erase(it_cur++);
-		}else{
-			++it_cur;
-		}
-	}
-	for(std::multimap<net::endpoint, store_token>::iterator
-		it_cur = issued_store_token.begin(); it_cur != issued_store_token.end();)
-	{
-		if(it_cur->second.timeout()){
-			issued_store_token.erase(it_cur++);
-		}else{
-			++it_cur;
-		}
 	}
 }
 

@@ -8,6 +8,7 @@
 #include "k_find.hpp"
 #include "k_func.hpp"
 #include "k_route_table.hpp"
+#include "k_token.hpp"
 
 //include
 #include <atomic_int.hpp>
@@ -22,19 +23,17 @@ public:
 
 	/*
 	find_node:
-		Find a node ID. The call back is used when the node ID is found.
-		Note: The found endpoint may not be right. The call back may be called
-			multiple times for all hosts that claim to have the specified ID. When
-			sure the correct endpoint has been found find_node_cancel() should be
-			called.
+		Find node.
+		Note: Call back may be used multiple times if more than one host has ID.
+	find_file:
+		Find hosts with file.
 	store_file:
-		Store file hash on DHT.
+		Store file hash.
 	*/
-	void find_node(const std::string & ID_to_find,
+	void find_node(const std::string & ID,
 		const boost::function<void (const net::endpoint &)> & call_back);
-
-
-	//void find_file
+	void find_file(const std::string & hash,
+		const boost::function<void (const net::endpoint &)> & call_back);
 	void store_file(const std::string & hash);
 
 	/* Info
@@ -56,42 +55,13 @@ private:
 	exchange_udp Exchange;
 	k_route_table Route_Table;
 	k_find Find;
+	k_token Token;
 
 	/*
 	The first time we call send_ping() we want to ping all nodes we can to update
 	our routing table ASAP.
 	*/
 	bool send_ping_called;
-
-	class store_token
-	{
-	public:
-		enum direction_t{
-			incoming,
-			outgoing
-		};
-		explicit store_token(
-			const net::buffer & random_in,
-			const direction_t direction
-		);
-		store_token(const store_token & ST);
-		//random bytes sent or received in pong message
-		const net::buffer random;
-		//returns true if store_token timed out
-		bool timeout();
-	private:
-		std::time_t time;  //time when store_token instantiated
-		unsigned _timeout; //timeout (seconds)
-	};
-
-	/*
-	received_store_token:
-		Stores tokens we have received from remote hosts.
-	issued_store_token:
-		Stores tokens we have sent to remote hosts.
-	*/
-	std::multimap<net::endpoint, store_token> received_store_token;
-	std::multimap<net::endpoint, store_token> issued_store_token;
 
 	/*
 	Function call proxy. A thread adds a function object and network_thread makes
@@ -103,7 +73,9 @@ private:
 	/* Relay Functions
 	Called from relay_job. Refer to public function comments.
 	*/
-	void find_node_relay(const std::string ID_to_find,
+	void find_node_relay(const std::string ID,
+		const boost::function<void (const net::endpoint &)> call_back);
+	void find_file_relay(const std::string hash,
 		const boost::function<void (const net::endpoint &)> call_back);
 	void store_file_relay(const std::string hash);
 
@@ -141,7 +113,6 @@ private:
 		const net::buffer & random, const std::string & remote_ID,
 		const std::string hash);
 	void store_file_call_back(const net::endpoint & ep, const std::string hash);
-	bool store_token_issued(const net::endpoint & ep, const net::buffer & random);
 
 	/* Timed Functions
 	Called by network_thread on regular time intervals.
@@ -157,7 +128,6 @@ private:
 	void send_find_node();
 	void send_ping();
 	void send_store_node();
-	void store_token_timeout();
 
 	/* Receive Call Back
 	Functions named after the message they receive.
