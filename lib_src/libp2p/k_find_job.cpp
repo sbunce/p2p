@@ -19,7 +19,27 @@ k_find_job::store_element::store_element(const store_element & SE):
 }
 //END store_element
 
-k_find_job::k_find_job(const std::multimap<mpa::mpint, net::endpoint> & hosts)
+//BEGIN call_back_element
+k_find_job::call_back_element::call_back_element(
+	const boost::function<void (const net::endpoint &)> call_back_in,
+	const call_back_t type_in
+):
+	call_back(call_back_in),
+	type(type_in)
+{
+
+}
+
+k_find_job::call_back_element::call_back_element(const call_back_element & CBE):
+	call_back(CBE.call_back),
+	type(CBE.type)
+{
+
+}
+//END call_back_element
+
+k_find_job::k_find_job(const std::multimap<mpa::mpint, net::endpoint> & hosts):
+	time(std::time(NULL) + protocol_udp::find_timeout)
 {
 	unsigned delay = 0;
 	int no_delay_cnt = protocol_udp::no_delay_count;
@@ -34,11 +54,26 @@ k_find_job::k_find_job(const std::multimap<mpa::mpint, net::endpoint> & hosts)
 	}
 }
 
-void k_find_job::add(const mpa::mpint & dist, const net::endpoint & ep)
+void k_find_job::add(const net::endpoint & ep, const mpa::mpint & dist)
 {
 	if(Memoize.find(ep) == Memoize.end()){
 		Memoize.insert(ep);
 		Store.insert(std::make_pair(dist, store_element(ep, k_contact())));
+	}
+}
+
+void k_find_job::call_back(const net::endpoint & ep, const mpa::mpint & dist)
+{
+	for(std::list<call_back_element>::iterator it_cur = Call_Back.begin(),
+		it_end = Call_Back.end(); it_cur != it_end; ++it_cur)
+	{
+		if(it_cur->type == exact_match){
+			if(dist == "0"){
+				it_cur->call_back(ep);
+			}
+		}else{
+			it_cur->call_back(ep);
+		}
 	}
 }
 
@@ -89,6 +124,8 @@ const std::multimap<mpa::mpint, net::endpoint> & k_find_job::found()
 void k_find_job::recv_host_list(const net::endpoint & from,
 	const std::list<net::endpoint> & hosts, const mpa::mpint & dist)
 {
+	call_back(from, dist);
+
 	//erase endpoint that sent host_list and add it to found collection
 	for(std::multimap<mpa::mpint, store_element>::iterator
 		it_cur = Store.begin(), it_end = Store.end(); it_cur != it_end; ++it_cur)
@@ -112,6 +149,25 @@ void k_find_job::recv_host_list(const net::endpoint & from,
 	for(std::list<net::endpoint>::const_iterator it_cur = hosts.begin(),
 		it_end = hosts.end(); it_cur != it_end; ++it_cur)
 	{
-		add(new_dist, *it_cur);
+		add(*it_cur, new_dist);
 	}
+}
+
+void k_find_job::register_call_back(
+	const boost::function<void (const net::endpoint &)> & call_back,
+	const call_back_t type)
+{
+	Call_Back.push_back(call_back_element(call_back, type));
+	if(type == any_will_do){
+		for(std::multimap<mpa::mpint, net::endpoint>::iterator it_cur = Found.begin(),
+			it_end = Found.end(); it_cur != it_end; ++it_cur)
+		{
+			call_back(it_cur->second);
+		}
+	}
+}
+
+bool k_find_job::timeout()
+{
+	return std::time(NULL) > time;
 }

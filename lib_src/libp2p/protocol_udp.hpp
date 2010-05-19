@@ -15,6 +15,8 @@ bucket_size:
 contact_timeout:
 	Set timeout such that if all buckets full we have enough time to ping every
 	contact before timeout.
+find_timeout:
+	Maximum time to spend on a iterative find job.
 max_store:
 	Maximum number of endpoints to send store command to.
 no_delay_count:
@@ -35,7 +37,7 @@ store_token_outgoing_timeout:
 const unsigned bucket_count = SHA1::bin_size * 8;
 const unsigned bucket_size = 16;
 const unsigned bucket_timeout = bucket_count * bucket_size * 2;
-const unsigned find_set_timeout = 60;
+const unsigned find_timeout = 60;
 const unsigned max_store = 16;
 const unsigned no_delay_count = 2;
 const unsigned response_timeout = 30;

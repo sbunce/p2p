@@ -75,22 +75,11 @@ void kad::find_node(const std::string & ID_to_find,
 	relay_job.push_back(boost::bind(&kad::find_node_relay, this, ID_to_find, call_back));
 }
 
-void kad::find_node_cancel(const std::string & ID)
-{
-	boost::mutex::scoped_lock lock(relay_job_mutex);
-	relay_job.push_back(boost::bind(&kad::find_node_cancel_relay, this, ID));
-}
-
 void kad::find_node_relay(const std::string ID_to_find,
 	const boost::function<void (const net::endpoint &)> call_back)
 {
 	std::multimap<mpa::mpint, net::endpoint> hosts = Route_Table.find_node_local(ID_to_find);
-	Find.find_node(ID_to_find, hosts, call_back);
-}
-
-void kad::find_node_cancel_relay(const std::string ID)
-{
-	Find.find_node_cancel(ID);
+	Find.node(ID_to_find, hosts, call_back);
 }
 
 void kad::network_loop()
@@ -256,7 +245,7 @@ void kad::send_store_node()
 {
 	LOG << "store_node started";
 	std::multimap<mpa::mpint, net::endpoint> hosts = Route_Table.find_node_local(local_ID);
-	Find.find_set(local_ID, hosts, boost::bind(&kad::send_store_node_call_back, this, _1));
+	Find.set(local_ID, hosts, boost::bind(&kad::send_store_node_call_back, this, _1));
 }
 
 void kad::send_store_node_call_back(const net::endpoint & from,
@@ -297,7 +286,7 @@ void kad::store_file_relay(const std::string hash)
 {
 	LOG << "store_node started";
 	std::multimap<mpa::mpint, net::endpoint> hosts = Route_Table.find_node_local(local_ID);
-	Find.find_set(local_ID, hosts, boost::bind(&kad::store_file_call_back, this, _1, hash));
+	Find.set(local_ID, hosts, boost::bind(&kad::store_file_call_back, this, _1, hash));
 }
 
 void kad::store_file_call_back(const net::endpoint & from,

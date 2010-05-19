@@ -19,6 +19,11 @@ class k_find_job : private boost::noncopyable
 public:
 	k_find_job(const std::multimap<mpa::mpint, net::endpoint> & hosts);
 
+	enum call_back_t{
+		exact_match, //call back only done for exact match
+		any_will_do  //call backs done for all results
+	};
+
 	/*
 	add:
 		Add endpoint where we know the distance it is from ID to find.
@@ -29,14 +34,27 @@ public:
 	recv_host_list:
 		Called when host list received. The dist parameter is distance from remote
 		host to ID to find.
+	register_call_back:
+		Register call back. If exact_match = true only call back on exact node.
+		Note: This can be called multiple times.
+		Note: If exact_match = false this function uses the call back for all
+			endpoints in Found immediately.
+	timeout:
+		Returns true if the k_find_job has expired.
 	*/
-	void add(const mpa::mpint & dist, const net::endpoint & ep);
+	void add(const net::endpoint & ep, const mpa::mpint & dist);
 	std::list<net::endpoint> find_node();
 	const std::multimap<mpa::mpint, net::endpoint> & found();
 	void recv_host_list(const net::endpoint & from,
 		const std::list<net::endpoint> & hosts, const mpa::mpint & dist);
+	void register_call_back(const boost::function<void (const net::endpoint &)> & call_back,
+		const call_back_t type);
+	bool timeout();
 
 private:
+	//time at which instantiated
+	std::time_t time;
+
 	class store_element
 	{
 	public:
@@ -70,5 +88,26 @@ private:
 
 	//memoize endpoints to eliminate duplicate find_node requests
 	std::set<net::endpoint> Memoize;
+
+	class call_back_element
+	{
+	public:
+		call_back_element(
+			const boost::function<void (const net::endpoint &)> call_back_in,
+			const call_back_t type_in
+		);
+		call_back_element(const call_back_element & CBE);
+		const boost::function<void (const net::endpoint &)> call_back;
+		const call_back_t type;
+	};
+
+	//registered call backs
+	std::list<call_back_element> Call_Back;
+
+	/*
+	call_back:
+		Do any call backs which need to be done for endpoint.
+	*/
+	void call_back(const net::endpoint & ep, const mpa::mpint & dist);
 };
 #endif

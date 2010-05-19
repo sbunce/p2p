@@ -27,15 +27,14 @@ public:
 			multiple times for all hosts that claim to have the specified ID. When
 			sure the correct endpoint has been found find_node_cancel() should be
 			called.
-	find_node_cancel:
-		Once sure that the node has been found this function should be called to
-		stop further find_node requests.
 	store_file:
 		Store file hash on DHT.
 	*/
 	void find_node(const std::string & ID_to_find,
 		const boost::function<void (const net::endpoint &)> & call_back);
-	void find_node_cancel(const std::string & ID);
+
+
+	//void find_file
 	void store_file(const std::string & hash);
 
 	/* Info
@@ -106,7 +105,6 @@ private:
 	*/
 	void find_node_relay(const std::string ID_to_find,
 		const boost::function<void (const net::endpoint &)> call_back);
-	void find_node_cancel_relay(const std::string ID);
 	void store_file_relay(const std::string hash);
 
 	/*
