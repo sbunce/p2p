@@ -85,6 +85,24 @@ void store_node_call_back(const net::endpoint & from,
 	}
 }
 
+const std::string test_hash("1111111111111111111111111111111111111111");
+void store_file_call_back(const net::endpoint & from, const net::buffer & random,
+	const std::string & remote_ID, const std::string & hash)
+{
+	if(from != *endpoint){
+		LOG; ++fail;
+	}
+	if(random != test_random){
+		LOG; ++fail;
+	}
+	if(remote_ID != test_ID){
+		LOG; ++fail;
+	}
+	if(hash != test_hash){
+		LOG; ++fail;
+	}
+}
+
 int main()
 {
 	std::set<net::endpoint> E = net::get_endpoint("localhost", "0");
@@ -140,6 +158,13 @@ int main()
 	//store_node
 	M_recv.reset(new message_udp::recv::store_node(&store_node_call_back));
 	M_send.reset(new message_udp::send::store_node(test_random, test_ID));
+	if(!M_recv->recv(M_send->buf, *endpoint)){
+		LOG; ++fail;
+	}
+
+	//store_file
+	M_recv.reset(new message_udp::recv::store_file(&store_file_call_back));
+	M_send.reset(new message_udp::send::store_file(test_random, test_ID, test_hash));
 	if(!M_recv->recv(M_send->buf, *endpoint)){
 		LOG; ++fail;
 	}

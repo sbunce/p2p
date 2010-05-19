@@ -45,13 +45,13 @@ void db::init::create_all()
 	DB->query(ss.str());
 	//generate random port between 1024 - 65535
 	union num_byte{
-		unsigned num;
-		unsigned char byte[sizeof(unsigned)];
+		unsigned n;
+		unsigned char b[sizeof(unsigned)];
 	} NB;
-	random::urandom(NB.byte, sizeof(unsigned));
+	random::urandom(NB.b, sizeof(unsigned));
 	ss.str(""); ss.clear();
 	ss << "INSERT OR IGNORE INTO prefs VALUES('port', '"
-		<< NB.num % 64512 + 1024 << "')";
+		<< NB.n % 64512 + 1024 << "')";
 	DB->query(ss.str());
 
 	//share

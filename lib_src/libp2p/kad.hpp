@@ -30,14 +30,13 @@ public:
 	find_node_cancel:
 		Once sure that the node has been found this function should be called to
 		stop further find_node requests.
-	find_set:
-		Find set of nodes which are closest to ID. The call back is used when the
-		set is found.
+	store_file:
+		Store file hash on DHT.
 	*/
-
 	void find_node(const std::string & ID_to_find,
 		const boost::function<void (const net::endpoint &)> & call_back);
 	void find_node_cancel(const std::string & ID);
+	void store_file(const std::string & hash);
 
 	/* Info
 	count:
@@ -87,13 +86,13 @@ private:
 	};
 
 	/*
-	incoming_store_token:
+	received_store_token:
 		Stores tokens we have received from remote hosts.
-	outgoing_store_token:
+	issued_store_token:
 		Stores tokens we have sent to remote hosts.
 	*/
-	std::multimap<net::endpoint, store_token> incoming_store_token;
-	std::multimap<net::endpoint, store_token> outgoing_store_token;
+	std::multimap<net::endpoint, store_token> received_store_token;
+	std::multimap<net::endpoint, store_token> issued_store_token;
 
 	/*
 	Function call proxy. A thread adds a function object and network_thread makes
@@ -103,11 +102,12 @@ private:
 	std::deque<boost::function<void ()> > relay_job;
 
 	/* Relay Functions
-	Called from relay_job. Refer to public functions to see what these do.
+	Called from relay_job. Refer to public function comments.
 	*/
 	void find_node_relay(const std::string ID_to_find,
 		const boost::function<void (const net::endpoint &)> call_back);
 	void find_node_cancel_relay(const std::string ID);
+	void store_file_relay(const std::string hash);
 
 	/*
 	network_loop:
@@ -116,34 +116,49 @@ private:
 		Called by network_thread to process relay jobs.
 	route_table_call_back:
 		Called when active contact added to the routing table.
+	send_store_node_call_back (3 parameters):
+		If we don't have a store token in send_store_node_call_back (1 parameter)
+		we send a ping and register send_store_node_call_back (3 parameters) as
+		the response handler. This function sends the store after the pong is
+		received.
+	send_store_node_call_back (1 parameter):
+		Call back to send store_node to closest nodes.
+	store_file_call_back (4 parameters):
+		If we don't have a store token in store_file_call_back (2 parameter)
+		we send a ping and register store_file_call_back (4 parameters) as
+		the response handler. This function sends the store after the pong is
+		received.
+	store_file_call_back (2 parameters):
+		Call back to send store_file to closest nodes.
+	store_token_issued:
+		Returns true if store token has been issued to the specified endpoint.
 	*/
 	void network_loop();
 	void process_relay_job();
 	void route_table_call_back(const net::endpoint & ep, const std::string & remote_ID);
+	void send_store_node_call_back(const net::endpoint & from,
+		const net::buffer & random, const std::string & remote_ID);
+	void send_store_node_call_back(const net::endpoint & ep);
+	void store_file_call_back(const net::endpoint & from,
+		const net::buffer & random, const std::string & remote_ID,
+		const std::string hash);
+	void store_file_call_back(const net::endpoint & ep, const std::string hash);
+	bool store_token_issued(const net::endpoint & ep, const net::buffer & random);
 
 	/* Timed Functions
+	Called by network_thread on regular time intervals.
 	send_find_node:
 		Send find_node messages.
 	send_ping:
 		Send ping messages.
 	send_store_node:
 		Sends store_node message.
-	send_store_node_call_back (1 parameter):
-		Call back to send store_node to closest nodes.
-	send_store_node_call_back (3 parameters):
-		If we don't have a store token in send_store_node_call_back (1 parameter)
-		we send a ping and register send_store_node_call_back (3 parameters) as
-		the response handler. This function sends the store after the pong is
-		received.
 	store_token_timeout:
 		Checks timeouts on all store_tokens.
 	*/
 	void send_find_node();
 	void send_ping();
 	void send_store_node();
-	void send_store_node_call_back(const net::endpoint & ep);
-	void send_store_node_call_back(const net::endpoint & from,
-		const net::buffer & random, const std::string & remote_ID);
 	void store_token_timeout();
 
 	/* Receive Call Back
@@ -159,6 +174,8 @@ private:
 		const std::string & remote_ID);
 	void recv_pong(const net::endpoint & from, const net::buffer & random,
 		const std::string & remote_ID);
+	void recv_store_file(const net::endpoint & from, const net::buffer & random,
+		const std::string & remote_ID, const std::string & hash);
 	void recv_store_node(const net::endpoint & from, const net::buffer & random,
 		const std::string & remote_ID);
 };

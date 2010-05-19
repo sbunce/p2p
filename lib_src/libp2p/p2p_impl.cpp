@@ -133,6 +133,7 @@ void p2p_impl::resume()
 	if(ID_to_find == db::table::prefs::get_ID()){
 		LOG << "starting find";
 		DHT.find_node("FCB579505C98E11CC2940D37C5D8D489CED63998", &func_local::FOUND_NODE);
+		DHT.store_file("DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF");
 	}
 }
 

@@ -218,6 +218,42 @@ bool message_udp::recv::store_node::recv(const net::buffer & recv_buf,
 }
 //END recv::store_node
 
+//BEGIN recv::store_file
+message_udp::recv::store_file::store_file(
+	handler func_in
+):
+	func(func_in)
+{
+
+}
+
+bool message_udp::recv::store_file::expect(const net::buffer & recv_buf)
+{
+	if(recv_buf.size() != protocol_udp::store_file_size){
+		return false;
+	}
+	if(recv_buf[0] != protocol_udp::store_file){
+		return false;
+	}
+	return true;
+}
+
+bool message_udp::recv::store_file::recv(const net::buffer & recv_buf,
+	const net::endpoint & endpoint)
+{
+	if(!expect(recv_buf)){
+		return false;
+	}
+	net::buffer random(recv_buf.data()+1, 4);
+	std::string remote_ID(convert::bin_to_hex(std::string(
+		reinterpret_cast<const char *>(recv_buf.data())+5, 20)));
+	std::string hash(convert::bin_to_hex(std::string(
+		reinterpret_cast<const char *>(recv_buf.data())+25, 20)));
+	func(endpoint, random, remote_ID, hash);
+	return true;
+}
+//END recv::store_file
+
 //BEGIN send::find_node
 message_udp::send::find_node::find_node(const net::buffer & random,
 	const std::string & local_ID, const std::string & ID_to_find)
@@ -300,3 +336,17 @@ message_udp::send::store_node::store_node(const net::buffer & random,
 		.append(convert::hex_to_bin(local_ID));
 }
 //END send::store_node
+
+//BEGIN send::store_file
+message_udp::send::store_file::store_file(const net::buffer & random,
+	const std::string & local_ID, const std::string & hash)
+{
+	assert(random.size() == 4);
+	assert(local_ID.size() == SHA1::hex_size);
+	assert(hash.size() == SHA1::hex_size);
+	buf.append(protocol_udp::store_file)
+		.append(random)
+		.append(convert::hex_to_bin(local_ID))
+		.append(convert::hex_to_bin(hash));
+}
+//END send::store_file

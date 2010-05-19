@@ -55,5 +55,7 @@ const unsigned host_list_size = 27;     //minimum size
 const unsigned host_list_elements = 16; //max elements in host_list
 const unsigned char store_node = 4;
 const unsigned store_node_size = 25;
+const unsigned char store_file = 5;
+const unsigned store_file_size = 45;
 }//end of namespace protocol_udp
 #endif

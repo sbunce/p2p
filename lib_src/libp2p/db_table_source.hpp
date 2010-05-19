@@ -17,7 +17,12 @@ namespace table{
 class source
 {
 public:
-
+	/*
+	add:
+		Add ID/hash pair.
+	*/
+	static void add(const std::string & remote_ID, const std::string hash,
+		db::pool::proxy DB = db::pool::proxy());
 
 private:
 	source(){}

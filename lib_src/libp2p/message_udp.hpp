@@ -95,6 +95,20 @@ private:
 	handler func;
 };
 
+class store_file : public base
+{
+public:
+	typedef boost::function<void (const net::endpoint & from,
+		const net::buffer & random, const std::string & remote_ID,
+		const std::string & hash)> handler;
+	store_file(handler func_in);
+	virtual bool expect(const net::buffer & recv_buf);
+	virtual bool recv(const net::buffer & recv_buf,
+		const net::endpoint & endpoint);
+private:
+	handler func;
+};
+
 }//end of namespace recv
 
 namespace send{
@@ -136,6 +150,13 @@ class store_node : public base
 {
 public:
 	store_node(const net::buffer & random, const std::string & local_ID);
+};
+
+class store_file : public base
+{
+public:
+	store_file(const net::buffer & random, const std::string & local_ID,
+		const std::string & hash);
 };
 
 }//end of namespace send
