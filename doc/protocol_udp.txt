@@ -123,7 +123,6 @@ desc: Store a mapping from node ID to address.
 A = command (base10: 4), B = store_token, C = node ID of sender
 ---
 
-//IMPLEMENT NEXT
 ---
 name: store_file
 desc: Store a mapping from node ID to file hash.

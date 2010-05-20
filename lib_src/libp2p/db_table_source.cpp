@@ -4,6 +4,6 @@ void db::table::source::add(const std::string & remote_ID,
 	const std::string hash, db::pool::proxy DB)
 {
 	std::stringstream ss;
-	ss << "INSERT INTO source VALUES('" << remote_ID << "', '" << hash << "')";
+	ss << "INSERT OR IGNORE INTO source VALUES('" << remote_ID << "', '" << hash << "')";
 	DB->query(ss.str());
 }

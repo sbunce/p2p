@@ -221,6 +221,16 @@ int SI_cmp(const std::string & left, const std::string & right)
 		return std::strcmp(left_temp.c_str(), right_temp.c_str());		
 	}
 }
+
+//shortens string and adds ".." after it
+std::string abbr(const std::string & str)
+{
+	if(str.size() < 6){
+		return str;
+	}else{
+		return str.substr(0, 6) + "..";
+	}
+}
 }//end of unnamed namespace
 }//end of namespace convert
 #endif

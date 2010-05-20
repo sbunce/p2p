@@ -37,7 +37,7 @@ void k_bucket::add_reserve(const net::endpoint & ep, const std::string remote_ID
 	if(exists(ep)){
 		return;
 	}
-	LOG << "reserve: " << ep.IP() << " " << ep.port() << " " << remote_ID;
+	LOG << "reserve: " << ep.IP() << " " << ep.port() << " " << convert::abbr(remote_ID);
 	Bucket_Reserve.push_back(bucket_element(ep, remote_ID,
 		k_contact(protocol_udp::bucket_timeout)));
 }
@@ -179,7 +179,7 @@ void k_bucket::recv_pong(const net::endpoint & from, const std::string & remote_
 	//not in active or reserve, response message that counts as pong
 	if(Bucket_Active.size() < protocol_udp::bucket_size){
 		//add to routing table
-		LOG << "active: " << from.IP() << " " << from.port() << " " << remote_ID;
+		LOG << "active: " << from.IP() << " " << from.port() << " " << convert::abbr(remote_ID);
 		++active_cnt;
 		Bucket_Active.push_front(bucket_element(from, remote_ID,
 			k_contact(protocol_udp::bucket_timeout)));
@@ -187,7 +187,7 @@ void k_bucket::recv_pong(const net::endpoint & from, const std::string & remote_
 		return;
 	}else{
 		//add to reserve
-		LOG << "reserve: " << from.IP() << " " << from.port() << " " << remote_ID;
+		LOG << "reserve: " << from.IP() << " " << from.port() << " " << convert::abbr(remote_ID);
 		Bucket_Reserve.push_back(bucket_element(from, remote_ID,
 			k_contact(protocol_udp::bucket_timeout)));
 		return;

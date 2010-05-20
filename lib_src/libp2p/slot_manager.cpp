@@ -256,7 +256,7 @@ bool slot_manager::recv_request_file_block(const unsigned char slot_num,
 
 bool slot_manager::recv_request_slot(const std::string & hash)
 {
-	LOG << hash;
+	LOG << convert::abbr(hash);
 	//locate requested slot
 	share::slot_iterator slot_iter = share::singleton().find_slot(hash);
 	if(slot_iter == share::singleton().end_slot()){
@@ -267,7 +267,7 @@ bool slot_manager::recv_request_slot(const std::string & hash)
 
 	if(!slot_iter->get_transfer()){
 		//we do not yet know file size
-		LOG << "failed " << hash;
+		LOG << "failed " << convert::abbr(hash);
 		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 		return true;
 	}
@@ -292,7 +292,7 @@ bool slot_manager::recv_request_slot(const std::string & hash)
 	//file size
 	boost::uint64_t file_size = slot_iter->file_size();
 	if(file_size == 0){
-		LOG << "failed " << hash;
+		LOG << "failed " << convert::abbr(hash);
 		Exchange.send(boost::shared_ptr<message_tcp::send::base>(
 			new message_tcp::send::error()));
 		return true;
@@ -301,7 +301,7 @@ bool slot_manager::recv_request_slot(const std::string & hash)
 	//root hash
 	std::string root_hash;
 	if(!slot_iter->get_transfer()->root_hash(root_hash)){
-		LOG << "failed " << hash;
+		LOG << "failed " << convert::abbr(hash);
 		Exchange.send(boost::shared_ptr<message_tcp::send::base>(
 			new message_tcp::send::error()));
 		return true;
@@ -346,10 +346,10 @@ bool slot_manager::recv_slot(const unsigned char slot_num,
 	const boost::uint64_t file_size, const std::string & root_hash,
 	bit_field & tree_BF, bit_field & file_BF, const std::string hash)
 {
-	LOG << hash;
+	LOG << convert::abbr(hash);
 	share::slot_iterator slot_iter = share::singleton().find_slot(hash);
 	if(slot_iter == share::singleton().end_slot()){
-		LOG << "failed " << hash;
+		LOG << "failed " << convert::abbr(hash);
 		Exchange.send(boost::shared_ptr<message_tcp::send::base>(
 			new message_tcp::send::close_slot(slot_num)));
 		return true;

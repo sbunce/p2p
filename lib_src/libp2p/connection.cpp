@@ -28,7 +28,7 @@ void connection::recv_call_back(net::proactor::connection_info & CI)
 
 bool connection::recv_initial(const std::string & ID)
 {
-	LOG << ID;
+	LOG << convert::abbr(ID);
 	Slot_Manager.resume(ID);
 	return true;
 }

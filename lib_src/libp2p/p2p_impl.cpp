@@ -5,7 +5,7 @@ p2p_impl::init::init()
 {
 	db::init::create_all();
 	LOG << "port: " << db::table::prefs::get_port() << " peer_ID: "
-		<< db::table::prefs::get_ID();
+		<< convert::abbr(db::table::prefs::get_ID());
 }
 //END init
 

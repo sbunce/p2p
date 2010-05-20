@@ -125,8 +125,8 @@ boost::optional<net::endpoint> k_route_table::ping()
 		}
 	}
 	//check if retransmission needed
-	for(std::map<net::endpoint, k_contact>::iterator it_cur = Unknown_Active.begin();
-		it_cur != Unknown_Active.end();)
+	for(std::map<net::endpoint, k_contact>::iterator it_cur = Unknown_Active.begin(),
+		it_end = Unknown_Active.end(); it_cur != it_end; ++it_cur)
 	{
 		if(it_cur->second.send()){
 			LOG << "retransmit: " << it_cur->first.IP() << " " << it_cur->first.port();
