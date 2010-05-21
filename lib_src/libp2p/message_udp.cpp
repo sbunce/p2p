@@ -254,6 +254,88 @@ bool message_udp::recv::store_file::recv(const net::buffer & recv_buf,
 }
 //END recv::store_file
 
+//BEGIN recv::query_file
+message_udp::recv::query_file::query_file(
+	handler func_in
+):
+	func(func_in)
+{
+
+}
+
+bool message_udp::recv::query_file::expect(const net::buffer & recv_buf)
+{
+	if(recv_buf.size() != protocol_udp::query_file_size){
+		return false;
+	}
+	if(recv_buf[0] != protocol_udp::query_file){
+		return false;
+	}
+	return true;
+}
+
+bool message_udp::recv::query_file::recv(const net::buffer & recv_buf,
+	const net::endpoint & endpoint)
+{
+	if(!expect(recv_buf)){
+		return false;
+	}
+	net::buffer random(recv_buf.data()+1, 4);
+	std::string remote_ID(convert::bin_to_hex(std::string(
+		reinterpret_cast<const char *>(recv_buf.data())+5, 20)));
+	std::string hash(convert::bin_to_hex(std::string(
+		reinterpret_cast<const char *>(recv_buf.data())+25, 20)));
+	func(endpoint, random, remote_ID, hash);
+	return true;
+}
+//END recv::query_file
+
+//BEGIN recv::node_list
+message_udp::recv::node_list::node_list(
+	handler func_in,
+	const net::buffer & random_in
+):
+	func(func_in),
+	random(random_in)
+{
+
+}
+
+bool message_udp::recv::node_list::expect(const net::buffer & recv_buf)
+{
+	if(recv_buf.size() < protocol_udp::node_list_size){
+		return false;
+	}
+	if(recv_buf[0] != protocol_udp::node_list){
+		return false;
+	}
+	if((recv_buf.size() - protocol_udp::node_list_size) % 20 != 0){
+		return false;
+	}
+	return std::memcmp(recv_buf.data()+1, random.data(), 4) == 0;
+}
+
+bool message_udp::recv::node_list::recv(const net::buffer & recv_buf,
+	const net::endpoint & endpoint)
+{
+	if(!expect(recv_buf)){
+		return false;
+	}
+	net::buffer random(recv_buf.data()+1, 4);
+	std::string remote_ID(convert::bin_to_hex(std::string(
+		reinterpret_cast<const char *>(recv_buf.data())+5, 20)));
+	std::list<std::string> nodes;
+	unsigned offset = protocol_udp::node_list_size;
+	for(unsigned x=0; x<16 && offset != recv_buf.size(); ++x){
+		nodes.push_back(convert::bin_to_hex(std::string(
+			reinterpret_cast<const char *>(recv_buf.data())+offset, 20)));
+		offset += 20;
+	}
+	func(endpoint, random, remote_ID, nodes);
+	return true;
+}
+//END recv::node_list
+
 //BEGIN send::find_node
 message_udp::send::find_node::find_node(const net::buffer & random,
 	const std::string & local_ID, const std::string & ID_to_find)
@@ -350,3 +432,36 @@ message_udp::send::store_file::store_file(const net::buffer & random,
 		.append(convert::hex_to_bin(hash));
 }
 //END send::store_file
+
+//BEGIN send::query_file
+message_udp::send::query_file::query_file(const net::buffer & random,
+	const std::string & local_ID, const std::string & hash)
+{
+	assert(random.size() == 4);
+	assert(local_ID.size() == SHA1::hex_size);
+	assert(hash.size() == SHA1::hex_size);
+	buf.append(protocol_udp::query_file)
+		.append(random)
+		.append(convert::hex_to_bin(local_ID))
+		.append(convert::hex_to_bin(hash));
+}
+//END send::query_file
+
+//BEGIN send::node_list
+message_udp::send::node_list::node_list(const net::buffer & random,
+	const std::string & local_ID, const std::list<std::string> & nodes)
+{
+	assert(random.size() == 4);
+	assert(local_ID.size() == SHA1::hex_size);
+	assert(nodes.size() <= protocol_udp::node_list_elements);
+	buf.append(protocol_udp::node_list)
+		.append(random)
+		.append(convert::hex_to_bin(local_ID));
+	for(std::list<std::string>::const_iterator it_cur = nodes.begin(),
+		it_end = nodes.end(); it_cur != it_end; ++it_cur)
+	{
+		assert(it_cur->size() == SHA1::hex_size);
+		buf.append(convert::hex_to_bin(*it_cur));
+	}
+}
+//END send::node_list

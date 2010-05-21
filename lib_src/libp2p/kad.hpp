@@ -15,6 +15,9 @@
 #include <bit_field.hpp>
 #include <net/net.hpp>
 
+//standard
+#include <algorithm>
+
 class kad
 {
 public:
@@ -80,39 +83,47 @@ private:
 	void store_file_relay(const std::string hash);
 
 	/*
+	find_file_call_back_0:
+		Call back to send query_file to closest nodes.
+	find_file_call_back_1:
+		Receives node list that was expected by find_file_call_back_0. Starts
+		searches for hosts in node_list.
 	network_loop:
 		Loop to handle timed events and network events.
 	process_relay_job:
 		Called by network_thread to process relay jobs.
 	route_table_call_back:
 		Called when active contact added to the routing table.
-	send_store_node_call_back (3 parameters):
-		If we don't have a store token in send_store_node_call_back (1 parameter)
-		we send a ping and register send_store_node_call_back (3 parameters) as
-		the response handler. This function sends the store after the pong is
-		received.
-	send_store_node_call_back (1 parameter):
+	send_store_node_call_back_0:
 		Call back to send store_node to closest nodes.
-	store_file_call_back (4 parameters):
-		If we don't have a store token in store_file_call_back (2 parameter)
-		we send a ping and register store_file_call_back (4 parameters) as
-		the response handler. This function sends the store after the pong is
-		received.
-	store_file_call_back (2 parameters):
+	send_store_node_call_back_1:
+		If we don't have a store token in send_store_node_back_0 we send a ping
+		and register this function as the response handler.
+	store_file_call_back_0:
 		Call back to send store_file to closest nodes.
-	store_token_issued:
-		Returns true if store token has been issued to the specified endpoint.
+	store_file_call_back_1:
+		If we don't have a store token in store_file_call_back_0 we send a ping
+		and register this function as the response handler.
 	*/
+	void find_file_call_back_0(const net::endpoint & ep,
+		const std::string hash,
+		const boost::function<void (const net::endpoint &)> call_back,
+		boost::shared_ptr<std::set<std::string> > node_list_memoize);
+	void find_file_call_back_1(const net::endpoint & from,
+		const net::buffer & random, const std::string & remote_ID,
+		const std::list<std::string> & nodes,
+		const boost::function<void (const net::endpoint &)> call_back,
+		boost::shared_ptr<std::set<std::string> > node_list_memoize);
 	void network_loop();
 	void process_relay_job();
 	void route_table_call_back(const net::endpoint & ep, const std::string & remote_ID);
-	void send_store_node_call_back(const net::endpoint & from,
+	void send_store_node_call_back_0(const net::endpoint & ep);
+	void send_store_node_call_back_1(const net::endpoint & from,
 		const net::buffer & random, const std::string & remote_ID);
-	void send_store_node_call_back(const net::endpoint & ep);
-	void store_file_call_back(const net::endpoint & from,
+	void store_file_call_back_0(const net::endpoint & ep, const std::string hash);
+	void store_file_call_back_1(const net::endpoint & from,
 		const net::buffer & random, const std::string & remote_ID,
 		const std::string hash);
-	void store_file_call_back(const net::endpoint & ep, const std::string hash);
 
 	/* Timed Functions
 	Called by network_thread on regular time intervals.
@@ -142,6 +153,8 @@ private:
 		const std::string & remote_ID);
 	void recv_pong(const net::endpoint & from, const net::buffer & random,
 		const std::string & remote_ID);
+	void recv_query_file(const net::endpoint & from, const net::buffer & random,
+		const std::string & remote_ID, const std::string & hash);
 	void recv_store_file(const net::endpoint & from, const net::buffer & random,
 		const std::string & remote_ID, const std::string & hash);
 	void recv_store_node(const net::endpoint & from, const net::buffer & random,

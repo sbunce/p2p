@@ -20,8 +20,12 @@ public:
 	/*
 	add:
 		Add ID/hash pair.
+	get_ID:
+		Get ID of node that has file.
 	*/
 	static void add(const std::string & remote_ID, const std::string hash,
+		db::pool::proxy DB = db::pool::proxy());
+	static std::list<std::string> get_ID(const std::string & hash,
 		db::pool::proxy DB = db::pool::proxy());
 
 private:

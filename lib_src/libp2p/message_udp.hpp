@@ -109,6 +109,35 @@ private:
 	handler func;
 };
 
+class query_file : public base
+{
+public:
+	typedef boost::function<void (const net::endpoint & from,
+		const net::buffer & random, const std::string & remote_ID,
+		const std::string & hash)> handler;
+	query_file(handler func_in);
+	virtual bool expect(const net::buffer & recv_buf);
+	virtual bool recv(const net::buffer & recv_buf,
+		const net::endpoint & endpoint);
+private:
+	handler func;
+};
+
+class node_list : public base
+{
+public:
+	typedef boost::function<void (const net::endpoint & from,
+		const net::buffer & random, const std::string & remote_ID,
+		const std::list<std::string> & nodes)> handler;
+	node_list(handler func_in, const net::buffer & random_in);
+	virtual bool expect(const net::buffer & recv_buf);
+	virtual bool recv(const net::buffer & recv_buf,
+		const net::endpoint & endpoint);
+private:
+	handler func;
+	const net::buffer random;
+};
+
 }//end of namespace recv
 
 namespace send{
@@ -157,6 +186,20 @@ class store_file : public base
 public:
 	store_file(const net::buffer & random, const std::string & local_ID,
 		const std::string & hash);
+};
+
+class query_file : public base
+{
+public:
+	query_file(const net::buffer & random, const std::string & local_ID,
+		const std::string & hash);
+};
+
+class node_list : public base
+{
+public:
+	node_list(const net::buffer & random, const std::string & local_ID,
+		const std::list<std::string> & nodes);
 };
 
 }//end of namespace send

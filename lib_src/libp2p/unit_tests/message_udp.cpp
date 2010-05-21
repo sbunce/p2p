@@ -9,6 +9,9 @@ int fail(0);
 const net::buffer test_random(random::urandom(4));
 const std::string test_ID("0123456789012345678901234567890123456789");
 boost::shared_ptr<net::endpoint> endpoint;
+std::list<net::endpoint> test_hosts;
+const std::string test_hash("1111111111111111111111111111111111111111");
+std::list<std::string> test_nodes;
 
 void ping_call_back(const net::endpoint & from,
 	const net::buffer & random, const std::string & remote_ID)
@@ -56,7 +59,6 @@ void find_node_call_back(const net::endpoint & from,
 	}
 }
 
-std::list<net::endpoint> test_hosts;
 void host_list_call_back(const net::endpoint & from,
 	const std::string & remote_ID, const std::list<net::endpoint> & hosts)
 {
@@ -85,7 +87,6 @@ void store_node_call_back(const net::endpoint & from,
 	}
 }
 
-const std::string test_hash("1111111111111111111111111111111111111111");
 void store_file_call_back(const net::endpoint & from, const net::buffer & random,
 	const std::string & remote_ID, const std::string & hash)
 {
@@ -99,6 +100,40 @@ void store_file_call_back(const net::endpoint & from, const net::buffer & random
 		LOG; ++fail;
 	}
 	if(hash != test_hash){
+		LOG; ++fail;
+	}
+}
+
+void query_file_call_back(const net::endpoint & from, const net::buffer & random,
+	const std::string & remote_ID, const std::string & hash)
+{
+	if(from != *endpoint){
+		LOG; ++fail;
+	}
+	if(random != test_random){
+		LOG; ++fail;
+	}
+	if(remote_ID != test_ID){
+		LOG; ++fail;
+	}
+	if(hash != test_hash){
+		LOG; ++fail;
+	}
+}
+
+void node_list_call_back(const net::endpoint & from, const net::buffer & random,
+	const std::string & remote_ID, const std::list<std::string> & nodes)
+{
+	if(from != *endpoint){
+		LOG; ++fail;
+	}
+	if(random != test_random){
+		LOG; ++fail;
+	}
+	if(remote_ID != test_ID){
+		LOG; ++fail;
+	}
+	if(nodes != test_nodes){
 		LOG; ++fail;
 	}
 }
@@ -165,6 +200,22 @@ int main()
 	//store_file
 	M_recv.reset(new message_udp::recv::store_file(&store_file_call_back));
 	M_send.reset(new message_udp::send::store_file(test_random, test_ID, test_hash));
+	if(!M_recv->recv(M_send->buf, *endpoint)){
+		LOG; ++fail;
+	}
+
+	//query_file
+	M_recv.reset(new message_udp::recv::query_file(&query_file_call_back));
+	M_send.reset(new message_udp::send::query_file(test_random, test_ID, test_hash));
+	if(!M_recv->recv(M_send->buf, *endpoint)){
+		LOG; ++fail;
+	}
+
+	//node_list
+	test_nodes.push_back("2222222222222222222222222222222222222222");
+	test_nodes.push_back("3333333333333333333333333333333333333333");
+	M_recv.reset(new message_udp::recv::node_list(&node_list_call_back, test_random));
+	M_send.reset(new message_udp::send::node_list(test_random, test_ID, test_nodes));
 	if(!M_recv->recv(M_send->buf, *endpoint)){
 		LOG; ++fail;
 	}

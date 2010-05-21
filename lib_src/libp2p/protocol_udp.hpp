@@ -59,5 +59,10 @@ const unsigned char store_node = 4;
 const unsigned store_node_size = 25;
 const unsigned char store_file = 5;
 const unsigned store_file_size = 45;
+const unsigned char query_file = 6;
+const unsigned query_file_size = 45;
+const unsigned char node_list = 7;
+const unsigned node_list_size = 25;     //minimum size
+const unsigned node_list_elements = 16; //minimum size
 }//end of namespace protocol_udp
 #endif

@@ -1,0 +1,27 @@
+//custom
+#include "../db_all.hpp"
+
+int fail(0);
+
+int main()
+{
+	//setup database and make sure share table clear
+	path::override_database_name("database_table_share.db");
+	path::override_program_directory("");
+	db::init::drop_all();
+	db::init::create_all();
+
+	std::string ID("1111111111111111111111111111111111111111");
+	std::string hash("2222222222222222222222222222222222222222");
+	db::table::source::add(ID, hash);
+
+	std::list<std::string> nodes = db::table::source::get_ID(hash);
+	if(nodes.size() != 1){
+		LOG; ++fail;
+		return fail;
+	}
+	if(nodes.front() != ID){
+		LOG; ++fail;
+	}
+	return fail;
+}

@@ -46,11 +46,9 @@ k_find_job::k_find_job(const std::multimap<mpa::mpint, net::endpoint> & hosts):
 	for(std::multimap<mpa::mpint, net::endpoint>::const_iterator
 		it_cur = hosts.begin(), it_end = hosts.end(); it_cur != it_end; ++it_cur)
 	{
-		if(Memoize.find(it_cur->second) == Memoize.end()){
-			Memoize.insert(it_cur->second);
-			Store.insert(std::make_pair(it_cur->first,
-				store_element(it_cur->second, k_contact(0, no_delay_cnt-- > 0 ? 0 : delay++))));
-		}
+		Memoize.insert(it_cur->second);
+		Store.insert(std::make_pair(it_cur->first,
+			store_element(it_cur->second, k_contact(0, no_delay_cnt-- > 0 ? 0 : delay++))));
 	}
 }
 
