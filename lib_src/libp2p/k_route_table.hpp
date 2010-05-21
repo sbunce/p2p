@@ -48,6 +48,12 @@ public:
 	boost::optional<net::endpoint> ping();
 	void recv_pong(const net::endpoint & from, const std::string & remote_ID);
 
+	/* Timed Functions
+	tick:
+		Called once per second to process timeouts.
+	*/
+	void tick();
+
 private:
 	const std::string local_ID;
 

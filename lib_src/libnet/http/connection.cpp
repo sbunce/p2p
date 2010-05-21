@@ -163,43 +163,52 @@ void connection::recv_call_back(net::proactor::connection_info & CI)
 	boost::match_results<std::string::iterator> what;
 	std::string req = CI.recv_buf.str();
 	if(boost::regex_search(req.begin(), req.end(), what, expression)){
-		std::string temp = what[1];
-		decode_chars(temp);
-		LOG << "request: " << temp;
-		path = fs::system_complete(fs::path(web_root + temp, fs::native));
-		if(path.string().find("..") != std::string::npos){
-			//stop directory traversal
-			CI.recv_call_back.clear();
-			Proactor.disconnect(CI.connection_ID);
-		}else{
-			if(fs::exists(path)){
-				if(fs::is_directory(path)){
-					//check if there is a index file in the directory
-					fs::path temp = fs::system_complete(fs::path(path.string()
-						+ "/index.html", fs::native));
-					if(fs::exists(temp)){
-						//serve the index file
-						path = temp;
+		try{
+			std::string temp = what[1];
+			decode_chars(temp);
+			LOG << "request: " << temp;
+			path = fs::system_complete(fs::path(web_root + temp, fs::native));
+			if(path.string().find("..") != std::string::npos){
+				//stop directory traversal
+				CI.recv_call_back.clear();
+				Proactor.disconnect(CI.connection_ID);
+			}else{
+				if(fs::exists(path)){
+					if(fs::is_directory(path)){
+						//check if there is a index file in the directory
+						fs::path temp = fs::system_complete(fs::path(path.string()
+							+ "/index.html", fs::native));
+						if(fs::exists(temp)){
+							//serve the index file
+							path = temp;
+							CI.recv_call_back.clear();
+							CI.send_call_back = boost::bind(&connection::file_send_call_back, this, _1);
+							CI.send_call_back(CI);
+						}else{
+							//serve directory listing
+							CI.recv_call_back.clear();
+							read_directory(CI);
+						}
+					}else{
+						//serve file
 						CI.recv_call_back.clear();
 						CI.send_call_back = boost::bind(&connection::file_send_call_back, this, _1);
 						CI.send_call_back(CI);
-					}else{
-						//serve directory listing
-						CI.recv_call_back.clear();
-						read_directory(CI);
 					}
 				}else{
-					//serve file
-					CI.recv_call_back.clear();
-					CI.send_call_back = boost::bind(&connection::file_send_call_back, this, _1);
-					CI.send_call_back(CI);
+					//file at request path doesn't exist
+					net::buffer B("404");
+					Proactor.send(CI.connection_ID, B);
+					Proactor.disconnect_on_empty(CI.connection_ID);
 				}
-			}else{
-				//file at request path doesn't exist
-				net::buffer B("404");
-				Proactor.send(CI.connection_ID, B);
-				Proactor.disconnect_on_empty(CI.connection_ID);
 			}
+		}catch(const std::exception & e){
+			//generally happens if path too long
+			LOG << e.what();
+			net::buffer B("404");
+			Proactor.send(CI.connection_ID, B);
+			Proactor.disconnect_on_empty(CI.connection_ID);
+			return;
 		}
 	}
 }

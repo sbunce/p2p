@@ -89,20 +89,6 @@ void k_bucket::find_node(const net::endpoint & from, const std::string & ID_to_f
 
 boost::optional<net::endpoint> k_bucket::ping()
 {
-	//removed active contacts which timed out
-	for(std::list<bucket_element>::iterator
-		it_cur = Bucket_Active.begin(); it_cur != Bucket_Active.end();)
-	{
-		if(it_cur->contact.timeout()
-			&& it_cur->contact.timeout_count() > protocol_udp::retransmit_limit)
-		{
-			LOG << "timeout: " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
-			--active_cnt;
-			it_cur = Bucket_Active.erase(it_cur);
-		}else{
-			++it_cur;
-		}
-	}
 	//check if active node needs ping
 	boost::optional<net::endpoint> ep;
 	for(std::list<bucket_element>::iterator it_cur = Bucket_Active.begin(),
@@ -191,5 +177,23 @@ void k_bucket::recv_pong(const net::endpoint & from, const std::string & remote_
 		Bucket_Reserve.push_back(bucket_element(from, remote_ID,
 			k_contact(protocol_udp::bucket_timeout)));
 		return;
+	}
+}
+
+void k_bucket::tick()
+{
+	//remove active contacts which timed out
+	for(std::list<bucket_element>::iterator
+		it_cur = Bucket_Active.begin(); it_cur != Bucket_Active.end();)
+	{
+		if(it_cur->contact.timeout()
+			&& it_cur->contact.timeout_count() > protocol_udp::retransmit_limit)
+		{
+			LOG << "timeout: " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
+			--active_cnt;
+			it_cur = Bucket_Active.erase(it_cur);
+		}else{
+			++it_cur;
+		}
 	}
 }

@@ -52,6 +52,12 @@ public:
 	boost::optional<net::endpoint> ping();
 	void recv_pong(const net::endpoint & from, const std::string & remote_ID);
 
+	/* Timed Functions
+	tick:
+		Called once per second to process timeouts.
+	*/
+	void tick();
+
 private:
 	atomic_int<unsigned> & active_cnt;
 	const boost::function<void (const net::endpoint &, const std::string &)> route_table_call_back;

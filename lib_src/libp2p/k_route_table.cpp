@@ -99,19 +99,6 @@ std::multimap<mpa::mpint, net::endpoint> k_route_table::find_node_local(
 
 boost::optional<net::endpoint> k_route_table::ping()
 {
-	//erase Unknown_Active endpoints that have timed out
-	for(std::map<net::endpoint, k_contact>::iterator it_cur = Unknown_Active.begin();
-		it_cur != Unknown_Active.end();)
-	{
-		if(it_cur->second.timeout()
-			&& it_cur->second.timeout_count() > protocol_udp::retransmit_limit)
-		{
-			LOG << "timeout: " << it_cur->first.IP() << " " << it_cur->first.port();
-			Unknown_Active.erase(it_cur++);
-		}else{
-			++it_cur;
-		}
-	}
 	//check buckets for endpoint to ping
 	boost::optional<net::endpoint> ep;
 	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
@@ -157,5 +144,27 @@ void k_route_table::recv_pong(const net::endpoint & from,
 		Bucket_4[bucket_num]->recv_pong(from, remote_ID);
 	}else{
 		Bucket_6[bucket_num]->recv_pong(from, remote_ID);
+	}
+}
+
+void k_route_table::tick()
+{
+	//erase Unknown_Active endpoints that have timed out
+	for(std::map<net::endpoint, k_contact>::iterator it_cur = Unknown_Active.begin();
+		it_cur != Unknown_Active.end();)
+	{
+		if(it_cur->second.timeout()
+			&& it_cur->second.timeout_count() > protocol_udp::retransmit_limit)
+		{
+			LOG << "timeout: " << it_cur->first.IP() << " " << it_cur->first.port();
+			Unknown_Active.erase(it_cur++);
+		}else{
+			++it_cur;
+		}
+	}
+
+	for(unsigned x=0; x<protocol_udp::bucket_count; ++x){
+		Bucket_4[x]->tick();
+		Bucket_6[x]->tick();
 	}
 }

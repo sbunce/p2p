@@ -138,6 +138,7 @@ void kad::network_loop()
 			send_find_node();
 			send_ping();
 			Find.tick();
+			Route_Table.tick();
 			Token.tick();
 			second_timeout = std::time(NULL) + 1;
 		}
