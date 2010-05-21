@@ -104,8 +104,7 @@ public:
 
 	/* Info
 	connections:
-		Returns how many connections are open. This does not include half-open
-		connections.
+		Returns how many connections are open. Includes half open connections.
 	download_rate:
 		Returns download rate averaged over a few seconds (B/s).
 	listen_port:

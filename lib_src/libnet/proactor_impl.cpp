@@ -32,6 +32,7 @@ void net::proactor_impl::add_socket(std::pair<int, boost::shared_ptr<connection>
 		P.first = P.second->connection_ID;
 		ret = ID.insert(P);
 		assert(ret.second);
+		++established_connections;
 	}else{
 		//the listen socket doesn't have connection associated with it
 		read_FDS.insert(P.first);
@@ -193,7 +194,6 @@ void net::proactor_impl::handle_async_connection(
 	P.second->touch();
 	if(P.second->is_open()){
 		//async connection suceeded
-		++established_connections;
 		read_FDS.insert(P.first); //monitor socket for incoming data
 		write_FDS.erase(P.first); //send_buf will be empty after connect
 		Dispatcher.connect(P.second->CI);
@@ -279,7 +279,6 @@ void net::proactor_impl::network_loop()
 				std::pair<int, boost::shared_ptr<connection> > P(N->socket(),
 					boost::shared_ptr<connection>(new connection(ID_Manager, N)));
 				if(incoming_connections < incoming_connection_limit){
-					++established_connections;
 					++incoming_connections;
 					add_socket(P);
 					Dispatcher.connect(P.second->CI);
