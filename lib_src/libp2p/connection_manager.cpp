@@ -98,11 +98,7 @@ void connection_manager::disconnect_call_back(net::proactor::connection_info & C
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	LOG << "\"" << (!CI.host.empty() ? CI.host : CI.IP) << "\" " << CI.port;
 	Connection.erase(CI.connection_ID);
-	/*
-	Duplicate connections that were disconnected don't have a Connection
-	element. Make sure there is a Connection element so element is not
-	erroneously erased from Connection_Hosts.
-	*/
+	//duplicate connections don't have a Connection element
 	if(Connection.find(CI.connection_ID) != Connection.end()){
 		Connection_Hosts.erase(std::make_pair(CI.IP, CI.port));
 	}

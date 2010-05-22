@@ -286,7 +286,7 @@ void share::garbage_collect()
 	for(std::map<std::string, boost::shared_ptr<slot> >::iterator
 		it_cur = Slot.begin(); it_cur != Slot.end();)
 	{
-		if(it_cur->second.unique()){
+		if(it_cur->second.unique() && it_cur->second->complete()){
 			Slot.erase(it_cur++);
 		}else{
 			++it_cur;
