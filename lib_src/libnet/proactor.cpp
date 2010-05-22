@@ -39,11 +39,6 @@ void net::proactor::connect(const std::string & host, const std::string & port)
 	Proactor_impl->connect(host, port);
 }
 
-unsigned net::proactor::connections()
-{
-	return Proactor_impl->connections();
-}
-
 void net::proactor::disconnect(const int connection_ID)
 {
 	Proactor_impl->disconnect(connection_ID);
@@ -57,21 +52,6 @@ void net::proactor::disconnect_on_empty(const int connection_ID)
 unsigned net::proactor::download_rate()
 {
 	return Proactor_impl->download_rate();
-}
-
-unsigned net::proactor::get_max_download_rate()
-{
-	return Proactor_impl->get_max_download_rate();
-}
-
-unsigned net::proactor::get_max_upload_rate()
-{
-	return Proactor_impl->get_max_upload_rate();
-}
-
-std::string net::proactor::listen_port()
-{
-	return Proactor_impl->listen_port();
 }
 
 void net::proactor::start(boost::shared_ptr<listener> Listener_in)

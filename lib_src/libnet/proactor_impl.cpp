@@ -8,8 +8,7 @@ net::proactor_impl::proactor_impl(
 	incoming_connection_limit(FD_SETSIZE / 2),
 	outgoing_connection_limit(FD_SETSIZE / 2),
 	incoming_connections(0),
-	outgoing_connections(0),
-	established_connections(0)
+	outgoing_connections(0)
 {
 
 }
@@ -32,7 +31,6 @@ void net::proactor_impl::add_socket(std::pair<int, boost::shared_ptr<connection>
 		P.first = P.second->connection_ID;
 		ret = ID.insert(P);
 		assert(ret.second);
-		++established_connections;
 	}else{
 		//the listen socket doesn't have connection associated with it
 		read_FDS.insert(P.first);
@@ -131,11 +129,6 @@ void net::proactor_impl::connect(const std::string & host, const std::string & p
 		host, port));
 }
 
-unsigned net::proactor_impl::connections()
-{
-	return established_connections;
-}
-
 void net::proactor_impl::disconnect(const int connection_ID)
 {
 	boost::mutex::scoped_lock lock(relay_job_mutex);
@@ -177,16 +170,6 @@ unsigned net::proactor_impl::download_rate()
 	return Rate_Limit.download();
 }
 
-unsigned net::proactor_impl::get_max_download_rate()
-{
-	return Rate_Limit.max_download();
-}
-
-unsigned net::proactor_impl::get_max_upload_rate()
-{
-	return Rate_Limit.max_upload();
-}
-
 void net::proactor_impl::handle_async_connection(
 	std::pair<int, boost::shared_ptr<connection> > P)
 {
@@ -209,15 +192,6 @@ void net::proactor_impl::handle_async_connection(
 			Dispatcher.disconnect(P.second->CI);
 		}
 	}
-}
-
-std::string net::proactor_impl::listen_port()
-{
-	/*
-	It is thread safe to return this because it is connected before the network
-	thread is started and won't disconnect while the network thread is active.
-	*/
-	return Listener->port();
 }
 
 std::pair<int, boost::shared_ptr<net::connection> >
@@ -378,7 +352,6 @@ void net::proactor_impl::remove_socket(const int socket_FD)
 		}else{
 			--outgoing_connections;
 		}
-		--established_connections;
 		Socket.erase(socket_FD);
 		ID.erase(P.second->connection_ID);
 	}

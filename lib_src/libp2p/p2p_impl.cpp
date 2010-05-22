@@ -22,12 +22,12 @@ p2p_impl::~p2p_impl()
 
 unsigned p2p_impl::connections()
 {
-	return Connection_Manager.Proactor.connections();
+	return 0;
 }
 
 unsigned p2p_impl::DHT_count()
 {
-	return DHT.count();
+	return Connection_Manager.DHT_count();
 }
 
 unsigned p2p_impl::get_max_connections()
@@ -47,8 +47,6 @@ unsigned p2p_impl::get_max_upload_rate()
 
 void p2p_impl::resume()
 {
-	db::table::prefs::warm_up_cache();
-
 	//delay helps GUI have responsive startup
 	boost::this_thread::yield();
 
@@ -85,7 +83,7 @@ void p2p_impl::resume()
 			it_cur->get_transfer()->check();
 		}
 	}
-
+/*
 	//connect to peers that have files we need
 	std::set<std::pair<std::string, std::string> >
 		peers = db::table::join::resume_peers();
@@ -95,23 +93,11 @@ void p2p_impl::resume()
 	{
 		Connection_Manager.Proactor.connect(it_cur->first, it_cur->second);
 	}
-
+*/
 	//bring up networking
-	std::set<net::endpoint> E = net::get_endpoint(
-		"",
-		db::table::prefs::get_port()
-	);
-	if(E.empty()){
-		LOG << "failed to resolve listener";
-		exit(1);
-	}
-	boost::shared_ptr<net::listener> Listener(new net::listener(*E.begin()));
-	if(!Listener->is_open()){
-		LOG << "failed to open listener";
-		exit(1);
-	}
-	Connection_Manager.Proactor.start(Listener);
+	Connection_Manager.start();
 
+/*
 //DEBUG, test DHT
 	struct func_local{
 	static void FOUND_NODE(const net::endpoint & ep)
@@ -130,25 +116,26 @@ void p2p_impl::resume()
 		boost::this_thread::sleep(boost::posix_time::milliseconds(10000));
 		DHT.find_file("DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF", &func_local::FOUND_FILE);
 	}
+*/
 }
 
-void p2p_impl::set_max_connections(unsigned connections)
+void p2p_impl::set_max_connections(const unsigned connections)
 {
 	//save extra 24 file descriptors for DB and misc other stuff
 	assert(connections <= 1000);
-	Connection_Manager.Proactor.set_connection_limit(connections / 2, connections / 2);
+	Connection_Manager.set_max_connections(connections / 2, connections / 2);
 	db::table::prefs::set_max_connections(connections);
 }
 
 void p2p_impl::set_max_download_rate(const unsigned rate)
 {
-	Connection_Manager.Proactor.set_max_download_rate(rate);
+	Connection_Manager.set_max_download_rate(rate);
 	db::table::prefs::set_max_download_rate(rate);
 }
 
 void p2p_impl::set_max_upload_rate(const unsigned rate)
 {
-	Connection_Manager.Proactor.set_max_upload_rate(rate);
+	Connection_Manager.set_max_upload_rate(rate);
 	db::table::prefs::set_max_upload_rate(rate);
 }
 
@@ -195,20 +182,20 @@ void p2p_impl::transfers(std::vector<p2p::transfer> & T)
 
 unsigned p2p_impl::TCP_download_rate()
 {
-	return Connection_Manager.Proactor.download_rate();
+	return Connection_Manager.TCP_download_rate();
 }
 
 unsigned p2p_impl::TCP_upload_rate()
 {
-	return Connection_Manager.Proactor.upload_rate();
+	return Connection_Manager.TCP_upload_rate();
 }
 
 unsigned p2p_impl::UDP_download_rate()
 {
-	return DHT.download_rate();
+	return Connection_Manager.UDP_download_rate();
 }
 
 unsigned p2p_impl::UDP_upload_rate()
 {
-	return DHT.upload_rate();
+	return Connection_Manager.UDP_upload_rate();
 }

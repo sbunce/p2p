@@ -41,14 +41,8 @@ public:
 	void send(const int connection_ID, buffer & send_buf);
 
 	//info
-	unsigned connections();
 	unsigned download_rate();
-	std::string listen_port();
 	unsigned upload_rate();
-
-	//get options
-	unsigned get_max_download_rate();
-	unsigned get_max_upload_rate();
 
 	//set options
 	void set_connection_limit(const unsigned incoming_limit, const unsigned outgoing_limit);
@@ -73,7 +67,6 @@ private:
 	unsigned outgoing_connection_limit;                   //maximum allowed outgoing connections
 	unsigned incoming_connections;                        //current incoming connections
 	unsigned outgoing_connections;                        //current outgoing connections
-	atomic_int<unsigned> established_connections;         //fully open connections
 
 	/*
 	Function call proxy. A thread adds a function object and network_thread makes

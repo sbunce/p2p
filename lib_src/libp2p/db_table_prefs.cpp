@@ -218,12 +218,3 @@ void db::table::prefs::set_port(const std::string & port,
 	ss << "UPDATE prefs SET value = '" << port << "' WHERE key = 'port'";
 	static_wrap::get().Thread_Pool.enqueue(boost::bind(&set_wrapper, ss.str()));
 }
-
-void db::table::prefs::warm_up_cache(db::pool::proxy DB)
-{
-	get_max_download_rate(DB);
-	get_max_connections(DB);
-	get_max_upload_rate(DB);
-	get_ID(DB);
-	get_port(DB);
-}

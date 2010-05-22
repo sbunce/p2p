@@ -3,6 +3,7 @@
 
 //custom
 #include "connection.hpp"
+#include "kad.hpp"
 
 //include
 #include <boost/thread.hpp>
@@ -19,23 +20,42 @@ public:
 	connection_manager();
 	~connection_manager();
 
-	net::proactor Proactor;
-
 	/*
-	connect_call_back:
-		Proactor does call back when there is a new connection.
-	disconnect_call_back:
-		Proactor does call back when new connection failed, or when existing
-		connection closed.
 	remove:
 		Remove incoming/outgoing slots with the specified hash.
+	start:
+		Start networking.
 	*/
-	void connect_call_back(net::proactor::connection_info & CI);
-	void disconnect_call_back(net::proactor::connection_info & CI);
-	void remove(const std::string hash);
+	void remove(const std::string & hash);
+	void start();
+
+	/* Info
+	DHT_count:
+		Returns number of contacts in DHT routing table.
+	TCP_download_rate:
+		Returns current average TCP download rate (B/s).
+	TCP_upload_rate:
+		Returns current average TCP upload rate (B/s).
+	UDP_download_rate:
+		Returns current average UDP download rate (B/s).
+	UDP_upload_rate:
+		Returns current average UDP upload rate (B/s).
+	*/
+	unsigned DHT_count();
+	unsigned TCP_download_rate();
+	unsigned TCP_upload_rate();
+	unsigned UDP_download_rate();
+	unsigned UDP_upload_rate();
+
+	//set options
+	void set_max_download_rate(const unsigned rate);
+	void set_max_connections(const unsigned incoming_limit, const unsigned outgoing_limit);
+	void set_max_upload_rate(const unsigned rate);
 
 private:
+	net::proactor Proactor;
 	thread_pool Thread_Pool;
+	kad DHT;
 
 	/*
 	The connection_ID associated with a connection (the state each connection
@@ -51,16 +71,27 @@ private:
 	boost::mutex filter_mutex;
 	std::set<int> filter;
 
+	/* Proactor Call Backs
+	connect_call_back:
+		Proactor does call back when there is a new connection.
+	disconnect_call_back:
+		Proactor does call back when new connection failed, or when existing
+		connection closed.
+	*/
+	void connect_call_back(net::proactor::connection_info & CI);
+	void disconnect_call_back(net::proactor::connection_info & CI);
+
 	/*
-	do_remove:
+	remove_priv:
 		Removes downloading file. Scheduled by remove().
-	do_tick:
+	tick:
 		Do tick() of connection if it exists.
 	trigger_tick:
 		Schedule a job with the thread pool to tick a connection.
+
 	*/
-	void do_remove(const std::string hash);
-	void do_tick(const int connection_ID);
+	void remove_priv(const std::string hash);
+	void tick(const int connection_ID);
 	void trigger_tick(const int connection_ID);
 };
 #endif

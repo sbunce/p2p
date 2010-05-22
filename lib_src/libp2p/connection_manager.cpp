@@ -19,16 +19,17 @@ connection_manager::~connection_manager()
 void connection_manager::connect_call_back(net::proactor::connection_info & CI)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
-
-//DEBUG, disable persistent blacklist
-	db::pool::get()->query("DELETE FROM blacklist");
-
 	LOG << "connect " << CI.IP << " " << CI.port;
 	std::pair<std::map<int, boost::shared_ptr<connection> >::iterator, bool>
 		ret = Connection.insert(std::make_pair(CI.connection_ID,
 		new connection(Proactor, CI, boost::bind(&connection_manager::trigger_tick,
 		this, _1))));
 	assert(ret.second);
+}
+
+unsigned connection_manager::DHT_count()
+{
+	return DHT.count();
 }
 
 void connection_manager::disconnect_call_back(net::proactor::connection_info & CI)
@@ -38,7 +39,12 @@ void connection_manager::disconnect_call_back(net::proactor::connection_info & C
 	Connection.erase(CI.connection_ID);
 }
 
-void connection_manager::do_remove(const std::string hash)
+void connection_manager::remove(const std::string & hash)
+{
+	Thread_Pool.enqueue(boost::bind(&connection_manager::remove_priv, this, hash));
+}
+
+void connection_manager::remove_priv(const std::string hash)
 {
 	boost::mutex::scoped_lock lock(Connection_mutex);
 	share::slot_iterator S_iter = share::singleton().remove_slot(hash);
@@ -75,7 +81,42 @@ void connection_manager::do_remove(const std::string hash)
 	}
 }
 
-void connection_manager::do_tick(const int connection_ID)
+void connection_manager::set_max_connections(const unsigned incoming_limit,
+	const unsigned outgoing_limit)
+{
+	assert(incoming_limit + outgoing_limit <= 1000);
+	Proactor.set_connection_limit(incoming_limit, outgoing_limit);
+}
+
+void connection_manager::set_max_download_rate(const unsigned rate)
+{
+	Proactor.set_max_download_rate(rate);
+}
+
+void connection_manager::set_max_upload_rate(const unsigned rate)
+{
+	Proactor.set_max_upload_rate(rate);
+}
+
+void connection_manager::start()
+{
+	std::set<net::endpoint> E = net::get_endpoint(
+		"",
+		db::table::prefs::get_port()
+	);
+	if(E.empty()){
+		LOG << "failed to resolve listener";
+		exit(1);
+	}
+	boost::shared_ptr<net::listener> Listener(new net::listener(*E.begin()));
+	if(!Listener->is_open()){
+		LOG << "failed to open listener";
+		exit(1);
+	}
+	Proactor.start(Listener);
+}
+
+void connection_manager::tick(const int connection_ID)
 {
 	{//BEGIN lock scope
 	boost::mutex::scoped_lock lock(filter_mutex);
@@ -92,17 +133,31 @@ void connection_manager::do_tick(const int connection_ID)
 	}//END lock scope
 }
 
-void connection_manager::remove(const std::string hash)
-{
-	Thread_Pool.enqueue(boost::bind(&connection_manager::do_remove, this, hash));
-}
-
 void connection_manager::trigger_tick(const int connection_ID)
 {
 	boost::mutex::scoped_lock lock(filter_mutex);
-	//if cannot insert then we know job already scheduled
 	std::pair<std::set<int>::iterator, bool> P = filter.insert(connection_ID);
 	if(P.second){
-		Thread_Pool.enqueue(boost::bind(&connection_manager::do_tick, this, connection_ID));
+		Thread_Pool.enqueue(boost::bind(&connection_manager::tick, this, connection_ID));
 	}
+}
+
+unsigned connection_manager::TCP_download_rate()
+{
+	return Proactor.download_rate();
+}
+
+unsigned connection_manager::TCP_upload_rate()
+{
+	return Proactor.upload_rate();
+}
+
+unsigned connection_manager::UDP_download_rate()
+{
+	return DHT.download_rate();
+}
+
+unsigned connection_manager::UDP_upload_rate()
+{
+	return DHT.upload_rate();
 }

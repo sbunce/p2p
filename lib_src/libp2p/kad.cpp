@@ -234,7 +234,8 @@ void kad::recv_store_file(const net::endpoint & from, const net::buffer & random
 {
 	Route_Table.add_reserve(from, remote_ID);
 	if(Token.has_been_issued(from, random)){
-		LOG << from.IP() << " " << from.port() << " " << convert::abbr(remote_ID) << " " << convert::abbr(hash);
+		LOG << from.IP() << " " << from.port() << " " << convert::abbr(remote_ID)
+			<< " " << convert::abbr(hash);
 		db::table::source::add(remote_ID, hash);
 	}else{
 		LOG << "invalid token: " << from.IP() << " " << from.port() << " " << convert::abbr(hash);

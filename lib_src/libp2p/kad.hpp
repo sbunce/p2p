@@ -56,8 +56,8 @@ private:
 	const std::string local_ID;      //our node ID
 	atomic_int<unsigned> active_cnt; //number of active contacts in k_buckets
 	exchange_udp Exchange;
-	k_route_table Route_Table;
 	k_find Find;
+	k_route_table Route_Table;
 	k_token Token;
 
 	/*

@@ -5,7 +5,6 @@
 #include "connection_manager.hpp"
 #include "db_all.hpp"
 #include "hash_tree.hpp"
-#include "kad.hpp"
 #include "path.hpp"
 #include "prime_generator.hpp"
 #include "share_scanner.hpp"
@@ -46,7 +45,7 @@ public:
 	unsigned get_max_upload_rate();
 	void remove_download(const std::string & hash);
 	void set_max_download_rate(const unsigned rate);
-	void set_max_connections(unsigned connections);
+	void set_max_connections(const unsigned connections);
 	void set_max_upload_rate(const unsigned rate);
 	boost::uint64_t share_size();
 	boost::uint64_t share_files();
@@ -62,7 +61,6 @@ private:
 	boost::thread resume_thread;
 
 	connection_manager Connection_Manager;
-	kad DHT;
 	share_scanner Share_Scanner;
 
 	/*

@@ -19,9 +19,6 @@ namespace table{
 class prefs
 {
 public:
-	//causes all values to be cached
-	static void warm_up_cache(db::pool::proxy DB = db::pool::proxy());
-
 	//get a value
 	static unsigned get_max_download_rate(
 		db::pool::proxy DB = db::pool::proxy());

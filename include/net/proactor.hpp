@@ -103,28 +103,13 @@ public:
 
 
 	/* Info
-	connections:
-		Returns how many connections are open. Includes half open connections.
 	download_rate:
 		Returns download rate averaged over a few seconds (B/s).
-	listen_port:
-		Returns port listening on (empty if not listening).
 	upload_rate:
 		Returns upload rate averaged over a few seconds (B/s).
 	*/
-	unsigned connections();
 	unsigned download_rate();
-	std::string listen_port();
 	unsigned upload_rate();
-
-	/* Get Options
-	get_max_download_rate:
-		Get maximum allowed download rate.
-	get_max_upload_rate:
-		Get maximum allowed upload rate.
-	*/
-	unsigned get_max_download_rate();
-	unsigned get_max_upload_rate();
 
 	/* Set Options
 	set_connection_limit:
