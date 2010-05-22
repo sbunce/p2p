@@ -326,6 +326,12 @@ void kad::send_store_node_call_back_1(const net::endpoint & from,
 		new message_udp::send::store_node(random, local_ID)), from);
 }
 
+void kad::stop()
+{
+	network_thread.interrupt();
+	network_thread.join();
+}
+
 void kad::store_file(const std::string & hash)
 {
 	boost::mutex::scoped_lock lock(relay_job_mutex);

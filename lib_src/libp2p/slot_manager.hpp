@@ -20,7 +20,7 @@ class slot_manager : private boost::noncopyable
 public:
 	slot_manager(
 		exchange_tcp & Exchange_in,
-		boost::function<void(const int)> trigger_tick_in
+		const boost::function<void(const int)> & trigger_tick_in
 	);
 	~slot_manager();
 

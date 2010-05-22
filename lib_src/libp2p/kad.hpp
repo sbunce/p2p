@@ -51,6 +51,12 @@ public:
 	unsigned download_rate();
 	unsigned upload_rate();
 
+	/*
+	stop:
+		Stop from doing any more call backs.
+	*/
+	void stop();
+
 private:
 	boost::thread network_thread;
 	const std::string local_ID;      //our node ID

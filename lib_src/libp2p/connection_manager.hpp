@@ -6,6 +6,7 @@
 #include "kad.hpp"
 
 //include
+#include <atomic_int.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
 #include <net/net.hpp>
@@ -21,15 +22,20 @@ public:
 	~connection_manager();
 
 	/*
+	add:
+		Find hosts which have the file and connect.
 	remove:
 		Remove incoming/outgoing slots with the specified hash.
-	start:
-		Start networking.
+	store:
+		Store file hash on the DHT.
 	*/
+	void add(const std::string & hash);
 	void remove(const std::string & hash);
-	void start();
+	void store_file(const std::string & hash);
 
 	/* Info
+	connections:
+		Returns number of established connections.
 	DHT_count:
 		Returns number of contacts in DHT routing table.
 	TCP_download_rate:
@@ -41,6 +47,7 @@ public:
 	UDP_upload_rate:
 		Returns current average UDP upload rate (B/s).
 	*/
+	unsigned connections();
 	unsigned DHT_count();
 	unsigned TCP_download_rate();
 	unsigned TCP_upload_rate();
@@ -52,24 +59,50 @@ public:
 	void set_max_connections(const unsigned incoming_limit, const unsigned outgoing_limit);
 	void set_max_upload_rate(const unsigned rate);
 
+	/*
+	start:
+		Start networking.
+	*/
+	void start();
+
 private:
 	net::proactor Proactor;
 	thread_pool Thread_Pool;
 	kad DHT;
+	atomic_int<unsigned> _connections;
+
+	class connection_element
+	{
+	public:
+		connection_element(
+			const std::string & IP_in,
+			const std::string & port_in,
+			const boost::shared_ptr<connection> & Connection_in
+		);
+		connection_element(const connection_element & CE);
+
+		const std::string IP;
+		const std::string port;
+		boost::shared_ptr<connection> Connection;
+	};
 
 	/*
-	The connection_ID associated with a connection (the state each connection
-	needs). The Connection_mutex locks all access to the Connection container.
+	Connection_mutex:
+		Locks access to all in this section.
+	Connection:
+		The connection_ID associated with a connection (the state each connection
+		needs). The Connection_mutex locks all access to the Connection container.
+	Connection_Hosts:
+		Set of hosts connected, or connecting to. Used to stop duplicate
+		connections. std::pair<IP, port>
 	*/
 	boost::mutex Connection_mutex;
-	std::map<int, boost::shared_ptr<connection> > Connection;
+	std::map<int, connection_element> Connection;
+	std::set<std::pair<std::string, std::string> > Connection_Hosts;
 
-	/*
-	We use the filter set to eliminate unnecessary tick()s from being scheduled
-	with the thread pool
-	*/
-	boost::mutex filter_mutex;
-	std::set<int> filter;
+	//memoize ticks we've scheduled so we don't do redundant ticks
+	boost::mutex tick_memoize_mutex;
+	std::set<int> tick_memoize;
 
 	/* Proactor Call Backs
 	connect_call_back:
@@ -82,14 +115,16 @@ private:
 	void disconnect_call_back(net::proactor::connection_info & CI);
 
 	/*
+	add_call_back:
+		Call back used by add() function to connect to hosts.
 	remove_priv:
 		Removes downloading file. Scheduled by remove().
 	tick:
 		Do tick() of connection if it exists.
 	trigger_tick:
 		Schedule a job with the thread pool to tick a connection.
-
 	*/
+	void add_call_back(const net::endpoint & ep);
 	void remove_priv(const std::string hash);
 	void tick(const int connection_ID);
 	void trigger_tick(const int connection_ID);

@@ -57,9 +57,7 @@ public:
 	unsigned UDP_upload_rate();
 
 private:
-	//thread spawned by ctor to do actions on startup
 	boost::thread resume_thread;
-
 	connection_manager Connection_Manager;
 	share_scanner Share_Scanner;
 

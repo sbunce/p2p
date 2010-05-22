@@ -18,7 +18,7 @@ public:
 	connection(
 		net::proactor & Proactor_in,
 		net::proactor::connection_info & CI,
-		boost::function<void(const int)> trigger_tick
+		const boost::function<void(const int)> & trigger_tick
 	);
 
 	/*
@@ -29,6 +29,9 @@ public:
 	tick:
 		Do periodic tasks.
 	*/
+//DEBUG, consider add() function to open slots.
+//Then keep track of pair<IP,port> to hash mappings in connection_manager.
+
 	bool empty();
 	void remove(const std::string & hash);
 	void tick();

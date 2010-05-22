@@ -22,7 +22,7 @@ p2p_impl::~p2p_impl()
 
 unsigned p2p_impl::connections()
 {
-	return 0;
+	return Connection_Manager.connections();
 }
 
 unsigned p2p_impl::DHT_count()
@@ -83,19 +83,20 @@ void p2p_impl::resume()
 			it_cur->get_transfer()->check();
 		}
 	}
-/*
-	//connect to peers that have files we need
-	std::set<std::pair<std::string, std::string> >
-		peers = db::table::join::resume_peers();
-	for(std::set<std::pair<std::string, std::string> >::iterator
-		it_cur = peers.begin(), it_end = peers.end(); it_cur != it_end;
-		++it_cur)
-	{
-		Connection_Manager.Proactor.connect(it_cur->first, it_cur->second);
-	}
-*/
+
 	//bring up networking
 	Connection_Manager.start();
+
+//DEBUG, store files (need to have share_scanner do this eventually)
+	Connection_Manager.store_file("0568833757D90F5886CFB9B30934AD40F42A08A8");
+	Connection_Manager.store_file("A4E2F25248D9F4C9FCACBE8D7F3A5D8E473CFBBE");
+
+	//find hosts which have files we need
+	for(share::slot_iterator it_cur = share::singleton().begin_slot(),
+		it_end = share::singleton().end_slot(); it_cur != it_end; ++it_cur)
+	{
+		Connection_Manager.add(it_cur->hash());
+	}
 
 /*
 //DEBUG, test DHT

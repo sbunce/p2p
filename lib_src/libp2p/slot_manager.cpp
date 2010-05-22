@@ -2,7 +2,7 @@
 
 slot_manager::slot_manager(
 	exchange_tcp & Exchange_in,
-	boost::function<void(const int)> trigger_tick_in
+	const boost::function<void(const int)> & trigger_tick_in
 ):
 	Exchange(Exchange_in),
 	trigger_tick(trigger_tick_in),

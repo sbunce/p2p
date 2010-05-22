@@ -3,7 +3,7 @@
 connection::connection(
 	net::proactor & Proactor_in,
 	net::proactor::connection_info & CI,
-	boost::function<void(const int)> trigger_tick
+	const boost::function<void(const int)> & trigger_tick
 ):
 	Exchange(Proactor_in, CI),
 	Slot_Manager(Exchange, trigger_tick)
