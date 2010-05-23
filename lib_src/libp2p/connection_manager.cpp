@@ -1,42 +1,18 @@
 #include "connection_manager.hpp"
 
-//BEGIN addr
-connection_manager::address::address(
-	const std::string & IP_in,
-	const std::string & port_in
-):
-	IP(IP_in),
-	port(port_in)
-{
-
-}
-
-connection_manager::address::address(const address & A):
-	IP(A.IP),
-	port(A.port)
-{
-
-}
-
-bool connection_manager::address::operator < (const address & rval) const
-{
-	return IP + port < rval.IP + rval.port;
-}
-//END addr
-
 //BEGIN connection_element
 connection_manager::connection_element::connection_element(
-	const address & Address_in,
+	const net::endpoint & ep_in,
 	const boost::shared_ptr<connection> & Connection_in
 ):
-	Address(Address_in),
+	ep(ep_in),
 	Connection(Connection_in)
 {
 
 }
 
 connection_manager::connection_element::connection_element(const connection_element & CE):
-	Address(CE.Address),
+	ep(CE.ep),
 	Connection(CE.Connection)
 {
 
@@ -63,18 +39,32 @@ connection_manager::~connection_manager()
 
 void connection_manager::add(const std::string & hash)
 {
-	DHT.find_file(hash, boost::bind(&connection_manager::add_call_back, this, _1));
+	LOG << hash;
+	DHT.find_file(hash, boost::bind(&connection_manager::add_call_back, this, _1, hash));
 }
 
-void connection_manager::connection_manager::add_call_back(const net::endpoint & ep)
+void connection_manager::connection_manager::add_call_back(
+	const net::endpoint & ep, const std::string hash)
 {
 	boost::mutex::scoped_lock lock(Connect_mutex);
-	if(Connecting.find(address(ep.IP(), ep.port())) == Connecting.end()
-		&& Connected.find(address(ep.IP(), ep.port())) == Connected.end())
-	{
-		Connecting.insert(address(ep.IP(), ep.port()));
+	bool connecting = (Connecting.find(ep) != Connecting.end());
+	bool connected = (Connected.find(ep) != Connected.end());
+	if(!connecting && !connected){
 		LOG << ep.IP() << " " << ep.port();
+		Connecting.insert(ep);
+		Hash.insert(std::make_pair(ep, hash));
 		Proactor.connect(ep);
+	}else if(connected){
+		//download file from connection
+		for(std::map<int, connection_element>::iterator it_cur = Connection.begin(),
+			it_end = Connection.end(); it_cur != it_end; ++it_cur)
+		{
+			if(it_cur->second.ep == ep){
+				it_cur->second.Connection->add(hash);
+				trigger_tick(it_cur->first);
+				break;
+			}
+		}
 	}
 }
 
@@ -86,18 +76,28 @@ unsigned connection_manager::connections()
 void connection_manager::connect_call_back(net::proactor::connection_info & CI)
 {
 	boost::mutex::scoped_lock lock(Connect_mutex);
+
+//DEBUG, disable blacklist
+db::pool::get()->query("DELETE FROM blacklist");
+
 	if(CI.direction == net::outgoing){
-		Connecting.erase(address(CI.ep.IP(), CI.ep.port()));
+		Connecting.erase(CI.ep);
 	}
-	if(Connected.find(address(CI.ep.IP(), CI.ep.port())) == Connected.end()){
-		Connected.insert(address(CI.ep.IP(), CI.ep.port()));
+	if(Connected.find(CI.ep) == Connected.end()){
+		Connected.insert(CI.ep);
 		LOG << "connect: " << CI.ep.IP() << " " << CI.ep.port();
 		boost::shared_ptr<connection> C(new connection(Proactor, CI,
 			boost::bind(&connection_manager::trigger_tick, this, _1)));
-		std::pair<std::map<int, connection_element>::iterator, bool>
-			ret = Connection.insert(std::make_pair(CI.connection_ID,
-			connection_element(address(CI.ep.IP(), CI.ep.port()), C)));
-		assert(ret.second);
+
+		//download files from connection
+		typedef std::multimap<net::endpoint, std::string>::iterator it_t;
+		std::pair<it_t, it_t> p = Hash.equal_range(CI.ep);
+		for(; p.first != p.second; ++p.first){
+			C->add(p.first->second);
+		}
+
+		Connection.insert(std::make_pair(CI.connection_ID, connection_element(CI.ep, C)));
+		trigger_tick(CI.connection_ID);
 		++_connections;
 	}else{
 		LOG << "dupe connect: " << CI.ep.IP() << " " << CI.ep.port();
@@ -113,15 +113,16 @@ unsigned connection_manager::DHT_count()
 void connection_manager::disconnect_call_back(net::proactor::connection_info & CI)
 {
 	boost::mutex::scoped_lock lock(Connect_mutex);
-	LOG << "\"" << CI.ep.IP() << "\" " << CI.ep.port();
 	Connection.erase(CI.connection_ID);
 	if(CI.direction == net::outgoing){
-		Connecting.erase(address(CI.ep.IP(), CI.ep.port()));
-//DEBUG, if element erased it means connection failed
+		if(!Connecting.erase(CI.ep)){
+			//connection failed
+			LOG << "connect failed: " << CI.ep.IP() << " " << CI.ep.port();
+			Hash.erase(CI.ep);
+		}
+	}else{
+		LOG << "\"" << CI.ep.IP() << "\" " << CI.ep.port();
 	}
-
-
-
 	--_connections;
 }
 

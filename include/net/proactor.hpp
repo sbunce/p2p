@@ -30,9 +30,9 @@ public:
 			const direction_t direction_in
 		);
 
-		const int connection_ID;     //unique identifier for connection
+		const int connection_ID;
 		const endpoint ep;
-		const direction_t direction; //incoming (remote host initiated connection) or outgoing
+		const direction_t direction;
 
 		/*
 		The recv_call_back must be set in the connect call back to recieve incoming

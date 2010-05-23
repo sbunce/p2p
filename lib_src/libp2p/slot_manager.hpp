@@ -25,6 +25,8 @@ public:
 	~slot_manager();
 
 	/*
+	add:
+		Add hash of a file to download.
 	empty:
 		Returns true if no incoming/outgoing slots.
 	remove:
@@ -35,9 +37,9 @@ public:
 	tick:
 		Called after exchange done processing buffers. Does periodic tasks.
 	*/
+	void add(const std::string & hash);
 	bool empty();
 	void remove(const std::string & hash);
-	void resume(const std::string & peer_ID);
 	void tick();
 
 private:
@@ -69,12 +71,15 @@ private:
 	open_slots:
 		Number of outgoing slots opened, or requested, from the remote host.
 		Invariant: 0 <= open_slots <= 256.
-	Pending:
+	Hash_Pending:
 		Hashes of files that need to be downloaded from host. Files will be
 		queued up if the slot limit of 256 is reached.
+	Hash_Opened:
+		Hashes we've opened slots for.
 	*/
 	unsigned open_slots;
-	std::list<std::string> Pending;
+	std::set<std::string> Hash_Pending;
+	std::set<std::string> Hash_Opened;
 
 	/*
 	close_complete:

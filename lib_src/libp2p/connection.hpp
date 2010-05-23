@@ -22,6 +22,8 @@ public:
 	);
 
 	/*
+	add:
+		Add hash of a file to download.
 	empty:
 		Returns true if no slots are open and no slots need to be opened.
 	remove:
@@ -29,9 +31,7 @@ public:
 	tick:
 		Do periodic tasks.
 	*/
-//DEBUG, consider add() function to open slots.
-//Then keep track of pair<IP,port> to hash mappings in connection_manager.
-
+	void add(const std::string & hash);
 	bool empty();
 	void remove(const std::string & hash);
 	void tick();

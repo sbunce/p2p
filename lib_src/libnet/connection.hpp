@@ -33,13 +33,11 @@ public:
 		ID_manager & ID_Manager_in,
 		const endpoint & ep
 	);
-
 	//ctor for incoming connection
 	connection(
 		ID_manager & ID_Manager_in,
 		const boost::shared_ptr<nstream> & N_in
 	);
-
 	~connection();
 
 	//modified by proactor
@@ -74,9 +72,7 @@ public:
 	bool half_open();
 	bool is_open();
 	int socket();
-
-//DEBUG, rename to timeout()
-	bool timed_out();
+	bool timeout();
 	void touch();
 };
 }//end namespace net

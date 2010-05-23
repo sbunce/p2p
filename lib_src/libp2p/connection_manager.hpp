@@ -71,25 +71,15 @@ private:
 	kad DHT;
 	atomic_int<unsigned> _connections;
 
-	class address
-	{
-	public:
-		address(const std::string & IP_in, const std::string & port_in);
-		address(const address & A);
-		std::string IP;
-		std::string port;
-		bool operator < (const address & rval) const;
-	};
-
 	class connection_element
 	{
 	public:
 		connection_element(
-			const address & Address_in,
+			const net::endpoint & ep_in,
 			const boost::shared_ptr<connection> & Connection_in
 		);
 		connection_element(const connection_element & CE);
-		address Address;
+		net::endpoint ep;
 		boost::shared_ptr<connection> Connection;
 	};
 
@@ -103,14 +93,14 @@ private:
 		Hosts we're connecting to.
 	Connected:
 		Only hosts that are connected. Address associated with connection_ID.
+	Hash:
+		Endpoints mapped to hashes of files they have.
 	*/
 	boost::mutex Connect_mutex;
 	std::map<int, connection_element> Connection;
-	std::set<address> Connecting;
-	std::set<address> Connected;
-
-
-	//std::map<std::pair<std::string, std::string>, std::string>
+	std::set<net::endpoint> Connecting;
+	std::set<net::endpoint> Connected;
+	std::multimap<net::endpoint, std::string> Hash;
 
 	//memoize ticks we've scheduled so we don't do redundant ticks
 	boost::mutex tick_memoize_mutex;
@@ -136,7 +126,7 @@ private:
 	trigger_tick:
 		Schedule a job with the thread pool to tick a connection.
 	*/
-	void add_call_back(const net::endpoint & ep);
+	void add_call_back(const net::endpoint & ep, const std::string hash);
 	void remove_priv(const std::string hash);
 	void tick(const int connection_ID);
 	void trigger_tick(const int connection_ID);

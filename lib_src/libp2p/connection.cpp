@@ -13,6 +13,11 @@ connection::connection(
 	send_initial();
 }
 
+void connection::add(const std::string & hash)
+{
+	Slot_Manager.add(hash);
+}
+
 bool connection::empty()
 {
 	boost::mutex::scoped_lock lock(Mutex);
@@ -29,7 +34,9 @@ void connection::recv_call_back(net::proactor::connection_info & CI)
 bool connection::recv_initial(const std::string & ID)
 {
 	LOG << convert::abbr(ID);
-	Slot_Manager.resume(ID);
+
+//DEBUG, need to make sure ID is what we expected
+
 	return true;
 }
 

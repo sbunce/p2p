@@ -107,7 +107,7 @@ void net::proactor_impl::check_timeouts()
 		it_cur = Socket.begin(), it_end = Socket.end(); it_cur != it_end;
 		++it_cur)
 	{
-		if(it_cur->second->timed_out()){
+		if(it_cur->second->timeout()){
 			timed_out.push_back(*it_cur);
 		}
 	}

@@ -57,7 +57,7 @@ int net::connection::socket()
 	return socket_FD;
 }
 
-bool net::connection::timed_out()
+bool net::connection::timeout()
 {
 	return std::time(NULL) > time;
 }

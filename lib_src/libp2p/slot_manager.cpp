@@ -41,6 +41,16 @@ slot_manager::~slot_manager()
 	share::singleton().garbage_collect();
 }
 
+void slot_manager::add(const std::string & hash)
+{
+	if(Hash_Pending.find(hash) == Hash_Pending.end()
+		&& Hash_Opened.find(hash) == Hash_Opened.end())
+	{
+		LOG << hash;
+		Hash_Pending.insert(hash);
+	}
+}
+
 void slot_manager::close_complete()
 {
 	for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
@@ -64,7 +74,7 @@ void slot_manager::close_complete()
 
 bool slot_manager::empty()
 {
-	return open_slots == 0 && Incoming_Slot.empty() && Pending.empty();
+	return open_slots == 0 && Incoming_Slot.empty() && Hash_Pending.empty();
 }
 
 bool slot_manager::recv_close_slot(const unsigned char slot_num)
@@ -447,25 +457,7 @@ void slot_manager::remove(const std::string & hash)
 			++it_cur;
 		}
 	}
-	for(std::list<std::string>::iterator it_cur = Pending.begin();
-		it_cur != Pending.end();)
-	{
-		if(*it_cur == hash){
-			it_cur = Pending.erase(it_cur);
-		}else{
-			++it_cur;
-		}
-	}
-}
-
-void slot_manager::resume(const std::string & peer_ID)
-{
-	std::set<std::string> hash = db::table::join::resume_hash(peer_ID);
-	for(std::set<std::string>::iterator it_cur = hash.begin(), it_end = hash.end();
-		it_cur != it_end; ++it_cur)
-	{
-		Pending.push_back(*it_cur);
-	}
+	Hash_Pending.erase(hash);
 }
 
 void slot_manager::send_block_requests()
@@ -575,9 +567,10 @@ void slot_manager::send_have()
 
 void slot_manager::send_slot_requests()
 {
-	while(!Pending.empty() && open_slots < 256){
-		share::slot_iterator slot_iter = share::singleton().find_slot(Pending.front());
-		Pending.pop_front();
+	while(!Hash_Pending.empty() && open_slots < 256){
+		share::slot_iterator slot_iter = share::singleton().find_slot(*Hash_Pending.begin());
+		Hash_Opened.insert(*Hash_Pending.begin());
+		Hash_Pending.erase(Hash_Pending.begin());
 		if(slot_iter == share::singleton().end_slot()){
 			continue;
 		}
