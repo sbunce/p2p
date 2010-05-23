@@ -26,16 +26,12 @@ public:
 	public:
 		connection_info(
 			const int connection_ID_in,
-			const std::string & host_in,
-			const std::string & IP_in,
-			const std::string & port_in,
+			const endpoint & ep_in,
 			const direction_t direction_in
 		);
 
 		const int connection_ID;     //unique identifier for connection
-		const std::string host;      //unresolved host name
-		const std::string IP;        //remote IP
-		const std::string port;      //remote port
+		const endpoint ep;
 		const direction_t direction; //incoming (remote host initiated connection) or outgoing
 
 		/*
@@ -96,7 +92,7 @@ public:
 	send:
 		Send data to specified connection if connection still exists.
 	*/
-	void connect(const std::string & host, const std::string & port);
+	void connect(const endpoint & ep);
 	void disconnect(const int connection_ID);
 	void disconnect_on_empty(const int connection_ID);
 	void send(const int connection_ID, buffer & send_buf);

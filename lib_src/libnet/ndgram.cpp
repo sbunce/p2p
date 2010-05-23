@@ -4,17 +4,17 @@
 
 net::ndgram::ndgram()
 {
-	std::set<endpoint> E = get_endpoint("", "0");
-	assert(!E.empty());
-	if((socket_FD = ::socket(E.begin()->AI->ai.ai_family, SOCK_DGRAM, IPPROTO_UDP)) == -1){
+	std::set<endpoint> ep = get_endpoint("", "0");
+	assert(!ep.empty());
+	if((socket_FD = ::socket(ep.begin()->AI->ai.ai_addr->sa_family, SOCK_DGRAM, IPPROTO_UDP)) == -1){
 		LOG << strerror(errno);
 		close();
 	}
 }
 
-net::ndgram::ndgram(const endpoint & E)
+net::ndgram::ndgram(const endpoint & ep)
 {
-	open(E);
+	open(ep);
 }
 
 std::string net::ndgram::local_IP()
@@ -63,23 +63,23 @@ std::string net::ndgram::local_port()
 	return buf;
 }
 
-void net::ndgram::open(const endpoint & E)
+void net::ndgram::open(const endpoint & ep)
 {
 	close();
-	if((socket_FD = ::socket(E.AI->ai.ai_family, SOCK_DGRAM, IPPROTO_UDP)) == -1){
+	if((socket_FD = ::socket(ep.AI->ai.ai_addr->sa_family, SOCK_DGRAM, IPPROTO_UDP)) == -1){
 		LOG << strerror(errno);
 		close();
 	}
-	if(::bind(socket_FD, E.AI->ai.ai_addr, E.AI->ai.ai_addrlen) == -1){
+	if(::bind(socket_FD, ep.AI->ai.ai_addr, ep.AI->ai.ai_addrlen) == -1){
 		LOG << strerror(errno);
 		close();
 		return;
 	}
 }
 
-int net::ndgram::recv(net::buffer & buf, boost::shared_ptr<endpoint> & E)
+int net::ndgram::recv(net::buffer & buf, boost::shared_ptr<endpoint> & ep)
 {
-	E.reset();
+	ep.reset();
 	addrinfo ai;
 	sockaddr_storage sas;
 	ai.ai_addr = reinterpret_cast<sockaddr *>(&sas);
@@ -94,16 +94,16 @@ int net::ndgram::recv(net::buffer & buf, boost::shared_ptr<endpoint> & E)
 		buf.tail_reserve(0);
 	}else{
 		boost::scoped_ptr<addr_impl> AI(new addr_impl(&ai));
-		E.reset(new endpoint(AI));
+		ep.reset(new endpoint(AI));
 		buf.tail_resize(n_bytes);
 	}
 	return n_bytes;
 }
 
-int net::ndgram::send(net::buffer & buf, const endpoint & E)
+int net::ndgram::send(net::buffer & buf, const endpoint & ep)
 {
 	int n_bytes = ::sendto(socket_FD, reinterpret_cast<char *>(buf.data()),
-		buf.size(), 0, E.AI->ai.ai_addr, E.AI->ai.ai_addrlen);
+		buf.size(), 0, ep.AI->ai.ai_addr, ep.AI->ai.ai_addrlen);
 	if(n_bytes == -1){
 		LOG << strerror(errno);
 	}else if(n_bytes == 0){

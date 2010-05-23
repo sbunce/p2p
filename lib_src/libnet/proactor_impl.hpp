@@ -35,7 +35,7 @@ public:
 	void stop();
 
 	//connect/disconnect/send
-	void connect(const std::string & host, const std::string & port);
+	void connect(const endpoint & ep);
 	void disconnect(const int connection_ID);
 	void disconnect_on_empty(const int connection_ID);
 	void send(const int connection_ID, buffer & send_buf);
@@ -58,7 +58,6 @@ private:
 	dispatcher Dispatcher;
 	boost::shared_ptr<listener> Listener;
 	rate_limit Rate_Limit;
-	thread_pool Thread_Pool;
 	select Select;
 	std::set<int> read_FDS, write_FDS;                    //sets to monitor with select
 	std::map<int, boost::shared_ptr<connection> > Socket; //socket_FD associated with connection
@@ -111,6 +110,7 @@ private:
 	void add_socket(std::pair<int, boost::shared_ptr<connection> > P);
 	void append_send_buf(const int connection_ID, boost::shared_ptr<buffer> B);
 	void check_timeouts();
+	void connect_relay(const endpoint ep);
 	void disconnect(const int connection_ID, const bool on_empty);
 	std::pair<int, boost::shared_ptr<connection> > lookup_socket(const int socket_FD);
 	std::pair<int, boost::shared_ptr<connection> > lookup_ID(const int connection_ID);
@@ -118,16 +118,6 @@ private:
 	void network_loop();
 	void process_relay_job();
 	void remove_socket(const int socket_FD);
-
-	/*
-	The public function connect() adds a job to call resolve_realay(). The
-	resolve_relay() function evaluates outgoing connection limit and if the limit
-	has not been reached schedules a job with Thread_Pool to call resolve.
-	Note: Thread_Pool threads run in the resolve() function. Be careful about
-		shared state.
-	*/
-	void resolve_relay(const std::string host, const std::string port);
-	void resolve(const std::string & host, const std::string & port);
 };
 }//end namespace net
 #endif

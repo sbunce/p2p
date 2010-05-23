@@ -66,7 +66,7 @@ void exchange_tcp::recv_call_back(net::proactor::connection_info & CI)
 			}
 			Status = Expect_Response.front()->recv(CI.recv_buf);
 			if(Status == message_tcp::recv::blacklist){
-				db::table::blacklist::add(CI.IP);
+				db::table::blacklist::add(CI.ep.IP());
 				goto end;
 			}else if(Status == message_tcp::recv::complete){
 				Expect_Response.pop_front();
@@ -83,7 +83,7 @@ void exchange_tcp::recv_call_back(net::proactor::connection_info & CI)
 			if(*it_cur){
 				Status = (*it_cur)->recv(CI.recv_buf);
 				if(Status == message_tcp::recv::blacklist){
-					db::table::blacklist::add(CI.IP);
+					db::table::blacklist::add(CI.ep.IP());
 					goto end;
 				}else if(Status == message_tcp::recv::complete){
 					goto begin;
@@ -98,16 +98,16 @@ void exchange_tcp::recv_call_back(net::proactor::connection_info & CI)
 			}
 		}
 		//a message was not processed, message on front of recv_buf is not expected
-		db::table::blacklist::add(CI.IP);
+		db::table::blacklist::add(CI.ep.IP());
 		goto end;
 	}
 	end:
 
 	//receive may have caused host to be blacklisted
 	if(db::table::blacklist::modified(blacklist_state)
-		&& db::table::blacklist::is_blacklisted(CI.IP))
+		&& db::table::blacklist::is_blacklisted(CI.ep.IP()))
 	{
-		LOG << "blacklist " << CI.IP;
+		LOG << "blacklist " << CI.ep.IP();
 		Proactor.disconnect(connection_ID);
 		CI.recv_call_back.clear();
 		return;

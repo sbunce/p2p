@@ -7,9 +7,9 @@ net::nstream::nstream()
 
 }
 
-net::nstream::nstream(const endpoint & E)
+net::nstream::nstream(const endpoint & ep)
 {
-	open(E);
+	open(ep);
 }
 
 net::nstream::nstream(const int socket_FD_in)
@@ -83,23 +83,23 @@ std::string net::nstream::local_port()
 	return buf;
 }
 
-void net::nstream::open(const endpoint & E)
+void net::nstream::open(const endpoint & ep)
 {
 	close();
-	if((socket_FD = ::socket(E.AI->ai.ai_family, SOCK_STREAM, IPPROTO_TCP)) == -1){
+	if((socket_FD = ::socket(ep.AI->ai.ai_addr->sa_family, SOCK_STREAM, IPPROTO_TCP)) == -1){
 		LOG << strerror(errno);
 		close();
 	}
-	if(::connect(socket_FD, E.AI->ai.ai_addr, E.AI->ai.ai_addrlen) != 0){
+	if(::connect(socket_FD, ep.AI->ai.ai_addr, ep.AI->ai.ai_addrlen) != 0){
 		LOG << strerror(errno);
 		close();
 	}
 }
 
-void net::nstream::open_async(const endpoint & E)
+void net::nstream::open_async(const endpoint & ep)
 {
 	close();
-	if((socket_FD = ::socket(E.AI->ai.ai_family, SOCK_STREAM, IPPROTO_TCP)) == -1){
+	if((socket_FD = ::socket(ep.AI->ai.ai_addr->sa_family, SOCK_STREAM, IPPROTO_TCP)) == -1){
 		LOG << strerror(errno);
 		return;
 	}
@@ -117,7 +117,7 @@ void net::nstream::open_async(const endpoint & E)
 	Because of the inconsistency above we check for writeability because it
 	works on FreeBSD, Windows, and Linux.
 	*/
-	if(::connect(socket_FD, E.AI->ai.ai_addr, E.AI->ai.ai_addrlen) != 0){
+	if(::connect(socket_FD, ep.AI->ai.ai_addr, ep.AI->ai.ai_addrlen) != 0){
 		//socket in progress of connecting
 		if(errno != EINPROGRESS && errno != EWOULDBLOCK){
 			LOG << strerror(errno);

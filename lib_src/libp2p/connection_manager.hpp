@@ -71,34 +71,46 @@ private:
 	kad DHT;
 	atomic_int<unsigned> _connections;
 
+	class address
+	{
+	public:
+		address(const std::string & IP_in, const std::string & port_in);
+		address(const address & A);
+		std::string IP;
+		std::string port;
+		bool operator < (const address & rval) const;
+	};
+
 	class connection_element
 	{
 	public:
 		connection_element(
-			const std::string & IP_in,
-			const std::string & port_in,
+			const address & Address_in,
 			const boost::shared_ptr<connection> & Connection_in
 		);
 		connection_element(const connection_element & CE);
-
-		const std::string IP;
-		const std::string port;
+		address Address;
 		boost::shared_ptr<connection> Connection;
 	};
 
 	/*
-	Connection_mutex:
+	Connect_mutex:
 		Locks access to all in this section.
 	Connection:
 		The connection_ID associated with a connection (the state each connection
 		needs). The Connection_mutex locks all access to the Connection container.
-	Connection_Hosts:
-		Set of hosts connected, or connecting to. Used to stop duplicate
-		connections. std::pair<IP, port>
+	Connecting:
+		Hosts we're connecting to.
+	Connected:
+		Only hosts that are connected. Address associated with connection_ID.
 	*/
-	boost::mutex Connection_mutex;
+	boost::mutex Connect_mutex;
 	std::map<int, connection_element> Connection;
-	std::set<std::pair<std::string, std::string> > Connection_Hosts;
+	std::set<address> Connecting;
+	std::set<address> Connected;
+
+
+	//std::map<std::pair<std::string, std::string>, std::string>
 
 	//memoize ticks we've scheduled so we don't do redundant ticks
 	boost::mutex tick_memoize_mutex;

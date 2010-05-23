@@ -122,11 +122,27 @@ void net::proactor_impl::check_timeouts()
 	}
 }
 
-void net::proactor_impl::connect(const std::string & host, const std::string & port)
+void net::proactor_impl::connect(const endpoint & ep)
 {
 	boost::mutex::scoped_lock lock(relay_job_mutex);
-	relay_job.push_back(boost::bind(&proactor_impl::resolve_relay, this,
-		host, port));
+	relay_job.push_back(boost::bind(&proactor_impl::connect_relay, this, ep));
+}
+
+void net::proactor_impl::connect_relay(const endpoint ep)
+{
+	boost::shared_ptr<connection> Connection(new connection(ID_Manager, ep));
+	if(Connection->socket() != -1){
+		//in progress of connecting
+		std::pair<int, boost::shared_ptr<connection> > P(Connection->socket(), Connection);
+		{//BEGIN lock scope
+		boost::mutex::scoped_lock lock(relay_job_mutex);
+		relay_job.push_back(boost::bind(&proactor_impl::add_socket, this, P));
+		}//END lock scope
+	}else{
+		//failed to resolve or failed to allocate socket
+		Dispatcher.disconnect(Connection->CI);
+	}
+	Select.interrupt();
 }
 
 void net::proactor_impl::disconnect(const int connection_ID)
@@ -181,16 +197,9 @@ void net::proactor_impl::handle_async_connection(
 		write_FDS.erase(P.first); //send_buf will be empty after connect
 		Dispatcher.connect(P.second->CI);
 	}else{
-		//async connection failed, try next endpoint
+		//async connection failed
 		remove_socket(P.first);
-		if(P.second->open_async()){
-			//async connection in progress
-			P.first = P.second->socket();
-			add_socket(P);
-		}else{
-			//failed to allocate socket
-			Dispatcher.disconnect(P.second->CI);
-		}
+		Dispatcher.disconnect(P.second->CI);
 	}
 }
 
@@ -357,42 +366,6 @@ void net::proactor_impl::remove_socket(const int socket_FD)
 	}
 }
 
-void net::proactor_impl::resolve_relay(const std::string host, const std::string port)
-{
-	if(outgoing_connections < outgoing_connection_limit){
-		++outgoing_connections;
-		Thread_Pool.enqueue(boost::bind(&proactor_impl::resolve, this, host, port));
-	}else{
-		//connection limit reached
-		boost::shared_ptr<proactor::connection_info> CI(new proactor::connection_info(
-			ID_Manager.allocate(),
-			host,
-			"",
-			port,
-			outgoing
-		));
-		ID_Manager.deallocate(CI->connection_ID);
-		Dispatcher.disconnect(CI);
-	}
-}
-
-void net::proactor_impl::resolve(const std::string & host, const std::string & port)
-{
-	boost::shared_ptr<connection> Connection(new connection(ID_Manager, host, port));
-	if(Connection->open_async()){
-		//in progress of connecting
-		std::pair<int, boost::shared_ptr<connection> > P(Connection->socket(), Connection);
-		{//BEGIN lock scope
-		boost::mutex::scoped_lock lock(relay_job_mutex);
-		relay_job.push_back(boost::bind(&proactor_impl::add_socket, this, P));
-		}//END lock scope
-	}else{
-		//failed to resolve or failed to allocate socket
-		Dispatcher.disconnect(Connection->CI);
-	}
-	Select.interrupt();
-}
-
 void net::proactor_impl::send(const int connection_ID, buffer & send_buf)
 {
 	if(!send_buf.empty()){
@@ -442,15 +415,11 @@ void net::proactor_impl::start(boost::shared_ptr<listener> Listener_in)
 	}
 	network_thread = boost::thread(boost::bind(&proactor_impl::network_loop, this));
 	Dispatcher.start();
-	Thread_Pool.start();
 }
 
 void net::proactor_impl::stop()
 {
 	boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
-
-	//cancel all resolve jobs
-	Thread_Pool.stop_clear_join();
 
 	//stop networking thread
 	network_thread.interrupt();

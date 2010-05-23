@@ -1,21 +1,42 @@
 #include "connection_manager.hpp"
 
-//BEGIN connection_element
-connection_manager::connection_element::connection_element(
+//BEGIN addr
+connection_manager::address::address(
 	const std::string & IP_in,
-	const std::string & port_in,
-	const boost::shared_ptr<connection> & Connection_in
+	const std::string & port_in
 ):
 	IP(IP_in),
-	port(port_in),
+	port(port_in)
+{
+
+}
+
+connection_manager::address::address(const address & A):
+	IP(A.IP),
+	port(A.port)
+{
+
+}
+
+bool connection_manager::address::operator < (const address & rval) const
+{
+	return IP + port < rval.IP + rval.port;
+}
+//END addr
+
+//BEGIN connection_element
+connection_manager::connection_element::connection_element(
+	const address & Address_in,
+	const boost::shared_ptr<connection> & Connection_in
+):
+	Address(Address_in),
 	Connection(Connection_in)
 {
 
 }
 
 connection_manager::connection_element::connection_element(const connection_element & CE):
-	IP(CE.IP),
-	port(CE.port),
+	Address(CE.Address),
 	Connection(CE.Connection)
 {
 
@@ -35,9 +56,9 @@ connection_manager::connection_manager():
 
 connection_manager::~connection_manager()
 {
+	Thread_Pool.stop_join();
 	DHT.stop();
 	Proactor.stop();
-	Thread_Pool.stop_join();
 }
 
 void connection_manager::add(const std::string & hash)
@@ -47,11 +68,13 @@ void connection_manager::add(const std::string & hash)
 
 void connection_manager::connection_manager::add_call_back(const net::endpoint & ep)
 {
-	boost::mutex::scoped_lock lock(Connection_mutex);
-	if(Connection_Hosts.find(std::make_pair(ep.IP(), ep.port())) == Connection_Hosts.end()){
-		Connection_Hosts.insert(std::make_pair(ep.IP(), ep.port()));
+	boost::mutex::scoped_lock lock(Connect_mutex);
+	if(Connecting.find(address(ep.IP(), ep.port())) == Connecting.end()
+		&& Connected.find(address(ep.IP(), ep.port())) == Connected.end())
+	{
+		Connecting.insert(address(ep.IP(), ep.port()));
 		LOG << ep.IP() << " " << ep.port();
-		Proactor.connect(ep.IP(), ep.port());
+		Proactor.connect(ep);
 	}
 }
 
@@ -62,28 +85,23 @@ unsigned connection_manager::connections()
 
 void connection_manager::connect_call_back(net::proactor::connection_info & CI)
 {
-	boost::mutex::scoped_lock lock(Connection_mutex);
-	bool is_connected = false;
-	for(std::map<int, connection_element>::iterator it_cur = Connection.begin(),
-		it_end = Connection.end(); it_cur != it_end; ++it_cur)
-	{
-		if(it_cur->second.IP == CI.IP && it_cur->second.port == CI.port){
-			is_connected = true;
-			break;
-		}
+	boost::mutex::scoped_lock lock(Connect_mutex);
+	if(CI.direction == net::outgoing){
+		Connecting.erase(address(CI.ep.IP(), CI.ep.port()));
 	}
-	if(is_connected){
-		LOG << "dupe connect: " << CI.IP << " " << CI.port;
-		Proactor.disconnect(CI.connection_ID);
-	}else{
-		LOG << "connect: " << CI.IP << " " << CI.port;
+	if(Connected.find(address(CI.ep.IP(), CI.ep.port())) == Connected.end()){
+		Connected.insert(address(CI.ep.IP(), CI.ep.port()));
+		LOG << "connect: " << CI.ep.IP() << " " << CI.ep.port();
 		boost::shared_ptr<connection> C(new connection(Proactor, CI,
 			boost::bind(&connection_manager::trigger_tick, this, _1)));
 		std::pair<std::map<int, connection_element>::iterator, bool>
 			ret = Connection.insert(std::make_pair(CI.connection_ID,
-			connection_element(CI.IP, CI.port, C)));
+			connection_element(address(CI.ep.IP(), CI.ep.port()), C)));
 		assert(ret.second);
 		++_connections;
+	}else{
+		LOG << "dupe connect: " << CI.ep.IP() << " " << CI.ep.port();
+		Proactor.disconnect(CI.connection_ID);
 	}
 }
 
@@ -94,15 +112,16 @@ unsigned connection_manager::DHT_count()
 
 void connection_manager::disconnect_call_back(net::proactor::connection_info & CI)
 {
-	{//BEGIN lock scope
-	boost::mutex::scoped_lock lock(Connection_mutex);
-	LOG << "\"" << (!CI.host.empty() ? CI.host : CI.IP) << "\" " << CI.port;
+	boost::mutex::scoped_lock lock(Connect_mutex);
+	LOG << "\"" << CI.ep.IP() << "\" " << CI.ep.port();
 	Connection.erase(CI.connection_ID);
-	//duplicate connections don't have a Connection element
-	if(Connection.find(CI.connection_ID) != Connection.end()){
-		Connection_Hosts.erase(std::make_pair(CI.IP, CI.port));
+	if(CI.direction == net::outgoing){
+		Connecting.erase(address(CI.ep.IP(), CI.ep.port()));
+//DEBUG, if element erased it means connection failed
 	}
-	}//END lock scope
+
+
+
 	--_connections;
 }
 
@@ -113,7 +132,7 @@ void connection_manager::remove(const std::string & hash)
 
 void connection_manager::remove_priv(const std::string hash)
 {
-	boost::mutex::scoped_lock lock(Connection_mutex);
+	boost::mutex::scoped_lock lock(Connect_mutex);
 	share::slot_iterator S_iter = share::singleton().remove_slot(hash);
 	if(S_iter != share::singleton().end_slot()){
 		if(S_iter->get_transfer() && S_iter->get_transfer()->complete()){
@@ -192,7 +211,7 @@ void connection_manager::tick(const int connection_ID)
 	tick_memoize.erase(connection_ID);
 	}//end lock scope
 	{//BEGIN lock scope
-	boost::mutex::scoped_lock lock(Connection_mutex);
+	boost::mutex::scoped_lock lock(Connect_mutex);
 	std::map<int, connection_element>::iterator iter = Connection.find(connection_ID);
 	if(iter != Connection.end()){
 		iter->second.Connection->tick();

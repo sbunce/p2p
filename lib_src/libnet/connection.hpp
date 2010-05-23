@@ -24,19 +24,14 @@ private:
 
 	bool connected;          //false if async connect in progress
 	ID_manager & ID_Manager; //allocates and deallocates connection_ID
-	std::set<endpoint> E;    //endpoints to try to connect to
-	std::time_t last_seen;   //last time there was activity on socket
+	std::time_t time;        //last time there was activity on socket
 	int socket_FD;           //file descriptor, will change after open_async()
 
 public:
-	/*
-	Ctor for outgoing connection.
-	Note: This ctor does DNS resolution if needed.
-	*/
+	//ctor for outgoing connection (starts async connect)
 	connection(
 		ID_manager & ID_Manager_in,
-		const std::string & host_in,
-		const std::string & port_in
+		const endpoint & ep
 	);
 
 	//ctor for incoming connection
@@ -53,8 +48,6 @@ public:
 
 	//const
 	const boost::shared_ptr<nstream> N; //connection object
-	const std::string host;             //hostname or IP to connect to
-	const std::string port;             //port number
 	const int connection_ID;            //see above
 
 	/* WARNING
@@ -71,12 +64,8 @@ public:
 		Returns true if async connecte succeeded. This is called after half
 		open socket becomes writeable.
 		Postcondition: If true returned then half_open() will return false.
-	open_async:
-		Open async connection, returns false if couldn't allocate socket.
-		Postcondition: socket_FD, and CI will change.
 	socket:
 		Returns file descriptor.
-		Note: Will return different file descriptor after open_async().
 	timed_out:
 		Returns true if connection timed out.
 	touch:
@@ -84,8 +73,9 @@ public:
 	*/
 	bool half_open();
 	bool is_open();
-	bool open_async();
 	int socket();
+
+//DEBUG, rename to timeout()
 	bool timed_out();
 	void touch();
 };

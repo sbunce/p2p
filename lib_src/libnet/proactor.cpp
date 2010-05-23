@@ -4,15 +4,11 @@
 //BEGIN connection_info
 net::proactor::connection_info::connection_info(
 	const int connection_ID_in,
-	const std::string & host_in,
-	const std::string & IP_in,
-	const std::string & port_in,
+	const endpoint & ep_in,
 	const direction_t direction_in
 ):
 	connection_ID(connection_ID_in),
-	host(host_in),
-	IP(IP_in),
-	port(port_in),
+	ep(ep_in),
 	direction(direction_in),
 	latest_recv(0),
 	latest_send(0),
@@ -34,9 +30,9 @@ net::proactor::proactor(
 
 }
 
-void net::proactor::connect(const std::string & host, const std::string & port)
+void net::proactor::connect(const endpoint & ep)
 {
-	Proactor_impl->connect(host, port);
+	Proactor_impl->connect(ep);
 }
 
 void net::proactor::disconnect(const int connection_ID)

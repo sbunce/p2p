@@ -37,7 +37,7 @@ public:
 	void tick();
 
 private:
-	//locks all entry points to this object
+	//lock for all entry points to this object
 	boost::mutex Mutex;
 
 	exchange_tcp Exchange;
