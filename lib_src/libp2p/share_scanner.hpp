@@ -2,6 +2,7 @@
 #define H_SHARE_SCANNER
 
 //custom
+#include "connection_manager.hpp"
 #include "file_info.hpp"
 #include "hash_tree.hpp"
 #include "share.hpp"
@@ -25,7 +26,7 @@
 class share_scanner : private boost::noncopyable
 {
 public:
-	share_scanner();
+	share_scanner(connection_manager & Connection_Manager_in);
 	~share_scanner();
 
 	/*
@@ -38,6 +39,7 @@ public:
 
 private:
 	boost::thread_group Workers;
+	connection_manager & Connection_Manager;
 
 	/*
 	Stores the paths of files that are currently hashing associated with a

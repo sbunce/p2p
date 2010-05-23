@@ -1,6 +1,7 @@
 #include "share_scanner.hpp"
 
-share_scanner::share_scanner()
+share_scanner::share_scanner(connection_manager & Connection_Manager_in):
+	Connection_Manager(Connection_Manager_in)
 {
 
 }
@@ -59,8 +60,8 @@ void share_scanner::hash_loop()
 				share::singleton().insert(FI);
 				db::table::share::add(db::table::share::info(FI.hash, FI.path,
 					FI.file_size, FI.last_write_time, db::table::share::complete));
-				db::table::hash::set_state(FI.hash,
-					db::table::hash::complete);
+				db::table::hash::set_state(FI.hash, db::table::hash::complete);
+				Connection_Manager.add(FI.hash);
 			}else{
 				//error hashing, retry later
 				LOG << "error hashing " << FI.path;

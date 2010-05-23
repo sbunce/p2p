@@ -9,7 +9,8 @@ p2p_impl::init::init()
 }
 //END init
 
-p2p_impl::p2p_impl()
+p2p_impl::p2p_impl():
+	Share_Scanner(Connection_Manager)
 {
 	resume_thread = boost::thread(boost::bind(&p2p_impl::resume, this));
 }

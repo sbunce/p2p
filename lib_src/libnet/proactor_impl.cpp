@@ -138,6 +138,7 @@ void net::proactor_impl::connect_relay(const endpoint ep)
 		boost::mutex::scoped_lock lock(relay_job_mutex);
 		relay_job.push_back(boost::bind(&proactor_impl::add_socket, this, P));
 		}//END lock scope
+		++outgoing_connections;
 	}else{
 		//failed to resolve or failed to allocate socket
 		Dispatcher.disconnect(Connection->CI);
