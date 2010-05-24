@@ -329,10 +329,8 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 			}
 		}
 
-return false;
-//DEBUG, this can cause requesting block remote host doesn't have
-/*
-		//determine what block has been requested least, and request it
+		//find the least requested block that the remote host has and request it
+		std::map<int, bit_field>::iterator remote_iter = remote.find(connection_ID);
 		boost::uint64_t rare_block;
 		unsigned min_request = std::numeric_limits<unsigned>::max();
 		for(std::map<boost::uint64_t, std::set<int> >::iterator
@@ -340,13 +338,18 @@ return false;
 			it_cur != it_end; ++it_cur)
 		{
 			if(it_cur->second.size() == 1){
-				//this block must be at least tied for least requested
-				block = it_cur->first;
-				it_cur->second.insert(connection_ID);
-				return true;
+				//least requested possible, check if remote host has it
+				if(remote_iter->second.empty() || remote_iter->second[it_cur->first] == true){
+					block = it_cur->first;
+					it_cur->second.insert(connection_ID);
+					return true;
+				}
 			}else if(it_cur->second.size() < min_request){
-				rare_block = it_cur->first;
-				min_request = it_cur->second.size();
+				//new least requested block found, check if remote host has it
+				if(remote_iter->second.empty() || remote_iter->second[it_cur->first] == true){
+					rare_block = it_cur->first;
+					min_request = it_cur->second.size();
+				}
 			}
 		}
 		if(min_request != std::numeric_limits<unsigned>::max()){
@@ -356,9 +359,9 @@ return false;
 			assert(iter != request.end());
 			iter->second.insert(connection_ID);
 			return true;
+		}else{
+			return false;
 		}
-		return false;
-*/
 	}
 }
 
