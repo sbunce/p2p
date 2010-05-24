@@ -201,7 +201,7 @@ unsigned transfer::percent_complete()
 }
 
 transfer::status transfer::read_file_block(boost::shared_ptr<message_tcp::send::base> & M,
-		const boost::uint64_t block_num)
+	const boost::uint64_t block_num)
 {
 	if(File_Block.have_block(block_num)){
 		net::buffer buf;

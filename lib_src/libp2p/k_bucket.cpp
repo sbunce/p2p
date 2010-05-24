@@ -37,7 +37,7 @@ void k_bucket::add_reserve(const net::endpoint & ep, const std::string remote_ID
 	if(exists(ep)){
 		return;
 	}
-	LOG << "reserve: " << ep.IP() << " " << ep.port() << " " << convert::abbr(remote_ID);
+	//LOG << "reserve: " << ep.IP() << " " << ep.port() << " " << convert::abbr(remote_ID);
 	Bucket_Reserve.push_back(bucket_element(ep, remote_ID,
 		k_contact(protocol_udp::bucket_timeout)));
 }
@@ -95,7 +95,7 @@ boost::optional<net::endpoint> k_bucket::ping()
 		it_end = Bucket_Active.end(); it_cur != it_end; ++it_cur)
 	{
 		if(it_cur->contact.send()){
-			LOG << "active: " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
+			//LOG << "active: " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
 			return it_cur->endpoint;
 		}
 	}
@@ -105,14 +105,14 @@ boost::optional<net::endpoint> k_bucket::ping()
 		it_cur != Bucket_Reserve.end() && needed; --needed)
 	{
 		if(it_cur->contact.send_immediate()){
-			LOG << "reserve: " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
+			//LOG << "reserve: " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
 			return it_cur->endpoint;
 		}else{
 			//reserve contact won't timeout unless it was pinged
 			if(it_cur->contact.timeout()
 				&& it_cur->contact.timeout_count() > protocol_udp::retransmit_limit)
 			{
-				LOG << "timeout: " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
+				//LOG << "timeout: " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
 				it_cur = Bucket_Reserve.erase(it_cur);
 			}else{
 				++it_cur;
@@ -129,11 +129,11 @@ void k_bucket::recv_pong(const net::endpoint & from, const std::string & remote_
 		it_end = Bucket_Active.end(); it_cur != it_end; ++it_cur)
 	{
 		if(it_cur->endpoint == from && it_cur->remote_ID == remote_ID){
-			LOG << "touch " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
+			//LOG << "touch " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
 			it_cur->contact.touch();
 			return;
 		}else if(it_cur->endpoint == from){
-			LOG << "ID change " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
+			//LOG << "ID change " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
 			it_cur->contact.touch();
 			Bucket_Reserve.push_back(*it_cur);
 			Bucket_Active.erase(it_cur);
@@ -146,8 +146,8 @@ void k_bucket::recv_pong(const net::endpoint & from, const std::string & remote_
 	{
 		if(it_cur->endpoint == from && it_cur->remote_ID == remote_ID){
 			if(Bucket_Active.size() < protocol_udp::bucket_size){
-				LOG << "reserve -> active: " << it_cur->endpoint.IP() << " "
-					<< it_cur->endpoint.port();
+				//LOG << "reserve -> active: " << it_cur->endpoint.IP() << " "
+					//<< it_cur->endpoint.port();
 				++active_cnt;
 				it_cur->contact.touch();
 				Bucket_Active.push_front(*it_cur);
@@ -156,7 +156,7 @@ void k_bucket::recv_pong(const net::endpoint & from, const std::string & remote_
 			}
 			return;
 		}else if(it_cur->endpoint == from){
-			LOG << "ID change " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
+			//LOG << "ID change " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
 			Bucket_Reserve.push_back(*it_cur);
 			Bucket_Reserve.erase(it_cur);
 			return;
@@ -165,7 +165,7 @@ void k_bucket::recv_pong(const net::endpoint & from, const std::string & remote_
 	//not in active or reserve, response message that counts as pong
 	if(Bucket_Active.size() < protocol_udp::bucket_size){
 		//add to routing table
-		LOG << "active: " << from.IP() << " " << from.port() << " " << convert::abbr(remote_ID);
+		//LOG << "active: " << from.IP() << " " << from.port() << " " << convert::abbr(remote_ID);
 		++active_cnt;
 		Bucket_Active.push_front(bucket_element(from, remote_ID,
 			k_contact(protocol_udp::bucket_timeout)));
@@ -173,7 +173,7 @@ void k_bucket::recv_pong(const net::endpoint & from, const std::string & remote_
 		return;
 	}else{
 		//add to reserve
-		LOG << "reserve: " << from.IP() << " " << from.port() << " " << convert::abbr(remote_ID);
+		//LOG << "reserve: " << from.IP() << " " << from.port() << " " << convert::abbr(remote_ID);
 		Bucket_Reserve.push_back(bucket_element(from, remote_ID,
 			k_contact(protocol_udp::bucket_timeout)));
 		return;
@@ -189,7 +189,7 @@ void k_bucket::tick()
 		if(it_cur->contact.timeout()
 			&& it_cur->contact.timeout_count() > protocol_udp::retransmit_limit)
 		{
-			LOG << "timeout: " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
+			//LOG << "timeout: " << it_cur->endpoint.IP() << " " << it_cur->endpoint.port();
 			--active_cnt;
 			it_cur = Bucket_Active.erase(it_cur);
 		}else{

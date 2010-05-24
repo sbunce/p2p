@@ -70,7 +70,7 @@ void kad::find_file_call_back_0(const net::endpoint & ep,
 	const boost::function<void (const net::endpoint &)> call_back,
 	boost::shared_ptr<std::set<std::string> > node_list_memoize)
 {
-	LOG << ep.IP() << " " << ep.port() << " " << convert::abbr(hash);
+	//LOG << ep.IP() << " " << ep.port() << " " << convert::abbr(hash);
 	//ask closest nodes what nodes have the file
 	net::buffer random(random::urandom(4));
 	Exchange.send(boost::shared_ptr<message_udp::send::base>(
@@ -86,7 +86,7 @@ void kad::find_file_call_back_1(const net::endpoint & from,
 	const boost::function<void (const net::endpoint &)> call_back,
 	boost::shared_ptr<std::set<std::string> > node_list_memoize)
 {
-	LOG << from.IP() << " " << from.port();
+	//LOG << from.IP() << " " << from.port();
 	//find address of node with file
 	for(std::list<std::string>::const_iterator it_cur = nodes.begin(),
 		it_end = nodes.end(); it_cur != it_end; ++it_cur)
@@ -171,7 +171,7 @@ void kad::recv_find_node(const net::endpoint & from,
 	const net::buffer & random, const std::string & remote_ID,
 	const std::string & ID_to_find)
 {
-	LOG << from.IP() << " " << from.port() << " find: " << convert::abbr(ID_to_find);
+	//LOG << from.IP() << " " << from.port() << " find: " << convert::abbr(ID_to_find);
 	Route_Table.add_reserve(from, remote_ID);
 	std::list<net::endpoint> hosts;
 	hosts = Route_Table.find_node(from, ID_to_find);
@@ -183,7 +183,7 @@ void kad::recv_host_list(const net::endpoint & from,
 	const std::string & remote_ID, const std::list<net::endpoint> & hosts,
 	const std::string ID_to_find)
 {
-	LOG << from.IP() << " " << from.port() << " " << convert::abbr(remote_ID);
+	//LOG << from.IP() << " " << from.port() << " " << convert::abbr(remote_ID);
 	Route_Table.recv_pong(from, remote_ID);
 	for(std::list<net::endpoint>::const_iterator it_cur = hosts.begin(),
 		it_end = hosts.end(); it_cur != it_end; ++it_cur)
@@ -212,7 +212,7 @@ void kad::recv_pong(const net::endpoint & from, const net::buffer & random,
 void kad::recv_query_file(const net::endpoint & from, const net::buffer & random,
 	const std::string & remote_ID, const std::string & hash)
 {
-	LOG << from.IP() << " " << from.port() << " " << convert::abbr(hash);
+	//LOG << from.IP() << " " << from.port() << " " << convert::abbr(hash);
 	Route_Table.add_reserve(from, remote_ID);
 	std::list<std::string> nodes = db::table::source::get_ID(hash);
 	//randomize what nodes we send remote host
@@ -234,8 +234,8 @@ void kad::recv_store_file(const net::endpoint & from, const net::buffer & random
 {
 	Route_Table.add_reserve(from, remote_ID);
 	if(Token.has_been_issued(from, random)){
-		LOG << from.IP() << " " << from.port() << " " << convert::abbr(remote_ID)
-			<< " " << convert::abbr(hash);
+		//LOG << from.IP() << " " << from.port() << " " << convert::abbr(remote_ID)
+			//<< " " << convert::abbr(hash);
 		db::table::source::add(remote_ID, hash);
 	}else{
 		LOG << "invalid token: " << from.IP() << " " << from.port() << " " << convert::abbr(hash);
@@ -246,7 +246,7 @@ void kad::recv_store_node(const net::endpoint & from, const net::buffer & random
 	const std::string & remote_ID)
 {
 	if(Token.has_been_issued(from, random)){
-		LOG << from.IP() << " " << from.port() << " " << convert::abbr(remote_ID);
+		//LOG << from.IP() << " " << from.port() << " " << convert::abbr(remote_ID);
 		db::table::peer::add(db::table::peer::info(remote_ID, from.IP(), from.port()));
 	}else{
 		LOG << "invalid token: " << from.IP() << " " << from.port() << convert::abbr(remote_ID);
@@ -302,12 +302,12 @@ void kad::send_store_node_call_back_0(const net::endpoint & ep)
 	boost::optional<net::buffer> random = Token.get_token(ep);
 	if(random){
 		//use existing token
-		LOG << "store_node: " << ep.IP() << " " << ep.port();
+		//LOG << "store_node: " << ep.IP() << " " << ep.port();
 		Exchange.send(boost::shared_ptr<message_udp::send::base>(
 			new message_udp::send::store_node(*random, local_ID)), ep);
 	}else{
 		//get token
-		LOG << "ping: " << ep.IP() << " " << ep.port();
+		//LOG << "ping: " << ep.IP() << " " << ep.port();
 		net::buffer random(random::urandom(4));
 		Exchange.send(boost::shared_ptr<message_udp::send::base>(
 			new message_udp::send::ping(random, local_ID)), ep);
@@ -321,7 +321,7 @@ void kad::send_store_node_call_back_1(const net::endpoint & from,
 	const net::buffer & random, const std::string & remote_ID)
 {
 	recv_pong(from, random, remote_ID);
-	LOG << "store_node: " << from.IP() << " " << from.port();
+	//LOG << "store_node: " << from.IP() << " " << from.port();
 	Exchange.send(boost::shared_ptr<message_udp::send::base>(
 		new message_udp::send::store_node(random, local_ID)), from);
 }
@@ -349,12 +349,12 @@ void kad::store_file_call_back_0(const net::endpoint & ep, const std::string has
 	boost::optional<net::buffer> random = Token.get_token(ep);
 	if(random){
 		//use existing token
-		LOG << "store_file: " << ep.IP() << " " << ep.port() << " " << convert::abbr(hash);
+		//LOG << "store_file: " << ep.IP() << " " << ep.port() << " " << convert::abbr(hash);
 		Exchange.send(boost::shared_ptr<message_udp::send::base>(
 			new message_udp::send::store_file(*random, local_ID, hash)), ep);
 	}else{
 		//get token
-		LOG << "ping: " << ep.IP() << " " << ep.port();
+		//LOG << "ping: " << ep.IP() << " " << ep.port();
 		net::buffer random(random::urandom(4));
 		Exchange.send(boost::shared_ptr<message_udp::send::base>(
 			new message_udp::send::ping(random, local_ID)), ep);
@@ -369,7 +369,7 @@ void kad::store_file_call_back_1(const net::endpoint & from,
 	const std::string hash)
 {
 	recv_pong(from, random, remote_ID);
-	LOG << "store_node: " << from.IP() << " " << from.port() << " " << convert::abbr(hash);
+	//LOG << "store_node: " << from.IP() << " " << from.port() << " " << convert::abbr(hash);
 	Exchange.send(boost::shared_ptr<message_udp::send::base>(
 		new message_udp::send::store_file(random, local_ID, hash)), from);
 }

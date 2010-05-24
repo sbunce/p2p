@@ -28,7 +28,7 @@ void k_route_table::add_reserve(const net::endpoint & ep, const std::string & re
 		{
 			return;
 		}
-		LOG << "add unknown: " << ep.IP() << " " << ep.port();
+		//LOG << "add unknown: " << ep.IP() << " " << ep.port();
 		Unknown_Reserve.insert(ep);
 	}else{
 		Unknown_Reserve.erase(ep);
@@ -128,7 +128,7 @@ boost::optional<net::endpoint> k_route_table::ping()
 		ep = *it;
 		Unknown_Reserve.erase(it);
 		Unknown_Active.insert(std::make_pair(*ep, k_contact()));
-		LOG << "unknown: " << ep->IP() << " " << ep->port();
+		//LOG << "unknown: " << ep->IP() << " " << ep->port();
 		return ep;
 	}
 	return boost::optional<net::endpoint>();

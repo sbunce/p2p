@@ -46,7 +46,6 @@ void slot_manager::add(const std::string & hash)
 	if(Hash_Pending.find(hash) == Hash_Pending.end()
 		&& Hash_Opened.find(hash) == Hash_Opened.end())
 	{
-		LOG << hash;
 		Hash_Pending.insert(hash);
 	}
 }
@@ -125,6 +124,7 @@ bool slot_manager::recv_file_block(const net::buffer & block,
 bool slot_manager::recv_have_file_block(const unsigned char slot_num,
 	const boost::uint64_t block_num)
 {
+LOG << "slot: " << (int)slot_num << " block: " << block_num;
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter = Outgoing_Slot.find(slot_num);
 	if(iter != Outgoing_Slot.end()){
@@ -139,6 +139,7 @@ bool slot_manager::recv_have_file_block(const unsigned char slot_num,
 bool slot_manager::recv_have_hash_tree_block(const unsigned char slot_num,
 	const boost::uint64_t block_num)
 {
+LOG << "slot: " << (int)slot_num << " block: " << block_num;
 	std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		iter = Outgoing_Slot.find(slot_num);
 	if(iter != Outgoing_Slot.end()){
@@ -221,7 +222,8 @@ bool slot_manager::recv_request_hash_tree_block(const unsigned char slot_num,
 			Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 			return true;
 		}else if(status == transfer::protocol_violated){
-			LOG << "violated protocol";
+			LOG << "violated protocol ";
+LOG << (int) slot_num << " " << block_num;
 			return false;
 		}
 	}
@@ -257,7 +259,8 @@ bool slot_manager::recv_request_file_block(const unsigned char slot_num,
 			Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 			return true;
 		}else if(status == transfer::protocol_violated){
-			LOG << "violated protocol";
+			LOG << "violated protocol ";
+LOG << (int) slot_num << " " << block_num;
 			return false;
 		}
 	}

@@ -107,7 +107,7 @@ std::list<net::endpoint> k_find_job::find_node()
 		it_cur = Store.begin(), it_end = Store.end(); it_cur != it_end; ++it_cur)
 	{
 		if(it_cur->second.contact.send()){
-			LOG << it_cur->second.endpoint.IP() << " " << it_cur->second.endpoint.port();
+			//LOG << it_cur->second.endpoint.IP() << " " << it_cur->second.endpoint.port();
 			jobs.push_back(it_cur->second.endpoint);
 		}
 	}

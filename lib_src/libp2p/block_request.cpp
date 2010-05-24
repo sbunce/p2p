@@ -153,6 +153,11 @@ bool block_request::find_next_rarest(const int connection_ID, boost::uint64_t & 
 			//block is not approved
 			continue;
 		}
+		if(!remote_iter->second.empty() && remote_iter->second[block] == false){
+			//remote host doesn't have this block
+			continue;
+		}
+
 		//check rarity
 		boost::uint32_t hosts = 0;
 		for(std::map<int, bit_field>::iterator it_cur = remote.begin(),
@@ -324,6 +329,9 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 			}
 		}
 
+return false;
+//DEBUG, this can cause requesting block remote host doesn't have
+/*
 		//determine what block has been requested least, and request it
 		boost::uint64_t rare_block;
 		unsigned min_request = std::numeric_limits<unsigned>::max();
@@ -350,6 +358,7 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 			return true;
 		}
 		return false;
+*/
 	}
 }
 
