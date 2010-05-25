@@ -87,7 +87,7 @@ void share_scanner::hash_loop()
 void share_scanner::scan_loop()
 {
 	boost::filesystem::path share_path(boost::filesystem::system_complete(
-		boost::filesystem::path(path::share(), boost::filesystem::native)));
+		boost::filesystem::path(path::share_dir(), boost::filesystem::native)));
 	boost::posix_time::milliseconds scan_delay(1000/5);
 
 	/*

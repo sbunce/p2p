@@ -34,7 +34,7 @@ void create_reassemble(const unsigned size)
 	//setup test file
 	file_info FI;
 	std::stringstream ss;
-	ss << path::share() << size << "_block";
+	ss << path::share_dir() << size << "_block";
 	FI.path = ss.str();
 	FI.file_size = size * protocol_tcp::file_block_size;
 	create_file(FI);
@@ -194,9 +194,9 @@ void child_block()
 int main()
 {
 	//setup database and make sure hash table clear
-	path::override_database_name("hash_tree.db");
-	path::override_program_directory("");
-	path::create_required_directories();
+	path::set_db_file_name("hash_tree.db");
+	path::set_program_dir("");
+	path::create_dirs();
 
 	create_reassemble(2);
 	create_reassemble(3);
@@ -208,6 +208,6 @@ int main()
 	child_block();
 
 	//remove temporary files
-	path::remove_temporary_hash_tree_files();
+	path::remove_tmp_tree_files();
 	return fail;
 }

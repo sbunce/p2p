@@ -213,13 +213,13 @@ hash_tree::status hash_tree::create()
 	}
 
 	/*
-	Open temp file to write hash tree to. A temp file is used to avoid database
+	Open tmp file to write hash tree to. A tmp file is used to avoid database
 	contention.
 	*/
-	std::fstream temp(path::hash_tree_temp().c_str(), std::ios::in |
+	std::fstream tmp(path::tree_file().c_str(), std::ios::in |
 		std::ios::out | std::ios::trunc | std::ios::binary);
-	if(!temp.good()){
-		LOG << "error opening temp file";
+	if(!tmp.good()){
+		LOG << "error opening tmp file";
 		return io_error;
 	}
 
@@ -254,10 +254,10 @@ hash_tree::status hash_tree::create()
 		SHA.init();
 		SHA.load(buf, file.gcount());
 		SHA.end();
-		temp.seekp(file_hash_offset + x * SHA1::bin_size, std::ios::beg);
-		temp.write(SHA.bin(), SHA1::bin_size);
-		if(!temp.good()){
-			LOG << "error writing temp file";
+		tmp.seekp(file_hash_offset + x * SHA1::bin_size, std::ios::beg);
+		tmp.write(SHA.bin(), SHA1::bin_size);
+		if(!tmp.good()){
+			LOG << "error writing tmp file";
 			return io_error;
 		}
 	}
@@ -270,19 +270,19 @@ hash_tree::status hash_tree::create()
 			LOG << "invalid block";
 			exit(1);
 		}
-		temp.seekg(info.first, std::ios::beg);
-		temp.read(buf, info.second);
-		if(temp.gcount() != info.second){
-			LOG << "error reading temp file";
+		tmp.seekg(info.first, std::ios::beg);
+		tmp.read(buf, info.second);
+		if(tmp.gcount() != info.second){
+			LOG << "error reading tmp file";
 			return io_error;
 		}
 		SHA.init();
 		SHA.load(buf, info.second);
 		SHA.end();
-		temp.seekp(parent, std::ios::beg);
-		temp.write(SHA.bin(), SHA1::bin_size);
-		if(!temp.good()){
-			LOG << "error writing temp file";
+		tmp.seekp(parent, std::ios::beg);
+		tmp.write(SHA.bin(), SHA1::bin_size);
+		if(!tmp.good()){
+			LOG << "error writing tmp file";
 			return io_error;
 		}
 	}
@@ -320,7 +320,7 @@ hash_tree::status hash_tree::create()
 	//set blob to one we just created
 	const_cast<db::blob &>(blob) = Info->blob;
 
-	temp.seekg(0, std::ios::beg);
+	tmp.seekg(0, std::ios::beg);
 	boost::uint64_t offset = 0, bytes_remaining = tree_size, read_size;
 	while(bytes_remaining){
 		if(boost::this_thread::interruption_requested()){
@@ -332,9 +332,9 @@ hash_tree::status hash_tree::create()
 		}else{
 			read_size = bytes_remaining;
 		}
-		temp.read(buf, read_size);
-		if(temp.gcount() != read_size){
-			LOG << "error reading temp file";
+		tmp.read(buf, read_size);
+		if(tmp.gcount() != read_size){
+			LOG << "error reading tmp file";
 			db::table::hash::remove(hash);
 			return io_error;
 		}else{

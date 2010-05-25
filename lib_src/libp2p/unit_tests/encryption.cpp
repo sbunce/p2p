@@ -6,11 +6,6 @@ int fail(0);
 
 int main()
 {
-	path::override_database_name("encryption.db");
-	path::override_program_directory("");
-	db::init::drop_all();
-	db::init::create_all();
-
 	//encryption for hosts A and B
 	encryption Encryption_A;
 	encryption Encryption_B;

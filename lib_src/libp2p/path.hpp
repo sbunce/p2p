@@ -16,80 +16,62 @@ class path
 {
 public:
 	/*
-	create_required_directories:
-		Creates directories different parts of the program expect. Called from the
-		p2p_real ctor.
+	create_dirs:
+		Creates directories different parts of the program expect.
 	remove_temporary_hash_tree_files:
-		Remove all temporary files used for generating hash trees. This is called
-		by the share dtor and hash_tree unit test.
+		Remove all temporary files used for generating hash trees.
+	set_db_file_name:
+		Set name of database file.
+		Note: This must be called before other functions in this class called.
+		Note: Not thread safe.
+	set_program_directory:
+		Change the program directory.
+		Note: This must be called before other functions in this class called.
+		Note: Not thread safe.
 	*/
-	static void create_required_directories();
-	static void remove_temporary_hash_tree_files();
+	static void create_dirs();
+	static void remove_tmp_tree_files();
+	static void set_db_file_name(const std::string & name);
+	static void set_program_dir(const std::string & path);
 
 	/* Files
-	database:
-		Path to database.
-	hash_tree_temp:
-		Temporary location of hash tree. The thread id is appended so different
-		threads will get directed to different files.
+	db_file:
+		Path to database file.
+	download_dir:
+		Path to download directory.
+	share_dir:
+		Path to share directory.
+	tmp_dir:
+		Path to temporary file directory.
+	tree_file:
+		Path to temporary hash tree file.
+		Note: Thread ID appended for uniqueness.
 	*/
-	static std::string database();
-	static std::string hash_tree_temp();
-
-	/* Directories
-	download:
-		Directory for finished downloads.
-	share:
-		Directory for shared files.
-	temp:
-		Returns location of temporary directory.
-	*/
-	static std::string download();
-	static std::string share();
-	static std::string temp();
-
-	/* Testing
-	Note: These functions are not thread safe.
-	override_DB_name:
-		Override the name of the database file.
-	override_program_directory:
-		Override path of program directory.
-	*/
-	static void override_database_name(const std::string & DB_name);
-	static void override_program_directory(const std::string & path);
+	static std::string db_file();
+	static std::string download_dir();
+	static std::string share_dir();
+	static std::string tmp_dir();
+	static std::string tree_file();
 
 private:
 	path(){}
 
-	/*
-	The init function is called with boost::call_once at the top of every
-	function to make sure the static variables are initialized in a thread safe
-	way.
-	*/
-	static boost::once_flag once_flag;
-	static void init();
-
 	class static_wrap
 	{
 	public:
-		static_wrap();
+		class static_objects
+		{
+		public:
+			static_objects();
+			std::string db_file_name;
+			std::string program_dir;
+		};
 
-		/*
-		database_name:
-			Returns file name of database.
-		program_directory:
-			Returns full path to directory that stores program information.
-		*/
-		std::string & database_name();
-		std::string & program_directory();
+		//get access to static objects
+		static static_objects & get();
 	private:
 		static boost::once_flag once_flag;
-
-		//initializes all static variables
-		static void init();
-
-		static std::string & _database_name();
-		static std::string & _program_directory();
+		static static_objects & _get();
 	};
 };
 #endif

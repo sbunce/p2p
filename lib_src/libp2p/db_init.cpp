@@ -2,7 +2,7 @@
 
 void db::init::create_all()
 {
-	path::create_required_directories();
+	path::create_dirs();
 	db::pool::proxy DB;
 
 	//blacklist

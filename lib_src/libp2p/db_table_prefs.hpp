@@ -24,14 +24,14 @@ namespace table{
 class prefs
 {
 public:
-	//get a value
+	//get value
 	static unsigned get_max_download_rate(db::pool::proxy DB = db::pool::proxy());
 	static unsigned get_max_connections(db::pool::proxy DB = db::pool::proxy());
 	static unsigned get_max_upload_rate(db::pool::proxy DB = db::pool::proxy());
 	static std::string get_ID(db::pool::proxy DB = db::pool::proxy());
 	static std::string get_port(db::pool::proxy DB = db::pool::proxy());
 
-	//set a value
+	//set value
 	static void set_max_download_rate(const unsigned rate, db::pool::proxy DB = db::pool::proxy());
 	static void set_max_connections(const unsigned connections, db::pool::proxy DB = db::pool::proxy());
 	static void set_max_upload_rate(const unsigned rate, db::pool::proxy DB = db::pool::proxy());
@@ -81,6 +81,10 @@ private:
 				boost::shared_ptr<cache_element> CE = get_cache_element(key);
 				{//BEGIN lock scope
 				boost::mutex::scoped_lock lock(CE->mutex);
+				if(CE->value == ss.str()){
+					//no need to write to database, value is the same as before
+					return;
+				}
 				CE->value = ss.str();
 				}//END lock scope
 				ss.str(""); ss.clear();
@@ -89,6 +93,10 @@ private:
 			}
 
 		private:
+			/*
+			Each cache element has it's own mutex so we don't have to hold the lock
+			on Cache while doing I/O for a specific key/value pair.
+			*/
 			class cache_element : private boost::noncopyable
 			{
 			public:
@@ -104,14 +112,10 @@ private:
 				Call back used to get value.
 			get_cache_element:
 				Get cache element, create cache element if it doesn't exist.
-			set_wrapper:
-				Wraps database call. Needed so that db::connection object isn't tied
-				up in thread pool.
 			*/
 			static int call_back(int columns, char ** response, char ** column_name,
 				std::string & value);
 			boost::shared_ptr<cache_element> get_cache_element(const std::string & key);
-			static void set_wrapper(const std::string query);
 		};
 
 		//get access to static objects

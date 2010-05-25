@@ -41,6 +41,11 @@ void p2p::remove_download(const std::string & hash)
 	P2P_impl->remove_download(hash);
 }
 
+void p2p::set_db_file_name(const std::string & name)
+{
+	path::set_db_file_name(name);
+}
+
 void p2p::set_max_connections(const unsigned connections)
 {
 	P2P_impl->set_max_connections(connections);
@@ -56,6 +61,11 @@ void p2p::set_max_upload_rate(const unsigned rate)
 	P2P_impl->set_max_upload_rate(rate);
 }
 
+void p2p::set_program_dir(const std::string & path)
+{
+	path::set_program_dir(path);
+}
+
 boost::uint64_t p2p::share_size()
 {
 	return P2P_impl->share_size();
@@ -69,14 +79,6 @@ boost::uint64_t p2p::share_files()
 void p2p::start_download(const p2p::download & D)
 {
 	P2P_impl->start_download(D);
-}
-
-void p2p::test(const std::string & port, const std::string & program_directory)
-{
-	path::override_database_name("DB_"+port);
-	path::override_program_directory(program_directory);
-	db::init::create_all();
-	db::table::prefs::set_port(port);
 }
 
 void p2p::transfers(std::vector<p2p::transfer> & T)

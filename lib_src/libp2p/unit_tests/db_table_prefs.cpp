@@ -6,8 +6,8 @@ int fail(0);
 int main()
 {
 	//setup database, there is no need to clear this table for testing
-	path::override_database_name("database_table_prefs.db");
-	path::override_program_directory("");
+	path::set_db_file_name("database_table_prefs.db");
+	path::set_program_dir("");
 	db::init::drop_all();
 	db::init::create_all();
 

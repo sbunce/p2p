@@ -32,12 +32,13 @@ int main(int argc, char ** argv)
 	//register signal handlers
 	signal(SIGINT, signal_handler);
 
-	//test server functionality, run multiple servers out of same directory
-	boost::optional<std::string> test = Opt_Parse.string("test");
-	if(test){
-		std::string port = test->substr(0, test->find_first_of(':'));
-		std::string program_directory = test->substr(test->find_first_of(':')+1);
-		p2p::test(port, program_directory);
+	boost::optional<std::string> program_dir = Opt_Parse.string("program_dir");
+	if(program_dir){
+		p2p::set_program_dir(*program_dir);
+	}
+	boost::optional<std::string> db_file_name = Opt_Parse.string("db_file_name");
+	if(db_file_name){
+		p2p::set_db_file_name(*db_file_name);
 	}
 
 	gui GUI;

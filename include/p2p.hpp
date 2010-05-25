@@ -111,12 +111,15 @@ public:
 	void set_max_connections(const unsigned connections);
 	void set_max_upload_rate(const unsigned rate);
 
-	/* UNSTABLE - MAY BE REMOVED FROM API AT ANYTIME
-	test:
-		Stores data files in a different location for testing purposes.
+	/* Change Defaults
+	set_db_file_name:
+		Change the name of the database file within program directory.
+	set_program_dir:
+		Change the program directory.
 		Note: Must be called before instantiating p2p.
 	*/
-	static void test(const std::string & port, const std::string & program_directory);
+	static void set_db_file_name(const std::string & name);
+	static void set_program_dir(const std::string & path);
 
 private:
 	boost::shared_ptr<p2p_impl> P2P_impl;

@@ -22,7 +22,7 @@ void db::pool::proxy::deleter(boost::shared_ptr<db::connection> Connection)
 db::pool::pool()
 {
 	for(int x=0; x<settings::DATABASE_POOL_SIZE; ++x){
-		Pool.push(boost::shared_ptr<connection>(new connection(path::database())));
+		Pool.push(boost::shared_ptr<connection>(new connection(path::db_file())));
 	}
 }
 
