@@ -115,7 +115,7 @@ void connection_manager::disconnect_call_back(net::proactor::connection_info & C
 	boost::mutex::scoped_lock lock(Connect_mutex);
 	Connection.erase(CI.connection_ID);
 	if(CI.direction == net::outgoing){
-		if(!Connecting.erase(CI.ep)){
+		if(Connecting.erase(CI.ep)){
 			//connection failed
 			LOG << "connect failed: " << CI.ep.IP() << " " << CI.ep.port();
 			Hash.erase(CI.ep);

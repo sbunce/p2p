@@ -58,6 +58,7 @@ public:
 
 private:
 	boost::thread resume_thread;
+	thread_pool Thread_Pool;
 	connection_manager Connection_Manager;
 	share_scanner Share_Scanner;
 

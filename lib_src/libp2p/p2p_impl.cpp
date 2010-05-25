@@ -10,6 +10,7 @@ p2p_impl::init::init()
 //END init
 
 p2p_impl::p2p_impl():
+	Thread_Pool(1),
 	Share_Scanner(Connection_Manager)
 {
 	resume_thread = boost::thread(boost::bind(&p2p_impl::resume, this));
@@ -17,6 +18,7 @@ p2p_impl::p2p_impl():
 
 p2p_impl::~p2p_impl()
 {
+	Thread_Pool.stop_join();
 	resume_thread.interrupt();
 	resume_thread.join();
 }
@@ -88,9 +90,14 @@ void p2p_impl::resume()
 	//bring up networking
 	Connection_Manager.start();
 
-//DEBUG, store files (need to have share_scanner do this eventually)
-	Connection_Manager.store_file("0568833757D90F5886CFB9B30934AD40F42A08A8");
-	Connection_Manager.store_file("A4E2F25248D9F4C9FCACBE8D7F3A5D8E473CFBBE");
+/* DEBUG, load all files in to DHT.
+Eventually will need to be more selective about this.
+*/
+	for(share::const_file_iterator it_cur = share::singleton().begin_file(),
+		it_end = share::singleton().end_file(); it_cur != it_end; ++it_cur)
+	{
+		Connection_Manager.store_file(it_cur->hash);
+	}
 
 	//find hosts which have files we need
 	for(share::slot_iterator it_cur = share::singleton().begin_slot(),
@@ -98,27 +105,11 @@ void p2p_impl::resume()
 	{
 		Connection_Manager.add(it_cur->hash());
 	}
+}
 
-/*
-//DEBUG, test DHT
-	struct func_local{
-	static void FOUND_NODE(const net::endpoint & ep)
-	{
-		LOG << "found node: \"" << ep.IP() << " " << ep.port();
-	}
-	static void FOUND_FILE(const net::endpoint & ep)
-	{
-		LOG << "found file: \"" << ep.IP() << " " << ep.port();
-	}
-	};
-	if(db::table::prefs::get_ID() == "22ED3160421A8D3F99CDEBB4BC32A1EEE9C945C1"){
-		LOG << "starting find";
-		DHT.find_node("FCB579505C98E11CC2940D37C5D8D489CED63998", &func_local::FOUND_NODE);
-		DHT.store_file("DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF");
-		boost::this_thread::sleep(boost::posix_time::milliseconds(10000));
-		DHT.find_file("DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF", &func_local::FOUND_FILE);
-	}
-*/
+static void set_max_connections_thread(const unsigned connections)
+{
+	db::table::prefs::set_max_connections(connections);
 }
 
 void p2p_impl::set_max_connections(const unsigned connections)
@@ -126,19 +117,29 @@ void p2p_impl::set_max_connections(const unsigned connections)
 	//save extra 24 file descriptors for DB and misc other stuff
 	assert(connections <= 1000);
 	Connection_Manager.set_max_connections(connections / 2, connections / 2);
-	db::table::prefs::set_max_connections(connections);
+	Thread_Pool.enqueue(boost::bind(&set_max_connections_thread, connections));
+}
+
+static void set_max_download_rate_thread(const unsigned rate)
+{
+	db::table::prefs::set_max_download_rate(rate);
 }
 
 void p2p_impl::set_max_download_rate(const unsigned rate)
 {
 	Connection_Manager.set_max_download_rate(rate);
-	db::table::prefs::set_max_download_rate(rate);
+	Thread_Pool.enqueue(boost::bind(&set_max_download_rate_thread, rate));
+}
+
+static void set_max_upload_rate_thread(const unsigned rate)
+{
+	db::table::prefs::set_max_upload_rate(rate);
 }
 
 void p2p_impl::set_max_upload_rate(const unsigned rate)
 {
 	Connection_Manager.set_max_upload_rate(rate);
-	db::table::prefs::set_max_upload_rate(rate);
+	Thread_Pool.enqueue(boost::bind(&set_max_upload_rate_thread, rate));
 }
 
 boost::uint64_t p2p_impl::share_size()
