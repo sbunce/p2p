@@ -5,8 +5,8 @@ net::proactor_impl::proactor_impl(
 	const boost::function<void (proactor::connection_info &)> & disconnect_call_back
 ):
 	Dispatcher(connect_call_back, disconnect_call_back),
-	incoming_connection_limit(FD_SETSIZE / 2),
-	outgoing_connection_limit(FD_SETSIZE / 2),
+	incoming_connection_limit(512),
+	outgoing_connection_limit(512),
 	incoming_connections(0),
 	outgoing_connections(0)
 {
@@ -267,7 +267,6 @@ void net::proactor_impl::network_loop()
 					add_socket(P);
 					Dispatcher.connect(P.second->CI);
 				}else{
-					N->close();
 					Dispatcher.disconnect(P.second->CI);
 				}
 			}
@@ -382,7 +381,7 @@ void net::proactor_impl::send(const int connection_ID, buffer & send_buf)
 void net::proactor_impl::set_connection_limit(const unsigned incoming_limit,
 	const unsigned outgoing_limit)
 {
-	assert(incoming_limit + outgoing_limit <= FD_SETSIZE);
+	assert(incoming_limit + outgoing_limit <= 1024);
 	boost::mutex::scoped_lock lock(relay_job_mutex);
 	relay_job.push_back(boost::bind(&proactor_impl::adjust_connection_limits,
 		this, incoming_limit, outgoing_limit));
@@ -435,7 +434,6 @@ void net::proactor_impl::stop()
 	{
 		if(it_cur->second->CI){
 			Dispatcher.disconnect(it_cur->second->CI);
-			it_cur->second->N->close();
 		}
 	}
 	if(!Listener->set_non_blocking(false)){

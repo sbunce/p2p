@@ -18,7 +18,12 @@ net::proactor Proactor(
 	&disconnect_call_back
 );
 
-const unsigned test_echo(500);
+/*
+If this is set too high windows will think a syn flood is happening and a lot of
+sends will fail with error 100054.
+*/
+const unsigned test_echo(32);
+
 atomic_int<unsigned> echo_count(0);
 atomic_int<unsigned> disconnect_count(0);
 

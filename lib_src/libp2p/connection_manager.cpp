@@ -43,8 +43,7 @@ void connection_manager::add(const std::string & hash)
 	DHT.find_file(hash, boost::bind(&connection_manager::add_call_back, this, _1, hash));
 }
 
-void connection_manager::connection_manager::add_call_back(
-	const net::endpoint & ep, const std::string hash)
+void connection_manager::add_call_back(const net::endpoint & ep, const std::string hash)
 {
 	boost::mutex::scoped_lock lock(Connect_mutex);
 	bool connecting = (Connecting.find(ep) != Connecting.end());

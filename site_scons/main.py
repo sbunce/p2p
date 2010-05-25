@@ -83,10 +83,10 @@ def setup(env):
 		'net',
 		'tommath',
 		'sqlite3',
-		'boost_system',
-		'boost_filesystem',
-		'boost_regex',
-		'boost_thread'
+		boost.library('boost_system'),
+		boost.library('boost_filesystem'),
+		boost.library('boost_regex'),
+		boost.library('boost_thread')
 	])
 	system_libraries(env)
 
