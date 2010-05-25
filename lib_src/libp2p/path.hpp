@@ -2,6 +2,7 @@
 #define H_PATH
 
 //include
+#include <atomic_bool.hpp>
 #include <boost/bind.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/thread.hpp>
@@ -63,8 +64,10 @@ private:
 		{
 		public:
 			static_objects();
-			std::string db_file_name;
-			std::string program_dir;
+			boost::recursive_mutex mutex;    //locks all path public functions
+			std::string db_file_name;        //name of database file (example "DB")
+			std::string program_dir;         //full path to program directory
+			atomic_bool non_set_func_called; //used to assert set_* functions not misused
 		};
 
 		//get access to static objects
