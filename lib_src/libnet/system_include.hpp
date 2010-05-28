@@ -5,6 +5,7 @@
 #ifdef _WIN32
 	#define MSG_NOSIGNAL 0  //disable SIGPIPE on send() to disconnected socket
 	#define FD_SETSIZE 1024 //max number of sockets in fd_set
+	#define WIN32_LEAN_AND_MEAN
 	#include <ws2tcpip.h>
 
 	/*

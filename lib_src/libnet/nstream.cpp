@@ -118,8 +118,12 @@ void net::nstream::open_async(const endpoint & ep)
 	works on FreeBSD, Windows, and Linux.
 	*/
 	if(::connect(socket_FD, ep.AI->ai.ai_addr, ep.AI->ai.ai_addrlen) != 0){
-		//socket in progress of connecting
-		if(errno != EINPROGRESS && errno != EWOULDBLOCK){
+		/*
+		Socket in progress of connecting.
+		Note: Windows will sometimes return SOCKET_ERROR (-1) from connect and
+			errno will be set to 0. In this case we can ignore the error.
+		*/
+		if(errno != EINPROGRESS && errno != EWOULDBLOCK && errno != 0){
 			LOG << strerror(errno);
 			exit(1);
 		}
@@ -201,7 +205,6 @@ int net::nstream::send(buffer & buf, int max_transfer)
 	if(max_transfer > MTU){
 		max_transfer = MTU;
 	}
-
 	if(socket_FD == -1){
 		//socket previously disconnected, errno might not be valid here
 		return 0;

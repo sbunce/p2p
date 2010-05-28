@@ -204,12 +204,12 @@ bool slot_manager::recv_request_hash_tree_block(const unsigned char slot_num,
 		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 	}else{
 		assert(iter->second->get_transfer());
-		boost::shared_ptr<message_tcp::send::base> M_request;
+		boost::shared_ptr<message_tcp::send::base> M_resp;
 		transfer::status status = iter->second->get_transfer()->read_tree_block(
-			M_request, block_num);
+			M_resp, block_num);
 		if(status == transfer::good){
 			++incoming_pipeline_size;
-			Exchange.send(M_request, boost::bind(&slot_manager::sent_block, this));
+			Exchange.send(M_resp, boost::bind(&slot_manager::sent_block, this));
 			return true;
 		}else if(status == transfer::bad){
 			LOG << "error reading tree block";
@@ -240,12 +240,12 @@ bool slot_manager::recv_request_file_block(const unsigned char slot_num,
 		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 	}else{
 		assert(iter->second->get_transfer());
-		boost::shared_ptr<message_tcp::send::base> M_request;
+		boost::shared_ptr<message_tcp::send::base> M_resp;
 		transfer::status status = iter->second->get_transfer()->read_file_block(
-			M_request, block_num);
+			M_resp, block_num);
 		if(status == transfer::good){
 			++incoming_pipeline_size;
-			Exchange.send(M_request, boost::bind(&slot_manager::sent_block, this));
+			Exchange.send(M_resp, boost::bind(&slot_manager::sent_block, this));
 			return true;
 		}else if(status == transfer::bad){
 			LOG << "error reading file block";

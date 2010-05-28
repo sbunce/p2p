@@ -232,6 +232,26 @@ desc: Closes a slot.
 C = command (base10: 8), S = slot number
 ---
 
+---
+name: peer_4
+desc: Address of peer that has file.
+	+---+---+---+---+---+---+---+
+	| A | B |     C     |   D   |
+	+---+---+---+---+---+---+---+
+	  0   1   2  ...  5   6   7
+A = command (base10: 10), B = slot number, C = IPv4 address, D = port
+---
+
+---
+name: peer_6
+desc: Address of peer that has file.
+	+---+---+---+---+---+---+---+
+	| A | B |     C     |   D   |
+	+---+---+---+---+---+---+---+
+	  0   1   2  ... 17  18  19
+A = command (base10: 10), B = slot number, C = IPv6 address, D = port
+---
+
 
 Pipelining
 ==========
@@ -240,7 +260,7 @@ Pipelining is done by sending multiple requests, and a new request whenever a
 response is received. This increases throughput because the sender will not be
 idle waiting for a request.
 
-A maximum of 16 (request_hash_tree_block + request_file_block) commands can be
+A maximum of 8 (request_hash_tree_block + request_file_block) commands can be
 pipelined.
 
 
