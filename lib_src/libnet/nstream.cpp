@@ -144,9 +144,8 @@ int net::nstream::recv(buffer & buf, const int max_transfer)
 	}else{
 		int n_bytes = ::recv(socket_FD, reinterpret_cast<char *>(buf.tail_start()),
 			buf.tail_size(), MSG_NOSIGNAL);
-		if(n_bytes == -1){
+		if(n_bytes == -1 || n_bytes == 0){
 			LOG << strerror(errno);
-		}else if(n_bytes == 0){
 			close();
 			buf.tail_reserve(0);
 		}else{
@@ -211,9 +210,8 @@ int net::nstream::send(buffer & buf, int max_transfer)
 	}else{
 		int n_bytes = ::send(socket_FD, reinterpret_cast<char *>(buf.data()),
 			max_transfer, MSG_NOSIGNAL);
-		if(n_bytes == -1){
+		if(n_bytes == -1 || n_bytes == 0){
 			LOG << strerror(errno);
-		}else if(n_bytes == 0){
 			close();
 		}else{
 			buf.erase(0, n_bytes);

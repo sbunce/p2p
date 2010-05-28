@@ -70,7 +70,7 @@ void net::ndgram::open(const endpoint & ep)
 		LOG << strerror(errno);
 		close();
 	}
-	if(::bind(socket_FD, ep.AI->ai.ai_addr, ep.AI->ai.ai_addrlen) == -1){
+	if(bind(socket_FD, ep.AI->ai.ai_addr, ep.AI->ai.ai_addrlen) == -1){
 		LOG << strerror(errno);
 		close();
 		return;
@@ -85,11 +85,10 @@ int net::ndgram::recv(net::buffer & buf, boost::shared_ptr<endpoint> & ep)
 	ai.ai_addr = reinterpret_cast<sockaddr *>(&sas);
 	ai.ai_addrlen = sizeof(sockaddr_storage);
 	buf.tail_reserve(MTU);
-	int n_bytes = ::recvfrom(socket_FD, reinterpret_cast<char *>(buf.tail_start()),
+	int n_bytes = recvfrom(socket_FD, reinterpret_cast<char *>(buf.tail_start()),
 		buf.tail_size(), 0, ai.ai_addr, reinterpret_cast<socklen_t *>(&ai.ai_addrlen));
-	if(n_bytes == -1){
+	if(n_bytes == -1 || n_bytes == 0){
 		LOG << strerror(errno);
-	}else if(n_bytes == 0){
 		close();
 		buf.tail_reserve(0);
 	}else{
@@ -102,11 +101,10 @@ int net::ndgram::recv(net::buffer & buf, boost::shared_ptr<endpoint> & ep)
 
 int net::ndgram::send(net::buffer & buf, const endpoint & ep)
 {
-	int n_bytes = ::sendto(socket_FD, reinterpret_cast<char *>(buf.data()),
+	int n_bytes = sendto(socket_FD, reinterpret_cast<char *>(buf.data()),
 		buf.size(), 0, ep.AI->ai.ai_addr, ep.AI->ai.ai_addrlen);
-	if(n_bytes == -1){
+	if(n_bytes == -1 || n_bytes == 0){
 		LOG << strerror(errno);
-	}else if(n_bytes == 0){
 		close();
 	}else{
 		buf.erase(0, n_bytes);
