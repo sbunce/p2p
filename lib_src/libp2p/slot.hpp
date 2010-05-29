@@ -24,7 +24,6 @@ class slot : private boost::noncopyable
 	is able to instantiate a slot. This makes it easy to enforce uniqueness.
 	*/
 	friend class share;
-
 public:
 	/* Info
 	complete:
@@ -49,6 +48,7 @@ public:
 	upload_speed:
 		Returns upload speed (bytes/second).
 	*/
+//DEBUG, get rid of most of these
 	bool complete();
 	unsigned download_peers();
 	unsigned download_speed();

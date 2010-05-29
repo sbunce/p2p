@@ -3,7 +3,6 @@ import glob
 import os
 import platform
 import re
-import sys
 from SCons.Script.SConscript import SConsEnvironment
 
 #Automated unit testing for a directory.

@@ -10,9 +10,7 @@
 #include "system_include.hpp"
 
 //include
-#include <atomic_int.hpp>
 #include <boost/shared_ptr.hpp>
-#include <thread_pool.hpp>
 #include <net/net.hpp>
 
 //standard
@@ -86,10 +84,11 @@ private:
 		send_buf.
 	check_timeouts:
 		Disconnecte connections which have timed out.
+	connect_relay:
+		Start async connect to endpoint.
 	disconnect:
-		Proxy-called using relay_job to disconnect a connection.
-		Note: If on_empty = true then connection disconnected when connection
-			send_buf is empty.
+		Disconnect a connection. If on_empty = true then connection disconnected
+		when connection send_buf is empty.
 	lookup_socket:
 		Lookup connection by socket_FD. If connection not found then shared_ptr
 		will be empty.

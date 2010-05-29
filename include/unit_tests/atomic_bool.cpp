@@ -1,6 +1,7 @@
 //include
 #include <atomic_bool.hpp>
 #include <logger.hpp>
+#include <unit_test.hpp>
 
 //standard
 #include <sstream>
@@ -40,6 +41,7 @@ void stream()
 
 int main()
 {
+	unit_test::timeout();
 	assignment();
 	emulate();
 	stream();
