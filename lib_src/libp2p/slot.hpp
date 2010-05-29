@@ -20,10 +20,7 @@
 class share;
 class slot : private boost::noncopyable
 {
-	/*
-	Slots are unique (there exists only one slot per hash). Only the share class
-	is able to instantiate a slot. This makes it easy to enforce uniqueness.
-	*/
+	//only share can instantiate slot, this helps enforce uniqueness
 	friend class share;
 public:
 	/* Info
@@ -60,17 +57,18 @@ public:
 		const std::string & root_hash);
 
 private:
-	/*
-	Note: The ctor may throw.
-	Note: If FI_in.file_size = 0 it means we don't know the file size.
-	*/
+	//FI_in.file_size = 0 if we don't know file_size
 	slot(const file_info & FI_in);
 
 	const file_info FI;
 	const std::string file_name;
 
-	//instantiated when we get root_hash/file_size
-	boost::mutex Transfer_mutex; //lock for instantiation of transfer
+	/*
+	Instantiated when we get root_hash and file_size.
+	Note: Mutex used to save on disk access. Blocks threads while one thread sets
+		the root_hash and file_size.
+	*/
+	boost::mutex Transfer_mutex;
 	boost::shared_ptr<transfer> Transfer;
 };
 #endif

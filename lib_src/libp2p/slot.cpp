@@ -50,23 +50,24 @@ const std::string & slot::hash()
 
 p2p::transfer slot::info()
 {
-	p2p::transfer transfer;
-	transfer.hash = FI.hash;
-	transfer.name = file_name;
+	p2p::transfer tmp;
+	tmp.hash = FI.hash;
+	tmp.name = file_name;
+	tmp.file_size = file_size();
 	if(Transfer){
-		transfer.percent_complete = Transfer->percent_complete();
-		transfer.download_peers = Transfer->outgoing_count();
-		transfer.download_speed = Transfer->download_speed();
-		transfer.upload_peers = Transfer->incoming_count();
-		transfer.upload_speed = Transfer->upload_speed();
+		tmp.percent_complete = Transfer->percent_complete();
+		tmp.download_peers = Transfer->outgoing_count();
+		tmp.download_speed = Transfer->download_speed();
+		tmp.upload_peers = Transfer->incoming_count();
+		tmp.upload_speed = Transfer->upload_speed();
 	}else{
-		transfer.percent_complete = 0;
-		transfer.download_peers = 0;
-		transfer.download_speed = 0;
-		transfer.upload_peers = 0;
-		transfer.upload_speed = 0;
+		tmp.percent_complete = 0;
+		tmp.download_peers = 0;
+		tmp.download_speed = 0;
+		tmp.upload_peers = 0;
+		tmp.upload_speed = 0;
 	}
-	return transfer;
+	return tmp;
 }
 
 const std::string & slot::name()
