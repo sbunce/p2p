@@ -29,24 +29,6 @@ bool slot::complete()
 	}
 }
 
-unsigned slot::download_peers()
-{
-	if(Transfer){
-		return Transfer->outgoing_count();
-	}else{
-		return 0;
-	}
-}
-
-unsigned slot::download_speed()
-{
-	if(Transfer){
-		return Transfer->download_speed();
-	}else{
-		return 0;
-	}
-}
-
 boost::uint64_t slot::file_size()
 {
 	if(Transfer){
@@ -66,6 +48,27 @@ const std::string & slot::hash()
 	return FI.hash;
 }
 
+p2p::transfer slot::info()
+{
+	p2p::transfer transfer;
+	transfer.hash = FI.hash;
+	transfer.name = file_name;
+	if(Transfer){
+		transfer.percent_complete = Transfer->percent_complete();
+		transfer.download_peers = Transfer->outgoing_count();
+		transfer.download_speed = Transfer->download_speed();
+		transfer.upload_peers = Transfer->incoming_count();
+		transfer.upload_speed = Transfer->upload_speed();
+	}else{
+		transfer.percent_complete = 0;
+		transfer.download_peers = 0;
+		transfer.download_speed = 0;
+		transfer.upload_peers = 0;
+		transfer.upload_speed = 0;
+	}
+	return transfer;
+}
+
 const std::string & slot::name()
 {
 	return file_name;
@@ -74,15 +77,6 @@ const std::string & slot::name()
 std::string slot::path()
 {
 	return FI.path;
-}
-
-unsigned slot::percent_complete()
-{
-	if(Transfer){
-		return Transfer->percent_complete();
-	}else{
-		return 0;
-	}
 }
 
 bool slot::set_unknown(const int connection_ID, const boost::uint64_t file_size,
@@ -103,29 +97,4 @@ bool slot::set_unknown(const int connection_ID, const boost::uint64_t file_size,
 	net::buffer buf(convert::hex_to_bin(root_hash));
 	Transfer->write_tree_block(connection_ID, 0, buf);
 	return true;
-}
-
-void slot::touch()
-{
-	if(Transfer){
-		Transfer->touch();
-	}
-}
-
-unsigned slot::upload_peers()
-{
-	if(Transfer){
-		return Transfer->incoming_count();
-	}else{
-		return 0;
-	}
-}
-
-unsigned slot::upload_speed()
-{
-	if(Transfer){
-		return Transfer->upload_speed();
-	}else{
-		return 0;
-	}
 }

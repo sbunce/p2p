@@ -275,7 +275,7 @@ bool slot_manager::recv_request_slot(const std::string & hash)
 	}
 
 	if(!slot_iter->get_transfer()){
-		//we do not yet know file size
+		//we do not yet know root_hash/file_size
 		LOG << "failed " << convert::abbr(hash);
 		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 		return true;
@@ -299,7 +299,7 @@ bool slot_manager::recv_request_slot(const std::string & hash)
 		trigger_tick, tree_BF, file_BF);
 
 	//file size
-	boost::uint64_t file_size = slot_iter->file_size();
+	boost::uint64_t file_size = slot_iter->get_transfer()->file_size();
 	if(file_size == 0){
 		LOG << "failed " << convert::abbr(hash);
 		Exchange.send(boost::shared_ptr<message_tcp::send::base>(

@@ -105,6 +105,7 @@ bool transfer::complete()
 
 unsigned transfer::download_speed()
 {
+	Download_Speed->add(0);
 	return Download_Speed->speed();
 }
 
@@ -268,12 +269,6 @@ bool transfer::root_hash(std::string & RH)
 	return true;
 }
 
-void transfer::touch()
-{
-	Download_Speed->add(0);
-	Upload_Speed->add(0);
-}
-
 boost::uint64_t transfer::tree_block_count()
 {
 	return Hash_Tree.tree_block_count;
@@ -281,6 +276,7 @@ boost::uint64_t transfer::tree_block_count()
 
 unsigned transfer::upload_speed()
 {
+	Upload_Speed->add(0);
 	return Upload_Speed->speed();
 }
 

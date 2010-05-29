@@ -169,17 +169,7 @@ void p2p_impl::transfers(std::vector<p2p::transfer> & T)
 	for(share::slot_iterator it_cur = share::singleton().begin_slot(),
 		it_end = share::singleton().end_slot(); it_cur != it_end; ++it_cur)
 	{
-		it_cur->touch();
-		p2p::transfer transfer;
-		transfer.hash = it_cur->hash();
-		transfer.name = it_cur->name();
-		transfer.file_size = it_cur->file_size();
-		transfer.percent_complete = it_cur->percent_complete();
-		transfer.download_peers = it_cur->download_peers();
-		transfer.download_speed = it_cur->download_speed();
-		transfer.upload_peers = it_cur->upload_peers();
-		transfer.upload_speed = it_cur->upload_speed();
-		T.push_back(transfer);
+		T.push_back(it_cur->info());
 	}
 }
 

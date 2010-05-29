@@ -126,14 +126,11 @@ public:
 		Returns download speed (bytes/second).
 	download_speed_calc:
 		Returns shared_ptr to speed calculator responsible for download speed.
-	touch:
-		Add 0 bytes to Download_Speed/Upload_Speed to force recalculation.
 	upload_speed:
 		Returns upload speed (bytes/second).
 	*/
 	unsigned download_speed();
 	boost::shared_ptr<net::speed_calc> download_speed_calc();
-	void touch();
 	unsigned upload_speed();
 
 	/* Upload/Download Counts
