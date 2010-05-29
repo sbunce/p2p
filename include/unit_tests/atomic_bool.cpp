@@ -12,12 +12,12 @@ void assignment()
 {
 	atomic_bool x = false;
 	x = true;
-	if(x != true){
+	if(!x){
 		LOG; ++fail;
 	}
 }
 
-void emulate()
+void conversion()
 {
 	atomic_bool x = false;
 	if(x){
@@ -27,12 +27,15 @@ void emulate()
 
 void stream()
 {
-	atomic_bool x(false);
+	//ostream
+	atomic_bool x = false;
 	std::stringstream ss;
 	ss << x;
 	if(ss.str() != "0"){
 		LOG; ++fail;
 	}
+
+	//istream
 	ss >> x;
 	if(x){
 		LOG; ++fail;
@@ -43,7 +46,7 @@ int main()
 {
 	unit_test::timeout();
 	assignment();
-	emulate();
+	conversion();
 	stream();
 	return fail;
 }
