@@ -2,10 +2,15 @@
 #include "../encryption.hpp"
 #include "../settings.hpp"
 
+//include
+#include <unit_test.hpp>
+
 int fail(0);
 
 int main()
 {
+	unit_test::timeout();
+
 	//encryption for hosts A and B
 	encryption Encryption_A;
 	encryption Encryption_B;

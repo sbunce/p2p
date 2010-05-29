@@ -1,8 +1,11 @@
 //include
 #include <net/net.hpp>
+#include <unit_test.hpp>
 
 int main()
 {
+	unit_test::timeout();
+
 	//setup listener
 	std::set<net::endpoint> E = net::get_endpoint("localhost", "0");
 	assert(!E.empty());

@@ -1,11 +1,14 @@
 //include
 #include <opt_parse.hpp>
 #include <logger.hpp>
+#include <unit_test.hpp>
 
 int fail(0);
 
 int main()
 {
+	unit_test::timeout();
+
 	const char * argv[] = {"./a.out", "-flag", "--flag", "--str0=123", "--str1",
 		"123", "--str2123", "--num=123"};
 	opt_parse OP(8, const_cast<char **>(argv));

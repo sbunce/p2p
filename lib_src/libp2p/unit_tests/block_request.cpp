@@ -1,6 +1,9 @@
 //custom
 #include "../block_request.hpp"
 
+//include
+#include <unit_test.hpp>
+
 //standard
 #include <cstdlib>
 
@@ -72,6 +75,8 @@ void all_partial()
 
 int main()
 {
+	unit_test::timeout();
+
 	all_complete();
 	all_partial();
 	return fail;

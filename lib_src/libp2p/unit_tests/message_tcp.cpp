@@ -3,6 +3,7 @@
 
 //include
 #include <logger.hpp>
+#include <unit_test.hpp>
 
 int fail(0);
 
@@ -203,6 +204,8 @@ bool slot_11_call_back(const unsigned char slot_num,
 
 int main()
 {
+	unit_test::timeout();
+
 	boost::shared_ptr<message_tcp::recv::base> M_recv;
 	boost::shared_ptr<message_tcp::send::base> M_send;
 	boost::shared_ptr<net::speed_calc> SC(new net::speed_calc());

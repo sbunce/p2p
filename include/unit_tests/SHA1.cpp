@@ -1,14 +1,16 @@
 //include
 #include <logger.hpp>
 #include <SHA1.hpp>
+#include <unit_test.hpp>
 
 int fail(0);
 
 int main()
 {
-	SHA1 SHA;
+	unit_test::timeout();
 
 	//test string plugged in to known working implementation
+	SHA1 SHA;
 	std::string text = "I am a working SHA-1 hash function!";
 	SHA.init();
 	SHA.load(text.data(), text.size());

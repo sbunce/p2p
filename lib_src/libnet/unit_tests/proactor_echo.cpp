@@ -1,6 +1,7 @@
 //include
 #include <atomic_int.hpp>
 #include <net/net.hpp>
+#include <unit_test.hpp>
 
 //standard
 #include <csignal>
@@ -64,6 +65,8 @@ void disconnect_call_back(net::proactor::connection_info & CI)
 
 int main()
 {
+	unit_test::timeout();
+
 	std::set<net::endpoint> E = net::get_endpoint(
 		"127.0.0.1",
 		"0"

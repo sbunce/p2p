@@ -89,6 +89,13 @@ public:
 	{
 		return lval << b.str();
 	}
+	friend std::istream & operator >> (std::istream & lval, mpint & b)
+	{
+		std::string tmp;
+		lval >> tmp;
+		b = mpint(tmp);
+		return lval;
+	}
 
 	//friends
 	friend mpint sqr(const mpint & a);

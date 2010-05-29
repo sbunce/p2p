@@ -4,6 +4,7 @@
 //include
 #include <logger.hpp>
 #include <random.hpp>
+#include <unit_test.hpp>
 
 int fail(0);
 const net::buffer test_random(random::urandom(4));
@@ -140,6 +141,8 @@ void node_list_call_back(const net::endpoint & from, const net::buffer & random,
 
 int main()
 {
+	unit_test::timeout();
+
 	std::set<net::endpoint> E = net::get_endpoint("localhost", "0");
 	assert(!E.empty());
 

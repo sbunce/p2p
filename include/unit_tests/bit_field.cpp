@@ -1,6 +1,7 @@
 //include
 #include <bit_field.hpp>
 #include <logger.hpp>
+#include <unit_test.hpp>
 
 //standard
 #include <cmath>
@@ -119,6 +120,7 @@ void operators()
 
 int main()
 {
+	unit_test::timeout();
 	assignment();
 	named_functions();
 	operators();

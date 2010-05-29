@@ -140,10 +140,10 @@ net::buffer::buffer()
 	ctor_initialize();
 }
 
-net::buffer::buffer(const std::string & S)
+net::buffer::buffer(const std::string & str)
 {
 	ctor_initialize();
-	append(S);
+	append(str);
 }
 
 net::buffer::buffer(const unsigned char * buf_append, const unsigned size)
@@ -327,11 +327,10 @@ net::buffer & net::buffer::operator = (const buffer & B)
 	return *this;
 }
 
-net::buffer & net::buffer::operator = (const char * str)
+net::buffer & net::buffer::operator = (const std::string & str)
 {
-	unsigned len = std::strlen(str);
-	allocate(bytes, len);
-	std::memcpy(buf, str, bytes);
+	allocate(bytes, str.size());
+	std::memcpy(buf, str.data(), bytes);
 	return *this;
 }
 
@@ -344,13 +343,12 @@ bool net::buffer::operator == (const buffer & B) const
 	}
 }
 
-bool net::buffer::operator == (const char * str) const
+bool net::buffer::operator == (const std::string & str) const
 {
-	unsigned len = std::strlen(str);
-	if(bytes != len){
+	if(bytes != str.size()){
 		return false;
 	}else{
-		return std::memcmp(buf, str, bytes) == 0;
+		return std::memcmp(buf, str.data(), bytes) == 0;
 	}
 }
 
@@ -359,7 +357,7 @@ bool net::buffer::operator != (const buffer & B) const
 	return !(*this == B);
 }
 
-bool net::buffer::operator != (const char * str) const
+bool net::buffer::operator != (const std::string & str) const
 {
 	return !(*this == str);
 }
@@ -375,15 +373,14 @@ bool net::buffer::operator < (const buffer & B) const
 	}
 }
 
-bool net::buffer::operator < (const char * str) const
+bool net::buffer::operator < (const std::string & str) const
 {
-	unsigned len = std::strlen(str);
-	if(bytes < len){
+	if(bytes < str.size()){
 		return true;
-	}else if(bytes > len){
+	}else if(bytes > str.size()){
 		return false;
 	}else{
-		return std::memcmp(buf, str, bytes) < 0;
+		return std::memcmp(buf, str.data(), bytes) < 0;
 	}
 }
 

@@ -18,7 +18,7 @@ class buffer
 {
 public:
 	buffer();
-	buffer(const std::string & S);
+	buffer(const std::string & str);
 	buffer(const unsigned char * buf_append, const unsigned size);
 	buffer(const buffer & B);
 	~buffer();
@@ -127,13 +127,13 @@ public:
 	const unsigned char operator [] (const unsigned idx) const;
 	unsigned char & operator [] (const unsigned idx);
 	buffer & operator = (const buffer & B);
-	buffer & operator = (const char * str);
+	buffer & operator = (const std::string & str);
 	bool operator == (const buffer & B) const;
-	bool operator == (const char * str) const;
+	bool operator == (const std::string & str) const;
 	bool operator != (const buffer & B) const;
-	bool operator != (const char * str) const;
+	bool operator != (const std::string & str) const;
 	bool operator < (const buffer & B) const;
-	bool operator < (const char * str) const;
+	bool operator < (const std::string & str) const;
 
 	friend std::ostream & operator << (std::ostream & lval, const buffer & rval)
 	{

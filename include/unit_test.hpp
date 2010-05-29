@@ -14,7 +14,7 @@ Kill the program after the specified timeout. This stops a unit test from
 hanging the build system if a unit test deadlocks or otherwise fails to
 terminate properly.
 */
-void timeout(const unsigned seconds = 8)
+void timeout(const unsigned seconds = 16)
 {
 	struct func_local{
 	static void timeout(const unsigned seconds)

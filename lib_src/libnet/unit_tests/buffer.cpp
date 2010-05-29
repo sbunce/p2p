@@ -1,21 +1,23 @@
+//include
 #include <net/net.hpp>
+#include <unit_test.hpp>
 
 int fail(0);
 
 int main()
 {
-	net::buffer B;
+	unit_test::timeout();
 
-	//erase
-	B = "ABC";
+	{//erase
+	net::buffer B("ABC");
 	B.erase(1, 1);
 	if(B[0] != 'A' || B[1] != 'C'){
 		LOG; ++fail;
 	}
+	}
 
-	//str()
-	B.clear();
-	B = "ABC";
+	{//str()
+	net::buffer B("ABC");
 	std::string str = B.str();
 	if(str != "ABC"){
 		LOG; ++fail;
@@ -32,9 +34,10 @@ int main()
 	if(str != ""){
 		LOG; ++fail;
 	}
+	}
 
-	//tail reserve
-	B.clear();
+	{//tail reserve
+	net::buffer B;
 	B.append('A');
 	B.tail_reserve(1);
 	B.tail_start()[0] = 'B';
@@ -42,20 +45,20 @@ int main()
 	if(B[1] != 'B'){
 		LOG; ++fail;
 	}
+	}
 
-	//!=
-	net::buffer B0, B1;
-	B0 = "ABC";
-	B1 = "ABC";
+	{//!=
+	net::buffer B0("ABC"), B1("ABC");
 	if(B0 != B1){
 		LOG; ++fail;
 	}
 	if(B0 != "ABC"){
 		LOG; ++fail;
 	}
+	}
 
-	//move
-	B0 = "123"; B1 = "ABC";
+	{//swap
+	net::buffer B0("123"), B1("ABC");
 	B0.swap(B1);
 	if(B0 != "ABC"){
 		LOG; ++fail;
@@ -63,5 +66,7 @@ int main()
 	if(B1 != "123"){
 		LOG; ++fail;
 	}
+	}
+
 	return fail;
 }

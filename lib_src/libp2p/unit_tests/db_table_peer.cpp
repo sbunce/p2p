@@ -1,10 +1,15 @@
 //custom
 #include "../db_all.hpp"
 
+//include
+#include <unit_test.hpp>
+
 int fail(0);
 
 int main()
 {
+	unit_test::timeout();
+
 	//setup database and make sure blacklist table clear
 	path::set_db_file_name("database_table_peer.db");
 	path::set_program_dir("");

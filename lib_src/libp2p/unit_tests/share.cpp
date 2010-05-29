@@ -3,11 +3,14 @@
 
 //include
 #include <logger.hpp>
+#include <unit_test.hpp>
 
 int fail(0);
 
 int main()
 {
+	unit_test::timeout();
+
 	//test files
 	file_info FI_1("ABC", "/foo", 123, 123);
 	file_info FI_2("DEF", "/foo/bar", 123, 123);

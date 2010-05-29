@@ -1,10 +1,15 @@
 //custom
 #include "../k_func.hpp"
 
+//include
+#include <unit_test.hpp>
+
 int fail(0);
 
 int main()
 {
+	unit_test::timeout();
+
 	std::string ID_0 = "DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF";
 	std::string ID_1 = "DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEE";
 

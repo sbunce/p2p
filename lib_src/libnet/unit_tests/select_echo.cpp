@@ -1,7 +1,11 @@
+//include
 #include <net/net.hpp>
+#include <unit_test.hpp>
 
 int main()
 {
+	unit_test::timeout();
+
 	std::set<net::endpoint> E = net::get_endpoint("localhost", "0");
 	assert(!E.empty());
 	net::ndgram N(*E.begin());

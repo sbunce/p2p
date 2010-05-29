@@ -7,10 +7,12 @@
 
 int fail(0);
 
-void assignment()
+int main()
 {
+	unit_test::timeout();
+
 	{//atomic_int rval
-	atomic_int<int> x = 0, y = 1;
+	atomic_int<int> x(0), y(1);
 	x = y;
 	if(x != 1){
 		LOG; ++fail;
@@ -18,43 +20,37 @@ void assignment()
 	}
 
 	{//int rval
-	atomic_int<int> x = 0;
-	int y = 1;
+	atomic_int<int> x(0);
+	int y(1);
 	x = y;
 	if(x != 1){
 		LOG; ++fail;
 	}
 	}
-}
 
-void conversion()
-{
-	{
-	atomic_int<int> x = 0;
+	{//conversion
+	atomic_int<int> x(0);
 	if(x){
 		LOG; ++fail;	
 	}
 	}
 
-	{
-	atomic_int<int> x = 1;
+	{//conversion
+	atomic_int<int> x(1);
 	if(!x){
 		LOG; ++fail;	
 	}
 	}
-}
 
-void increment_decrement()
-{
 	{//pre-inc
-	atomic_int<int> x = 0;
+	atomic_int<int> x(0);
 	if(++x != 1){
 		LOG; ++fail;
 	}
 	}
 
 	{//post-inc
-	atomic_int<int> x = 0;
+	atomic_int<int> x(0);
 	if(x++ != 0){
 		LOG; ++fail;
 	}
@@ -64,14 +60,14 @@ void increment_decrement()
 	}
 
 	{//pre-dec
-	atomic_int<int> x = 1;
+	atomic_int<int> x(1);
 	if(--x != 0){
 		LOG; ++fail;
 	}
 	}
 
 	{//post-dec
-	atomic_int<int> x = 1;
+	atomic_int<int> x(1);
 	if(x-- != 1){
 		LOG; ++fail;
 	}
@@ -79,13 +75,9 @@ void increment_decrement()
 		LOG; ++fail;
 	}
 	}
-}
 
-
-void compound_assignment()
-{
 	{//+= atomic_int rval
-	atomic_int<int> x = 1;
+	atomic_int<int> x(1);
 	x += x;
 	if(x != 2){
 		LOG; ++fail;
@@ -93,8 +85,8 @@ void compound_assignment()
 	}
 
 	{//+= int rval
-	atomic_int<int> x = 1;
-	int y = 1;
+	atomic_int<int> x(1);
+	int y(1);
 	x += y;
 	if(x != 2){
 		LOG; ++fail;
@@ -102,7 +94,7 @@ void compound_assignment()
 	}
 
 	{//-= atomic_int rval
-	atomic_int<int> x = 1;
+	atomic_int<int> x(1);
 	x -= x;
 	if(x != 0){
 		LOG; ++fail;
@@ -110,8 +102,8 @@ void compound_assignment()
 	}
 
 	{//-= int rval
-	atomic_int<int> x = 1;
-	int y = 1;
+	atomic_int<int> x(1);
+	int y(1);
 	x -= y;
 	if(x != 0){
 		LOG; ++fail;
@@ -119,7 +111,7 @@ void compound_assignment()
 	}
 
 	{//*= atomic_int rval
-	atomic_int<int> x = 2;
+	atomic_int<int> x(2);
 	x *= x;
 	if(x != 4){
 		LOG; ++fail;
@@ -127,8 +119,8 @@ void compound_assignment()
 	}
 
 	{//*= int rval
-	atomic_int<int> x = 2;
-	int y = 2;
+	atomic_int<int> x(2);
+	int y(2);
 	x *= y;
 	if(x != 4){
 		LOG; ++fail;
@@ -136,7 +128,7 @@ void compound_assignment()
 	}
 
 	{///= atomic_int rval
-	atomic_int<int> x = 2;
+	atomic_int<int> x(2);
 	x /= x;
 	if(x != 1){
 		LOG; ++fail;
@@ -144,8 +136,8 @@ void compound_assignment()
 	}
 
 	{///= int rval
-	atomic_int<int> x = 2;
-	int y = 2;
+	atomic_int<int> x(2);
+	int y(2);
 	x /= y;
 	if(x != 1){
 		LOG; ++fail;
@@ -153,7 +145,7 @@ void compound_assignment()
 	}
 
 	{//%= atomic_int rval
-	atomic_int<int> x = 2;
+	atomic_int<int> x(2);
 	x %= x;
 	if(x != 0){
 		LOG; ++fail;
@@ -161,8 +153,8 @@ void compound_assignment()
 	}
 
 	{//%= int rval
-	atomic_int<int> x = 2;
-	int y = 2;
+	atomic_int<int> x(2);
+	int y(2);
 	x %= y;
 	if(x != 0){
 		LOG; ++fail;
@@ -170,7 +162,7 @@ void compound_assignment()
 	}
 
 	{//>>=
-	atomic_int<int> x = 2;
+	atomic_int<int> x(2);
 	x >>= 1;
 	if(x != 1){
 		LOG; ++fail;
@@ -178,7 +170,7 @@ void compound_assignment()
 	}
 
 	{//<<=
-	atomic_int<int> x = 1;
+	atomic_int<int> x(1);
 	x <<= 1;
 	if(x != 2){
 		LOG; ++fail;
@@ -202,7 +194,7 @@ void compound_assignment()
 	}
 
 	{//^= atomic_int rval
-	atomic_int<unsigned> x = 1;
+	atomic_int<unsigned> x(1);
 	x ^= x;
 	if(x != 0){
 		LOG; ++fail;
@@ -210,7 +202,7 @@ void compound_assignment()
 	}
 
 	{//^= int rval
-	atomic_int<unsigned> x = 1;
+	atomic_int<unsigned> x(1);
 	x ^= 1;
 	if(x != 0){
 		LOG; ++fail;
@@ -218,7 +210,7 @@ void compound_assignment()
 	}
 
 	{//|= atomic_int rval
-	atomic_int<unsigned> x = 1;
+	atomic_int<unsigned> x(1);
 	x |= x;
 	if(x != 1){
 		LOG; ++fail;
@@ -226,38 +218,27 @@ void compound_assignment()
 	}
 
 	{//|= int rval
-	atomic_int<unsigned> x = 1;
+	atomic_int<unsigned> x(1);
 	x |= 1;
 	if(x != 1){
 		LOG; ++fail;
 	}
 	}
-}
 
-void stream()
-{
-	//ostream
-	atomic_int<int> x = 1;
+	{//ostream
+	atomic_int<int> x(1);
 	std::stringstream ss;
 	ss << x;
 	if(ss.str() != "1"){
 		LOG; ++fail;
 	}
-
+	x = 2;
 	//istream
 	ss >> x;
 	if(x != 1){
 		LOG; ++fail;
 	}
-}
+	}
 
-int main()
-{
-	unit_test::timeout();
-	assignment();
-	conversion();
-	increment_decrement();
-	compound_assignment();
-	stream();
 	return fail;
 }

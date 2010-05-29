@@ -1,10 +1,15 @@
 //custom
 #include "../db_all.hpp"
 
+//include
+#include <unit_test.hpp>
+
 int fail(0);
 
 int main()
 {
+	unit_test::timeout();
+
 	//setup database and make sure share table clear
 	path::set_db_file_name("database_table_share.db");
 	path::set_program_dir("");

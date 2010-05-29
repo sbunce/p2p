@@ -1,6 +1,7 @@
 //include
 #include <convert.hpp>
 #include <RC4.hpp>
+#include <unit_test.hpp>
 
 //standard
 #include <iostream>
@@ -10,6 +11,8 @@ int fail(0);
 
 int main()
 {
+	unit_test::timeout();
+
 	RC4 PRNG;
 	PRNG.seed((unsigned char *)"Key", 3);
 	std::string data = "Plaintext";

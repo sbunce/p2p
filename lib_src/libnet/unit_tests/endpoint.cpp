@@ -1,11 +1,14 @@
 //include
 #include <logger.hpp>
 #include <net/net.hpp>
+#include <unit_test.hpp>
 
 int fail(0);
 
 int main()
 {
+	unit_test::timeout();
+
 	{//BEGIN IPv4
 	std::set<net::endpoint> E = net::get_endpoint("127.0.0.1", "0");
 	if(E.empty()){

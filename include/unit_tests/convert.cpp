@@ -1,6 +1,7 @@
 //include
 #include <convert.hpp>
 #include <logger.hpp>
+#include <unit_test.hpp>
 
 //standard
 #include <string>
@@ -9,6 +10,8 @@ int fail(0);
 
 int main()
 {
+	unit_test::timeout();
+
 	//encode/decode
 	if(convert::bin_to_int<int>(convert::int_to_bin<int>(10)) != 10){
 		LOG; ++fail;

@@ -7,6 +7,7 @@
 
 //include
 #include <logger.hpp>
+#include <unit_test.hpp>
 
 //standard
 #include <algorithm>
@@ -193,6 +194,8 @@ void child_block()
 
 int main()
 {
+	unit_test::timeout();
+
 	//setup database and make sure hash table clear
 	path::set_db_file_name("hash_tree.db");
 	path::set_program_dir("");
