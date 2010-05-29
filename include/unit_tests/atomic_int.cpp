@@ -3,198 +3,248 @@
 
 //standard
 #include <limits>
+#include <unit_test.hpp>
 
 int fail(0);
 
 void assignment()
 {
-	atomic_int<int> x, y;
-	int z;
-
-	x = 0;
-	y = 1;
+	{//atomic_int rval
+	atomic_int<int> x = 0, y = 1;
 	x = y;
 	if(x != 1){
 		LOG; ++fail;
 	}
+	}
 
-	x = 0;
-	z = 1;
-	x = z;
+	{//int rval
+	atomic_int<int> x = 0;
+	int y = 1;
+	x = y;
 	if(x != 1){
 		LOG; ++fail;
 	}
+	}
 }
 
-void emulate()
+void conversion()
 {
-	atomic_int<int> x, y, z;
-
-	//?
-	x = 1; y = 2; z = 3;
-	x = x ? y : z;
-	if(x != 2){
-		LOG; ++fail;
-	}
-
-	//()
-	x = 0;
+	{
+	atomic_int<int> x = 0;
 	if(x){
 		LOG; ++fail;	
+	}
+	}
+
+	{
+	atomic_int<int> x = 1;
+	if(!x){
+		LOG; ++fail;	
+	}
 	}
 }
 
 void increment_decrement()
 {
-	atomic_int<int> x;
-
-	//++
-	x = 0;
+	{//pre-inc
+	atomic_int<int> x = 0;
 	if(++x != 1){
 		LOG; ++fail;
 	}
-	x = 0;
+	}
+
+	{//post-inc
+	atomic_int<int> x = 0;
 	if(x++ != 0){
 		LOG; ++fail;
 	}
+	if(x != 1){
+		LOG; ++fail;
+	}
+	}
 
-	//--
-	x = 1;
+	{//pre-dec
+	atomic_int<int> x = 1;
 	if(--x != 0){
 		LOG; ++fail;
 	}
-	x = 1;
+	}
+
+	{//post-dec
+	atomic_int<int> x = 1;
 	if(x-- != 1){
 		LOG; ++fail;
+	}
+	if(x != 0){
+		LOG; ++fail;
+	}
 	}
 }
 
 
 void compound_assignment()
 {
-	atomic_int<int> x;
-	int y;
-
-	//+=
-	x = 1;
+	{//+= atomic_int rval
+	atomic_int<int> x = 1;
 	x += x;
 	if(x != 2){
 		LOG; ++fail;
 	}
-	x = 1; y = 1;
+	}
+
+	{//+= int rval
+	atomic_int<int> x = 1;
+	int y = 1;
 	x += y;
 	if(x != 2){
 		LOG; ++fail;
 	}
+	}
 
-	//-=
-	x = 1;
+	{//-= atomic_int rval
+	atomic_int<int> x = 1;
 	x -= x;
 	if(x != 0){
 		LOG; ++fail;
 	}
-	x = 1; y = 1;
+	}
+
+	{//-= int rval
+	atomic_int<int> x = 1;
+	int y = 1;
 	x -= y;
 	if(x != 0){
 		LOG; ++fail;
 	}
+	}
 
-	//*=
-	x = 1;
+	{//*= atomic_int rval
+	atomic_int<int> x = 2;
 	x *= x;
-	if(x != 1){
+	if(x != 4){
 		LOG; ++fail;
 	}
-	x = 1; y = 1;
-	x *= y;
-	if(x != 1){
-		LOG; ++fail;
 	}
 
-	///=
-	x = 2;
+	{//*= int rval
+	atomic_int<int> x = 2;
+	int y = 2;
+	x *= y;
+	if(x != 4){
+		LOG; ++fail;
+	}
+	}
+
+	{///= atomic_int rval
+	atomic_int<int> x = 2;
 	x /= x;
 	if(x != 1){
 		LOG; ++fail;
 	}
-	x = 2; y = 2;
+	}
+
+	{///= int rval
+	atomic_int<int> x = 2;
+	int y = 2;
 	x /= y;
 	if(x != 1){
 		LOG; ++fail;
 	}
+	}
 
-	//%=
-	x = 2;
+	{//%= atomic_int rval
+	atomic_int<int> x = 2;
 	x %= x;
 	if(x != 0){
 		LOG; ++fail;
 	}
-	x = 2; y = 2;
+	}
+
+	{//%= int rval
+	atomic_int<int> x = 2;
+	int y = 2;
 	x %= y;
 	if(x != 0){
 		LOG; ++fail;
 	}
+	}
 
-	//>>=
-	x = 2;
+	{//>>=
+	atomic_int<int> x = 2;
 	x >>= 1;
 	if(x != 1){
 		LOG; ++fail;
 	}
+	}
 
-	//<<=
-	x = 1;
+	{//<<=
+	atomic_int<int> x = 1;
 	x <<= 1;
 	if(x != 2){
 		LOG; ++fail;
 	}
+	}
 
-	//&=
-	atomic_int<unsigned> q(std::numeric_limits<unsigned>::max()), p(0u);
-	q &= p;
-	if(q != 0u){
+	{//&= atomic_int rval
+	atomic_int<unsigned> x(std::numeric_limits<unsigned>::max()), y(0u);
+	x &= y;
+	if(x != 0u){
 		LOG; ++fail;
 	}
-	q = std::numeric_limits<unsigned>::max();;
+	}
+
+	{//&= int rval
+	atomic_int<unsigned> q = std::numeric_limits<unsigned>::max();
 	q &= 0u;
 	if(q != 0u){
 		LOG; ++fail;
 	}
+	}
 
-	//^=
-	x = 1;
+	{//^= atomic_int rval
+	atomic_int<unsigned> x = 1;
 	x ^= x;
 	if(x != 0){
 		LOG; ++fail;
 	}
-	x = 1;
+	}
+
+	{//^= int rval
+	atomic_int<unsigned> x = 1;
 	x ^= 1;
 	if(x != 0){
 		LOG; ++fail;
 	}
+	}
 
-	//|=
-	x = 1;
+	{//|= atomic_int rval
+	atomic_int<unsigned> x = 1;
 	x |= x;
 	if(x != 1){
 		LOG; ++fail;
 	}
-	x = 1;
+	}
+
+	{//|= int rval
+	atomic_int<unsigned> x = 1;
 	x |= 1;
 	if(x != 1){
 		LOG; ++fail;
+	}
 	}
 }
 
 void stream()
 {
-	atomic_int<int> x(1);
+	//ostream
+	atomic_int<int> x = 1;
 	std::stringstream ss;
 	ss << x;
 	if(ss.str() != "1"){
 		LOG; ++fail;
 	}
 
+	//istream
 	ss >> x;
 	if(x != 1){
 		LOG; ++fail;
@@ -203,8 +253,9 @@ void stream()
 
 int main()
 {
+	unit_test::timeout();
 	assignment();
-	emulate();
+	conversion();
 	increment_decrement();
 	compound_assignment();
 	stream();

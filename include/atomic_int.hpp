@@ -74,8 +74,8 @@ public:
 		return temp;
 	}
 
-	//conditional (?, ())
-	operator T ()
+	//conversion
+	operator T () const
 	{
 		boost::recursive_mutex::scoped_lock lock(*Mutex);
 		return wrapped_int;
