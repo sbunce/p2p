@@ -239,7 +239,7 @@ desc: Address of peer that has file.
 	| A | B |     C     |   D   |
 	+---+---+---+---+---+---+---+
 	  0   1   2  ...  5   6   7
-A = command (base10: 10), B = slot number, C = IPv4 address, D = port
+A = command (base10: 9), B = slot number, C = IPv4 address, D = port
 ---
 
 ---

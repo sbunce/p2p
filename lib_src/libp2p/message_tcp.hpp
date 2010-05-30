@@ -211,6 +211,19 @@ private:
 	bool checked;     //true when file_size/root_hash checked
 };
 
+//receives either peer_4 or peer_6
+class peer : public base
+{
+public:
+	typedef boost::function<bool (const unsigned char slot_num,
+		const net::endpoint & ep)> handler;
+	peer(handler func_in);
+	virtual bool expect(const net::buffer & recv_buf);
+	virtual status recv(net::buffer & recv_buf);
+private:
+	handler func;
+};
+
 }//end of namespace recv
 
 namespace send{
@@ -311,6 +324,13 @@ public:
 	slot(const unsigned char slot_num, const boost::uint64_t file_size,
 		const std::string & root_hash, const bit_field & tree_BF,
 		const bit_field & file_BF);
+};
+
+//sends either peer_4 or peer_6
+class peer : public base
+{
+public:
+	peer(const unsigned char slot_num, const net::endpoint & ep);
 };
 
 }//end of namespace send

@@ -18,6 +18,9 @@ slot_manager::slot_manager(
 	Exchange.expect_anytime(boost::shared_ptr<message_tcp::recv::base>(
 		new message_tcp::recv::close_slot(boost::bind(
 			&slot_manager::recv_close_slot, this, _1))));
+	Exchange.expect_anytime(boost::shared_ptr<message_tcp::recv::base>(
+		new message_tcp::recv::peer(boost::bind(
+			&slot_manager::recv_peer, this, _1, _2))));
 }
 
 slot_manager::~slot_manager()
@@ -175,6 +178,13 @@ bool slot_manager::recv_hash_tree_block(const net::buffer & block,
 		}
 	}
 	return true;
+}
+
+bool slot_manager::recv_peer(const unsigned char slot_num,
+	const net::endpoint & ep)
+{
+	LOG << ep.IP() << " " << ep.port();
+
 }
 
 bool slot_manager::recv_request_block_failed(const unsigned char slot_num)

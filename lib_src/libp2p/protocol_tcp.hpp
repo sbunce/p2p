@@ -50,5 +50,9 @@ static unsigned have_file_block_size(const unsigned VLI_size)
 }
 const unsigned char close_slot = 8;
 const unsigned close_slot_size = 2;
+const unsigned char peer_4 = 9;
+const unsigned peer_4_size = 8;
+const unsigned char peer_6 = 10;
+const unsigned peer_6_size = 20;
 }//end of namespace protocol_tcp
 #endif

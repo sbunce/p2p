@@ -560,6 +560,57 @@ message_tcp::recv::status message_tcp::recv::slot::recv(net::buffer & recv_buf)
 }
 //END recv::slot
 
+//BEGIN recv::peer
+message_tcp::recv::peer::peer(
+	handler func_in
+):
+	func(func_in)
+{
+
+}
+
+bool message_tcp::recv::peer::expect(const net::buffer & recv_buf)
+{
+	assert(!recv_buf.empty());
+	return recv_buf[0] == protocol_tcp::peer_4
+		|| recv_buf[0] == protocol_tcp::peer_6;
+}
+
+message_tcp::recv::status message_tcp::recv::peer::recv(net::buffer & recv_buf)
+{
+	if(!expect(recv_buf)){
+		return not_expected;
+	}
+	if(recv_buf[0] == protocol_tcp::peer_4){
+		if(recv_buf.size() < protocol_tcp::peer_4_size){
+			return incomplete;
+		}
+		unsigned char slot_num = recv_buf[1];
+		boost::optional<net::endpoint> ep = net::bin_to_endpoint(
+			std::string(reinterpret_cast<const char *>(recv_buf.data())+2, 4),
+			std::string(reinterpret_cast<const char *>(recv_buf.data())+6, 2));
+		if(ep){
+			func(slot_num, *ep);
+		}
+		recv_buf.erase(0, protocol_tcp::peer_4_size);
+		return complete;
+	}else{
+		if(recv_buf.size() < protocol_tcp::peer_6_size){
+			return incomplete;
+		}
+		unsigned char slot_num = recv_buf[1];
+		boost::optional<net::endpoint> ep = net::bin_to_endpoint(
+			std::string(reinterpret_cast<const char *>(recv_buf.data())+2, 16),
+			std::string(reinterpret_cast<const char *>(recv_buf.data())+18, 2));
+		if(ep){
+			func(slot_num, *ep);
+		}
+		recv_buf.erase(0, protocol_tcp::peer_6_size);
+		return complete;
+	}
+}
+//END recv::peer
+
 //BEGIN send::block
 message_tcp::send::block::block(const net::buffer & block,
 	boost::shared_ptr<net::speed_calc> Upload_Speed_in)
@@ -702,3 +753,18 @@ message_tcp::send::slot::slot(const unsigned char slot_num,
 	}
 }
 //END send::slot
+
+//BEGIN send::peer
+message_tcp::send::peer::peer(const unsigned char slot_num,
+	const net::endpoint & ep)
+{
+	if(ep.version() == net::IPv4){
+		buf.append(protocol_tcp::peer_4);
+	}else{
+		buf.append(protocol_tcp::peer_6);
+	}
+	buf.append(slot_num)
+		.append(ep.IP_bin())
+		.append(ep.port_bin());
+}
+//END send::peer

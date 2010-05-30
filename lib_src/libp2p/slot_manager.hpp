@@ -108,6 +108,7 @@ private:
 		const boost::uint64_t block_num);
 	bool recv_hash_tree_block(const net::buffer & block,
 		const unsigned char slot_num, const boost::uint64_t block_num);
+	bool recv_peer(const unsigned char slot_num, const net::endpoint & ep);
 	bool recv_request_hash_tree_block(const unsigned char slot_num,
 		const boost::uint64_t block_num);
 	bool recv_request_file_block(const unsigned char slot_num,

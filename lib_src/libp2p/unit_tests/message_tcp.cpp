@@ -3,6 +3,7 @@
 
 //include
 #include <logger.hpp>
+#include <net/net.hpp>
 #include <unit_test.hpp>
 
 int fail(0);
@@ -202,6 +203,18 @@ bool slot_11_call_back(const unsigned char slot_num,
 	return true;
 }
 
+boost::shared_ptr<net::endpoint> test_ep;
+bool peer_call_back(const unsigned char slot_num, const net::endpoint & ep)
+{
+	if(slot_num != test_slot_num){
+		LOG; ++fail;
+	}
+	if(ep != *test_ep){
+		LOG; ++fail;
+	}
+	return true;
+}
+
 int main()
 {
 	unit_test::timeout();
@@ -211,20 +224,16 @@ int main()
 	boost::shared_ptr<net::speed_calc> SC(new net::speed_calc());
 
 	//block
-	M_recv = boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::block(
-		&block_call_back, test_block.size(), SC));
-	M_send = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::block(
-		test_block, SC));
+	M_recv.reset(new message_tcp::recv::block(&block_call_back, test_block.size(), SC));
+	M_send.reset(new message_tcp::send::block(test_block, SC));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
 		LOG; ++fail;
 	}
 
 	//close_slot
-	M_recv = boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::close_slot(
-		&close_slot_call_back));
-	M_send = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::close_slot(
-		test_slot_num));
+	M_recv.reset(new message_tcp::recv::close_slot(&close_slot_call_back));
+	M_send.reset(new message_tcp::send::close_slot(test_slot_num));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
 		LOG; ++fail;
@@ -232,109 +241,96 @@ int main()
 
 	//composite holding block and close_slot
 	boost::shared_ptr<message_tcp::recv::composite> M_composite(new message_tcp::recv::composite());
-	M_recv = boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::block(
-		&block_call_back, test_block.size(), SC));
+	M_recv.reset(new message_tcp::recv::block(&block_call_back, test_block.size(), SC));
 	M_composite->add(M_recv);
-	M_recv = boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::close_slot(
-		&close_slot_call_back));
+	M_recv.reset(new message_tcp::recv::close_slot(&close_slot_call_back));
 	M_composite->add(M_recv);
-	M_send = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::block(
-		test_block, SC));
+	M_send.reset(new message_tcp::send::block(test_block, SC));
 	append_garbage(M_send->buf);
 	if(M_composite->recv(M_send->buf) != message_tcp::recv::complete){
 		LOG; ++fail;
 	}
-	M_send = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::close_slot(
-		test_slot_num));
+	M_send.reset(new message_tcp::send::close_slot(test_slot_num));
 	append_garbage(M_send->buf);
 	if(M_composite->recv(M_send->buf) != message_tcp::recv::complete){
 		LOG; ++fail;
 	}
 
 	//error
-	M_recv = boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::error(
-		&error_call_back));
-	M_send = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error());
+	M_recv.reset(new message_tcp::recv::error(&error_call_back));
+	M_send.reset(new message_tcp::send::error());
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
 		LOG; ++fail;
 	}
 
 	//have_file_block
-	M_recv = boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::have_file_block(
-		&have_call_back, test_slot_num, test_block_count));
-	M_send = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::have_file_block(
-		test_slot_num, test_block_num, test_block_count));
+	M_recv.reset(new message_tcp::recv::have_file_block(&have_call_back,
+		test_slot_num, test_block_count));
+	M_send.reset(new message_tcp::send::have_file_block(test_slot_num,
+		test_block_num, test_block_count));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
 		LOG; ++fail;
 	}
 
 	//have_hash_tree_block
-	M_recv = boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::have_hash_tree_block(
-		&have_call_back, test_slot_num, test_block_count));
-	M_send = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::have_hash_tree_block(
-		test_slot_num, test_block_num, test_block_count));
+	M_recv.reset(new message_tcp::recv::have_hash_tree_block(&have_call_back,
+		test_slot_num, test_block_count));
+	M_send.reset(new message_tcp::send::have_hash_tree_block(test_slot_num,
+		test_block_num, test_block_count));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
 		LOG; ++fail;
 	}
 
 	//initial
-	M_recv = boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::initial(
-		&initial_call_back));
-	M_send = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::initial(
-		test_ID));
+	M_recv.reset(new message_tcp::recv::initial(&initial_call_back));
+	M_send.reset(new message_tcp::send::initial(test_ID));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
 		LOG; ++fail;
 	}
 
 	//key_exchange_p_rA
-	M_recv = boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::key_exchange_p_rA(
-		&key_exchange_p_rA_call_back));
-	M_send = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::key_exchange_p_rA(
-		test_p_rA));
+	M_recv.reset(new message_tcp::recv::key_exchange_p_rA(&key_exchange_p_rA_call_back));
+	M_send.reset(new message_tcp::send::key_exchange_p_rA(test_p_rA));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
 		LOG; ++fail;
 	}
 
 	//key_exchange_rB
-	M_recv = boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::key_exchange_rB(
-		&key_exchange_rB_call_back));
-	M_send = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::key_exchange_rB(
-		test_rB));
+	M_recv.reset(new message_tcp::recv::key_exchange_rB(&key_exchange_rB_call_back));
+	M_send.reset(new message_tcp::send::key_exchange_rB(test_rB));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
 		LOG; ++fail;
 	}
 
 	//request_file_block
-	M_recv = boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::request_file_block(
-		&request_call_back, test_slot_num, test_block_count));
-	M_send = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::request_file_block(
-		test_slot_num, test_block_num, test_block_count));
+	M_recv.reset(new message_tcp::recv::request_file_block(&request_call_back,
+		test_slot_num, test_block_count));
+	M_send.reset(new message_tcp::send::request_file_block(test_slot_num,
+		test_block_num, test_block_count));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
 		LOG; ++fail;
 	}
 
 	//request_hash_tree_block
-	M_recv = boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::request_hash_tree_block(
-		&request_call_back, test_slot_num, test_block_count));
-	M_send = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::request_hash_tree_block(
-		test_slot_num, test_block_num, test_block_count));
+	M_recv.reset(new message_tcp::recv::request_hash_tree_block(&request_call_back,
+		test_slot_num, test_block_count));
+	M_send.reset(new message_tcp::send::request_hash_tree_block(test_slot_num,
+		test_block_num, test_block_count));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
 		LOG; ++fail;
 	}
 
 	//request_slot
-	M_recv = boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::request_slot(
-		&request_slot_call_back));
-	M_send = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::request_slot(
-		test_hash_request_slot));
+	M_recv.reset(new message_tcp::recv::request_slot(&request_slot_call_back));
+	M_send.reset(new message_tcp::send::request_slot(test_hash_request_slot));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
 		LOG; ++fail;
@@ -352,43 +348,61 @@ int main()
 	test_hash_slot = SHA.hex();
 
 	//no bit_field
-	M_recv = boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::slot(
-		&slot_00_call_back, test_hash_slot));
-	M_send = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::slot(
-		test_slot_num, test_file_size, test_root_hash, test_tree_BF_empty, test_file_BF_empty));
+	M_recv.reset(new message_tcp::recv::slot(&slot_00_call_back, test_hash_slot));
+	M_send.reset(new message_tcp::send::slot(test_slot_num, test_file_size,
+		test_root_hash, test_tree_BF_empty, test_file_BF_empty));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
 		LOG; ++fail;
 	}
 
 	//file bit_field
-	M_recv = boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::slot(
-		&slot_01_call_back, test_hash_slot));
-	M_send = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::slot(
-		test_slot_num, test_file_size, test_root_hash, test_tree_BF_empty, test_file_BF));
+	M_recv.reset(new message_tcp::recv::slot(&slot_01_call_back, test_hash_slot));
+	M_send.reset(new message_tcp::send::slot(test_slot_num, test_file_size,
+		test_root_hash, test_tree_BF_empty, test_file_BF));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
 		LOG; ++fail;
 	}
 
 	//tree bit_field
-	M_recv = boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::slot(
-		&slot_10_call_back, test_hash_slot));
-	M_send = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::slot(
-		test_slot_num, test_file_size, test_root_hash, test_tree_BF, test_file_BF_empty));
+	M_recv.reset(new message_tcp::recv::slot(&slot_10_call_back, test_hash_slot));
+	M_send.reset(new message_tcp::send::slot(test_slot_num, test_file_size,
+		test_root_hash, test_tree_BF, test_file_BF_empty));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
 		LOG; ++fail;
 	}
 
 	//tree and file bit_field
-	M_recv = boost::shared_ptr<message_tcp::recv::base>(new message_tcp::recv::slot(
-		&slot_11_call_back, test_hash_slot));
-	M_send = boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::slot(
-		test_slot_num, test_file_size, test_root_hash, test_tree_BF, test_file_BF));
+	M_recv.reset(new message_tcp::recv::slot(&slot_11_call_back, test_hash_slot));
+	M_send.reset(new message_tcp::send::slot(test_slot_num, test_file_size,
+		test_root_hash, test_tree_BF, test_file_BF));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
 		LOG; ++fail;
+	}
+
+	//peer
+	std::set<net::endpoint> E = net::get_endpoint("127.0.0.1", "0");
+	assert(!E.empty());
+	test_ep.reset(new net::endpoint(*E.begin()));
+	M_recv.reset(new message_tcp::recv::peer(&peer_call_back));
+	M_send.reset(new message_tcp::send::peer(test_slot_num, *test_ep));
+	append_garbage(M_send->buf);
+	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
+		LOG; ++fail;
+	}
+	//test IPv6 only if host supports it
+	E = net::get_endpoint("::1", "0");
+	if(!E.empty()){
+		test_ep.reset(new net::endpoint(*E.begin()));
+		M_recv.reset(new message_tcp::recv::peer(&peer_call_back));
+		M_send.reset(new message_tcp::send::peer(test_slot_num, *test_ep));
+		append_garbage(M_send->buf);
+		if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
+			LOG; ++fail;
+		}
 	}
 
 	return fail;

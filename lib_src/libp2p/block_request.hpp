@@ -1,9 +1,3 @@
-/*
-The block_request class keeps track of what blocks we have and what blocks
-remote hosts have. It also can determine the rarest blocks to request.
-
-This class is threadsafe.
-*/
 #ifndef H_BLOCK_REQUEST
 #define H_BLOCK_REQUEST
 
@@ -20,6 +14,10 @@ This class is threadsafe.
 #include <queue>
 #include <set>
 
+/*
+The block_request class keeps track of what blocks we have and what blocks
+remote hosts have. It also can determine the rarest blocks to request.
+*/
 class block_request : private boost::noncopyable
 {
 public:
@@ -30,30 +28,27 @@ public:
 		Add block. Used when next_request was not involved in getting a block.
 		This function is used during hash check to mark what blocks we already
 		have.
-		Precondition: No hosts must be subscribed.
+		Precondition: No hosts are subscribed.
 	add_block_local (two parameters):
 		Add block from specific host.
 	add_block_local_all:
 		Adds all local blocks.
-		Postcondition: complete() = true, all requests cleared (so no rerequests
-			are done on timeout).
+		Postcondition: complete() = true, all requests cleared.
 	add_block_remote:
 		Add block that we know remote host has.
-	add_host_complete:
-		Add remote host that has all blocks.
-	add_host_incomplete:
-		Add remote host that has only some blocks.
 	approve_block:
 		Approve block for requesting. Blocks that aren't approved won't be
 		requested.
+	approve_block_all:
+		Approve all blocks for requesting.
 	bytes:
 		Returns size of bit_field. (bytes)
 	complete:
 		Returns true if we have all blocks.
-	force_complete:
-		Sets block request to indicate that we have all blocks.
 	have_block:
 		Returns true if we have specified block.
+	is_approved:
+		Returns true if the block has been approved to be requested.
 	next_request:
 		Returns true and sets block to next block to request. Or returns false if
 		host not yet added or no blocks to request from host.
@@ -74,7 +69,8 @@ public:
 	bool next_request(const int connection_ID, boost::uint64_t & block);
 	unsigned remote_host_count();
 
-	/* Incoming_Slot Related
+	/* Incoming Slot
+	Slots the remote host has opened with us.
 	incoming_count:
 		Number of hosts we're uploading file to.
 	incoming_subscribe:
@@ -97,7 +93,8 @@ public:
 	void incoming_unsubscribe(const int connection_ID);
 	bool next_have(const int connection_ID, boost::uint64_t & block);
 
-	/* Outgoing_Slot Related
+	/* Outgoing Slot
+	Slots we have opened with the remote host.
 	outgoing_count:
 		Number of hosts we're downloading file from.
 	outgoing_subscribe:
@@ -112,7 +109,7 @@ public:
 	void outgoing_unsubscribe(const int connection_ID);
 
 private:
-	//locks access to all data members
+	//object set up as a monitor, lock used for all public functions
 	boost::mutex Mutex;
 
 	//number of blocks (bits in the bit_fields)
@@ -142,7 +139,7 @@ private:
 	*/
 	std::map<boost::uint64_t, std::set<int> > request;
 
-	//connection_ID associated with bitset representing blocks remote host has
+	//connection_ID associated with bit_field representing blocks remote host has
 	std::map<int, bit_field> remote;
 
 	class have_info
