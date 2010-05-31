@@ -149,11 +149,11 @@ unsigned transfer::incoming_count()
 }
 
 transfer::local_BF transfer::incoming_subscribe(const int connection_ID,
-	const boost::function<void(const int)> trigger_tick)
+	const net::endpoint & ep, const boost::function<void(const int)> trigger_tick)
 {
 	local_BF tmp;
-	tmp.tree_BF = Hash_Tree_Block.incoming_subscribe(connection_ID, trigger_tick);
-	tmp.file_BF = File_Block.incoming_subscribe(connection_ID, trigger_tick);
+	tmp.tree_BF = Hash_Tree_Block.incoming_subscribe(connection_ID, ep, trigger_tick);
+	tmp.file_BF = File_Block.incoming_subscribe(connection_ID, ep, trigger_tick);
 	return tmp;
 }
 

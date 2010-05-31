@@ -298,8 +298,9 @@ bool slot_manager::recv_request_slot(const std::string & hash)
 	}
 
 	//bit_fields for tree and file
+	assert(remote_listen);
 	transfer::local_BF LBF = slot_iter->get_transfer()->incoming_subscribe(
-		Exchange.connection_ID, trigger_tick);
+		Exchange.connection_ID, *remote_listen, trigger_tick);
 
 	//file size
 	boost::uint64_t file_size = slot_iter->get_transfer()->file_size();
@@ -590,6 +591,11 @@ void slot_manager::sent_block()
 {
 	--incoming_pipeline_size;
 	assert(incoming_pipeline_size < protocol_tcp::max_block_pipeline);
+}
+
+void slot_manager::set_remote_listen(const net::endpoint & ep)
+{
+	remote_listen.reset(new net::endpoint(ep));
 }
 
 void slot_manager::tick()

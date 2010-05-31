@@ -53,9 +53,13 @@ bool have_call_back(const unsigned char slot_num,
 }
 
 const std::string test_ID("0123456789012345678901234567890123456789");
-bool initial_call_back(const std::string & ID)
+const std::string test_port("1234");
+bool initial_call_back(const std::string & remote_ID, const std::string & port)
 {
-	if(ID != test_ID){
+	if(remote_ID != test_ID){
+		LOG; ++fail;
+	}
+	if(port != test_port){
 		LOG; ++fail;
 	}
 	return true;
@@ -286,7 +290,7 @@ int main()
 
 	//initial
 	M_recv.reset(new message_tcp::recv::initial(&initial_call_back));
-	M_send.reset(new message_tcp::send::initial(test_ID));
+	M_send.reset(new message_tcp::send::initial(test_ID, test_port));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
 		LOG; ++fail;

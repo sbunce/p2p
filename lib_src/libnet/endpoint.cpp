@@ -57,9 +57,11 @@ std::string net::endpoint::port() const
 std::string net::endpoint::port_bin() const
 {
 	if(AI->ai.ai_addr->sa_family == AF_INET){
-		return convert::int_to_bin(reinterpret_cast<sockaddr_in *>(AI->ai.ai_addr)->sin_port);
+		return std::string(reinterpret_cast<const char *>(
+			&reinterpret_cast<sockaddr_in *>(AI->ai.ai_addr)->sin_port), 2);
 	}else if(AI->ai.ai_addr->sa_family == AF_INET6){
-		return convert::int_to_bin(reinterpret_cast<sockaddr_in6 *>(AI->ai.ai_addr)->sin6_port);
+		return std::string(reinterpret_cast<const char *>(
+			&reinterpret_cast<sockaddr_in6 *>(AI->ai.ai_addr)->sin6_port), 2);
 	}else{
 		LOG << "unknown address family";
 		exit(1);
@@ -135,8 +137,8 @@ std::set<net::endpoint> net::get_endpoint(const std::string & host,
 	return E;
 }
 
-boost::optional<net::endpoint> net::bin_to_endpoint(
-	const std::string & addr, const std::string & port)
+boost::optional<net::endpoint> net::bin_to_endpoint(const std::string & addr,
+	const std::string & port)
 {
 	net::init Init;
 	assert(addr.size() == 4 || addr.size() == 16);
@@ -155,14 +157,14 @@ boost::optional<net::endpoint> net::bin_to_endpoint(
 		assert(addr.size() == 4);
 		reinterpret_cast<sockaddr_in *>(ep->AI->ai.ai_addr)->sin_addr.s_addr
 			= convert::bin_to_int<boost::uint32_t>(addr);
-		reinterpret_cast<sockaddr_in *>(ep->AI->ai.ai_addr)->sin_port
-			= convert::bin_to_int<boost::uint16_t>(port);
+		std::memcpy(reinterpret_cast<void *>(&reinterpret_cast<sockaddr_in *>(ep->AI->ai.ai_addr)->sin_port),
+			reinterpret_cast<const void *>(port.data()), 2);
 	}else if(ep->AI->ai.ai_addr->sa_family == AF_INET6){
 		assert(addr.size() == 16);
 		std::memcpy(reinterpret_cast<sockaddr_in6 *>(ep->AI->ai.ai_addr)->sin6_addr.s6_addr,
 			addr.data(), addr.size());
-		reinterpret_cast<sockaddr_in6 *>(ep->AI->ai.ai_addr)->sin6_port
-			= convert::bin_to_int<boost::uint16_t>(port);
+		std::memcpy(reinterpret_cast<void *>(&reinterpret_cast<sockaddr_in6 *>(ep->AI->ai.ai_addr)->sin6_port),
+			reinterpret_cast<const void *>(port.data()), 2);
 	}else{
 		LOG << "unknown address family";
 		exit(1);

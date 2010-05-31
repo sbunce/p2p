@@ -116,7 +116,7 @@ public:
 	*/
 	void check();
 	bool complete();
-	local_BF incoming_subscribe(const int connection_ID,
+	local_BF incoming_subscribe(const int connection_ID, const net::endpoint & ep,
 		const boost::function<void(const int)> trigger_tick);
 	void incoming_unsubscribe(const int connection_ID);
 	void outgoing_subscribe(const int connection_ID, const bit_field & tree_BF,

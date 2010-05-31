@@ -210,8 +210,10 @@ unsigned block_request::incoming_count()
 }
 
 bit_field block_request::incoming_subscribe(const int connection_ID,
-	const boost::function<void(const int)> trigger_tick)
+	const net::endpoint & ep, const boost::function<void(const int)> trigger_tick)
 {
+//DEBUG, do something with ep
+
 	boost::mutex::scoped_lock lock(Mutex);
 	if(local.empty()){
 		return bit_field();

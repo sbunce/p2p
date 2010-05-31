@@ -32,14 +32,16 @@ public:
 	remove:
 		Remove incoming/outgoing slots with the specified hash. Cancel pending
 		slots with the specified hash.
-	resume:
-		When the peer_ID is received this function is called to resume downloads.
+	set_remote_listen:
+		When initial message is received this function is called to set the
+		endpoint we can contact remote host on.
 	tick:
 		Called after exchange done processing buffers. Does periodic tasks.
 	*/
 	void add(const std::string & hash);
 	bool empty();
 	void remove(const std::string & hash);
+	void set_remote_listen(const net::endpoint & ep);
 	void tick();
 
 private:
@@ -80,6 +82,12 @@ private:
 	unsigned open_slots;
 	std::set<std::string> Hash_Pending;
 	std::set<std::string> Hash_Opened;
+
+	/*
+	This is the endpoint the remote host can be contacted on. This is used for
+	sending peer messages. It is set by set_remote_listen().
+	*/
+	boost::scoped_ptr<net::endpoint> remote_listen;
 
 	/*
 	close_complete:

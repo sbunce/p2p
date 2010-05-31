@@ -125,7 +125,8 @@ private:
 class initial : public base
 {
 public:
-	typedef boost::function<bool (const std::string & ID)> handler;
+	typedef boost::function<bool (const std::string & remote_ID,
+		const std::string & port)> handler;
 	explicit initial(handler func_in);
 	virtual bool expect(const net::buffer & recv_buf);
 	virtual status recv(net::buffer & recv_buf);
@@ -281,7 +282,7 @@ public:
 class initial : public base
 {
 public:
-	explicit initial(const std::string & ID);
+	explicit initial(const std::string & ID, const std::string & port);
 };
 
 class key_exchange_p_rA : public base

@@ -6,6 +6,7 @@
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
 #include <logger.hpp>
+#include <net/net.hpp>
 
 //standard
 #include <algorithm>
@@ -87,6 +88,7 @@ public:
 	*/
 	unsigned incoming_count();
 	bit_field incoming_subscribe(const int connection_ID,
+		const net::endpoint & ep,
 		const boost::function<void(const int)> trigger_tick);
 	void incoming_unsubscribe(const int connection_ID);
 	boost::optional<boost::uint64_t> next_have(const int connection_ID);

@@ -44,6 +44,14 @@ private:
 	slot_manager Slot_Manager;
 
 	/*
+	The endpoint of the remote host.
+	Note: This is not the endpoint that we can connect to because the port is
+		randomly assigned by the remote host. The remote host will tell us the
+		correct port in the initial message.
+	*/
+	const net::endpoint remote_ep;
+
+	/*
 	recv_call_back:
 		Called by connection::recv_call_back, which is called by proactor.
 	send_call_back:
@@ -58,7 +66,7 @@ private:
 	send_initial:
 		Send initial message. Called after key exchange completed.
 	*/
-	bool recv_initial(const std::string & ID);
+	bool recv_initial(const std::string & remote_ID, const std::string & port);
 	void send_initial();
 };
 #endif
