@@ -53,12 +53,17 @@ bool have_call_back(const unsigned char slot_num,
 }
 
 const std::string test_ID("0123456789012345678901234567890123456789");
-const std::string test_port("1234");
-bool initial_call_back(const std::string & remote_ID, const std::string & port)
+bool initial_ID_call_back(const std::string & remote_ID)
 {
 	if(remote_ID != test_ID){
 		LOG; ++fail;
 	}
+	return true;
+}
+
+const std::string test_port("1234");
+bool initial_port_call_back(const std::string & port)
+{
 	if(port != test_port){
 		LOG; ++fail;
 	}
@@ -288,9 +293,17 @@ int main()
 		LOG; ++fail;
 	}
 
-	//initial
-	M_recv.reset(new message_tcp::recv::initial(&initial_call_back));
-	M_send.reset(new message_tcp::send::initial(test_ID, test_port));
+	//initial_ID
+	M_recv.reset(new message_tcp::recv::initial_ID(&initial_ID_call_back));
+	M_send.reset(new message_tcp::send::initial_ID(test_ID));
+	append_garbage(M_send->buf);
+	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
+		LOG; ++fail;
+	}
+
+	//initial_port
+	M_recv.reset(new message_tcp::recv::initial_port(&initial_port_call_back));
+	M_send.reset(new message_tcp::send::initial_port(test_port));
 	append_garbage(M_send->buf);
 	if(M_recv->recv(M_send->buf) != message_tcp::recv::complete){
 		LOG; ++fail;

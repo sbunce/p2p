@@ -61,12 +61,13 @@ private:
 	void send_call_back(net::proactor::connection_info & CI);
 
 	/*
-	recv_initial:
-		Call back for receiving initial message.
-	send_initial:
-		Send initial message. Called after key exchange completed.
+	recv_initial_ID:
+		Called when we receive remote_ID.
+	recv_initial_port:
+		Called when we receive port.
+		Note: Only called on incoming connections.
 	*/
-	bool recv_initial(const std::string & remote_ID, const std::string & port);
-	void send_initial();
+	bool recv_initial_ID(const std::string & remote_ID);
+	bool recv_initial_port(const std::string & port);
 };
 #endif

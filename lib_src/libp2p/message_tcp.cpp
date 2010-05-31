@@ -250,8 +250,8 @@ message_tcp::recv::status message_tcp::recv::have_hash_tree_block::recv(net::buf
 }
 //END recv::have_hash_tree_block
 
-//BEGIN recv::initial
-message_tcp::recv::initial::initial(
+//BEGIN recv::initial_ID
+message_tcp::recv::initial_ID::initial_ID(
 	handler func_in
 ):
 	func(func_in)
@@ -259,24 +259,21 @@ message_tcp::recv::initial::initial(
 
 }
 
-bool message_tcp::recv::initial::expect(const net::buffer & recv_buf)
+bool message_tcp::recv::initial_ID::expect(const net::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
 	//initial message random, no way to verify we expect
 	return true;
 }
 
-message_tcp::recv::status message_tcp::recv::initial::recv(net::buffer & recv_buf)
+message_tcp::recv::status message_tcp::recv::initial_ID::recv(net::buffer & recv_buf)
 {
 	assert(!recv_buf.empty());
-	if(recv_buf.size() >= protocol_tcp::initial_size){
+	if(recv_buf.size() >= protocol_tcp::initial_ID_size){
 		std::string ID = convert::bin_to_hex(std::string(
 			reinterpret_cast<const char *>(recv_buf.data()), SHA1::bin_size));
-		std::string port = boost::lexical_cast<std::string>(
-			convert::bin_to_int<boost::uint16_t>(std::string(
-			reinterpret_cast<const char *>(recv_buf.data())+SHA1::bin_size, 2)));
-		recv_buf.erase(0, protocol_tcp::initial_size);
-		if(func(ID, port)){
+		recv_buf.erase(0, protocol_tcp::initial_ID_size);
+		if(func(ID)){
 			return complete;
 		}else{
 			return blacklist;
@@ -284,7 +281,41 @@ message_tcp::recv::status message_tcp::recv::initial::recv(net::buffer & recv_bu
 	}
 	return incomplete;
 }
-//END recv::initial
+//END recv::initial_ID
+
+//BEGIN recv::initial_port
+message_tcp::recv::initial_port::initial_port(
+	handler func_in
+):
+	func(func_in)
+{
+
+}
+
+bool message_tcp::recv::initial_port::expect(const net::buffer & recv_buf)
+{
+	assert(!recv_buf.empty());
+	//initial message random, no way to verify we expect
+	return true;
+}
+
+message_tcp::recv::status message_tcp::recv::initial_port::recv(net::buffer & recv_buf)
+{
+	assert(!recv_buf.empty());
+	if(recv_buf.size() >= protocol_tcp::initial_port_size){
+		std::string port = boost::lexical_cast<std::string>(
+			convert::bin_to_int<boost::uint16_t>(std::string(
+			reinterpret_cast<const char *>(recv_buf.data()), 2)));
+		recv_buf.erase(0, protocol_tcp::initial_port_size);
+		if(func(port)){
+			return complete;
+		}else{
+			return blacklist;
+		}
+	}
+	return incomplete;
+}
+//END recv::initial_ID
 
 //BEGIN recv::key_exchange_p_rA
 message_tcp::recv::key_exchange_p_rA::key_exchange_p_rA(
@@ -663,21 +694,25 @@ message_tcp::send::have_hash_tree_block::have_hash_tree_block(
 }
 //END send::have_hash_tree_block
 
-//BEGIN send::initial
-message_tcp::send::initial::initial(const std::string & ID, const std::string & port)
+//BEGIN send::initial_ID
+message_tcp::send::initial_ID::initial_ID(const std::string & ID)
 {
 	assert(ID.size() == SHA1::hex_size);
-	boost::uint16_t port_int;
+	buf.append(convert::hex_to_bin(ID));
+}
+//END send::initial_ID
+
+//BEGIN send::initial_port
+message_tcp::send::initial_port::initial_port(const std::string & port)
+{
 	try{
-		port_int = boost::lexical_cast<boost::uint16_t>(port);
+		buf.append(convert::int_to_bin(boost::lexical_cast<boost::uint16_t>(port)));
 	}catch(const std::exception & e){
 		LOG << e.what();
 		exit(1);
 	}
-	buf.append(convert::hex_to_bin(ID))
-		.append(convert::int_to_bin(port_int));
 }
-//END send::initial
+//END send::initial_port
 
 //BEGIN send::key_exchange_p_rA
 message_tcp::send::key_exchange_p_rA::key_exchange_p_rA(const net::buffer & buf_in)

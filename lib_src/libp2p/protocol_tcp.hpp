@@ -13,7 +13,8 @@ const unsigned hash_block_size = 512;  //number of hashes in hash block
 const unsigned file_block_size = hash_block_size * SHA1::bin_size;
 
 //commands and message sizes
-const unsigned initial_size = SHA1::bin_size + 2;
+const unsigned initial_ID_size = SHA1::bin_size;
+const unsigned initial_port_size = 2;
 const unsigned char error = 0;
 const unsigned error_size = 1;
 const unsigned char request_slot = 1;

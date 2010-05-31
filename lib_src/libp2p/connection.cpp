@@ -11,7 +11,34 @@ connection::connection(
 {
 	CI.recv_call_back = boost::bind(&connection::recv_call_back, this, _1);
 	CI.send_call_back = boost::bind(&connection::send_call_back, this, _1);
-	send_initial();
+
+	//send initial messages
+	Exchange.send(boost::shared_ptr<message_tcp::send::base>(
+		new message_tcp::send::initial_ID(db::table::prefs::get_ID())));
+	if(CI.direction == net::outgoing){
+		/*
+		The remote host will only see our randomly bound port when we connect to
+		it. We need to tell it what port it can contact us on.
+		*/
+		Exchange.send(boost::shared_ptr<message_tcp::send::base>(
+			new message_tcp::send::initial_port(db::table::prefs::get_port())));
+	}
+
+	//expect initial messages
+	if(CI.direction == net::incoming){
+		Exchange.expect_response(boost::shared_ptr<message_tcp::recv::base>(
+			new message_tcp::recv::initial_ID(boost::bind(&connection::recv_initial_ID,
+			this, _1))));
+		//remote host will tell us what port we can contact it on
+		Exchange.expect_response(boost::shared_ptr<message_tcp::recv::base>(
+			new message_tcp::recv::initial_port(boost::bind(&connection::recv_initial_port,
+			this, _1))));
+	}else{
+		Exchange.expect_response(boost::shared_ptr<message_tcp::recv::base>(
+			new message_tcp::recv::initial_ID(boost::bind(&connection::recv_initial_ID,
+			this, _1))));
+		Slot_Manager.set_remote_listen(CI.ep);
+	}
 }
 
 void connection::add(const std::string & hash)
@@ -32,20 +59,19 @@ void connection::recv_call_back(net::proactor::connection_info & CI)
 	Slot_Manager.tick();
 }
 
-bool connection::recv_initial(const std::string & remote_ID,
-	const std::string & port)
+bool connection::recv_initial_ID(const std::string & remote_ID)
 {
 //DEBUG, need to make sure ID is what we expected
-	LOG << convert::abbr(remote_ID) << " " << port;
+	LOG << convert::abbr(remote_ID);
+	return true;
+}
 
-	boost::uint16_t port_int = boost::lexical_cast<boost::uint16_t>(port);
-LOG << port_int;
-LOG << convert::bin_to_int<boost::uint16_t>(convert::int_to_bin(port_int));
-
+bool connection::recv_initial_port(const std::string & port)
+{
+	LOG << port;
 	boost::optional<net::endpoint> remote_listen = net::bin_to_endpoint(remote_ep.IP_bin(),
-		convert::int_to_bin(port_int));
+		convert::int_to_bin(boost::lexical_cast<boost::uint16_t>(port)));
 	assert(remote_listen);
-LOG << remote_listen->IP() << " " << remote_listen->port();
 	assert(remote_listen->port() == port);
 	Slot_Manager.set_remote_listen(*remote_listen);
 	return true;
@@ -61,16 +87,6 @@ void connection::send_call_back(net::proactor::connection_info & CI)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	Exchange.send_call_back(CI);
-}
-
-void connection::send_initial()
-{
-	std::string ID = db::table::prefs::get_ID();
-	Exchange.send(boost::shared_ptr<message_tcp::send::base>(
-		new message_tcp::send::initial(ID, db::table::prefs::get_port())));
-	Exchange.expect_response(boost::shared_ptr<message_tcp::recv::base>(
-		new message_tcp::recv::initial(boost::bind(&connection::recv_initial,
-		this, _1, _2))));
 }
 
 void connection::tick()

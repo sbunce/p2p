@@ -1,9 +1,9 @@
 Basic Info
 ==========
 
-The protocol is symmetric with the exception of the key exchange. Any message
-can go in either direction. All numbers are encoded in big-endian. The protocol
-is entirely binary.
+The protocol is symmetric with the exception of the key exchange and the initial
+messages. After that any message can go in either direction. All numbers are
+encoded in big-endian. The protocol is entirely binary.
 
 VLI (variable length integers) are used to save space. VLIs are used when we
 know the maximum value an integer must hold. VLIs make the protocol difficult
@@ -67,17 +67,36 @@ output of the PRNGs. The send PRNG of Host_A remains synchronized to the recv
 PRNG of Host_B and vise versa.
 
 
-Initial Message
+Initial Messages
 ================
 
-After key exchange this message is sent by both sides.
-	+---+---+---+---+---+
-	|     A     |   B   |
-	+---+---+---+---+---+
-	  0  ... 20  21  22
-A = node_ID, B = port
-note: A is the node_ID for the DHT.
-note: B is the port the remote host will accept TCP/UDP connections on.
+After key exchange the following messages are sent.
+
+---
+message 0: node ID
+desc: Sent by both sides.
+	+---+---+---+
+	|     A     |
+	+---+---+---+
+	  0  ...  20
+A = node ID
+note: A is node identifier for DHT. It should be persistent after program restarts.
+---
+
+---
+message 1: port
+desc: Sent only by host that initiated the connection. This is the TCP/UDP
+listen port.
+	+---+---+
+	|   A   |
+	+---+---+
+	  0   1
+A = port
+note: This is necessary because when host A connects to host B, host B will only
+see the randomly bound port on host A. Host A must tell host B what port it is
+listening on. Host A already knows what port to contact B on because it
+initiated connection.
+---
 
 Messages
 ========

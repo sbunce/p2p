@@ -122,12 +122,22 @@ private:
 	const boost::uint64_t tree_block_count;
 };
 
-class initial : public base
+class initial_ID : public base
 {
 public:
-	typedef boost::function<bool (const std::string & remote_ID,
-		const std::string & port)> handler;
-	explicit initial(handler func_in);
+	typedef boost::function<bool (const std::string & ID)> handler;
+	explicit initial_ID(handler func_in);
+	virtual bool expect(const net::buffer & recv_buf);
+	virtual status recv(net::buffer & recv_buf);
+private:
+	handler func;
+};
+
+class initial_port : public base
+{
+public:
+	typedef boost::function<bool (const std::string & port)> handler;
+	explicit initial_port(handler func_in);
 	virtual bool expect(const net::buffer & recv_buf);
 	virtual status recv(net::buffer & recv_buf);
 private:
@@ -279,10 +289,16 @@ public:
 		const boost::uint64_t block_num, const boost::uint64_t tree_block_count);
 };
 
-class initial : public base
+class initial_ID : public base
 {
 public:
-	explicit initial(const std::string & ID, const std::string & port);
+	explicit initial_ID(const std::string & ID);
+};
+
+class initial_port : public base
+{
+public:
+	explicit initial_port(const std::string & port);
 };
 
 class key_exchange_p_rA : public base
