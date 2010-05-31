@@ -356,8 +356,7 @@ boost::shared_ptr<slot> share::next_slot(const std::string & hash)
 share::slot_iterator share::remove_slot(const std::string & hash)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
-	std::map<std::string, boost::shared_ptr<slot> >::iterator
-		S_iter = Slot.find(std::string(hash));
+	std::map<std::string, boost::shared_ptr<slot> >::iterator S_iter = Slot.find(hash);
 	if(S_iter == Slot.end()){
 		return end_slot();
 	}else{
@@ -375,8 +374,11 @@ share::slot_iterator share::remove_slot(const std::string & hash)
 			}
 		}
 		//remove path element
-		Path.erase(std::string(SI->path()));
-		_bytes -= SI->file_size();
+		Path.erase(SI->path());
+		boost::optional<boost::uint64_t> file_size = SI->file_size();
+		if(file_size){
+			_bytes -= *file_size;
+		}
 		--_files;
 		return SI;
 	}

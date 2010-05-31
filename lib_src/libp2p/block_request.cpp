@@ -134,17 +134,17 @@ bool block_request::complete()
 	return local.empty();
 }
 
-bool block_request::find_next_rarest(const int connection_ID, boost::uint64_t & block)
+boost::optional<boost::uint64_t> block_request::find_next_rarest(const int connection_ID)
 {
 	//find bitset for remote host
 	std::map<int, bit_field>::iterator remote_iter = remote.find(connection_ID);
 	if(remote_iter == remote.end()){
 		//we are waiting on a bit_field from the remote host most likely
-		return false;
+		return boost::optional<boost::uint64_t>();
 	}
 	boost::uint64_t rare_block;           //most rare block
 	boost::uint64_t rare_block_hosts = 0; //number of hosts that have rare_block
-	for(block = 0; block < local.size(); ++block){
+	for(boost::uint64_t block = 0; block < local.size(); ++block){
 		if(local[block]){
 			//we already have this block
 			continue;
@@ -171,7 +171,7 @@ bool block_request::find_next_rarest(const int connection_ID, boost::uint64_t & 
 			//block with maximum rarity found
 			if(request.find(block) == request.end()){
 				//block not already requested
-				return true;
+				return block;
 			}
 		}else if(hosts < rare_block_hosts || rare_block_hosts == 0){
 			//a new most-rare block found
@@ -184,11 +184,10 @@ bool block_request::find_next_rarest(const int connection_ID, boost::uint64_t & 
 	}
 	if(rare_block_hosts == 0){
 		//host has no blocks we need
-		return false;
+		return boost::optional<boost::uint64_t>();
 	}else{
 		//a block was found that we need
-		block = rare_block;
-		return true;
+		return rare_block;
 	}
 }
 
@@ -210,18 +209,18 @@ unsigned block_request::incoming_count()
 	return have.size();
 }
 
-void block_request::incoming_subscribe(const int connection_ID,
-	const boost::function<void(const int)> trigger_tick, bit_field & BF)
+bit_field block_request::incoming_subscribe(const int connection_ID,
+	const boost::function<void(const int)> trigger_tick)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	if(local.empty()){
-		BF.clear();
+		return bit_field();
 	}else{
 		std::pair<std::map<int, have_info>::iterator, bool>
 			ret = have.insert(std::make_pair(connection_ID, have_info()));
 		assert(ret.second);
 		ret.first->second.trigger_tick = trigger_tick;
-		BF = local;
+		return local;
 	}
 }
 
@@ -248,7 +247,7 @@ unsigned block_request::outgoing_count()
 }
 
 void block_request::outgoing_subscribe(const int connection_ID,
-	bit_field & BF)
+	const bit_field & BF)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	assert(BF.empty() || BF.size() == block_count);
@@ -274,44 +273,43 @@ void block_request::outgoing_unsubscribe(const int connection_ID)
 	}
 }
 
-bool block_request::next_have(const int connection_ID, boost::uint64_t & block)
+boost::optional<boost::uint64_t> block_request::next_have(const int connection_ID)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	std::map<int, have_info>::iterator iter = have.find(connection_ID);
 	if(iter == have.end()){
-		return false;
+		return boost::optional<boost::uint64_t>();
 	}else{
 		if(iter->second.block.empty()){
-			return false;
+			return boost::optional<boost::uint64_t>();
 		}else{
-			block = iter->second.block.front();
+			boost::uint64_t block = iter->second.block.front();
 			iter->second.block.pop();
-			return true;
+			return block;
 		}
 	}
 }
 
-bool block_request::next_request(const int connection_ID, boost::uint64_t & block)
+boost::optional<boost::uint64_t> block_request::next_request(const int connection_ID)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	if(local.empty()){
 		//complete
-		return false;
+		return boost::optional<boost::uint64_t>();
 	}
 	/*
 	At this point we know there are no timed out requests to the host and there
 	are no re-requests to do. We move on to checking for the next rarest block to
 	request from the host.
 	*/
-	if(find_next_rarest(connection_ID, block)){
+	if(boost::optional<boost::uint64_t> block = find_next_rarest(connection_ID)){
 		//there is a new block to request
 		std::pair<std::map<boost::uint64_t, std::set<int> >::iterator, bool>
-			r_ret = request.insert(std::make_pair(block, std::set<int>()));
+			r_ret = request.insert(std::make_pair(*block, std::set<int>()));
 		assert(r_ret.second);
-		std::pair<std::set<int>::iterator, bool>
-			c_ret = r_ret.first->second.insert(connection_ID);
+		std::pair<std::set<int>::iterator, bool> c_ret = r_ret.first->second.insert(connection_ID);
 		assert(c_ret.second);
-		return true;
+		return block;
 	}else{
 		/*
 		No new blocks to request. If this connection has no requests pending then
@@ -325,7 +323,7 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 		{
 			if(it_cur->second.find(connection_ID) != it_cur->second.end()){
 				//pending request found, make no duplicate request
-				return false;
+				return boost::optional<boost::uint64_t>();
 			}
 		}
 
@@ -340,9 +338,8 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 			if(it_cur->second.size() == 1){
 				//least requested possible, check if remote host has it
 				if(remote_iter->second.empty() || remote_iter->second[it_cur->first] == true){
-					block = it_cur->first;
 					it_cur->second.insert(connection_ID);
-					return true;
+					return it_cur->first;
 				}
 			}else if(it_cur->second.size() < min_request){
 				//new least requested block found, check if remote host has it
@@ -353,14 +350,12 @@ bool block_request::next_request(const int connection_ID, boost::uint64_t & bloc
 			}
 		}
 		if(min_request != std::numeric_limits<unsigned>::max()){
-			block = rare_block;
-			std::map<boost::uint64_t, std::set<int> >::iterator
-				iter = request.find(rare_block);
+			std::map<boost::uint64_t, std::set<int> >::iterator iter = request.find(rare_block);
 			assert(iter != request.end());
 			iter->second.insert(connection_ID);
-			return true;
+			return rare_block;
 		}else{
-			return false;
+			return boost::optional<boost::uint64_t>();
 		}
 	}
 }

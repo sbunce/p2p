@@ -23,35 +23,48 @@ public:
 		protocol_violated //host violated protocol and should be blacklisted
 	};
 
+	class next_request
+	{
+	public:
+		next_request(
+			const boost::uint64_t block_num_in,
+			const unsigned block_size_in
+		);
+		next_request(const next_request & NR);
+		boost::uint64_t block_num;
+		unsigned block_size;
+	};
+
+	class local_BF
+	{
+	public:
+		bit_field tree_BF;
+		bit_field file_BF;
+	};
+
 	/* Hash Tree
 	next_have_file:
-		Returns true and sets block to block which needs to be sent in
-		have_file_block message. Returns false if no have_file_block message needs
-		to be sent.
+		Returns info to be sent in have_hash_tree_block message.
 	next_request_hash_tree:
-		Returns true and sets block_num, block_size, and tree_block_count if a
-		hash tree block needs to be requested.
+		Returns info to be send in request_hash_tree_block message.
 	read_tree_block:
-		Reads block from hash tree and constructs block message. Returns good if
-		block message created, bad if read failed, protocol_violated if tried to
-		read a block we don't have.
+		Read a block from the hash tree.
+		Note: The message is only valid if status = good.
 	recv_have_hash_tree_block:
 		Called when we get a have_hash_tree_block message.
 	root_hash:
-		Sets RH to root hash needed for slot message. Returns true if RH can be
-		set, false if RH cannot be set.
+		Returns the root hash of the hash tree.
 	tree_block_count:
 		Returns number of blocks in hash tree.
 	write_hash_tree_block:
 		Write block to hash tree.
 	*/
-	bool next_have_tree(const int connection_ID, boost::uint64_t & block_num);
-	bool next_request_tree(const int connection_ID, boost::uint64_t & block_num,
-		unsigned & block_size);
-	status read_tree_block(boost::shared_ptr<message_tcp::send::base> & M,
+	boost::optional<boost::uint64_t> next_have_tree(const int connection_ID);
+	boost::optional<next_request> next_request_tree(const int connection_ID);
+	std::pair<boost::shared_ptr<message_tcp::send::base>, status> read_tree_block(
 		const boost::uint64_t block_num);
 	void recv_have_hash_tree_block(const int connection_ID, const boost::uint64_t block_num);
-	bool root_hash(std::string & RH);
+	boost::optional<std::string> root_hash();
 	boost::uint64_t tree_block_count();
 	status write_tree_block(const int connection_ID, const boost::uint64_t block_num,
 		const net::buffer & buf);
@@ -62,29 +75,23 @@ public:
 	file_size:
 		Returns file size.
 	next_have_file:
-		Returns true and sets block to block which needs to be sent in
-		have_file_block message. Returns false if no have_file_block message needs
-		to be sent.
+		Returns info to be send in request_file_block message.
 	next_request_file:
-		Returns true and sets block_num, block-size, and file_block_count if a
-		file block needs to be requested.
+		Returns info to be send in request_file_block message.
 	read_file_block:
-		Reads block from fiel and constructs block message. Returns good if block
-		message created, bad if read failed, protocol_violated if tried to read a
-		block we don't have.
+		Read a block from file.
+		Note: The message is only valid if status = good.
 	recv_have_file_block:
 		Called when we get a have_file_block message.
 	write_file_block:
-		Hash checks file block and writes it to the file if it is good. Returns
-		good if block good and written to file, bad if error writing to file,
-		protocol_violated if block failed hash check.
+		Write block to file.
+		Note: This function hash checks the block.
 	*/
 	boost::uint64_t file_block_count();
 	boost::uint64_t file_size();
-	bool next_have_file(const int connection_ID, boost::uint64_t & block_num);
-	bool next_request_file(const int connection_ID, boost::uint64_t & block_num,
-		unsigned & block_size);
-	status read_file_block(boost::shared_ptr<message_tcp::send::base> & M,
+	boost::optional<boost::uint64_t> next_have_file(const int connection_ID);
+	boost::optional<next_request> next_request_file(const int connection_ID);
+	std::pair<boost::shared_ptr<message_tcp::send::base>, status> read_file_block(
 		const boost::uint64_t block_num);
 	void recv_have_file_block(const int connection_ID, const boost::uint64_t block_num);
 	status write_file_block(const int connection_ID, const boost::uint64_t block_num,
@@ -96,8 +103,6 @@ public:
 		transfers.
 	complete:
 		Returns true if hash tree and file are complete.
-	hash:
-		Returns hash.
 	incoming_subscribe:
 		Subscribe to changes to hash tree and file.
 	incoming_unsubscribe:
@@ -111,13 +116,11 @@ public:
 	*/
 	void check();
 	bool complete();
-	const std::string & hash();
-	void incoming_subscribe(const int connection_ID,
-		const boost::function<void(const int)> trigger_tick, bit_field & tree_BF,
-		bit_field & file_BF);
+	local_BF incoming_subscribe(const int connection_ID,
+		const boost::function<void(const int)> trigger_tick);
 	void incoming_unsubscribe(const int connection_ID);
-	void outgoing_subscribe(const int connection_ID, bit_field & tree_BF,
-		bit_field & file_BF);
+	void outgoing_subscribe(const int connection_ID, const bit_field & tree_BF,
+		const bit_field & file_BF);
 	void outgoing_unsubscribe(const int connection_ID);
 	unsigned percent_complete();
 
@@ -130,7 +133,7 @@ public:
 		Returns upload speed (bytes/second).
 	*/
 	unsigned download_speed();
-	boost::shared_ptr<net::speed_calc> download_speed_calc();
+	const boost::shared_ptr<net::speed_calc> & download_speed_calc();
 	unsigned upload_speed();
 
 	/* Upload/Download Counts

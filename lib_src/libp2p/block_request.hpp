@@ -66,35 +66,32 @@ public:
 	bool complete();
 	bool have_block(const boost::uint64_t block);
 	bool is_approved(const boost::uint64_t block);
-	bool next_request(const int connection_ID, boost::uint64_t & block);
+	boost::optional<boost::uint64_t> next_request(const int connection_ID);
 	unsigned remote_host_count();
 
-	/* Incoming Slot
-	Slots the remote host has opened with us.
+	/* Incoming Slot (slots the remote host has opened with us)
 	incoming_count:
 		Number of hosts we're uploading file to.
 	incoming_subscribe:
-		Subscribes a Incoming_Slot to local bit_field updates. BF is set to our
-		current local bit_field. The trigger_tick function is used to call the
-		tick() function on the connection when there's a have_* message to send.
-		This is called when constructing a Incoming_Slot.
+		Subscribes a Incoming_Slot to local bit_field updates. The local bit_field
+		is returned. The trigger_tick function is used to call the tick() function
+		on the connection when there's a have_* message to send. This is called
+		when constructing a Incoming_Slot.
 	incoming_unsubscribe:
 		Unsubscribes a Incoming_Slot to bit_field updates. This is called when
 		a Incoming_Slot is removed.
 		Postcondition: We will not keep track of updates and we will not call
 			trigger for this connection_ID.
 	next_have:
-		Returns true and sets block to block we need to send in a have_* message.
-		Returns false if no have messages to send.
+		Returns block that needs to be sent in have_* message.
 	*/
 	unsigned incoming_count();
-	void incoming_subscribe(const int connection_ID,
-		const boost::function<void(const int)> trigger_tick, bit_field & BF);
+	bit_field incoming_subscribe(const int connection_ID,
+		const boost::function<void(const int)> trigger_tick);
 	void incoming_unsubscribe(const int connection_ID);
-	bool next_have(const int connection_ID, boost::uint64_t & block);
+	boost::optional<boost::uint64_t> next_have(const int connection_ID);
 
-	/* Outgoing Slot
-	Slots we have opened with the remote host.
+	/* Outgoing Slot (slots we have opened with the remote host)
 	outgoing_count:
 		Number of hosts we're downloading file from.
 	outgoing_subscribe:
@@ -105,7 +102,7 @@ public:
 		requests. This is called when a Outgoing_Slot is removed.
 	*/
 	unsigned outgoing_count();
-	void outgoing_subscribe(const int connection_ID, bit_field & BF);
+	void outgoing_subscribe(const int connection_ID, const bit_field & BF);
 	void outgoing_unsubscribe(const int connection_ID);
 
 private:
@@ -160,10 +157,8 @@ private:
 
 	/*
 	find_next_rarest:
-		Finds the next rarest block to request from the host with the specified
-		connection_ID. This is called by next_request() after checking for timed out
-		requests to re-request.
+		Returns next rarest block we need to request.
 	*/
-	bool find_next_rarest(const int connection_ID, boost::uint64_t & block);
+	boost::optional<boost::uint64_t> find_next_rarest(const int connection_ID);
 };
 #endif

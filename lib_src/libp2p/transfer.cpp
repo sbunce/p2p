@@ -1,5 +1,24 @@
 #include "transfer.hpp"
 
+//BEGIN next_request
+transfer::next_request::next_request(
+	const boost::uint64_t block_num_in,
+	const unsigned block_size_in
+):
+	block_num(block_num_in),
+	block_size(block_size_in)
+{
+
+}
+
+transfer::next_request::next_request(const next_request & NR):
+	block_num(NR.block_num),
+	block_size(NR.block_size)
+{
+
+}
+//END next_request
+
 transfer::transfer(const file_info & FI):
 	Hash_Tree(FI),
 	File(FI),
@@ -109,7 +128,7 @@ unsigned transfer::download_speed()
 	return Download_Speed->speed();
 }
 
-boost::shared_ptr<net::speed_calc> transfer::download_speed_calc()
+const boost::shared_ptr<net::speed_calc> & transfer::download_speed_calc()
 {
 	return Download_Speed;
 }
@@ -124,22 +143,18 @@ boost::uint64_t transfer::file_size()
 	return Hash_Tree.file_size;
 }
 
-const std::string & transfer::hash()
-{
-	return Hash_Tree.hash;
-}
-
 unsigned transfer::incoming_count()
 {
 	return Hash_Tree_Block.incoming_count();
 }
 
-void transfer::incoming_subscribe(const int connection_ID,
-	const boost::function<void(const int)> trigger_tick, bit_field & tree_BF,
-	bit_field & file_BF)
+transfer::local_BF transfer::incoming_subscribe(const int connection_ID,
+	const boost::function<void(const int)> trigger_tick)
 {
-	Hash_Tree_Block.incoming_subscribe(connection_ID, trigger_tick, tree_BF);
-	File_Block.incoming_subscribe(connection_ID, trigger_tick, file_BF);
+	local_BF tmp;
+	tmp.tree_BF = Hash_Tree_Block.incoming_subscribe(connection_ID, trigger_tick);
+	tmp.file_BF = File_Block.incoming_subscribe(connection_ID, trigger_tick);
+	return tmp;
 }
 
 void transfer::incoming_unsubscribe(const int connection_ID)
@@ -153,8 +168,8 @@ unsigned transfer::outgoing_count()
 	return Hash_Tree_Block.outgoing_count();
 }
 
-void transfer::outgoing_subscribe(const int connection_ID, bit_field & tree_BF,
-	bit_field & file_BF)
+void transfer::outgoing_subscribe(const int connection_ID, const bit_field & tree_BF,
+	const bit_field & file_BF)
 {
 	Hash_Tree_Block.outgoing_subscribe(connection_ID, tree_BF);
 	File_Block.outgoing_subscribe(connection_ID, file_BF);
@@ -166,34 +181,32 @@ void transfer::outgoing_unsubscribe(const int connection_ID)
 	File_Block.outgoing_unsubscribe(connection_ID);
 }
 
-bool transfer::next_have_file(const int connection_ID, boost::uint64_t & block_num)
+boost::optional<boost::uint64_t> transfer::next_have_file(const int connection_ID)
 {
-	return File_Block.next_have(connection_ID, block_num);
+	return File_Block.next_have(connection_ID);
 }
 
-bool transfer::next_have_tree(const int connection_ID, boost::uint64_t & block_num)
+boost::optional<boost::uint64_t> transfer::next_have_tree(const int connection_ID)
 {
-	return Hash_Tree_Block.next_have(connection_ID, block_num);
+	return Hash_Tree_Block.next_have(connection_ID);
 }
 
-bool transfer::next_request_tree(const int connection_ID,
-	boost::uint64_t & block_num, unsigned & block_size)
+boost::optional<transfer::next_request> transfer::next_request_tree(const int connection_ID)
 {
-	if(Hash_Tree_Block.next_request(connection_ID, block_num)){
-		block_size = Hash_Tree.block_size(block_num);
-		return true;
+	if(boost::optional<boost::uint64_t> block_num = Hash_Tree_Block.next_request(connection_ID)){
+		unsigned block_size = Hash_Tree.block_size(*block_num);
+		return next_request(*block_num, block_size);
 	}
-	return false;
+	return boost::optional<next_request>();
 }
 
-bool transfer::next_request_file(const int connection_ID,
-	boost::uint64_t & block_num, unsigned & block_size)
+boost::optional<transfer::next_request> transfer::next_request_file(const int connection_ID)
 {
-	if(File_Block.next_request(connection_ID, block_num)){
-		block_size = File.block_size(block_num);
-		return true;
+	if(boost::optional<boost::uint64_t> block_num = File_Block.next_request(connection_ID)){
+		unsigned block_size = File.block_size(*block_num);
+		return next_request(*block_num, block_size);
 	}
-	return false;
+	return boost::optional<next_request>();
 }
 
 unsigned transfer::percent_complete()
@@ -201,8 +214,8 @@ unsigned transfer::percent_complete()
 	return ((double)bytes_received / (Hash_Tree.tree_size + Hash_Tree.file_size)) * 100;
 }
 
-transfer::status transfer::read_file_block(boost::shared_ptr<message_tcp::send::base> & M,
-	const boost::uint64_t block_num)
+std::pair<boost::shared_ptr<message_tcp::send::base>, transfer::status>
+	transfer::read_file_block(const boost::uint64_t block_num)
 {
 	if(File_Block.have_block(block_num)){
 		net::buffer buf;
@@ -212,33 +225,34 @@ transfer::status transfer::read_file_block(boost::shared_ptr<message_tcp::send::
 			check every block before we send it to detect modified blocks.
 			*/
 			hash_tree::status status = Hash_Tree.check_file_block(block_num, buf);
-			if(status != hash_tree::good){
-				return bad;
+			if(status == hash_tree::good){
+				return std::make_pair(boost::shared_ptr<message_tcp::send::base>(
+					new message_tcp::send::block(buf, Upload_Speed)), good);
+			}else{
+				return std::make_pair(boost::shared_ptr<message_tcp::send::base>(), bad);
 			}
-			M.reset(new message_tcp::send::block(buf, Upload_Speed));
-			return good;
 		}else{
-			return bad;
+			return std::make_pair(boost::shared_ptr<message_tcp::send::base>(), bad);
 		}
 	}else{
-		return protocol_violated;
+		return std::make_pair(boost::shared_ptr<message_tcp::send::base>(), protocol_violated);
 	}
 }
 
-transfer::status transfer::read_tree_block(boost::shared_ptr<message_tcp::send::base> & M,
-	const boost::uint64_t block_num)
+std::pair<boost::shared_ptr<message_tcp::send::base>, transfer::status>
+	transfer::read_tree_block(const boost::uint64_t block_num)
 {
 	if(Hash_Tree_Block.have_block(block_num)){
 		net::buffer buf;
 		hash_tree::status status = Hash_Tree.read_block(block_num, buf);
 		if(status == hash_tree::good){
-			M.reset(new message_tcp::send::block(buf, Upload_Speed));
-			return good;
+			return std::make_pair(boost::shared_ptr<message_tcp::send::base>(
+				new message_tcp::send::block(buf, Upload_Speed)), good);
 		}else{
-			return bad;
+			return std::make_pair(boost::shared_ptr<message_tcp::send::base>(), bad);
 		}
 	}else{
-		return protocol_violated;
+		return std::make_pair(boost::shared_ptr<message_tcp::send::base>(), protocol_violated);
 	}
 }
 
@@ -254,19 +268,18 @@ void transfer::recv_have_hash_tree_block(const int connection_ID,
 	Hash_Tree_Block.add_block_remote(connection_ID, block_num);
 }
 
-bool transfer::root_hash(std::string & RH)
+boost::optional<std::string> transfer::root_hash()
 {
 	char buf[8 + SHA1::bin_size];
 	std::memcpy(buf, convert::int_to_bin(file_size()).data(), 8);
 	if(!db::pool::get()->blob_read(Hash_Tree.blob, buf+8, SHA1::bin_size, 0)){
-		return false;
+		return boost::optional<std::string>();
 	}
 	SHA1 SHA(buf, 8 + SHA1::bin_size);
-	if(SHA.hex() != hash()){
-		return false;
+	if(SHA.hex() != Hash_Tree.hash){
+		return boost::optional<std::string>();
 	}
-	RH = convert::bin_to_hex(std::string(buf+8, SHA1::bin_size));
-	return true;
+	return convert::bin_to_hex(std::string(buf+8, SHA1::bin_size));
 }
 
 boost::uint64_t transfer::tree_block_count()

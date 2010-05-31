@@ -24,10 +24,9 @@ void all_complete()
 	//we should be able to request all blocks
 	int socket_FD = 0;
 	while(!BR.complete()){
-		boost::uint64_t block;
 		int temp = socket_FD++ % 8;
-		if(BR.next_request(temp, block)){
-			BR.add_block_local(temp, block);
+		if(boost::optional<boost::uint64_t> block_num = BR.next_request(temp)){
+			BR.add_block_local(temp, *block_num);
 		}else{
 			//exit immediately to avoid infinite loop on error
 			LOG; exit(1);
@@ -65,10 +64,9 @@ void all_partial()
 	//we should be able to request all blocks
 	int socket_FD = 0;
 	while(!BR.complete()){
-		boost::uint64_t block;
 		int temp = socket_FD++ % 8;
-		if(BR.next_request(temp, block)){
-			BR.add_block_local(temp, block);
+		if(boost::optional<boost::uint64_t> block_num = BR.next_request(temp)){
+			BR.add_block_local(temp, *block_num);
 		}
 	}
 }

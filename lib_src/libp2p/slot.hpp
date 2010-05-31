@@ -27,7 +27,7 @@ public:
 	complete:
 		Returns true if both the Hash_Tree and File are complete.
 	file_size:
-		Returns file size (bytes) or 0 if file size not known.
+		Returns file size (bytes).
 	hash:
 		Returns hash file is tracked by.
 	name:
@@ -36,7 +36,7 @@ public:
 		Returns full path to file slot represents.
 	*/
 	bool complete();
-	boost::uint64_t file_size();
+	boost::optional<boost::uint64_t> file_size();
 	const std::string & hash();
 	const std::string & name();
 	std::string path();

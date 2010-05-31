@@ -29,12 +29,12 @@ bool slot::complete()
 	}
 }
 
-boost::uint64_t slot::file_size()
+boost::optional<boost::uint64_t> slot::file_size()
 {
 	if(Transfer){
 		return Transfer->file_size();
 	}else{
-		return FI.file_size;
+		return boost::optional<boost::uint64_t>();
 	}
 }
 
@@ -53,14 +53,15 @@ p2p::transfer slot::info()
 	p2p::transfer tmp;
 	tmp.hash = FI.hash;
 	tmp.name = file_name;
-	tmp.file_size = file_size();
 	if(Transfer){
+		tmp.file_size = Transfer->file_size();
 		tmp.percent_complete = Transfer->percent_complete();
 		tmp.download_peers = Transfer->outgoing_count();
 		tmp.download_speed = Transfer->download_speed();
 		tmp.upload_peers = Transfer->incoming_count();
 		tmp.upload_speed = Transfer->upload_speed();
 	}else{
+		tmp.file_size = 0;
 		tmp.percent_complete = 0;
 		tmp.download_peers = 0;
 		tmp.download_speed = 0;

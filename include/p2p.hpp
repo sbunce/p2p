@@ -20,8 +20,8 @@ public:
 	{
 	public:
 		std::string hash;          //root hash of hash tree
-		std::string name;          //name of the file
-		boost::uint64_t file_size; //size of the file (bytes)
+		std::string name;          //name of file
+		boost::uint64_t file_size; //size of file (bytes), 0 if not known
 		boost::uint64_t tree_size; //size of hash tree (bytes)
 		unsigned percent_complete; //0-100
 		unsigned download_peers;   //number of hosts we're downloading from
