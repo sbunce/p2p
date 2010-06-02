@@ -24,8 +24,7 @@ connection_manager::connection_manager():
 		boost::bind(&connection_manager::connect_call_back, this, _1),
 		boost::bind(&connection_manager::disconnect_call_back, this, _1)
 	),
-	Thread_Pool(1),
-	_connections(0)
+	Thread_Pool(1)
 {
 
 }
@@ -73,7 +72,8 @@ void connection_manager::connect(const net::endpoint ep, const std::string hash)
 
 unsigned connection_manager::connections()
 {
-	return _connections;
+	boost::mutex::scoped_lock lock(Connect_mutex);
+	return Connection.size();
 }
 
 void connection_manager::connect_call_back(net::proactor::connection_info & CI)
@@ -102,7 +102,6 @@ db::pool::get()->query("DELETE FROM blacklist");
 
 		Connection.insert(std::make_pair(CI.connection_ID, connection_element(CI.ep, C)));
 		trigger_tick(CI.connection_ID);
-		++_connections;
 	}else{
 		LOG << "dupe connect: " << CI.ep.IP() << " " << CI.ep.port();
 		Proactor.disconnect(CI.connection_ID);
@@ -127,7 +126,6 @@ void connection_manager::disconnect_call_back(net::proactor::connection_info & C
 	}else{
 		LOG << "\"" << CI.ep.IP() << "\" " << CI.ep.port();
 	}
-	--_connections;
 }
 
 void connection_manager::peer_call_back(const net::endpoint & ep,

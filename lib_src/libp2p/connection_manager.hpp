@@ -6,7 +6,6 @@
 #include "kad.hpp"
 
 //include
-#include <atomic_int.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
 #include <net/net.hpp>
@@ -69,7 +68,6 @@ private:
 	net::proactor Proactor;
 	thread_pool Thread_Pool;
 	kad DHT;
-	atomic_int<unsigned> _connections;
 
 	class connection_element
 	{
