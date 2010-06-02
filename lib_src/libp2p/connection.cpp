@@ -3,10 +3,11 @@
 connection::connection(
 	net::proactor & Proactor_in,
 	net::proactor::connection_info & CI,
+	const boost::function<void(const net::endpoint & ep, const std::string & hash)> & peer_call_back,
 	const boost::function<void(const int)> & trigger_tick
 ):
 	Exchange(Proactor_in, CI),
-	Slot_Manager(Exchange, trigger_tick),
+	Slot_Manager(Exchange, peer_call_back, trigger_tick),
 	remote_ep(CI.ep)
 {
 	CI.recv_call_back = boost::bind(&connection::recv_call_back, this, _1);

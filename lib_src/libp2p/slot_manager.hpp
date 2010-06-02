@@ -20,6 +20,7 @@ class slot_manager : private boost::noncopyable
 public:
 	slot_manager(
 		exchange_tcp & Exchange_in,
+		const boost::function<void(const net::endpoint & ep, const std::string & hash)> & peer_call_back_in,
 		const boost::function<void(const int)> & trigger_tick_in
 	);
 	~slot_manager();
@@ -46,16 +47,17 @@ public:
 
 private:
 	exchange_tcp & Exchange;
-	boost::function<void(const int)> trigger_tick;
+	const boost::function<void(const net::endpoint & ep, const std::string hash)> peer_call_back;
+	const boost::function<void(const int)> trigger_tick;
 
 	/*
-	Incoming_Slot container holds slots the remote host has opened with us.
-	Outgoing_Slot holds slots we have opened with the remote host.
+	Upload_Slot container holds slots the remote host has opened with us.
+	Download_Slot holds slots we have opened with the remote host.
 	Note: Index in vector is slot ID.
 	Note: If there is an empty shared_ptr it means the slot ID is available.
 	*/
-	std::map<unsigned char, boost::shared_ptr<slot> > Incoming_Slot;
-	std::map<unsigned char, boost::shared_ptr<slot> > Outgoing_Slot;
+	std::map<unsigned char, boost::shared_ptr<slot> > Upload_Slot;
+	std::map<unsigned char, boost::shared_ptr<slot> > Download_Slot;
 
 	//unfulfilled block requests we have made
 	unsigned outgoing_pipeline_size;
@@ -96,12 +98,15 @@ private:
 		Makes any hash_tree of file block requests that need to be done.
 	send_have:
 		Sends have_* messages.
+	send_peer:
+		Sends peer_* messages.
 	send_slot_requests:
 		Does pending slot requests.
 	*/
 	void close_complete();
 	void send_block_requests();
 	void send_have();
+	void send_peer();
 	void send_slot_requests();
 
 	/* Receive Functions

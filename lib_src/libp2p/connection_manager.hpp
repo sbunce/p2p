@@ -117,8 +117,11 @@ private:
 	void disconnect_call_back(net::proactor::connection_info & CI);
 
 	/*
-	add_call_back:
-		Call back used by add() function to connect to hosts.
+	connect:
+		Connect to endpoint and start downloading file. Or if endpoint already
+		connected start downloading file.
+	peer_call_back:
+		Call back used when we receive a peer message.
 	remove_priv:
 		Removes downloading file. Scheduled by remove().
 	tick:
@@ -126,7 +129,8 @@ private:
 	trigger_tick:
 		Schedule a job with the thread pool to tick a connection.
 	*/
-	void add_call_back(const net::endpoint & ep, const std::string hash);
+	void connect(const net::endpoint ep, const std::string hash);
+	void peer_call_back(const net::endpoint & ep, const std::string & hash);
 	void remove_priv(const std::string hash);
 	void tick(const int connection_ID);
 	void trigger_tick(const int connection_ID);

@@ -6,7 +6,7 @@ net::connection::connection(
 ):
 	connected(false),
 	ID_Manager(ID_Manager_in),
-	time(std::time(NULL) + idle_timeout),
+	time(std::time(NULL) + connect_timeout),
 	disc_on_empty(false),
 	N(new nstream()),
 	connection_ID(ID_Manager.allocate())

@@ -1,5 +1,19 @@
 #include "block_request.hpp"
 
+//BEGIN have_element
+block_request::have_element::have_element(const boost::function<void()> & trigger_tick_in):
+	trigger_tick(trigger_tick_in)
+{
+
+}
+
+block_request::have_element::have_element(const have_element & HE):
+	trigger_tick(HE.trigger_tick)
+{
+
+}
+//END have_element
+
 block_request::block_request(const boost::uint64_t block_count_in):
 	block_count(block_count_in),
 	local(block_count),
@@ -11,7 +25,7 @@ block_request::block_request(const boost::uint64_t block_count_in):
 void block_request::add_block_local(const boost::uint64_t block)
 {
 	boost::mutex::scoped_lock lock(Mutex);
-	assert(have.empty());
+	assert(Have.empty());
 	if(!local.empty()){
 		assert(local[block] == false);
 		local[block] = true;
@@ -41,8 +55,8 @@ void block_request::add_block_local(const int connection_ID, const boost::uint64
 		also don't tell it we have blocks we know it already has.
 		*/
 		std::set<int> trigger;
-		for(std::map<int, have_info>::iterator it_cur = have.begin(),
-			it_end = have.end(); it_cur != it_end; ++it_cur)
+		for(std::map<int, have_element>::iterator it_cur = Have.begin(),
+			it_end = Have.end(); it_cur != it_end; ++it_cur)
 		{
 			if(it_cur->first != connection_ID){
 				std::map<int, bit_field>::iterator iter = remote.find(it_cur->first);
@@ -67,13 +81,11 @@ void block_request::add_block_local(const int connection_ID, const boost::uint64
 				}
 			}
 		}
-		for(std::map<int, have_info>::iterator it_cur = have.begin(),
-			it_end = have.end(); it_cur != it_end; ++it_cur)
+		for(std::map<int, have_element>::iterator it_cur = Have.begin(),
+			it_end = Have.end(); it_cur != it_end; ++it_cur)
 		{
-			if(it_cur->first != connection_ID
-				&& trigger.find(it_cur->first) != trigger.end())
-			{
-				it_cur->second.trigger_tick(it_cur->first);
+			if(it_cur->first != connection_ID && trigger.find(it_cur->first) != trigger.end()){
+				it_cur->second.trigger_tick();
 			}
 		}
 	}
@@ -206,30 +218,24 @@ bool block_request::have_block(const boost::uint64_t block)
 unsigned block_request::incoming_count()
 {
 	boost::mutex::scoped_lock lock(Mutex);
-	return have.size();
+	return Have.size();
 }
 
 bit_field block_request::incoming_subscribe(const int connection_ID,
-	const net::endpoint & ep, const boost::function<void(const int)> trigger_tick)
+	const boost::function<void()> trigger_tick)
 {
-//DEBUG, do something with ep
-
 	boost::mutex::scoped_lock lock(Mutex);
-	if(local.empty()){
-		return bit_field();
-	}else{
-		std::pair<std::map<int, have_info>::iterator, bool>
-			ret = have.insert(std::make_pair(connection_ID, have_info()));
-		assert(ret.second);
-		ret.first->second.trigger_tick = trigger_tick;
-		return local;
-	}
+	//add have element
+	std::pair<std::map<int, have_element>::iterator, bool>
+		p = Have.insert(std::make_pair(connection_ID, have_element(trigger_tick)));
+	assert(p.second);
+	return local;
 }
 
 void block_request::incoming_unsubscribe(const int connection_ID)
 {
 	boost::mutex::scoped_lock lock(Mutex);
-	have.erase(connection_ID);
+	Have.erase(connection_ID);
 }
 
 bool block_request::is_approved(const boost::uint64_t block)
@@ -242,44 +248,11 @@ bool block_request::is_approved(const boost::uint64_t block)
 	}
 }
 
-unsigned block_request::outgoing_count()
-{
-	boost::mutex::scoped_lock lock(Mutex);
-	return remote.size();
-}
-
-void block_request::outgoing_subscribe(const int connection_ID,
-	const bit_field & BF)
-{
-	boost::mutex::scoped_lock lock(Mutex);
-	assert(BF.empty() || BF.size() == block_count);
-	std::pair<std::map<int, bit_field>::iterator, bool>
-		ret = remote.insert(std::make_pair(connection_ID, BF));
-	assert(ret.second);
-}
-
-void block_request::outgoing_unsubscribe(const int connection_ID)
-{
-	boost::mutex::scoped_lock lock(Mutex);
-	remote.erase(connection_ID);
-	//erase request elements for this host
-	std::map<boost::uint64_t, std::set<int> >::iterator
-		it_cur = request.begin(), it_end = request.end();
-	while(it_cur != it_end){
-		it_cur->second.erase(connection_ID);
-		if(it_cur->second.empty()){
-			request.erase(it_cur++);
-		}else{
-			++it_cur;
-		}
-	}
-}
-
 boost::optional<boost::uint64_t> block_request::next_have(const int connection_ID)
 {
 	boost::mutex::scoped_lock lock(Mutex);
-	std::map<int, have_info>::iterator iter = have.find(connection_ID);
-	if(iter == have.end()){
+	std::map<int, have_element>::iterator iter = Have.find(connection_ID);
+	if(iter == Have.end()){
 		return boost::optional<boost::uint64_t>();
 	}else{
 		if(iter->second.block.empty()){
@@ -358,6 +331,39 @@ boost::optional<boost::uint64_t> block_request::next_request(const int connectio
 			return rare_block;
 		}else{
 			return boost::optional<boost::uint64_t>();
+		}
+	}
+}
+
+unsigned block_request::outgoing_count()
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	return remote.size();
+}
+
+void block_request::outgoing_subscribe(const int connection_ID,
+	const bit_field & BF)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	assert(BF.empty() || BF.size() == block_count);
+	std::pair<std::map<int, bit_field>::iterator, bool>
+		ret = remote.insert(std::make_pair(connection_ID, BF));
+	assert(ret.second);
+}
+
+void block_request::outgoing_unsubscribe(const int connection_ID)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	remote.erase(connection_ID);
+	//erase request elements for this host
+	std::map<boost::uint64_t, std::set<int> >::iterator
+		it_cur = request.begin(), it_end = request.end();
+	while(it_cur != it_end){
+		it_cur->second.erase(connection_ID);
+		if(it_cur->second.empty()){
+			request.erase(it_cur++);
+		}else{
+			++it_cur;
 		}
 	}
 }

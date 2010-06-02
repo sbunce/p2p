@@ -40,14 +40,18 @@ connection_manager::~connection_manager()
 void connection_manager::add(const std::string & hash)
 {
 	LOG << hash;
-	DHT.find_file(hash, boost::bind(&connection_manager::add_call_back, this, _1, hash));
+	DHT.find_file(hash, boost::bind(&connection_manager::connect, this, _1, hash));
 }
 
-void connection_manager::add_call_back(const net::endpoint & ep, const std::string hash)
+void connection_manager::connect(const net::endpoint ep, const std::string hash)
 {
 	boost::mutex::scoped_lock lock(Connect_mutex);
-	bool connecting = (Connecting.find(ep) != Connecting.end());
-	bool connected = (Connected.find(ep) != Connected.end());
+	if(ep.IP() == "127.0.0.1" && ep.port() == db::table::prefs::get_port()){
+		LOG << "received peer message to connect to self";
+		return;
+	}
+	bool connecting = Connecting.find(ep) != Connecting.end();
+	bool connected = Connected.find(ep) != Connected.end();
 	if(!connecting && !connected){
 		LOG << ep.IP() << " " << ep.port();
 		Connecting.insert(ep);
@@ -86,6 +90,7 @@ db::pool::get()->query("DELETE FROM blacklist");
 		Connected.insert(CI.ep);
 		LOG << "connect: " << CI.ep.IP() << " " << CI.ep.port();
 		boost::shared_ptr<connection> C(new connection(Proactor, CI,
+			boost::bind(&connection_manager::peer_call_back, this, _1, _2),
 			boost::bind(&connection_manager::trigger_tick, this, _1)));
 
 		//download files from connection
@@ -123,6 +128,12 @@ void connection_manager::disconnect_call_back(net::proactor::connection_info & C
 		LOG << "\"" << CI.ep.IP() << "\" " << CI.ep.port();
 	}
 	--_connections;
+}
+
+void connection_manager::peer_call_back(const net::endpoint & ep,
+	const std::string & hash)
+{
+	Thread_Pool.enqueue(boost::bind(&connection_manager::connect, this, ep, hash));
 }
 
 void connection_manager::remove(const std::string & hash)

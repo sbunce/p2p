@@ -18,6 +18,7 @@ public:
 	connection(
 		net::proactor & Proactor_in,
 		net::proactor::connection_info & CI,
+		const boost::function<void(const net::endpoint & ep, const std::string & hash)> & peer_call_back,
 		const boost::function<void(const int)> & trigger_tick
 	);
 

@@ -204,12 +204,11 @@ be checked before they're sent. The file may have been modified.
 
 Have Message Recommendations
 ----------------------------
+A have message should not be sent back to a host for a block that host sent.
 
-Have messages should not be sent to the host which sent the block.
-
-Also, they should not be sent to hosts we know won't request the block. We can
-know that a host which already has the block will not request the block. This
-can only be known if two hosts are downloading from eachother.
+A have message should not be sent if we know a host won't request a block. We
+can know this if it already has a block.
+----------------------------
 
 ---
 name: have_hash_tree_block
@@ -253,6 +252,7 @@ desc: Address of peer that has file.
 	+---+---+---+---+---+---+---+
 	  0   1   2  ...  5   6   7
 A = command (base10: 9), B = slot number, C = IPv4 address, D = port
+note: We should send these only to remote hosts we're uploading to.
 ---
 
 ---
@@ -263,6 +263,7 @@ desc: Address of peer that has file.
 	+---+---+---+---+---+---+---+
 	  0   1   2  ... 17  18  19
 A = command (base10: 10), B = slot number, C = IPv6 address, D = port
+note: We should send these only to remote hosts we're uploading to.
 ---
 
 

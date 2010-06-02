@@ -88,8 +88,7 @@ public:
 	*/
 	unsigned incoming_count();
 	bit_field incoming_subscribe(const int connection_ID,
-		const net::endpoint & ep,
-		const boost::function<void(const int)> trigger_tick);
+		const boost::function<void()> trigger_tick);
 	void incoming_unsubscribe(const int connection_ID);
 	boost::optional<boost::uint64_t> next_have(const int connection_ID);
 
@@ -132,8 +131,7 @@ private:
 	bit_field approved;
 
 	/*
-	Associates a block number with all the connections it has been requested
-	from.
+	Associates a block number with all the connections it has been requested from.
 	std::map<block_num, std::list<connection_ID> >
 	*/
 	std::map<boost::uint64_t, std::set<int> > request;
@@ -141,21 +139,23 @@ private:
 	//connection_ID associated with bit_field representing blocks remote host has
 	std::map<int, bit_field> remote;
 
-	class have_info
+	class have_element
 	{
 	public:
-		//have_* message blocks
+		have_element(const boost::function<void()> & trigger_tick_in);
+		have_element(const have_element & HE);
+		/*
+		Calling this will cause the connection::tick() function to be called for
+		the connection this object is for. This is called after blocks are added.
+		*/
+		boost::function<void()> trigger_tick;
+		/*
+		This is a block diff between the local blocks when the host subscribed and
+		the present. These block numbers are sent in have_* messages.
+		*/
 		std::queue<boost::uint64_t> block;
-
-		//triggers connection object to be called so it can process next_have
-		boost::function<void(const int)> trigger_tick;
 	};
-
-	/*
-	This container effectively contains diff's between the local bit_field when
-	someone subscribed vs the local bit_field as it currently exists.
-	*/
-	std::map<int, have_info> have;
+	std::map<int, have_element> Have;
 
 	/*
 	find_next_rarest:

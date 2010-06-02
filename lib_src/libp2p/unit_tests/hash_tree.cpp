@@ -194,7 +194,7 @@ void child_block()
 
 int main()
 {
-	unit_test::timeout();
+	unit_test::timeout(60);
 
 	//setup database and make sure hash table clear
 	path::set_db_file_name("hash_tree.db");

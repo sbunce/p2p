@@ -6,6 +6,7 @@
 #include "file.hpp"
 #include "hash_tree.hpp"
 #include "message_tcp.hpp"
+#include "peer.hpp"
 #include "protocol_tcp.hpp"
 
 //include
@@ -107,6 +108,8 @@ public:
 		Subscribe to changes to hash tree and file.
 	incoming_unsubscribe:
 		Unsubscribe to changes to hash tree and file.
+	next_peer:
+		Returns endpoint that needs to be sent in peer_* message.
 	outgoing_subscribe:
 		Called when we recv slot message to add remote host bit_fields.
 	outgoing_unsubscribe:
@@ -117,10 +120,11 @@ public:
 	void check();
 	bool complete();
 	local_BF incoming_subscribe(const int connection_ID, const net::endpoint & ep,
-		const boost::function<void(const int)> trigger_tick);
+		const boost::function<void()> trigger_tick);
 	void incoming_unsubscribe(const int connection_ID);
-	void outgoing_subscribe(const int connection_ID, const bit_field & tree_BF,
-		const bit_field & file_BF);
+	boost::optional<net::endpoint> next_peer(const int connection_ID);
+	void outgoing_subscribe(const int connection_ID, const net::endpoint & ep,
+		const bit_field & tree_BF, const bit_field & file_BF);
 	void outgoing_unsubscribe(const int connection_ID);
 	unsigned percent_complete();
 
@@ -150,6 +154,7 @@ private:
 	file File;
 	block_request Hash_Tree_Block;
 	block_request File_Block;
+	peer Peer;
 
 	//number of bytes received (used to calculate percent complete)
 	atomic_int<boost::uint64_t> bytes_received;

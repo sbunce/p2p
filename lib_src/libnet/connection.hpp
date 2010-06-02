@@ -16,6 +16,9 @@ namespace net{
 class connection : private boost::noncopyable
 {
 private:
+	//amount of time a connection is allowed to be half-open
+	static const unsigned connect_timeout = 30;
+
 	/*
 	Timeout (seconds) before idle sockets disconnected. This has to be quite high
 	otherwise client that download very slowly will be erroneously disconnected.
