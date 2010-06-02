@@ -350,14 +350,25 @@ bool slot_manager::recv_request_slot(const std::string & hash)
 		boost::bind(&slot_manager::recv_request_file_block, this, _1, _2),
 		slot_num, slot_iter->get_transfer()->file_block_count())));
 
-	//if downloading the file open slot with remote host
+	//check if we need to download this file
+	bool already_downloading = false;
 	for(std::map<unsigned char, boost::shared_ptr<slot> >::iterator
 		it_cur = Download_Slot.begin(), it_end = Download_Slot.end();
 		it_cur != it_end; ++it_cur)
 	{
 		if(it_cur->second->hash() == hash){
-			add(hash);
+			already_downloading = true;
 			break;
+		}
+	}
+	if(!already_downloading){
+		for(share::slot_iterator it_cur = share::singleton().begin_slot(),
+			it_end = share::singleton().end_slot(); it_cur != it_end; ++it_cur)
+		{
+			if(hash == it_cur->hash() && !it_cur->complete()){
+				Hash_Pending.insert(hash);
+				break;
+			}
 		}
 	}
 

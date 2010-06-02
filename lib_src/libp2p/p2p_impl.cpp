@@ -53,6 +53,9 @@ void p2p_impl::resume()
 	//delay helps GUI have responsive startup
 	boost::this_thread::yield();
 
+	//fill pref cache
+	db::table::prefs::init_cache();
+
 	//set prefs with proactor
 	set_max_connections(db::table::prefs::get_max_connections());
 	set_max_download_rate(db::table::prefs::get_max_download_rate());
@@ -91,7 +94,7 @@ void p2p_impl::resume()
 	Connection_Manager.start();
 
 /* DEBUG, load all files in to DHT.
-Eventually will need to be more selective about this.
+Eventually will need to be more selective about this. Or space it out.
 */
 	for(share::const_file_iterator it_cur = share::singleton().begin_file(),
 		it_end = share::singleton().end_file(); it_cur != it_end; ++it_cur)

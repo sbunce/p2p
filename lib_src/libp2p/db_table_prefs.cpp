@@ -67,6 +67,16 @@ std::string db::table::prefs::get_port(db::pool::proxy DB)
 	return static_wrap::get().get<std::string>("port", DB);
 }
 
+void db::table::prefs::init_cache()
+{
+	db::pool::proxy DB;
+	get_max_download_rate(DB);
+	get_max_connections(DB);
+	get_max_upload_rate(DB);
+	get_ID(DB);
+	get_port(DB);
+}
+
 void db::table::prefs::set_max_download_rate(const unsigned rate,
 	db::pool::proxy DB)
 {

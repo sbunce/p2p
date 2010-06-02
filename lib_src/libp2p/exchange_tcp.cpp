@@ -32,10 +32,16 @@ void exchange_tcp::expect_anytime(boost::shared_ptr<message_tcp::recv::base> M)
 
 void exchange_tcp::expect_anytime_erase(boost::shared_ptr<message_tcp::send::base> M)
 {
+	assert(M);
+	assert(!M->buf.empty());
 	for(std::list<boost::shared_ptr<message_tcp::recv::base> >::iterator
 		it_cur = Expect_Anytime.begin(), it_end = Expect_Anytime.end();
 		it_cur != it_end; ++it_cur)
 	{
+		if(!*it_cur){
+			//shared_ptr already empty from previous expect_anytime_erase
+			continue;
+		}
 		if((*it_cur)->expect(M->buf)){
 			/*
 			Schedule message to be erased. We don't erase element here because it

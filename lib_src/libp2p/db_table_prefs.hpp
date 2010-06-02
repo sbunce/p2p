@@ -37,6 +37,9 @@ public:
 	static void set_max_upload_rate(const unsigned rate, db::pool::proxy DB = db::pool::proxy());
 	static void set_port(const std::string & port, db::pool::proxy DB = db::pool::proxy());
 
+	//get all values in cache
+	static void init_cache();
+
 private:
 	prefs(){}
 
