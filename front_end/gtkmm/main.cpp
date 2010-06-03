@@ -1,5 +1,5 @@
 //custom
-#include "gui.hpp"
+#include "window_main.hpp"
 
 //include
 #include <boost/shared_ptr.hpp>
@@ -10,12 +10,12 @@
 //std
 #include <csignal>
 
-boost::shared_ptr<Gtk::Main> gui_main;
+boost::shared_ptr<Gtk::Main> Main;
 boost::once_flag once_flag = BOOST_ONCE_INIT;
 
 void quit_prog()
 {
-	gui_main->quit();
+	Main->quit();
 }
 
 void signal_handler(int sig)
@@ -27,7 +27,7 @@ void signal_handler(int sig)
 int main(int argc, char ** argv)
 {
 	opt_parse Opt_Parse(argc, argv);
-	gui_main = boost::shared_ptr<Gtk::Main>(new Gtk::Main(argc, argv));
+	Main.reset(new Gtk::Main(argc, argv));
 
 	//register signal handlers
 	signal(SIGINT, signal_handler);
@@ -41,6 +41,6 @@ int main(int argc, char ** argv)
 		p2p::set_db_file_name(*db_file_name);
 	}
 
-	gui GUI;
-	gui_main->run(GUI);
+	window_main Window_Main;
+	Main->run(Window_Main);
 }

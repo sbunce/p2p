@@ -1,6 +1,6 @@
-#include "gui.hpp"
+#include "window_main.hpp"
 
-gui::gui():
+window_main::window_main():
 	Gtk::Window(Gtk::WINDOW_TOPLEVEL)
 {
 	window = this;
@@ -21,7 +21,7 @@ gui::gui():
 
 	Window_Download = Gtk::manage(new window_transfer(P2P, window_transfer::download));
 	Window_Upload = Gtk::manage(new window_transfer(P2P, window_transfer::upload));
-	statusbar = Gtk::manage(new statusbar_main(P2P));
+	statusbar = Gtk::manage(new fixed_statusbar(P2P));
 
 	//boxes (divides the window)
 	main_VBox = Gtk::manage(new Gtk::VBox(false, 0));
@@ -83,21 +83,21 @@ gui::gui():
 	window->drag_dest_set(list_targets);
 
 	//signaled functions
-	window->signal_drag_data_received().connect(sigc::mem_fun(*this, &gui::file_drag_data_received));
-	quit->signal_activate().connect(sigc::mem_fun(*this, &gui::on_quit), false);
-	preferences->signal_activate().connect(sigc::mem_fun(*this, &gui::settings_preferences), false);
-	about->signal_activate().connect(sigc::mem_fun(*this, &gui::help_about), false);
+	window->signal_drag_data_received().connect(sigc::mem_fun(*this, &window_main::file_drag_data_received));
+	quit->signal_activate().connect(sigc::mem_fun(*this, &window_main::on_quit), false);
+	preferences->signal_activate().connect(sigc::mem_fun(*this, &window_main::settings_preferences), false);
+	about->signal_activate().connect(sigc::mem_fun(*this, &window_main::help_about), false);
 
 	//set objects to be visible
 	window->show_all_children();
 }
 
-gui::~gui()
+window_main::~window_main()
 {
 
 }
 
-void gui::file_drag_data_received(
+void window_main::file_drag_data_received(
 	const Glib::RefPtr<Gdk::DragContext> & context, //info about drag (available on source and dest)
 	int x,                                          //x-coord of drop
 	int y,                                          //y-coord of drop
@@ -113,30 +113,30 @@ void gui::file_drag_data_received(
 	context->drag_finish(true, true, time);
 }
 
-void gui::help_about()
+void window_main::help_about()
 {
 	boost::shared_ptr<window_about> Window_About(new window_about());
 	Gtk::Main::run(*Window_About);
 }
 
-void gui::on_quit()
+void window_main::on_quit()
 {
 	hide();
 }
 
-bool gui::on_delete_event(GdkEventAny * event)
+bool window_main::on_delete_event(GdkEventAny * event)
 {
 	on_quit();
 	return true;
 }
 
-void gui::process_URI(const std::string & URI)
+void window_main::process_URI(const std::string & URI)
 {
 	LOG << URI;
 }
 
-void gui::settings_preferences()
+void window_main::settings_preferences()
 {
-	boost::shared_ptr<window_preferences> prefs(new window_preferences(P2P));
+	boost::shared_ptr<window_prefs> prefs(new window_prefs(P2P));
 	Gtk::Main::run(*prefs);
 }

@@ -1,8 +1,5 @@
-#ifndef H_WINDOW_PREFERENCES
-#define H_WINDOW_PREFERENCES
-
-//custom
-#include "settings.hpp"
+#ifndef H_WINDOW_PREFS
+#define H_WINDOW_PREFS
 
 //include
 #include <boost/utility.hpp>
@@ -13,10 +10,10 @@
 //standard
 #include <sstream>
 
-class window_preferences : public Gtk::Window, private boost::noncopyable
+class window_prefs : public Gtk::Window, private boost::noncopyable
 {  
 public:
-	window_preferences(p2p & P2P_in);
+	window_prefs(p2p & P2P_in);
 
 private:
 	p2p & P2P;

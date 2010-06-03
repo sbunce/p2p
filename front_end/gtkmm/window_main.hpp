@@ -1,11 +1,11 @@
-#ifndef H_GUI
-#define H_GUI
+#ifndef H_WINDOW_MAIN
+#define H_WINDOW_MAIN
 
 //custom
 #include "settings.hpp"
-#include "statusbar_main.hpp"
+#include "fixed_statusbar.hpp"
 #include "window_about.hpp"
-#include "window_preferences.hpp"
+#include "window_prefs.hpp"
 #include "window_transfer.hpp"
 
 //include
@@ -25,11 +25,11 @@
 #include <string>
 #include <vector>
 
-class gui : public Gtk::Window, private boost::noncopyable
+class window_main : public Gtk::Window, private boost::noncopyable
 {
 public:
-	gui();
-	~gui();
+	window_main();
+	~window_main();
 
 private:
 	Gtk::Window * window;
@@ -60,7 +60,7 @@ private:
 	Gtk::VBox * main_VBox; //VBox for the main window
 
 	//bottom bar that displays status etc
-	Gtk::Statusbar * statusbar;
+	Gtk::Fixed * statusbar;
 
 	//stuff in download/upload tabs
 	window_transfer * Window_Download;

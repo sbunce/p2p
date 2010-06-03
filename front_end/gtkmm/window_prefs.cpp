@@ -1,6 +1,6 @@
-#include "window_preferences.hpp"
+#include "window_prefs.hpp"
 
-window_preferences::window_preferences(
+window_prefs::window_prefs(
 	p2p & P2P_in
 ):
 	P2P(P2P_in)
@@ -101,20 +101,17 @@ window_preferences::window_preferences(
 	show_all_children();
 
 	//signaled functions
-	apply_button->signal_clicked().connect(sigc::mem_fun(*this,
-		&window_preferences::apply_click), false);
-	cancel_button->signal_clicked().connect(sigc::mem_fun(*this,
-		&window_preferences::cancel_click), false);
-	ok_button->signal_clicked().connect(sigc::mem_fun(*this,
-		&window_preferences::ok_click), false);
+	apply_button->signal_clicked().connect(sigc::mem_fun(*this, &window_prefs::apply_click), false);
+	cancel_button->signal_clicked().connect(sigc::mem_fun(*this, &window_prefs::cancel_click), false);
+	ok_button->signal_clicked().connect(sigc::mem_fun(*this, &window_prefs::ok_click), false);
 }
 
-void window_preferences::apply_click()
+void window_prefs::apply_click()
 {
 	apply_settings();
 }
 
-void window_preferences::apply_settings()
+void window_prefs::apply_settings()
 {
 	int download_rate, upload_rate;
 	std::stringstream ss;
@@ -130,12 +127,12 @@ void window_preferences::apply_settings()
 	P2P.set_max_upload_rate(upload_rate * 1024);
 }
 
-void window_preferences::cancel_click()
+void window_prefs::cancel_click()
 {
 	hide();
 }
 
-void window_preferences::ok_click()
+void window_prefs::ok_click()
 {
 	apply_settings();
 	hide();
