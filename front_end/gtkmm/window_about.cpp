@@ -67,7 +67,7 @@ window_about::window_about()
 
 
 	text_buff = Gtk::TextBuffer::create();
-	text_buff->set_text(settings::NAME+" version: "+version()+" © Seth Bunce 2006");
+	text_buff->set_text(settings::name + " version: " + version() + " © Seth Bunce 2006");
 	text_view->set_buffer(text_buff);
 	text_view->set_editable(false);
 

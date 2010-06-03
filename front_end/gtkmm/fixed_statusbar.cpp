@@ -8,7 +8,7 @@ fixed_statusbar::fixed_statusbar(
 	put(download_label, 5, 0);
 	put(upload_label, 100, 0);
 
-	Glib::signal_timeout().connect(sigc::mem_fun(*this, &fixed_statusbar::update), settings::GUI_TICK);
+	Glib::signal_timeout().connect(sigc::mem_fun(*this, &fixed_statusbar::update), settings::GUI_tick);
 }
 
 bool fixed_statusbar::update()

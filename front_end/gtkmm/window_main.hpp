@@ -35,7 +35,7 @@ private:
 	Gtk::Window * window;
 	Gtk::MenuBar * menubar;
 	Gtk::Notebook * notebook;
-
+/*
 	//file menu
 	Gtk::Menu * file_menu;
 	Gtk::MenuItem * file_menu_item;
@@ -50,7 +50,7 @@ private:
 	Gtk::Menu * help_menu;
 	Gtk::MenuItem * help_menu_item;
 	Gtk::MenuItem * about;
-
+*/
 	//notebook labels
 	Gtk::Image * download_label;
 	Gtk::Image * upload_label;

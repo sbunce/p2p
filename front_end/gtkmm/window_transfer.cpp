@@ -60,7 +60,7 @@ window_transfer::window_transfer(
 
 	//signaled functions
 	Glib::signal_timeout().connect(sigc::mem_fun(*this, &window_transfer::refresh),
-		settings::GUI_TICK);
+		settings::GUI_tick);
 	download_view->signal_button_press_event().connect(sigc::mem_fun(*this,
 		&window_transfer::click), false);
 }

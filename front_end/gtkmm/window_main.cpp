@@ -7,12 +7,12 @@ window_main::window_main():
 
 	menubar = Gtk::manage(new Gtk::MenuBar);
 	notebook = Gtk::manage(new Gtk::Notebook);
-
+/*
 	//menus
 	file_menu = Gtk::manage(new Gtk::Menu);
 	settings_menu = Gtk::manage(new Gtk::Menu);
 	help_menu = Gtk::manage(new Gtk::Menu);
-
+*/
 	//notebook labels
 	Gtk::Image * download_label = Gtk::manage(new Gtk::Image(Gtk::Stock::GO_DOWN,
 		Gtk::ICON_SIZE_LARGE_TOOLBAR));
@@ -30,7 +30,7 @@ window_main::window_main():
 	window->set_icon(
 		Gtk::Widget::render_icon(Gtk::Stock::NETWORK, Gtk::ICON_SIZE_LARGE_TOOLBAR)
 	);
-
+/*
 	//add items to File menu
 	file_menu->items().push_back(Gtk::Menu_Helpers::StockMenuElem(Gtk::StockID(Gtk::Stock::QUIT)));
 	quit = static_cast<Gtk::ImageMenuItem *>(&file_menu->items().back());
@@ -49,7 +49,7 @@ window_main::window_main():
 	//add items to Help menu
 	help_menu->items().push_back(Gtk::Menu_Helpers::StockMenuElem(Gtk::StockID(Gtk::Stock::ABOUT)));
 	about = static_cast<Gtk::MenuItem *>(&help_menu->items().back());
-
+*/
 	//set notebook properties
 	notebook->set_flags(Gtk::CAN_FOCUS);
 	notebook->set_show_tabs(true);
@@ -64,12 +64,12 @@ window_main::window_main():
 	notebook->pages().back().set_tab_label_packing(false, true, Gtk::PACK_START);
 
 	//add items to the main VBox
-	main_VBox->pack_start(*menubar, Gtk::PACK_SHRINK, 0);
+	//main_VBox->pack_start(*menubar, Gtk::PACK_SHRINK, 0);
 	main_VBox->pack_start(*notebook);
 	main_VBox->pack_start(*statusbar, Gtk::PACK_SHRINK, 0);
 
 	//window properties
-	window->set_title(settings::NAME);
+	window->set_title(settings::name);
 	window->resize(640, 480);
 	window->set_modal(false);
 	window->property_window_position().set_value(Gtk::WIN_POS_CENTER_ON_PARENT);
@@ -84,9 +84,9 @@ window_main::window_main():
 
 	//signaled functions
 	window->signal_drag_data_received().connect(sigc::mem_fun(*this, &window_main::file_drag_data_received));
-	quit->signal_activate().connect(sigc::mem_fun(*this, &window_main::on_quit), false);
-	preferences->signal_activate().connect(sigc::mem_fun(*this, &window_main::settings_preferences), false);
-	about->signal_activate().connect(sigc::mem_fun(*this, &window_main::help_about), false);
+	//quit->signal_activate().connect(sigc::mem_fun(*this, &window_main::on_quit), false);
+	//preferences->signal_activate().connect(sigc::mem_fun(*this, &window_main::settings_preferences), false);
+	//about->signal_activate().connect(sigc::mem_fun(*this, &window_main::help_about), false);
 
 	//set objects to be visible
 	window->show_all_children();

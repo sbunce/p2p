@@ -6,7 +6,7 @@
 
 namespace settings
 {
-const std::string NAME = "P2P";        //name of program
-const unsigned GUI_TICK = 100;         //time(milliseconds) between gui updates
+const std::string name = "P2P"; //name of program
+const unsigned GUI_tick = 100;  //time (milliseconds) between gui updates
 }//end of namespace settings
 #endif
