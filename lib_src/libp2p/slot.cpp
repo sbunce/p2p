@@ -56,9 +56,9 @@ p2p::transfer slot::info()
 	if(Transfer){
 		tmp.file_size = Transfer->file_size();
 		tmp.percent_complete = Transfer->percent_complete();
-		tmp.download_peers = Transfer->outgoing_count();
+		tmp.download_peers = Transfer->download_count();
 		tmp.download_speed = Transfer->download_speed();
-		tmp.upload_peers = Transfer->incoming_count();
+		tmp.upload_peers = Transfer->upload_count();
 		tmp.upload_speed = Transfer->upload_speed();
 	}else{
 		tmp.file_size = 0;

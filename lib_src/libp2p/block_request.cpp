@@ -146,6 +146,39 @@ bool block_request::complete()
 	return local.empty();
 }
 
+unsigned block_request::download_count()
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	return remote.size();
+}
+
+void block_request::download_subscribe(const int connection_ID,
+	const bit_field & BF)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	assert(BF.empty() || BF.size() == block_count);
+	std::pair<std::map<int, bit_field>::iterator, bool>
+		ret = remote.insert(std::make_pair(connection_ID, BF));
+	assert(ret.second);
+}
+
+void block_request::download_unsubscribe(const int connection_ID)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	remote.erase(connection_ID);
+	//erase request elements for this host
+	std::map<boost::uint64_t, std::set<int> >::iterator
+		it_cur = request.begin(), it_end = request.end();
+	while(it_cur != it_end){
+		it_cur->second.erase(connection_ID);
+		if(it_cur->second.empty()){
+			request.erase(it_cur++);
+		}else{
+			++it_cur;
+		}
+	}
+}
+
 boost::optional<boost::uint64_t> block_request::find_next_rarest(const int connection_ID)
 {
 	//find bitset for remote host
@@ -215,27 +248,10 @@ bool block_request::have_block(const boost::uint64_t block)
 	}
 }
 
-unsigned block_request::incoming_count()
+unsigned block_request::upload_count()
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	return Have.size();
-}
-
-bit_field block_request::incoming_subscribe(const int connection_ID,
-	const boost::function<void()> trigger_tick)
-{
-	boost::mutex::scoped_lock lock(Mutex);
-	//add have element
-	std::pair<std::map<int, have_element>::iterator, bool>
-		p = Have.insert(std::make_pair(connection_ID, have_element(trigger_tick)));
-	assert(p.second);
-	return local;
-}
-
-void block_request::incoming_unsubscribe(const int connection_ID)
-{
-	boost::mutex::scoped_lock lock(Mutex);
-	Have.erase(connection_ID);
 }
 
 bool block_request::is_approved(const boost::uint64_t block)
@@ -335,41 +351,25 @@ boost::optional<boost::uint64_t> block_request::next_request(const int connectio
 	}
 }
 
-unsigned block_request::outgoing_count()
-{
-	boost::mutex::scoped_lock lock(Mutex);
-	return remote.size();
-}
-
-void block_request::outgoing_subscribe(const int connection_ID,
-	const bit_field & BF)
-{
-	boost::mutex::scoped_lock lock(Mutex);
-	assert(BF.empty() || BF.size() == block_count);
-	std::pair<std::map<int, bit_field>::iterator, bool>
-		ret = remote.insert(std::make_pair(connection_ID, BF));
-	assert(ret.second);
-}
-
-void block_request::outgoing_unsubscribe(const int connection_ID)
-{
-	boost::mutex::scoped_lock lock(Mutex);
-	remote.erase(connection_ID);
-	//erase request elements for this host
-	std::map<boost::uint64_t, std::set<int> >::iterator
-		it_cur = request.begin(), it_end = request.end();
-	while(it_cur != it_end){
-		it_cur->second.erase(connection_ID);
-		if(it_cur->second.empty()){
-			request.erase(it_cur++);
-		}else{
-			++it_cur;
-		}
-	}
-}
-
 unsigned block_request::remote_host_count()
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	return remote.size();
+}
+
+bit_field block_request::upload_subscribe(const int connection_ID,
+	const boost::function<void()> trigger_tick)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	//add have element
+	std::pair<std::map<int, have_element>::iterator, bool>
+		p = Have.insert(std::make_pair(connection_ID, have_element(trigger_tick)));
+	assert(p.second);
+	return local;
+}
+
+void block_request::upload_unsubscribe(const int connection_ID)
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	Have.erase(connection_ID);
 }

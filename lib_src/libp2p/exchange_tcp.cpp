@@ -22,11 +22,13 @@ exchange_tcp::exchange_tcp(
 
 void exchange_tcp::expect_response(boost::shared_ptr<message_tcp::recv::base> M)
 {
+	assert(M);
 	Expect_Response.push_back(M);
 }
 
 void exchange_tcp::expect_anytime(boost::shared_ptr<message_tcp::recv::base> M)
 {
+	assert(M);
 	Expect_Anytime.push_back(M);
 }
 
@@ -39,7 +41,7 @@ void exchange_tcp::expect_anytime_erase(boost::shared_ptr<message_tcp::send::bas
 		it_cur != it_end; ++it_cur)
 	{
 		if(!*it_cur){
-			//shared_ptr already empty from previous expect_anytime_erase
+			//shared_ptr already empty from previous expect_anytime_erase() call
 			continue;
 		}
 		if((*it_cur)->expect(M->buf)){
@@ -61,7 +63,6 @@ void exchange_tcp::recv_call_back(net::proactor::connection_info & CI)
 	}
 
 	//process incoming messages
-	message_tcp::recv::status Status;
 	begin:
 	while(!CI.recv_buf.empty()){
 		//check if message is expected response
@@ -70,7 +71,7 @@ void exchange_tcp::recv_call_back(net::proactor::connection_info & CI)
 				Expect_Response.pop_front();
 				goto begin;
 			}
-			Status = Expect_Response.front()->recv(CI.recv_buf);
+			message_tcp::recv::status Status = Expect_Response.front()->recv(CI.recv_buf);
 			if(Status == message_tcp::recv::blacklist){
 				db::table::blacklist::add(CI.ep.IP());
 				goto end;
@@ -87,7 +88,7 @@ void exchange_tcp::recv_call_back(net::proactor::connection_info & CI)
 			it_cur != it_end;)
 		{
 			if(*it_cur){
-				Status = (*it_cur)->recv(CI.recv_buf);
+				message_tcp::recv::status Status = (*it_cur)->recv(CI.recv_buf);
 				if(Status == message_tcp::recv::blacklist){
 					db::table::blacklist::add(CI.ep.IP());
 					goto end;

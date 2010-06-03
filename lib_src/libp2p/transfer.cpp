@@ -122,6 +122,11 @@ bool transfer::complete()
 	return Hash_Tree_Block.complete() && File_Block.complete();
 }
 
+unsigned transfer::download_count()
+{
+	return Hash_Tree_Block.download_count();
+}
+
 unsigned transfer::download_speed()
 {
 	Download_Speed->add(0);
@@ -131,6 +136,20 @@ unsigned transfer::download_speed()
 const boost::shared_ptr<net::speed_calc> & transfer::download_speed_calc()
 {
 	return Download_Speed;
+}
+
+void transfer::download_subscribe(const int connection_ID, const net::endpoint & ep,
+	const bit_field & tree_BF, const bit_field & file_BF)
+{
+	Peer.add(connection_ID, ep);
+	Hash_Tree_Block.download_subscribe(connection_ID, tree_BF);
+	File_Block.download_subscribe(connection_ID, file_BF);
+}
+
+void transfer::download_unsubscribe(const int connection_ID)
+{
+	Hash_Tree_Block.download_unsubscribe(connection_ID);
+	File_Block.download_unsubscribe(connection_ID);
 }
 
 boost::uint64_t transfer::file_block_count()
@@ -143,25 +162,9 @@ boost::uint64_t transfer::file_size()
 	return Hash_Tree.file_size;
 }
 
-unsigned transfer::incoming_count()
+unsigned transfer::upload_count()
 {
-	return Hash_Tree_Block.incoming_count();
-}
-
-transfer::local_BF transfer::incoming_subscribe(const int connection_ID,
-	const net::endpoint & ep, const boost::function<void()> trigger_tick)
-{
-	Peer.add(connection_ID, ep);
-	local_BF tmp;
-	tmp.tree_BF = Hash_Tree_Block.incoming_subscribe(connection_ID, trigger_tick);
-	tmp.file_BF = File_Block.incoming_subscribe(connection_ID, trigger_tick);
-	return tmp;
-}
-
-void transfer::incoming_unsubscribe(const int connection_ID)
-{
-	Hash_Tree_Block.incoming_unsubscribe(connection_ID);
-	File_Block.incoming_unsubscribe(connection_ID);
+	return Hash_Tree_Block.upload_count();
 }
 
 boost::optional<boost::uint64_t> transfer::next_have_file(const int connection_ID)
@@ -195,25 +198,6 @@ boost::optional<transfer::next_request> transfer::next_request_file(const int co
 		return next_request(*block_num, block_size);
 	}
 	return boost::optional<next_request>();
-}
-
-unsigned transfer::outgoing_count()
-{
-	return Hash_Tree_Block.outgoing_count();
-}
-
-void transfer::outgoing_subscribe(const int connection_ID, const net::endpoint & ep,
-	const bit_field & tree_BF, const bit_field & file_BF)
-{
-	Peer.add(connection_ID, ep);
-	Hash_Tree_Block.outgoing_subscribe(connection_ID, tree_BF);
-	File_Block.outgoing_subscribe(connection_ID, file_BF);
-}
-
-void transfer::outgoing_unsubscribe(const int connection_ID)
-{
-	Hash_Tree_Block.outgoing_unsubscribe(connection_ID);
-	File_Block.outgoing_unsubscribe(connection_ID);
 }
 
 unsigned transfer::percent_complete()
@@ -298,6 +282,22 @@ unsigned transfer::upload_speed()
 {
 	Upload_Speed->add(0);
 	return Upload_Speed->speed();
+}
+
+transfer::local_BF transfer::upload_subscribe(const int connection_ID,
+	const net::endpoint & ep, const boost::function<void()> trigger_tick)
+{
+	Peer.add(connection_ID, ep);
+	local_BF tmp;
+	tmp.tree_BF = Hash_Tree_Block.upload_subscribe(connection_ID, trigger_tick);
+	tmp.file_BF = File_Block.upload_subscribe(connection_ID, trigger_tick);
+	return tmp;
+}
+
+void transfer::upload_unsubscribe(const int connection_ID)
+{
+	Hash_Tree_Block.upload_unsubscribe(connection_ID);
+	File_Block.upload_unsubscribe(connection_ID);
 }
 
 transfer::status transfer::write_file_block(const int connection_ID,
