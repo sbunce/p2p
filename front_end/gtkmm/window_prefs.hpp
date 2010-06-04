@@ -10,7 +10,7 @@
 //standard
 #include <sstream>
 
-class window_prefs : public Gtk::Window, private boost::noncopyable
+class window_prefs : public Gtk::ScrolledWindow, private boost::noncopyable
 {  
 public:
 	window_prefs(p2p & P2P_in);
@@ -18,39 +18,15 @@ public:
 private:
 	p2p & P2P;
 
-	Gtk::Window * window;
 	Gtk::Entry * max_download_rate_entry;
 	Gtk::Entry * max_upload_rate_entry;
-	Gtk::Label * rate_label;
-	Gtk::Label * connection_limit_label;
-	Gtk::Label * upload_rate_label;
-	Gtk::Label * download_rate_label;
-	Gtk::Button * ok_button;
-	Gtk::Button * cancel_button;
-	Gtk::Button * apply_button;
-	Gtk::HButtonBox * button_box;
 	Gtk::HScale * connections_hscale;
-	Gtk::Fixed * fixed;
 
 	/*
-	apply_click:
-		Apply button clicked.
 	apply_settings:
-		Read input preferences and set them.
-	cancel_click:
-		Cancel button clicked.
-	client_connections_changed:
-		Called when client_connections_hscale changes value.
-	server_connections_changed:
-		Called when server_connections_hscale changes value.
-	ok_click:
-		Ok button clicked.
+		Called once per second to apply settings. This makes it so we don't need
+		an apply button.
 	*/
-	void apply_click();
-	void apply_settings();
-	void cancel_click();
-	void client_connections_changed();
-	void server_connections_changed();
-	void ok_click();
+	bool apply_settings();
 };
 #endif

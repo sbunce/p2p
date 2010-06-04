@@ -9,9 +9,12 @@ window_main::window_main():
 		Gtk::ICON_SIZE_LARGE_TOOLBAR));
 	Gtk::Image * upload_label = Gtk::manage(new Gtk::Image(Gtk::Stock::GO_UP,
 		Gtk::ICON_SIZE_LARGE_TOOLBAR));
+	Gtk::Image * prefs_label = Gtk::manage(new Gtk::Image(Gtk::Stock::PREFERENCES,
+		Gtk::ICON_SIZE_LARGE_TOOLBAR));
 	//window inside download/upload tabs
-	window_transfer * window_download = Gtk::manage(new window_transfer(P2P, window_transfer::download));
-	window_transfer * window_upload = Gtk::manage(new window_transfer(P2P, window_transfer::upload));
+	window_transfer * download_window = Gtk::manage(new window_transfer(P2P, window_transfer::download));
+	window_transfer * upload_window = Gtk::manage(new window_transfer(P2P, window_transfer::upload));
+	window_prefs * prefs_window = Gtk::manage(new window_prefs(P2P));
 	//bar on bottom of window (that lists upload/download speeds)
 	Gtk::Fixed * statusbar = Gtk::manage(new fixed_statusbar(P2P));
 	//vertically divides main window
@@ -24,8 +27,9 @@ window_main::window_main():
 	notebook->set_scrollable(true);
 
 	//add elements to the notebook
-	notebook->append_page(*window_download, *download_label);
-	notebook->append_page(*window_upload, *upload_label);
+	notebook->append_page(*download_window, *download_label);
+	notebook->append_page(*upload_window, *upload_label);
+	notebook->append_page(*prefs_window, *prefs_label);
 
 	//add items to the main VBox
 	main_VBox->pack_start(*notebook);

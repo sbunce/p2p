@@ -5,31 +5,18 @@ window_prefs::window_prefs(
 ):
 	P2P(P2P_in)
 {
-	window = this;
 	max_download_rate_entry = Gtk::manage(new Gtk::Entry());
 	max_upload_rate_entry = Gtk::manage(new Gtk::Entry());
-	rate_label = Gtk::manage(new Gtk::Label("Speed (kB/s)"));
-	connection_limit_label = Gtk::manage(new Gtk::Label("Connection Limit"));
-	upload_rate_label = Gtk::manage(new Gtk::Label("UL"));
-	download_rate_label = Gtk::manage(new Gtk::Label("DL"));
-	apply_button = Gtk::manage(new Gtk::Button(Gtk::StockID("gtk-apply")));
-	cancel_button = Gtk::manage(new Gtk::Button(Gtk::StockID("gtk-cancel")));
-	ok_button = Gtk::manage(new Gtk::Button(Gtk::StockID("gtk-ok")));
-	button_box = Gtk::manage(new Gtk::HButtonBox);
 	connections_hscale = Gtk::manage(new Gtk::HScale(2,1001,1));
-	fixed = Gtk::manage(new Gtk::Fixed());
 
-	//icon for top left of window
-	window->set_icon(
-		Gtk::Widget::render_icon(Gtk::Stock::PREFERENCES, Gtk::ICON_SIZE_LARGE_TOOLBAR)
-	);
+	Gtk::Label * rate_label = Gtk::manage(new Gtk::Label("Speed (kB/s)"));
+	Gtk::Label * connection_limit_label = Gtk::manage(new Gtk::Label("Connection Limit"));
+	Gtk::Label * upload_rate_label = Gtk::manage(new Gtk::Label("UL"));
+	Gtk::Label * download_rate_label = Gtk::manage(new Gtk::Label("DL"));
+	Gtk::Fixed * fixed = Gtk::manage(new Gtk::Fixed());
 
-	window->set_resizable(false);
-	window->set_title("Preferences");
-	window->set_modal(true);
-	window->set_keep_above(true);
-	window->set_position(Gtk::WIN_POS_CENTER);
-	window->add(*fixed);
+	this->add(*fixed);
+	this->set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC); //auto scroll bars
 
 	std::stringstream ss;
 	unsigned download_rate, upload_rate;
@@ -83,12 +70,6 @@ window_prefs::window_prefs(
 	connections_hscale->set_value_pos(Gtk::POS_TOP);
 	connections_hscale->set_value(P2P.get_max_connections());
 
-	button_box->set_spacing(8);
-	button_box->set_border_width(8);
-	button_box->pack_start(*apply_button);
-	button_box->pack_start(*cancel_button);
-	button_box->pack_start(*ok_button);
-
 	fixed->put(*max_download_rate_entry, 40, 40);
 	fixed->put(*max_upload_rate_entry, 40, 80);
 	fixed->put(*rate_label, 4, 10);
@@ -96,22 +77,13 @@ window_prefs::window_prefs(
 	fixed->put(*download_rate_label, 8, 45);
 	fixed->put(*upload_rate_label, 8, 85);
 	fixed->put(*connections_hscale, 140, 50);
-	fixed->put(*button_box, 80, 115);
+
+	Glib::signal_timeout().connect(sigc::mem_fun(*this, &window_prefs::apply_settings), 1000);
 
 	show_all_children();
-
-	//signaled functions
-	apply_button->signal_clicked().connect(sigc::mem_fun(*this, &window_prefs::apply_click), false);
-	cancel_button->signal_clicked().connect(sigc::mem_fun(*this, &window_prefs::cancel_click), false);
-	ok_button->signal_clicked().connect(sigc::mem_fun(*this, &window_prefs::ok_click), false);
 }
 
-void window_prefs::apply_click()
-{
-	apply_settings();
-}
-
-void window_prefs::apply_settings()
+bool window_prefs::apply_settings()
 {
 	int download_rate, upload_rate;
 	std::stringstream ss;
@@ -125,15 +97,6 @@ void window_prefs::apply_settings()
 	P2P.set_max_download_rate(download_rate * 1024);
 	P2P.set_max_connections((int)connections_hscale->get_value());
 	P2P.set_max_upload_rate(upload_rate * 1024);
-}
 
-void window_prefs::cancel_click()
-{
-	hide();
-}
-
-void window_prefs::ok_click()
-{
-	apply_settings();
-	hide();
+	return true;
 }

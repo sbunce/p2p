@@ -34,9 +34,6 @@ private:
 	//upload or download (some things are disabled for upload)
 	const type Type;
 
-	//convenience pointer
-	Gtk::ScrolledWindow * window;
-
 	//objects for display of downloads
 	Gtk::TreeView * download_view;
 	Gtk::ScrolledWindow * download_scrolled_window;
@@ -44,23 +41,19 @@ private:
 
 	//treeview columns
 	Gtk::TreeModel::ColumnRecord column;
-
 	Gtk::TreeModelColumn<Glib::ustring> column_name;
 	Gtk::TreeModelColumn<Glib::ustring> column_size;
-	Gtk::TreeModelColumn<Glib::ustring> column_peers;
 	Gtk::TreeModelColumn<Glib::ustring> column_speed;
 	Gtk::TreeModelColumn<int> column_percent_complete;
 	Gtk::TreeModelColumn<Glib::ustring> column_hash;
 	Gtk::TreeModelColumn<bool> column_update;
 	Gtk::CellRendererProgress cell;
-	int hash_col_num;
-	int update_col_num;
 
 	//popup menus for when user right clicks on treeviews
 	Gtk::Menu downloads_popup_menu;
 
 	//hash associated with row (this is used as index for fast updates)
-	std::map<std::string, Gtk::TreeModel::Row> Row_Index;
+	std::map<std::string, Gtk::TreeModel::Row> Row_Idx;
 
 	/*
 	compare_size:

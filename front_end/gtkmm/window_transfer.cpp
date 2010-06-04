@@ -7,25 +7,24 @@ window_transfer::window_transfer(
 	P2P(P2P_in),
 	Type(Type_in)
 {
-	window = this;
-
-	//instantiate
 	download_view = Gtk::manage(new Gtk::TreeView);
-	window->add(*download_view);
+
 	download_scrolled_window = Gtk::manage(new Gtk::ScrolledWindow);
 
 	//options
-	download_view->set_headers_visible(true);
+	download_view->set_headers_visible(false);
 	download_view->set_rules_hint(true); //alternate row color
+
+	this->add(*download_view);
+	this->set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC); //auto scroll bars
 
 	//set up column
 	column.add(column_name);
 	column.add(column_size);
-	column.add(column_peers);
 	column.add(column_speed);
 	column.add(column_percent_complete);
-	column.add(column_hash); hash_col_num = 5;
-	column.add(column_update); update_col_num = 6;
+	column.add(column_hash);
+	column.add(column_update);
 
 	//setup list to hold rows in treeview
 	download_list = Gtk::ListStore::create(column);
@@ -34,7 +33,6 @@ window_transfer::window_transfer(
 	//add columns to download_view
 	int name_col_num = download_view->append_column(" Name ", column_name) - 1;
 	int size_col_num = download_view->append_column(" Size ", column_size) - 1;
-	int peers_col_num = download_view->append_column(" Peers ", column_peers) - 1;
 	int speed_col_num = download_view->append_column(" Speed ", column_speed) - 1;
 	int complete_col_num = download_view->append_column(" Complete ", cell) - 1;
 	download_view->get_column(complete_col_num)->add_attribute(cell.property_value(),
@@ -45,7 +43,6 @@ window_transfer::window_transfer(
 	download_view->get_column(size_col_num)->set_sort_column(size_col_num);
 	download_list->set_sort_func(size_col_num, sigc::mem_fun(*this,
 		&window_transfer::compare_size));
-	download_view->get_column(peers_col_num)->set_sort_column(peers_col_num);
 	download_view->get_column(speed_col_num)->set_sort_column(speed_col_num);
 	download_list->set_sort_func(speed_col_num, sigc::mem_fun(*this,
 		&window_transfer::compare_size));
@@ -106,7 +103,6 @@ bool window_transfer::click(GdkEventButton * event)
 		&& event->button == 3)
 	{
 		//right click
-		downloads_popup_menu.popup(event->button, event->time);
 		int x, y;
 		Gtk::TreeModel::Path path;
 		Gtk::TreeViewColumn columnObject;
@@ -114,6 +110,7 @@ bool window_transfer::click(GdkEventButton * event)
 		if(download_view->get_path_at_pos((int)event->x, (int)event->y, path,
 			column, x, y))
 		{
+			downloads_popup_menu.popup(event->button, event->time);
 			download_view->set_cursor(path);
 		}else{
 			download_view->get_selection()->unselect_all();
@@ -131,27 +128,19 @@ bool window_transfer::refresh()
 	for(std::vector<p2p::transfer>::iterator it_cur = T.begin(),
 		it_end = T.end(); it_cur != it_end; ++it_cur)
 	{
-		if(Type == download && it_cur->download_peers == 0
-			&& it_cur->percent_complete == 100)
+		if(Type == download && it_cur->percent_complete == 100)
 		{
 			continue;
 		}else if(Type == upload && it_cur->upload_peers == 0){
 			continue;
 		}
 		std::map<std::string, Gtk::TreeModel::Row>::iterator
-			iter = Row_Index.find(it_cur->hash);
-		if(iter == Row_Index.end()){
+			iter = Row_Idx.find(it_cur->hash);
+		if(iter == Row_Idx.end()){
 			//add
 			Gtk::TreeModel::Row row = *(download_list->append());
 			row[column_name] = it_cur->name;
 			row[column_size] = convert::bytes_to_SI(it_cur->file_size);
-			std::stringstream peers;
-			if(Type == download){
-				peers << it_cur->download_peers;
-			}else{
-				peers << it_cur->upload_peers;
-			}
-			row[column_peers] = peers.str();
 			if(Type == download){
 				row[column_speed] = convert::bytes_to_SI(it_cur->download_speed) + "/s";
 			}else{
@@ -160,19 +149,12 @@ bool window_transfer::refresh()
 			row[column_percent_complete] = it_cur->percent_complete;
 			row[column_hash] = it_cur->hash;
 			row[column_update] = true;
-			Row_Index.insert(std::make_pair(it_cur->hash, row));
+			Row_Idx.insert(std::make_pair(it_cur->hash, row));
 		}else{
 			//update
 			Gtk::TreeModel::Row row = iter->second;
 			row[column_name] = it_cur->name;
 			row[column_size] = convert::bytes_to_SI(it_cur->file_size);
-			std::stringstream peers;
-			if(Type == download){
-				peers << it_cur->download_peers;
-			}else{
-				peers << it_cur->upload_peers;
-			}
-			row[column_peers] = peers.str();
 			if(Type == download){
 				row[column_speed] = convert::bytes_to_SI(it_cur->download_speed) + "/s";
 			}else{
@@ -191,7 +173,7 @@ bool window_transfer::refresh()
 			++it_cur;
 		}else{
 			Glib::ustring hash = (*it_cur)[column_hash];
-			Row_Index.erase(hash);
+			Row_Idx.erase(hash);
 			it_cur = download_list->erase(it_cur);
 		}
 	}

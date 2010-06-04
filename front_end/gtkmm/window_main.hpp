@@ -20,7 +20,9 @@ public:
 	window_main();
 
 private:
-	/* Signaled Functions
+	p2p P2P;
+
+	/*
 	file_drag_data_received:
 		File dragged on to window.
 	on_delete_event:
@@ -33,7 +35,5 @@ private:
 		int x, int y, const Gtk::SelectionData & selection_data, guint info, guint time);
 	bool on_delete_event(GdkEventAny * event);
 	void process_URI(const std::string & URI);
-
-	p2p P2P;
 };
 #endif
