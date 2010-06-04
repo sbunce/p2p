@@ -23,8 +23,8 @@ public:
 private:
 	p2p & P2P;
 
-	Gtk::Label download_label;
-	Gtk::Label upload_label;
+	Gtk::Label * download_label;
+	Gtk::Label * upload_label;
 
 	/*
 	update:
