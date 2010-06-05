@@ -155,7 +155,7 @@ boost::uint64_t p2p_impl::share_files()
 	return share::singleton().files();
 }
 
-void p2p_impl::start_download(const p2p::download & D)
+void p2p_impl::start_download(const p2p::download_info & DI)
 {
 	LOG;
 }
@@ -166,9 +166,9 @@ void p2p_impl::remove_download(const std::string & hash)
 	Connection_Manager.remove(hash);
 }
 
-std::list<p2p::transfer> p2p_impl::transfers()
+std::list<p2p::transfer_info> p2p_impl::transfers()
 {
-	std::list<p2p::transfer> tmp;
+	std::list<p2p::transfer_info> tmp;
 	for(share::slot_iterator it_cur = share::singleton().begin_slot(),
 		it_end = share::singleton().end_slot(); it_cur != it_end; ++it_cur)
 	{

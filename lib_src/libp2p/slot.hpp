@@ -52,7 +52,7 @@ public:
 		transfer could not be instantiated.
 	*/
 	const boost::shared_ptr<transfer> & get_transfer();
-	p2p::transfer info();
+	p2p::transfer_info info();
 	bool set_unknown(const int connection_ID, const boost::uint64_t file_size,
 		const std::string & root_hash);
 

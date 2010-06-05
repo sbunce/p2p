@@ -49,8 +49,8 @@ public:
 	void set_max_upload_rate(const unsigned rate);
 	boost::uint64_t share_size();
 	boost::uint64_t share_files();
-	void start_download(const p2p::download & D);
-	std::list<p2p::transfer> transfers();
+	void start_download(const p2p::download_info & DI);
+	std::list<p2p::transfer_info> transfers();
 	unsigned TCP_download_rate();
 	unsigned TCP_upload_rate();
 	unsigned UDP_download_rate();

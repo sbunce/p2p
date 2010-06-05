@@ -16,7 +16,7 @@ public:
 	p2p();
 
 	//status of a transfer
-	class transfer
+	class transfer_info
 	{
 	public:
 		std::string hash;          //root hash of hash tree
@@ -31,16 +31,13 @@ public:
 	};
 
 	//needed to start a download
-	class download
+	class download_info
 	{
 	public:
-		download(
+		download_info(
 			const std::string & hash_in,
 			const std::string & name_in
-		):
-			hash(hash_in),
-			name(name_in)
-		{}
+		);
 		std::string hash;
 		std::string name;
 	};
@@ -54,8 +51,8 @@ public:
 		Clears T and populates it with transfer information.
 	*/
 	void remove_download(const std::string & hash);
-	void start_download(const p2p::download & D);
-	std::list<p2p::transfer> transfers();
+	void start_download(const p2p::download_info & DI);
+	std::list<p2p::transfer_info> transfers();
 
 	/* Info
 	connection:

@@ -48,9 +48,9 @@ const std::string & slot::hash()
 	return FI.hash;
 }
 
-p2p::transfer slot::info()
+p2p::transfer_info slot::info()
 {
-	p2p::transfer tmp;
+	p2p::transfer_info tmp;
 	tmp.hash = FI.hash;
 	tmp.name = file_name;
 	if(Transfer){

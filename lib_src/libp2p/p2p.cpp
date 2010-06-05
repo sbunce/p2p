@@ -5,6 +5,18 @@
 #include <boost/shared_ptr.hpp>
 #include <p2p.hpp>
 
+//BEGIN download_info
+p2p::download_info::download_info(
+	const std::string & hash_in,
+	const std::string & name_in
+):
+	hash(hash_in),
+	name(name_in)
+{
+
+}
+//END download_info
+
 p2p::p2p():
 	P2P_impl(new p2p_impl())
 {
@@ -76,12 +88,12 @@ boost::uint64_t p2p::share_files()
 	return P2P_impl->share_files();
 }
 
-void p2p::start_download(const p2p::download & D)
+void p2p::start_download(const p2p::download_info & DI)
 {
-	P2P_impl->start_download(D);
+	P2P_impl->start_download(DI);
 }
 
-std::list<p2p::transfer> p2p::transfers()
+std::list<p2p::transfer_info> p2p::transfers()
 {
 	return P2P_impl->transfers();
 }
