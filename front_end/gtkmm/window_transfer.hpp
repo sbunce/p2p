@@ -18,21 +18,23 @@
 class window_transfer : public Gtk::ScrolledWindow, private boost::noncopyable
 {
 public:
-	enum type {
+	enum type_t {
 		download,
 		upload
 	};
 
 	window_transfer(
+		const type_t type_in,
 		p2p & P2P_in,
-		const type Type_in
+		Gtk::Notebook * notebook_in
 	);
 
 private:
+	const type_t type;
 	p2p & P2P;
 
-	//upload or download (some things are disabled for upload)
-	const type Type;
+	//needed to control adding and removing tabs
+	Gtk::Notebook * notebook;
 
 	//objects for display of downloads
 	Gtk::TreeView * download_view;
@@ -52,16 +54,19 @@ private:
 	//popup menus for when user right clicks on treeviews
 	Gtk::Menu downloads_popup_menu;
 
-	//hash associated with row (this is used as index for fast updates)
+	//hash associated with row
 	std::map<std::string, Gtk::TreeModel::Row> Row_Idx;
 
 	/*
 	compare_size:
 		Signaled when user clicks size or speed column to sort.
-	delete_download:
-		Removes selected download.
 	click:
 		Called when TreeView clicked.
+	download_delete:
+		Called when delete selected from right click menu.
+		Note: Only for downloads.
+	transfer_info:
+		Called when info selected from right click menu.
 	refresh:
 		Refreshes TreeView.
 	pause:
@@ -69,8 +74,9 @@ private:
 	*/
 	int compare_size(const Gtk::TreeModel::iterator & lval,
 		const Gtk::TreeModel::iterator & rval);
-	void delete_download();
 	bool click(GdkEventButton * event);
+	void download_delete();
+	void transfer_info();
 	bool refresh();
 };
 #endif

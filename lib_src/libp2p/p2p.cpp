@@ -81,9 +81,9 @@ void p2p::start_download(const p2p::download & D)
 	P2P_impl->start_download(D);
 }
 
-void p2p::transfers(std::vector<p2p::transfer> & T)
+std::list<p2p::transfer> p2p::transfers()
 {
-	P2P_impl->transfers(T);
+	return P2P_impl->transfers();
 }
 
 unsigned p2p::TCP_download_rate()

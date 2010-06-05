@@ -1,24 +1,24 @@
 #include "window_transfer.hpp"
 
 window_transfer::window_transfer(
+	const type_t type_in,
 	p2p & P2P_in,
-	const type Type_in
+	Gtk::Notebook * notebook_in
 ):
+	type(type_in),
 	P2P(P2P_in),
-	Type(Type_in)
+	notebook(notebook_in)
 {
 	download_view = Gtk::manage(new Gtk::TreeView);
-
 	download_scrolled_window = Gtk::manage(new Gtk::ScrolledWindow);
 
 	//options
-	download_view->set_headers_visible(false);
+	this->set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC); //auto scroll bars
+	download_view->set_headers_visible(true);
 	download_view->set_rules_hint(true); //alternate row color
 
+	//add/compose elements
 	this->add(*download_view);
-	this->set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC); //auto scroll bars
-
-	//set up column
 	column.add(column_name);
 	column.add(column_size);
 	column.add(column_speed);
@@ -48,11 +48,14 @@ window_transfer::window_transfer(
 		&window_transfer::compare_size));
 	download_view->get_column(complete_col_num)->set_sort_column(complete_col_num);
 
-	if(Type == download){
+	//right click menu
+	downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::StockMenuElem(
+		Gtk::StockID(Gtk::Stock::INFO), sigc::mem_fun(*this, &window_transfer::transfer_info)));
+	if(type == download){
 		//menu that pops up when right click happens on download
 		downloads_popup_menu.items().push_back(Gtk::Menu_Helpers::StockMenuElem(
 			Gtk::StockID(Gtk::Stock::DELETE), sigc::mem_fun(*this,
-			&window_transfer::delete_download)));
+			&window_transfer::download_delete)));
 	}
 
 	//signaled functions
@@ -72,7 +75,38 @@ int window_transfer::compare_size(const Gtk::TreeModel::iterator & lval,
 	return convert::SI_cmp(left_ss.str(), right_ss.str());
 }
 
-void window_transfer::delete_download()
+bool window_transfer::click(GdkEventButton * event)
+{
+	if(event->type == GDK_BUTTON_PRESS && event->button == 1){
+		//left click
+		int x, y;
+		Gtk::TreeModel::Path path;
+		Gtk::TreeViewColumn column_obj;
+		Gtk::TreeViewColumn * column = &column_obj;
+		if(download_view->get_path_at_pos(event->x, event->y, path, column, x, y)){
+			download_view->set_cursor(path);
+		}else{
+			download_view->get_selection()->unselect_all();
+		}
+	}else if(type == download && event->type == GDK_BUTTON_PRESS
+		&& event->button == 3)
+	{
+		//right click
+		int x, y;
+		Gtk::TreeModel::Path path;
+		Gtk::TreeViewColumn column_obj;
+		Gtk::TreeViewColumn * column = &column_obj;
+		if(download_view->get_path_at_pos(event->x, event->y, path, column, x, y)){
+			downloads_popup_menu.popup(event->button, event->time);
+			download_view->set_cursor(path);
+		}else{
+			download_view->get_selection()->unselect_all();
+		}
+	}
+	return true;
+}
+
+void window_transfer::download_delete()
 {
 	Glib::RefPtr<Gtk::TreeView::Selection> refSelection = download_view->get_selection();
 	if(refSelection){
@@ -84,54 +118,102 @@ void window_transfer::delete_download()
 	}
 }
 
-bool window_transfer::click(GdkEventButton * event)
+void window_transfer::transfer_info()
 {
-	if(event->type == GDK_BUTTON_PRESS && event->button == 1){
-		//left click
-		int x, y;
-		Gtk::TreeModel::Path path;
-		Gtk::TreeViewColumn columnObject;
-		Gtk::TreeViewColumn * column = &columnObject;
-		if(download_view->get_path_at_pos((int)event->x, (int)event->y, path,
-			column, x, y))
-		{
-			download_view->set_cursor(path);
-		}else{
-			download_view->get_selection()->unselect_all();
-		}
-	}else if(Type == download && event->type == GDK_BUTTON_PRESS
-		&& event->button == 3)
-	{
-		//right click
-		int x, y;
-		Gtk::TreeModel::Path path;
-		Gtk::TreeViewColumn columnObject;
-		Gtk::TreeViewColumn * column = &columnObject;
-		if(download_view->get_path_at_pos((int)event->x, (int)event->y, path,
-			column, x, y))
-		{
-			downloads_popup_menu.popup(event->button, event->time);
-			download_view->set_cursor(path);
-		}else{
-			download_view->get_selection()->unselect_all();
+	std::string hash;
+	Glib::RefPtr<Gtk::TreeView::Selection> refSelection = download_view->get_selection();
+	if(refSelection){
+		Gtk::TreeModel::iterator selected_row_iter = refSelection->get_selected();
+		if(selected_row_iter){
+			Glib::ustring tmp = (*selected_row_iter)[column_hash];
+			hash = tmp;
 		}
 	}
-	return true;
 }
+
+/*
+void gui_window_download::download_info_tab()
+{
+	std::string root_hash, file_name;
+	Glib::RefPtr<Gtk::TreeView::Selection> refSelection = download_view->get_selection();
+	if(refSelection){
+		Gtk::TreeModel::iterator selected_row_iter = refSelection->get_selected();
+		if(selected_row_iter){
+			Gtk::TreeModel::Row row = *selected_row_iter;
+			Glib::ustring hash_retrieved;
+			row.get_value(0, root_hash);
+		}
+	}
+
+	//make sure download exists (user could have requested information on nothing)
+	std::string path;
+	boost::uint64_t tree_size, file_size;
+	if(!P2P->file_info(root_hash, path, tree_size, file_size)){
+		LOGGER << "clicked download doesn't exist";
+		return;
+	}
+
+	std::set<std::string>::iterator iter = open_info_tabs.find(root_hash);
+	if(iter != open_info_tabs.end()){
+		LOGGER << "tab for " << root_hash << " already open";
+		return;
+	}else{
+		open_info_tabs.insert(root_hash);
+	}
+
+	Gtk::HBox * hbox;           //separates tab label from button
+	Gtk::Label * tab_label;     //tab text
+	Gtk::Button * close_button; //clickable close button
+
+	gui_window_download_status * status_window = Gtk::manage(new gui_window_download_status(
+		root_hash,
+		path,
+		tree_size,
+		file_size,
+		hbox,         //set in ctor
+		tab_label,    //set in ctor
+		close_button, //set in ctor
+		*P2P
+	));
+
+	notebook->append_page(*status_window, *hbox, *tab_label);
+	notebook->show_all_children();
+
+	//set tab window to refresh
+	sigc::connection tab_conn = Glib::signal_timeout().connect(
+		sigc::mem_fun(status_window, &gui_window_download_status::refresh),
+		settings::GUI_TICK
+	);
+
+	//signal to close tab, function pointer bound to window pointer associated with a tab
+	close_button->signal_clicked().connect(
+		sigc::bind<gui_window_download_status *, std::string, sigc::connection>(
+			sigc::mem_fun(*this, &gui_window_download::download_info_tab_close),
+			status_window, root_hash, tab_conn
+		)
+	);
+}
+
+void gui_window_download::download_info_tab_close(gui_window_download_status * status_window, std::string root_hash, sigc::connection tab_conn)
+{
+	tab_conn.disconnect();                 //stop window from refreshing
+	notebook->remove_page(*status_window); //remove from notebook
+	open_info_tabs.erase(root_hash);
+}
+*/
 
 bool window_transfer::refresh()
 {
-	std::vector<p2p::transfer> T;
-	P2P.transfers(T);
+	std::list<p2p::transfer> T = P2P.transfers();
 
 	//add and update rows
-	for(std::vector<p2p::transfer>::iterator it_cur = T.begin(),
+	for(std::list<p2p::transfer>::iterator it_cur = T.begin(),
 		it_end = T.end(); it_cur != it_end; ++it_cur)
 	{
-		if(Type == download && it_cur->percent_complete == 100)
+		if(type == download && it_cur->percent_complete == 100)
 		{
 			continue;
-		}else if(Type == upload && it_cur->upload_peers == 0){
+		}else if(type == upload && it_cur->upload_peers == 0){
 			continue;
 		}
 		std::map<std::string, Gtk::TreeModel::Row>::iterator
@@ -141,7 +223,7 @@ bool window_transfer::refresh()
 			Gtk::TreeModel::Row row = *(download_list->append());
 			row[column_name] = it_cur->name;
 			row[column_size] = convert::bytes_to_SI(it_cur->file_size);
-			if(Type == download){
+			if(type == download){
 				row[column_speed] = convert::bytes_to_SI(it_cur->download_speed) + "/s";
 			}else{
 				row[column_speed] = convert::bytes_to_SI(it_cur->upload_speed) + "/s";
@@ -155,7 +237,7 @@ bool window_transfer::refresh()
 			Gtk::TreeModel::Row row = iter->second;
 			row[column_name] = it_cur->name;
 			row[column_size] = convert::bytes_to_SI(it_cur->file_size);
-			if(Type == download){
+			if(type == download){
 				row[column_speed] = convert::bytes_to_SI(it_cur->download_speed) + "/s";
 			}else{
 				row[column_speed] = convert::bytes_to_SI(it_cur->upload_speed) + "/s";

@@ -166,14 +166,15 @@ void p2p_impl::remove_download(const std::string & hash)
 	Connection_Manager.remove(hash);
 }
 
-void p2p_impl::transfers(std::vector<p2p::transfer> & T)
+std::list<p2p::transfer> p2p_impl::transfers()
 {
-	T.clear();
+	std::list<p2p::transfer> tmp;
 	for(share::slot_iterator it_cur = share::singleton().begin_slot(),
 		it_end = share::singleton().end_slot(); it_cur != it_end; ++it_cur)
 	{
-		T.push_back(it_cur->info());
+		tmp.push_back(it_cur->info());
 	}
+	return tmp;
 }
 
 unsigned p2p_impl::TCP_download_rate()

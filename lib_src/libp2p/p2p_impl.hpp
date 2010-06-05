@@ -50,7 +50,7 @@ public:
 	boost::uint64_t share_size();
 	boost::uint64_t share_files();
 	void start_download(const p2p::download & D);
-	void transfers(std::vector<p2p::transfer> & T);
+	std::list<p2p::transfer> transfers();
 	unsigned TCP_download_rate();
 	unsigned TCP_upload_rate();
 	unsigned UDP_download_rate();

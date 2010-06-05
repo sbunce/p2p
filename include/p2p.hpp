@@ -55,7 +55,7 @@ public:
 	*/
 	void remove_download(const std::string & hash);
 	void start_download(const p2p::download & D);
-	void transfers(std::vector<p2p::transfer> & T);
+	std::list<p2p::transfer> transfers();
 
 	/* Info
 	connection:

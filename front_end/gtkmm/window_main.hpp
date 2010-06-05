@@ -6,6 +6,7 @@
 #include "fixed_statusbar.hpp"
 #include "window_prefs.hpp"
 #include "window_transfer.hpp"
+#include "window_transfer_info.hpp"
 
 //include
 #include <boost/shared_ptr.hpp>
@@ -32,7 +33,7 @@ private:
 		Note: URI might be newline delimited list of URIs.
 	*/
 	void file_drag_data_received(const Glib::RefPtr<Gdk::DragContext> & context,
-		int x, int y, const Gtk::SelectionData & selection_data, guint info, guint time);
+		const int x, const int y, const Gtk::SelectionData & selection_data, const guint info, const guint time);
 	bool on_delete_event(GdkEventAny * event);
 	void process_URI(const std::string & URI);
 };
