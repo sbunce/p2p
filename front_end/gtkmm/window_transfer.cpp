@@ -204,7 +204,7 @@ void gui_window_download::download_info_tab_close(gui_window_download_status * s
 
 bool window_transfer::refresh()
 {
-	std::list<p2p::transfer_info> T = P2P.transfers();
+	std::list<p2p::transfer_info> T = P2P.transfer();
 
 	//add and update rows
 	for(std::list<p2p::transfer_info>::iterator it_cur = T.begin(),

@@ -93,9 +93,14 @@ void p2p::start_download(const p2p::download_info & DI)
 	P2P_impl->start_download(DI);
 }
 
-std::list<p2p::transfer_info> p2p::transfers()
+std::list<p2p::transfer_info> p2p::transfer()
 {
-	return P2P_impl->transfers();
+	return P2P_impl->transfer();
+}
+
+boost::optional<p2p::transfer_info> p2p::transfer(const std::string & hash)
+{
+	return P2P_impl->transfer(hash);
 }
 
 unsigned p2p::TCP_download_rate()

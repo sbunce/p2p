@@ -2,6 +2,7 @@
 #define H_P2P
 
 //include
+#include <boost/optional.hpp>
 #include <boost/utility.hpp>
 #include <boost/shared_ptr.hpp>
 
@@ -47,12 +48,9 @@ public:
 		Removes a running download.
 	start_download:
 		Starts a download.
-	transfers:
-		Clears T and populates it with transfer information.
 	*/
 	void remove_download(const std::string & hash);
 	void start_download(const p2p::download_info & DI);
-	std::list<p2p::transfer_info> transfers();
 
 	/* Info
 	connection:
@@ -63,6 +61,10 @@ public:
 		Size of all shared files (bytes).
 	share_files:
 		The number of files shared.
+	transfer (0 parameters):
+		Returns information for all transfers.
+	transfer (1 parameter):
+		Returns information for specific transfer.
 	TCP_download_rate:
 		Returns current average TCP download rate (B/s).
 	TCP_upload_rate:
@@ -76,6 +78,8 @@ public:
 	unsigned DHT_count();
 	boost::uint64_t share_size();
 	boost::uint64_t share_files();
+	std::list<transfer_info> transfer();
+	boost::optional<transfer_info> transfer(const std::string & hash);
 	unsigned TCP_download_rate();
 	unsigned TCP_upload_rate();
 	unsigned UDP_download_rate();
@@ -109,6 +113,7 @@ public:
 	void set_max_upload_rate(const unsigned rate);
 
 	/* Change Defaults
+	Note: These must be called before p2p instantiated.
 	set_db_file_name:
 		Change the name of the database file within program directory.
 	set_program_dir:

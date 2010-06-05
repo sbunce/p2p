@@ -83,9 +83,9 @@ public:
 	insert_update:
 		Insert or update file if a file already exists with the same path.
 	find_hash:
-		Lookup file by hash. The shared_ptr will be empty if no file found.
+		Lookup file by hash. Returns end iterator if not found.
 	find_path:
-		Lookup file by path. The shared_ptr will be empty if no file found.
+		Lookup file by path. Returns end iterator if not found.
 	*/
 	const_file_iterator begin_file();
 	const_file_iterator end_file();
@@ -101,8 +101,10 @@ public:
 	end_slot:
 		Returns iterator to end of slots.
 	find_slot:
-		Returns slot_iterator for specified hash. Returns end iterator if file
-		with specified hash not in share.
+		Returns slot_iterator for specified hash. The no_create parameter
+		specifies if slot should be created if it doesn't already exist.
+		Note: If file with hash doesn't exist in share end iterator returned no
+			matter what.
 	garbage_collect:
 		Remove unused slots. This is called whenever a slot is closed with a
 		remote host.
@@ -117,7 +119,7 @@ public:
 	*/
 	slot_iterator begin_slot();
 	slot_iterator end_slot();
-	slot_iterator find_slot(const std::string & hash);
+	slot_iterator find_slot(const std::string & hash, const bool no_create = true);
 	void garbage_collect();
 	bool is_downloading(const std::string & path);
 	slot_iterator remove_slot(const std::string & hash);
