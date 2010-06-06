@@ -11,10 +11,10 @@ fixed_statusbar::fixed_statusbar(
 	this->put(*download_label, 5, 0);
 	this->put(*upload_label, 100, 0);
 
-	Glib::signal_timeout().connect(sigc::mem_fun(*this, &fixed_statusbar::update), settings::GUI_tick);
+	Glib::signal_timeout().connect(sigc::mem_fun(*this, &fixed_statusbar::refresh), settings::GUI_tick);
 }
 
-bool fixed_statusbar::update()
+bool fixed_statusbar::refresh()
 {
 	std::stringstream ss;
 	ss << "D: " << convert::bytes_to_SI(P2P.TCP_download_rate() + P2P.UDP_download_rate()) << "/s";

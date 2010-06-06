@@ -249,7 +249,7 @@ share::const_file_iterator share::find_path(const std::string & path)
 	}
 }
 
-share::slot_iterator share::find_slot(const std::string & hash, const bool no_create)
+share::slot_iterator share::find_slot(const std::string & hash, const bool create)
 {
 	boost::recursive_mutex::scoped_lock lock(Recursive_Mutex);
 
@@ -267,10 +267,7 @@ share::slot_iterator share::find_slot(const std::string & hash, const bool no_cr
 		return end_slot();
 	}
 
-	if(no_create){
-		return end_slot();
-	}else{
-		//create slot
+	if(create){
 		boost::shared_ptr<slot> new_slot;
 		try{
 			new_slot.reset(new slot(*Hash_iter->second));
@@ -281,6 +278,8 @@ share::slot_iterator share::find_slot(const std::string & hash, const bool no_cr
 		std::pair<std::map<std::string, boost::shared_ptr<slot> >::iterator, bool>
 			ret = Slot.insert(std::make_pair(hash, new_slot));
 		return slot_iterator(this, ret.first->second);
+	}else{
+		return end_slot();
 	}
 }
 

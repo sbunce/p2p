@@ -54,6 +54,8 @@ public:
 		Returns true and sets block to next block to request. Or returns false if
 		host not yet added or no blocks to request from host.
 		Precondition: !complete()
+	percent_complete:
+		Returns % of blocks we have (0-100).
 	remote_host_count:
 		Returns the number of remote hosts block_request is keeping track of.
 	*/
@@ -68,6 +70,7 @@ public:
 	bool have_block(const boost::uint64_t block);
 	bool is_approved(const boost::uint64_t block);
 	boost::optional<boost::uint64_t> next_request(const int connection_ID);
+	unsigned percent_complete();
 	unsigned remote_host_count();
 
 	/* Upload
@@ -112,6 +115,9 @@ private:
 
 	//number of blocks (bits in the bit_fields)
 	const boost::uint64_t block_count;
+
+	//number of blocks we have
+	boost::uint64_t local_blocks;
 
 	/*
 	Bits set to 0 represent blocks we need to request. Bits set to 1 represent

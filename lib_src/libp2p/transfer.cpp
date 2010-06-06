@@ -22,7 +22,7 @@ transfer::next_request::next_request(const next_request & NR):
 transfer::transfer(const file_info & FI):
 	Hash_Tree(FI),
 	File(FI),
-	Hash_Tree_Block(Hash_Tree.tree_block_count),
+	Tree_Block(Hash_Tree.tree_block_count),
 	File_Block(Hash_Tree.file_block_count),
 	bytes_received(0),
 	Download_Speed(new net::speed_calc()),
@@ -35,7 +35,7 @@ transfer::transfer(const file_info & FI):
 		hash_info = db::table::hash::find(FI.hash);
 	if(hash_info){
 		if(hash_info->tree_state == db::table::hash::complete){
-			Hash_Tree_Block.add_block_local_all();
+			Tree_Block.add_block_local_all();
 			bytes_received += Hash_Tree.tree_size;
 		}
 	}else{
@@ -61,10 +61,10 @@ void transfer::check()
 	buf.reserve(protocol_tcp::file_block_size);
 
 	//only check tree blocks with good parents
-	Hash_Tree_Block.approve_block(0);
+	Tree_Block.approve_block(0);
 	for(boost::uint64_t block_num=0; block_num<Hash_Tree.tree_block_count; ++block_num){
 		boost::this_thread::interruption_point();
-		if(!Hash_Tree_Block.is_approved(block_num)){
+		if(!Tree_Block.is_approved(block_num)){
 			continue;
 		}
 		buf.clear();
@@ -76,13 +76,13 @@ void transfer::check()
 		status = Hash_Tree.check_tree_block(block_num, buf);
 		if(status == hash_tree::good){
 			bytes_received += buf.size();
-			Hash_Tree_Block.add_block_local(block_num);
+			Tree_Block.add_block_local(block_num);
 			std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool>
 				pair = Hash_Tree.tree_block_children(block_num);
 			if(pair.second){
 				//approve child hash tree blocks
 				for(boost::uint64_t x=pair.first.first; x<pair.first.second; ++x){
-					Hash_Tree_Block.approve_block(x);
+					Tree_Block.approve_block(x);
 				}
 			}
 			pair = Hash_Tree.file_block_children(block_num);
@@ -119,12 +119,12 @@ void transfer::check()
 
 bool transfer::complete()
 {
-	return Hash_Tree_Block.complete() && File_Block.complete();
+	return Tree_Block.complete() && File_Block.complete();
 }
 
 unsigned transfer::download_count()
 {
-	return Hash_Tree_Block.download_count();
+	return Tree_Block.download_count();
 }
 
 unsigned transfer::download_speed()
@@ -142,19 +142,24 @@ void transfer::download_subscribe(const int connection_ID, const net::endpoint &
 	const bit_field & tree_BF, const bit_field & file_BF)
 {
 	Peer.add(connection_ID, ep);
-	Hash_Tree_Block.download_subscribe(connection_ID, tree_BF);
+	Tree_Block.download_subscribe(connection_ID, tree_BF);
 	File_Block.download_subscribe(connection_ID, file_BF);
 }
 
 void transfer::download_unsubscribe(const int connection_ID)
 {
-	Hash_Tree_Block.download_unsubscribe(connection_ID);
+	Tree_Block.download_unsubscribe(connection_ID);
 	File_Block.download_unsubscribe(connection_ID);
 }
 
 boost::uint64_t transfer::file_block_count()
 {
 	return Hash_Tree.file_block_count;
+}
+
+unsigned transfer::file_percent_complete()
+{
+	return File_Block.percent_complete();
 }
 
 boost::uint64_t transfer::file_size()
@@ -164,7 +169,7 @@ boost::uint64_t transfer::file_size()
 
 unsigned transfer::upload_count()
 {
-	return Hash_Tree_Block.upload_count();
+	return Tree_Block.upload_count();
 }
 
 boost::optional<boost::uint64_t> transfer::next_have_file(const int connection_ID)
@@ -174,7 +179,7 @@ boost::optional<boost::uint64_t> transfer::next_have_file(const int connection_I
 
 boost::optional<boost::uint64_t> transfer::next_have_tree(const int connection_ID)
 {
-	return Hash_Tree_Block.next_have(connection_ID);
+	return Tree_Block.next_have(connection_ID);
 }
 
 boost::optional<net::endpoint> transfer::next_peer(const int connection_ID)
@@ -184,7 +189,7 @@ boost::optional<net::endpoint> transfer::next_peer(const int connection_ID)
 
 boost::optional<transfer::next_request> transfer::next_request_tree(const int connection_ID)
 {
-	if(boost::optional<boost::uint64_t> block_num = Hash_Tree_Block.next_request(connection_ID)){
+	if(boost::optional<boost::uint64_t> block_num = Tree_Block.next_request(connection_ID)){
 		unsigned block_size = Hash_Tree.block_size(*block_num);
 		return next_request(*block_num, block_size);
 	}
@@ -233,7 +238,7 @@ std::pair<boost::shared_ptr<message_tcp::send::base>, transfer::status>
 std::pair<boost::shared_ptr<message_tcp::send::base>, transfer::status>
 	transfer::read_tree_block(const boost::uint64_t block_num)
 {
-	if(Hash_Tree_Block.have_block(block_num)){
+	if(Tree_Block.have_block(block_num)){
 		net::buffer buf;
 		hash_tree::status status = Hash_Tree.read_block(block_num, buf);
 		if(status == hash_tree::good){
@@ -256,7 +261,7 @@ void transfer::recv_have_file_block(const int connection_ID,
 void transfer::recv_have_hash_tree_block(const int connection_ID,
 	const boost::uint64_t block_num)
 {
-	Hash_Tree_Block.add_block_remote(connection_ID, block_num);
+	Tree_Block.add_block_remote(connection_ID, block_num);
 }
 
 boost::optional<std::string> transfer::root_hash()
@@ -278,6 +283,17 @@ boost::uint64_t transfer::tree_block_count()
 	return Hash_Tree.tree_block_count;
 }
 
+unsigned transfer::tree_percent_complete()
+{
+	return Tree_Block.percent_complete();
+}
+
+
+boost::uint64_t transfer::tree_size()
+{
+	return Hash_Tree.tree_size;
+}
+
 unsigned transfer::upload_speed()
 {
 	Upload_Speed->add(0);
@@ -289,14 +305,14 @@ transfer::local_BF transfer::upload_subscribe(const int connection_ID,
 {
 	Peer.add(connection_ID, ep);
 	local_BF tmp;
-	tmp.tree_BF = Hash_Tree_Block.upload_subscribe(connection_ID, trigger_tick);
+	tmp.tree_BF = Tree_Block.upload_subscribe(connection_ID, trigger_tick);
 	tmp.file_BF = File_Block.upload_subscribe(connection_ID, trigger_tick);
 	return tmp;
 }
 
 void transfer::upload_unsubscribe(const int connection_ID)
 {
-	Hash_Tree_Block.upload_unsubscribe(connection_ID);
+	Tree_Block.upload_unsubscribe(connection_ID);
 	File_Block.upload_unsubscribe(connection_ID);
 }
 
@@ -334,7 +350,7 @@ transfer::status transfer::write_file_block(const int connection_ID,
 transfer::status transfer::write_tree_block(const int connection_ID,
 	const boost::uint64_t block_num, const net::buffer & buf)
 {
-	if(Hash_Tree_Block.have_block(block_num)){
+	if(Tree_Block.have_block(block_num)){
 		/*
 		Don't write block which already exists.
 		Note: Multiple threads might make it past here with the same block but
@@ -344,14 +360,14 @@ transfer::status transfer::write_tree_block(const int connection_ID,
 	}
 	hash_tree::status status = Hash_Tree.write_block(block_num, buf);
 	if(status == hash_tree::good){
-		Hash_Tree_Block.add_block_local(connection_ID, block_num);
+		Tree_Block.add_block_local(connection_ID, block_num);
 		bytes_received += buf.size();
 		std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool>
 			pair = Hash_Tree.tree_block_children(block_num);
 		if(pair.second){
 			//approve child hash tree blocks
 			for(boost::uint64_t x=pair.first.first; x<pair.first.second; ++x){
-				Hash_Tree_Block.approve_block(x);
+				Tree_Block.approve_block(x);
 			}
 		}
 		pair = Hash_Tree.file_block_children(block_num);
@@ -361,7 +377,7 @@ transfer::status transfer::write_tree_block(const int connection_ID,
 				File_Block.approve_block(x);
 			}
 		}
-		if(Hash_Tree_Block.complete()){
+		if(Tree_Block.complete()){
 			db::table::hash::set_state(Hash_Tree.hash, db::table::hash::complete);
 		}
 		return good;

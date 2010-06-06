@@ -101,8 +101,8 @@ public:
 	end_slot:
 		Returns iterator to end of slots.
 	find_slot:
-		Returns slot_iterator for specified hash. The no_create parameter
-		specifies if slot should be created if it doesn't already exist.
+		Returns slot_iterator for specified hash. The create parameter specifies
+		if slot should be created if it doesn't already exist.
 		Note: If file with hash doesn't exist in share end iterator returned no
 			matter what.
 	garbage_collect:
@@ -119,7 +119,7 @@ public:
 	*/
 	slot_iterator begin_slot();
 	slot_iterator end_slot();
-	slot_iterator find_slot(const std::string & hash, const bool no_create = true);
+	slot_iterator find_slot(const std::string & hash, const bool create = true);
 	void garbage_collect();
 	bool is_downloading(const std::string & path);
 	slot_iterator remove_slot(const std::string & hash);

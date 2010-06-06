@@ -33,7 +33,12 @@ window_transfer::window_transfer(
 	//add columns to download_view
 	int name_col_num = download_view->append_column(" Name ", column_name) - 1;
 	int size_col_num = download_view->append_column(" Size ", column_size) - 1;
-	int speed_col_num = download_view->append_column(" Speed ", column_speed) - 1;
+	int speed_col_num;
+	if(type == download){
+		speed_col_num = download_view->append_column(" Down ", column_speed) - 1;
+	}else{
+		speed_col_num = download_view->append_column(" Up ", column_speed) - 1;
+	}
 	int complete_col_num = download_view->append_column(" Complete ", cell) - 1;
 	download_view->get_column(complete_col_num)->add_attribute(cell.property_value(),
 		column_percent_complete);
@@ -118,97 +123,18 @@ void window_transfer::download_delete()
 	}
 }
 
-void window_transfer::transfer_info()
+void window_transfer::info_tab_close(Gtk::ScrolledWindow * info_window)
 {
-	std::string hash;
-	Glib::RefPtr<Gtk::TreeView::Selection> refSelection = download_view->get_selection();
-	if(refSelection){
-		Gtk::TreeModel::iterator selected_row_iter = refSelection->get_selected();
-		if(selected_row_iter){
-			Glib::ustring tmp = (*selected_row_iter)[column_hash];
-			hash = tmp;
-		}
-	}
+	notebook->remove_page(*info_window);
 }
-
-/*
-void gui_window_download::download_info_tab()
-{
-	std::string root_hash, file_name;
-	Glib::RefPtr<Gtk::TreeView::Selection> refSelection = download_view->get_selection();
-	if(refSelection){
-		Gtk::TreeModel::iterator selected_row_iter = refSelection->get_selected();
-		if(selected_row_iter){
-			Gtk::TreeModel::Row row = *selected_row_iter;
-			Glib::ustring hash_retrieved;
-			row.get_value(0, root_hash);
-		}
-	}
-
-	//make sure download exists (user could have requested information on nothing)
-	std::string path;
-	boost::uint64_t tree_size, file_size;
-	if(!P2P->file_info(root_hash, path, tree_size, file_size)){
-		LOGGER << "clicked download doesn't exist";
-		return;
-	}
-
-	std::set<std::string>::iterator iter = open_info_tabs.find(root_hash);
-	if(iter != open_info_tabs.end()){
-		LOGGER << "tab for " << root_hash << " already open";
-		return;
-	}else{
-		open_info_tabs.insert(root_hash);
-	}
-
-	Gtk::HBox * hbox;           //separates tab label from button
-	Gtk::Label * tab_label;     //tab text
-	Gtk::Button * close_button; //clickable close button
-
-	gui_window_download_status * status_window = Gtk::manage(new gui_window_download_status(
-		root_hash,
-		path,
-		tree_size,
-		file_size,
-		hbox,         //set in ctor
-		tab_label,    //set in ctor
-		close_button, //set in ctor
-		*P2P
-	));
-
-	notebook->append_page(*status_window, *hbox, *tab_label);
-	notebook->show_all_children();
-
-	//set tab window to refresh
-	sigc::connection tab_conn = Glib::signal_timeout().connect(
-		sigc::mem_fun(status_window, &gui_window_download_status::refresh),
-		settings::GUI_TICK
-	);
-
-	//signal to close tab, function pointer bound to window pointer associated with a tab
-	close_button->signal_clicked().connect(
-		sigc::bind<gui_window_download_status *, std::string, sigc::connection>(
-			sigc::mem_fun(*this, &gui_window_download::download_info_tab_close),
-			status_window, root_hash, tab_conn
-		)
-	);
-}
-
-void gui_window_download::download_info_tab_close(gui_window_download_status * status_window, std::string root_hash, sigc::connection tab_conn)
-{
-	tab_conn.disconnect();                 //stop window from refreshing
-	notebook->remove_page(*status_window); //remove from notebook
-	open_info_tabs.erase(root_hash);
-}
-*/
 
 bool window_transfer::refresh()
 {
-	std::list<p2p::transfer_info> T = P2P.transfer();
+	std::list<p2p::transfer_info> TI = P2P.transfer();
 
 	//add and update rows
-	for(std::list<p2p::transfer_info>::iterator it_cur = T.begin(),
-		it_end = T.end(); it_cur != it_end; ++it_cur)
+	for(std::list<p2p::transfer_info>::iterator it_cur = TI.begin(),
+		it_end = TI.end(); it_cur != it_end; ++it_cur)
 	{
 		if(type == download && it_cur->percent_complete == 100)
 		{
@@ -268,4 +194,41 @@ bool window_transfer::refresh()
 	}
 
 	return true;
+}
+
+void window_transfer::transfer_info()
+{
+	std::string hash;
+	Glib::RefPtr<Gtk::TreeView::Selection> refSelection = download_view->get_selection();
+	if(refSelection){
+		Gtk::TreeModel::iterator selected_row_iter = refSelection->get_selected();
+		if(selected_row_iter){
+			Glib::ustring tmp = (*selected_row_iter)[column_hash];
+			hash = tmp;
+		}
+	}
+
+	boost::optional<p2p::transfer_info> TI = P2P.transfer(hash);
+	if(!TI){
+		return;
+	}
+	std::string name = " " + convert::abbr(TI->name, 16) + " ";
+
+	Gtk::HBox * HBox = Gtk::manage(new Gtk::HBox(false, 0));
+	Gtk::Label * tab_label = Gtk::manage(new Gtk::Label(name));
+	Gtk::Button * close_button = Gtk::manage(new Gtk::Button);
+	Gtk::Image * close_image = Gtk::manage(new Gtk::Image(Gtk::Stock::CLOSE, Gtk::ICON_SIZE_MENU));
+	Gtk::ScrolledWindow * info_window = Gtk::manage(new window_transfer_info(P2P, *TI));
+
+	//add/compose elements
+	HBox->pack_start(*tab_label);
+	close_button->add(*close_image);
+	HBox->pack_start(*close_button);
+	HBox->show_all_children();
+	notebook->append_page(*info_window, *HBox, *tab_label);
+	notebook->show_all_children();
+
+	//signal to close tab, function pointer bound to window pointer associated with a tab
+	close_button->signal_clicked().connect(sigc::bind<Gtk::ScrolledWindow *>(
+		sigc::mem_fun(*this, &window_transfer::info_tab_close), info_window));
 }

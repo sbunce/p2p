@@ -3,6 +3,7 @@
 
 //custom
 #include "settings.hpp"
+#include "window_transfer_info.hpp"
 
 //include
 #include <convert.hpp>
@@ -65,17 +66,18 @@ private:
 	download_delete:
 		Called when delete selected from right click menu.
 		Note: Only for downloads.
-	transfer_info:
-		Called when info selected from right click menu.
+	info_tab_close:
+		Called when download info tab is closed.
 	refresh:
 		Refreshes TreeView.
-	pause:
-		Pauses the selected download.
+	transfer_info:
+		Called when info selected from right click menu.
 	*/
 	int compare_size(const Gtk::TreeModel::iterator & lval,
 		const Gtk::TreeModel::iterator & rval);
 	bool click(GdkEventButton * event);
 	void download_delete();
+	void info_tab_close(Gtk::ScrolledWindow * info_window);
 	void transfer_info();
 	bool refresh();
 };

@@ -223,12 +223,12 @@ int SI_cmp(const std::string & left, const std::string & right)
 }
 
 //shortens string and adds ".." after it
-std::string abbr(const std::string & str)
+std::string abbr(const std::string & str, const unsigned max_len = 6)
 {
-	if(str.size() < 6){
+	if(str.size() < max_len){
 		return str;
 	}else{
-		return str.substr(0, 6) + "..";
+		return str.substr(0, max_len) + "..";
 	}
 }
 }//end of unnamed namespace

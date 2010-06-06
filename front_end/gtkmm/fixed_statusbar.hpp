@@ -27,9 +27,9 @@ private:
 	Gtk::Label * upload_label;
 
 	/*
-	update:
+	refresh:
 		Update info.
 	*/
-	bool update();
+	bool refresh();
 };
 #endif

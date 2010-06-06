@@ -179,7 +179,7 @@ std::list<p2p::transfer_info> p2p_impl::transfer()
 
 boost::optional<p2p::transfer_info> p2p_impl::transfer(const std::string & hash)
 {
-	share::slot_iterator it = share::singleton().find_slot(hash, true);
+	share::slot_iterator it = share::singleton().find_slot(hash, false);
 	if(it == share::singleton().end_slot()){
 		return boost::optional<p2p::transfer_info>();
 	}else{

@@ -20,15 +20,28 @@ public:
 	class transfer_info
 	{
 	public:
-		std::string hash;          //root hash of hash tree
-		std::string name;          //name of file
-		boost::uint64_t file_size; //size of file (bytes), 0 if not known
-		boost::uint64_t tree_size; //size of hash tree (bytes)
-		unsigned percent_complete; //0-100
-		unsigned download_peers;   //number of hosts we're downloading from
-		unsigned download_speed;   //total download bytes/second
-		unsigned upload_peers;     //number of hosts we're uploading to
-		unsigned upload_speed;     //total upload bytes/second
+		std::string hash;               //hash file tracked by on DHT
+		std::string name;               //name of file
+		boost::uint64_t tree_size;      //size of hash tree (bytes)
+		boost::uint64_t file_size;      //size of file (bytes), 0 if not known
+		unsigned percent_complete;      //0-100 (tree and file combined)
+		unsigned tree_percent_complete; //0-100
+		unsigned file_percent_complete; //0-100
+		unsigned download_peers;        //number of hosts we're downloading from
+		unsigned upload_peers;          //number of hosts we're uploading to
+		unsigned download_speed;        //total download bytes/second
+		unsigned upload_speed;          //total upload bytes/second
+
+		//individual hosts
+		class host_element
+		{
+		public:
+			std::string IP;
+			std::string port;
+			unsigned upload_speed;
+			unsigned download_speed;
+		};
+		std::list<host_element> host;
 	};
 
 	//needed to start a download

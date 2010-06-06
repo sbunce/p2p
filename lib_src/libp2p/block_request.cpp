@@ -16,6 +16,7 @@ block_request::have_element::have_element(const have_element & HE):
 
 block_request::block_request(const boost::uint64_t block_count_in):
 	block_count(block_count_in),
+	local_blocks(0),
 	local(block_count),
 	approved(block_count)
 {
@@ -29,6 +30,7 @@ void block_request::add_block_local(const boost::uint64_t block)
 	if(!local.empty()){
 		assert(local[block] == false);
 		local[block] = true;
+		++local_blocks;
 		if(local.all_set()){
 			local.clear();
 		}
@@ -44,6 +46,7 @@ void block_request::add_block_local(const int connection_ID, const boost::uint64
 			send_have = true;
 		}
 		local[block] = true;
+		++local_blocks;
 		if(local.all_set()){
 			local.clear();
 		}
@@ -96,6 +99,7 @@ void block_request::add_block_local_all()
 	boost::mutex::scoped_lock lock(Mutex);
 	local.clear();
 	request.clear();
+	local_blocks = block_count;
 }
 
 void block_request::add_block_remote(const int connection_ID,
@@ -248,12 +252,6 @@ bool block_request::have_block(const boost::uint64_t block)
 	}
 }
 
-unsigned block_request::upload_count()
-{
-	boost::mutex::scoped_lock lock(Mutex);
-	return Have.size();
-}
-
 bool block_request::is_approved(const boost::uint64_t block)
 {
 	boost::mutex::scoped_lock lock(Mutex);
@@ -351,10 +349,26 @@ boost::optional<boost::uint64_t> block_request::next_request(const int connectio
 	}
 }
 
+unsigned block_request::percent_complete()
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	if(local.empty()){
+		return 100;
+	}else{
+		return ((double)local_blocks / block_count) * 100;
+	}
+}
+
 unsigned block_request::remote_host_count()
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	return remote.size();
+}
+
+unsigned block_request::upload_count()
+{
+	boost::mutex::scoped_lock lock(Mutex);
+	return Have.size();
 }
 
 bit_field block_request::upload_subscribe(const int connection_ID,

@@ -57,6 +57,10 @@ public:
 		Returns the root hash of the hash tree.
 	tree_block_count:
 		Returns number of blocks in hash tree.
+	tree_percent_complete:
+		Returns % of the tree we have (0-100).
+	tree_size:
+		Returns size of hash tree (bytes).
 	write_hash_tree_block:
 		Write block to hash tree.
 	*/
@@ -67,12 +71,16 @@ public:
 	void recv_have_hash_tree_block(const int connection_ID, const boost::uint64_t block_num);
 	boost::optional<std::string> root_hash();
 	boost::uint64_t tree_block_count();
+	unsigned tree_percent_complete();
+	boost::uint64_t tree_size();
 	status write_tree_block(const int connection_ID, const boost::uint64_t block_num,
 		const net::buffer & buf);
 
 	/* File
 	file_block_size:
 		Returns number of blocks in file.
+	file_percent_complete:
+		Returns % of file we have (0-100).
 	file_size:
 		Returns file size.
 	next_have_file:
@@ -89,6 +97,7 @@ public:
 		Note: This function hash checks the block.
 	*/
 	boost::uint64_t file_block_count();
+	unsigned file_percent_complete();
 	boost::uint64_t file_size();
 	boost::optional<boost::uint64_t> next_have_file(const int connection_ID);
 	boost::optional<next_request> next_request_file(const int connection_ID);
@@ -152,7 +161,7 @@ public:
 private:
 	hash_tree Hash_Tree;
 	file File;
-	block_request Hash_Tree_Block;
+	block_request Tree_Block;
 	block_request File_Block;
 	peer Peer;
 
