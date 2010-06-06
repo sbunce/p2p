@@ -19,38 +19,38 @@ window_transfer::window_transfer(
 
 	//add/compose elements
 	this->add(*download_view);
-	column.add(column_name);
-	column.add(column_size);
-	column.add(column_speed);
-	column.add(column_percent_complete);
-	column.add(column_hash);
-	column.add(column_update);
+	column.add(name_column);
+	column.add(size_column);
+	column.add(speed_column);
+	column.add(percent_complete_column);
+	column.add(hash_column);
+	column.add(update_column);
 
 	//setup list to hold rows in treeview
 	download_list = Gtk::ListStore::create(column);
 	download_view->set_model(download_list);
 
 	//add columns to download_view
-	int name_col_num = download_view->append_column(" Name ", column_name) - 1;
-	int size_col_num = download_view->append_column(" Size ", column_size) - 1;
+	int name_col_num = download_view->append_column(" Name ", name_column) - 1;
+	int size_col_num = download_view->append_column(" Size ", size_column) - 1;
 	int speed_col_num;
 	if(type == download){
-		speed_col_num = download_view->append_column(" Down ", column_speed) - 1;
+		speed_col_num = download_view->append_column(" Down ", speed_column) - 1;
 	}else{
-		speed_col_num = download_view->append_column(" Up ", column_speed) - 1;
+		speed_col_num = download_view->append_column(" Up ", speed_column) - 1;
 	}
 	int complete_col_num = download_view->append_column(" Complete ", cell) - 1;
 	download_view->get_column(complete_col_num)->add_attribute(cell.property_value(),
-		column_percent_complete);
+		percent_complete_column);
 
 	//make columns sortable
 	download_view->get_column(name_col_num)->set_sort_column(name_col_num);
 	download_view->get_column(size_col_num)->set_sort_column(size_col_num);
-	download_list->set_sort_func(size_col_num, sigc::mem_fun(*this,
-		&window_transfer::compare_size));
+	download_list->set_sort_func(size_col_num, sigc::bind(sigc::mem_fun(*this,
+		&window_transfer::compare_SI), size_column));
 	download_view->get_column(speed_col_num)->set_sort_column(speed_col_num);
-	download_list->set_sort_func(speed_col_num, sigc::mem_fun(*this,
-		&window_transfer::compare_size));
+	download_list->set_sort_func(speed_col_num, sigc::bind(sigc::mem_fun(*this,
+		&window_transfer::compare_SI), speed_column));
 	download_view->get_column(complete_col_num)->set_sort_column(complete_col_num);
 
 	//right click menu
@@ -70,13 +70,13 @@ window_transfer::window_transfer(
 		&window_transfer::click), false);
 }
 
-int window_transfer::compare_size(const Gtk::TreeModel::iterator & lval,
-	const Gtk::TreeModel::iterator & rval)
+int window_transfer::compare_SI(const Gtk::TreeModel::iterator & lval,
+	const Gtk::TreeModel::iterator & rval, const Gtk::TreeModelColumn<Glib::ustring> column)
 {
 	std::stringstream left_ss;
-	left_ss << (*lval)[column_size];
+	left_ss << (*lval)[column];
 	std::stringstream right_ss;
-	right_ss << (*rval)[column_size];
+	right_ss << (*rval)[column];
 	return convert::SI_cmp(left_ss.str(), right_ss.str());
 }
 
@@ -117,7 +117,7 @@ void window_transfer::download_delete()
 	if(refSelection){
 		Gtk::TreeModel::iterator selected_row_iter = refSelection->get_selected();
 		if(selected_row_iter){
-			Glib::ustring hash = (*selected_row_iter)[column_hash];
+			Glib::ustring hash = (*selected_row_iter)[hash_column];
 			P2P.remove_download(hash);
 		}
 	}
@@ -147,29 +147,29 @@ bool window_transfer::refresh()
 		if(iter == Row_Idx.end()){
 			//add
 			Gtk::TreeModel::Row row = *(download_list->append());
-			row[column_name] = it_cur->name;
-			row[column_size] = convert::bytes_to_SI(it_cur->file_size);
+			row[name_column] = it_cur->name;
+			row[size_column] = convert::bytes_to_SI(it_cur->file_size);
 			if(type == download){
-				row[column_speed] = convert::bytes_to_SI(it_cur->download_speed) + "/s";
+				row[speed_column] = convert::bytes_to_SI(it_cur->download_speed) + "/s";
 			}else{
-				row[column_speed] = convert::bytes_to_SI(it_cur->upload_speed) + "/s";
+				row[speed_column] = convert::bytes_to_SI(it_cur->upload_speed) + "/s";
 			}
-			row[column_percent_complete] = it_cur->percent_complete;
-			row[column_hash] = it_cur->hash;
-			row[column_update] = true;
+			row[percent_complete_column] = it_cur->percent_complete;
+			row[hash_column] = it_cur->hash;
+			row[update_column] = true;
 			Row_Idx.insert(std::make_pair(it_cur->hash, row));
 		}else{
 			//update
 			Gtk::TreeModel::Row row = iter->second;
-			row[column_name] = it_cur->name;
-			row[column_size] = convert::bytes_to_SI(it_cur->file_size);
+			row[name_column] = it_cur->name;
+			row[size_column] = convert::bytes_to_SI(it_cur->file_size);
 			if(type == download){
-				row[column_speed] = convert::bytes_to_SI(it_cur->download_speed) + "/s";
+				row[speed_column] = convert::bytes_to_SI(it_cur->download_speed) + "/s";
 			}else{
-				row[column_speed] = convert::bytes_to_SI(it_cur->upload_speed) + "/s";
+				row[speed_column] = convert::bytes_to_SI(it_cur->upload_speed) + "/s";
 			}
-			row[column_percent_complete] = it_cur->percent_complete;
-			row[column_update] = true;
+			row[percent_complete_column] = it_cur->percent_complete;
+			row[update_column] = true;
 		}
 	}
 
@@ -177,10 +177,10 @@ bool window_transfer::refresh()
 	for(Gtk::TreeModel::Children::iterator it_cur = download_list->children().begin();
 		it_cur != download_list->children().end();)
 	{
-		if((*it_cur)[column_update]){
+		if((*it_cur)[update_column]){
 			++it_cur;
 		}else{
-			Glib::ustring hash = (*it_cur)[column_hash];
+			Glib::ustring hash = (*it_cur)[hash_column];
 			Row_Idx.erase(hash);
 			it_cur = download_list->erase(it_cur);
 		}
@@ -190,7 +190,7 @@ bool window_transfer::refresh()
 	for(Gtk::TreeModel::Children::iterator it_cur = download_list->children().begin(),
 		it_end = download_list->children().end(); it_cur != it_end; ++it_cur)
 	{
-		(*it_cur)[column_update] = false;
+		(*it_cur)[update_column] = false;
 	}
 
 	return true;
@@ -203,7 +203,7 @@ void window_transfer::transfer_info()
 	if(refSelection){
 		Gtk::TreeModel::iterator selected_row_iter = refSelection->get_selected();
 		if(selected_row_iter){
-			Glib::ustring tmp = (*selected_row_iter)[column_hash];
+			Glib::ustring tmp = (*selected_row_iter)[hash_column];
 			hash = tmp;
 		}
 	}

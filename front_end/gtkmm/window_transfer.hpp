@@ -44,12 +44,12 @@ private:
 
 	//treeview columns
 	Gtk::TreeModel::ColumnRecord column;
-	Gtk::TreeModelColumn<Glib::ustring> column_name;
-	Gtk::TreeModelColumn<Glib::ustring> column_size;
-	Gtk::TreeModelColumn<Glib::ustring> column_speed;
-	Gtk::TreeModelColumn<int> column_percent_complete;
-	Gtk::TreeModelColumn<Glib::ustring> column_hash;
-	Gtk::TreeModelColumn<bool> column_update;
+	Gtk::TreeModelColumn<Glib::ustring> name_column;
+	Gtk::TreeModelColumn<Glib::ustring> size_column;
+	Gtk::TreeModelColumn<Glib::ustring> speed_column;
+	Gtk::TreeModelColumn<int> percent_complete_column;
+	Gtk::TreeModelColumn<Glib::ustring> hash_column;
+	Gtk::TreeModelColumn<bool> update_column;
 	Gtk::CellRendererProgress cell;
 
 	//popup menus for when user right clicks on treeviews
@@ -59,8 +59,8 @@ private:
 	std::map<std::string, Gtk::TreeModel::Row> Row_Idx;
 
 	/*
-	compare_size:
-		Signaled when user clicks size or speed column to sort.
+	compare_SI:
+		Compares size SI for column sorting.
 	click:
 		Called when TreeView clicked.
 	download_delete:
@@ -73,8 +73,8 @@ private:
 	transfer_info:
 		Called when info selected from right click menu.
 	*/
-	int compare_size(const Gtk::TreeModel::iterator & lval,
-		const Gtk::TreeModel::iterator & rval);
+	int compare_SI(const Gtk::TreeModel::iterator & lval,
+		const Gtk::TreeModel::iterator & rval, const Gtk::TreeModelColumn<Glib::ustring> col);
 	bool click(GdkEventButton * event);
 	void download_delete();
 	void info_tab_close(Gtk::ScrolledWindow * info_window);

@@ -26,14 +26,19 @@ window_transfer_info::window_transfer_info(
 	file_percent_value = Gtk::manage(new Gtk::Label("0%"));
 	download_speed_value = Gtk::manage(new Gtk::Label(convert::bytes_to_SI(TI.download_speed)+"/s"));
 	upload_speed_value = Gtk::manage(new Gtk::Label(convert::bytes_to_SI(TI.upload_speed)+"/s"));
-	servers_scrolled_window = Gtk::manage(new Gtk::ScrolledWindow);
-	servers_view = Gtk::manage(new Gtk::TreeView);
+	host_scrolled_window = Gtk::manage(new Gtk::ScrolledWindow);
+	host_view = Gtk::manage(new Gtk::TreeView);
+
+	//options
+	this->set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC); //auto scroll bars
+	host_view->set_headers_visible(true);
+	host_scrolled_window->set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
 
 	//add/compose elements
 	this->add(*vbox);
 	vbox->pack_start(*info_fixed, Gtk::PACK_SHRINK, 8);
-	vbox->pack_start(*servers_scrolled_window);
-	servers_scrolled_window->add(*servers_view);
+	vbox->pack_start(*host_scrolled_window);
+	host_scrolled_window->add(*host_view);
 	info_fixed->put(*file_name_label, 8, 0);
 	info_fixed->put(*file_name_value, 90, 0);
 	info_fixed->put(*hash_label, 8, 16);
@@ -51,23 +56,48 @@ window_transfer_info::window_transfer_info(
 	info_fixed->put(*upload_speed_label, 160 + 8, 64);
 	info_fixed->put(*upload_speed_value, 160 + 90, 64);
 
-	//options
-	this->set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC); //auto scroll bars
-	servers_scrolled_window->set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+	//setup column
+	column.add(IP_column);
+	column.add(port_column);
+	column.add(download_speed_column);
+	column.add(upload_speed_column);
 
-/*
-	//setup servers_view
-	column.add(column_server);
-	column.add(column_speed);
-	servers_list = Gtk::ListStore::create(column);
-	servers_view->set_model(servers_list);
-	servers_view->append_column(" IP ", column_server);
-	servers_view->append_column(" Speed ", column_speed);
-*/
+	//setup list to hold rows in treeview
+	host_list = Gtk::ListStore::create(column);
+	host_view->set_model(host_list);
+
+	//add columns to treeview
+	int IP_col_num = host_view->append_column(" IP ", IP_column) - 1;
+	int port_col_num = host_view->append_column(" Port ", port_column) - 1;
+	int download_speed_col_num = host_view->append_column(" Down ", download_speed_column) - 1;
+	int upload_speed_col_num = host_view->append_column(" Up ", upload_speed_column) - 1;
+
+	//make columns sortable
+	host_view->get_column(IP_col_num)->set_sort_column(IP_col_num);
+	host_view->get_column(port_col_num)->set_sort_column(port_col_num);
+	host_view->get_column(download_speed_col_num)->set_sort_column(download_speed_col_num);
+	host_list->set_sort_func(download_speed_col_num, sigc::bind(sigc::mem_fun(*this,
+		&window_transfer_info::compare_SI), download_speed_column));
+	host_view->get_column(upload_speed_col_num)->set_sort_column(upload_speed_col_num);
+	host_list->set_sort_func(upload_speed_col_num, sigc::bind(sigc::mem_fun(*this,
+		&window_transfer_info::compare_SI), upload_speed_column));
+
+	//signaled functions
 	Glib::signal_timeout().connect(sigc::mem_fun(*this, &window_transfer_info::refresh),
 		settings::GUI_tick);
 
 	this->show_all_children();
+}
+
+//reduce to one function, pass in column
+int window_transfer_info::compare_SI(const Gtk::TreeModel::iterator & lval,
+	const Gtk::TreeModel::iterator & rval, const Gtk::TreeModelColumn<Glib::ustring> column)
+{
+	std::stringstream left_ss;
+	left_ss << (*lval)[column];
+	std::stringstream right_ss;
+	right_ss << (*rval)[column];
+	return convert::SI_cmp(left_ss.str(), right_ss.str());
 }
 
 bool window_transfer_info::refresh()
