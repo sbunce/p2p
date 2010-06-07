@@ -12,6 +12,7 @@
 //include
 #include <atomic_int.hpp>
 #include <net/net.hpp>
+#include <p2p.hpp>
 
 class transfer : private boost::noncopyable
 {
@@ -137,26 +138,26 @@ public:
 		const boost::function<void()> trigger_tick);
 	void upload_unsubscribe(const int connection_ID);
 
-	/* Speeds
+	/* Other
+	download_count:
+		Number of hosts we're downloading file from.
 	download_speed:
 		Returns download speed (bytes/second).
 	download_speed_calc:
 		Returns shared_ptr to speed calculator responsible for download speed.
+	host:
+		Returns host info.
+	upload_count:
+		Number of hosts we're uploading file to.
 	upload_speed:
 		Returns upload speed (bytes/second).
 	*/
+	unsigned download_count();
 	unsigned download_speed();
 	const boost::shared_ptr<net::speed_calc> & download_speed_calc();
-	unsigned upload_speed();
-
-	/* Connection Counts
-	download_count:
-		Number of hosts we're downloading file from.
-	upload_count:
-		Number of hosts we're uploading file to.
-	*/
-	unsigned download_count();
+	std::list<p2p::transfer_info::host_element> host();
 	unsigned upload_count();
+	unsigned upload_speed();
 
 private:
 	hash_tree Hash_Tree;
@@ -165,9 +166,10 @@ private:
 	block_request File_Block;
 	peer Peer;
 
-	//number of bytes received (used to calculate percent complete)
+	//total hash_tree and file bytes received (doesn't include protocol overhead)
 	atomic_int<boost::uint64_t> bytes_received;
 
+	//total speeds
 	boost::shared_ptr<net::speed_calc> Download_Speed;
 	boost::shared_ptr<net::speed_calc> Upload_Speed;
 };

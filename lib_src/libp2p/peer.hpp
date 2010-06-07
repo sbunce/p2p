@@ -15,9 +15,11 @@ class peer
 public:
 	/*
 	add:
-		Add endpoint that has subscribed (incoming or outgoing).
+		Add endpoint received in peer_* message. The connection_ID is the
+		connection the peer_* message arrived from.
 	get:
-		Get endpoint which needs to be sent in a peer_* message.
+		Get endpoint which needs to be sent in a peer_* message. The connection_ID
+		is the connection we want to send a peer_* message to.
 	*/
 	void add(const int connection_ID, const net::endpoint & ep);
 	boost::optional<net::endpoint> get(const int connection_ID);

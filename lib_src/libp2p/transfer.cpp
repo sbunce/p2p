@@ -167,6 +167,18 @@ boost::uint64_t transfer::file_size()
 	return Hash_Tree.file_size;
 }
 
+std::list<p2p::transfer_info::host_element> transfer::host()
+{
+	std::list<p2p::transfer_info::host_element> tmp;
+	p2p::transfer_info::host_element test;
+	test.IP = "123.123.123.123";
+	test.port = "1234";
+	test.download_speed = 1024;
+	test.upload_speed = 1024;
+	tmp.push_back(test);
+	return tmp;
+}
+
 unsigned transfer::upload_count()
 {
 	return Tree_Block.upload_count();

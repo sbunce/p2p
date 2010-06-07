@@ -56,8 +56,6 @@ public:
 		Precondition: !complete()
 	percent_complete:
 		Returns % of blocks we have (0-100).
-	remote_host_count:
-		Returns the number of remote hosts block_request is keeping track of.
 	*/
 	void add_block_local(const boost::uint64_t block);
 	void add_block_local(const int connection_ID, const boost::uint64_t block);
@@ -71,7 +69,6 @@ public:
 	bool is_approved(const boost::uint64_t block);
 	boost::optional<boost::uint64_t> next_request(const int connection_ID);
 	unsigned percent_complete();
-	unsigned remote_host_count();
 
 	/* Upload
 	upload_count:
@@ -136,32 +133,35 @@ private:
 	*/
 	bit_field approved;
 
-	/*
-	Associates a block number with all the connections it has been requested from.
-	std::map<block_num, std::list<connection_ID> >
-	*/
-	std::map<boost::uint64_t, std::set<int> > request;
+	//block number associated with connection_ID requested from
+	std::map<boost::uint64_t, std::set<int> > Request;
 
-	//connection_ID associated with bit_field representing blocks remote host has
-	std::map<int, bit_field> remote;
-
-	class have_element
+	class download_element
 	{
 	public:
-		have_element(const boost::function<void()> & trigger_tick_in);
-		have_element(const have_element & HE);
-		/*
-		Calling this will cause the connection::tick() function to be called for
-		the connection this object is for. This is called after blocks are added.
-		*/
-		boost::function<void()> trigger_tick;
-		/*
-		This is a block diff between the local blocks when the host subscribed and
-		the present. These block numbers are sent in have_* messages.
-		*/
-		std::queue<boost::uint64_t> block;
+		download_element(const bit_field & BF);
+		download_element(const download_element & DE);
+
+		//remote bit_field, when we receive have_* messages we update this
+		bit_field block_BF;
 	};
-	std::map<int, have_element> Have;
+	//key is connection_ID
+	std::map<int, download_element> Download;
+
+	class upload_element
+	{
+	public:
+		upload_element(const boost::function<void()> & trigger_tick_in);
+		upload_element(const upload_element & UE);
+
+		//trigger tick on connection this object represents
+		boost::function<void()> trigger_tick;
+
+		//diff between original local bit_field state and current state
+		std::queue<boost::uint64_t> block_diff;
+	};
+	//key is connection_ID
+	std::map<int, upload_element> Upload;
 
 	/*
 	find_next_rarest:

@@ -38,8 +38,8 @@ public:
 		public:
 			std::string IP;
 			std::string port;
-			unsigned upload_speed;
 			unsigned download_speed;
+			unsigned upload_speed;
 		};
 		std::list<host_element> host;
 	};

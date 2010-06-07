@@ -61,6 +61,8 @@ window_transfer_info::window_transfer_info(
 	column.add(port_column);
 	column.add(download_speed_column);
 	column.add(upload_speed_column);
+	column.add(hash_column);
+	column.add(update_column);
 
 	//setup list to hold rows in treeview
 	host_list = Gtk::ListStore::create(column);
@@ -114,6 +116,64 @@ bool window_transfer_info::refresh()
 		file_percent_value->set_text(ss.str());
 		download_speed_value->set_text(convert::bytes_to_SI(TI->download_speed)+"/s");
 		upload_speed_value->set_text(convert::bytes_to_SI(TI->upload_speed)+"/s");
+/*
+		std::list<p2p::transfer_info> TI = P2P.transfer();
+
+		//add and update rows
+		for(std::list<p2p::transfer_info>::iterator it_cur = TI.begin(),
+			it_end = TI.end(); it_cur != it_end; ++it_cur)
+		{
+			std::map<std::string, Gtk::TreeModel::Row>::iterator
+				iter = Row_Idx.find(it_cur->hash);
+			if(iter == Row_Idx.end()){
+				//add
+				Gtk::TreeModel::Row row = *(download_list->append());
+				row[name_column] = it_cur->name;
+				row[size_column] = convert::bytes_to_SI(it_cur->file_size);
+				if(type == download){
+					row[speed_column] = convert::bytes_to_SI(it_cur->download_speed) + "/s";
+				}else{
+					row[speed_column] = convert::bytes_to_SI(it_cur->upload_speed) + "/s";
+				}
+				row[percent_complete_column] = it_cur->percent_complete;
+				row[hash_column] = it_cur->hash;
+				row[update_column] = true;
+				Row_Idx.insert(std::make_pair(it_cur->hash, row));
+			}else{
+				//update
+				Gtk::TreeModel::Row row = iter->second;
+				row[name_column] = it_cur->name;
+				row[size_column] = convert::bytes_to_SI(it_cur->file_size);
+				if(type == download){
+					row[speed_column] = convert::bytes_to_SI(it_cur->download_speed) + "/s";
+				}else{
+					row[speed_column] = convert::bytes_to_SI(it_cur->upload_speed) + "/s";
+				}
+				row[percent_complete_column] = it_cur->percent_complete;
+				row[update_column] = true;
+			}
+		}
+
+		//remove rows not updated
+		for(Gtk::TreeModel::Children::iterator it_cur = download_list->children().begin();
+			it_cur != download_list->children().end();)
+		{
+			if((*it_cur)[update_column]){
+				++it_cur;
+			}else{
+				Glib::ustring hash = (*it_cur)[hash_column];
+				Row_Idx.erase(hash);
+				it_cur = download_list->erase(it_cur);
+			}
+		}
+
+		//make all rows as not updated for next call to refresh()
+		for(Gtk::TreeModel::Children::iterator it_cur = download_list->children().begin(),
+			it_end = download_list->children().end(); it_cur != it_end; ++it_cur)
+		{
+			(*it_cur)[update_column] = false;
+		}
+*/
 		return true;
 	}else{
 		download_speed_value->set_text("0B/s");

@@ -46,6 +46,8 @@ private:
 	Gtk::TreeModelColumn<Glib::ustring> port_column;
 	Gtk::TreeModelColumn<Glib::ustring> download_speed_column;
 	Gtk::TreeModelColumn<Glib::ustring> upload_speed_column;
+	Gtk::TreeModelColumn<Glib::ustring> hash_column;
+	Gtk::TreeModelColumn<bool> update_column;
 
 	/*
 	compare_SI:
