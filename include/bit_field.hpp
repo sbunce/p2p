@@ -5,6 +5,7 @@
 #include <boost/cstdint.hpp>
 
 //standard
+#include <algorithm>
 #include <cassert>
 #include <string>
 #include <vector>
@@ -14,14 +15,16 @@ class bit_field
 public:
 	bit_field(const boost::uint64_t bits_in = 0):
 		bits(bits_in),
-		vec(bits % 8 == 0 ? bits / 8 : bits / 8 + 1, '\0')
+		vec(bits % 8 == 0 ? bits / 8 : bits / 8 + 1, '\0'),
+		bits_set(0)
 	{
 
 	}
 
 	bit_field(const bit_field & BF):
 		bits(BF.bits),
-		vec(BF.vec)
+		vec(BF.vec),
+		bits_set(BF.bits_set)
 	{
 
 	}
@@ -72,10 +75,11 @@ public:
 
 	private:
 		proxy(
-			bit_field & BF_in,
+			const bit_field & BF_in,
 			const boost::uint64_t idx_in
 		):
-			BF(BF_in),
+			//const_cast needed for const operator []
+			BF(const_cast<bit_field &>(BF_in)),
 			idx(idx_in)
 		{}
 
@@ -85,6 +89,13 @@ public:
 
 	//returns proxy object (see documentation for proxy)
 	proxy operator [](const boost::uint64_t idx)
+	{
+		assert(idx < bits);
+		return proxy(*this, idx);
+	}
+
+	//const version of above
+	const proxy operator [](const boost::uint64_t idx) const
 	{
 		assert(idx < bits);
 		return proxy(*this, idx);
@@ -109,6 +120,7 @@ public:
 		for(boost::uint64_t x=0; x<smaller_size; ++x){
 			vec[x] &= rval.vec[x];
 		}
+		calc_bits_set();
 		return *this;
 	}
 
@@ -119,6 +131,7 @@ public:
 		for(boost::uint64_t x=0; x<smaller_size; ++x){
 			vec[x] ^= rval.vec[x];
 		}
+		calc_bits_set();
 		return *this;
 	}
 
@@ -129,6 +142,7 @@ public:
 		for(boost::uint64_t x=0; x<smaller_size; ++x){
 			vec[x] |= rval.vec[x];
 		}
+		calc_bits_set();
 		return *this;
 	}
 
@@ -138,6 +152,7 @@ public:
 		for(boost::uint64_t x=0; x<vec.size(); ++x){
 			vec[x] = ~vec[x];
 		}
+		calc_bits_set();
 		return *this;
 	}
 
@@ -146,31 +161,22 @@ public:
 	{
 		bits = rval.bits;
 		vec = rval.vec;
+		bits_set = rval.bits_set;
 		return *this;
 	}
 
 	//returns true if all bits set to one
 	bool all_set() const
 	{
-		for(boost::uint64_t x=0; x<bits; ++x){
-			if(get(x) != true){
-				return false;
-			}
-		}
-		return true;
+		return bits == bits_set;
 	}
 
 	//return bit_field as big-endian string
 	std::string get_buf() const
 	{
-		if(vec.empty()){
-			return std::string();
-		}
 		std::string tmp;
 		tmp.resize(vec.size());
-		for(int x=0, y=vec.size()-1; x<vec.size(); ++x, --y){
-			tmp[x] = vec[y];
-		}
+		std::reverse_copy(vec.begin(), vec.end(), tmp.begin());
 		return tmp;
 	}
 
@@ -179,6 +185,7 @@ public:
 	{
 		bits = 0;
 		vec.clear();
+		bits_set = 0;
 	}
 
 	//returns true if the bit_field holds zero elements
@@ -190,12 +197,7 @@ public:
 	//return true if all bits set to zero
 	bool none_set() const
 	{
-		for(boost::uint64_t x=0; x<bits; ++x){
-			if(get(x) != false){
-				return false;
-			}
-		}
-		return true;
+		return bits_set == 0;
 	}
 
 	//set all bits to zero
@@ -204,6 +206,7 @@ public:
 		for(boost::uint64_t x=0; x<vec.size(); ++x){
 			vec[x] = 0;
 		}
+		bits_set = 0;
 	}
 
 	//change size of bit_field
@@ -211,14 +214,16 @@ public:
 	{
 		bits = bits_in;
 		vec.resize(bits % 8 == 0 ? bits / 8 : bits / 8 + 1, '\0');
+		calc_bits_set();
 	}
 
-	//set all bits
+	//set all bits to true
 	void set()
 	{
 		for(boost::uint64_t x=0; x<vec.size(); ++x){
 			vec[x] = 255;
 		}
+		bits_set = bits;
 	}
 
 	//set internal buffer from big-endian source buf
@@ -228,9 +233,14 @@ public:
 		assert(size_bytes(bits_in) == size);
 		bits = bits_in;
 		vec.resize(size);
-		for(boost::uint64_t x=0, y=vec.size()-1; x<vec.size(); ++x, --y){
-			vec[x] = buf[y];
-		}
+		std::reverse_copy(buf, buf+size, vec.begin());
+		calc_bits_set();
+	}
+
+	//returns number of bits set to 1
+	boost::uint64_t set_count() const
+	{
+		return bits_set;
 	}
 
 	//returns the number of bitbits in the bitgroup_set
@@ -240,8 +250,18 @@ public:
 	}
 
 private:
-	boost::uint64_t bits;
-	std::vector<unsigned char> vec;
+	boost::uint64_t bits;           //number of bits in bit_field
+	std::vector<unsigned char> vec; //internal buffer
+	boost::uint64_t bits_set;       //number of bits set to 1
+
+	//recalculates bits_set
+	void calc_bits_set()
+	{
+		bits_set = 0;
+		for(boost::uint64_t x=0; x<bits; ++x){
+			bits_set += get(x);
+		}
+	}
 
 	//get a number from the bitgroup_set
 	bool get(const boost::uint64_t idx) const
@@ -253,8 +273,14 @@ private:
 	void set(const boost::uint64_t idx, const bool val)
 	{
 		if(val){
+			if(get(idx) == false){
+				++bits_set;
+			}
 			vec[idx / 8] |= (1 << idx % 8);
 		}else{
+			if(get(idx) == true){
+				--bits_set;
+			}
 			vec[idx / 8] &= ~(1 << idx % 8);
 		}
 	}
