@@ -389,12 +389,12 @@ void net::proactor_impl::set_connection_limit(const unsigned incoming_limit,
 
 void net::proactor_impl::set_max_download_rate(const unsigned rate)
 {
-	Rate_Limit.max_download(rate);
+	Rate_Limit.set_max_download(rate);
 }
 
 void net::proactor_impl::set_max_upload_rate(const unsigned rate)
 {
-	Rate_Limit.max_upload(rate);
+	Rate_Limit.set_max_upload(rate);
 }
 
 void net::proactor_impl::start(boost::shared_ptr<listener> Listener_in)

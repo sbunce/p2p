@@ -37,10 +37,6 @@ public:
 		Precondition: socket_count > 0
 	download:
 		Returns average download rate (B/s).
-	max_download:
-		Get or set max allowed download rate (B/s).
-	max_upload:
-		Get or set max allowed upload rate (B/s).
 	upload:
 		Returns average upload rate (B/s).
 	*/
@@ -49,21 +45,33 @@ public:
 	int available_upload(const int socket_count = 1);
 	int available_download(const int socket_count = 1);
 	unsigned download();
-	unsigned max_download();
-	void max_download(const unsigned rate);
-	unsigned max_upload();
-	void max_upload(const unsigned rate);
 	unsigned upload();
+
+	/* Options
+	get_max_download:
+		Get maximum download rate (bytes/second).
+	get_max_upload:
+		Get maximum upload rate (bytes/second).
+	set_max_download:
+		Set maximum download rate (bytes/second).
+	set_max_upload:
+		Set maximum upload rate (bytes/second).
+	*/
+	unsigned get_max_download();
+	unsigned get_max_upload();
+	void set_max_download(const unsigned rate);
+	void set_max_upload(const unsigned rate);
 
 private:
 	//mutex for all public functions
 	boost::recursive_mutex Recursive_Mutex;
 
 	//max upload/download rate
-	unsigned _max_download;
-	unsigned _max_upload;
+	unsigned max_download;
+	unsigned max_upload;
 
-	speed_calc Download, Upload;
+	speed_calc Download;
+	speed_calc Upload;
 
 	/*
 	available_transfer:

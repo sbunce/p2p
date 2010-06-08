@@ -22,9 +22,8 @@ public:
 	current_second:
 		Returns how many bytes have been seen in the current second.
 	speed:
-		Returns average speed for the previous AVERAGE seconds. This does not
-		include the bytes for the current incomplete second.
-
+		Returns average speed. This does not include the bytes for the current
+		incomplete second.
 	*/
 	void add(const unsigned n_bytes);
 	unsigned current_second();
