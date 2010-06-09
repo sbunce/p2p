@@ -165,6 +165,14 @@ bool window_transfer_info::refresh()
 	}else{
 		download_speed_value->set_text("0B/s");
 		upload_speed_value->set_text("0B/s");
+		Row_Idx.clear();
+
+		//doing host_list.clear() erroneously leaves one row
+		for(Gtk::TreeModel::Children::iterator it_cur = host_list->children().begin();
+			it_cur != host_list->children().end();)
+		{
+			it_cur = host_list->erase(it_cur);
+		}
 		return false;
 	}
 }

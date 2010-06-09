@@ -38,9 +38,9 @@ private:
 	Gtk::Notebook * notebook;
 
 	//objects for display of downloads
-	Gtk::TreeView * download_view;
-	Gtk::ScrolledWindow * download_scrolled_window;
-	Glib::RefPtr<Gtk::ListStore> download_list;
+	Gtk::TreeView * transfer_view;
+	Gtk::ScrolledWindow * transfer_scrolled_window;
+	Glib::RefPtr<Gtk::ListStore> transfer_list;
 
 	//treeview columns
 	Gtk::TreeModel::ColumnRecord column;
@@ -53,7 +53,7 @@ private:
 	Gtk::CellRendererProgress cell;
 
 	//popup menus for when user right clicks on treeviews
-	Gtk::Menu downloads_popup_menu;
+	Gtk::Menu popup_menu;
 
 	//hash associated with row
 	std::map<std::string, Gtk::TreeModel::Row> Row_Idx;
