@@ -113,7 +113,7 @@ public:
 	complete:
 		Returns true if hash tree and file are complete.
 	download_reg:
-		Called when we recv slot message to add remote host bit_fields.
+		Register a download. Called when we recv a slot message.
 	download_unreg:
 		Called when outgoing slot removed.
 	next_peer:

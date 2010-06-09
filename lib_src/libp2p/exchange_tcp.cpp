@@ -1,5 +1,47 @@
 #include "exchange_tcp.hpp"
 
+//BEGIN send_speed_element
+exchange_tcp::send_speed_element::send_speed_element(
+	const unsigned remaining_bytes_in,
+	const speed_composite & Speed_Calc_in,
+	const boost::function<void ()> & call_back_in
+):
+	remaining_bytes(remaining_bytes_in),
+	Speed_Calc(Speed_Calc_in),
+	call_back(call_back_in)
+{
+
+}
+
+exchange_tcp::send_speed_element::send_speed_element(const send_speed_element & SSE):
+	remaining_bytes(SSE.remaining_bytes),
+	Speed_Calc(SSE.Speed_Calc),
+	call_back(SSE.call_back)
+{
+
+}
+
+bool exchange_tcp::send_speed_element::consume(unsigned & n_bytes)
+{
+	if(n_bytes == 0){
+		return false;
+	}
+	if(n_bytes <= remaining_bytes){
+		Speed_Calc.add(n_bytes);
+		remaining_bytes -= n_bytes;
+		n_bytes = 0;
+	}else{
+		Speed_Calc.add(remaining_bytes);
+		n_bytes -= remaining_bytes;
+		remaining_bytes = 0;
+	}
+	if(remaining_bytes == 0 && call_back){
+		call_back();
+	}
+	return remaining_bytes == 0;
+}
+//END send_speed_element
+
 exchange_tcp::exchange_tcp(
 	net::proactor & Proactor_in,
 	net::proactor::connection_info & CI
@@ -177,21 +219,12 @@ void exchange_tcp::send_buffered()
 
 void exchange_tcp::send_call_back(net::proactor::connection_info & CI)
 {
-//DEBUG, move this logic inside send_speed_element
-	unsigned latest_send = CI.latest_send;
-	while(latest_send){
-		assert(!Send_Speed.empty());
-		if(latest_send >= Send_Speed.front().remaining_bytes){
-			Send_Speed.front().Speed_Calc.add(Send_Speed.front().remaining_bytes);
-			latest_send -= Send_Speed.front().remaining_bytes;
-			if(Send_Speed.front().call_back){
-				Send_Speed.front().call_back();
-			}
+	while(!Send_Speed.empty()){
+		if(Send_Speed.front().consume(CI.latest_send)){
 			Send_Speed.pop_front();
 		}else{
-			Send_Speed.front().Speed_Calc.add(latest_send);
-			Send_Speed.front().remaining_bytes -= latest_send;
 			break;
 		}
 	}
+	assert(CI.latest_send == 0);
 }

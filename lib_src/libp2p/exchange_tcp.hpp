@@ -72,32 +72,24 @@ private:
 	*/
 	std::list<boost::shared_ptr<message_tcp::send::base> > Encrypt_Buf;
 
-	/*
-	When we send a message to the proactor we push it's size and a shared_ptr to
-	a speed_calc on the back of this container. When bytes are sent we
-	update the speed_calc. The shared_ptr is empty if there is no
-	shared_ptr to update.
-	*/
 	class send_speed_element
 	{
 	public:
-//DEBUG, move this in to implementation
 		send_speed_element(
 			const unsigned remaining_bytes_in,
 			const speed_composite & Speed_Calc_in,
 			const boost::function<void ()> & call_back_in
-		):
-			remaining_bytes(remaining_bytes_in),
-			Speed_Calc(Speed_Calc_in),
-			call_back(call_back_in)
-		{}
+		);
+		send_speed_element(const send_speed_element & SSE);
 
-		send_speed_element(const send_speed_element & SSE):
-			remaining_bytes(SSE.remaining_bytes),
-			Speed_Calc(SSE.Speed_Calc),
-			call_back(SSE.call_back)
-		{}
+		/*
+		consume:
+			Subtracts the bytes we expect from n_bytes. True is returned if we
+			consumed all n_bytes.
+		*/
+		bool consume(unsigned & n_bytes);
 
+	private:
 		unsigned remaining_bytes;
 		speed_composite Speed_Calc;
 		boost::function<void ()> call_back;
