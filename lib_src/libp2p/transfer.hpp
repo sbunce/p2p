@@ -8,6 +8,7 @@
 #include "message_tcp.hpp"
 #include "peer.hpp"
 #include "protocol_tcp.hpp"
+#include "speed_composite.hpp"
 
 //include
 #include <atomic_int.hpp>
@@ -51,7 +52,6 @@ public:
 		Returns info to be send in request_hash_tree_block message.
 	read_tree_block:
 		Read a block from the hash tree.
-		Note: The message is only valid if status = good.
 	recv_have_hash_tree_block:
 		Called when we get a have_hash_tree_block message.
 	root_hash:
@@ -67,8 +67,7 @@ public:
 	*/
 	boost::optional<boost::uint64_t> next_have_tree(const int connection_ID);
 	boost::optional<next_request> next_request_tree(const int connection_ID);
-	std::pair<boost::shared_ptr<message_tcp::send::base>, status> read_tree_block(
-		const boost::uint64_t block_num);
+	std::pair<net::buffer, status> read_tree_block(const boost::uint64_t block_num);
 	void recv_have_hash_tree_block(const int connection_ID, const boost::uint64_t block_num);
 	boost::optional<std::string> root_hash();
 	boost::uint64_t tree_block_count();
@@ -102,8 +101,7 @@ public:
 	boost::uint64_t file_size();
 	boost::optional<boost::uint64_t> next_have_file(const int connection_ID);
 	boost::optional<next_request> next_request_file(const int connection_ID);
-	std::pair<boost::shared_ptr<message_tcp::send::base>, status> read_file_block(
-		const boost::uint64_t block_num);
+	std::pair<net::buffer, status> read_file_block(const boost::uint64_t block_num);
 	void recv_have_file_block(const int connection_ID, const boost::uint64_t block_num);
 	status write_file_block(const int connection_ID, const boost::uint64_t block_num,
 		const net::buffer & buf);
@@ -114,50 +112,53 @@ public:
 		transfers.
 	complete:
 		Returns true if hash tree and file are complete.
-	download_subscribe:
+	download_reg:
 		Called when we recv slot message to add remote host bit_fields.
-	download_unsubscribe:
+	download_unreg:
 		Called when outgoing slot removed.
 	next_peer:
 		Returns endpoint that needs to be sent in peer_* message.
 	percent_complete:
 		Returns percent complete of the hash tree and file combined.
-	upload_subscribe:
+	upload_reg:
 		Subscribe to changes to hash tree and file.
-	upload_unsubscribe:
+	upload_unreg:
 		Unsubscribe to changes to hash tree and file.
 	*/
 	void check();
 	bool complete();
-	void download_subscribe(const int connection_ID, const net::endpoint & ep,
+	void download_reg(const int connection_ID, const net::endpoint & ep,
 		const bit_field & tree_BF, const bit_field & file_BF);
-	void download_unsubscribe(const int connection_ID);
+	void download_unreg(const int connection_ID);
 	boost::optional<net::endpoint> next_peer(const int connection_ID);
 	unsigned percent_complete();
-	local_BF upload_subscribe(const int connection_ID, const net::endpoint & ep,
+	local_BF upload_reg(const int connection_ID, const net::endpoint & ep,
 		const boost::function<void()> trigger_tick);
-	void upload_unsubscribe(const int connection_ID);
+	void upload_unreg(const int connection_ID);
 
 	/* Other
 	download_count:
 		Number of hosts we're downloading file from.
 	download_speed:
 		Returns download speed (bytes/second).
-	download_speed_calc:
-		Returns shared_ptr to speed calculator responsible for download speed.
-	host:
-		Returns host info.
+	download_speed_composite:
+		Returns download speed calculator.
+	host_info:
+		Returns info for all connected hosts.
 	upload_count:
 		Number of hosts we're uploading file to.
 	upload_speed:
 		Returns upload speed (bytes/second).
+	upload_speed_composite:
+		Returns upload speed calculator.
 	*/
 	unsigned download_count();
 	unsigned download_speed();
-	const boost::shared_ptr<net::speed_calc> & download_speed_calc();
-	std::list<p2p::transfer_info::host_element> host();
+	speed_composite download_speed_composite(const int connection_ID);
+	std::list<p2p::transfer_info::host_element> host_info();
 	unsigned upload_count();
 	unsigned upload_speed();
+	speed_composite upload_speed_composite(const int connection_ID);
 
 private:
 	hash_tree Hash_Tree;

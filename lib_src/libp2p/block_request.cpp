@@ -150,7 +150,7 @@ unsigned block_request::download_count()
 	return Download.size();
 }
 
-void block_request::download_subscribe(const int connection_ID,
+void block_request::download_reg(const int connection_ID,
 	const bit_field & BF)
 {
 	boost::mutex::scoped_lock lock(Mutex);
@@ -160,7 +160,7 @@ void block_request::download_subscribe(const int connection_ID,
 	assert(ret.second);
 }
 
-void block_request::download_unsubscribe(const int connection_ID)
+void block_request::download_unreg(const int connection_ID)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	Download.erase(connection_ID);
@@ -358,7 +358,7 @@ unsigned block_request::upload_count()
 	return Upload.size();
 }
 
-bit_field block_request::upload_subscribe(const int connection_ID,
+bit_field block_request::upload_reg(const int connection_ID,
 	const boost::function<void()> trigger_tick)
 {
 	boost::mutex::scoped_lock lock(Mutex);
@@ -369,7 +369,7 @@ bit_field block_request::upload_subscribe(const int connection_ID,
 	return local;
 }
 
-void block_request::upload_unsubscribe(const int connection_ID)
+void block_request::upload_unreg(const int connection_ID)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	Upload.erase(connection_ID);

@@ -63,7 +63,7 @@ p2p::transfer_info slot::info()
 		tmp.download_speed = Transfer->download_speed();
 		tmp.upload_peers = Transfer->upload_count();
 		tmp.upload_speed = Transfer->upload_speed();
-		tmp.host = Transfer->host();
+		tmp.host = Transfer->host_info();
 	}else{
 		tmp.tree_size = 0;
 		tmp.file_size = 0;

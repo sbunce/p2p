@@ -49,6 +49,9 @@ private:
 	Gtk::TreeModelColumn<Glib::ustring> hash_column;
 	Gtk::TreeModelColumn<bool> update_column;
 
+	//IP + port associated with row
+	std::map<std::string, Gtk::TreeModel::Row> Row_Idx;
+
 	/*
 	compare_SI:
 		Compares size SI for column sorting.

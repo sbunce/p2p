@@ -11,7 +11,7 @@ bool message_tcp::send::base::encrypt()
 message_tcp::recv::block::block(
 	handler func_in,
 	const unsigned block_size_in,
-	boost::shared_ptr<net::speed_calc> Download_Speed_in
+	speed_composite Download_Speed_in
 ):
 	func(func_in),
 	block_size(block_size_in),
@@ -33,7 +33,7 @@ message_tcp::recv::status message_tcp::recv::block::recv(net::buffer & recv_buf)
 	}
 	if(recv_buf.size() >= protocol_tcp::block_size(block_size)){
 		net::buffer buf;
-		Download_Speed->add(block_size - bytes_seen);
+		Download_Speed.add(block_size - bytes_seen);
 		buf.append(recv_buf.data() + 1, protocol_tcp::block_size(block_size) - 1);
 		recv_buf.erase(0, protocol_tcp::block_size(block_size));
 		if(func(buf)){
@@ -42,7 +42,7 @@ message_tcp::recv::status message_tcp::recv::block::recv(net::buffer & recv_buf)
 			return blacklist;
 		}
 	}
-	Download_Speed->add(recv_buf.size() - bytes_seen);
+	Download_Speed.add(recv_buf.size() - bytes_seen);
 	bytes_seen = recv_buf.size();
 	return incomplete;
 }
@@ -647,7 +647,7 @@ message_tcp::recv::status message_tcp::recv::peer::recv(net::buffer & recv_buf)
 
 //BEGIN send::block
 message_tcp::send::block::block(const net::buffer & block,
-	boost::shared_ptr<net::speed_calc> Upload_Speed_in)
+	speed_composite Upload_Speed_in)
 {
 	buf.append(protocol_tcp::block).append(block);
 	Upload_Speed = Upload_Speed_in;

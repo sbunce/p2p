@@ -177,22 +177,19 @@ void exchange_tcp::send_buffered()
 
 void exchange_tcp::send_call_back(net::proactor::connection_info & CI)
 {
+//DEBUG, move this logic inside send_speed_element
 	unsigned latest_send = CI.latest_send;
 	while(latest_send){
 		assert(!Send_Speed.empty());
 		if(latest_send >= Send_Speed.front().remaining_bytes){
-			if(Send_Speed.front().Speed_Calc){
-				Send_Speed.front().Speed_Calc->add(Send_Speed.front().remaining_bytes);
-			}
+			Send_Speed.front().Speed_Calc.add(Send_Speed.front().remaining_bytes);
 			latest_send -= Send_Speed.front().remaining_bytes;
 			if(Send_Speed.front().call_back){
 				Send_Speed.front().call_back();
 			}
 			Send_Speed.pop_front();
 		}else{
-			if(Send_Speed.front().Speed_Calc){
-				Send_Speed.front().Speed_Calc->add(latest_send);
-			}
+			Send_Speed.front().Speed_Calc.add(latest_send);
 			Send_Speed.front().remaining_bytes -= latest_send;
 			break;
 		}

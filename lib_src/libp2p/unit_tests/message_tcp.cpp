@@ -230,7 +230,7 @@ int main()
 
 	boost::shared_ptr<message_tcp::recv::base> M_recv;
 	boost::shared_ptr<message_tcp::send::base> M_send;
-	boost::shared_ptr<net::speed_calc> SC(new net::speed_calc());
+	speed_composite SC;
 
 	//block
 	M_recv.reset(new message_tcp::recv::block(&block_call_back, test_block.size(), SC));

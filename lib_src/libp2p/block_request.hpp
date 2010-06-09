@@ -75,36 +75,33 @@ public:
 		Number of hosts we're uploading file to.
 	next_have:
 		Returns block that needs to be sent in have_* message.
-	upload_subscribe:
-		Subscribes a Incoming_Slot to local bit_field updates. The local bit_field
-		is returned. The trigger_tick function is used to call the tick() function
-		on the connection when there's a have_* message to send. This is called
-		when constructing a Incoming_Slot.
-	upload_unsubscribe:
-		Unsubscribes a Incoming_Slot to bit_field updates. This is called when
-		a Incoming_Slot is removed.
+	upload_reg:
+		Register upload. Returns local bit_field. The trigger_tick function is
+		used to call the tick() function on the connection when there's a have_*
+		message to send.
+	upload_unreg:
+		Unregister upload.
 		Postcondition: We will not keep track of updates and we will not call
 			trigger for this connection_ID.
 	*/
 	unsigned upload_count();
 	boost::optional<boost::uint64_t> next_have(const int connection_ID);
-	bit_field upload_subscribe(const int connection_ID,
+	bit_field upload_reg(const int connection_ID,
 		const boost::function<void()> trigger_tick);
-	void upload_unsubscribe(const int connection_ID);
+	void upload_unreg(const int connection_ID);
 
 	/* Download
 	download_count:
 		Number of hosts we're downloading file from.
-	download_subscribe:
-		Add a bit_field of a remote host. If BF is empty it means the remote host
-		has all blocks. This is called when a Outgoing_Slot is added.
-	download_unsubscribe:
+	download_reg:
+		Register download.
+	download_unreg:
 		Remove the connection as a source of blocks. Cancel all unfulfilled
-		requests. This is called when a Outgoing_Slot is removed.
+		requests.
 	*/
 	unsigned download_count();
-	void download_subscribe(const int connection_ID, const bit_field & BF);
-	void download_unsubscribe(const int connection_ID);
+	void download_reg(const int connection_ID, const bit_field & BF);
+	void download_unreg(const int connection_ID);
 
 private:
 	//object set up as a monitor, lock used for all public functions

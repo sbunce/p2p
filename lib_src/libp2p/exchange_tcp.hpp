@@ -4,6 +4,7 @@
 //custom
 #include "encryption.hpp"
 #include "message_tcp.hpp"
+#include "speed_composite.hpp"
 
 //include
 #include <boost/shared_ptr.hpp>
@@ -38,7 +39,7 @@ public:
 	expect_anytime_remove:
 		Removes messages expected anytime.
 	send:
-		Sends a message. Handles encryption.
+		Sends a message.
 	*/
 	void expect_response(boost::shared_ptr<message_tcp::recv::base> M);
 	void expect_anytime(boost::shared_ptr<message_tcp::recv::base> M);
@@ -80,9 +81,10 @@ private:
 	class send_speed_element
 	{
 	public:
+//DEBUG, move this in to implementation
 		send_speed_element(
 			const unsigned remaining_bytes_in,
-			const boost::shared_ptr<net::speed_calc> & Speed_Calc_in,
+			const speed_composite & Speed_Calc_in,
 			const boost::function<void ()> & call_back_in
 		):
 			remaining_bytes(remaining_bytes_in),
@@ -97,7 +99,7 @@ private:
 		{}
 
 		unsigned remaining_bytes;
-		boost::shared_ptr<net::speed_calc> Speed_Calc;
+		speed_composite Speed_Calc;
 		boost::function<void ()> call_back;
 	};
 	std::list<send_speed_element> Send_Speed;

@@ -133,23 +133,27 @@ unsigned transfer::download_speed()
 	return Download_Speed->speed();
 }
 
-const boost::shared_ptr<net::speed_calc> & transfer::download_speed_calc()
+speed_composite transfer::download_speed_composite(const int connection_ID)
 {
-	return Download_Speed;
+	speed_composite SC;
+	SC.add_calc(Download_Speed);
+	SC.add_calc(Peer.download_speed_calc(connection_ID));
+	return SC;
 }
 
-void transfer::download_subscribe(const int connection_ID, const net::endpoint & ep,
+void transfer::download_reg(const int connection_ID, const net::endpoint & ep,
 	const bit_field & tree_BF, const bit_field & file_BF)
 {
-	Peer.add(connection_ID, ep);
-	Tree_Block.download_subscribe(connection_ID, tree_BF);
-	File_Block.download_subscribe(connection_ID, file_BF);
+	Peer.reg(connection_ID, ep);
+	Tree_Block.download_reg(connection_ID, tree_BF);
+	File_Block.download_reg(connection_ID, file_BF);
 }
 
-void transfer::download_unsubscribe(const int connection_ID)
+void transfer::download_unreg(const int connection_ID)
 {
-	Tree_Block.download_unsubscribe(connection_ID);
-	File_Block.download_unsubscribe(connection_ID);
+	Peer.unreg(connection_ID);
+	Tree_Block.download_unreg(connection_ID);
+	File_Block.download_unreg(connection_ID);
 }
 
 boost::uint64_t transfer::file_block_count()
@@ -167,16 +171,9 @@ boost::uint64_t transfer::file_size()
 	return Hash_Tree.file_size;
 }
 
-std::list<p2p::transfer_info::host_element> transfer::host()
+std::list<p2p::transfer_info::host_element> transfer::host_info()
 {
-	std::list<p2p::transfer_info::host_element> tmp;
-	p2p::transfer_info::host_element test;
-	test.IP = "123.123.123.123";
-	test.port = "1234";
-	test.download_speed = 1024;
-	test.upload_speed = 1024;
-	tmp.push_back(test);
-	return tmp;
+	return Peer.host_info();
 }
 
 unsigned transfer::upload_count()
@@ -222,45 +219,50 @@ unsigned transfer::percent_complete()
 	return ((double)bytes_received / (Hash_Tree.tree_size + Hash_Tree.file_size)) * 100;
 }
 
-std::pair<boost::shared_ptr<message_tcp::send::base>, transfer::status>
-	transfer::read_file_block(const boost::uint64_t block_num)
+std::pair<net::buffer, transfer::status> transfer::read_file_block(
+	const boost::uint64_t block_num)
 {
+	std::pair<net::buffer, status> p;
 	if(File_Block.have_block(block_num)){
-		net::buffer buf;
-		if(File.read_block(block_num, buf)){
+		if(File.read_block(block_num, p.first)){
 			/*
 			We can't trust that the local user hasn't modified the file. We hash
 			check every block before we send it to detect modified blocks.
 			*/
-			hash_tree::status status = Hash_Tree.check_file_block(block_num, buf);
+			hash_tree::status status = Hash_Tree.check_file_block(block_num, p.first);
 			if(status == hash_tree::good){
-				return std::make_pair(boost::shared_ptr<message_tcp::send::base>(
-					new message_tcp::send::block(buf, Upload_Speed)), good);
+				p.second = good;
+				return p;
 			}else{
-				return std::make_pair(boost::shared_ptr<message_tcp::send::base>(), bad);
+				p.second = bad;
+				return p;
 			}
 		}else{
-			return std::make_pair(boost::shared_ptr<message_tcp::send::base>(), bad);
+			p.second = bad;
+			return p;
 		}
 	}else{
-		return std::make_pair(boost::shared_ptr<message_tcp::send::base>(), protocol_violated);
+		p.second = protocol_violated;
+		return p;
 	}
 }
 
-std::pair<boost::shared_ptr<message_tcp::send::base>, transfer::status>
-	transfer::read_tree_block(const boost::uint64_t block_num)
+std::pair<net::buffer, transfer::status> transfer::read_tree_block(
+	const boost::uint64_t block_num)
 {
+	std::pair<net::buffer, status> p;
 	if(Tree_Block.have_block(block_num)){
-		net::buffer buf;
-		hash_tree::status status = Hash_Tree.read_block(block_num, buf);
+		hash_tree::status status = Hash_Tree.read_block(block_num, p.first);
 		if(status == hash_tree::good){
-			return std::make_pair(boost::shared_ptr<message_tcp::send::base>(
-				new message_tcp::send::block(buf, Upload_Speed)), good);
+			p.second = good;
+			return p;
 		}else{
-			return std::make_pair(boost::shared_ptr<message_tcp::send::base>(), bad);
+			p.second = bad;
+			return p;
 		}
 	}else{
-		return std::make_pair(boost::shared_ptr<message_tcp::send::base>(), protocol_violated);
+		p.second = protocol_violated;
+		return p;
 	}
 }
 
@@ -300,7 +302,6 @@ unsigned transfer::tree_percent_complete()
 	return Tree_Block.percent_complete();
 }
 
-
 boost::uint64_t transfer::tree_size()
 {
 	return Hash_Tree.tree_size;
@@ -312,20 +313,29 @@ unsigned transfer::upload_speed()
 	return Upload_Speed->speed();
 }
 
-transfer::local_BF transfer::upload_subscribe(const int connection_ID,
+speed_composite transfer::upload_speed_composite(const int connection_ID)
+{
+	speed_composite SC;
+	SC.add_calc(Upload_Speed);
+	SC.add_calc(Peer.upload_speed_calc(connection_ID));
+	return SC;
+}
+
+transfer::local_BF transfer::upload_reg(const int connection_ID,
 	const net::endpoint & ep, const boost::function<void()> trigger_tick)
 {
-	Peer.add(connection_ID, ep);
+	Peer.reg(connection_ID, ep);
 	local_BF tmp;
-	tmp.tree_BF = Tree_Block.upload_subscribe(connection_ID, trigger_tick);
-	tmp.file_BF = File_Block.upload_subscribe(connection_ID, trigger_tick);
+	tmp.tree_BF = Tree_Block.upload_reg(connection_ID, trigger_tick);
+	tmp.file_BF = File_Block.upload_reg(connection_ID, trigger_tick);
 	return tmp;
 }
 
-void transfer::upload_unsubscribe(const int connection_ID)
+void transfer::upload_unreg(const int connection_ID)
 {
-	Tree_Block.upload_unsubscribe(connection_ID);
-	File_Block.upload_unsubscribe(connection_ID);
+	Peer.unreg(connection_ID);
+	Tree_Block.upload_unreg(connection_ID);
+	File_Block.upload_unreg(connection_ID);
 }
 
 transfer::status transfer::write_file_block(const int connection_ID,

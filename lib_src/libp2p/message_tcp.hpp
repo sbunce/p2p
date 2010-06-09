@@ -5,6 +5,7 @@
 #include "file.hpp"
 #include "hash_tree.hpp"
 #include "protocol_tcp.hpp"
+#include "speed_composite.hpp"
 
 //include
 #include <bit_field.hpp>
@@ -30,7 +31,7 @@ class base
 {
 public:
 	//speed calculator for download (empty if no speed to track)
-	boost::shared_ptr<net::speed_calc> Download_Speed;
+	speed_composite Download_Speed;
 
 	/*
 	expect:
@@ -49,7 +50,7 @@ class block : public base
 public:
 	typedef boost::function<bool (const net::buffer & block)> handler;
 	block(handler func_in, const unsigned block_size_in,
-		boost::shared_ptr<net::speed_calc> Download_Speed_in);
+		speed_composite Download_Speed_in);
 	virtual bool expect(const net::buffer & recv_buf);
 	virtual status recv(net::buffer & recv_buf);
 private:
@@ -246,7 +247,7 @@ public:
 	net::buffer buf;
 
 	//speed calculator for upload (empty if no speed to track)
-	boost::shared_ptr<net::speed_calc> Upload_Speed;
+	speed_composite Upload_Speed;
 
 	/*
 	encrypt:
@@ -259,8 +260,7 @@ public:
 class block : public base
 {
 public:
-	block(const net::buffer & block,
-		boost::shared_ptr<net::speed_calc> Upload_Speed_in);
+	block(const net::buffer & block, speed_composite Upload_Speed_in);
 };
 
 class close_slot : public base

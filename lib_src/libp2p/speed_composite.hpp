@@ -21,8 +21,8 @@ public:
 	add_speed_calc:
 		Add speed_calc to be updated by add_bytes().
 	*/
-	void add_bytes(const unsigned n_bytes);
-	void add_speed_calc(boost::shared_ptr<net::speed_calc> SC);
+	void add(const unsigned n_bytes);
+	void add_calc(boost::shared_ptr<net::speed_calc> SC);
 
 private:
 	std::list<boost::shared_ptr<net::speed_calc> > Elements;
