@@ -33,6 +33,8 @@ window_transfer_info::window_transfer_info(
 	this->set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC); //auto scroll bars
 	host_view->set_headers_visible(true);
 	host_scrolled_window->set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+	file_name_value->set_selectable();
+	hash_value->set_selectable();
 
 	//add/compose elements
 	this->add(*vbox);
@@ -160,8 +162,6 @@ bool window_transfer_info::refresh()
 		{
 			(*it_cur)[update_column] = false;
 		}
-
-		return true;
 	}else{
 		download_speed_value->set_text("0B/s");
 		upload_speed_value->set_text("0B/s");
@@ -173,6 +173,6 @@ bool window_transfer_info::refresh()
 		{
 			it_cur = host_list->erase(it_cur);
 		}
-		return false;
 	}
+	return true;
 }
