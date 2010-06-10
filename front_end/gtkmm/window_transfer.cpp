@@ -137,7 +137,7 @@ bool window_transfer::refresh()
 		if(type == download && it_cur->percent_complete == 100)
 		{
 			continue;
-		}else if(type == upload && it_cur->upload_peers == 0){
+		}else if(type == upload && it_cur->upload_hosts == 0){
 			continue;
 		}
 		std::map<std::string, Gtk::TreeModel::Row>::iterator

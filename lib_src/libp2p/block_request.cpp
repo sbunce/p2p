@@ -144,7 +144,7 @@ bool block_request::complete()
 	return local.empty();
 }
 
-unsigned block_request::download_count()
+unsigned block_request::download_hosts()
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	return Download.size();
@@ -352,7 +352,7 @@ unsigned block_request::percent_complete()
 	}
 }
 
-unsigned block_request::upload_count()
+unsigned block_request::upload_hosts()
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	return Upload.size();

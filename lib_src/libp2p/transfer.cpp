@@ -122,9 +122,9 @@ bool transfer::complete()
 	return Tree_Block.complete() && File_Block.complete();
 }
 
-unsigned transfer::download_count()
+unsigned transfer::download_hosts()
 {
-	return Tree_Block.download_count();
+	return Tree_Block.download_hosts();
 }
 
 unsigned transfer::download_speed()
@@ -176,9 +176,9 @@ std::list<p2p::transfer_info::host_element> transfer::host_info()
 	return Peer.host_info();
 }
 
-unsigned transfer::upload_count()
+unsigned transfer::upload_hosts()
 {
-	return Tree_Block.upload_count();
+	return Tree_Block.upload_hosts();
 }
 
 boost::optional<boost::uint64_t> transfer::next_have_file(const int connection_ID)

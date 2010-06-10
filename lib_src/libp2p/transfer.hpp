@@ -137,7 +137,7 @@ public:
 	void upload_unreg(const int connection_ID);
 
 	/* Other
-	download_count:
+	download_hosts:
 		Number of hosts we're downloading file from.
 	download_speed:
 		Returns download speed (bytes/second).
@@ -145,18 +145,18 @@ public:
 		Returns download speed calculator.
 	host_info:
 		Returns info for all connected hosts.
-	upload_count:
+	upload_hosts:
 		Number of hosts we're uploading file to.
 	upload_speed:
 		Returns upload speed (bytes/second).
 	upload_speed_composite:
 		Returns upload speed calculator.
 	*/
-	unsigned download_count();
+	unsigned download_hosts();
 	unsigned download_speed();
 	speed_composite download_speed_composite(const int connection_ID);
 	std::list<p2p::transfer_info::host_element> host_info();
-	unsigned upload_count();
+	unsigned upload_hosts();
 	unsigned upload_speed();
 	speed_composite upload_speed_composite(const int connection_ID);
 

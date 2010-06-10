@@ -33,7 +33,9 @@ private:
 	Gtk::Label * file_size_value;
 	Gtk::Label * file_percent_value;
 	Gtk::Label * download_speed_value;
+	Gtk::Label * download_hosts_value;
 	Gtk::Label * upload_speed_value;
+	Gtk::Label * upload_hosts_value;
 
 	//bottom server stuff
 	Gtk::ScrolledWindow * host_scrolled_window;

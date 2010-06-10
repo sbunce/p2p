@@ -71,7 +71,7 @@ public:
 	unsigned percent_complete();
 
 	/* Upload
-	upload_count:
+	upload_hosts:
 		Number of hosts we're uploading file to.
 	next_have:
 		Returns block that needs to be sent in have_* message.
@@ -84,14 +84,14 @@ public:
 		Postcondition: We will not keep track of updates and we will not call
 			trigger for this connection_ID.
 	*/
-	unsigned upload_count();
+	unsigned upload_hosts();
 	boost::optional<boost::uint64_t> next_have(const int connection_ID);
 	bit_field upload_reg(const int connection_ID,
 		const boost::function<void()> trigger_tick);
 	void upload_unreg(const int connection_ID);
 
 	/* Download
-	download_count:
+	download_hosts:
 		Number of hosts we're downloading file from.
 	download_reg:
 		Register download.
@@ -99,7 +99,7 @@ public:
 		Remove the connection as a source of blocks. Cancel all unfulfilled
 		requests.
 	*/
-	unsigned download_count();
+	unsigned download_hosts();
 	void download_reg(const int connection_ID, const bit_field & BF);
 	void download_unreg(const int connection_ID);
 

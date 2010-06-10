@@ -27,8 +27,8 @@ public:
 		unsigned percent_complete;      //0-100 (tree and file combined)
 		unsigned tree_percent_complete; //0-100
 		unsigned file_percent_complete; //0-100
-		unsigned download_peers;        //number of hosts we're downloading from
-		unsigned upload_peers;          //number of hosts we're uploading to
+		unsigned download_hosts;        //number of hosts we're downloading from
+		unsigned upload_hosts;          //number of hosts we're uploading to
 		unsigned download_speed;        //total download bytes/second
 		unsigned upload_speed;          //total upload bytes/second
 

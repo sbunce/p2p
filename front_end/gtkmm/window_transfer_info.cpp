@@ -17,15 +17,23 @@ window_transfer_info::window_transfer_info(
 	Gtk::Label * file_size_label = Gtk::manage(new Gtk::Label("File Size: "));
 	Gtk::Label * file_percent_label = Gtk::manage(new Gtk::Label("Complete: "));
 	Gtk::Label * download_speed_label = Gtk::manage(new Gtk::Label("Down: "));
+	Gtk::Label * download_hosts_label = Gtk::manage(new Gtk::Label("Hosts: "));
 	Gtk::Label * upload_speed_label = Gtk::manage(new Gtk::Label("Up: "));
+	Gtk::Label * upload_hosts_label = Gtk::manage(new Gtk::Label("Hosts: "));
 
+	std::stringstream ss;
 	tree_size_value = Gtk::manage(new Gtk::Label(convert::bytes_to_SI(TI.tree_size)));
 	tree_percent_value = Gtk::manage(new Gtk::Label("0%"));
 	file_name_value = Gtk::manage(new Gtk::Label(TI.name));
 	file_size_value = Gtk::manage(new Gtk::Label(convert::bytes_to_SI(TI.file_size)));
 	file_percent_value = Gtk::manage(new Gtk::Label("0%"));
 	download_speed_value = Gtk::manage(new Gtk::Label(convert::bytes_to_SI(TI.download_speed)+"/s"));
+	ss << TI.download_hosts;
+	download_hosts_value = Gtk::manage(new Gtk::Label(ss.str()));
 	upload_speed_value = Gtk::manage(new Gtk::Label(convert::bytes_to_SI(TI.upload_speed)+"/s"));
+	ss.str(""); ss.clear();
+	ss << TI.upload_hosts;
+	upload_hosts_value = Gtk::manage(new Gtk::Label(ss.str()));
 	host_scrolled_window = Gtk::manage(new Gtk::ScrolledWindow);
 	host_view = Gtk::manage(new Gtk::TreeView);
 
@@ -55,8 +63,12 @@ window_transfer_info::window_transfer_info(
 	info_fixed->put(*file_percent_value, 160 + 90, 48);
 	info_fixed->put(*download_speed_label, 8, 64);
 	info_fixed->put(*download_speed_value, 90, 64);
-	info_fixed->put(*upload_speed_label, 160 + 8, 64);
-	info_fixed->put(*upload_speed_value, 160 + 90, 64);
+	info_fixed->put(*download_hosts_label, 160 + 8, 64);
+	info_fixed->put(*download_hosts_value, 160 + 90, 64);
+	info_fixed->put(*upload_speed_label, 8, 80);
+	info_fixed->put(*upload_speed_value, 90, 80);
+	info_fixed->put(*upload_hosts_label, 160 + 8, 80);
+	info_fixed->put(*upload_hosts_value, 160 + 90, 80);
 
 	//setup column
 	column.add(IP_column);
@@ -117,7 +129,13 @@ bool window_transfer_info::refresh()
 		ss << TI->file_percent_complete << "%";
 		file_percent_value->set_text(ss.str());
 		download_speed_value->set_text(convert::bytes_to_SI(TI->download_speed)+"/s");
+		ss.str(""); ss.clear();
+		ss << TI->download_hosts;
+		download_hosts_value->set_text(ss.str());
 		upload_speed_value->set_text(convert::bytes_to_SI(TI->upload_speed)+"/s");
+		ss.str(""); ss.clear();
+		ss << TI->upload_hosts;
+		upload_hosts_value->set_text(ss.str());
 
 		//add and update rows
 		for(std::list<p2p::transfer_info::host_element>::iterator it_cur = TI->host.begin(),

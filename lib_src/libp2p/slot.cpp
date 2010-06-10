@@ -59,9 +59,9 @@ p2p::transfer_info slot::info()
 		tmp.percent_complete = Transfer->percent_complete();
 		tmp.tree_percent_complete = Transfer->tree_percent_complete();
 		tmp.file_percent_complete = Transfer->file_percent_complete();
-		tmp.download_peers = Transfer->download_count();
+		tmp.download_hosts = Transfer->download_hosts();
 		tmp.download_speed = Transfer->download_speed();
-		tmp.upload_peers = Transfer->upload_count();
+		tmp.upload_hosts = Transfer->upload_hosts();
 		tmp.upload_speed = Transfer->upload_speed();
 		tmp.host = Transfer->host_info();
 	}else{
@@ -70,9 +70,9 @@ p2p::transfer_info slot::info()
 		tmp.percent_complete = 0;
 		tmp.tree_percent_complete = 0;
 		tmp.file_percent_complete = 0;
-		tmp.download_peers = 0;
+		tmp.download_hosts = 0;
 		tmp.download_speed = 0;
-		tmp.upload_peers = 0;
+		tmp.upload_hosts = 0;
 		tmp.upload_speed = 0;
 	}
 	return tmp;
