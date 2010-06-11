@@ -31,7 +31,8 @@ connection_manager::connection_manager():
 
 connection_manager::~connection_manager()
 {
-	Thread_Pool.stop_join();
+	Thread_Pool.stop();
+	Thread_Pool.join();
 	DHT.stop();
 	Proactor.stop();
 }

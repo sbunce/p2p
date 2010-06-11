@@ -10,7 +10,6 @@ p2p_impl::init::init()
 //END init
 
 p2p_impl::p2p_impl():
-	Thread_Pool(1),
 	Share_Scanner(Connection_Manager)
 {
 	resume_thread = boost::thread(boost::bind(&p2p_impl::resume, this));
@@ -18,7 +17,6 @@ p2p_impl::p2p_impl():
 
 p2p_impl::~p2p_impl()
 {
-	Thread_Pool.stop_join();
 	resume_thread.interrupt();
 	resume_thread.join();
 }
@@ -102,6 +100,9 @@ Eventually will need to be more selective about this. Or space it out.
 		Connection_Manager.store_file(it_cur->hash);
 	}
 
+//DEBUG, give the DHT time to store the key/val pairs
+	boost::this_thread::sleep(boost::posix_time::milliseconds(4000));
+
 	//find hosts which have files we need
 	for(share::slot_iterator it_cur = share::singleton().begin_slot(),
 		it_end = share::singleton().end_slot(); it_cur != it_end; ++it_cur)
@@ -110,39 +111,24 @@ Eventually will need to be more selective about this. Or space it out.
 	}
 }
 
-static void set_max_connections_thread(const unsigned connections)
-{
-	db::table::prefs::set_max_connections(connections);
-}
-
 void p2p_impl::set_max_connections(const unsigned connections)
 {
 	//save extra 24 file descriptors for DB and misc other stuff
 	assert(connections <= 1000);
 	Connection_Manager.set_max_connections(connections / 2, connections / 2);
-	Thread_Pool.enqueue(boost::bind(&set_max_connections_thread, connections));
-}
-
-static void set_max_download_rate_thread(const unsigned rate)
-{
-	db::table::prefs::set_max_download_rate(rate);
+	db::table::prefs::set_max_connections(connections);
 }
 
 void p2p_impl::set_max_download_rate(const unsigned rate)
 {
 	Connection_Manager.set_max_download_rate(rate);
-	Thread_Pool.enqueue(boost::bind(&set_max_download_rate_thread, rate));
-}
-
-static void set_max_upload_rate_thread(const unsigned rate)
-{
-	db::table::prefs::set_max_upload_rate(rate);
+	db::table::prefs::set_max_download_rate(rate);
 }
 
 void p2p_impl::set_max_upload_rate(const unsigned rate)
 {
 	Connection_Manager.set_max_upload_rate(rate);
-	Thread_Pool.enqueue(boost::bind(&set_max_upload_rate_thread, rate));
+	db::table::prefs::set_max_upload_rate(rate);
 }
 
 boost::uint64_t p2p_impl::share_size()
