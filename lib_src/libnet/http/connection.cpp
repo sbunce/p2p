@@ -122,18 +122,36 @@ void connection::read_directory(net::proactor::connection_info & CI)
 	"<td>size</td>\n"
 	"</tr>\n";
 	try{
+		std::map<std::string, std::string> directory;
+		std::map<std::string, std::string> file;
 		for(fs::directory_iterator it_cur(path), it_end; it_cur != it_end; ++it_cur){
 			std::string relative_path = it_cur->path().directory_string().substr(web_root.size());
 			encode_chars(relative_path);
 			std::string file_name = it_cur->path().filename();
+			std::stringstream tmp_ss;
 			if(fs::is_directory(it_cur->path())){
-				ss << "<tr>\n<td>\n<a href=\"" << relative_path << "\">" << file_name
+				tmp_ss << "<tr>\n<td>\n<a href=\"" << relative_path << "\">" << file_name
 					<< "/</a>\n</td>\n<td>DIR</td>\n</tr>";
+				boost::to_upper(file_name);
+				directory.insert(std::make_pair(file_name, tmp_ss.str()));
 			}else{
-				ss << "<tr>\n<td>\n<a href=\"" << relative_path << "\">" << it_cur->path().filename()
+				tmp_ss << "<tr>\n<td>\n<a href=\"" << relative_path << "\">" << it_cur->path().filename()
 					<< "</a>\n</td>\n<td>" << convert::bytes_to_SI(fs::file_size(it_cur->path()))
 					<< "</td>\n</tr>\n";
+				boost::to_upper(file_name);
+				file.insert(std::make_pair(file_name, tmp_ss.str()));
 			}
+		}
+		//append sorted listing to ss
+		for(std::map<std::string, std::string>::iterator it_cur = directory.begin(),
+			it_end = directory.end(); it_cur != it_end; ++it_cur)
+		{
+			ss << it_cur->second;
+		}
+		for(std::map<std::string, std::string>::iterator it_cur = file.begin(),
+			it_end = file.end(); it_cur != it_end; ++it_cur)
+		{
+			ss << it_cur->second;
 		}
 	}catch(std::exception & ex){
 		LOG << ex.what();

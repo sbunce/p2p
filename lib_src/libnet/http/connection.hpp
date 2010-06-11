@@ -2,6 +2,7 @@
 #define H_CONNECTION
 
 //include
+#include <boost/algorithm/string.hpp>
 #include <boost/bind.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/filesystem.hpp>
