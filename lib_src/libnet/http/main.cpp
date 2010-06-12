@@ -6,16 +6,10 @@
 #include <logger.hpp>
 #include <net/net.hpp>
 #include <opt_parse.hpp>
+#include <portable.hpp>
 
 //standard
 #include <csignal>
-
-//needed to priveledge drop
-#ifndef _WIN32
-	//posix
-	#include <sys/types.h> 
-	#include <unistd.h>
-#endif
 
 boost::mutex terminate_mutex;
 boost::condition_variable_any terminate_cond;
@@ -50,10 +44,8 @@ int main(int argc, char ** argv)
 		<< "\n"
 		<< "options:\n"
 		<< " -l                Listen on localhost only.\n"
-		#ifndef _WIN32
 		<< " --uid <uid>       User ID to priviledge drop to.\n"
 		<< " --gid <gid>       Group ID to priviledge drop to.\n"
-		#endif
 		<< " --port <port>     Port number 0 to 65535 (default random).\n"
 		<< " --rate <rate>     Max upload rate (B/s) (default unlimited).\n"
 		<< " --help            Show this dialogue.\n"
@@ -73,10 +65,8 @@ int main(int argc, char ** argv)
 		return 1;
 	}
 	bool localhost_only = Opt_Parse.flag('l');
-	#ifndef _WIN32
 	boost::optional<uid_t> uid = Opt_Parse.lexical_cast<uid_t>("uid");
 	boost::optional<gid_t> gid = Opt_Parse.lexical_cast<gid_t>("gid");
-	#endif
 	boost::optional<std::string> port = Opt_Parse.string("port");
 	boost::optional<unsigned> rate = Opt_Parse.lexical_cast<unsigned>("rate");
 	if(Opt_Parse.unparsed()){
@@ -102,18 +92,16 @@ int main(int argc, char ** argv)
 	std::cout << "listening on " << Listener->port() << "\n";
 
 	//drop priviledges before allowing incoming connections
-	#ifndef _WIN32
 	if(gid){
-		if(setgid(*gid) == -1){
+		if(portable::setgid(*gid) == -1){
 			LOG << errno;
 		}
 	}
 	if(uid){
-		if(setuid(*uid) == -1){
+		if(portable::setuid(*uid) == -1){
 			LOG << errno;
 		}
 	}
-	#endif
 
 	if(rate){
 		HTTP.set_max_upload_rate(*rate);

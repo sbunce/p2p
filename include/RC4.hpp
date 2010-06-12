@@ -2,7 +2,7 @@
 #define H_RC4
 
 //include
-#include <random.hpp>
+#include <portable_random.hpp>
 
 class RC4
 {
@@ -18,7 +18,7 @@ public:
 	void seed()
 	{
 		unsigned char buf[max_seed];
-		random::urandom(buf, max_seed);
+		portable::urandom(buf, max_seed);
 		seed(buf, max_seed);
 	}
 

@@ -3,11 +3,11 @@
 
 //include
 #include <logger.hpp>
-#include <random.hpp>
+#include <portable_random.hpp>
 #include <unit_test.hpp>
 
 int fail(0);
-const net::buffer test_random(random::urandom(4));
+const net::buffer test_random(portable::urandom(4));
 const std::string test_ID("0123456789012345678901234567890123456789");
 boost::shared_ptr<net::endpoint> endpoint;
 std::list<net::endpoint> test_hosts;

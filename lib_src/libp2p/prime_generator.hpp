@@ -11,7 +11,6 @@
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
 #include <mpa.hpp>
-#include <random.hpp>
 #include <RC4.hpp>
 
 //standard

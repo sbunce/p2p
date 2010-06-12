@@ -71,7 +71,7 @@ bool initial_port_call_back(const std::string & port)
 }
 
 //note, p_rA doesn't contain actual prime
-const net::buffer test_p_rA(random::urandom(protocol_tcp::DH_key_size * 2));
+const net::buffer test_p_rA(portable::urandom(protocol_tcp::DH_key_size * 2));
 bool key_exchange_p_rA_call_back(const net::buffer & p_rA)
 {
 	if(p_rA != test_p_rA){
@@ -80,7 +80,7 @@ bool key_exchange_p_rA_call_back(const net::buffer & p_rA)
 	return true;
 }
 
-const net::buffer test_rB(random::urandom(protocol_tcp::DH_key_size));
+const net::buffer test_rB(portable::urandom(protocol_tcp::DH_key_size));
 bool key_exchange_rB_call_back(const net::buffer & rB)
 {
 	if(rB != test_rB){

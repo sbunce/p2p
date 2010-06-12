@@ -190,6 +190,7 @@ bool slot_manager::recv_peer(const unsigned char slot_num,
 	if(it != Download_Slot.end()){
 		peer_call_back(ep, it->second->hash());
 	}
+	return true;
 }
 
 bool slot_manager::recv_request_block_failed(const unsigned char slot_num)

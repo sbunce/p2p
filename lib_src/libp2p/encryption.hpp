@@ -12,7 +12,6 @@
 #include <RC4.hpp>
 #include <mpa.hpp>
 #include <net/net.hpp>
-#include <random.hpp>
 
 //std
 #include <cassert>

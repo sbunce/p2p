@@ -1,7 +1,10 @@
+//include
 #include <tommath.h>
-
 #include <mpa.hpp>
-#include <random.hpp>
+#include <portable_random.hpp>
+
+//standard
+#include <limits>
 
 #ifdef max
 	#undef max
@@ -596,7 +599,7 @@ mpa::mpint mpa::random_prime(const std::size_t bytes)
 		mp_prime_rabin_miller_trials(bytes * 8),
 		bytes * 8,        //size (bits) of prime to generate
 		0,                //optional flags
-		&random::urandom, //random byte source
+		&portable::urandom, //random byte source
 		NULL              //optional void * passed to PRNG
 	)) != MP_OKAY)
 	{
@@ -611,7 +614,7 @@ mpa::mpint mpa::random(const int bytes)
 	if(buf == NULL){
 		throw ::exception(MP_MEM);
 	}
-	random::urandom(buf, bytes);
+	portable::urandom(buf, bytes);
 	mpint tmp(buf, bytes);
 	delete[] buf;
 	return tmp;

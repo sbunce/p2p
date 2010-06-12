@@ -72,7 +72,7 @@ void kad::find_file_call_back_0(const net::endpoint & ep,
 {
 	//LOG << ep.IP() << " " << ep.port() << " " << convert::abbr(hash);
 	//ask closest nodes what nodes have the file
-	net::buffer random(random::urandom(4));
+	net::buffer random(portable::urandom(4));
 	Exchange.send(boost::shared_ptr<message_udp::send::base>(
 		new message_udp::send::query_file(random, local_ID, hash)), ep);
 	Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
@@ -264,7 +264,7 @@ void kad::send_find_node()
 	for(std::list<std::pair<net::endpoint, std::string> >::iterator
 		it_cur = jobs.begin(), it_end = jobs.end(); it_cur != it_end; ++it_cur)
 	{
-		net::buffer random(random::urandom(4));
+		net::buffer random(portable::urandom(4));
 		Exchange.send(boost::shared_ptr<message_udp::send::base>(
 			new message_udp::send::find_node(random, local_ID, it_cur->second)), it_cur->first);
 		Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
@@ -280,7 +280,7 @@ void kad::send_ping()
 	do{
 		ep = Route_Table.ping();
 		if(ep){
-			net::buffer random(random::urandom(4));
+			net::buffer random(portable::urandom(4));
 			Exchange.send(boost::shared_ptr<message_udp::send::base>(
 				new message_udp::send::ping(random, local_ID)), *ep);
 			Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
@@ -308,7 +308,7 @@ void kad::send_store_node_call_back_0(const net::endpoint & ep)
 	}else{
 		//get token
 		//LOG << "ping: " << ep.IP() << " " << ep.port();
-		net::buffer random(random::urandom(4));
+		net::buffer random(portable::urandom(4));
 		Exchange.send(boost::shared_ptr<message_udp::send::base>(
 			new message_udp::send::ping(random, local_ID)), ep);
 		Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(
@@ -355,7 +355,7 @@ void kad::store_file_call_back_0(const net::endpoint & ep, const std::string has
 	}else{
 		//get token
 		//LOG << "ping: " << ep.IP() << " " << ep.port();
-		net::buffer random(random::urandom(4));
+		net::buffer random(portable::urandom(4));
 		Exchange.send(boost::shared_ptr<message_udp::send::base>(
 			new message_udp::send::ping(random, local_ID)), ep);
 		Exchange.expect_response(boost::shared_ptr<message_udp::recv::base>(

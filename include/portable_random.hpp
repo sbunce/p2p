@@ -1,5 +1,5 @@
-#ifndef H_RANDOM
-#define H_RANDOM
+#ifndef H_PORTABLE_RANDOM
+#define H_PORTABLE_RANDOM
 
 //include
 #include <boost/cstdint.hpp>
@@ -15,12 +15,12 @@
 	Even though this header is not relevant here it must be included before
 	wincrypt.h otherwise there will be errors.
 	*/
-	#include <ws2tcpip.h>
+	//#include <ws2tcpip.h>
 	#include <wincrypt.h>
 #endif
 
 namespace{
-namespace random{
+namespace portable{
 
 //tommath requires this function signature
 int urandom(unsigned char * buf, int size, void * data = NULL)

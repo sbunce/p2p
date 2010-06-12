@@ -37,7 +37,7 @@ void db::init::create_all()
 	DB->query(ss.str());
 	//generate our node ID
 	unsigned char buf[SHA1::bin_size];
-	random::urandom(buf, SHA1::bin_size);
+	portable::urandom(buf, SHA1::bin_size);
 	ss.str(""); ss.clear();
 	ss << "INSERT OR IGNORE INTO prefs VALUES('ID', '"
 		<< convert::bin_to_hex(std::string(reinterpret_cast<const char *>(buf), SHA1::bin_size))
@@ -48,7 +48,7 @@ void db::init::create_all()
 		unsigned n;
 		unsigned char b[sizeof(unsigned)];
 	} NB;
-	random::urandom(NB.b, sizeof(unsigned));
+	portable::urandom(NB.b, sizeof(unsigned));
 	ss.str(""); ss.clear();
 	ss << "INSERT OR IGNORE INTO prefs VALUES('port', '"
 		<< NB.n % 64512 + 1024 << "')";
