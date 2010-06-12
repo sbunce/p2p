@@ -183,6 +183,8 @@ bool window_transfer_info::refresh()
 	}else{
 		download_speed_value->set_text("0B/s");
 		upload_speed_value->set_text("0B/s");
+		download_hosts_value->set_text("0");
+		upload_hosts_value->set_text("0");
 		Row_Idx.clear();
 
 		//doing host_list.clear() erroneously leaves one row
