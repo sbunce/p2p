@@ -122,7 +122,7 @@ boost::optional<net::endpoint> k_route_table::ping()
 	}
 	if(!Unknown_Reserve.empty()){
 		//ping random endpoint
-		boost::uint64_t num = portable::roll(Unknown_Reserve.size());
+		boost::uint64_t num = portable::urandom_roll(Unknown_Reserve.size());
 		std::set<net::endpoint>::iterator it = Unknown_Reserve.begin();
 		while(num--){ ++it; }
 		ep = *it;

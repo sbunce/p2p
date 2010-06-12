@@ -7,7 +7,7 @@
 
 //include
 #include <convert.hpp>
-#include <portable_random.hpp>
+#include <portable.hpp>
 #include <SHA1.hpp>
 
 //standard

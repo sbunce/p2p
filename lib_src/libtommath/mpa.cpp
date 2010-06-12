@@ -1,7 +1,7 @@
 //include
 #include <tommath.h>
 #include <mpa.hpp>
-#include <portable_random.hpp>
+#include <portable.hpp>
 
 //standard
 #include <limits>

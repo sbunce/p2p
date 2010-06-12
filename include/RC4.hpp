@@ -2,7 +2,7 @@
 #define H_RC4
 
 //include
-#include <portable_random.hpp>
+#include <portable.hpp>
 
 class RC4
 {
