@@ -7,8 +7,11 @@
 #include <boost/shared_ptr.hpp>
 
 //standard
+#include <cstdio>
+#include <fstream>
 #include <list>
 #include <string>
+#include <sstream>
 
 class p2p_impl;
 class p2p : private boost::noncopyable
@@ -57,11 +60,16 @@ public:
 	};
 
 	/* Transfers
+	load_file:
+		Load a *.p2p file.
+		Note: If set_db_file_name and/or set_program_dir need to be called they
+			should be called before this function.
 	remove_download:
 		Removes a running download.
 	start_download:
 		Starts a download.
 	*/
+	static void load_file(const std::string & path);
 	void remove_download(const std::string & hash);
 	void start_download(const p2p::download_info & DI);
 

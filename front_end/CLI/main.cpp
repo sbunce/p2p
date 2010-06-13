@@ -40,6 +40,21 @@ int main(int argc, char ** argv)
 		p2p::set_db_file_name(*db_file_name);
 	}
 
+	//get last argument if *.p2p file
+	boost::optional<std::string> p2p_file = Opt_Parse.match_last(".+\\.p2p");
+	if(Opt_Parse.unparsed()){
+		return 1;
+	}
+	if(p2p_file){
+		LOG << *p2p_file;
+		p2p::load_file(*p2p_file);
+		/*
+		There is no good portable way of determining if the program is already
+		running so we do not try to start the program after loading a file.
+		*/
+		return 0;
+	}
+
 	p2p P2P;
 
 	{//begin lock scope

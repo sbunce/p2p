@@ -2,8 +2,8 @@
 #include "p2p_impl.hpp"
 
 //include
-#include <boost/shared_ptr.hpp>
 #include <p2p.hpp>
+#include <portable.hpp>
 
 //BEGIN download_info
 p2p::download_info::download_info(
@@ -46,6 +46,20 @@ unsigned p2p::get_max_download_rate()
 unsigned p2p::get_max_upload_rate()
 {
 	return P2P_impl->get_max_upload_rate();
+}
+
+void p2p::load_file(const std::string & path)
+{
+	path::create_dirs();
+
+	//to be atomic we copy the file to the tmp directory then move it
+	std::stringstream tmp_path, load_path;
+	tmp_path << path::tmp_dir() << "load_" << portable::getpid();
+	load_path << path::load_dir() << "load_" << portable::getpid();
+	std::fstream fin(path.c_str(), std::ios::in | std::ios::binary);
+	std::fstream fout(tmp_path.str().c_str(), std::ios::out | std::ios::binary);
+	fout << fin.rdbuf();
+	std::rename(tmp_path.str().c_str(), load_path.str().c_str());
 }
 
 void p2p::remove_download(const std::string & hash)

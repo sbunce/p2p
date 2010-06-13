@@ -40,12 +40,13 @@ void path::create_dirs()
 	static_wrap::get().non_set_func_called = true;
 	try{
 		#ifndef _WIN32
-		//main directory always in current directory on windows
+		//program directory always in current directory on windows
 		if(!static_wrap::get().program_dir.empty()){
 			boost::filesystem::create_directory(static_wrap::get().program_dir);
 		}
 		#endif
 		boost::filesystem::create_directory(download_dir());
+		boost::filesystem::create_directory(load_dir());
 		boost::filesystem::create_directory(share_dir());
 		boost::filesystem::create_directory(tmp_dir());
 	}catch(const std::exception & e){
@@ -66,6 +67,13 @@ std::string path::download_dir()
 	boost::recursive_mutex::scoped_lock lock(static_wrap::get().mutex);
 	static_wrap::get().non_set_func_called = true;
 	return static_wrap::get().program_dir + "download/";
+}
+
+std::string path::load_dir()
+{
+	boost::recursive_mutex::scoped_lock lock(static_wrap::get().mutex);
+	static_wrap::get().non_set_func_called = true;
+	return static_wrap::get().program_dir + "load/";
 }
 
 void path::remove_tmp_tree_files()

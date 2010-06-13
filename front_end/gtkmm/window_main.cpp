@@ -1,7 +1,8 @@
 #include "window_main.hpp"
 
-window_main::window_main():
-	Gtk::Window(Gtk::WINDOW_TOPLEVEL)
+window_main::window_main(p2p & P2P_in):
+	Gtk::Window(Gtk::WINDOW_TOPLEVEL),
+	P2P(P2P_in)
 {
 	//splits main window
 	Gtk::VBox * VBox = Gtk::manage(new Gtk::VBox(false, 0));

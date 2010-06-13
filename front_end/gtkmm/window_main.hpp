@@ -18,10 +18,10 @@
 class window_main : public Gtk::Window, private boost::noncopyable
 {
 public:
-	window_main();
+	window_main(p2p & P2P_in);
 
 private:
-	p2p P2P;
+	p2p & P2P;
 
 	/*
 	file_drag_data_received:

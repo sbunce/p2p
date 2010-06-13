@@ -40,6 +40,8 @@ public:
 		Path to database file.
 	download_dir:
 		Path to download directory.
+	load_dir:
+		Directory which loads *.p2p files.
 	share_dir:
 		Path to share directory.
 	tmp_dir:
@@ -50,6 +52,7 @@ public:
 	*/
 	static std::string db_file();
 	static std::string download_dir();
+	static std::string load_dir();
 	static std::string share_dir();
 	static std::string tmp_dir();
 	static std::string tree_file();

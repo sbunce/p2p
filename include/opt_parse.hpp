@@ -5,6 +5,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
 #include <boost/regex.hpp>
+#include <logger.hpp>
 
 //standard
 #include <iostream>
@@ -19,31 +20,6 @@ public:
 		args(argv+1, argv+argc)
 	{
 
-	}
-
-	/*
-	After checking for all options this function should be called. If there are
-	unused options they will be printed and true will be returned.
-	*/
-	bool unparsed()
-	{
-		if(args.empty()){
-			return false;
-		}else{
-			std::cout << "unknown options \"";
-			for(std::list<std::string>::iterator it_cur = args.begin(),
-			it_end = args.end(); it_cur != it_end; ++it_cur)
-			{
-				std::cout << *it_cur;
-				std::list<std::string>::iterator it_next = it_cur;
-				++it_next;
-				if(it_next != it_end){
-					std::cout << " ";
-				}
-			}
-			std::cout << "\"\n";
-			return true;
-		}
 	}
 
 	/*
@@ -94,6 +70,24 @@ public:
 			}
 		}
 		return false;
+	}
+
+	//match last option with specified regex
+	boost::optional<std::string> match_last(const std::string & reg)
+	{
+		if(args.empty()){
+			//only program name left
+			return boost::optional<std::string>();
+		}else{
+			boost::regex expr(reg);
+			if(boost::regex_match(args.back().begin(), args.back().end(), expr)){
+				std::string tmp = args.back();
+				args.erase(--args.end());
+				return tmp;
+			}else{
+				return boost::optional<std::string>();
+			}
+		}
 	}
 
 	/*
@@ -152,6 +146,31 @@ public:
 			}
 		}else{
 			return boost::optional<T>();
+		}
+	}
+
+	/*
+	After checking for all options this function should be called. If there are
+	unused options they will be printed and true will be returned.
+	*/
+	bool unparsed()
+	{
+		if(args.empty()){
+			return false;
+		}else{
+			std::cout << "unknown options \"";
+			for(std::list<std::string>::iterator it_cur = args.begin(),
+			it_end = args.end(); it_cur != it_end; ++it_cur)
+			{
+				std::cout << *it_cur;
+				std::list<std::string>::iterator it_next = it_cur;
+				++it_next;
+				if(it_next != it_end){
+					std::cout << " ";
+				}
+			}
+			std::cout << "\"\n";
+			return true;
 		}
 	}
 
