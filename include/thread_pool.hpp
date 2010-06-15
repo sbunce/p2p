@@ -45,6 +45,7 @@ public:
 		if(object_ptr == NULL){
 			job_queue.clear();
 			timeout_jobs.clear();
+			job_objects.clear();
 		}else{
 			for(std::list<job>::iterator it_cur = job_queue.begin(); it_cur != job_queue.end();){
 				if(it_cur->object_ptr == object_ptr){
@@ -69,6 +70,7 @@ public:
 				}
 			}
 		}
+		join_cond.notify_all();
 	}
 
 	//enqueue job

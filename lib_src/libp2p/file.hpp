@@ -44,6 +44,6 @@ public:
 		Given the file size, returns the file block count. Used to get
 		file_block_count when file not instanted.
 	*/
-	static boost::uint64_t calc_file_block_count(boost::uint64_t file_size);
+	static boost::uint64_t calc_file_block_count(const boost::uint64_t file_size);
 };
 #endif

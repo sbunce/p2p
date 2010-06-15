@@ -29,7 +29,7 @@ unsigned file::block_size(const boost::uint64_t block_num)
 	}
 }
 
-boost::uint64_t file::calc_file_block_count(boost::uint64_t file_size)
+boost::uint64_t file::calc_file_block_count(const boost::uint64_t file_size)
 {
 	if(file_size % protocol_tcp::file_block_size == 0){
 		return file_size / protocol_tcp::file_block_size;
@@ -69,7 +69,7 @@ bool file::write_block(const boost::uint64_t block_num, const net::buffer & buf)
 		fout.close();
 		fout.open(path.c_str(), std::ios::in | std::ios::out | std::ios::binary);
 		if(!fout.is_open()){
-			LOG << "failed to open \"" << path << "\"";
+			LOG << "failed to create \"" << path << "\"";
 			return false;
 		}
 	}
