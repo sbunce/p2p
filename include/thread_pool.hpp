@@ -7,8 +7,8 @@
 #include <boost/thread.hpp>
 
 //standard
+#include <list>
 #include <map>
-#include <queue>
 #include <set>
 
 /*
@@ -79,8 +79,33 @@ public:
 	void clear(void * object_ptr = NULL)
 	{
 		boost::mutex::scoped_lock lock(mutex);
-		job_queue.clear();
-		timeout_jobs.clear();
+		if(object_ptr == NULL){
+			job_queue.clear();
+			timeout_jobs.clear();
+		}else{
+			for(std::list<job>::iterator it_cur = job_queue.begin(); it_cur != job_queue.end();){
+				if(it_cur->object_ptr == object_ptr){
+					std::multiset<void *>::iterator it = job_objects.find(object_ptr);
+					assert(it != job_objects.end());
+					job_objects.erase(it);
+					it_cur = job_queue.erase(it_cur);
+				}else{
+					++it_cur;
+				}
+			}
+			for(std::multimap<boost::uint64_t, job>::iterator it_cur = timeout_jobs.begin();
+				it_cur != timeout_jobs.end();)
+			{
+				if(it_cur->second.object_ptr == object_ptr){
+					std::multiset<void *>::iterator it = job_objects.find(object_ptr);
+					assert(it != job_objects.end());
+					job_objects.erase(it);
+					timeout_jobs.erase(it_cur++);
+				}else{
+					++it_cur;
+				}
+			}
+		}
 	}
 
 	//enqueue job
@@ -155,7 +180,7 @@ private:
 	boost::mutex mutex;                      //locks everyting
 	boost::thread_group workers;             //worker threads
 	boost::condition_variable_any job_cond;  //cond notified when job added
-	std::deque<job> job_queue;               //jobs to run
+	std::list<job> job_queue;                //jobs to run
 	std::multiset<void *> job_objects;       //all object_ptrs in job_queue
 	boost::condition_variable_any join_cond; //cond used for join
 	bool stopped;                            //when true no jobs can be added

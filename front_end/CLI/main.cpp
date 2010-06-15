@@ -41,13 +41,12 @@ int main(int argc, char ** argv)
 	}
 
 	//get last argument if *.p2p file
-	boost::optional<std::string> p2p_file = Opt_Parse.match_last(".+\\.p2p");
+	boost::optional<std::string> file_path = Opt_Parse.match_last(".+\\.p2p");
 	if(Opt_Parse.unparsed()){
 		return 1;
 	}
-	if(p2p_file){
-		LOG << *p2p_file;
-		p2p::load_file(*p2p_file);
+	if(file_path){
+		p2p::load_file(*file_path);
 		/*
 		There is no good portable way of determining if the program is already
 		running so we do not try to start the program after loading a file.

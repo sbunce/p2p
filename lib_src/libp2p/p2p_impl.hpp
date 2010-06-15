@@ -5,6 +5,7 @@
 #include "connection_manager.hpp"
 #include "db_all.hpp"
 #include "hash_tree.hpp"
+#include "load_scanner.hpp"
 #include "path.hpp"
 #include "prime_generator.hpp"
 #include "share_scanner.hpp"
@@ -60,6 +61,7 @@ public:
 private:
 	boost::thread resume_thread;
 	connection_manager Connection_Manager;
+	load_scanner Load_Scanner;
 	share_scanner Share_Scanner;
 
 	/*

@@ -15,6 +15,7 @@
 
 //standard
 #include <map>
+#include <queue>
 
 namespace net{
 class proactor_impl : private boost::noncopyable
