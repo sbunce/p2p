@@ -62,10 +62,17 @@ void window_main::file_drag_data_received(
 	const guint info,                               //type of info dropped
 	const guint time)                               //time stamp of when drop happened
 {
-//DEBUG, this does not work on windows, not sure why
+//DEBUG, dragging file on to window does not work on windows, not sure why
 
 	if(selection_data.get_length() >= 0 && selection_data.get_format() == 8){
-		process_URI(selection_data.get_data_as_string());
+		//this will look like file:///home/foo/bar.txt
+		std::string URI = selection_data.get_data_as_string();
+		if(URI.size() > 7){
+			std::string path = URI.substr(7);
+			//get rid of newline on the end
+			boost::trim(path);
+			p2p::load_file(path);
+		}
 	}
 
 	//tell other end we're done with drag and drop so it can free resources
@@ -76,9 +83,4 @@ bool window_main::on_delete_event(GdkEventAny * event)
 {
 	hide();
 	return true;
-}
-
-void window_main::process_URI(const std::string & URI)
-{
-	LOG << URI;
 }

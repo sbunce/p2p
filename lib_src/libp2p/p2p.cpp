@@ -52,14 +52,22 @@ void p2p::load_file(const std::string & path)
 {
 	path::create_dirs();
 
+	boost::regex expr(".+\\.p2p");
+	if(!boost::regex_match(path.begin(), path.end(), expr)){
+		//not *.p2p file, don't try to load
+		return;
+	}
+
 	//to be atomic we copy the file to the tmp directory then move it
 	std::stringstream tmp_path, load_path;
-	tmp_path << path::tmp_dir() << "load_" << portable::getpid();
-	load_path << path::load_dir() << "load_" << portable::getpid();
+	tmp_path << path::tmp_dir() << "load_" << portable::getpid() << ".p2p";
+	load_path << path::load_dir() << "load_" << portable::getpid() << ".p2p";
 	std::fstream fin(path.c_str(), std::ios::in | std::ios::binary);
-	std::fstream fout(tmp_path.str().c_str(), std::ios::out | std::ios::binary);
-	fout << fin.rdbuf();
-	std::rename(tmp_path.str().c_str(), load_path.str().c_str());
+	if(fin.is_open()){
+		std::fstream fout(tmp_path.str().c_str(), std::ios::out | std::ios::binary);
+		fout << fin.rdbuf();
+		std::rename(tmp_path.str().c_str(), load_path.str().c_str());
+	}
 }
 
 void p2p::remove_download(const std::string & hash)

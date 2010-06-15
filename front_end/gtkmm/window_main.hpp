@@ -9,6 +9,7 @@
 #include "window_transfer_info.hpp"
 
 //include
+#include <boost/algorithm/string.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/utility.hpp>
 #include <convert.hpp>
@@ -35,6 +36,5 @@ private:
 	void file_drag_data_received(const Glib::RefPtr<Gdk::DragContext> & context,
 		const int x, const int y, const Gtk::SelectionData & selection_data, const guint info, const guint time);
 	bool on_delete_event(GdkEventAny * event);
-	void process_URI(const std::string & URI);
 };
 #endif

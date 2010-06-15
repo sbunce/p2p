@@ -47,6 +47,7 @@ void path::create_dirs()
 		#endif
 		boost::filesystem::create_directory(download_dir());
 		boost::filesystem::create_directory(load_dir());
+		boost::filesystem::create_directory(load_bad_dir());
 		boost::filesystem::create_directory(share_dir());
 		boost::filesystem::create_directory(tmp_dir());
 	}catch(const std::exception & e){
@@ -67,6 +68,13 @@ std::string path::download_dir()
 	boost::recursive_mutex::scoped_lock lock(static_wrap::get().mutex);
 	static_wrap::get().non_set_func_called = true;
 	return static_wrap::get().program_dir + "download/";
+}
+
+std::string path::load_bad_dir()
+{
+	boost::recursive_mutex::scoped_lock lock(static_wrap::get().mutex);
+	static_wrap::get().non_set_func_called = true;
+	return static_wrap::get().program_dir + "load/bad/";
 }
 
 std::string path::load_dir()

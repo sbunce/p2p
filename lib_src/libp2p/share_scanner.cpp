@@ -140,7 +140,7 @@ void share_scanner::scan_loop()
 					++it_cur;
 				}
 			}
-		}catch(std::exception & e){
+		}catch(const std::exception & e){
 			LOG << e.what();
 		}
 
@@ -154,7 +154,9 @@ void share_scanner::scan_loop()
 			}else{
 				boost::this_thread::sleep(boost::posix_time::milliseconds(scan_delay));
 			}
-			if(!boost::filesystem::exists(it_cur->path)){
+			if(!boost::filesystem::exists(it_cur->path)
+				&& !share::singleton().is_downloading(it_cur->path))
+			{
 				share::singleton().erase(it_cur->path);
 				db::table::share::remove(it_cur->path);
 				skip_sleep = true;

@@ -63,12 +63,18 @@ bool file::write_block(const boost::uint64_t block_num, const net::buffer & buf)
 {
 	std::fstream fout(path.c_str(), std::ios::in | std::ios::out | std::ios::binary);
 	if(!fout.is_open()){
-		LOG << "failed to open " << path;
-		return false;
+		//try to create
+		LOG << "create file \"" << path << "\"";
+		fout.open(path.c_str(), std::ios::out | std::ios::binary);
+		fout.close();
+		fout.open(path.c_str(), std::ios::in | std::ios::out | std::ios::binary);
+		if(!fout.is_open()){
+			LOG << "failed to open \"" << path << "\"";
+			return false;
+		}
 	}
 	fout.seekp(block_num * protocol_tcp::file_block_size);
-	fout.write(reinterpret_cast<const char *>(buf.data()),
-		buf.size());
+	fout.write(reinterpret_cast<const char *>(buf.data()), buf.size());
 	if(!fout.is_open()){
 		LOG << "failed to open " << path;
 		return false;
