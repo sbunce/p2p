@@ -86,9 +86,8 @@ void share_scanner::hash_loop()
 
 void share_scanner::scan_loop()
 {
-	boost::filesystem::path share_path(boost::filesystem::system_complete(
-		boost::filesystem::path(path::share_dir(), boost::filesystem::native)));
-	boost::posix_time::milliseconds scan_delay(1000/5);
+	//milliseconds between file iteration
+	static const unsigned scan_delay(1000/5);
 
 	/*
 	If a new file is found we don't sleep before we iterate to the next file.
@@ -97,16 +96,17 @@ void share_scanner::scan_loop()
 	bool skip_sleep = false;
 
 	while(true){
-		boost::this_thread::sleep(scan_delay);
+		boost::this_thread::sleep(boost::posix_time::milliseconds(scan_delay));
 		try{
 			//scan share
-			boost::filesystem::recursive_directory_iterator it_cur(share_path), it_end;
-			while(it_cur != it_end){
+			for(boost::filesystem::recursive_directory_iterator it_cur(path::share_dir()),
+				it_end; it_cur != it_end;)
+			{
 				boost::this_thread::interruption_point();
 				if(skip_sleep){
 					skip_sleep = false;
 				}else{
-					boost::this_thread::sleep(scan_delay);
+					boost::this_thread::sleep(boost::posix_time::milliseconds(scan_delay));
 				}
 
 				//block if we've created too many jobs
@@ -152,7 +152,7 @@ void share_scanner::scan_loop()
 			if(skip_sleep){
 				skip_sleep = false;
 			}else{
-				boost::this_thread::sleep(scan_delay);
+				boost::this_thread::sleep(boost::posix_time::milliseconds(scan_delay));
 			}
 			if(!boost::filesystem::exists(it_cur->path)){
 				share::singleton().erase(it_cur->path);

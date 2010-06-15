@@ -11,43 +11,6 @@
 #include <map>
 #include <set>
 
-/*
-This thread pool allows objects to be associated with jobs. The following
-example creates a list of objects and starts jobs in each object. The dtor does
-a join on the object so the job won't try to run on a destroyed object.
-
-class test : private boost::noncopyable
-{
-public:
-	test(thread_pool & TP_in):
-		TP(TP_in)
-	{
-		//be careful about temporary objects
-		TP.enqueue(boost::bind(&test::job, this), this);
-	}
-	~test()
-	{
-		//don't allow object to be destroyed when there are still jobs for it
-		TP.join(this);
-	}
-private:
-	void job()
-	{
-		boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
-		std::cout << "job finished\n";
-	}
-	thread_pool & TP;
-};
-
-int main()
-{
-	thread_pool TP(8);
-	std::list<boost::shared_ptr<test> > Test;
-	for(int x=0; x<8; ++x){
-		Test.push_back(boost::shared_ptr<test>(new test(TP)));
-	}
-}
-*/
 class thread_pool : private boost::noncopyable
 {
 	//accuracy of timer, may be up to this many ms off
@@ -181,13 +144,18 @@ private:
 	boost::thread_group workers;             //worker threads
 	boost::condition_variable_any job_cond;  //cond notified when job added
 	std::list<job> job_queue;                //jobs to run
-	std::multiset<void *> job_objects;       //all object_ptrs in job_queue
 	boost::condition_variable_any join_cond; //cond used for join
 	bool stopped;                            //when true no jobs can be added
 	boost::thread timeout_thread;            //timout_dispatcher() thread
 	boost::uint64_t timeout_ms;              //incremented by timeout_thread
 
-	//jobs enqueued after timeout, when timeout_ms >= key timeout expired
+	/*
+	Object pointers for all jobs. Added whenever job is enqueued. Only removed
+	if job is removed, or if job finishes running.
+	*/
+	std::multiset<void *> job_objects;
+
+	//jobs enqueued after timeout, when timeout_ms >= key
 	std::multimap<boost::uint64_t, job> timeout_jobs;
 
 	//consumes enqueued jobs, does call backs

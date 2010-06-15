@@ -3,6 +3,7 @@
 
 //include
 #include <atomic_bool.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/utility.hpp>
 #include <global_thread_pool.hpp>
 #include <logger.hpp>
