@@ -49,8 +49,8 @@ void load_scanner::load(const boost::filesystem::path & path)
 			continue;
 		}
 		//max row size is hex hash + 256 char file name
-		if(buf.size() > SHA1::hex_size + 256){
-			LOG << "row > " << SHA1::hex_size + 256;
+		if(buf.size() > SHA1::hex_size + 255){
+			LOG << "row > " << SHA1::hex_size + 255;
 			continue;
 		}
 		//verify hash contains only hex chars

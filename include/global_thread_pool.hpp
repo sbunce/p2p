@@ -21,7 +21,11 @@ public:
 		return CPU_TP;
 	}
 
-	//used for IO bound jobs
+	/*
+	Used for IO bound jobs.
+	Note: These should not be long jobs like 'hash a whole file'. They should be
+		short jobs like 'hash a file block'.
+	*/
 	thread_pool & IO()
 	{
 		return IO_TP;

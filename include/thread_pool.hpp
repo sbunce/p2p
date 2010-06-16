@@ -28,10 +28,7 @@ public:
 
 	~thread_pool()
 	{
-		//wait for existing jobs to finish
 		join();
-
-		//stop threads
 		workers.interrupt_all();
 		workers.join_all();
 		timeout_thread.interrupt();
@@ -122,6 +119,7 @@ public:
 	//disable enqueue
 	void stop()
 	{
+		boost::mutex::scoped_lock lock(mutex);
 		stopped = true;
 	}
 
@@ -129,14 +127,12 @@ private:
 	class job
 	{
 	public:
-		job(){}
-		job(const boost::function<void ()> & func_in, void * object_ptr_in):
+		job(
+			const boost::function<void ()> & func_in = boost::function<void ()>(),
+			void * object_ptr_in = NULL
+		):
 			func(func_in),
 			object_ptr(object_ptr_in)
-		{}
-		job(const job & J):
-			func(J.func),
-			object_ptr(J.object_ptr)
 		{}
 		boost::function<void ()> func;
 		void * object_ptr;
@@ -144,12 +140,14 @@ private:
 
 	boost::mutex mutex;                      //locks everyting
 	boost::thread_group workers;             //worker threads
+	boost::thread timeout_thread;            //timout_dispatcher() thread
 	boost::condition_variable_any job_cond;  //cond notified when job added
-	std::list<job> job_queue;                //jobs to run
 	boost::condition_variable_any join_cond; //cond used for join
 	bool stopped;                            //when true no jobs can be added
-	boost::thread timeout_thread;            //timout_dispatcher() thread
 	boost::uint64_t timeout_ms;              //incremented by timeout_thread
+
+	//new jobs pushed on back, dispatcher processes jobs on front
+	std::list<job> job_queue;
 
 	/*
 	Object pointers for all jobs. Added whenever job is enqueued. Only removed
