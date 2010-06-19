@@ -1,176 +1,157 @@
 #include "share_scanner.hpp"
 
 share_scanner::share_scanner(connection_manager & Connection_Manager_in):
-	Connection_Manager(Connection_Manager_in)
+	Connection_Manager(Connection_Manager_in),
+	started(false),
+	TP_IO(this)
 {
+	/*
+	Hashing file ties up one IO thread for a long time. Insure there are at least
+	two IO threads so we don't block all IO jobs.
+	*/
+	assert(TP_IO.size() >= 2);
 
+	//default share
+	shared.push_back(path::share_dir());
 }
 
 share_scanner::~share_scanner()
 {
-	Workers.interrupt_all();
-	Workers.join_all();
+	TP_IO.stop();
+	TP_IO.clear();
 }
 
-void share_scanner::hash_loop()
+void share_scanner::hash_file(boost::filesystem::recursive_directory_iterator it)
 {
-	while(true){
-		boost::this_thread::interruption_point();
-
-		//wait for job
+	hash_tree::status Status = hash_tree::good;
+	if(share::singleton().find_path(it->path().string()) == share::singleton().end_file()){
 		file_info FI;
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(job_queue_mutex);
-		while(job_queue.empty()){
-			job_queue_cond.wait(job_queue_mutex);
+		FI.path = it->path().string();
+		try{
+			FI.file_size = boost::filesystem::file_size(it->path());
+			FI.last_write_time = boost::filesystem::last_write_time(it->path());
+		}catch(const std::exception & e){
+			LOG << e.what();
+			start_scan();
+			return;
 		}
-		FI = job_queue.front();
-		job_queue.pop_front();
-		job_queue_max_cond.notify_one();
-		}//end lock scope
-
-		//memoize the paths so that threads don't concurrently hash the same file
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(memoize_mutex);
-		std::pair<std::map<std::string, std::time_t>::iterator, bool>
-			ret = memoize.insert(std::make_pair(FI.path, 0));
-		if(ret.second == false){
-			if(ret.first->second == 0){
-				//file in progress of hashing
-				continue;
-			}else{
-				//timeout set, check if it expired
-				if(ret.first->second < std::time(NULL)){
-					//timeout expired, try to hash file
-					ret.first->second = 0;
-				}else{
-					//timeout not expired, do not try to hash file
-					continue;
-				}
-			}
-		}
-		}//end lock scope
-
-		hash_tree::status Status = hash_tree::good;
-		if(share::singleton().find_path(FI.path) == share::singleton().end_file()){
-			hash_tree HT(FI);
-			Status = HT.create();
-			FI.hash = HT.hash;
-			if(Status == hash_tree::good){
-				share::singleton().insert(FI);
-				db::table::share::add(db::table::share::info(FI.hash, FI.path,
-					FI.file_size, FI.last_write_time, db::table::share::complete));
-				db::table::hash::set_state(FI.hash, db::table::hash::complete);
-				Connection_Manager.add(FI.hash);
-			}else{
-				//error hashing, retry later
-				LOG << "error hashing " << FI.path;
-				share::singleton().erase(FI.path);
-			}
-		}
-
-		//unmemoize the file
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(memoize_mutex);
-		if(Status == hash_tree::copying){
-			//don't attempt to hash this file again for 1 minute
-			std::map<std::string, std::time_t>::iterator iter = memoize.find(FI.path);
-			assert(iter != memoize.end());
-			iter->second = std::time(NULL) + 60;
+		hash_tree HT(FI);
+		Status = HT.create();
+		FI.hash = HT.hash;
+		if(Status == hash_tree::good){
+			share::singleton().insert(FI);
+			db::table::share::add(db::table::share::info(FI.hash, FI.path,
+				FI.file_size, FI.last_write_time, db::table::share::complete));
+			db::table::hash::set_state(FI.hash, db::table::hash::complete);
+			Connection_Manager.add(FI.hash);
 		}else{
-			memoize.erase(FI.path);
+			share::singleton().erase(FI.path);
 		}
-		}//end lock scope
+	}
+	if(Status == hash_tree::copying){
+		copying.insert(std::make_pair(it->path().string(), std::time(NULL) + 60));
+	}
+	TP_IO.enqueue(boost::bind(&share_scanner::scan, this, ++it));
+}
+
+void share_scanner::remove_missing(share::const_file_iterator it)
+{
+	if(it == share::singleton().end_file()){
+		//finished scanning existing files
+		start_scan();
+	}else{
+		//check if exists
+		if(!boost::filesystem::exists(it->path)
+			&& !share::singleton().is_downloading(it->path))
+		{
+			share::singleton().erase(it->path);
+			db::table::share::remove(it->path);
+		}
+		TP_IO.enqueue(boost::bind(&share_scanner::remove_missing, this, ++it), scan_delay_ms);
 	}
 }
 
-void share_scanner::scan_loop()
+void share_scanner::scan(boost::filesystem::recursive_directory_iterator it)
 {
-	//milliseconds between file iteration
-	static const unsigned scan_delay(1000/5);
-
-	/*
-	If a new file is found we don't sleep before we iterate to the next file.
-	This takes advantage of the fact that new files are often added in groups.
-	*/
-	bool skip_sleep = false;
-
-	while(true){
-		boost::this_thread::sleep(boost::posix_time::milliseconds(scan_delay));
-		try{
-			//scan share
-			for(boost::filesystem::recursive_directory_iterator it_cur(path::share_dir()),
-				it_end; it_cur != it_end;)
-			{
-				boost::this_thread::interruption_point();
-				if(skip_sleep){
-					skip_sleep = false;
+	try{
+		if(it == boost::filesystem::recursive_directory_iterator()){
+			//finished scanning share, remove missing
+			TP_IO.enqueue(boost::bind(&share_scanner::remove_missing, this,
+				share::singleton().begin_file()), scan_delay_ms);
+		}else if(boost::filesystem::is_symlink(it->path().parent_path())){
+			//do not follow symlinks to avoid infinite loops
+			it.pop();
+			TP_IO.enqueue(boost::bind(&share_scanner::scan, this, it), scan_delay_ms);
+		}else if(boost::filesystem::is_regular_file(it->status())){
+			//potential file to hash
+			std::map<std::string, std::time_t>::iterator cp_it = copying.find(it->path().string());
+			if(cp_it != copying.end()){
+				if(cp_it->second < std::time(NULL)){
+					//timeout expired
+					copying.erase(cp_it);
 				}else{
-					boost::this_thread::sleep(boost::posix_time::milliseconds(scan_delay));
-				}
-
-				//block if we've created too many jobs
-				{//begin lock scope
-				boost::mutex::scoped_lock lock(job_queue_mutex);
-				while(job_queue.size() >= settings::SHARE_BUFFER_SIZE){
-					job_queue_max_cond.wait(job_queue_mutex);
-				}
-				}//end lock scope
-
-				if(boost::filesystem::is_symlink(it_cur->path().parent_path())){
-					//traversed to symlink directory, go back up and skip
-					it_cur.pop();
-				}else{
-					if(boost::filesystem::is_regular_file(it_cur->status())){
-						std::string path = it_cur->path().string();
-						boost::uint64_t file_size = boost::filesystem::file_size(path);
-						std::time_t last_write_time = boost::filesystem::last_write_time(it_cur->path());
-						share::const_file_iterator share_iter = share::singleton().find_path(path);
-						if(share_iter == share::singleton().end_file()
-							|| (!share::singleton().is_downloading(path) && (share_iter->file_size != file_size
-							|| share_iter->last_write_time != last_write_time)))
-						{
-							//new file, or modified file
-							boost::mutex::scoped_lock lock(job_queue_mutex);
-							job_queue.push_back(file_info("", path, file_size, last_write_time));
-							job_queue_cond.notify_one();
-							skip_sleep = true;
-						}
-					}
-					++it_cur;
+					//timeout not expired
+					TP_IO.enqueue(boost::bind(&share_scanner::scan, this, ++it), scan_delay_ms);
+					return;
 				}
 			}
-		}catch(const std::exception & e){
-			LOG << e.what();
-		}
-
-		//remove missing files
-		for(share::const_file_iterator it_cur = share::singleton().begin_file(),
-			it_end = share::singleton().end_file(); it_cur != it_end; ++it_cur)
-		{
-			boost::this_thread::interruption_point();
-			if(skip_sleep){
-				skip_sleep = false;
+			boost::uint64_t file_size = boost::filesystem::file_size(it->path());
+			std::time_t last_write_time = boost::filesystem::last_write_time(it->path());
+			share::const_file_iterator share_it = share::singleton().find_path(it->path().string());
+			bool exists_in_share = share_it != share::singleton().end_file();
+			bool downloading = share::singleton().is_downloading(it->path().string());
+			bool modified = share_it == share::singleton().end_file()
+				|| share_it->file_size != file_size
+				|| share_it->last_write_time != last_write_time;
+			//file may be copying if it was recently modified
+			bool recently_modified = std::time(NULL) - last_write_time < 8;
+			if((!exists_in_share && !recently_modified)
+				|| (!downloading && modified && !recently_modified))
+			{
+				TP_IO.enqueue(boost::bind(boost::bind(&share_scanner::hash_file, this, it)));
 			}else{
-				boost::this_thread::sleep(boost::posix_time::milliseconds(scan_delay));
+				TP_IO.enqueue(boost::bind(&share_scanner::scan, this, ++it), scan_delay_ms);
 			}
-			if(!boost::filesystem::exists(it_cur->path)
-				&& !share::singleton().is_downloading(it_cur->path))
-			{
-				share::singleton().erase(it_cur->path);
-				db::table::share::remove(it_cur->path);
-				skip_sleep = true;
-			}
+		}else{
+			//not valid file to hash
+			TP_IO.enqueue(boost::bind(&share_scanner::scan, this, ++it), scan_delay_ms);
 		}
+	}catch(const std::exception & e){
+		LOG << e.what();
+		start_scan();
 	}
 }
 
 void share_scanner::start()
 {
 	boost::mutex::scoped_lock lock(start_mutex);
-	assert(Workers.size() == 0);
-	Workers.create_thread(boost::bind(&share_scanner::scan_loop, this));
-	for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
-		Workers.create_thread(boost::bind(&share_scanner::hash_loop, this));
+	if(!started){
+		start_scan();
+		started = true;
 	}
+}
+
+void share_scanner::start_scan()
+{
+	boost::mutex::scoped_lock lock(shared_mutex);
+	if(shared.empty()){
+		//no shared directories
+		TP_IO.enqueue(boost::bind(&share_scanner::start_scan, this), scan_delay_ms);
+		return;
+	}
+	std::string start = shared.front();
+	do{
+		try{
+			boost::filesystem::recursive_directory_iterator it(shared.front());
+			TP_IO.enqueue(boost::bind(&share_scanner::scan, this, it), scan_delay_ms);
+			return;
+		}catch(const std::exception & e){
+			//directory doesn't exist, try next
+			shared.push_back(shared.front());
+			shared.pop_front();
+		}
+	}while(shared.front() != start);
+
+	//no shared directory exists
+	TP_IO.enqueue(boost::bind(&share_scanner::start_scan, this), scan_delay_ms);
 }

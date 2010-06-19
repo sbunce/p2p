@@ -207,7 +207,7 @@ hash_tree::status hash_tree::create()
 
 	//open file to generate hash tree for
 	std::fstream file(path.c_str(), std::ios::in | std::ios::binary);
-	if(!file.good()){
+	if(!file.is_open()){
 		LOG << "error opening " << path;
 		return io_error;
 	}
@@ -218,7 +218,7 @@ hash_tree::status hash_tree::create()
 	*/
 	std::fstream tmp(path::tree_file().c_str(), std::ios::in |
 		std::ios::out | std::ios::trunc | std::ios::binary);
-	if(!tmp.good()){
+	if(!tmp.is_open()){
 		LOG << "error opening tmp file";
 		return io_error;
 	}

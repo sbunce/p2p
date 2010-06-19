@@ -12,10 +12,11 @@
 #include <boost/cstdint.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
-#include <logger.hpp>
 #include <boost/ref.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
+#include <logger.hpp>
+#include <thread_pool.hpp>
 
 //standard
 #include <cassert>
@@ -25,52 +26,50 @@
 
 class share_scanner : private boost::noncopyable
 {
+	static const unsigned scan_delay_ms = 100;
 public:
 	share_scanner(connection_manager & Connection_Manager_in);
 	~share_scanner();
 
 	/*
 	start:
-		Starts threads to scan share and hash files.
-		Note: If threads are started they are stopped in dtor.
+		Start scanning share and hashing files.
 	*/
-	boost::mutex start_mutex;
 	void start();
 
 private:
-	boost::thread_group Workers;
 	connection_manager & Connection_Manager;
 
-	/*
-	Stores the paths of files that are currently hashing associated with a
-	time. If the time != 0 then the element won't be unmemoized until >= time.
-	*/
-	boost::mutex memoize_mutex;
-	std::map<std::string, std::time_t> memoize;
+	//used to insure safety of start()
+	boost::mutex start_mutex;
+	bool started;
+
+	//shared directories
+	boost::mutex shared_mutex;
+	std::list<std::string> shared;
 
 	/*
-	job_queue_mutex:
-		Locks all access to job_queue.
-	joe_queue_cond:
-		Used to notify a thread blocked at get_job() that a job can be returned.
-	job_queue_max_cond:
-		When the job_queue reaches the max allowed size the scan_thread is blocked
-		on job_queue_max_cond. It is notified in get_job() when a job is returned.
-	job_queue:
-		Holds file_info for files that need to be hashed.
+	If a file is found to be copying we set a timeout on it.
+	std::map<path, timeout>
 	*/
-	boost::mutex job_queue_mutex;
-	boost::condition_variable_any job_queue_cond;
-	boost::condition_variable_any job_queue_max_cond;
-	std::deque<file_info> job_queue;
+	std::map<std::string, std::time_t> copying;
 
 	/*
-	hash_loop:
+	hash_file:
 		Threads wait in this function for files to hash.
-	scan_loop:
-		One thread scans the shared directories.
+	remove_missing:
+		Removes missing files from share.
+	scan:
+		Scan share. Schedule files to be hashed.
+	start_scan:
+		Starts scanning shared directory. This is called by start() and also when
+		we catch a filesystem exception.
 	*/
-	void hash_loop();
-	void scan_loop();
+	void hash_file(boost::filesystem::recursive_directory_iterator it);
+	void remove_missing(share::const_file_iterator it);
+	void scan(boost::filesystem::recursive_directory_iterator it);
+	void start_scan();
+
+	thread_pool_IO TP_IO;
 };
 #endif

@@ -16,10 +16,7 @@ net::dispatcher::dispatcher(
 
 net::dispatcher::~dispatcher()
 {
-	//wait for existing jobs to finish
 	stop_join();
-
-	//stop threads
 	workers.interrupt_all();
 	workers.join_all();
 }
@@ -90,8 +87,7 @@ void net::dispatcher::dispatch()
 				it_cur = job_list.begin(), it_end = job_list.end(); it_cur != it_end;
 				++it_cur)
 			{
-				std::pair<std::set<int>::iterator, bool>
-					ret = memoize.insert(it_cur->first);
+				std::pair<std::set<int>::iterator, bool> ret = memoize.insert(it_cur->first);
 				if(ret.second){
 					tmp = *it_cur;
 					job_list.erase(it_cur);

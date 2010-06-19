@@ -1,17 +1,15 @@
 #include "load_scanner.hpp"
 
 load_scanner::load_scanner():
-	stop_flag(false)
+	TP_IO(this)
 {
-	global_thread_pool::singleton().IO().enqueue(
-		boost::bind(&load_scanner::scan, this), this);
+	TP_IO.enqueue(boost::bind(&load_scanner::scan, this));
 }
 
 load_scanner::~load_scanner()
 {
-	stop_flag = true;
-	global_thread_pool::singleton().IO().clear(this);
-	global_thread_pool::singleton().IO().join(this);
+	TP_IO.stop();
+	TP_IO.clear();
 }
 
 void load_scanner::load(const boost::filesystem::path & path)
@@ -83,10 +81,7 @@ void load_scanner::scan()
 	}catch(const std::exception & e){
 		LOG << e.what();
 	}
-	if(!stop_flag){
-		global_thread_pool::singleton().IO().enqueue(
-			boost::bind(&load_scanner::scan, this), 1000, this);
-	}
+	TP_IO.enqueue(boost::bind(&load_scanner::scan, this), 1000);
 }
 
 void load_scanner::start(const std::string & hash, const std::string file_name)

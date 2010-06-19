@@ -5,12 +5,11 @@
 #include "path.hpp"
 
 //include
-#include <atomic_bool.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
 #include <boost/utility.hpp>
 #include <convert.hpp>
-#include <global_thread_pool.hpp>
+#include <thread_pool.hpp>
 #include <logger.hpp>
 #include <SHA1.hpp>
 
@@ -25,9 +24,6 @@ public:
 	~load_scanner();
 
 private:
-	//when true scan() is stopped
-	atomic_bool stop_flag;
-
 	/*
 	load:
 		Load file at path.
@@ -39,5 +35,7 @@ private:
 	void load(const boost::filesystem::path & path);
 	void scan();
 	void start(const std::string & hash, const std::string file_name);
+
+	thread_pool_IO TP_IO;
 };
 #endif

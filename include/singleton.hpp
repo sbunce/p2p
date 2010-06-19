@@ -51,7 +51,7 @@ private:
 		The scoped_ptr is guaranteed to never throw. If T ctor throws the
 		scoped_ptr will set itself to NULL which will cause an exception when
 		singleton() is called. For this reason classes derived from the
-		singleton_base must never throw.
+		singleton_base must not throw in ctor.
 		*/
 		t.reset(new T());
 	}
