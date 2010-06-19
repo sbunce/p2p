@@ -49,12 +49,6 @@ private:
 	std::list<std::string> shared;
 
 	/*
-	If a file is found to be copying we set a timeout on it.
-	std::map<path, timeout>
-	*/
-	std::map<std::string, std::time_t> copying;
-
-	/*
 	hash_file:
 		Threads wait in this function for files to hash.
 	remove_missing:

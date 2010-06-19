@@ -48,9 +48,6 @@ void share_scanner::hash_file(boost::filesystem::recursive_directory_iterator it
 			share::singleton().erase(FI.path);
 		}
 	}
-	if(Status == hash_tree::copying){
-		copying.insert(std::make_pair(it->path().string(), std::time(NULL) + 60));
-	}
 	TP_IO.enqueue(boost::bind(&share_scanner::scan, this, ++it));
 }
 
@@ -84,17 +81,6 @@ void share_scanner::scan(boost::filesystem::recursive_directory_iterator it)
 			TP_IO.enqueue(boost::bind(&share_scanner::scan, this, it), scan_delay_ms);
 		}else if(boost::filesystem::is_regular_file(it->status())){
 			//potential file to hash
-			std::map<std::string, std::time_t>::iterator cp_it = copying.find(it->path().string());
-			if(cp_it != copying.end()){
-				if(cp_it->second < std::time(NULL)){
-					//timeout expired
-					copying.erase(cp_it);
-				}else{
-					//timeout not expired
-					TP_IO.enqueue(boost::bind(&share_scanner::scan, this, ++it), scan_delay_ms);
-					return;
-				}
-			}
 			boost::uint64_t file_size = boost::filesystem::file_size(it->path());
 			std::time_t last_write_time = boost::filesystem::last_write_time(it->path());
 			share::const_file_iterator share_it = share::singleton().find_path(it->path().string());
@@ -141,14 +127,14 @@ void share_scanner::start_scan()
 	}
 	std::string start = shared.front();
 	do{
+		shared.push_back(shared.front());
+		shared.pop_front();
 		try{
 			boost::filesystem::recursive_directory_iterator it(shared.front());
 			TP_IO.enqueue(boost::bind(&share_scanner::scan, this, it), scan_delay_ms);
 			return;
 		}catch(const std::exception & e){
-			//directory doesn't exist, try next
-			shared.push_back(shared.front());
-			shared.pop_front();
+			LOG << e.what();
 		}
 	}while(shared.front() != start);
 
