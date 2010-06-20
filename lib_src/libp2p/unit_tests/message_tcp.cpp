@@ -113,7 +113,7 @@ bool request_slot_call_back(const std::string & hash)
 const boost::uint64_t test_file_size(protocol_tcp::file_block_size * 128);
 const std::string test_root_hash("0123456789012345678901234567890123456789");
 std::string test_hash_slot;
-const boost::uint64_t tree_block_count(hash_tree::calc_tree_block_count(test_file_size));
+const boost::uint64_t tree_block_count(tree_info::calc_tree_block_count(test_file_size));
 const boost::uint64_t file_block_count(file::calc_file_block_count(test_file_size));
 bit_field test_tree_BF(tree_block_count);
 bit_field test_tree_BF_empty;

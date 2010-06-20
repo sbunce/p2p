@@ -563,7 +563,7 @@ message_tcp::recv::status message_tcp::recv::slot::recv(net::buffer & recv_buf)
 		recv_buf.erase(0, protocol_tcp::slot_size(0, file_BF_size));
 	}else if(recv_buf[2] == 2){
 		//tree bit_field
-		boost::uint64_t tree_block_count = hash_tree::calc_tree_block_count(file_size);
+		boost::uint64_t tree_block_count = tree_info::calc_tree_block_count(file_size);
 		boost::uint64_t tree_BF_size = bit_field::size_bytes(tree_block_count);
 		if(recv_buf.size() < protocol_tcp::slot_size(tree_BF_size, 0)){
 			return incomplete;
@@ -572,7 +572,7 @@ message_tcp::recv::status message_tcp::recv::slot::recv(net::buffer & recv_buf)
 		recv_buf.erase(0, protocol_tcp::slot_size(tree_BF_size, 0));
 	}else if(recv_buf[2] == 3){
 		//tree and file bit_field
-		boost::uint64_t tree_block_count = hash_tree::calc_tree_block_count(file_size);
+		boost::uint64_t tree_block_count = tree_info::calc_tree_block_count(file_size);
 		boost::uint64_t file_block_count = file::calc_file_block_count(file_size);
 		boost::uint64_t tree_BF_size = bit_field::size_bytes(tree_block_count);
 		boost::uint64_t file_BF_size = bit_field::size_bytes(file_block_count);

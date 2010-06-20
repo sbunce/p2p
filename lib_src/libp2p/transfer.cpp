@@ -22,8 +22,8 @@ transfer::next_request::next_request(const next_request & NR):
 transfer::transfer(const file_info & FI):
 	Hash_Tree(FI),
 	File(FI),
-	Tree_Block(Hash_Tree.tree_block_count),
-	File_Block(Hash_Tree.file_block_count),
+	Tree_Block(Hash_Tree.TI.tree_block_count),
+	File_Block(Hash_Tree.TI.file_block_count),
 	bytes_received(0),
 	Download_Speed(new net::speed_calc()),
 	Upload_Speed(new net::speed_calc())
@@ -36,7 +36,7 @@ transfer::transfer(const file_info & FI):
 	if(hash_info){
 		if(hash_info->tree_state == db::table::hash::complete){
 			Tree_Block.add_block_local_all();
-			bytes_received += Hash_Tree.tree_size;
+			bytes_received += Hash_Tree.TI.tree_size;
 		}
 	}else{
 		throw std::runtime_error("error finding hash tree info");
@@ -48,7 +48,7 @@ transfer::transfer(const file_info & FI):
 	if(share_info){
 		if(share_info->file_state == db::table::share::complete){
 			File_Block.add_block_local_all();
-			bytes_received += Hash_Tree.file_size;
+			bytes_received += Hash_Tree.TI.file_size;
 		}
 	}else{
 		throw std::runtime_error("error finding share info");
@@ -62,7 +62,7 @@ void transfer::check()
 
 	//only check tree blocks with good parents
 	Tree_Block.approve_block(0);
-	for(boost::uint64_t block_num=0; block_num<Hash_Tree.tree_block_count; ++block_num){
+	for(boost::uint64_t block_num=0; block_num<Hash_Tree.TI.tree_block_count; ++block_num){
 		boost::this_thread::interruption_point();
 		if(!Tree_Block.is_approved(block_num)){
 			continue;
@@ -78,14 +78,14 @@ void transfer::check()
 			bytes_received += buf.size();
 			Tree_Block.add_block_local(block_num);
 			std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool>
-				pair = Hash_Tree.tree_block_children(block_num);
+				pair = Hash_Tree.TI.tree_block_children(block_num);
 			if(pair.second){
 				//approve child hash tree blocks
 				for(boost::uint64_t x=pair.first.first; x<pair.first.second; ++x){
 					Tree_Block.approve_block(x);
 				}
 			}
-			pair = Hash_Tree.file_block_children(block_num);
+			pair = Hash_Tree.TI.file_block_children(block_num);
 			if(pair.second){
 				//approve file blocks that are children of bottom tree row
 				for(boost::uint64_t x=pair.first.first; x<pair.first.second; ++x){
@@ -99,7 +99,7 @@ void transfer::check()
 	}
 
 	//only check file blocks with good hash tree parents
-	for(boost::uint64_t block_num=0; block_num<Hash_Tree.file_block_count; ++block_num){
+	for(boost::uint64_t block_num=0; block_num<Hash_Tree.TI.file_block_count; ++block_num){
 		boost::this_thread::interruption_point();
 		if(!File_Block.is_approved(block_num)){
 			continue;
@@ -158,7 +158,7 @@ void transfer::download_unreg(const int connection_ID)
 
 boost::uint64_t transfer::file_block_count()
 {
-	return Hash_Tree.file_block_count;
+	return Hash_Tree.TI.file_block_count;
 }
 
 unsigned transfer::file_percent_complete()
@@ -168,7 +168,7 @@ unsigned transfer::file_percent_complete()
 
 boost::uint64_t transfer::file_size()
 {
-	return Hash_Tree.file_size;
+	return Hash_Tree.TI.file_size;
 }
 
 std::list<p2p::transfer_info::host_element> transfer::host_info()
@@ -199,7 +199,7 @@ boost::optional<net::endpoint> transfer::next_peer(const int connection_ID)
 boost::optional<transfer::next_request> transfer::next_request_tree(const int connection_ID)
 {
 	if(boost::optional<boost::uint64_t> block_num = Tree_Block.next_request(connection_ID)){
-		unsigned block_size = Hash_Tree.block_size(*block_num);
+		unsigned block_size = Hash_Tree.TI.block_size(*block_num);
 		return next_request(*block_num, block_size);
 	}
 	return boost::optional<next_request>();
@@ -216,7 +216,7 @@ boost::optional<transfer::next_request> transfer::next_request_file(const int co
 
 unsigned transfer::percent_complete()
 {
-	return ((double)bytes_received / (Hash_Tree.tree_size + Hash_Tree.file_size)) * 100;
+	return ((double)bytes_received / (Hash_Tree.TI.tree_size + Hash_Tree.TI.file_size)) * 100;
 }
 
 std::pair<net::buffer, transfer::status> transfer::read_file_block(
@@ -286,7 +286,7 @@ boost::optional<std::string> transfer::root_hash()
 		return boost::optional<std::string>();
 	}
 	SHA1 SHA(buf, 8 + SHA1::bin_size);
-	if(SHA.hex() != Hash_Tree.hash){
+	if(SHA.hex() != Hash_Tree.TI.hash){
 		return boost::optional<std::string>();
 	}
 	return convert::bin_to_hex(std::string(buf+8, SHA1::bin_size));
@@ -294,7 +294,7 @@ boost::optional<std::string> transfer::root_hash()
 
 boost::uint64_t transfer::tree_block_count()
 {
-	return Hash_Tree.tree_block_count;
+	return Hash_Tree.TI.tree_block_count;
 }
 
 unsigned transfer::tree_percent_complete()
@@ -304,7 +304,7 @@ unsigned transfer::tree_percent_complete()
 
 boost::uint64_t transfer::tree_size()
 {
-	return Hash_Tree.tree_size;
+	return Hash_Tree.TI.tree_size;
 }
 
 unsigned transfer::upload_speed()
@@ -355,7 +355,7 @@ transfer::status transfer::write_file_block(const int connection_ID,
 			File_Block.add_block_local(connection_ID, block_num);
 			bytes_received += buf.size();
 			if(File_Block.complete()){
-				db::table::share::set_state(Hash_Tree.hash, db::table::share::complete);
+				db::table::share::set_state(Hash_Tree.TI.hash, db::table::share::complete);
 			}
 			return good;
 		}else{
@@ -385,14 +385,14 @@ transfer::status transfer::write_tree_block(const int connection_ID,
 		Tree_Block.add_block_local(connection_ID, block_num);
 		bytes_received += buf.size();
 		std::pair<std::pair<boost::uint64_t, boost::uint64_t>, bool>
-			pair = Hash_Tree.tree_block_children(block_num);
+			pair = Hash_Tree.TI.tree_block_children(block_num);
 		if(pair.second){
 			//approve child hash tree blocks
 			for(boost::uint64_t x=pair.first.first; x<pair.first.second; ++x){
 				Tree_Block.approve_block(x);
 			}
 		}
-		pair = Hash_Tree.file_block_children(block_num);
+		pair = Hash_Tree.TI.file_block_children(block_num);
 		if(pair.second){
 			//approve file blocks that are children of bottom tree row
 			for(boost::uint64_t x=pair.first.first; x<pair.first.second; ++x){
@@ -400,7 +400,7 @@ transfer::status transfer::write_tree_block(const int connection_ID,
 			}
 		}
 		if(Tree_Block.complete()){
-			db::table::hash::set_state(Hash_Tree.hash, db::table::hash::complete);
+			db::table::hash::set_state(Hash_Tree.TI.hash, db::table::hash::complete);
 		}
 		return good;
 	}else if(status == hash_tree::bad){

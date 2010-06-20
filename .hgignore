@@ -11,6 +11,7 @@ syntax: glob
 bin
 lib
 lib_src/libp2p/unit_tests/download/
+lib_src/libp2p/unit_tests/load/
 lib_src/libp2p/unit_tests/share/
 lib_src/libp2p/unit_tests/tmp/
 TODO

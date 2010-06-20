@@ -23,7 +23,6 @@ share_scanner::~share_scanner()
 
 void share_scanner::hash_file(boost::filesystem::recursive_directory_iterator it)
 {
-	hash_tree::status Status = hash_tree::good;
 	if(share::singleton().find_path(it->path().string()) == share::singleton().end_file()){
 		file_info FI;
 		FI.path = it->path().string();
@@ -35,9 +34,7 @@ void share_scanner::hash_file(boost::filesystem::recursive_directory_iterator it
 			start_scan();
 			return;
 		}
-		hash_tree HT(FI);
-		Status = HT.create();
-		FI.hash = HT.hash;
+		hash_tree::status Status = hash_tree::create(FI);
 		if(Status == hash_tree::good){
 			share::singleton().insert(FI);
 			db::table::share::add(db::table::share::info(FI.hash, FI.path,
