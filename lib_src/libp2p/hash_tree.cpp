@@ -37,7 +37,7 @@ hash_tree::hash_tree(const file_info & FI, db::pool::proxy DB):
 	}
 }
 
-hash_tree::status hash_tree::check()
+hash_tree::status hash_tree::check() const
 {
 	net::buffer buf;
 	buf.reserve(protocol_tcp::file_block_size);
@@ -61,7 +61,7 @@ hash_tree::status hash_tree::check()
 }
 
 hash_tree::status hash_tree::check_file_block(const boost::uint64_t file_block_num,
-	const net::buffer & buf)
+	const net::buffer & buf) const
 {
 	char parent_buf[SHA1::bin_size];
 	if(!db::pool::get()->blob_read(blob, parent_buf,
@@ -79,7 +79,7 @@ hash_tree::status hash_tree::check_file_block(const boost::uint64_t file_block_n
 }
 
 hash_tree::status hash_tree::check_tree_block(const boost::uint64_t block_num,
-	const net::buffer & buf)
+	const net::buffer & buf) const
 {
 	if(block_num == 0){
 		//special requirements to check root_hash, see documentation for root_hash
@@ -261,7 +261,7 @@ hash_tree::status hash_tree::create(file_info & FI)
 }
 
 hash_tree::status hash_tree::read_block(const boost::uint64_t block_num,
-	net::buffer & buf)
+	net::buffer & buf) const
 {
 	std::pair<boost::uint64_t, unsigned> info;
 	if(TI.block_info(block_num, info)){
@@ -278,6 +278,20 @@ hash_tree::status hash_tree::read_block(const boost::uint64_t block_num,
 		LOG << "invalid block";
 		exit(1);
 	}
+}
+
+boost::optional<std::string> hash_tree::root_hash() const
+{
+	char buf[8 + SHA1::bin_size];
+	std::memcpy(buf, convert::int_to_bin(TI.file_size).data(), 8);
+	if(!db::pool::get()->blob_read(blob, buf+8, SHA1::bin_size, 0)){
+		return boost::optional<std::string>();
+	}
+	SHA1 SHA(buf, 8 + SHA1::bin_size);
+	if(SHA.hex() != TI.hash){
+		return boost::optional<std::string>();
+	}
+	return convert::bin_to_hex(std::string(buf+8, SHA1::bin_size));
 }
 
 hash_tree::status hash_tree::write_block(const boost::uint64_t block_num,

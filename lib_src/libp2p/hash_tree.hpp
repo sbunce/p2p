@@ -50,9 +50,6 @@ public:
 		copying   //file may be copying (it is increasing in size)
 	};
 
-	//blob handle for hash tree in database
-	const db::blob blob;
-
 	//tree information needed to read/write tree
 	const tree_info TI;
 
@@ -74,6 +71,8 @@ public:
 	read_block:
 		Get block from hash tree. Returns good if suceeded (and block appended to
 		buf). Returns io_error if cannot read hash tree.
+	root_hash:
+		Returns root_hash (top hash of tree) if we have it.
 	write_block:
 		Add or replace block in hash tree. Returns good if block was written,
 		io_error if block could not be written, or bad if the block hash failed.
@@ -81,10 +80,11 @@ public:
 		Precondition: Parent hash must have been written.
 		Note: This function does not check validity of root_hash (block 0).
 	*/
-	status check();
-	status check_file_block(const boost::uint64_t file_block_num, const net::buffer & buf);
-	status check_tree_block(const boost::uint64_t block_num, const net::buffer & buf);
-	status read_block(const boost::uint64_t block_num, net::buffer & buf);
+	status check() const;
+	status check_file_block(const boost::uint64_t file_block_num, const net::buffer & buf) const;
+	status check_tree_block(const boost::uint64_t block_num, const net::buffer & buf) const;
+	status read_block(const boost::uint64_t block_num, net::buffer & buf) const;
+	boost::optional<std::string> root_hash() const;
 	status write_block(const boost::uint64_t block_num, const net::buffer & buf);
 
 	/*
@@ -97,5 +97,9 @@ public:
 			be set to complete or tree will be deleted on next program start.
 	*/
 	static status create(file_info & FI);
+
+private:
+	//blob handle for hash tree in database
+	const db::blob blob;
 };
 #endif

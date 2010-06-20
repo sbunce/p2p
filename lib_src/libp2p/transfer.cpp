@@ -280,16 +280,7 @@ void transfer::recv_have_hash_tree_block(const int connection_ID,
 
 boost::optional<std::string> transfer::root_hash()
 {
-	char buf[8 + SHA1::bin_size];
-	std::memcpy(buf, convert::int_to_bin(file_size()).data(), 8);
-	if(!db::pool::get()->blob_read(Hash_Tree.blob, buf+8, SHA1::bin_size, 0)){
-		return boost::optional<std::string>();
-	}
-	SHA1 SHA(buf, 8 + SHA1::bin_size);
-	if(SHA.hex() != Hash_Tree.TI.hash){
-		return boost::optional<std::string>();
-	}
-	return convert::bin_to_hex(std::string(buf+8, SHA1::bin_size));
+	return Hash_Tree.root_hash();
 }
 
 boost::uint64_t transfer::tree_block_count()
