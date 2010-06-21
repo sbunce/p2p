@@ -4,6 +4,7 @@
 //include
 #include <boost/cstdint.hpp>
 #include <boost/shared_ptr.hpp>
+#include <RC4.hpp>
 
 //standard
 #include <iostream>

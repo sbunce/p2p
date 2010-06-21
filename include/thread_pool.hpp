@@ -227,7 +227,7 @@ public:
 	thread_pool_CPU(void * object_ptr_in):
 		object_ptr(object_ptr_in),
 		stopped(false),
-		TP(thread_pool_global::singleton())
+		TPG(thread_pool_global::singleton())
 	{
 
 	}
@@ -239,7 +239,7 @@ public:
 
 	void clear()
 	{
-		TP->get().clear(object_ptr);
+		TPG->get().clear(object_ptr);
 	}
 
 	bool enqueue(const boost::function<void ()> & func)
@@ -247,7 +247,7 @@ public:
 		if(stopped){
 			return false;
 		}else{
-			return TP->get().enqueue(func, object_ptr);
+			return TPG->get().enqueue(func, object_ptr);
 		}
 	}
 
@@ -256,18 +256,18 @@ public:
 		if(stopped){
 			return false;
 		}else{
-			return TP->get().enqueue(func, delay_ms, object_ptr);
+			return TPG->get().enqueue(func, delay_ms, object_ptr);
 		}
 	}
 
 	void join()
 	{
-		TP->get().join(object_ptr);
+		TPG->get().join(object_ptr);
 	}
 
 	unsigned size()
 	{
-		return TP->get().size();
+		return TPG->get().size();
 	}
 
 	void start()
@@ -288,10 +288,10 @@ private:
 	public:
 		thread_pool & get()
 		{
-			return TP;
+			return TPG;
 		}
 	private:
-		thread_pool TP;
+		thread_pool TPG;
 	};
 
 	void * object_ptr;
@@ -301,7 +301,7 @@ private:
 	this object within other singletons and avoid static initialization order
 	problems. See documentation in singleton.hpp for more info.
 	*/
-	boost::shared_ptr<thread_pool_global> TP;
+	boost::shared_ptr<thread_pool_global> TPG;
 };
 
 //see documentation for thread_pool_CPU
@@ -311,7 +311,7 @@ public:
 	thread_pool_IO(void * object_ptr_in):
 		object_ptr(object_ptr_in),
 		stopped(false),
-		TP(thread_pool_global::singleton())
+		TPG(thread_pool_global::singleton())
 	{}
 
 	~thread_pool_IO()
@@ -321,7 +321,7 @@ public:
 
 	void clear()
 	{
-		TP->get().clear(object_ptr);
+		TPG->get().clear(object_ptr);
 	}
 
 	bool enqueue(const boost::function<void ()> & func)
@@ -329,7 +329,7 @@ public:
 		if(stopped){
 			return false;
 		}else{
-			return TP->get().enqueue(func, object_ptr);
+			return TPG->get().enqueue(func, object_ptr);
 		}
 	}
 
@@ -338,18 +338,18 @@ public:
 		if(stopped){
 			return false;
 		}else{
-			return TP->get().enqueue(func, delay_ms, object_ptr);
+			return TPG->get().enqueue(func, delay_ms, object_ptr);
 		}
 	}
 
 	void join()
 	{
-		TP->get().join(object_ptr);
+		TPG->get().join(object_ptr);
 	}
 
 	unsigned size()
 	{
-		return TP->get().size();
+		return TPG->get().size();
 	}
 
 	void start()
@@ -369,18 +369,18 @@ private:
 		friend class singleton_base<thread_pool_global>;
 	public:
 		thread_pool_global():
-			TP(4)
+			TPG(4)
 		{}
 		thread_pool & get()
 		{
-			return TP;
+			return TPG;
 		}
 	private:
-		thread_pool TP;
+		thread_pool TPG;
 	};
 
 	void * object_ptr;
 	atomic_bool stopped;
-	boost::shared_ptr<thread_pool_global> TP;
+	boost::shared_ptr<thread_pool_global> TPG;
 };
 #endif

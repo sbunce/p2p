@@ -589,18 +589,30 @@ mpa::mpint mpa::lcm(const mpint & a, const mpint & b)
 	return c;
 }
 
+static int rand_source(unsigned char * buf, int size, void * data)
+{
+	RC4 * PRNG = (RC4 *)data;
+	for(int x=0; x<size; ++x){
+		buf[x] = PRNG->byte();
+	}
+	return size;
+}
+
 mpa::mpint mpa::random_prime(const unsigned bytes)
 {
 	assert(bytes * 8 < std::numeric_limits<int>::max());
+	//RC4 PRNG used to speed up prime generation
+	RC4 PRNG;
+	PRNG.seed();
 	int err;
 	mpint tmp;
 	if((err = mp_prime_random_ex(
 		tmp.data.get(),
 		mp_prime_rabin_miller_trials(bytes * 8),
-		bytes * 8,        //size (bits) of prime to generate
-		0,                //optional flags
-		&portable::urandom, //random byte source
-		NULL              //optional void * passed to PRNG
+		bytes * 8,    //size (bits) of prime to generate
+		0,            //optional flags
+		&rand_source, //random byte source
+		&PRNG         //optional void * passed to rand_source
 	)) != MP_OKAY)
 	{
 		throw ::exception(err);
