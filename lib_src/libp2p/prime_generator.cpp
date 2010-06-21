@@ -1,64 +1,38 @@
 #include "prime_generator.hpp"
 
-prime_generator::prime_generator()
+prime_generator::prime_generator():
+	TP_IO(this)
 {
-	for(int x=0; x<boost::thread::hardware_concurrency(); ++x){
-		Workers.create_thread(boost::bind(&prime_generator::main_loop, this));
-	}
+	TP_IO.enqueue(boost::bind(&prime_generator::generate, this));
 }
 
 prime_generator::~prime_generator()
 {
-	Workers.interrupt_all();
-	Workers.join_all();
+	TP_IO.stop();
+	TP_IO.clear();
 }
 
-void prime_generator::main_loop()
+void prime_generator::generate()
 {
-	mpa::mpint random_prime;
-	while(true){
-		boost::this_thread::interruption_point();
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(prime_mutex);
-		while(Prime_Cache.size() >= settings::PRIME_CACHE){
-			prime_generate_cond.wait(prime_mutex);
-		}
-		}//end lock scope
-
-		//this should not be locked
-		random_prime = mpa::random_prime(protocol_tcp::DH_key_size);
-
-		{//begin lock scope
-		boost::mutex::scoped_lock lock(prime_mutex);
-		/*
-		With multiple threads it's possible that we can go beyond the limit when
-		multiple threads generate primes at the same time. Hence the check.
-		*/
-		if(Prime_Cache.size() < settings::PRIME_CACHE){
-			Prime_Cache.push_back(random_prime);
-		}
-		}//end lock scope
-
-		//notify possible threads waiting for prime to be generated
-		prime_remove_cond.notify_one();
+	mpa::mpint p = mpa::random_prime(protocol_tcp::DH_key_size);
+	{//begin lock scope
+	boost::mutex::scoped_lock lock(Mutex);
+	Cache.push_back(p);
+	if(Cache.size() < settings::PRIME_CACHE_MIN){
+		TP_IO.enqueue(boost::bind(&prime_generator::generate, this));
 	}
-}
-
-unsigned prime_generator::prime_count()
-{
-	boost::mutex::scoped_lock lock(prime_mutex);
-	return Prime_Cache.size();
+	}//end lock scope
+	Cond.notify_one();
 }
 
 mpa::mpint prime_generator::random_prime()
 {
-	mpa::mpint tmp;
-	boost::mutex::scoped_lock lock(prime_mutex);
-	while(Prime_Cache.empty()){
-		prime_remove_cond.wait(prime_mutex);
+	boost::mutex::scoped_lock lock(Mutex);
+	while(Cache.empty()){
+		Cond.wait(Mutex);
 	}
-	tmp = Prime_Cache.back();
-	Prime_Cache.pop_back();
-	prime_generate_cond.notify_one();
+	mpa::mpint tmp = Cache.back();
+	Cache.pop_back();
+	TP_IO.enqueue(boost::bind(&prime_generator::generate, this));
 	return tmp;
 }

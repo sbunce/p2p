@@ -68,10 +68,10 @@ void p2p_impl::resume()
 			resume.front().file_size,
 			resume.front().last_write_time
 		);
-		share::singleton().insert(FI);
+		share::singleton()->insert(FI);
 		if(resume.front().file_state == db::table::share::downloading){
 			//trigger slot creation for downloading file
-			share::singleton().find_slot(FI.hash);
+			share::singleton()->find_slot(FI.hash);
 		}
 		resume.pop_front();
 	}
@@ -80,8 +80,8 @@ void p2p_impl::resume()
 	Share_Scanner.start();
 
 	//hash check resumed downloads
-	for(share::slot_iterator it_cur = share::singleton().begin_slot(),
-		it_end = share::singleton().end_slot(); it_cur != it_end; ++it_cur)
+	for(share::slot_iterator it_cur = share::singleton()->begin_slot(),
+		it_end = share::singleton()->end_slot(); it_cur != it_end; ++it_cur)
 	{
 		if(it_cur->get_transfer()){
 			it_cur->get_transfer()->check();
@@ -94,8 +94,8 @@ void p2p_impl::resume()
 /* DEBUG, load all files in to DHT.
 Eventually will need to be more selective about this. Or space it out.
 */
-	for(share::const_file_iterator it_cur = share::singleton().begin_file(),
-		it_end = share::singleton().end_file(); it_cur != it_end; ++it_cur)
+	for(share::const_file_iterator it_cur = share::singleton()->begin_file(),
+		it_end = share::singleton()->end_file(); it_cur != it_end; ++it_cur)
 	{
 		Connection_Manager.store_file(it_cur->hash);
 	}
@@ -104,8 +104,8 @@ Eventually will need to be more selective about this. Or space it out.
 	boost::this_thread::sleep(boost::posix_time::milliseconds(4000));
 
 	//find hosts which have files we need
-	for(share::slot_iterator it_cur = share::singleton().begin_slot(),
-		it_end = share::singleton().end_slot(); it_cur != it_end; ++it_cur)
+	for(share::slot_iterator it_cur = share::singleton()->begin_slot(),
+		it_end = share::singleton()->end_slot(); it_cur != it_end; ++it_cur)
 	{
 		Connection_Manager.add(it_cur->hash());
 	}
@@ -133,12 +133,12 @@ void p2p_impl::set_max_upload_rate(const unsigned rate)
 
 boost::uint64_t p2p_impl::share_size()
 {
-	return share::singleton().bytes();
+	return share::singleton()->bytes();
 }
 
 boost::uint64_t p2p_impl::share_files()
 {
-	return share::singleton().files();
+	return share::singleton()->files();
 }
 
 void p2p_impl::start_download(const p2p::download_info & DI)
@@ -155,8 +155,8 @@ void p2p_impl::remove_download(const std::string & hash)
 std::list<p2p::transfer_info> p2p_impl::transfer()
 {
 	std::list<p2p::transfer_info> tmp;
-	for(share::slot_iterator it_cur = share::singleton().begin_slot(),
-		it_end = share::singleton().end_slot(); it_cur != it_end; ++it_cur)
+	for(share::slot_iterator it_cur = share::singleton()->begin_slot(),
+		it_end = share::singleton()->end_slot(); it_cur != it_end; ++it_cur)
 	{
 		tmp.push_back(it_cur->info());
 	}
@@ -165,8 +165,8 @@ std::list<p2p::transfer_info> p2p_impl::transfer()
 
 boost::optional<p2p::transfer_info> p2p_impl::transfer(const std::string & hash)
 {
-	share::slot_iterator it = share::singleton().find_slot(hash, false);
-	if(it == share::singleton().end_slot()){
+	share::slot_iterator it = share::singleton()->find_slot(hash, false);
+	if(it == share::singleton()->end_slot()){
 		return boost::optional<p2p::transfer_info>();
 	}else{
 		return it->info();

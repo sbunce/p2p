@@ -214,30 +214,7 @@ private:
 	}
 };
 
-/*
-Global thread pool for CPU bound jobs.
-Note: Generally thread_pool_CPU would be used instead of this.
-*/
-class thread_pool_global_CPU : public singleton_base<thread_pool_global_CPU>
-{
-	friend class singleton_base<thread_pool_global_CPU>;
-public:
-
-	thread_pool & get()
-	{
-		return TP;
-	}
-
-private:
-	thread_pool TP;
-};
-
-/*
-Wrapper automatically specifies object_ptr and automatically joins upon
-destruction. It also makes start/stop specific to the object and not the whole
-global thread pool.
-Note: Should be instantiated in very bottom of header so join works correctly.
-*/
+//note: instantiate at bottom of header so join() works correctly
 class thread_pool_CPU : private boost::noncopyable
 {
 public:
@@ -249,8 +226,11 @@ public:
 	*/
 	thread_pool_CPU(void * object_ptr_in):
 		object_ptr(object_ptr_in),
-		stopped(false)
-	{}
+		stopped(false),
+		TP(thread_pool_global::singleton())
+	{
+
+	}
 
 	~thread_pool_CPU()
 	{
@@ -259,7 +239,7 @@ public:
 
 	void clear()
 	{
-		thread_pool_global_CPU::singleton().get().clear(object_ptr);
+		TP->get().clear(object_ptr);
 	}
 
 	bool enqueue(const boost::function<void ()> & func)
@@ -267,7 +247,7 @@ public:
 		if(stopped){
 			return false;
 		}else{
-			return thread_pool_global_CPU::singleton().get().enqueue(func, object_ptr);
+			return TP->get().enqueue(func, object_ptr);
 		}
 	}
 
@@ -276,18 +256,18 @@ public:
 		if(stopped){
 			return false;
 		}else{
-			return thread_pool_global_CPU::singleton().get().enqueue(func, delay_ms, object_ptr);
+			return TP->get().enqueue(func, delay_ms, object_ptr);
 		}
 	}
 
 	void join()
 	{
-		thread_pool_global_CPU::singleton().get().join(object_ptr);
+		TP->get().join(object_ptr);
 	}
 
 	unsigned size()
 	{
-		return thread_pool_global_CPU::singleton().get().size();
+		return TP->get().size();
 	}
 
 	void start()
@@ -301,44 +281,37 @@ public:
 	}
 
 private:
+	//global thread_pool that contains # of thread = hardware threads
+	class thread_pool_global : public singleton_base<thread_pool_global>
+	{
+		friend class singleton_base<thread_pool_global>;
+	public:
+		thread_pool & get()
+		{
+			return TP;
+		}
+	private:
+		thread_pool TP;
+	};
+
 	void * object_ptr;
 	atomic_bool stopped;
-};
-
-/*
-Global thread pool for IO bound jobs.
-Note: Generally thread_pool_IO would be used instead of this.
-*/
-class thread_pool_global_IO : public singleton_base<thread_pool_global_IO>
-{
-	friend class singleton_base<thread_pool_global_IO>;
-public:
-	thread_pool_global_IO():
-		TP(4)
-	{}
-
-	thread_pool & get()
-	{
-		return TP;
-	}
-
-private:
-	thread_pool TP;
+	/*
+	Storing a shared_ptr to the thread_pool singleton allows us to instantiate
+	this object within other singletons and avoid static initialization order
+	problems. See documentation in singleton.hpp for more info.
+	*/
+	boost::shared_ptr<thread_pool_global> TP;
 };
 
 //see documentation for thread_pool_CPU
 class thread_pool_IO : private boost::noncopyable
 {
 public:
-	/*
-	Pass in NULL for non-member func use.
-	Note: Default NULL parameter not used because it would be error prone. It'd
-		be easy to forget to specify object in initializer list if default
-		initialization allowed.
-	*/
 	thread_pool_IO(void * object_ptr_in):
 		object_ptr(object_ptr_in),
-		stopped(false)
+		stopped(false),
+		TP(thread_pool_global::singleton())
 	{}
 
 	~thread_pool_IO()
@@ -348,7 +321,7 @@ public:
 
 	void clear()
 	{
-		thread_pool_global_IO::singleton().get().clear(object_ptr);
+		TP->get().clear(object_ptr);
 	}
 
 	bool enqueue(const boost::function<void ()> & func)
@@ -356,7 +329,7 @@ public:
 		if(stopped){
 			return false;
 		}else{
-			return thread_pool_global_IO::singleton().get().enqueue(func, object_ptr);
+			return TP->get().enqueue(func, object_ptr);
 		}
 	}
 
@@ -365,18 +338,18 @@ public:
 		if(stopped){
 			return false;
 		}else{
-			return thread_pool_global_IO::singleton().get().enqueue(func, delay_ms, object_ptr);
+			return TP->get().enqueue(func, delay_ms, object_ptr);
 		}
 	}
 
 	void join()
 	{
-		thread_pool_global_IO::singleton().get().join(object_ptr);
+		TP->get().join(object_ptr);
 	}
 
 	unsigned size()
 	{
-		return thread_pool_global_IO::singleton().get().size();
+		return TP->get().size();
 	}
 
 	void start()
@@ -390,7 +363,24 @@ public:
 	}
 
 private:
+	//global thread_pool that contains # of threads optimal for IO
+	class thread_pool_global : public singleton_base<thread_pool_global>
+	{
+		friend class singleton_base<thread_pool_global>;
+	public:
+		thread_pool_global():
+			TP(4)
+		{}
+		thread_pool & get()
+		{
+			return TP;
+		}
+	private:
+		thread_pool TP;
+	};
+
 	void * object_ptr;
 	atomic_bool stopped;
+	boost::shared_ptr<thread_pool_global> TP;
 };
 #endif

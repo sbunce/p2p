@@ -589,7 +589,7 @@ mpa::mpint mpa::lcm(const mpint & a, const mpint & b)
 	return c;
 }
 
-mpa::mpint mpa::random_prime(const std::size_t bytes)
+mpa::mpint mpa::random_prime(const unsigned bytes)
 {
 	assert(bytes * 8 < std::numeric_limits<int>::max());
 	int err;
@@ -608,8 +608,9 @@ mpa::mpint mpa::random_prime(const std::size_t bytes)
 	return tmp;
 }
 
-mpa::mpint mpa::random(const int bytes)
+mpa::mpint mpa::random(const unsigned bytes)
 {
+	assert(bytes < std::numeric_limits<int>::max());
 	unsigned char * buf = new unsigned char[bytes];
 	if(buf == NULL){
 		throw ::exception(MP_MEM);

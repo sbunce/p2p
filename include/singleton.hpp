@@ -26,7 +26,7 @@ order can be done by calling the singleton() function in the appropriate order.
 #define H_SINGLETON
 
 //include
-#include <boost/scoped_ptr.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
 
@@ -34,10 +34,22 @@ template<typename T>
 class singleton_base : private boost::noncopyable
 {
 public:
-	static T & singleton()
+	/*
+	A shared_ptr made available to help solve static initialization problems.
+	Example Problem (numbers indicate order events happen):
+	0. singleton A instantiated (will be destroyed last).
+	1. singleton B instantiated (will be destroyed first).
+	2. B destroyed.
+	3. A tries to use B (PROGRAM CRASH).
+
+	We can get around this initialization order problem by storing a shared_ptr
+	to B within A. This way we can stop B from getting destroyed until A is done
+	with it.
+	*/
+	static const boost::shared_ptr<T> & singleton()
 	{
-		boost::call_once(init, once_flag);
-		return *t;
+		boost::call_once(&init, once_flag);
+		return obj_ptr;
 	}
 
 protected:
@@ -47,19 +59,13 @@ protected:
 private:
 	static void init()
 	{
-		/*
-		The scoped_ptr is guaranteed to never throw. If T ctor throws the
-		scoped_ptr will set itself to NULL which will cause an exception when
-		singleton() is called. For this reason classes derived from the
-		singleton_base must not throw in ctor.
-		*/
-		t.reset(new T());
+		obj_ptr.reset(new T());
 	}
 
-	static boost::scoped_ptr<T> t;
 	static boost::once_flag once_flag;
+	static boost::shared_ptr<T> obj_ptr;
 };
 
-template<typename T> boost::scoped_ptr<T> singleton_base<T>::t(NULL);
+template<typename T> boost::shared_ptr<T> singleton_base<T>::obj_ptr;
 template<typename T> boost::once_flag singleton_base<T>::once_flag = BOOST_ONCE_INIT;
 #endif

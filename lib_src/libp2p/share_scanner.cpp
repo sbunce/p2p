@@ -24,7 +24,7 @@ share_scanner::~share_scanner()
 
 void share_scanner::hash_file(boost::filesystem::recursive_directory_iterator it)
 {
-	if(share::singleton().find_path(it->path().string()) == share::singleton().end_file()){
+	if(share::singleton()->find_path(it->path().string()) == share::singleton()->end_file()){
 		file_info FI;
 		FI.path = it->path().string();
 		try{
@@ -37,13 +37,13 @@ void share_scanner::hash_file(boost::filesystem::recursive_directory_iterator it
 		}
 		hash_tree::status Status = hash_tree::create(FI);
 		if(Status == hash_tree::good){
-			share::singleton().insert(FI);
+			share::singleton()->insert(FI);
 			db::table::share::add(db::table::share::info(FI.hash, FI.path,
 				FI.file_size, FI.last_write_time, db::table::share::complete));
 			db::table::hash::set_state(FI.hash, db::table::hash::complete);
 			Connection_Manager.add(FI.hash);
 		}else{
-			share::singleton().erase(FI.path);
+			share::singleton()->erase(FI.path);
 		}
 	}
 	TP_IO.enqueue(boost::bind(&share_scanner::scan, this, ++it));
@@ -51,15 +51,15 @@ void share_scanner::hash_file(boost::filesystem::recursive_directory_iterator it
 
 void share_scanner::remove_missing(share::const_file_iterator it)
 {
-	if(it == share::singleton().end_file()){
+	if(it == share::singleton()->end_file()){
 		//finished scanning existing files
 		start_scan();
 	}else{
 		//check if exists
 		if(!boost::filesystem::exists(it->path)
-			&& !share::singleton().is_downloading(it->path))
+			&& !share::singleton()->is_downloading(it->path))
 		{
-			share::singleton().erase(it->path);
+			share::singleton()->erase(it->path);
 			db::table::share::remove(it->path);
 		}
 		TP_IO.enqueue(boost::bind(&share_scanner::remove_missing, this, ++it), scan_delay_ms);
@@ -72,7 +72,7 @@ void share_scanner::scan(boost::filesystem::recursive_directory_iterator it)
 		if(it == boost::filesystem::recursive_directory_iterator()){
 			//finished scanning share, remove missing
 			TP_IO.enqueue(boost::bind(&share_scanner::remove_missing, this,
-				share::singleton().begin_file()), scan_delay_ms);
+				share::singleton()->begin_file()), scan_delay_ms);
 		}else if(boost::filesystem::is_symlink(it->path().parent_path())){
 			//do not follow symlinks to avoid infinite loops
 			it.pop();
@@ -81,10 +81,10 @@ void share_scanner::scan(boost::filesystem::recursive_directory_iterator it)
 			//potential file to hash
 			boost::uint64_t file_size = boost::filesystem::file_size(it->path());
 			std::time_t last_write_time = boost::filesystem::last_write_time(it->path());
-			share::const_file_iterator share_it = share::singleton().find_path(it->path().string());
-			bool exists_in_share = share_it != share::singleton().end_file();
-			bool downloading = share::singleton().is_downloading(it->path().string());
-			bool modified = share_it == share::singleton().end_file()
+			share::const_file_iterator share_it = share::singleton()->find_path(it->path().string());
+			bool exists_in_share = share_it != share::singleton()->end_file();
+			bool downloading = share::singleton()->is_downloading(it->path().string());
+			bool modified = share_it == share::singleton()->end_file()
 				|| share_it->file_size != file_size
 				|| share_it->last_write_time != last_write_time;
 			//file may be copying if it was recently modified

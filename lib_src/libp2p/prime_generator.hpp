@@ -12,12 +12,13 @@
 #include <boost/utility.hpp>
 #include <mpa.hpp>
 #include <RC4.hpp>
+#include <thread_pool.hpp>
 
 //standard
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include <vector>
+#include <list>
 
 class prime_generator : public singleton_base<prime_generator>
 {
@@ -26,12 +27,9 @@ public:
 	~prime_generator();
 
 	/*
-	prime_count:
-		Returns number of primes in prime_cache.
 	random_prime:
-		Returns prime in prime cache. Size of prime is always settings::DH_KEY_SIZE.
+		Returns random prime of size settings::DH_KEY_SIZE.
 	*/
-	unsigned prime_count();
 	mpa::mpint random_prime();
 
 private:
@@ -40,21 +38,23 @@ private:
 	boost::thread_group Workers;
 
 	/*
-	The prime_remove_cond triggers the generate_thread to make more primes. The
-	prime_generate_cond triggers threads waiting on primes to check to see if
-	there is a prime to get. The prime_mutex locks all access to Prime_Cache.
+	mutex:
+		Locks the Prime_Cache container.
+	cond:
+		Notified when a prime removed from the cache.
 	*/
-	boost::condition_variable_any prime_remove_cond;
-	boost::condition_variable_any prime_generate_cond;
-	boost::mutex prime_mutex;
-
-	//cache of primes, all access must be locked with prime_mutex
-	std::vector<mpa::mpint> Prime_Cache;
+	boost::mutex Mutex;
+	boost::condition_variable_any Cond;
+	std::list<mpa::mpint> Cache;
 
 	/*
-	main_loop:
+	generate:
+		Generates a prime and puts it in the cache.
 		Worker threads loop in this thread and generate primes.
 	*/
-	void main_loop();
+	void generate();
+
+	//random source used for prime generation is a lot of IO
+	thread_pool_IO TP_IO;
 };
 #endif

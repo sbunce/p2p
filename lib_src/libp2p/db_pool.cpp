@@ -2,7 +2,7 @@
 
 //BEGIN pool::proxy
 db::pool::proxy::proxy():
-	Connection(singleton().pool_get()),
+	Connection(singleton()->pool_get()),
 	This(this, boost::bind(&proxy::deleter, this, Connection))
 {
 
@@ -15,7 +15,7 @@ boost::shared_ptr<db::connection> & db::pool::proxy::operator -> ()
 
 void db::pool::proxy::deleter(boost::shared_ptr<db::connection> Connection)
 {
-	singleton().pool_put(Connection);
+	singleton()->pool_put(Connection);
 }
 //END pool::proxy
 

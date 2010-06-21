@@ -143,8 +143,8 @@ void connection_manager::remove(const std::string & hash)
 void connection_manager::remove_priv(const std::string hash)
 {
 	boost::mutex::scoped_lock lock(Connect_mutex);
-	share::slot_iterator S_iter = share::singleton().remove_slot(hash);
-	if(S_iter != share::singleton().end_slot()){
+	share::slot_iterator S_iter = share::singleton()->remove_slot(hash);
+	if(S_iter != share::singleton()->end_slot()){
 		if(S_iter->get_transfer() && S_iter->get_transfer()->complete()){
 			/*
 			Don't allow complete files to be removed. We have this check in case

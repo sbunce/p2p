@@ -177,10 +177,10 @@ mpint gcd(const mpint & a, const mpint & b);
 mpint lcm(const mpint & a, const mpint & b);
 
 //random prime number of specified size
-mpint random_prime(const std::size_t bytes);
+mpint random_prime(const unsigned bytes);
 
 //random number
-mpint random(const int bytes);
+mpint random(const unsigned bytes);
 
 }//end of namespace mpint
 #endif

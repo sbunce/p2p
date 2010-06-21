@@ -200,7 +200,7 @@ void exchange_tcp::send(boost::shared_ptr<message_tcp::send::base> M,
 		Send_Speed.push_back(send_speed_element(M->buf.size(), M->Upload_Speed, func));
 		Proactor.send(connection_ID, M->buf);
 	}else if(!M->encrypt()){
-		//sent unencrypted message
+		//sent unencrypted message (key exchange message)
 		Send_Speed.push_back(send_speed_element(M->buf.size(), M->Upload_Speed, func));
 		Proactor.send(connection_ID, M->buf);
 	}

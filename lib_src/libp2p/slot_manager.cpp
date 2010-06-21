@@ -43,7 +43,7 @@ slot_manager::~slot_manager()
 			it_cur->second->get_transfer()->download_unreg(Exchange.connection_ID);
 		}
 	}
-	share::singleton().garbage_collect();
+	share::singleton()->garbage_collect();
 }
 
 void slot_manager::add(const std::string & hash)
@@ -69,7 +69,7 @@ void slot_manager::close_complete()
 			Exchange.send(boost::shared_ptr<message_tcp::send::base>(
 				new message_tcp::send::close_slot(it_cur->first)));
 			Download_Slot.erase(it_cur++);
-			share::singleton().garbage_collect();
+			share::singleton()->garbage_collect();
 		}else{
 			++it_cur;
 		}
@@ -118,7 +118,7 @@ bool slot_manager::recv_file_block(const net::buffer & block,
 			Exchange.send(boost::shared_ptr<message_tcp::send::base>(
 				new message_tcp::send::close_slot(it->first)));
 			Download_Slot.erase(it);
-			share::singleton().garbage_collect();
+			share::singleton()->garbage_collect();
 		}else if(status == transfer::protocol_violated){
 			LOG << "block arrived late";
 		}
@@ -174,7 +174,7 @@ bool slot_manager::recv_hash_tree_block(const net::buffer & block,
 			Exchange.send(boost::shared_ptr<message_tcp::send::base>(
 				new message_tcp::send::close_slot(it->first)));
 			Download_Slot.erase(it);
-			share::singleton().garbage_collect();
+			share::singleton()->garbage_collect();
 		}else if(status == transfer::protocol_violated){
 			LOG << "block arrived late";
 		}
@@ -283,8 +283,8 @@ bool slot_manager::recv_request_slot(const std::string & hash)
 {
 	LOG << convert::abbr(hash);
 	//locate requested slot
-	share::slot_iterator slot_it = share::singleton().find_slot(hash);
-	if(slot_it == share::singleton().end_slot()){
+	share::slot_iterator slot_it = share::singleton()->find_slot(hash);
+	if(slot_it == share::singleton()->end_slot()){
 		LOG << "failed " << hash;
 		Exchange.send(boost::shared_ptr<message_tcp::send::base>(new message_tcp::send::error()));
 		return true;
@@ -369,8 +369,8 @@ bool slot_manager::recv_request_slot(const std::string & hash)
 		}
 	}
 	if(!already_downloading){
-		for(share::slot_iterator it_cur = share::singleton().begin_slot(),
-			it_end = share::singleton().end_slot(); it_cur != it_end; ++it_cur)
+		for(share::slot_iterator it_cur = share::singleton()->begin_slot(),
+			it_end = share::singleton()->end_slot(); it_cur != it_end; ++it_cur)
 		{
 			if(hash == it_cur->hash() && !it_cur->complete()){
 				Hash_Pending.insert(hash);
@@ -394,8 +394,8 @@ bool slot_manager::recv_slot(const unsigned char slot_num,
 	bit_field & tree_BF, bit_field & file_BF, const std::string hash)
 {
 	LOG << convert::abbr(hash);
-	share::slot_iterator slot_it = share::singleton().find_slot(hash);
-	if(slot_it == share::singleton().end_slot()){
+	share::slot_iterator slot_it = share::singleton()->find_slot(hash);
+	if(slot_it == share::singleton()->end_slot()){
 		LOG << "failed " << convert::abbr(hash);
 		Exchange.send(boost::shared_ptr<message_tcp::send::base>(
 			new message_tcp::send::close_slot(slot_num)));
@@ -620,10 +620,10 @@ void slot_manager::send_peer()
 void slot_manager::send_slot_requests()
 {
 	while(!Hash_Pending.empty() && open_slots < 256){
-		share::slot_iterator slot_it = share::singleton().find_slot(*Hash_Pending.begin());
+		share::slot_iterator slot_it = share::singleton()->find_slot(*Hash_Pending.begin());
 		Hash_Opened.insert(*Hash_Pending.begin());
 		Hash_Pending.erase(Hash_Pending.begin());
-		if(slot_it == share::singleton().end_slot()){
+		if(slot_it == share::singleton()->end_slot()){
 			continue;
 		}
 		++open_slots;

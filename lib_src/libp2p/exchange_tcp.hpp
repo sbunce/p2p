@@ -39,7 +39,8 @@ public:
 	expect_anytime_remove:
 		Removes messages expected anytime.
 	send:
-		Sends a message.
+		Sends a message. Optionall a call back can be specified that is called
+		after the message is sent.
 	*/
 	void expect_response(boost::shared_ptr<message_tcp::recv::base> M);
 	void expect_anytime(boost::shared_ptr<message_tcp::recv::base> M);

@@ -73,7 +73,7 @@ net::buffer encryption::send_p_rA()
 	enable_recv_rB = true;
 
 	net::buffer buf;
-	p = prime_generator::singleton().random_prime();
+	p = prime_generator::singleton()->random_prime();
 	buf.append(p.bin(protocol_tcp::DH_key_size));
 	local_result = mpa::exptmod(g, s, p);
 	buf.append(local_result.bin(protocol_tcp::DH_key_size));
