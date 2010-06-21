@@ -5,7 +5,7 @@ boost::once_flag db::table::prefs::static_wrap::once_flag = BOOST_ONCE_INIT;
 
 db::table::prefs::static_wrap::static_objects & db::table::prefs::static_wrap::get()
 {
-	boost::call_once(once_flag, _get);
+	boost::call_once(once_flag, &_get);
 	return _get();
 }
 

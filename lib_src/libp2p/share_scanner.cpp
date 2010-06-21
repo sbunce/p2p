@@ -17,6 +17,7 @@ share_scanner::share_scanner(connection_manager & Connection_Manager_in):
 
 share_scanner::~share_scanner()
 {
+	hash_tree::stop_create();
 	TP_IO.stop();
 	TP_IO.clear();
 }

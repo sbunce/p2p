@@ -1,10 +1,32 @@
 #include "hash_tree.hpp"
 
-hash_tree::hash_tree(const file_info & FI, db::pool::proxy DB):
+//BEGIN static_wrap
+boost::once_flag hash_tree::static_wrap::once_flag = BOOST_ONCE_INIT;
+
+hash_tree::static_wrap::static_objects::static_objects():
+	stopped(false)
+{
+
+}
+
+hash_tree::static_wrap::static_objects & hash_tree::static_wrap::get()
+{
+	boost::call_once(once_flag, &_get);
+	return _get();
+}
+
+hash_tree::static_wrap::static_objects & hash_tree::static_wrap::_get()
+{
+	static static_objects SO;
+	return SO;
+}
+//END static_wrap
+
+hash_tree::hash_tree(const file_info & FI):
 	TI(FI)
 {
 	assert(TI.hash.size() == SHA1::hex_size);
-	boost::shared_ptr<db::table::hash::info> info = db::table::hash::find(TI.hash, DB);
+	boost::shared_ptr<db::table::hash::info> info = db::table::hash::find(TI.hash);
 	if(info){
 		//opened existing hash tree
 		boost::uint64_t size;
@@ -23,9 +45,9 @@ hash_tree::hash_tree(const file_info & FI, db::pool::proxy DB):
 		const_cast<db::blob &>(blob) = info->blob;
 	}else{
 		//allocate space to reconstruct hash tree
-		if(db::table::hash::add(TI.hash, TI.tree_size, DB)){
-			db::table::hash::set_state(TI.hash, db::table::hash::downloading, DB);
-			info = db::table::hash::find(TI.hash, DB);
+		if(db::table::hash::add(TI.hash, TI.tree_size)){
+			db::table::hash::set_state(TI.hash, db::table::hash::downloading);
+			info = db::table::hash::find(TI.hash);
 			if(info){
 				const_cast<db::blob &>(blob) = info->blob;
 			}else{
@@ -157,7 +179,7 @@ hash_tree::status hash_tree::create(file_info & FI)
 			}
 		}
 
-		if(boost::this_thread::interruption_requested()){
+		if(static_wrap::get().stopped){
 			return io_error;
 		}
 		file.read(buf, protocol_tcp::file_block_size);
@@ -292,6 +314,11 @@ boost::optional<std::string> hash_tree::root_hash() const
 		return boost::optional<std::string>();
 	}
 	return convert::bin_to_hex(std::string(buf+8, SHA1::bin_size));
+}
+
+void hash_tree::stop_create()
+{
+	static_wrap::get().stopped = true;
 }
 
 hash_tree::status hash_tree::write_block(const boost::uint64_t block_num,

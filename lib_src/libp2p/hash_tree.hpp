@@ -15,6 +15,7 @@ this class is exactly like a file.
 #include "tree_info.hpp"
 
 //include
+#include <atomic_bool.hpp>
 #include <atomic_int.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/filesystem.hpp>
@@ -38,10 +39,7 @@ The hash_tree object can be used to read/write, or reconstruct a hash tree.
 class hash_tree : private boost::noncopyable
 {
 public:
-	hash_tree(
-		const file_info & FI,
-		db::pool::proxy DB = db::pool::proxy()
-	);
+	hash_tree(const file_info & FI);
 
 	enum status{
 		good,     //block is good
@@ -95,11 +93,33 @@ public:
 		file.
 		Note: If tree created the tree state will be set to reserved. This must
 			be set to complete or tree will be deleted on next program start.
+	stop_create:
+		Causes create() to return early with io_error.
 	*/
 	static status create(file_info & FI);
+	static void stop_create();
 
 private:
 	//blob handle for hash tree in database
 	const db::blob blob;
+
+	class static_wrap
+	{
+	public:
+		class static_objects
+		{
+		public:
+			static_objects();
+
+			//true if create() should be interrupted
+			atomic_bool stopped;
+		};
+
+		//get access to static objects
+		static static_objects & get();
+	private:
+		static boost::once_flag once_flag;
+		static static_objects & _get();
+	};
 };
 #endif
