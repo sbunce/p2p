@@ -49,13 +49,13 @@ public:
 		Sets the state of the hash tree.
 	*/
 	static bool add(const std::string & hash, const boost::uint64_t tree_size,
-		db::pool::proxy DB = db::pool::proxy());
+		db::pool::proxy DB = db::pool::singleton()->get());
 	static boost::shared_ptr<info> find(const std::string & hash,
-		db::pool::proxy DB = db::pool::proxy());
+		db::pool::proxy DB = db::pool::singleton()->get());
 	static void remove(const std::string & hash,
-		db::pool::proxy DB = db::pool::proxy());
+		db::pool::proxy DB = db::pool::singleton()->get());
 	static void set_state(const std::string & hash, const state tree_state,
-		db::pool::proxy DB = db::pool::proxy());
+		db::pool::proxy DB = db::pool::singleton()->get());
 private:
 	hash(){}
 };

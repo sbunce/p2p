@@ -3,7 +3,7 @@
 void db::init::create_all()
 {
 	path::create_dirs();
-	db::pool::proxy DB;
+	db::pool::proxy DB = db::pool::singleton()->get();
 
 	//blacklist
 	DB->query("CREATE TABLE IF NOT EXISTS blacklist(IP TEXT)");
@@ -72,7 +72,7 @@ void db::init::create_all()
 
 void db::init::drop_all()
 {
-	db::pool::proxy DB;
+	db::pool::proxy DB = db::pool::singleton()->get();
 	DB->query("DROP TABLE IF EXISTS blacklist");
 	DB->query("DROP TABLE IF EXISTS hash");
 	DB->query("DROP TABLE IF EXISTS host");

@@ -24,9 +24,9 @@ public:
 		called to determine what slots to open.
 	*/
 	static std::set<std::pair<std::string, std::string> > resume_peers(
-		db::pool::proxy DB = db::pool::proxy());
+		db::pool::proxy DB = db::pool::singleton()->get());
 	static std::set<std::string> resume_hash(const std::string & peer_ID,
-		db::pool::proxy DB = db::pool::proxy());
+		db::pool::proxy DB = db::pool::singleton()->get());
 
 private:
 	join(){}

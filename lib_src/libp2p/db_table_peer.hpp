@@ -43,11 +43,11 @@ public:
 		Returns all peers in table.
 	*/
 	static void add(const info & Info,
-		db::pool::proxy DB = db::pool::proxy());
+		db::pool::proxy DB = db::pool::singleton()->get());
 	static void remove(const std::string ID,
-		db::pool::proxy DB = db::pool::proxy());
+		db::pool::proxy DB = db::pool::singleton()->get());
 	static std::vector<info> resume(
-		db::pool::proxy DB = db::pool::proxy());
+		db::pool::proxy DB = db::pool::singleton()->get());
 
 private:
 	peer(){}

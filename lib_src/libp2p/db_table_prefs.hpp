@@ -59,7 +59,8 @@ private:
 			if(CE->value.empty()){
 				std::stringstream ss;
 				ss << "SELECT value FROM prefs WHERE key = '" << key << "'";
-				DB_Pool->get()->query(ss.str(), boost::bind(&call_back, _1, _2, _3, boost::ref(value)));
+				db::pool::singleton()->get()->query(ss.str(),
+					boost::bind(&call_back, _1, _2, _3, boost::ref(value)));
 				assert(!value.empty());
 				CE->value = value;
 			}else{

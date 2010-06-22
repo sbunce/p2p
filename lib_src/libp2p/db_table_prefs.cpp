@@ -26,7 +26,7 @@ boost::shared_ptr<db::table::prefs::cache::cache_element>
 
 void db::table::prefs::cache::set_query(const std::string query)
 {
-	DB_Pool->get()->query(query);
+	db::pool::singleton()->get()->query(query);
 }
 //END static_wrap::static_objects
 

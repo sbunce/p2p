@@ -33,9 +33,9 @@ public:
 		Postcondition: last_state_seen = blacklist_state.
 	*/
 	static void add(const std::string & IP,
-		db::pool::proxy DB = db::pool::proxy());
+		db::pool::proxy DB = db::pool::singleton()->get());
 	static bool is_blacklisted(const std::string & IP,
-		db::pool::proxy DB = db::pool::proxy());
+		db::pool::proxy DB = db::pool::singleton()->get());
 	static bool modified(int & last_state_seen);
 
 private:

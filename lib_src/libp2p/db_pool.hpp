@@ -20,15 +20,10 @@ class pool : public singleton_base<pool>
 public:
 	~pool(){}
 
-	/*
-	The proxy automatically returns the connection to the pool when the last
-	reference to it goes out of scope.
-	*/
 	class proxy
 	{
+		friend class pool;
 	public:
-		proxy();
-
 		/*
 		Exposing the shared_ptr with this operator makes it impossible for the
 		shared_ptr to be copied. This is what we want since it reduces errors.
@@ -36,6 +31,9 @@ public:
 		boost::shared_ptr<connection> & operator -> ();
 
 	private:
+		//only db::pool can instantiate proxy
+		proxy();
+
 		boost::shared_ptr<connection> Connection;
 		boost::shared_ptr<proxy> This;
 
@@ -45,9 +43,7 @@ public:
 
 	/*
 	get:
-		Conveniance function for when a single database call needs to be done. The
-		advantage of using this is that the connection is returned after the
-		expression is evaluated.
+		Get database object. This is the only way to get one.
 	*/
 	proxy get();
 

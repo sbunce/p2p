@@ -70,16 +70,16 @@ public:
 		we start a download and receive the file size in the slot message.
 	*/
 	static void add(const info & FI,
-		db::pool::proxy DB = db::pool::proxy());
+		db::pool::proxy DB = db::pool::singleton()->get());
 	static boost::shared_ptr<info> find(const std::string & hash,
-		db::pool::proxy DB = db::pool::proxy());
+		db::pool::proxy DB = db::pool::singleton()->get());
 	static void remove(const std::string & path,
-		db::pool::proxy DB = db::pool::proxy());
-	static std::deque<info> resume(db::pool::proxy DB = db::pool::proxy());
+		db::pool::proxy DB = db::pool::singleton()->get());
+	static std::deque<info> resume(db::pool::proxy DB = db::pool::singleton()->get());
 	static void set_state(const std::string & hash, const state file_state,
-		db::pool::proxy DB = db::pool::proxy());
+		db::pool::proxy DB = db::pool::singleton()->get());
 	static void update_file_size(const std::string & path, const boost::uint64_t file_size,
-		db::pool::proxy DB = db::pool::proxy());
+		db::pool::proxy DB = db::pool::singleton()->get());
 
 private:
 	share(){}
