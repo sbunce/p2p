@@ -66,7 +66,6 @@ public:
 
 private:
 	net::proactor Proactor;
-	thread_pool Thread_Pool;
 	kad DHT;
 
 	class connection_element
@@ -132,5 +131,7 @@ private:
 	void remove_priv(const std::string hash);
 	void tick(const int connection_ID);
 	void trigger_tick(const int connection_ID);
+
+	thread_pool_global Thread_Pool;
 };
 #endif

@@ -214,32 +214,35 @@ private:
 	}
 };
 
-//note: instantiate at bottom of header so join() works correctly
-class thread_pool_CPU : private boost::noncopyable
+/*
+Thread pool that shares threads globally.
+note: instantiate at bottom of header so join() works correctly
+*/
+class thread_pool_global : private boost::noncopyable
 {
 public:
 	/*
-	Pass in NULL for non-member func use.
+	Pass in NULL if no object owns the thread_pool_global.
 	Note: Default NULL parameter not used because it would be error prone. It'd
 		be easy to forget to specify object in initializer list if default
 		initialization allowed.
 	*/
-	thread_pool_CPU(void * object_ptr_in):
+	thread_pool_global(void * object_ptr_in):
 		object_ptr(object_ptr_in),
 		stopped(false),
-		TPG(thread_pool_global::singleton())
+		TPW(thread_pool_wrap::singleton())
 	{
 
 	}
 
-	~thread_pool_CPU()
+	~thread_pool_global()
 	{
 		join();
 	}
 
 	void clear()
 	{
-		TPG->get().clear(object_ptr);
+		TPW->get().clear(object_ptr);
 	}
 
 	bool enqueue(const boost::function<void ()> & func)
@@ -247,7 +250,7 @@ public:
 		if(stopped){
 			return false;
 		}else{
-			return TPG->get().enqueue(func, object_ptr);
+			return TPW->get().enqueue(func, object_ptr);
 		}
 	}
 
@@ -256,18 +259,18 @@ public:
 		if(stopped){
 			return false;
 		}else{
-			return TPG->get().enqueue(func, delay_ms, object_ptr);
+			return TPW->get().enqueue(func, delay_ms, object_ptr);
 		}
 	}
 
 	void join()
 	{
-		TPG->get().join(object_ptr);
+		TPW->get().join(object_ptr);
 	}
 
 	unsigned size()
 	{
-		return TPG->get().size();
+		return TPW->get().size();
 	}
 
 	void start()
@@ -282,16 +285,19 @@ public:
 
 private:
 	//global thread_pool that contains # of thread = hardware threads
-	class thread_pool_global : public singleton_base<thread_pool_global>
+	class thread_pool_wrap : public singleton_base<thread_pool_wrap>
 	{
 		friend class singleton_base<thread_pool_global>;
 	public:
+		thread_pool_wrap():
+			TP(8)
+		{}
 		thread_pool & get()
 		{
-			return TPG;
+			return TP;
 		}
 	private:
-		thread_pool TPG;
+		thread_pool TP;
 	};
 
 	void * object_ptr;
@@ -301,86 +307,6 @@ private:
 	this object within other singletons and avoid static initialization order
 	problems. See documentation in singleton.hpp for more info.
 	*/
-	boost::shared_ptr<thread_pool_global> TPG;
-};
-
-//see documentation for thread_pool_CPU
-class thread_pool_IO : private boost::noncopyable
-{
-public:
-	thread_pool_IO(void * object_ptr_in):
-		object_ptr(object_ptr_in),
-		stopped(false),
-		TPG(thread_pool_global::singleton())
-	{}
-
-	~thread_pool_IO()
-	{
-		join();
-	}
-
-	void clear()
-	{
-		TPG->get().clear(object_ptr);
-	}
-
-	bool enqueue(const boost::function<void ()> & func)
-	{
-		if(stopped){
-			return false;
-		}else{
-			return TPG->get().enqueue(func, object_ptr);
-		}
-	}
-
-	bool enqueue(const boost::function<void ()> & func, const unsigned delay_ms)
-	{
-		if(stopped){
-			return false;
-		}else{
-			return TPG->get().enqueue(func, delay_ms, object_ptr);
-		}
-	}
-
-	void join()
-	{
-		TPG->get().join(object_ptr);
-	}
-
-	unsigned size()
-	{
-		return TPG->get().size();
-	}
-
-	void start()
-	{
-		stopped = false;
-	}
-
-	void stop()
-	{
-		stopped = true;
-	}
-
-private:
-	//global thread_pool that contains # of threads optimal for IO
-	class thread_pool_global : public singleton_base<thread_pool_global>
-	{
-		friend class singleton_base<thread_pool_global>;
-	public:
-		thread_pool_global():
-			TPG(4)
-		{}
-		thread_pool & get()
-		{
-			return TPG;
-		}
-	private:
-		thread_pool TPG;
-	};
-
-	void * object_ptr;
-	atomic_bool stopped;
-	boost::shared_ptr<thread_pool_global> TPG;
+	boost::shared_ptr<thread_pool_wrap> TPW;
 };
 #endif

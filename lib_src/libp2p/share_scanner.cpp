@@ -3,13 +3,13 @@
 share_scanner::share_scanner(connection_manager & Connection_Manager_in):
 	Connection_Manager(Connection_Manager_in),
 	started(false),
-	TP_IO(this)
+	Thread_Pool(this)
 {
 	/*
 	Hashing file ties up one IO thread for a long time. Insure there are at least
 	two IO threads so we don't block all IO jobs.
 	*/
-	assert(TP_IO.size() >= 2);
+	assert(Thread_Pool.size() >= 2);
 
 	//default share
 	shared.push_back(path::share_dir());
@@ -18,8 +18,8 @@ share_scanner::share_scanner(connection_manager & Connection_Manager_in):
 share_scanner::~share_scanner()
 {
 	hash_tree::stop_create();
-	TP_IO.stop();
-	TP_IO.clear();
+	Thread_Pool.stop();
+	Thread_Pool.clear();
 }
 
 void share_scanner::hash_file(boost::filesystem::recursive_directory_iterator it)
@@ -46,7 +46,7 @@ void share_scanner::hash_file(boost::filesystem::recursive_directory_iterator it
 			share::singleton()->erase(FI.path);
 		}
 	}
-	TP_IO.enqueue(boost::bind(&share_scanner::scan, this, ++it));
+	Thread_Pool.enqueue(boost::bind(&share_scanner::scan, this, ++it));
 }
 
 void share_scanner::remove_missing(share::const_file_iterator it)
@@ -62,7 +62,7 @@ void share_scanner::remove_missing(share::const_file_iterator it)
 			share::singleton()->erase(it->path);
 			db::table::share::remove(it->path);
 		}
-		TP_IO.enqueue(boost::bind(&share_scanner::remove_missing, this, ++it), scan_delay_ms);
+		Thread_Pool.enqueue(boost::bind(&share_scanner::remove_missing, this, ++it), scan_delay_ms);
 	}
 }
 
@@ -71,12 +71,12 @@ void share_scanner::scan(boost::filesystem::recursive_directory_iterator it)
 	try{
 		if(it == boost::filesystem::recursive_directory_iterator()){
 			//finished scanning share, remove missing
-			TP_IO.enqueue(boost::bind(&share_scanner::remove_missing, this,
+			Thread_Pool.enqueue(boost::bind(&share_scanner::remove_missing, this,
 				share::singleton()->begin_file()), scan_delay_ms);
 		}else if(boost::filesystem::is_symlink(it->path().parent_path())){
 			//do not follow symlinks to avoid infinite loops
 			it.pop();
-			TP_IO.enqueue(boost::bind(&share_scanner::scan, this, it), scan_delay_ms);
+			Thread_Pool.enqueue(boost::bind(&share_scanner::scan, this, it), scan_delay_ms);
 		}else if(boost::filesystem::is_regular_file(it->status())){
 			//potential file to hash
 			boost::uint64_t file_size = boost::filesystem::file_size(it->path());
@@ -92,13 +92,13 @@ void share_scanner::scan(boost::filesystem::recursive_directory_iterator it)
 			if((!exists_in_share && !recently_modified)
 				|| (!downloading && modified && !recently_modified))
 			{
-				TP_IO.enqueue(boost::bind(boost::bind(&share_scanner::hash_file, this, it)));
+				Thread_Pool.enqueue(boost::bind(boost::bind(&share_scanner::hash_file, this, it)));
 			}else{
-				TP_IO.enqueue(boost::bind(&share_scanner::scan, this, ++it), scan_delay_ms);
+				Thread_Pool.enqueue(boost::bind(&share_scanner::scan, this, ++it), scan_delay_ms);
 			}
 		}else{
 			//not valid file to hash
-			TP_IO.enqueue(boost::bind(&share_scanner::scan, this, ++it), scan_delay_ms);
+			Thread_Pool.enqueue(boost::bind(&share_scanner::scan, this, ++it), scan_delay_ms);
 		}
 	}catch(const std::exception & e){
 		LOG << e.what();
@@ -120,7 +120,7 @@ void share_scanner::start_scan()
 	boost::mutex::scoped_lock lock(shared_mutex);
 	if(shared.empty()){
 		//no shared directories
-		TP_IO.enqueue(boost::bind(&share_scanner::start_scan, this), scan_delay_ms);
+		Thread_Pool.enqueue(boost::bind(&share_scanner::start_scan, this), scan_delay_ms);
 		return;
 	}
 	std::string start = shared.front();
@@ -129,7 +129,7 @@ void share_scanner::start_scan()
 		shared.pop_front();
 		try{
 			boost::filesystem::recursive_directory_iterator it(shared.front());
-			TP_IO.enqueue(boost::bind(&share_scanner::scan, this, it), scan_delay_ms);
+			Thread_Pool.enqueue(boost::bind(&share_scanner::scan, this, it), scan_delay_ms);
 			return;
 		}catch(const std::exception & e){
 			LOG << e.what();
@@ -137,5 +137,5 @@ void share_scanner::start_scan()
 	}while(shared.front() != start);
 
 	//no shared directory exists
-	TP_IO.enqueue(boost::bind(&share_scanner::start_scan, this), scan_delay_ms);
+	Thread_Pool.enqueue(boost::bind(&share_scanner::start_scan, this), scan_delay_ms);
 }

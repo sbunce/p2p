@@ -451,8 +451,7 @@ void net::proactor_impl::stop()
 	outgoing_connections = 0;
 	relay_job.clear();
 
-	//stop dispatcher and wait for dispatcher call backs to finish
-	Dispatcher.stop_join();
+	Dispatcher.stop();
 }
 
 unsigned net::proactor_impl::upload_rate()

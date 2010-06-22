@@ -13,7 +13,7 @@ const unsigned MAX_DOWNLOAD_RATE = 0; //no limit
 const unsigned MAX_UPLOAD_RATE = 0;   //no limit
 
 //hard settings, not changable at runtime
-const int PRIME_CACHE_MIN = 32;     //minimum number of primes to keep in cache
+const int PRIME_CACHE = 64;         //minimum number of primes to keep in cache
 const int DATABASE_POOL_SIZE = 8;   //size of database connection pool
 const int SHARE_BUFFER_SIZE = 1024; //size of buffers between share pipeline stages
 }//end of namespace settings

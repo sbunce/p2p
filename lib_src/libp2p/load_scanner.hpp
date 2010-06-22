@@ -36,6 +36,6 @@ private:
 	void scan();
 	void start(const std::string & hash, const std::string file_name);
 
-	thread_pool_IO TP_IO;
+	thread_pool_global Thread_Pool;
 };
 #endif

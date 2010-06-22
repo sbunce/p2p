@@ -30,6 +30,7 @@ atomic_int<unsigned> disconnect_count(0);
 
 void recv_call_back(net::proactor::connection_info & CI)
 {
+LOG;
 	if(CI.direction == net::incoming){
 		assert(CI.recv_buf.size() == 1);
 		assert(CI.recv_buf[0] == 'x');
@@ -45,6 +46,7 @@ void recv_call_back(net::proactor::connection_info & CI)
 
 void connect_call_back(net::proactor::connection_info & CI)
 {
+LOG;
 	CI.recv_call_back = &recv_call_back;
 	if(CI.direction == net::outgoing){
 		net::buffer buf;
@@ -55,6 +57,7 @@ void connect_call_back(net::proactor::connection_info & CI)
 
 void disconnect_call_back(net::proactor::connection_info & CI)
 {
+LOG;
 	++disconnect_count;
 	if(disconnect_count == test_echo * 2){
 		boost::mutex::scoped_lock lock(test_mutex);

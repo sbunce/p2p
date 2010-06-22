@@ -12,8 +12,6 @@
 namespace net{
 class dispatcher : private boost::noncopyable
 {
-	//number of threads to use to do call backs
-	static const unsigned dispatcher_threads = 4;
 public:
 	dispatcher(
 		const boost::function<void (proactor::connection_info &)> & connect_call_back_in,
@@ -23,13 +21,12 @@ public:
 
 	/*
 	start:
-		Allow the dispatcher to accept new jobs.
+		Start dispatcher.
 	stop_join:
-		Stop dispatcher from accepting new jobs. Block until all existing jobs are
-		finished.
+		Stop dispatcher. Block until jobs finished.
 	*/
 	void start();
-	void stop_join();
+	void stop();
 
 	/*
 	connect:
@@ -63,11 +60,7 @@ private:
 	const boost::function<void (proactor::connection_info &)> disconnect_call_back;
 
 	/*
-	Call backs to be done by dispatch(). The job container holds all call backs
-	which need to be made. The stopped and dtor_stopped flags are used for
-	assertions to insure the dispatcher is not incorrectly used.
-
-	There are some invariants to the call back system.
+	Invariants to the call back system:
 	1. Only one call back for a socket is done concurrently.
 	2. The first call back for a socket must be the connect call back.
 	3. The last call back for a socket must be the disconnect call back.
@@ -77,17 +70,14 @@ private:
 		job container.
 	Invariant 3 is insured by requiring that disconnect jobs be scheduled last.
 	*/
-	boost::mutex job_mutex; //locks everything in this section
-	boost::condition_variable_any job_cond;  //cond to check for new jobs
-	boost::condition_variable_any join_cond; //cond used for join
-	std::list<std::pair<int, boost::function<void ()> > > job_list;
-	std::set<int> memoize;  //used to memoize connection_ID
-	unsigned running_jobs;  //number of jobs in progress
-	bool stopped;           //if true worker terminates when no more jobs
+	boost::mutex Mutex;    //locks everything in this section
+	std::list<std::pair<int, boost::function<void ()> > > Jobs;
+	std::set<int> Memoize; //used to memoize connection_ID
 
 	/*
 	dispatch:
 		Worker threads which do call backs reside in this function.
+		Precondition: Mutex locked.
 	*/
 	void dispatch();
 
@@ -111,6 +101,8 @@ private:
 		boost::shared_ptr<buffer> recv_buf);
 	void send_call_back_wrapper(boost::shared_ptr<proactor::connection_info> CI,
 		const unsigned latest_send, const int send_buf_size);
+
+	thread_pool_global Thread_Pool;
 };
 }//end of namespace net
 #endif

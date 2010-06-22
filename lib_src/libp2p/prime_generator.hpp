@@ -35,8 +35,6 @@ public:
 private:
 	prime_generator();
 
-	boost::thread_group Workers;
-
 	/*
 	mutex:
 		Locks the Prime_Cache container.
@@ -54,7 +52,11 @@ private:
 	*/
 	void generate();
 
-	//random source used for prime generation is a lot of IO
-	thread_pool_IO TP_IO;
+	/*
+	We don't use thread_pool_global because it would cause deadlock potential.
+	It's not very necessary to use it here anyways since there will only be one
+	prime_generator instantiated.
+	*/
+	thread_pool Thread_Pool;
 };
 #endif
