@@ -48,9 +48,6 @@ unsigned p2p_impl::get_max_upload_rate()
 
 void p2p_impl::resume()
 {
-	//delay helps GUI have responsive startup
-	boost::this_thread::yield();
-
 	//fill pref cache
 	db::table::prefs::init_cache();
 

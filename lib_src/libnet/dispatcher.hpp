@@ -20,13 +20,10 @@ public:
 	~dispatcher();
 
 	/*
-	start:
-		Start dispatcher.
-	stop_join:
-		Stop dispatcher. Block until jobs finished.
+	join:
+		Block until all dispatches complete.
 	*/
-	void start();
-	void stop();
+	void join();
 
 	/*
 	connect:

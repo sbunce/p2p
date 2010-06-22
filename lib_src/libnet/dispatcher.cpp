@@ -13,8 +13,7 @@ net::dispatcher::dispatcher(
 
 net::dispatcher::~dispatcher()
 {
-	Thread_Pool.stop();
-	Thread_Pool.clear();
+
 }
 
 void net::dispatcher::connect(const boost::shared_ptr<proactor::connection_info> & CI)
@@ -35,39 +34,6 @@ void net::dispatcher::disconnect(const boost::shared_ptr<proactor::connection_in
 		&dispatcher::disconnect_call_back_wrapper, this, CI)));
 	}//END lock scope
 	dispatch();
-}
-
-void net::dispatcher::recv(const boost::shared_ptr<proactor::connection_info> & CI,
-	const boost::shared_ptr<buffer> & recv_buf)
-{
-	{//BEGIN lock scope
-	boost::mutex::scoped_lock lock(Mutex);
-	Jobs.push_back(std::make_pair(CI->connection_ID, boost::bind(
-		&dispatcher::recv_call_back_wrapper, this, CI, recv_buf)));
-	}//END lock scope
-	dispatch();
-}
-
-void net::dispatcher::send(const boost::shared_ptr<proactor::connection_info> & CI,
-	const unsigned latest_send, const unsigned send_buf_size)
-{
-	{//BEGIN lock scope
-	boost::mutex::scoped_lock lock(Mutex);
-	Jobs.push_back(std::make_pair(CI->connection_ID, boost::bind(
-		&dispatcher::send_call_back_wrapper, this, CI, latest_send, send_buf_size)));
-	}//END lock scope
-	dispatch();
-}
-
-void net::dispatcher::start()
-{
-	Thread_Pool.start();
-}
-
-void net::dispatcher::stop()
-{
-	Thread_Pool.stop();
-	Thread_Pool.join();
 }
 
 void net::dispatcher::dispatch()
@@ -110,6 +76,22 @@ void net::dispatcher::disconnect_call_back_wrapper(
 	dispatch();
 }
 
+void net::dispatcher::join()
+{
+	Thread_Pool.join();
+}
+
+void net::dispatcher::recv(const boost::shared_ptr<proactor::connection_info> & CI,
+	const boost::shared_ptr<buffer> & recv_buf)
+{
+	{//BEGIN lock scope
+	boost::mutex::scoped_lock lock(Mutex);
+	Jobs.push_back(std::make_pair(CI->connection_ID, boost::bind(
+		&dispatcher::recv_call_back_wrapper, this, CI, recv_buf)));
+	}//END lock scope
+	dispatch();
+}
+
 void net::dispatcher::recv_call_back_wrapper(
 	boost::shared_ptr<proactor::connection_info> CI, boost::shared_ptr<buffer> recv_buf)
 {
@@ -122,6 +104,17 @@ void net::dispatcher::recv_call_back_wrapper(
 	boost::mutex::scoped_lock lock(Mutex);
 	Memoize.erase(CI->connection_ID);
 	}//end lock scope
+	dispatch();
+}
+
+void net::dispatcher::send(const boost::shared_ptr<proactor::connection_info> & CI,
+	const unsigned latest_send, const unsigned send_buf_size)
+{
+	{//BEGIN lock scope
+	boost::mutex::scoped_lock lock(Mutex);
+	Jobs.push_back(std::make_pair(CI->connection_ID, boost::bind(
+		&dispatcher::send_call_back_wrapper, this, CI, latest_send, send_buf_size)));
+	}//END lock scope
 	dispatch();
 }
 

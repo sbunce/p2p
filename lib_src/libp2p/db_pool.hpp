@@ -49,18 +49,18 @@ public:
 		advantage of using this is that the connection is returned after the
 		expression is evaluated.
 	*/
-	static proxy get();
+	proxy get();
 
 private:
 	pool();
 
 	/*
 	The Pool container holds available database connections. When there are no
-	available connections threads will wait on the Pool_cond. The Pool_mutex
+	available connections threads will wait on the Cond. The Mutex
 	locks access to the Pool.
 	*/
-	boost::mutex Pool_mutex;
-	boost::condition_variable_any Pool_cond;
+	boost::mutex Mutex;
+	boost::condition_variable_any Cond;
 	std::stack<boost::shared_ptr<connection> > Pool;
 
 	/*

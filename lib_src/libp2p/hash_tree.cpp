@@ -30,7 +30,7 @@ hash_tree::hash_tree(const file_info & FI):
 	if(info){
 		//opened existing hash tree
 		boost::uint64_t size;
-		if(!db::pool::get()->blob_size(info->blob, size)){
+		if(!db::pool::singleton()->get()->blob_size(info->blob, size)){
 			throw std::runtime_error("error checking tree size");
 		}
 		//only open tree if the size is what we expect
@@ -86,7 +86,7 @@ hash_tree::status hash_tree::check_file_block(const boost::uint64_t file_block_n
 	const net::buffer & buf) const
 {
 	char parent_buf[SHA1::bin_size];
-	if(!db::pool::get()->blob_read(blob, parent_buf,
+	if(!db::pool::singleton()->get()->blob_read(blob, parent_buf,
 		SHA1::bin_size, TI.file_hash_offset + file_block_num * SHA1::bin_size))
 	{
 		return io_error;
@@ -125,7 +125,7 @@ hash_tree::status hash_tree::check_tree_block(const boost::uint64_t block_num,
 			buf.size());
 		//verify parent hash is a hash of the children
 		char parent_hash[SHA1::bin_size];
-		if(!db::pool::get()->blob_read(blob, parent_hash, SHA1::bin_size, parent)){
+		if(!db::pool::singleton()->get()->blob_read(blob, parent_hash, SHA1::bin_size, parent)){
 			return io_error;
 		}
 		if(std::memcmp(parent_hash, SHA.bin(), SHA1::bin_size) == 0){
@@ -270,7 +270,7 @@ hash_tree::status hash_tree::create(file_info & FI)
 			db::table::hash::remove(TI.hash);
 			return io_error;
 		}else{
-			if(!db::pool::get()->blob_write(Info->blob, buf, read_size, offset)){
+			if(!db::pool::singleton()->get()->blob_write(Info->blob, buf, read_size, offset)){
 				LOG << "error writing blob";
 				db::table::hash::remove(FI.hash);
 				return io_error;
@@ -288,7 +288,7 @@ hash_tree::status hash_tree::read_block(const boost::uint64_t block_num,
 	std::pair<boost::uint64_t, unsigned> info;
 	if(TI.block_info(block_num, info)){
 		buf.tail_reserve(info.second);
-		if(!db::pool::get()->blob_read(blob, reinterpret_cast<char *>(buf.tail_start()),
+		if(!db::pool::singleton()->get()->blob_read(blob, reinterpret_cast<char *>(buf.tail_start()),
 			info.second, info.first))
 		{
 			buf.tail_resize(0);
@@ -306,7 +306,7 @@ boost::optional<std::string> hash_tree::root_hash() const
 {
 	char buf[8 + SHA1::bin_size];
 	std::memcpy(buf, convert::int_to_bin(TI.file_size).data(), 8);
-	if(!db::pool::get()->blob_read(blob, buf+8, SHA1::bin_size, 0)){
+	if(!db::pool::singleton()->get()->blob_read(blob, buf+8, SHA1::bin_size, 0)){
 		return boost::optional<std::string>();
 	}
 	SHA1 SHA(buf, 8 + SHA1::bin_size);
@@ -330,7 +330,7 @@ hash_tree::status hash_tree::write_block(const boost::uint64_t block_num,
 		assert(info.second == buf.size());
 		if(block_num != 0){
 			char parent_buf[SHA1::bin_size];
-			if(!db::pool::get()->blob_read(blob, parent_buf, SHA1::bin_size, parent)){
+			if(!db::pool::singleton()->get()->blob_read(blob, parent_buf, SHA1::bin_size, parent)){
 				return io_error;
 			}
 			SHA1 SHA(reinterpret_cast<const char *>(buf.data()),
@@ -339,7 +339,7 @@ hash_tree::status hash_tree::write_block(const boost::uint64_t block_num,
 				return bad;
 			}
 		}
-		if(!db::pool::get()->blob_write(blob,
+		if(!db::pool::singleton()->get()->blob_write(blob,
 			reinterpret_cast<const char *>(buf.data()), buf.size(), info.first))
 		{
 			return io_error;

@@ -104,6 +104,13 @@ public:
 		}
 	}
 
+	//returns true if thread_pool is started
+	bool is_started()
+	{
+		boost::mutex::scoped_lock lock(mutex);
+		return !stopped;
+	}
+
 	//block until all jobs done
 	void join(void * object_ptr = NULL)
 	{
@@ -261,6 +268,11 @@ public:
 		}else{
 			return TPW->get().enqueue(func, delay_ms, object_ptr);
 		}
+	}
+
+	bool is_started()
+	{
+		return !stopped;
 	}
 
 	void join()

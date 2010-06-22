@@ -43,7 +43,6 @@ slot_manager::~slot_manager()
 			it_cur->second->get_transfer()->download_unreg(Exchange.connection_ID);
 		}
 	}
-	share::singleton()->garbage_collect();
 }
 
 void slot_manager::add(const std::string & hash)

@@ -3,6 +3,7 @@
 
 //include
 #include <boost/thread.hpp>
+#include <singleton.hpp>
 
 //standard
 #include <iostream>
@@ -15,7 +16,7 @@ class logger
 public:
 	~logger()
 	{
-		boost::mutex::scoped_lock lock(static_wrap<>::get().stdout_mutex);
+		boost::mutex::scoped_lock lock(wrap::singleton()->stdout_mutex);
 		std::cout << "[" << file << "][" << func << "][" << line << "] " << buf.str() << "\n";
 	}
 
@@ -56,32 +57,12 @@ private:
 	int line;
 	std::stringstream buf;
 
-	template<typename T=int>
-	class static_wrap
+	class wrap : public singleton_base<wrap>
 	{
+		friend class singleton_base<wrap>;
 	public:
-		class static_objects
-		{
-		public:
-			//locks all access to stdout
-			boost::mutex stdout_mutex;
-		};
-
-		//get access to static objects
-		static static_objects & get()
-		{
-			boost::call_once(once_flag, _get);
-			return _get();
-		}
-	private:
-		static boost::once_flag once_flag;
-		static static_objects & _get()
-		{
-			static static_objects SO;
-			return SO;
-		}
+		//locks all access to stdout
+		boost::mutex stdout_mutex;
 	};
 };
-
-template<typename T> boost::once_flag logger::static_wrap<T>::once_flag = BOOST_ONCE_INIT;
 #endif

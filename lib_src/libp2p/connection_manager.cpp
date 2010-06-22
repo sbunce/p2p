@@ -82,7 +82,7 @@ void connection_manager::connect_call_back(net::proactor::connection_info & CI)
 	boost::mutex::scoped_lock lock(Connect_mutex);
 
 //DEBUG, disable blacklist
-db::pool::get()->query("DELETE FROM blacklist");
+db::pool::singleton()->get()->query("DELETE FROM blacklist");
 
 	if(CI.direction == net::outgoing){
 		Connecting.erase(CI.ep);

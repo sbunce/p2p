@@ -28,9 +28,9 @@ db::pool::pool()
 
 boost::shared_ptr<db::connection> db::pool::pool_get()
 {
-	boost::mutex::scoped_lock lock(Pool_mutex);
+	boost::mutex::scoped_lock lock(Mutex);
 	while(Pool.empty()){
-		Pool_cond.wait(Pool_mutex);
+		Cond.wait(Mutex);
 	}
 	boost::shared_ptr<connection> Connection = Pool.top();
 	Pool.pop();
@@ -44,7 +44,7 @@ db::pool::proxy db::pool::get()
 
 void db::pool::pool_put(boost::shared_ptr<db::connection> & Connection)
 {
-	boost::mutex::scoped_lock lock(Pool_mutex);
+	boost::mutex::scoped_lock lock(Mutex);
 	Pool.push(Connection);
-	Pool_cond.notify_one();
+	Cond.notify_one();
 }
