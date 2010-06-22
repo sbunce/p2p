@@ -41,25 +41,15 @@ public:
 private:
 	blacklist(){}
 
-	class static_wrap
+	class wrap : public singleton_base<wrap>
 	{
+		friend class singleton_base<wrap>;
 	public:
-		class static_objects
-		{
-		public:
-			/*
-			blacklist_state:
-				Incremented whenever IP added to blacklist. This makes it possible to
-				determine if blacklist has changed without doing a database query.
-			*/
-			atomic_int<int> blacklist_state;
-		};
-
-		//get access to static objects
-		static static_objects & get();
-	private:
-		static boost::once_flag once_flag;
-		static static_objects & _get();
+		/*
+		Incremented whenever IP added to blacklist. This makes it possible to
+		determine if blacklist has changed without doing a database query.
+		*/
+		atomic_int<int> blacklist_state;
 	};
 };
 }//end of namespace table

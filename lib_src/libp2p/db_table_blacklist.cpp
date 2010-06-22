@@ -1,31 +1,13 @@
 #include "db_table_blacklist.hpp"
 
-//BEGIN static_wrap
-boost::once_flag db::table::blacklist::static_wrap::once_flag = BOOST_ONCE_INIT;
-
-db::table::blacklist::static_wrap::static_objects &
-	db::table::blacklist::static_wrap::get()
-{
-	boost::call_once(once_flag, _get);
-	return _get();
-}
-
-db::table::blacklist::static_wrap::static_objects &
-	db::table::blacklist::static_wrap::_get()
-{
-	static static_objects SO;
-	return SO;
-}
-//END static_wrap
-
 void db::table::blacklist::add(const std::string & IP, db::pool::proxy DB)
 {
 	std::stringstream ss;
 	ss << "INSERT OR IGNORE INTO blacklist VALUES ('" << IP << "')";
 	DB->query(ss.str());
-	++static_wrap::get().blacklist_state;
-	if(static_wrap::get().blacklist_state == 0){
-		++static_wrap::get().blacklist_state;
+	++wrap::singleton()->blacklist_state;
+	if(wrap::singleton()->blacklist_state == 0){
+		++wrap::singleton()->blacklist_state;
 	}
 }
 
@@ -48,10 +30,10 @@ bool db::table::blacklist::is_blacklisted(const std::string & IP,
 
 bool db::table::blacklist::modified(int & last_state_seen)
 {
-	if(last_state_seen == static_wrap::get().blacklist_state){
+	if(last_state_seen == wrap::singleton()->blacklist_state){
 		return false;
 	}else{
-		last_state_seen = static_wrap::get().blacklist_state;
+		last_state_seen = wrap::singleton()->blacklist_state;
 		return true;
 	}
 }
