@@ -1,0 +1,30 @@
+Load File Format
+================
+
+There are two different file formats that can be used to start a download. One
+file format downloads a single file. The other file format downloads a
+directory. The name of the files for both formats must end in ".p2p".
+
+Single File
+-----------
+File downloaded will be the name of the load file without the ".p2p". For
+example "foo.avi.p2p" downloads file "foo.avi".
+
+The file must contain the file hash (40 byte hex).
+
+
+Directory
+---------
+Directory downloaded will be the name of the load file without the ".p2p". For
+example "bar.p2p" downloads directory "bar".
+
+The file must contain lines which consist of the file hash (40 byte hex)
+followed by the file name (255 char max). Both types of line breaks are
+supported ("\n" and "\r\n").
+
+Example (file named "test.p2p"):
+DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFfoo.avi
+0123456789ABCDEF0123456789ABCDEF01234567bar.avi
+
+This would create a directory named "test" and download "foo.avi" and "bar.avi"
+in to it.
