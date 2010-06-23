@@ -5,12 +5,6 @@ share_scanner::share_scanner(connection_manager & Connection_Manager_in):
 	started(false),
 	Thread_Pool(this)
 {
-	/*
-	Hashing file ties up one IO thread for a long time. Insure there are at least
-	two IO threads so we don't block all IO jobs.
-	*/
-	assert(Thread_Pool.size() >= 2);
-
 	//default share
 	shared.push_back(path::share_dir());
 }

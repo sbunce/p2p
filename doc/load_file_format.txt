@@ -3,7 +3,9 @@ Load File Format
 
 There are two different file formats that can be used to start a download. One
 file format downloads a single file. The other file format downloads a
-directory. The name of the files for both formats must end in ".p2p".
+directory. Nested directories are not supported. The name of the files for both
+formats must end in ".p2p".
+
 
 Single File
 -----------
@@ -28,3 +30,13 @@ DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFfoo.avi
 
 This would create a directory named "test" and download "foo.avi" and "bar.avi"
 in to it.
+
+
+Allowed Characters
+------------------
+${}^[]`=,;`abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ._-0123456789.
+
+
+EOF Empty Line
+--------------
+One empty line on the end of the file is allowed.

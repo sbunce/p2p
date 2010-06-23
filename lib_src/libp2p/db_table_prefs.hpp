@@ -59,7 +59,7 @@ private:
 			if(CE->value.empty()){
 				std::stringstream ss;
 				ss << "SELECT value FROM prefs WHERE key = '" << key << "'";
-				db::pool::singleton()->get()->query(ss.str(),
+				DBP_Singleton->get()->query(ss.str(),
 					boost::bind(&call_back, _1, _2, _3, boost::ref(value)));
 				assert(!value.empty());
 				CE->value = value;
@@ -97,7 +97,7 @@ private:
 
 	private:
 		cache():
-			DB_Pool(db::pool::singleton()),
+			DBP_Singleton(db::pool::singleton()),
 			Thread_Pool(this)
 		{}
 
@@ -130,10 +130,11 @@ private:
 		void set_query(const std::string query);
 
 		/*
-		This singleton depends on the db::pool singleton. To prevent static
-		initialization order problems we keep a shared_ptr to db::pool.
+		This cacne singleton depends on the db::pool singleton. To prevent static
+		initialization order problems we keep a shared_ptr to db::pool. This
+		shared_ptr should be used instead of db::pool::singleton().
 		*/
-		boost::shared_ptr<db::pool> DB_Pool;
+		boost::shared_ptr<db::pool> DBP_Singleton;
 
 		thread_pool_global Thread_Pool;
 	};

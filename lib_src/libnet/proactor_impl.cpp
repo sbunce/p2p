@@ -399,7 +399,7 @@ void net::proactor_impl::set_max_upload_rate(const unsigned rate)
 void net::proactor_impl::start(boost::shared_ptr<listener> Listener_in)
 {
 	boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
-	if(Thread_Pool.is_started()){
+	if(!Thread_Pool.is_stopped()){
 		LOG << "proactor already started";
 		exit(1);
 	}

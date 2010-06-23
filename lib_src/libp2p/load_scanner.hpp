@@ -35,7 +35,7 @@ private:
 	*/
 	void load(const boost::filesystem::path & path);
 	void scan();
-	void start(const p2p::download_info & DI);
+	void start(const std::string & hash, const std::string file_name);
 
 	thread_pool_global Thread_Pool;
 };
