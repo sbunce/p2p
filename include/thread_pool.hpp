@@ -30,10 +30,10 @@ public:
 	~thread_pool()
 	{
 		join();
-		workers.interrupt_all();
-		workers.join_all();
 		timeout_thread.interrupt();
 		timeout_thread.join();
+		workers.interrupt_all();
+		workers.join_all();
 	}
 
 	//clear jobs
@@ -99,15 +99,17 @@ public:
 			}
 			if(delay_ms == 0){
 				job_queue.push_back(job(func, object_ptr));
+				job_objects.insert(object_ptr);
+				job_cond.notify_one();
 			}else{
 				timeout_jobs.insert(std::make_pair(timeout_ms + delay_ms, job(func, object_ptr)));
+				job_objects.insert(object_ptr);
 			}
-			job_objects.insert(object_ptr);
 			return true;
 		}
 	}
 
-	//returns true if thread_pool is started
+	//returns true if thread_pool is stopped
 	bool is_stopped()
 	{
 		boost::mutex::scoped_lock lock(mutex);
@@ -151,7 +153,7 @@ private:
 	public:
 		job(
 			const boost::function<void ()> & func_in = boost::function<void ()>(),
-			void * object_ptr_in = NULL
+			void * const object_ptr_in = NULL
 		):
 			func(func_in),
 			object_ptr(object_ptr_in)
@@ -251,6 +253,8 @@ public:
 
 	void clear()
 	{
+		boost::mutex::scoped_lock lock(Mutex);
+		job_queue.clear();
 		TPW_Singleton->get().clear(object_ptr);
 	}
 
