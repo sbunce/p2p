@@ -36,36 +36,30 @@ public:
 		workers.join_all();
 	}
 
-	//clear jobs
+	//clear jobs (if object_ptr = NULL clear all jobs)
 	void clear(void * const object_ptr = NULL)
 	{
 		boost::mutex::scoped_lock lock(mutex);
-		if(object_ptr == NULL){
-			job_queue.clear();
-			timeout_jobs.clear();
-			job_objects.clear();
-		}else{
-			for(std::list<job>::iterator it_cur = job_queue.begin(); it_cur != job_queue.end();){
-				if(it_cur->object_ptr == object_ptr){
-					std::multiset<void *>::iterator it = job_objects.find(object_ptr);
-					assert(it != job_objects.end());
-					job_objects.erase(it);
-					it_cur = job_queue.erase(it_cur);
-				}else{
-					++it_cur;
-				}
+		for(std::list<job>::iterator it_cur = job_queue.begin(); it_cur != job_queue.end();){
+			if(object_ptr == NULL || it_cur->object_ptr == object_ptr){
+				std::multiset<void *>::iterator it = job_objects.find(object_ptr);
+				assert(it != job_objects.end());
+				job_objects.erase(it);
+				it_cur = job_queue.erase(it_cur);
+			}else{
+				++it_cur;
 			}
-			for(std::multimap<boost::uint64_t, job>::iterator it_cur = timeout_jobs.begin();
-				it_cur != timeout_jobs.end();)
-			{
-				if(it_cur->second.object_ptr == object_ptr){
-					std::multiset<void *>::iterator it = job_objects.find(object_ptr);
-					assert(it != job_objects.end());
-					job_objects.erase(it);
-					timeout_jobs.erase(it_cur++);
-				}else{
-					++it_cur;
-				}
+		}
+		for(std::multimap<boost::uint64_t, job>::iterator it_cur = timeout_jobs.begin();
+			it_cur != timeout_jobs.end();)
+		{
+			if(object_ptr == NULL || it_cur->second.object_ptr == object_ptr){
+				std::multiset<void *>::iterator it = job_objects.find(object_ptr);
+				assert(it != job_objects.end());
+				job_objects.erase(it);
+				timeout_jobs.erase(it_cur++);
+			}else{
+				++it_cur;
 			}
 		}
 		join_cond.notify_all();
