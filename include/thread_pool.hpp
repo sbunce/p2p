@@ -29,22 +29,33 @@ public:
 
 	~thread_pool()
 	{
-		join();
+		//wait for all jobs to finish
+		{//BEGIN lock scope
+		boost::mutex::scoped_lock lock(mutex);
+		while(!job_obj.empty()){
+			join_cond.wait(mutex);
+		}
+		}//END lock scope
+
 		timeout_thread.interrupt();
 		timeout_thread.join();
 		workers.interrupt_all();
 		workers.join_all();
 	}
 
-	//clear jobs (if object_ptr = NULL clear all jobs)
-	void clear(void * const object_ptr = NULL)
+	//clear jobs
+	void clear(void * const obj_ptr = NULL)
 	{
 		boost::mutex::scoped_lock lock(mutex);
 		for(std::list<job>::iterator it_cur = job_queue.begin(); it_cur != job_queue.end();){
-			if(object_ptr == NULL || it_cur->object_ptr == object_ptr){
-				std::multiset<void *>::iterator it = job_objects.find(object_ptr);
-				assert(it != job_objects.end());
-				job_objects.erase(it);
+			if(it_cur->obj_ptr == obj_ptr){
+				std::map<void *, unsigned>::iterator it = job_obj.find(obj_ptr);
+				assert(it != job_obj.end());
+				if(it->second == 1){
+					job_obj.erase(it);
+				}else{
+					--it->second;
+				}
 				it_cur = job_queue.erase(it_cur);
 			}else{
 				++it_cur;
@@ -53,10 +64,14 @@ public:
 		for(std::multimap<boost::uint64_t, job>::iterator it_cur = timeout_jobs.begin();
 			it_cur != timeout_jobs.end();)
 		{
-			if(object_ptr == NULL || it_cur->second.object_ptr == object_ptr){
-				std::multiset<void *>::iterator it = job_objects.find(object_ptr);
-				assert(it != job_objects.end());
-				job_objects.erase(it);
+			if(it_cur->second.obj_ptr == obj_ptr){
+				std::map<void *, unsigned>::iterator it = job_obj.find(obj_ptr);
+				assert(it != job_obj.end());
+				if(it->second == 1){
+					job_obj.erase(it);
+				}else{
+					--it->second;
+				}
 				timeout_jobs.erase(it_cur++);
 			}else{
 				++it_cur;
@@ -66,14 +81,19 @@ public:
 	}
 
 	//enqueue job
-	bool enqueue(const boost::function<void ()> & func, void * const object_ptr = NULL)
+	bool enqueue(const boost::function<void ()> & func, void * const obj_ptr = NULL)
 	{
 		boost::mutex::scoped_lock lock(mutex);
 		if(stopped){
 			return false;
 		}else{
-			job_queue.push_back(job(func, object_ptr));
-			job_objects.insert(object_ptr);
+			job_queue.push_back(job(func, obj_ptr));
+			std::map<void *, unsigned>::iterator it = job_obj.find(obj_ptr);
+			if(it == job_obj.end()){
+				job_obj.insert(std::make_pair(obj_ptr, 1));
+			}else{
+				++it->second;
+			}
 			job_cond.notify_one();
 			return true;
 		}
@@ -81,7 +101,7 @@ public:
 
 	//enqueue job after specified delay (ms)
 	bool enqueue(const boost::function<void ()> & func, const unsigned delay_ms,
-		void * const object_ptr = NULL)
+		void * const obj_ptr = NULL)
 	{
 		boost::mutex::scoped_lock lock(mutex);
 		if(stopped){
@@ -92,38 +112,27 @@ public:
 				timeout_thread = boost::thread(boost::bind(&thread_pool::timeout_dispatcher, this));
 			}
 			if(delay_ms == 0){
-				job_queue.push_back(job(func, object_ptr));
-				job_objects.insert(object_ptr);
+				job_queue.push_back(job(func, obj_ptr));
 				job_cond.notify_one();
 			}else{
-				timeout_jobs.insert(std::make_pair(timeout_ms + delay_ms, job(func, object_ptr)));
-				job_objects.insert(object_ptr);
+				timeout_jobs.insert(std::make_pair(timeout_ms + delay_ms, job(func, obj_ptr)));
+			}
+			std::map<void *, unsigned>::iterator it = job_obj.find(obj_ptr);
+			if(it == job_obj.end()){
+				job_obj.insert(std::make_pair(obj_ptr, 1));
+			}else{
+				++it->second;
 			}
 			return true;
 		}
 	}
 
-	//returns true if thread_pool is stopped
-	bool is_stopped()
-	{
-		boost::mutex::scoped_lock lock(mutex);
-		return stopped;
-	}
-
 	//block until all jobs done
-	void join(void * const object_ptr = NULL)
+	void join(void * const obj_ptr = NULL)
 	{
 		boost::mutex::scoped_lock lock(mutex);
-		if(object_ptr == NULL){
-			//join on all
-			while(!job_objects.empty()){
-				join_cond.wait(mutex);
-			}
-		}else{
-			//join on jobs from specific object
-			while(job_objects.find(object_ptr) != job_objects.end()){
-				join_cond.wait(mutex);
-			}
+		while(job_obj.find(obj_ptr) != job_obj.end()){
+			join_cond.wait(mutex);
 		}
 	}
 
@@ -147,29 +156,29 @@ private:
 	public:
 		job(
 			const boost::function<void ()> & func_in = boost::function<void ()>(),
-			void * const object_ptr_in = NULL
+			void * const obj_ptr_in = NULL
 		):
 			func(func_in),
-			object_ptr(object_ptr_in)
+			obj_ptr(obj_ptr_in)
 		{}
 		boost::function<void ()> func;
-		void * object_ptr;
+		void * obj_ptr;
 	};
 
 	boost::mutex mutex;                      //locks everyting (object is a monitor)
-	boost::thread_group workers;             //worker threads
+	boost::thread_group workers;             //dispatcher() threads
 	boost::thread timeout_thread;            //timout_dispatcher() thread
-	boost::condition_variable_any job_cond;  //cond notified when job added
-	boost::condition_variable_any join_cond; //cond used for join
+	boost::condition_variable_any job_cond;  //notified when job added
+	boost::condition_variable_any join_cond; //notified when job added or job finished
 	bool stopped;                            //when true no jobs can be added
 	boost::uint64_t timeout_ms;              //incremented by timeout_thread
 
-	//new jobs pushed on back, dispatcher processes jobs on front
+	//new jobs pushed on back, jobs on front processed
 	std::list<job> job_queue;
 	//jobs enqueued after timeout, when timeout_ms >= key
 	std::multimap<boost::uint64_t, job> timeout_jobs;
-	//object pointers for pending and running jobs
-	std::multiset<void *> job_objects;
+	//obj_ptrs for queued and running jobs (std::map<obj_ptr, # of jobs>)
+	std::map<void *, unsigned> job_obj;
 
 	//consumes enqueued jobs, does call backs
 	void dispatcher()
@@ -187,9 +196,12 @@ private:
 			tmp.func();
 			{//BEGIN lock scope
 			boost::mutex::scoped_lock lock(mutex);
-			std::multiset<void *>::iterator it = job_objects.find(tmp.object_ptr);
-			if(it != job_objects.end()){
-				job_objects.erase(it);
+			std::map<void *, unsigned>::iterator it = job_obj.find(tmp.obj_ptr);
+			assert(it != job_obj.end());
+			if(it->second == 1){
+				job_obj.erase(it);
+			}else{
+				--it->second;
 			}
 			}//END lock scope
 			join_cond.notify_all();
@@ -216,7 +228,7 @@ private:
 
 /*
 Thread pool that shares threads globally. The functions are equivalent to those
-in thread_pool but they all work with the object_ptr passed to the ctor.
+in thread_pool but they all work with the obj_ptr passed to the ctor.
 note: instantiate at bottom of header so join() works correctly
 */
 class thread_pool_global : private boost::noncopyable
@@ -231,8 +243,8 @@ public:
 		be easy to forget to specify object in initializer list if default
 		initialization allowed.
 	*/
-	explicit thread_pool_global(void * const object_ptr_in):
-		object_ptr(object_ptr_in),
+	explicit thread_pool_global(void * const obj_ptr_in):
+		obj_ptr(obj_ptr_in),
 		stopped(false),
 		running_jobs(0),
 		TPW_Singleton(thread_pool_wrap::singleton())
@@ -249,7 +261,7 @@ public:
 	{
 		boost::mutex::scoped_lock lock(Mutex);
 		job_queue.clear();
-		TPW_Singleton->get().clear(object_ptr);
+		TPW_Singleton->TP.clear(obj_ptr);
 	}
 
 	bool enqueue(const boost::function<void ()> & func)
@@ -261,8 +273,8 @@ public:
 			if(running_jobs < pool_size){
 				++running_jobs;
 				//wrap the call back to potentially schedule other jobs
-				return TPW_Singleton->get().enqueue(
-					boost::bind(&thread_pool_global::call_back_wrap, this, func), object_ptr);
+				return TPW_Singleton->TP.enqueue(
+					boost::bind(&thread_pool_global::call_back_wrap, this, func), obj_ptr);
 			}else{
 				//schedule job
 				job_queue.push_back(func);
@@ -281,8 +293,8 @@ public:
 				if(running_jobs < pool_size){
 					++running_jobs;
 					//wrap the call back to potentially schedule other jobs
-					return TPW_Singleton->get().enqueue(
-						boost::bind(&thread_pool_global::call_back_wrap, this, func), object_ptr);
+					return TPW_Singleton->TP.enqueue(
+						boost::bind(&thread_pool_global::call_back_wrap, this, func), obj_ptr);
 				}else{
 					//schedule job
 					job_queue.push_back(func);
@@ -290,21 +302,15 @@ public:
 				}
 			}else{
 				//enqueue job after delay
-				return TPW_Singleton->get().enqueue(boost::bind(
-					&thread_pool_global::enqueue, this, func), delay_ms, object_ptr);
+				return TPW_Singleton->TP.enqueue(boost::bind(
+					&thread_pool_global::enqueue, this, func), delay_ms, obj_ptr);
 			}
 		}
 	}
 
-	bool is_stopped()
-	{
-		boost::mutex::scoped_lock lock(Mutex);
-		return stopped || TPW_Singleton->get().is_stopped();
-	}
-
 	void join()
 	{
-		TPW_Singleton->get().join(object_ptr);
+		TPW_Singleton->TP.join(obj_ptr);
 	}
 
 	void start()
@@ -328,25 +334,19 @@ private:
 		thread_pool_wrap():
 			TP(pool_size)
 		{}
-
-		thread_pool & get()
-		{
-			return TP;
-		}
-	private:
 		thread_pool TP;
 	};
 
 	boost::mutex Mutex;      //locks everything (object is a monitor)
-	void * const object_ptr; //object_ptr parameter for thread_pool
-	bool stopped;            //true if thread_pool_global object stopped
+	void * const obj_ptr; //passed to global thread pool
+	bool stopped;            //if true thread_pool_global doesn't allow new jobs
 
 	/*
 	We don't want one object to hog the global thread pool so we maintain a
 	job_queue specific to the object. We limit how many concurrent jobs we give
 	to the global thread pool and put the overflow in this container.
 	*/
-	unsigned running_jobs;
+	unsigned running_jobs; //# of jobs sent to global thread pool
 	std::list<boost::function<void ()> > job_queue;
 
 	/*
@@ -372,7 +372,8 @@ private:
 			++running_jobs;
 			boost::function<void ()> tmp = job_queue.front();
 			job_queue.pop_front();
-			TPW_Singleton->get().enqueue(boost::bind(&thread_pool_global::call_back_wrap, this, tmp), object_ptr);
+			TPW_Singleton->TP.enqueue(
+				boost::bind(&thread_pool_global::call_back_wrap, this, tmp), obj_ptr);
 		}
 		}//END lock scope
 	}

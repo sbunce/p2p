@@ -4,6 +4,7 @@ net::proactor_impl::proactor_impl(
 	const boost::function<void (proactor::connection_info &)> & connect_call_back,
 	const boost::function<void (proactor::connection_info &)> & disconnect_call_back
 ):
+	stopped(true),
 	Dispatcher(connect_call_back, disconnect_call_back),
 	network_loop_time(std::time(NULL)),
 	incoming_connection_limit(512),
@@ -399,10 +400,11 @@ void net::proactor_impl::set_max_upload_rate(const unsigned rate)
 void net::proactor_impl::start(boost::shared_ptr<listener> Listener_in)
 {
 	boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
-	if(!Thread_Pool.is_stopped()){
+	if(!stopped){
 		LOG << "proactor already started";
-		exit(1);
+		return;
 	}
+	stopped = false;
 	if(Listener_in){
 		assert(Listener_in->is_open());
 		Listener = Listener_in;
@@ -419,6 +421,11 @@ void net::proactor_impl::start(boost::shared_ptr<listener> Listener_in)
 void net::proactor_impl::stop()
 {
 	boost::recursive_mutex::scoped_lock lock(start_stop_mutex);
+	if(stopped){
+		LOG << "proactor already stopped";
+		return;
+	}
+	stopped = true;
 
 	//stop networking thread
 	Thread_Pool.stop();

@@ -52,6 +52,7 @@ public:
 private:
 	//lock for starting/stopping proactor
 	boost::recursive_mutex start_stop_mutex;
+	bool stopped;
 
 	ID_manager ID_Manager;
 	dispatcher Dispatcher;
