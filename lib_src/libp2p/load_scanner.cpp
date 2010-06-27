@@ -12,60 +12,113 @@ load_scanner::~load_scanner()
 	Thread_Pool.clear();
 }
 
-void load_scanner::load(const boost::filesystem::path & path)
+void load_scanner::load(const boost::filesystem::path & load_file)
 {
 	//verify file has .p2p extension
-	std::string path_str = path.string();
+	std::string path_str = load_file.string();
 	boost::regex expr(".+\\.p2p");
 	if(!boost::regex_match(path_str.begin(), path_str.end(), expr)){
 		LOG << "foreign file \"" << path_str << "\"";
-		if(boost::filesystem::exists(path::load_bad_dir() + path.filename())){
-			//resolve naming conflict and move file
+		if(boost::filesystem::exists(path::load_bad_dir() + load_file.filename())){
+			//resolve naming conflict and move foreign file
 			unsigned num = 1;
 			while(true){
 				std::stringstream new_path;
-				new_path << path::load_bad_dir() << path.filename() << "_" << num++;
+				new_path << path::load_bad_dir() << load_file.filename() << "_" << num++;
 				if(!boost::filesystem::exists(new_path.str())){
-					boost::filesystem::rename(path, new_path.str());
+					boost::filesystem::rename(load_file, new_path.str());
 					break;
 				}
 			}
 		}else{
-			//move file
-			boost::filesystem::rename(path, path::load_bad_dir() + path.filename());
+			//move foreign file
+			boost::filesystem::rename(load_file, path::load_bad_dir() + load_file.filename());
 		}
 		return;
 	}
 
-	//read file
+	//used to insure paths are unique
+	std::set<boost::filesystem::path> path_set;
+
+	//used to insure only one directory or file created in download directory
+	boost::filesystem::path first_path;
+
 	std::fstream fin(path_str.c_str(), std::ios::in);
 	std::string buf;
 	while(std::getline(fin, buf)){
 		//min row size is hex hash + 1 char file name
 		if(buf.size() < SHA1::hex_size + 1){
-			LOG << "row < " << SHA1::hex_size + 1;
-			return;
+			LOG << "error, row size less than minimum";
+			goto end;
 		}
-		//max row size is hex hash + 256 char file name
-		if(buf.size() > SHA1::hex_size + 255){
-			LOG << "row > " << SHA1::hex_size + 255;
-			return;
+		std::string hash = buf.substr(0, SHA1::hex_size);
+		std::string tmp = buf.substr(SHA1::hex_size);
+		boost::filesystem::path path(tmp);
+		boost::to_lower(tmp);
+		boost::filesystem::path path_lower;
+
+		//only allow creation of one top level directory or file
+		if(first_path.empty()){
+			first_path = path;
+		}else{
+
+//DEBUG, this will fail on mixed case on POSIX system
+
+			if(*path_lower.begin() != *first_path.begin()){
+				LOG << "error, multiple top level files";
+				goto end;
+			}
 		}
+
+
+/*
+		//rule 2: directory and file names < 255 chars
+		for(boost::filesystem::path::iterator it_cur = path.begin(),
+			it_end = path.end(); it_cur != it_end; ++it_cur)
+		{
+			if(it_cur->size() > 255){
+				LOG << "error, directory or file name > 255 chars";
+				goto end;
+			}
+		}
+
+		//rule 3: file extensions are lower case
+		std::string::size_type pos = path.filename().find(".");
+		if(pos != std::string::npos){
+			std::string file_extension = path.filename().substr(pos);
+			if(!boost::all(file_extension, boost::is_lower())){
+				LOG << "error, upper case file extension";
+				goto end;
+			}
+		}
+
 		//verify hash contains only hex chars
-		if(!convert::hex_validate(std::string(buf, 0, SHA1::hex_size))){
+		if(!convert::hex_validate(hash)){
 			LOG << "hash contains non-hex chars";
-			return;
+			goto end;
 		}
-		//stop directory traversal
-		if(buf.find("..") != std::string::npos){
+
+		//verify there is no directory traversal
+		if(path.string().find("..") != std::string::npos){
 			LOG << "\"..\" not allowed";
+			goto end;
 		}
-		//everything checks out
-		start(std::string(buf, 0, SHA1::hex_size), std::string(buf, SHA1::hex_size));
+
+		//verify path is unique
+		std::pair<std::set<boost::filesystem::path>::iterator, bool>
+			ret = path_set.insert(path);
+		if(!ret.second){
+			LOG << "duplicate path";
+			goto end;
+		}
+*/
+		LOG << hash << " " << path;
 	}
 
-	//remove loaded file
-	boost::filesystem::remove(path);
+	//start downloads
+
+	end:
+	boost::filesystem::remove(load_file);
 }
 
 void load_scanner::scan()

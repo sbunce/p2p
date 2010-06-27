@@ -1,42 +1,67 @@
 Load File Format
 ================
 
-There are two different file formats that can be used to start a download. One
-file format downloads a single file. The other file format downloads a
-directory. Nested directories are not supported. The name of the files for both
-formats must end in ".p2p".
+Load File Rules:
+1. The name of the load file must end in ".p2p".
+2. The load file must contain hash (40 byte hex) path pairs (the hash followed by
+the path). Each line ends with "\n" or "\r\n".
+
+Path Rules:
+1. A maximum of one file or one directory can be created within the users
+download directory. This is to stop a load file from polluting the users
+download directory and making it difficult for the user to find anything.
+2. File and directory names are a maximum of 255 characters. When generating a
+load file additional characters should be truncated.
+3. File extensions are all lower case. When generating a load file upper case
+file extensions should be converted to lower case. For example "foo.ZIP" ->
+"foo.zip".
+4. File and directory names must not end with period(s). When generating a load
+file files or directories ending with period(s) should have the period(s)
+truncated.
+5. File and directory names are case sensitive on platforms that support it.
+When a naming conflict is found on a case insensitive platform one of the files
+or directories should be renamed in such a way that preserves the original file
+name. For example, "foo.avi" -> "foo_1.avi".
+6. Paths must begin with a valid file or directory name.
+7. Paths can not contain "..". Directory traversal is not allowed.
+8. If a directory or file naming conflict is found in the top level download
+directory the directory or file name should be renamed in such a way that
+preserves the original file name. For example, "foo" -> "foo_1".
+9. Directories in a path are delimited by '/'.
+10. Empty directories and files should have their hash set to all periods.
+11. The following characters are allowed in directory and file names:
+${}^[]`=,;abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ._- 0123456789
+note: Spaces are allowed in both directories and file names.
+12. All paths in a load file must be unique (the hashes don't need to be).
 
 
-Single File
------------
-File downloaded will be the name of the load file without the ".p2p". For
-example "foo.avi.p2p" downloads file "foo.avi".
+Examples
+========
 
-The file must contain the file hash (40 byte hex).
+Valid:
+DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFtest/foo
+0123456789ABCDEF0123456789ABCDEF01234567test/bar
 
+Valid:
+DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFfoo
 
-Directory
----------
-Directory downloaded will be the name of the load file without the ".p2p". For
-example "bar.p2p" downloads directory "bar".
+Valid:
+........................................foo
 
-The file must contain lines which consist of the file hash (40 byte hex)
-followed by the file name (255 char max). Both types of line breaks are
-supported ("\n" and "\r\n").
+Invalid (not allowed to create > 1 top level files):
+DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFfoo
+0123456789ABCDEF0123456789ABCDEF01234567bar
 
-Example (file named "test.p2p"):
-DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFfoo.avi
-0123456789ABCDEF0123456789ABCDEF01234567bar.avi
+Invalid (not allowed to create > 1 top level directories):
+DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFtest_1/foo
+0123456789ABCDEF0123456789ABCDEF01234567test_2/bar
 
-This would create a directory named "test" and download "foo.avi" and "bar.avi"
-in to it.
-
-
-Allowed Characters
-------------------
-${}^[]`=,;`abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ._-0123456789.
+Invalid (not valid hex):
+ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZfoo
 
 
-EOF Empty Line
---------------
-One empty line on the end of the file is allowed.
+Parsing
+=======
+
+Load files should be strictly parsed. If the load file is malformed nothing from
+within it should be loaded without user intervention.

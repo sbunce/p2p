@@ -12,10 +12,12 @@
 #include <thread_pool.hpp>
 #include <logger.hpp>
 #include <SHA1.hpp>
+#include <boost/algorithm/string.hpp>
 
 //standard
 #include <fstream>
 #include <set>
+#include <string>
 
 class load_scanner : private boost::noncopyable
 {
@@ -24,7 +26,6 @@ public:
 	~load_scanner();
 
 private:
-
 	/*
 	load:
 		Load file at path.
@@ -33,7 +34,7 @@ private:
 	start:
 		Start download.
 	*/
-	void load(const boost::filesystem::path & path);
+	void load(const boost::filesystem::path & load_file);
 	void scan();
 	void start(const std::string & hash, const std::string file_name);
 
