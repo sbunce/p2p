@@ -17,11 +17,11 @@ file extensions should be converted to lower case. For example "foo.ZIP" ->
 "foo.zip".
 4. File and directory names must not end with period(s). When generating a load
 file files or directories ending with period(s) should have the period(s)
-truncated.
+truncated
 5. File and directory names are case sensitive on platforms that support it.
 When a naming conflict is found on a case insensitive platform one of the files
-or directories should be renamed in such a way that preserves the original file
-name. For example, "foo.avi" -> "foo_1.avi".
+or directories should be renamed in such a way that preserves the original name.
+For example, "foo.avi" -> "foo_1.avi".
 6. Paths must begin with a valid file or directory name.
 7. Paths can not contain "..". Directory traversal is not allowed.
 8. If a directory or file naming conflict is found in the top level download

@@ -37,10 +37,10 @@ void load_scanner::load(const boost::filesystem::path & load_file)
 		return;
 	}
 
-	//used to insure paths are unique
-	std::set<boost::filesystem::path> path_set;
+	//std::map<path_upper, path>, used to check for case conflicts
+	std::map<boost::filesystem::path, boost::filesystem::path> path_map;
 
-	//used to insure only one directory or file created in download directory
+	//used to insure only one top level directory or file created
 	boost::filesystem::path first_path;
 
 	std::fstream fin(path_str.c_str(), std::ios::in);
@@ -54,23 +54,18 @@ void load_scanner::load(const boost::filesystem::path & load_file)
 		std::string hash = buf.substr(0, SHA1::hex_size);
 		std::string tmp = buf.substr(SHA1::hex_size);
 		boost::filesystem::path path(tmp);
-		boost::to_lower(tmp);
-		boost::filesystem::path path_lower;
+		boost::to_upper(tmp);
+		boost::filesystem::path path_upper;
 
 		//only allow creation of one top level directory or file
 		if(first_path.empty()){
 			first_path = path;
 		}else{
-
-//DEBUG, this will fail on mixed case on POSIX system
-
-			if(*path_lower.begin() != *first_path.begin()){
+			if(*path.begin() != *first_path.begin()){
 				LOG << "error, multiple top level files";
 				goto end;
 			}
 		}
-
-
 /*
 		//rule 2: directory and file names < 255 chars
 		for(boost::filesystem::path::iterator it_cur = path.begin(),

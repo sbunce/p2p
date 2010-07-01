@@ -1,6 +1,7 @@
 SConscript([
 	'libnet/SConscript',
 	'libp2p/SConscript',
+	'libslz/SConscript',
 	'libsqlite3/SConscript',
 	'libtommath/SConscript'
 ])
