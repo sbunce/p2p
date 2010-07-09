@@ -1,0 +1,58 @@
+Serialize
+=========
+The serialization format is similar to protocol buffers. However, it is NOT
+compatible.
+http://code.google.com/apis/protocolbuffers/docs/encoding.html#structure
+
+The protocol consists of key/value pairs. The key is a vint (variable length
+unsigned int) which specifies field ID and the wire format of the value.
+
+vint
+====
+All vints are unsigned and little-endian. Each byte in a vint only uses 7 bits
+to store data, the MSB (most sig bit) is used to indicate if there is another
+byte in the vint. Vints can be a maximum of 10 bytes to support 64bit integers.
+
+	+---+---+---+---+---+---+---+---+   +---+---+---+---+---+---+---+---+
+	| 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | + | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
+	+---+---+---+---+---+---+---+---+   +---+---+---+---+---+---+---+---+
+	  7   6   5   4   3   2   1   0       7   6   5   4   3   2   1   0
+                 byte 0                              byte 1
+
+This example shows a vint which stores the number 128. Byte 0 has the MSB set to
+indicate that another byte follows. Byte 1 doesn't have the MSB set to indicate
+it is the last byte. Byte 1 has it's LSB (least sig bit) set which is a data
+bit. Since the 8th data bit is set this vint is equal to 128.
+
+Signed integers can be converted to unsigned by shifting them left by 1 and
+using the LSB for the sign bit. This is necessary to be able to store signed
+numbers in a vint. The code for this:
+
+boost::uint64_t encode_int(const boost::int64_t x)
+{
+	return (x << 1) ^ (x >> 63);
+}
+
+boost::int64_t decode_int(const boost::uint64_t x)
+{
+	return (x >> 1) ^ -static_cast<boost::int64_t>(x & 1);
+}
+
+
+key
+===
+The key is a vint. The LSB of the key is the wire format. The rest of the key is
+the message ID. If the LSB is set to 0 there will be a vint value. If the LSB is
+set to 1 there will be a length delimited value. A length delimited value starts
+with a vint that specifies how many bytes will follow it.
+
+The reason for using the LSB of the key to indicate wire format is that we need
+to be able to ignore unknown key/value pairs. This allows updating of the
+protocol without breaking old clients.
+
+
+message
+=======
+A message consists of one or more key/value pairs grouped together. A message is
+prefixed with a vint that is the length (bytes) of the following message. The
+message fields can be in any order.
