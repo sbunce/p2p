@@ -1,4 +1,3 @@
 SConscript([
-	'slz/SConscript',
 	'unit_tests/SConscript'
 ])

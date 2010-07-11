@@ -1,5 +1,5 @@
 //include
-#include <slz.hpp>
+#include <slz/slz.hpp>
 
 int fail(0);
 
@@ -16,6 +16,22 @@ int main()
 		LOG; ++fail;
 	}
 	if(!ASCII || !par_ASCII || *ASCII != *par_ASCII){
+		LOG; ++fail;
+	}
+
+	//bool
+	slz::boolean<0> boolean = true, par_boolean;
+	if(!par_boolean.parse(boolean.serialize())){
+		LOG; ++fail;
+	}
+	if(!boolean || !par_boolean || *boolean != *par_boolean){
+		LOG; ++fail;
+	}
+	boolean = false;
+	if(!par_boolean.parse(boolean.serialize())){
+		LOG; ++fail;
+	}
+	if(!boolean || !par_boolean || *boolean != *par_boolean){
 		LOG; ++fail;
 	}
 

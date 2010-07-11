@@ -1,5 +1,5 @@
 //include
-#include <slz.hpp>
+#include <slz/slz.hpp>
 
 int fail(0);
 
