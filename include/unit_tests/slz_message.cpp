@@ -17,34 +17,27 @@ public:
 	slz::string<1> string;
 	slz::uint<2> uint;
 	slz::sint<3> sint;
+	slz::vector<slz::ASCII<4> > ASCII_vec;
 };
 
 int main()
 {
-	std::string test_string =
+	std::string test_str =
 		" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNO"
 		"PQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
-	unsigned test_uint = 123;
-	int test_sint = -123;
-	boost::shared_ptr<test> Test(new test());
-	Test->ASCII = test_string;
-	Test->string = test_string;
-	Test->uint = test_uint;
-	Test->sint = test_sint;
-	std::string buf = Test->serialize();
-	if(!Test->parse(buf)){
+	
+	test Test, par_Test;
+	Test.ASCII = test_str;
+	Test.string = test_str;
+	Test.uint = 123;
+	Test.sint = -123;
+	Test.ASCII_vec->push_back(test_str);
+	Test.ASCII_vec->push_back(test_str);
+
+	if(!par_Test.parse(Test.serialize())){
 		LOG; ++fail;
 	}
-	if(!Test->ASCII || *Test->ASCII != test_string){
-		LOG; ++fail;
-	}
-	if(!Test->string || *Test->string != test_string){
-		LOG; ++fail;
-	}
-	if(!Test->uint || *Test->uint != test_uint){
-		LOG; ++fail;
-	}
-	if(!Test->sint || *Test->sint != test_sint){
+	if(Test != par_Test){
 		LOG; ++fail;
 	}
 

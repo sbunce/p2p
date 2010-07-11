@@ -14,6 +14,7 @@
 #include <list>
 #include <map>
 #include <string>
+#include <vector>
 
 namespace slz{
 
@@ -110,8 +111,8 @@ std::list<std::string> message_to_fields(std::string buf)
 		}
 		buf.erase(0, key_vint.size());
 		boost::uint64_t key = vint_to_uint(key_vint);
-		bool len_delim = (key & 1);
-		if(len_delim){
+		bool key_length_delim = (key & 1);
+		if(key_length_delim){
 			std::string f_size_vint = vint_parse(buf);
 			if(f_size_vint.empty() || buf.empty()){
 				return std::list<std::string>();
@@ -148,8 +149,8 @@ std::list<boost::uint64_t> message_to_field_IDs(const std::string & buf)
 	{
 		std::string key_vint = vint_parse(*it_cur);
 		boost::uint64_t key = vint_to_uint(key_vint);
-		boost::uint64_t field_ID = (key >> 1);
-		tmp.push_back(field_ID);
+		boost::uint64_t field_UID = (key >> 1);
+		tmp.push_back(field_UID);
 	}
 	return tmp;
 }
@@ -158,6 +159,14 @@ std::list<boost::uint64_t> message_to_field_IDs(const std::string & buf)
 class field
 {
 public:
+	/*
+	Derived classes must define the following.
+
+	static const boost::uint64_t field_UID;
+	static const bool length_delim = true;
+	typedef <type field holds> value_type;
+	*/
+
 	/*
 	operator bool:
 		True if field set (acts like boost::optional).
@@ -176,10 +185,31 @@ public:
 };
 
 //7-bit ASCII encoded variable length string (max_val_size is 7 bit groups)
-template<boost::uint64_t field_ID>
+template<boost::uint64_t T_field_UID>
 class ASCII : public field
 {
 public:
+	static const boost::uint64_t field_UID = T_field_UID;
+	static const bool length_delim = true;
+	typedef std::string value_type;
+
+	ASCII()
+	{
+
+	}
+
+	ASCII(const std::string & val_in):
+		val(val_in)
+	{
+
+	}
+
+	ASCII(const char * val_in):
+		val(val_in)
+	{
+
+	}
+
 	ASCII & operator = (const std::string & rval)
 	{
 		val = rval;
@@ -188,29 +218,27 @@ public:
 
 	std::string & operator * ()
 	{
-		return *val;
+		return val;
 	}
 
-	boost::optional<std::string> & operator -> ()
-	{
-		return *val;
-	}
-
-	virtual operator bool () const
+	std::string & operator -> ()
 	{
 		return val;
 	}
 
+	virtual operator bool () const
+	{
+		return !val.empty();
+	}
+
 	virtual void clear()
 	{
-		if(val){
-			val.reset();
-		}
+		val.clear();
 	}
 
 	virtual boost::uint64_t ID() const
 	{
-		return field_ID;
+		return field_UID;
 	}
 
 	virtual bool parse(std::string buf)
@@ -222,9 +250,9 @@ public:
 			return false;
 		}
 		boost::uint64_t key = vint_to_uint(key_vint);
-		boost::uint64_t key_field_ID = (key >> 1);
-		bool len_delim = (key & 1);
-		if(key_field_ID != field_ID || len_delim != true){
+		boost::uint64_t key_field_UID = (key >> 1);
+		bool key_length_delim = (key & 1);
+		if(key_field_UID != field_UID || key_length_delim != true){
 			return false;
 		}
 		std::string len_vint = vint_parse(buf);
@@ -242,21 +270,21 @@ public:
 
 	virtual std::string serialize() const
 	{
-		if(!val || val->empty() || !is_ASCII(*val)){
+		if(val.empty() || !is_ASCII(val)){
 			return "";
 		}
-		boost::uint64_t key = (field_ID << 1);
+		boost::uint64_t key = (field_UID << 1);
 		key |= 1;
 		std::string tmp;
 		tmp += uint_to_vint(key);
-		std::string enc = ASCII_encode(*val);
+		std::string enc = ASCII_encode(val);
 		tmp += uint_to_vint(enc.size()) + enc;
 		return tmp;
 	}
 
 private:
 	//stores unencoded string
-	boost::optional<std::string> val;
+	std::string val;
 
 	//ASCII stored in 8 bits -> ASCII stored in 7 bits
 	std::string ASCII_encode(const std::string & str) const
@@ -324,10 +352,25 @@ private:
 };
 
 //signed integer
-template<boost::uint64_t field_ID>
+template<boost::uint64_t T_field_UID>
 class sint : public field
 {
 public:
+	static const boost::uint64_t field_UID = T_field_UID;
+	static const bool length_delim = false;
+	typedef boost::int64_t value_type;
+
+	sint()
+	{
+
+	}
+
+	sint(const boost::int64_t & val_in):
+		val(val_in)
+	{
+
+	}
+
 	sint & operator = (const boost::int64_t rval)
 	{
 		val = rval;
@@ -353,7 +396,7 @@ public:
 
 	virtual boost::uint64_t ID() const
 	{
-		return field_ID;
+		return field_UID;
 	}
 
 	virtual bool parse(std::string buf)
@@ -365,9 +408,9 @@ public:
 			return false;
 		}
 		boost::uint64_t key = vint_to_uint(key_vint);
-		boost::uint64_t key_field_ID = (key >> 1);
-		bool len_delim = (key & 1);
-		if(key_field_ID != field_ID || len_delim != false){
+		boost::uint64_t key_field_UID = (key >> 1);
+		bool key_length_delim = (key & 1);
+		if(key_field_UID != field_UID || key_length_delim != false){
 			return false;
 		}
 		std::string val_vint = vint_parse(buf);
@@ -384,7 +427,7 @@ public:
 		if(!val){
 			return "";
 		}
-		boost::uint64_t key = (field_ID << 1);
+		boost::uint64_t key = (field_UID << 1);
 		std::string tmp;
 		tmp += uint_to_vint(key);
 		tmp += uint_to_vint(encode_sint(*val));
@@ -408,10 +451,31 @@ private:
 };
 
 //variable length string (max_val_size is bytes)
-template<boost::uint64_t field_ID>
+template<boost::uint64_t T_field_UID>
 class string : public field
 {
 public:
+	static const boost::uint64_t field_UID = T_field_UID;
+	static const bool length_delim = true;
+	typedef std::string value_type;
+
+	string()
+	{
+
+	}
+
+	string(const std::string & val_in):
+		val(val_in)
+	{
+
+	}
+
+	string(const char * val_in):
+		val(val_in)
+	{
+
+	}
+
 	string & operator = (const std::string & rval)
 	{
 		val = rval;
@@ -420,29 +484,27 @@ public:
 
 	std::string & operator * ()
 	{
-		return *val;
+		return val;
 	}
 
-	boost::optional<std::string> & operator -> ()
-	{
-		return *val;
-	}
-
-	virtual operator bool () const
+	std::string & operator -> ()
 	{
 		return val;
 	}
 
+	virtual operator bool () const
+	{
+		return !val.empty();
+	}
+
 	virtual void clear()
 	{
-		if(val){
-			val.reset();
-		}
+		val.clear();
 	}
 
 	virtual boost::uint64_t ID() const
 	{
-		return field_ID;
+		return field_UID;
 	}
 
 	virtual bool parse(std::string buf)
@@ -454,9 +516,9 @@ public:
 			return false;
 		}
 		boost::uint64_t key = vint_to_uint(key_vint);
-		boost::uint64_t key_field_ID = (key >> 1);
-		bool len_delim = (key & 1);
-		if(key_field_ID != field_ID || len_delim != true){
+		boost::uint64_t key_field_UID = (key >> 1);
+		bool key_length_delim = (key & 1);
+		if(key_field_UID != field_UID || key_length_delim != true){
 			return false;
 		}
 		std::string len_vint = vint_parse(buf);
@@ -474,26 +536,41 @@ public:
 
 	virtual std::string serialize() const
 	{
-		if(!val || val->empty()){
+		if(val.empty()){
 			return "";
 		}
-		boost::uint64_t key = (field_ID << 1);
+		boost::uint64_t key = (field_UID << 1);
 		key |= 1;
 		std::string tmp;
 		tmp += uint_to_vint(key);
-		tmp += uint_to_vint(val->size()) + *val;
+		tmp += uint_to_vint(val.size()) + val;
 		return tmp;
 	}
 
 private:
-	boost::optional<std::string> val;
+	std::string val;
 };
 
 //unsigned integer
-template<boost::uint64_t field_ID>
+template<boost::uint64_t T_field_UID>
 class uint : public field
 {
 public:
+	static const boost::uint64_t field_UID = T_field_UID;
+	static const bool length_delim = false;
+	typedef boost::uint64_t value_type;
+
+	uint()
+	{
+
+	}
+
+	uint(const boost::uint64_t val_in):
+		val(val_in)
+	{
+
+	}
+
 	uint & operator = (const boost::uint64_t rval)
 	{
 		val = rval;
@@ -519,7 +596,7 @@ public:
 
 	virtual boost::uint64_t ID() const
 	{
-		return field_ID;
+		return field_UID;
 	}
 
 	virtual bool parse(std::string buf)
@@ -531,9 +608,9 @@ public:
 			return false;
 		}
 		boost::uint64_t key = vint_to_uint(key_vint);
-		boost::uint64_t key_field_ID = (key >> 1);
-		bool len_delim = (key & 1);
-		if(key_field_ID != field_ID || len_delim != false){
+		boost::uint64_t key_field_UID = (key >> 1);
+		bool key_length_delim = (key & 1);
+		if(key_field_UID != field_UID || key_length_delim != false){
 			return false;
 		}
 		std::string val_vint = vint_parse(buf);
@@ -550,7 +627,7 @@ public:
 		if(!val){
 			return "";
 		}
-		boost::uint64_t key = (field_ID << 1);
+		boost::uint64_t key = (field_UID << 1);
 		std::string tmp;
 		tmp += uint_to_vint(key);
 		tmp += uint_to_vint(*val);
@@ -559,6 +636,166 @@ public:
 
 private:
 	boost::optional<boost::uint64_t> val;
+};
+
+//vector of fields of a specific type
+template<typename field_type>
+class vector : public field
+{
+public:
+	static const boost::uint64_t field_UID = field_type::field_UID;
+	static const bool length_delim = true;
+	typedef std::string value_type;
+
+	vector()
+	{
+
+	}
+
+	vector(const std::vector<field_type> & val_in):
+		val(val_in)
+	{
+
+	}
+
+	vector<field_type> & operator = (const std::vector<field_type> & rval)
+	{
+		val = rval;
+		return *this;
+	}
+
+	std::vector<field_type> & operator * ()
+	{
+		return val;
+	}
+
+	std::vector<field_type> * operator -> ()
+	{
+		return &val;
+	}
+
+	virtual operator bool () const
+	{
+		return !val.empty();
+	}
+
+	virtual void clear()
+	{
+		val.clear();
+	}
+
+	virtual boost::uint64_t ID() const
+	{
+		return field_type::field_UID;
+	}
+
+	virtual bool parse(std::string buf)
+	{
+		/*
+		To parse we take the key and prepend it to every list element before we
+		pass the list elements to be parsed by the field_type. This makes it so
+		fields don't have to understand the "packed" format.
+		*/
+		clear();
+		std::string key_vint = vint_parse(buf);
+		buf.erase(0, key_vint.size());
+		if(key_vint.empty() || buf.empty()){
+			return false;
+		}
+		boost::uint64_t key = vint_to_uint(key_vint);
+		boost::uint64_t key_field_UID = (key >> 1);
+		bool key_length_delim = (key & 1);
+		if(key_field_UID != field_type::field_UID || key_length_delim != true){
+			return false;
+		}
+		if(field_type::length_delim == false && key_length_delim == true){
+			/*
+			The vector is length delimited but the elements are not. Change the
+			length delimited bit on the key before passing it to the field
+			object to be parsed.
+			*/
+			key = (key >> 1) << 1;
+			key_vint = uint_to_vint(key);
+		}
+		std::string len_vint = vint_parse(buf);
+		buf.erase(0, len_vint.size());
+		if(len_vint.empty() || buf.empty()){
+			return false;
+		}
+		boost::uint64_t len = vint_to_uint(len_vint);
+		if(buf.size() != len){
+			return false;
+		}
+		while(!buf.empty()){
+			std::string packed_field;
+			if(field_type::length_delim){
+				std::string f_size_vint = vint_parse(buf);
+				if(f_size_vint.empty() || buf.empty()){
+					return false;
+				}
+				buf.erase(0, f_size_vint.size());
+				boost::uint64_t f_size = vint_to_uint(f_size_vint);
+				if(buf.size() < f_size){
+					return false;
+				}
+				std::string reassembled = key_vint + f_size_vint + buf.substr(0, f_size);
+				buf.erase(0, f_size);
+				field_type Field;
+				if(!Field.parse(reassembled)){
+					return false;
+				}
+				val.push_back(Field);
+			}else{
+				std::string val_vint = vint_parse(buf);
+				if(val_vint.empty()){
+					return false;
+				}
+				buf.erase(0, val_vint.size());
+				std::string reassembled = key_vint + val_vint;
+				field_type Field;
+				if(!Field.parse(reassembled)){
+					return false;
+				}
+				val.push_back(Field);
+			}
+		}
+		return true;
+	}
+
+	virtual std::string serialize() const
+	{
+		/*
+		Vector elements are "packed" together. Their keys are stripped. Only one
+		key is left at the start of the list. Format of a "packed" list is:
+		<key><field_size><val_size><val> + <val_size><val> + ...
+		*/
+		if(val.empty()){
+			return "";
+		}
+		std::string packed;
+		for(typename std::vector<field_type>::const_iterator it_cur = val.begin(),
+			it_end = val.end(); it_cur != it_end; ++it_cur)
+		{
+			std::string tmp = it_cur->serialize();
+			std::string key_vint = vint_parse(tmp);
+			if(key_vint.empty()){
+				continue;
+			}else{
+				tmp.erase(0, key_vint.size());
+			}
+			packed += tmp;
+		}
+		if(packed.empty()){
+			return "";
+		}
+		boost::uint64_t key = (field_type::field_UID << 1);
+		key |= 1;
+		packed = uint_to_vint(key) + uint_to_vint(packed.size()) + packed;
+		return packed;
+	}
+
+private:
+	std::vector<field_type> val;
 };
 
 //base class for user defined messages
@@ -570,6 +807,35 @@ public:
 	that typeid returns the derived type instead of the base type.
 	*/
 	virtual ~message(){}
+
+	bool operator == (const message & rval)
+	{
+		//message must be composed of same fields
+		if(Field.size() != rval.Field.size()){
+			return false;
+		}
+		//state of fields must be equal
+		for(std::map<boost::uint64_t, field *>::const_iterator
+			it_cur = Field.begin(), rval_it_cur = rval.Field.begin(),
+			it_end = Field.end(), rval_it_end = rval.Field.end();
+			it_cur != it_end; ++it_cur, ++rval_it_cur)
+		{
+			if(*it_cur->second != *rval_it_cur->second){
+				//one of the fields is set and one is not
+				return false;
+			}
+			if(it_cur->second->serialize() != rval_it_cur->second->serialize()){
+				//fields have different values
+				return false;
+			}
+		}
+		return true;
+	}
+
+	bool operator != (const message & rval)
+	{
+		return !(*this == rval);
+	}
 
 	//clear all fields
 	void clear()
@@ -612,8 +878,8 @@ public:
 				return false;
 			}
 			boost::uint64_t key = vint_to_uint(key_vint);
-			boost::uint64_t field_ID = (key >> 1);
-			std::map<boost::uint64_t, field *>::iterator it = Field.find(field_ID);
+			boost::uint64_t field_UID = (key >> 1);
+			std::map<boost::uint64_t, field *>::iterator it = Field.find(field_UID);
 			if(it != Field.end()){
 				if(!it->second->parse(*it_cur)){
 					return false;
