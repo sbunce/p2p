@@ -17,19 +17,14 @@ public:
 		key_val.clear();
 	}
 
-	virtual boost::uint64_t ID() const
-	{
-		return field_UID;
-	}
-
 	virtual bool parse(std::string buf)
 	{
-		std::string key_vint = vint_parse(buf);
-		if(key_vint.empty() || buf.size() <= key_vint.size()){
+		clear();
+		boost::optional<std::pair<boost::uint64_t, bool> > key = key_parse(buf);
+		if(!key){
 			return false;
 		}
-		boost::uint64_t key = vint_to_uint(key_vint);
-		field_UID = (key >> 1);
+		field_UID = key->first;
 		key_val = buf;
 		return true;
 	}
@@ -37,6 +32,11 @@ public:
 	virtual std::string serialize() const
 	{
 		return key_val;
+	}
+
+	virtual boost::uint64_t UID() const
+	{
+		return field_UID;
 	}
 
 private:

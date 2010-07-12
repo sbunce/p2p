@@ -44,27 +44,14 @@ public:
 		}
 	}
 
-	virtual boost::uint64_t ID() const
-	{
-		return field_UID;
-	}
-
 	virtual bool parse(std::string buf)
 	{
 		clear();
-		std::string key_vint = vint_parse(buf);
-		buf.erase(0, key_vint.size());
-		if(key_vint.empty() || buf.empty()){
+		boost::optional<std::pair<boost::uint64_t, bool> > key = key_split(buf);
+		if(!key || key->first != field_UID || key->second != false){
 			return false;
 		}
-		boost::uint64_t key = vint_to_uint(key_vint);
-		boost::uint64_t key_field_UID = (key >> 1);
-		bool key_length_delim = (key & 1);
-		if(key_field_UID != field_UID || key_length_delim != false){
-			return false;
-		}
-		std::string val_vint = vint_parse(buf);
-		buf.erase(0, val_vint.size());
+		std::string val_vint = vint_split(buf);
 		if(val_vint.empty() || !buf.empty()){
 			return false;
 		}
@@ -77,11 +64,15 @@ public:
 		if(!val){
 			return "";
 		}
-		boost::uint64_t key = (field_UID << 1);
-		std::string tmp;
-		tmp += uint_to_vint(key);
-		tmp += uint_to_vint(*val);
-		return tmp;
+		std::string ser;
+		ser += key_create(field_UID, false);
+		ser += uint_to_vint(*val);
+		return ser;
+	}
+
+	virtual boost::uint64_t UID() const
+	{
+		return field_UID;
 	}
 
 private:

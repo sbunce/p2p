@@ -86,68 +86,56 @@ std::string vint_parse(const std::string & buf)
 	}
 }
 
-//return all fields in message, or empty list if malformed message
-std::list<std::string> message_to_fields(std::string buf)
+/*
+Return vint from front of buf, empty string if invalid vint.
+Postcondition: If vint returned then vint removed from front of buf.
+*/
+std::string vint_split(std::string & buf)
 {
-	std::string m_size_vint = vint_parse(buf);
-	if(m_size_vint.empty() || buf.empty()){
-		return std::list<std::string>();
-	}
-	buf.erase(0, m_size_vint.size());
-	boost::uint64_t m_size = vint_to_uint(m_size_vint);
-	if(buf.size() != m_size){
-		return std::list<std::string>();
-	}
-	std::list<std::string> tmp_fields;
-	while(!buf.empty()){
-		std::string key_vint = vint_parse(buf);
-		if(key_vint.empty() || buf.empty()){
-			return std::list<std::string>();
-		}
-		buf.erase(0, key_vint.size());
-		boost::uint64_t key = vint_to_uint(key_vint);
-		bool key_length_delim = (key & 1);
-		if(key_length_delim){
-			std::string f_size_vint = vint_parse(buf);
-			if(f_size_vint.empty() || buf.empty()){
-				return std::list<std::string>();
-			}
-			buf.erase(0, f_size_vint.size());
-			boost::uint64_t f_size = vint_to_uint(f_size_vint);
-			if(buf.size() < f_size){
-				return std::list<std::string>();
-			}
-			tmp_fields.push_back(key_vint + f_size_vint + buf.substr(0, f_size));
-			buf.erase(0, f_size);
-		}else{
-			std::string val_vint = vint_parse(buf);
-			if(val_vint.empty()){
-				return std::list<std::string>();
-			}
-			buf.erase(0, val_vint.size());
-			tmp_fields.push_back(key_vint + val_vint);
-		}
-	}
-	return tmp_fields;
+	std::string vint = vint_parse(buf);
+	buf.erase(0, vint.size());
+	return vint;
 }
 
-//return all field_IDs in message, or empty list if malformed message
-std::list<boost::uint64_t> message_to_field_IDs(const std::string & buf)
+//return field key
+std::string key_create(boost::uint64_t field_UID, const bool length_delim)
 {
-	std::list<std::string> fields = message_to_fields(buf);
-	if(fields.empty()){
-		return std::list<boost::uint64_t>();
+	field_UID <<= 1;
+	if(length_delim){
+		field_UID |= 1;
 	}
-	std::list<boost::uint64_t> tmp;
-	for(std::list<std::string>::iterator it_cur = fields.begin(),
-		it_end = fields.end(); it_cur != it_end; ++it_cur)
-	{
-		std::string key_vint = vint_parse(*it_cur);
-		boost::uint64_t key = vint_to_uint(key_vint);
-		boost::uint64_t field_UID = (key >> 1);
-		tmp.push_back(field_UID);
+	return uint_to_vint(field_UID);
+}
+
+/*
+Return key from front of buf, nothing if malformed field.
+Precondition: Complete field must exist in front of buf.
+*/
+boost::optional<std::pair<boost::uint64_t, bool> > key_parse(const std::string & buf)
+{
+	std::string key_vint = vint_parse(buf);
+	if(key_vint.empty()){
+		return boost::optional<std::pair<boost::uint64_t, bool> >();
 	}
-	return tmp;
+	boost::uint64_t key = vint_to_uint(key_vint);
+	bool length_delim = (key & 1);
+	return std::make_pair(key >> 1, length_delim);
+}
+
+/*
+Return key from front of buf, nothing if malformed field.
+Precondition: Complete field must exist in front of buf.
+Postcondition: If key returned then key removed from front of buf.
+*/
+boost::optional<std::pair<boost::uint64_t, bool> > key_split(std::string & buf)
+{
+	std::string key_vint = vint_split(buf);
+	if(key_vint.empty()){
+		return boost::optional<std::pair<boost::uint64_t, bool> >();
+	}
+	boost::uint64_t key = vint_to_uint(key_vint);
+	bool length_delim = (key & 1);
+	return std::make_pair(key >> 1, length_delim);
 }
 
 }//end of namespace slz

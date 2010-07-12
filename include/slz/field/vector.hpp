@@ -47,11 +47,6 @@ public:
 		val.clear();
 	}
 
-	virtual boost::uint64_t ID() const
-	{
-		return field_type::field_UID;
-	}
-
 	virtual bool parse(std::string buf)
 	{
 		/*
@@ -60,28 +55,23 @@ public:
 		fields don't have to understand the "packed" format.
 		*/
 		clear();
-		std::string key_vint = vint_parse(buf);
-		buf.erase(0, key_vint.size());
+		std::string key_vint = vint_split(buf);
 		if(key_vint.empty() || buf.empty()){
 			return false;
 		}
-		boost::uint64_t key = vint_to_uint(key_vint);
-		boost::uint64_t key_field_UID = (key >> 1);
-		bool key_length_delim = (key & 1);
-		if(key_field_UID != field_type::field_UID || key_length_delim != true){
+		boost::optional<std::pair<boost::uint64_t, bool> > key = key_parse(key_vint);
+		if(!key || key->first != field_type::field_UID || key->second != true){
 			return false;
 		}
-		if(field_type::length_delim == false && key_length_delim == true){
+		if(field_type::length_delim == false && key->second == true){
 			/*
 			The vector is length delimited but the elements are not. Change the
 			length delimited bit on the key before passing it to the field
 			object to be parsed.
 			*/
-			key = (key >> 1) << 1;
-			key_vint = uint_to_vint(key);
+			key_vint = key_create(key->first, false);
 		}
-		std::string len_vint = vint_parse(buf);
-		buf.erase(0, len_vint.size());
+		std::string len_vint = vint_split(buf);
 		if(len_vint.empty() || buf.empty()){
 			return false;
 		}
@@ -92,11 +82,10 @@ public:
 		while(!buf.empty()){
 			std::string packed_field;
 			if(field_type::length_delim){
-				std::string f_size_vint = vint_parse(buf);
+				std::string f_size_vint = vint_split(buf);
 				if(f_size_vint.empty() || buf.empty()){
 					return false;
 				}
-				buf.erase(0, f_size_vint.size());
 				boost::uint64_t f_size = vint_to_uint(f_size_vint);
 				if(buf.size() < f_size){
 					return false;
@@ -109,11 +98,10 @@ public:
 				}
 				val.push_back(Field);
 			}else{
-				std::string val_vint = vint_parse(buf);
+				std::string val_vint = vint_split(buf);
 				if(val_vint.empty()){
 					return false;
 				}
-				buf.erase(0, val_vint.size());
 				std::string reassembled = key_vint + val_vint;
 				field_type Field;
 				if(!Field.parse(reassembled)){
@@ -140,21 +128,25 @@ public:
 			it_end = val.end(); it_cur != it_end; ++it_cur)
 		{
 			std::string tmp = it_cur->serialize();
-			std::string key_vint = vint_parse(tmp);
+			std::string key_vint = vint_split(tmp);
 			if(key_vint.empty()){
 				continue;
-			}else{
-				tmp.erase(0, key_vint.size());
 			}
 			packed += tmp;
 		}
 		if(packed.empty()){
 			return "";
 		}
-		boost::uint64_t key = (field_type::field_UID << 1);
-		key |= 1;
-		packed = uint_to_vint(key) + uint_to_vint(packed.size()) + packed;
-		return packed;
+		std::string ser;
+		ser += key_create(field_type::field_UID, true);
+		ser += uint_to_vint(packed.size());
+		ser += packed;
+		return ser;
+	}
+
+	virtual boost::uint64_t UID() const
+	{
+		return field_type::field_UID;
 	}
 
 private:

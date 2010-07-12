@@ -2,102 +2,112 @@
 #define H_SLZ_PARSER
 
 //custom
-#include "message.hpp"
+#include "field.hpp"
 
 namespace slz{
 
-//parser for incoming messages
+//parser for incoming fields
 class parser
 {
 public:
 	parser():
-		_good(true)
+		bad(false)
 	{}
 
 	/*
-	Add message parser will understand.
-	Postcondition: Message cleared.
+	Add field parser will understand.
+	Postcondition: Field cleared.
 	*/
-	void add_message(const boost::shared_ptr<message> & M)
+	void add_field(const boost::shared_ptr<field> & M)
 	{
 		assert(M);
-		std::list<boost::uint64_t> ID = M->ID();
-		for(std::list<boost::uint64_t>::iterator it_cur = ID.begin(),
-			it_end = ID.end(); it_cur != it_end; ++it_cur)
-		{
-			std::pair<std::map<boost::uint64_t, boost::shared_ptr<message> >::iterator, bool>
-				p = Message.insert(std::make_pair(*it_cur, M));
-			if(!p.second){
-				LOG << "error, field ID " << *it_cur << " not unique";
-				exit(1);
-			}
+		std::pair<std::map<boost::uint64_t, boost::shared_ptr<field> >::iterator, bool>
+			p = Field.insert(std::make_pair(M->UID(), M));
+		if(!p.second){
+			LOG << "error, field_UID " << M->UID() << " not unique";
+			exit(1);
 		}
 	}
 
-	//returns true if message in buf was malformed
-	bool good() const
+	//returns true if field in buf was malformed
+	bool bad_stream() const
 	{
-		return _good;
+		return bad;
 	}
 
 	/*
-	Parse messages in buf. Messages must have length prefixed. Returns empty
-	shared_ptr if incomplete message in buf.
-	Postcondition: Parsed message removed from buf.
+	Parse fields in buf. Fields must have length prefixed. Returns empty
+	shared_ptr if incomplete field in buf.
+	Postcondition: Parsed field removed from buf.
 	*/
-	boost::shared_ptr<message> parse(std::string & buf)
+	boost::shared_ptr<field> parse(std::string & buf)
 	{
-		std::string m_size_vint = vint_parse(buf);
-		if(m_size_vint.empty()){
-			return boost::shared_ptr<message>();
+		std::string f_buf = field_split(buf);
+		if(f_buf.empty()){
+			return boost::shared_ptr<field>();
 		}
-		boost::uint64_t m_size = vint_to_uint(m_size_vint);
-		if(buf.size() < m_size_vint.size() + m_size){
-			return boost::shared_ptr<message>();
+		boost::optional<std::pair<boost::uint64_t, bool> > key = key_parse(f_buf);
+		if(!key){
+			bad = true;
+			return boost::shared_ptr<field>();
 		}
-		std::string m_buf = buf.substr(0, m_size_vint.size() + m_size);
-		buf.erase(0, m_size_vint.size() + m_size);
-		std::list<boost::uint64_t> field_IDs = message_to_field_IDs(m_buf);
-		if(field_IDs.empty()){
-			_good = false;
-			return boost::shared_ptr<message>();
-		}
-		//all field_IDs must be from same parent message
-		boost::shared_ptr<message> found_parent;
-		for(std::list<boost::uint64_t>::iterator it_cur = field_IDs.begin(),
-			it_end = field_IDs.end(); it_cur != it_end; ++it_cur)
-		{
-			std::map<boost::uint64_t, boost::shared_ptr<message> >::iterator
-				it = Message.find(*it_cur);
-			if(it != Message.end()){
-				if(found_parent){
-					if(found_parent != it->second){
-						_good = false;
-						return boost::shared_ptr<message>();
-					}
-				}else{
-					found_parent = it->second;
-				}
-			}
-		}
-		if(found_parent){
-			if(found_parent->parse(m_buf)){
-				return found_parent;
+		std::map<boost::uint64_t, boost::shared_ptr<field> >::iterator
+			it = Field.find(key->first);
+		if(it == Field.end()){
+			boost::shared_ptr<field> Unknown(new unknown());
+			if(Unknown->parse(f_buf)){
+				return Unknown;
 			}else{
-				_good = false;
-				return boost::shared_ptr<message>();
+				return boost::shared_ptr<field>();
 			}
 		}else{
-			return boost::shared_ptr<message>();
+			if(it->second->parse(f_buf)){
+				return it->second;
+			}else{
+				bad = true;
+				return boost::shared_ptr<field>();
+			}
 		}
 	}
 
 private:
-	//true if bad message passed to parse
-	bool _good;
+	//true if bad field passed to parse
+	bool bad;
 
-	//maps field ID to message it belongs to
-	std::map<boost::uint64_t, boost::shared_ptr<message> > Message;
+	//maps field UID to field it belongs to
+	std::map<boost::uint64_t, boost::shared_ptr<field> > Field;
+
+	/*
+	Return field from front of buf, empty string if incomplete field.
+	Postcondition: If field returned then field removed from front of buf.
+	*/
+	std::string field_split(std::string & buf)
+	{
+		std::string key_vint = vint_parse(buf);
+		if(key_vint.empty() || key_vint.size() == buf.size()){
+			return "";
+		}
+		boost::uint64_t key = vint_to_uint(key_vint);
+		bool length_delim = (key & 1);
+		std::string tmp = buf.substr(key_vint.size(), 10);
+		if(length_delim){
+			std::string len_vint = vint_parse(tmp);
+			boost::uint64_t len = vint_to_uint(len_vint);
+			if(buf.size() < key_vint.size() + len_vint.size() + len){
+				return "";
+			}
+			tmp = buf.substr(0, key_vint.size() + len_vint.size() + len);
+			buf.erase(0, key_vint.size() + len_vint.size() + len);
+		}else{
+			std::string val_vint = vint_parse(tmp);
+			if(val_vint.empty()){
+				return "";
+			}
+			tmp = buf.substr(0, key_vint.size() + val_vint.size());
+			buf.erase(0, key_vint.size() + val_vint.size());
+		}
+		return tmp;
+	}
 };
 
 }//end of namespace slz

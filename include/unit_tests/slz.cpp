@@ -3,6 +3,44 @@
 
 int fail(0);
 
+class nested_message : public slz::message<6>
+{
+public:
+	nested_message()
+	{
+		add_field(ASCII);
+		add_field(string);
+		add_field(uint);
+		add_field(sint);
+	}
+	slz::ASCII<7> ASCII;
+	slz::string<2> string;
+	slz::uint<3> uint;
+	slz::sint<4> sint;
+	slz::vector<slz::ASCII<5> > ASCII_vec;
+};
+
+class message : public slz::message<0>
+{
+public:
+	message()
+	{
+		add_field(ASCII);
+		add_field(string);
+		add_field(uint);
+		add_field(sint);
+		add_field(Nested_Message);
+		add_field(Nested_Message_vec);
+	}
+	slz::ASCII<1> ASCII;
+	slz::string<2> string;
+	slz::uint<3> uint;
+	slz::sint<4> sint;
+	slz::vector<slz::ASCII<5> > ASCII_vec;
+	nested_message Nested_Message;
+	slz::vector<nested_message> Nested_Message_vec;
+};
+
 int main()
 {
 	//ASCII string for test
@@ -99,6 +137,55 @@ int main()
 		LOG; ++fail;
 	}
 	if(*uint_vv != *par_uint_vv){
+		LOG; ++fail;
+	}
+
+	//message	
+	boost::shared_ptr<message> Message(new message()), par_Message(new message());
+	//message data members
+	Message->ASCII = test_str;
+	Message->string = test_str;
+	Message->uint = 123;
+	Message->sint = -123;
+	Message->ASCII_vec->push_back(test_str);
+	Message->ASCII_vec->push_back(test_str);
+	//nested message data members
+	Message->Nested_Message.ASCII = test_str;
+	Message->Nested_Message.string = test_str;
+	Message->Nested_Message.uint = 123;
+	Message->Nested_Message.sint = -123;
+	Message->Nested_Message.ASCII_vec->push_back(test_str);
+	Message->Nested_Message.ASCII_vec->push_back(test_str);
+	//vector of messages
+	Message->Nested_Message_vec->push_back(Message->Nested_Message);
+	Message->Nested_Message_vec->push_back(Message->Nested_Message);
+	if(!par_Message->parse(Message->serialize())){
+		LOG; ++fail;
+	}
+	if(*Message != *par_Message){
+		LOG; ++fail;
+	}
+
+	//parser
+	slz::parser Parser;
+	Parser.add_field(Message);
+	std::string buf;
+	buf += Message->serialize();
+	buf += Message->serialize();
+	unsigned test_parsed = 0;
+	while(boost::shared_ptr<slz::field> M = Parser.parse(buf)){
+		if(typeid(*M) == typeid(message)){
+			message * par_Message = (message *)M.get();
+			if(*par_Message != *Message){
+				LOG; ++fail;
+			}
+			++test_parsed;
+		}
+	}
+	if(test_parsed != 2){
+		LOG; ++fail;
+	}
+	if(Parser.bad_stream()){
 		LOG; ++fail;
 	}
 
