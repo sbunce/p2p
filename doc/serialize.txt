@@ -49,10 +49,3 @@ with a vint that specifies how many bytes will follow it.
 The reason for using the LSB of the key to indicate wire format is that we need
 to be able to ignore unknown key/value pairs. This allows updating of the
 protocol without breaking old clients.
-
-
-message
-=======
-A message consists of one or more key/value pairs grouped together. A message is
-prefixed with a vint that is the length (bytes) of the following message. The
-message fields can be in any order.

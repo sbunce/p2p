@@ -14,10 +14,10 @@ public:
 		add_field(sint);
 	}
 	slz::ASCII<7> ASCII;
-	slz::string<2> string;
-	slz::uint<3> uint;
-	slz::sint<4> sint;
-	slz::vector<slz::ASCII<5> > ASCII_vec;
+	slz::string<8> string;
+	slz::uint<9> uint;
+	slz::sint<10> sint;
+	slz::vector<slz::ASCII<11> > ASCII_vec;
 };
 
 class message : public slz::message<0>
@@ -39,6 +39,30 @@ public:
 	slz::vector<slz::ASCII<5> > ASCII_vec;
 	nested_message Nested_Message;
 	slz::vector<nested_message> Nested_Message_vec;
+};
+
+//used to test handling of unrecognized fields
+class m_old : public slz::message<0>
+{
+public:
+	m_old()
+	{
+		add_field(string);
+	}
+	slz::string<1> string;
+	//note: old protocol doesn't have the uint field
+};
+
+class m_new : public slz::message<0>
+{
+public:
+	m_new()
+	{
+		add_field(string);
+		add_field(uint);
+	}
+	slz::string<1> string;
+	slz::uint<2> uint;
 };
 
 int main()
@@ -186,6 +210,18 @@ int main()
 		LOG; ++fail;
 	}
 	if(Parser.bad_stream()){
+		LOG; ++fail;
+	}
+
+	//unrecognized field
+	m_old M_Old;
+	m_new M_New;
+	M_New.string = test_str;
+	M_New.uint = 123;
+	if(!M_Old.parse(M_New.serialize())){
+		LOG; ++fail;
+	}
+	if(M_Old != M_New){
 		LOG; ++fail;
 	}
 

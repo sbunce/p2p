@@ -13,11 +13,19 @@ public:
 
 	virtual operator bool () const
 	{
-		return !Field.empty();
+		return !Field.empty() || !Unknown_Field.empty();
 	}
 
 	virtual void clear()
 	{
+		//erase unknown elements
+		for(std::map<boost::uint64_t, boost::shared_ptr<field> >::iterator
+			it_cur = Unknown_Field.begin(); it_cur != Unknown_Field.end();)
+		{
+			Field.erase(it_cur->first);
+			Unknown_Field.erase(it_cur++);
+		}
+		//clear known elements
 		for(std::map<boost::uint64_t, field *>::iterator it_cur = Field.begin(),
 			it_end = Field.end(); it_cur != it_end; ++it_cur)
 		{
