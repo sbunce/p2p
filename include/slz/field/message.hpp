@@ -116,9 +116,9 @@ private:
 		if(key_vint.empty() || buf.empty()){
 			return std::list<std::string>();
 		}
-		boost::uint64_t key = vint_to_uint(key_vint);
-		bool key_length_delim = (key & 1);
-		if(key_length_delim != true){
+		boost::optional<std::pair<boost::uint64_t, bool> >
+			key = key_parse(key_vint);
+		if(!key || key->second != true){
 			return std::list<std::string>();
 		}
 		std::string m_size_vint = vint_split(buf);
@@ -131,13 +131,12 @@ private:
 		}
 		std::list<std::string> tmp_fields;
 		while(!buf.empty()){
-			std::string key_vint = vint_split(buf);
+			key_vint = vint_split(buf);
 			if(key_vint.empty() || buf.empty()){
 				return std::list<std::string>();
 			}
-			boost::uint64_t key = vint_to_uint(key_vint);
-			bool key_length_delim = (key & 1);
-			if(key_length_delim){
+			key = key_parse(key_vint);
+			if(key->second){
 				std::string f_size_vint = vint_split(buf);
 				if(f_size_vint.empty() || buf.empty()){
 					return std::list<std::string>();

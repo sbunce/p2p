@@ -87,10 +87,13 @@ private:
 		if(key_vint.empty() || key_vint.size() == buf.size()){
 			return "";
 		}
-		boost::uint64_t key = vint_to_uint(key_vint);
-		bool length_delim = (key & 1);
+		boost::optional<std::pair<boost::uint64_t, bool> >
+			key = key_parse(key_vint);
+		if(!key){
+			return "";
+		}
 		std::string tmp = buf.substr(key_vint.size(), 10);
-		if(length_delim){
+		if(key->second){
 			std::string len_vint = vint_parse(tmp);
 			boost::uint64_t len = vint_to_uint(len_vint);
 			if(buf.size() < key_vint.size() + len_vint.size() + len){
