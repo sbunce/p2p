@@ -53,10 +53,11 @@ public:
 #include "field/unknown.hpp"
 #include "field/ASCII.hpp"
 #include "field/boolean.hpp"
+#include "field/list.hpp"
 #include "field/message.hpp"
 #include "field/sint.hpp"
 #include "field/string.hpp"
 #include "field/uint.hpp"
-#include "field/vector.hpp"
+
 
 #endif

@@ -1,23 +1,41 @@
 //include
 #include <slz/slz.hpp>
+#include <unit_test.hpp>
 
 int fail(0);
 
-class nested_message : public slz::message<6>
+//one of every ASCII character
+const std::string test_str(
+	" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNO"
+	"PQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+);
+
+class nested_message : public slz::message<7>
 {
 public:
 	nested_message()
 	{
 		add_field(ASCII);
+		add_field(boolean);
 		add_field(string);
-		add_field(uint);
 		add_field(sint);
+		add_field(uint);
+		add_field(ASCII_list);
+
+		ASCII = test_str;
+		boolean = false;
+		string = test_str;
+		uint = 123;
+		sint = -123;
+		ASCII_list->push_back(test_str);
+		ASCII_list->push_back(test_str);
 	}
-	slz::ASCII<7> ASCII;
-	slz::string<8> string;
-	slz::uint<9> uint;
-	slz::sint<10> sint;
-	slz::vector<slz::ASCII<11> > ASCII_vec;
+	slz::ASCII<8> ASCII;
+	slz::boolean<9> boolean;
+	slz::string<10> string;
+	slz::sint<12> sint;
+	slz::uint<11> uint;
+	slz::list<slz::ASCII<13> > ASCII_list;
 };
 
 class message : public slz::message<0>
@@ -26,181 +44,212 @@ public:
 	message()
 	{
 		add_field(ASCII);
+		add_field(boolean);
 		add_field(string);
-		add_field(uint);
 		add_field(sint);
-		add_field(Nested_Message);
-		add_field(Nested_Message_vec);
-	}
-	slz::ASCII<1> ASCII;
-	slz::string<2> string;
-	slz::uint<3> uint;
-	slz::sint<4> sint;
-	slz::vector<slz::ASCII<5> > ASCII_vec;
-	nested_message Nested_Message;
-	slz::vector<nested_message> Nested_Message_vec;
-};
-
-//used to test handling of unrecognized fields
-class m_old : public slz::message<0>
-{
-public:
-	m_old()
-	{
-		add_field(string);
-	}
-	slz::string<1> string;
-	//note: old protocol doesn't have the uint field
-};
-
-class m_new : public slz::message<0>
-{
-public:
-	m_new()
-	{
-		add_field(string);
 		add_field(uint);
+		add_field(ASCII_list);
+		add_field(Nested_Message);
+		add_field(Nested_Message_list);
+
+		ASCII = test_str;
+		boolean = true;
+		string = test_str;
+		uint = 123;
+		sint = -123;
+		ASCII_list->push_back(test_str);
+		ASCII_list->push_back(test_str);
+		Nested_Message_list->push_back(Nested_Message);
+		Nested_Message_list->push_back(Nested_Message);
 	}
-	slz::string<1> string;
-	slz::uint<2> uint;
+
+	slz::ASCII<1> ASCII;
+	slz::boolean<2> boolean;
+	slz::string<3> string;
+	slz::sint<5> sint;
+	slz::uint<4> uint;
+	slz::list<slz::ASCII<6> > ASCII_list;
+	nested_message Nested_Message;
+	slz::list<nested_message> Nested_Message_list;
 };
 
-int main()
+void ASCII_field()
 {
-	//ASCII string for test
-	std::string test_str = 
-		" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNO"
-		"PQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+	slz::ASCII<0> field = test_str, parsed_field;
+	if(!parsed_field.parse(field.serialize())){
+		LOG; ++fail;
+	}
+	if(!field || !parsed_field || *field != *parsed_field){
+		LOG; ++fail;
+	}
+}
 
-	//ASCII
-	slz::ASCII<0> ASCII = test_str, par_ASCII;
-	if(!par_ASCII.parse(ASCII.serialize())){
+void boolean_field()
+{
+	slz::boolean<0> field = true, parsed_field;
+	if(!parsed_field.parse(field.serialize())){
 		LOG; ++fail;
 	}
-	if(!ASCII || !par_ASCII || *ASCII != *par_ASCII){
+	if(!field || !parsed_field || *field != *parsed_field){
 		LOG; ++fail;
 	}
+	field = false;
+	if(!parsed_field.parse(field.serialize())){
+		LOG; ++fail;
+	}
+	if(!field || !parsed_field || *field != *parsed_field){
+		LOG; ++fail;
+	}
+}
 
-	//bool
-	slz::boolean<0> boolean = true, par_boolean;
-	if(!par_boolean.parse(boolean.serialize())){
+void uint_field()
+{
+	slz::uint<0> field = 123, parsed_field;
+	if(!parsed_field.parse(field.serialize())){
 		LOG; ++fail;
 	}
-	if(!boolean || !par_boolean || *boolean != *par_boolean){
+	if(!field || !parsed_field || *field != *parsed_field){
 		LOG; ++fail;
 	}
-	boolean = false;
-	if(!par_boolean.parse(boolean.serialize())){
-		LOG; ++fail;
-	}
-	if(!boolean || !par_boolean || *boolean != *par_boolean){
-		LOG; ++fail;
-	}
+}
 
-	//uint
-	slz::uint<0> uint = 123, par_uint;
-	if(!par_uint.parse(uint.serialize())){
+void sint_field()
+{
+	slz::sint<0> field = -123, parsed_field;
+	if(!parsed_field.parse(field.serialize())){
 		LOG; ++fail;
 	}
-	if(!uint || !par_uint || *uint != *par_uint){
+	if(!field || !parsed_field || *field != *parsed_field){
 		LOG; ++fail;
 	}
+}
 
-	//sint
-	slz::sint<0> sint = -123, par_sint;
-	if(!par_sint.parse(sint.serialize())){
+void string_field()
+{
+	slz::string<0> field = test_str, parsed_field;
+	if(!parsed_field.parse(field.serialize())){
 		LOG; ++fail;
 	}
-	if(!sint || !par_sint || *sint != *par_sint){
+	if(!field || !parsed_field || *field != *parsed_field){
 		LOG; ++fail;
 	}
+}
 
-	//string
-	slz::string<0> string = test_str, par_string;
-	if(!par_string.parse(string.serialize())){
+void list_field()
+{
+	{//BEGIN scope
+	//list of non-length_delimited values
+	slz::list<slz::uint<0> > field, parsed_field;
+	field->push_back(0);
+	field->push_back(1);
+	field->push_back(2);
+	if(!parsed_field.parse(field.serialize())){
 		LOG; ++fail;
 	}
-	if(!string || !par_string || *string != *par_string){
+	if(*field != *parsed_field){
 		LOG; ++fail;
 	}
+	}//END scope
 
-	//vector of vints
-	slz::vector<slz::uint<0> > uint_vec, par_uint_vec;
-	uint_vec->push_back(0);
-	uint_vec->push_back(1);
-	uint_vec->push_back(2);
-	if(!par_uint_vec.parse(uint_vec.serialize())){
+	{//BEGIN scope
+	//list of length_delimited values
+	slz::list<slz::string<0> > field, parsed_field;
+	field->push_back("ABCD");
+	field->push_back("123");
+	field->push_back("VWXYZ");
+	if(!parsed_field.parse(field.serialize())){
 		LOG; ++fail;
 	}
-	if(*uint_vec != *par_uint_vec){
+	if(*field != *parsed_field){
 		LOG; ++fail;
 	}
+	}//END scope
 
-	//vector of variable length fields
-	slz::vector<slz::string<0> > string_vec, par_string_vec;
-	string_vec->push_back("ABCD");
-	string_vec->push_back("123");
-	string_vec->push_back("VWXYZ");
-	if(!par_string_vec.parse(string_vec.serialize())){
+	{//BEGIN scope
+	//list of lists
+	slz::list<slz::list<slz::uint<0> > > field, parsed_field;
+	slz::list<slz::uint<0> > field_element;
+	field_element->push_back(0);
+	field_element->push_back(1);
+	field_element->push_back(2);
+	field->push_back(field_element);
+	field->push_back(field_element);
+	field->push_back(field_element);
+	if(!parsed_field.parse(field.serialize())){
 		LOG; ++fail;
 	}
-	if(*string_vec != *par_string_vec){
+	if(*field != *parsed_field){
 		LOG; ++fail;
 	}
+	}//END scope
+}
 
-	//vector composition
-	slz::vector<slz::vector<slz::uint<0> > > uint_vv, par_uint_vv;
-	slz::vector<slz::uint<0> > uint_v;
-	uint_v->push_back(0);
-	uint_v->push_back(1);
-	uint_v->push_back(2);
-	uint_vv->push_back(uint_v);
-	uint_vv->push_back(uint_v);
-	uint_vv->push_back(uint_v);
-	if(!par_uint_vv.parse(uint_vv.serialize())){
+void message_field()
+{
+	message field, parsed_field;
+	if(!parsed_field.parse(field.serialize())){
 		LOG; ++fail;
 	}
-	if(*uint_vv != *par_uint_vv){
+	if(field != parsed_field){
 		LOG; ++fail;
 	}
+}
 
-	//message	
-	boost::shared_ptr<message> Message(new message()), par_Message(new message());
-	//message data members
-	Message->ASCII = test_str;
-	Message->string = test_str;
-	Message->uint = 123;
-	Message->sint = -123;
-	Message->ASCII_vec->push_back(test_str);
-	Message->ASCII_vec->push_back(test_str);
-	//nested message data members
-	Message->Nested_Message.ASCII = test_str;
-	Message->Nested_Message.string = test_str;
-	Message->Nested_Message.uint = 123;
-	Message->Nested_Message.sint = -123;
-	Message->Nested_Message.ASCII_vec->push_back(test_str);
-	Message->Nested_Message.ASCII_vec->push_back(test_str);
-	//vector of messages
-	Message->Nested_Message_vec->push_back(Message->Nested_Message);
-	Message->Nested_Message_vec->push_back(Message->Nested_Message);
-	if(!par_Message->parse(Message->serialize())){
-		LOG; ++fail;
-	}
-	if(*Message != *par_Message){
-		LOG; ++fail;
-	}
+void unknown_field()
+{
+	//old message version
+	class m_old : public slz::message<0>
+	{
+	public:
+		m_old()
+		{
+			add_field(string);
+		}
+		slz::string<1> string;
+	} M_Old;
 
-	//parser
+	//new message version that has additional field
+	class m_new : public slz::message<0>
+	{
+	public:
+		m_new()
+		{
+			add_field(string);
+			add_field(uint);
+
+			string = test_str;
+			uint = 123;
+		}
+
+		slz::string<1> string;
+		slz::uint<2> uint;
+	} M_New;
+	if(!M_Old.parse(M_New.serialize())){
+		LOG; ++fail;
+	}
+	//M_Old holds unknown field
+	if(M_Old != M_New){
+		LOG; ++fail;
+	}
+	//equivalent to M_Old != M_New
+	if(M_Old.serialize() != M_New.serialize()){
+		LOG; ++fail;
+	}
+}
+
+void parser()
+{
 	slz::parser Parser;
-	Parser.add_field(Message);
+	boost::shared_ptr<slz::field> field(new message());
+	Parser.add_field(field);
 	std::string buf;
-	buf += Message->serialize();
-	buf += Message->serialize();
+	buf += field->serialize();
+	buf += field->serialize();
 	unsigned test_parsed = 0;
 	while(boost::shared_ptr<slz::field> M = Parser.parse(buf)){
 		if(typeid(*M) == typeid(message)){
-			message * par_Message = (message *)M.get();
-			if(*par_Message != *Message){
+			message * parsed_field = (message *)M.get();
+			if(*field != *parsed_field){
 				LOG; ++fail;
 			}
 			++test_parsed;
@@ -212,18 +261,21 @@ int main()
 	if(Parser.bad_stream()){
 		LOG; ++fail;
 	}
+}
 
-	//unrecognized field
-	m_old M_Old;
-	m_new M_New;
-	M_New.string = test_str;
-	M_New.uint = 123;
-	if(!M_Old.parse(M_New.serialize())){
-		LOG; ++fail;
-	}
-	if(M_Old != M_New){
-		LOG; ++fail;
-	}
+int main()
+{
+	unit_test::timeout();
+
+	ASCII_field();
+	boolean_field();
+	uint_field();
+	sint_field();
+	list_field();
+	message_field();
+	unknown_field();
+
+	parser();
 
 	return fail;
 }

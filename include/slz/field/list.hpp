@@ -1,38 +1,38 @@
-#ifndef H_SLZ_FIELD_VECTOR
-#define H_SLZ_FIELD_VECTOR
+#ifndef H_SLZ_FIELD_LIST
+#define H_SLZ_FIELD_LIST
 
 namespace slz{
 
 template<typename field_type>
-class vector : public field
+class list : public field
 {
 public:
 	static const boost::uint64_t field_UID = field_type::field_UID;
 	static const bool length_delim = true;
 
-	vector()
+	list()
 	{
 
 	}
 
-	vector(const std::vector<field_type> & val_in):
+	list(const std::vector<field_type> & val_in):
 		val(val_in)
 	{
 
 	}
 
-	vector<field_type> & operator = (const std::vector<field_type> & rval)
+	list<field_type> & operator = (const std::list<field_type> & rval)
 	{
 		val = rval;
 		return *this;
 	}
 
-	std::vector<field_type> & operator * ()
+	std::list<field_type> & operator * ()
 	{
 		return val;
 	}
 
-	std::vector<field_type> * operator -> ()
+	std::list<field_type> * operator -> ()
 	{
 		return &val;
 	}
@@ -124,7 +124,7 @@ public:
 			return "";
 		}
 		std::string packed;
-		for(typename std::vector<field_type>::const_iterator it_cur = val.begin(),
+		for(typename std::list<field_type>::const_iterator it_cur = val.begin(),
 			it_end = val.end(); it_cur != it_end; ++it_cur)
 		{
 			std::string tmp = it_cur->serialize();
@@ -150,7 +150,7 @@ public:
 	}
 
 private:
-	std::vector<field_type> val;
+	std::list<field_type> val;
 };
 
 }//end namespace slz
