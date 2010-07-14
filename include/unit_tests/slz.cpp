@@ -240,16 +240,16 @@ void unknown_field()
 void parser()
 {
 	slz::parser Parser;
-	boost::shared_ptr<slz::field> field(new message());
-	Parser.add_field(field);
+	Parser.add_field<message>();
+	message field;
 	std::string buf;
-	buf += field->serialize();
-	buf += field->serialize();
+	buf += field.serialize();
+	buf += field.serialize();
 	unsigned test_parsed = 0;
 	while(boost::shared_ptr<slz::field> M = Parser.parse(buf)){
 		if(typeid(*M) == typeid(message)){
 			message * parsed_field = (message *)M.get();
-			if(*field != *parsed_field){
+			if(field != *parsed_field){
 				LOG; ++fail;
 			}
 			++test_parsed;

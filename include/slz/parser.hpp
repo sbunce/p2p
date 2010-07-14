@@ -15,16 +15,18 @@ public:
 	{}
 
 	/*
-	Add field parser will understand.
+	Add field parser will understand. T must be a field.
+	Precondition: This must not have been called for T before.
 	Postcondition: Field cleared.
 	*/
-	void add_field(const boost::shared_ptr<field> & M)
+	template<typename T>
+	void add_field()
 	{
-		assert(M);
+		boost::shared_ptr<T> new_field(new T());
 		std::pair<std::map<boost::uint64_t, boost::shared_ptr<field> >::iterator, bool>
-			p = Field.insert(std::make_pair(M->UID(), M));
+			p = Field.insert(std::make_pair(new_field->UID(), new_field));
 		if(!p.second){
-			LOG << "error, field_UID " << M->UID() << " not unique";
+			LOG << "error, field UID " << new_field->UID() << " not unique";
 			exit(1);
 		}
 	}

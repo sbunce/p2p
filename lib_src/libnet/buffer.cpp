@@ -229,9 +229,12 @@ void net::buffer::erase(const unsigned idx)
 	allocate(bytes, idx);
 }
 
-void net::buffer::erase(const unsigned idx, const unsigned size)
+void net::buffer::erase(const unsigned idx, unsigned size)
 {
-	assert(idx + size <= bytes);
+	assert(idx < bytes);
+	if(idx + size > bytes){
+		size = bytes - idx;
+	}
 	std::memmove(buf + idx, buf + idx + size, bytes - idx - size);
 	allocate(bytes, bytes - size);
 }
@@ -280,10 +283,14 @@ std::string net::buffer::str(const unsigned idx) const
 	return std::string(reinterpret_cast<const char *>(buf + idx), bytes - idx);
 }
 
-std::string net::buffer::str(const unsigned idx, const unsigned len) const
+std::string net::buffer::str(const unsigned idx, unsigned size) const
 {
-	assert(idx + len <= bytes);
-	return std::string(reinterpret_cast<const char *>(buf + idx), len);
+	assert(idx <= bytes);
+	if(idx + size > bytes){
+		size = bytes - idx;
+	}
+	assert(idx + size <= bytes);
+	return std::string(reinterpret_cast<const char *>(buf + idx), size);
 }
 
 unsigned char * net::buffer::tail_start() const

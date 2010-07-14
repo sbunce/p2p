@@ -1,21 +1,16 @@
 Basic Info
 ==========
-The DHT used is based on Kademlia.
+The DHT used is Kademlia.
 
-The DHT commands are sent to the same port as the TCP listener. All messages are
-kept <= 508 bytes to insure no message gets truncated.
+The DHT commands are sent to the same port as the TCP listener. All packets are
+kept <= 508 bytes to insure no message gets truncated by a MTU limit. Messages
+may be combined in to the same packet but never span multiple packets.
 
 We assume a message has been lost if we don't receive a reply within 60 seconds.
 
 All request messages include 4 random bytes which must be echo'd back in the
 response. This is to protect against address forgery. The Kademlia spec calls
 for 20 bytes but that is excessive.
-
-
-Concurrency
-===========
-In the kademlia paper the number of concurrent requests on the wire is referred
-to as alpha. The alpha is unspecified.
 
 
 Routing Table Updates
@@ -45,6 +40,15 @@ Messages
 ========
 
 ---
+name: ping
+desc: Check to see if host is up. Acquire token to store.
+fields:
+	name: random_bytes
+	UID: ...
+	desc: 4 random bytes to combat address forgery. These are also a store token.
+resp: ping sent in response
+
+
 name: ping
 desc: Check if a host is up and/or get node ID.
 	+---+---+---+---+---+---+---+
