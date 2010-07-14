@@ -79,8 +79,6 @@ public:
 	erase (two parameters):
 		Erase bytes in buffer starting at idx and size chars long.
 		Note: If idx + len > buf suze the remainder of the buf erased.
-	swap:
-		Swap one buffer with another without copying internal buffer.
 	reserve:
 		Specified amount of memory will be left allocated.
 	resize:
@@ -94,6 +92,8 @@ public:
 	str (two parameters):
 		Returns std::string of buffer starting at idx and len elements long.
 		Note: If idx + len > buf size the remainder of the string returned.
+	swap:
+		Swap one buffer with another without copying internal buffer.
 	tail_start:
 		Returns pointer to start of unused space at end of buffer.
 	tail_reserve:
@@ -115,13 +115,13 @@ public:
 	iterator end() const;
 	void erase(const unsigned idx);
 	void erase(const unsigned idx, unsigned size);
-	void swap(buffer & rval);
 	void reserve(const unsigned size);
 	void resize(const unsigned size);
 	unsigned size() const;
 	std::string str() const;
 	std::string str(const unsigned idx) const;
 	std::string str(const unsigned idx, unsigned size) const;
+	void swap(buffer & rval);
 	unsigned char * tail_start() const;
 	void tail_reserve(const unsigned size);
 	void tail_resize(const unsigned size);

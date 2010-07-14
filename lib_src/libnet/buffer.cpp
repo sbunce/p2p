@@ -239,24 +239,6 @@ void net::buffer::erase(const unsigned idx, unsigned size)
 	allocate(bytes, bytes - size);
 }
 
-void net::buffer::swap(buffer & rval)
-{
-	//save current lval
-	unsigned tmp_reserved = reserved;
-	unsigned tmp_bytes = bytes;
-	unsigned char * tmp_buf = buf;
-
-	//copy rval to lval
-	reserved = rval.reserved;
-	bytes = rval.bytes;
-	buf = rval.buf;
-
-	//copy old lval to rval
-	rval.reserved = tmp_reserved;
-	rval.bytes = tmp_bytes;
-	rval.buf = tmp_buf;
-}
-
 void net::buffer::reserve(const unsigned size)
 {
 	allocate(reserved, size);
@@ -291,6 +273,24 @@ std::string net::buffer::str(const unsigned idx, unsigned size) const
 	}
 	assert(idx + size <= bytes);
 	return std::string(reinterpret_cast<const char *>(buf + idx), size);
+}
+
+void net::buffer::swap(buffer & rval)
+{
+	//save current lval
+	unsigned tmp_reserved = reserved;
+	unsigned tmp_bytes = bytes;
+	unsigned char * tmp_buf = buf;
+
+	//copy rval to lval
+	reserved = rval.reserved;
+	bytes = rval.bytes;
+	buf = rval.buf;
+
+	//copy old lval to rval
+	rval.reserved = tmp_reserved;
+	rval.bytes = tmp_bytes;
+	rval.buf = tmp_buf;
 }
 
 unsigned char * net::buffer::tail_start() const
