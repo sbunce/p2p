@@ -13,22 +13,7 @@ const std::string test_str(
 class nested_message : public slz::message<0>
 {
 public:
-	nested_message()
-	{
-		add();
-	}
-
-	nested_message(const nested_message & NM)
-	{
-		add();
-		copy(NM);
-	}
-
-	nested_message & operator = (const nested_message & rval)
-	{
-		copy(rval);
-		return *this;
-	}
+	SLZ_CTOR_ASSIGN(nested_message)
 
 	slz::ASCII<0> ASCII;
 	slz::boolean<1> boolean;
@@ -73,22 +58,7 @@ private:
 class message : public slz::message<1>
 {
 public:
-	message()
-	{
-		add();
-	}
-
-	message(const message & M)
-	{
-		add();
-		copy(M);
-	}
-
-	message & operator = (const message & rval)
-	{
-		copy(rval);
-		return *this;
-	}
+	SLZ_CTOR_ASSIGN(message)
 
 	slz::ASCII<1> ASCII;
 	slz::boolean<2> boolean;

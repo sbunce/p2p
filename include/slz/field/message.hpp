@@ -5,8 +5,7 @@ namespace slz{
 
 /*
 Base class for predefined AND user defined messages.
-Note: IDs only need to be unique within a message, not between different
-messages.
+Note: IDs only need to be unique within a message.
 
 class m_0 : slz::message<0>
 {
@@ -30,6 +29,13 @@ public:
 	slz::uint<0> test;
 }
 */
+
+//convenience macro to specify ctor/assignment, m_class is derived class name
+#define SLZ_CTOR_ASSIGN(m_class) \
+	m_class(){ add(); } \
+	m_class(const m_class & MC){ add(); copy(MC); } \
+	m_class & operator = (const m_class & rval){ copy(rval); return *this; }
+
 template<boost::uint64_t T_field_ID>
 class message : public field, private boost::noncopyable
 {
