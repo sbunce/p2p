@@ -10,18 +10,35 @@ const std::string test_str(
 	"PQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
 );
 
-class nested_message : public slz::message<7>
+class nested_message : public slz::message<0>
 {
 public:
 	nested_message()
 	{
-		add_field(ASCII);
-		add_field(boolean);
-		add_field(string);
-		add_field(sint);
-		add_field(uint);
-		add_field(ASCII_list);
+		add();
+	}
 
+	nested_message(const nested_message & NM)
+	{
+		add();
+		copy(NM);
+	}
+
+	nested_message & operator = (const nested_message & rval)
+	{
+		copy(rval);
+		return *this;
+	}
+
+	slz::ASCII<0> ASCII;
+	slz::boolean<1> boolean;
+	slz::string<2> string;
+	slz::sint<3> sint;
+	slz::uint<4> uint;
+	slz::list<slz::ASCII<5> > ASCII_list;
+
+	void set_test_vals()
+	{
 		ASCII = test_str;
 		boolean = false;
 		string = test_str;
@@ -30,18 +47,9 @@ public:
 		ASCII_list->push_back(test_str);
 		ASCII_list->push_back(test_str);
 	}
-	slz::ASCII<8> ASCII;
-	slz::boolean<9> boolean;
-	slz::string<10> string;
-	slz::sint<12> sint;
-	slz::uint<11> uint;
-	slz::list<slz::ASCII<13> > ASCII_list;
-};
 
-class message : public slz::message<0>
-{
-public:
-	message()
+private:
+	void add()
 	{
 		add_field(ASCII);
 		add_field(boolean);
@@ -49,9 +57,49 @@ public:
 		add_field(sint);
 		add_field(uint);
 		add_field(ASCII_list);
-		add_field(Nested_Message);
-		add_field(Nested_Message_list);
+	}
 
+	void copy(const nested_message & rval)
+	{
+		ASCII = rval.ASCII;
+		boolean = rval.boolean;
+		string = rval.string;
+		sint = rval.sint;
+		uint = rval.uint;
+		ASCII_list = rval.ASCII_list;
+	}
+};
+
+class message : public slz::message<1>
+{
+public:
+	message()
+	{
+		add();
+	}
+
+	message(const message & M)
+	{
+		add();
+		copy(M);
+	}
+
+	message & operator = (const message & rval)
+	{
+		copy(rval);
+		return *this;
+	}
+
+	slz::ASCII<1> ASCII;
+	slz::boolean<2> boolean;
+	slz::string<3> string;
+	slz::sint<4> sint;
+	slz::uint<5> uint;
+	slz::list<slz::ASCII<6> > ASCII_list;
+	slz::list<nested_message> Nested_Message_list;
+
+	void set_test_vals()
+	{
 		ASCII = test_str;
 		boolean = true;
 		string = test_str;
@@ -59,18 +107,35 @@ public:
 		sint = -123;
 		ASCII_list->push_back(test_str);
 		ASCII_list->push_back(test_str);
-		Nested_Message_list->push_back(Nested_Message);
-		Nested_Message_list->push_back(Nested_Message);
+		nested_message tmp;
+		tmp.set_test_vals();
+		Nested_Message_list->push_back(tmp);
+		tmp.uint = 321;
+		Nested_Message_list->push_back(tmp);
 	}
 
-	slz::ASCII<1> ASCII;
-	slz::boolean<2> boolean;
-	slz::string<3> string;
-	slz::sint<5> sint;
-	slz::uint<4> uint;
-	slz::list<slz::ASCII<6> > ASCII_list;
-	nested_message Nested_Message;
-	slz::list<nested_message> Nested_Message_list;
+private:
+	void add()
+	{
+		add_field(ASCII);
+		add_field(boolean);
+		add_field(string);
+		add_field(sint);
+		add_field(uint);
+		add_field(ASCII_list);
+		add_field(Nested_Message_list);
+	}
+
+	void copy(const message & rval)
+	{
+		ASCII = rval.ASCII;
+		boolean = rval.boolean;
+		string = rval.string;
+		sint = rval.sint;
+		uint = rval.uint;
+		ASCII_list = rval.ASCII_list;
+		Nested_Message_list = rval.Nested_Message_list;
+	}
 };
 
 void ASCII_field()
@@ -187,6 +252,7 @@ void list_field()
 void message_field()
 {
 	message field, parsed_field;
+	field.set_test_vals();
 	if(!parsed_field.parse(field.serialize())){
 		LOG; ++fail;
 	}
@@ -242,6 +308,7 @@ void parser()
 	slz::parser Parser;
 	Parser.add_field<message>();
 	message field;
+	field.set_test_vals();
 	std::string buf;
 	buf += field.serialize();
 	buf += field.serialize();
@@ -259,6 +326,14 @@ void parser()
 		LOG; ++fail;
 	}
 	if(Parser.bad_stream()){
+		LOG; ++fail;
+	}
+
+	//test slz::parser::missing
+	buf = field.serialize();
+	buf.erase(buf.size() - 5);
+	boost::optional<unsigned> mis = Parser.missing(buf);
+	if(!mis || *mis != 5){
 		LOG; ++fail;
 	}
 }

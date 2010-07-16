@@ -3,12 +3,38 @@
 
 namespace slz{
 
-//base class for user defined messages
-template<boost::uint64_t T_field_UID>
-class message : public field
+/*
+Base class for predefined AND user defined messages.
+Note: IDs only need to be unique within a message, not between different
+messages.
+
+class m_0 : slz::message<0>
 {
 public:
-	static const boost::uint64_t field_UID = T_field_UID;
+	m_1()
+	{
+		add_field(test);
+	}
+	slz::uint<0> test;
+}
+
+//note: The IDs of m_0 and m_1 MUST be different
+class m_1 : slz::message<1>
+{
+public:
+	m_2()
+	{
+		add_field(test);
+	}
+	//note: The IDs of m_0::test and m_1::test can be the same
+	slz::uint<0> test;
+}
+*/
+template<boost::uint64_t T_field_ID>
+class message : public field, private boost::noncopyable
+{
+public:
+	static const boost::uint64_t field_ID = T_field_ID;
 	static const bool length_delim = true;
 
 	virtual operator bool () const
@@ -19,10 +45,9 @@ public:
 	virtual void clear()
 	{
 		//erase unknown elements
-		for(std::map<boost::uint64_t, boost::shared_ptr<field> >::iterator
+		for(std::map<boost::uint64_t, unknown>::iterator
 			it_cur = Unknown_Field.begin(); it_cur != Unknown_Field.end();)
 		{
-			Field.erase(it_cur->first);
 			Unknown_Field.erase(it_cur++);
 		}
 		//clear known elements
@@ -33,11 +58,16 @@ public:
 		}
 	}
 
+	virtual boost::uint64_t ID() const
+	{
+		return field_ID;
+	}
+
 	virtual bool parse(std::string buf)
 	{
 		clear();
 		boost::optional<std::pair<boost::uint64_t, bool> > key = key_parse(buf);
-		if(!key || key->first != field_UID || key->second != true){
+		if(!key || key->first != field_ID || key->second != true){
 			return false;
 		}
 		std::list<std::string> fields = message_split(buf);
@@ -53,12 +83,11 @@ public:
 			}
 			std::map<boost::uint64_t, field *>::iterator it = Field.find(key->first);
 			if(it == Field.end()){
-				boost::shared_ptr<field> Unknown(new unknown());
-				if(!Unknown->parse(*it_cur)){
+				unknown Unknown;
+				if(!Unknown.parse(*it_cur)){
 					return false;
 				}
-				Field.insert(std::make_pair(Unknown->UID(), Unknown.get()));
-				Unknown_Field.insert(std::make_pair(Unknown->UID(), Unknown));
+				Unknown_Field.insert(std::make_pair(Unknown.ID(), Unknown));
 			}else{
 				if(!it->second->parse(*it_cur)){
 					return false;
@@ -71,7 +100,8 @@ public:
 	virtual std::string serialize() const
 	{
 		if(Field.empty()){
-			return "";
+			LOG << "attempt to serialize empty message";
+			exit(1);
 		}
 		std::string tmp;
 		for(std::map<boost::uint64_t, field *>::const_iterator it_cur = Field.begin(),
@@ -79,31 +109,35 @@ public:
 		{
 			tmp += it_cur->second->serialize();
 		}
+		for(std::map<boost::uint64_t, unknown>::const_iterator it_cur = Unknown_Field.begin(),
+			it_end = Unknown_Field.end(); it_cur != it_end; ++it_cur)
+		{
+			tmp += it_cur->second.serialize();
+		}
 		std::string ser;
-		ser += key_create(field_UID, true);
+		ser += key_create(field_ID, true);
 		ser += uint_to_vint(tmp.size());
 		ser += tmp;
 		return ser;
-	}
-
-	virtual boost::uint64_t UID() const
-	{
-		return field_UID;
 	}
 
 protected:
 	//must be called for all fields in derived
 	void add_field(field & F)
 	{
-		Field.insert(std::make_pair(F.UID(), &F));
+		std::pair<std::map<boost::uint64_t, field *>::iterator, bool >
+			p = Field.insert(std::make_pair(F.ID(), &F));
+		if(!p.second){
+			p.second = &F;
+		}
 	}
 
 private:
 	//field ID mapped to field
 	std::map<boost::uint64_t, field *> Field;
 
-	//unknown fields, field pointer will also exist in Field container
-	std::map<boost::uint64_t, boost::shared_ptr<field> > Unknown_Field;
+	//message fields we don't understand
+	std::map<boost::uint64_t, unknown> Unknown_Field;
 
 	/*
 	Return all fields in message, or empty list if malformed message.

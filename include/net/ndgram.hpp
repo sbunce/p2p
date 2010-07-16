@@ -8,8 +8,8 @@
 namespace net{
 class ndgram : public socket_base
 {
-	//max we attempt to send/recv in one go
-	static const int MTU = 1536;
+	//max we attempt to recv in one go
+	static const int MTU = 9000;
 public:
 	ndgram();                   //open but don't bind (used for send only)
 	ndgram(const endpoint & E); //open and bind (used for send/recv)

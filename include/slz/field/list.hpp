@@ -3,11 +3,12 @@
 
 namespace slz{
 
+//list inherits the field_ID from the field_type
 template<typename field_type>
 class list : public field
 {
 public:
-	static const boost::uint64_t field_UID = field_type::field_UID;
+	static const boost::uint64_t field_ID = field_type::field_ID;
 	static const bool length_delim = true;
 
 	list()
@@ -47,6 +48,11 @@ public:
 		val.clear();
 	}
 
+	virtual boost::uint64_t ID() const
+	{
+		return field_type::field_ID;
+	}
+
 	virtual bool parse(std::string buf)
 	{
 		/*
@@ -60,7 +66,7 @@ public:
 			return false;
 		}
 		boost::optional<std::pair<boost::uint64_t, bool> > key = key_parse(key_vint);
-		if(!key || key->first != field_type::field_UID || key->second != true){
+		if(!key || key->first != field_type::field_ID || key->second != true){
 			return false;
 		}
 		if(field_type::length_delim == false && key->second == true){
@@ -138,15 +144,10 @@ public:
 			return "";
 		}
 		std::string ser;
-		ser += key_create(field_type::field_UID, true);
+		ser += key_create(field_type::field_ID, true);
 		ser += uint_to_vint(packed.size());
 		ser += packed;
 		return ser;
-	}
-
-	virtual boost::uint64_t UID() const
-	{
-		return field_type::field_UID;
 	}
 
 private:

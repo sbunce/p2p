@@ -3,11 +3,11 @@
 
 namespace slz{
 
-template<boost::uint64_t T_field_UID>
+template<boost::uint64_t T_field_ID>
 class boolean : public field
 {
 public:
-	static const boost::uint64_t field_UID = T_field_UID;
+	static const boost::uint64_t field_ID = T_field_ID;
 	static const bool length_delim = false;
 
 	boolean()
@@ -44,11 +44,16 @@ public:
 		}
 	}
 
+	virtual boost::uint64_t ID() const
+	{
+		return field_ID;
+	}
+
 	virtual bool parse(std::string buf)
 	{
 		clear();
 		boost::optional<std::pair<boost::uint64_t, bool> > key = key_split(buf);
-		if(!key || key->first != field_UID || key->second != false){
+		if(!key || key->first != field_ID || key->second != false){
 			return false;
 		}
 		std::string val_vint = vint_split(buf);
@@ -65,14 +70,9 @@ public:
 			return "";
 		}
 		std::string ser;
-		ser += key_create(field_UID, false);
+		ser += key_create(field_ID, false);
 		ser += uint_to_vint(*val);
 		return ser;
-	}
-
-	virtual boost::uint64_t UID() const
-	{
-		return field_UID;
 	}
 
 private:

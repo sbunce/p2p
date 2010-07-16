@@ -20,6 +20,5 @@ SConscript([
 
 Clean('bin','bin')
 Clean('lib','lib')
-Clean('.cache','.cache')
 if env_base.GetOption('clean'):
 	os.system('rm .sconsign.dblite')

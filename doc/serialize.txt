@@ -47,5 +47,5 @@ set to 1 there will be a length delimited value. A length delimited value starts
 with a vint that specifies how many bytes will follow it.
 
 The reason for using the LSB of the key to indicate wire format is that we need
-to be able to ignore unknown key/value pairs. This allows updating of the
-protocol without breaking old clients.
+to be able to parse unknown key/value pairs. This allows updating the protocol
+without breaking old clients.

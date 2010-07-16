@@ -17,6 +17,11 @@ public:
 		key_val.clear();
 	}
 
+	virtual boost::uint64_t ID() const
+	{
+		return field_ID;
+	}
+
 	virtual bool parse(std::string buf)
 	{
 		clear();
@@ -24,7 +29,7 @@ public:
 		if(!key){
 			return false;
 		}
-		field_UID = key->first;
+		field_ID = key->first;
 		key_val = buf;
 		return true;
 	}
@@ -34,13 +39,8 @@ public:
 		return key_val;
 	}
 
-	virtual boost::uint64_t UID() const
-	{
-		return field_UID;
-	}
-
 private:
-	boost::uint64_t field_UID;
+	boost::uint64_t field_ID;
 	std::string key_val;
 };
 

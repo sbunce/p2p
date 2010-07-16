@@ -61,9 +61,6 @@ def system_libraries(env):
 def setup(env):
 	environment.define_keys(env)
 
-	#cache dir for object reuse
-	env.CacheDir('.cache')
-
 	#enable parallel building
 	parallel_build.setup(env)
 

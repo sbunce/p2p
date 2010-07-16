@@ -7,11 +7,11 @@ namespace slz{
 String field which serializes to 7-bit ASCII to save space.
 A 8 byte ASCII string would be 7 bytes serialized.
 */
-template<boost::uint64_t T_field_UID>
+template<boost::uint64_t T_field_ID>
 class ASCII : public field
 {
 public:
-	static const boost::uint64_t field_UID = T_field_UID;
+	static const boost::uint64_t field_ID = T_field_ID;
 	static const bool length_delim = true;
 
 	ASCII()
@@ -57,11 +57,16 @@ public:
 		val.clear();
 	}
 
+	virtual boost::uint64_t ID() const
+	{
+		return field_ID;
+	}
+
 	virtual bool parse(std::string buf)
 	{
 		clear();
 		boost::optional<std::pair<boost::uint64_t, bool> > key = key_split(buf);
-		if(!key || key->first != field_UID || key->second != true){
+		if(!key || key->first != field_ID || key->second != true){
 			return false;
 		}
 		std::string len_vint = vint_split(buf);
@@ -83,15 +88,10 @@ public:
 		}
 		std::string enc = ASCII_encode(val);
 		std::string ser;
-		ser += key_create(field_UID, true);
+		ser += key_create(field_ID, true);
 		ser += uint_to_vint(enc.size());
 		ser += enc;
 		return ser;
-	}
-
-	virtual boost::uint64_t UID() const
-	{
-		return field_UID;
 	}
 
 private:

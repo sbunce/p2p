@@ -24,9 +24,9 @@ public:
 	{
 		boost::shared_ptr<T> new_field(new T());
 		std::pair<std::map<boost::uint64_t, boost::shared_ptr<field> >::iterator, bool>
-			p = Field.insert(std::make_pair(new_field->UID(), new_field));
+			p = Field.insert(std::make_pair(new_field->ID(), new_field));
 		if(!p.second){
-			LOG << "error, field UID " << new_field->UID() << " not unique";
+			LOG << "error, field ID " << new_field->ID() << " not unique";
 			exit(1);
 		}
 	}
@@ -35,6 +35,42 @@ public:
 	bool bad_stream() const
 	{
 		return bad;
+	}
+
+	/*
+	Returns number of bytes are missing from field, 0 if complete, or nothing if
+	indeterminant.
+	*/
+	boost::optional<unsigned> missing(const std::string & buf)
+	{
+		if(buf.empty()){
+			return 0u;
+		}
+		std::string key_vint = vint_parse(buf);
+		boost::optional<std::pair<boost::uint64_t, bool> > key = key_parse(key_vint);
+		if(!key){
+			return boost::optional<unsigned>();
+		}
+		std::string tmp = buf.substr(key_vint.size(), 10);
+		if(key->second){
+			std::string size_vint = vint_parse(tmp);
+			if(size_vint.empty()){
+				return boost::optional<unsigned>();
+			}
+			boost::uint64_t size = vint_to_uint(size_vint);
+			if(buf.size() < key_vint.size() + size_vint.size() + size){
+				return (key_vint.size() + size_vint.size() + size) - buf.size();
+			}else{
+				return 0u;
+			}
+		}else{
+			std::string val_vint = vint_parse(tmp);
+			if(val_vint.empty()){
+				return boost::optional<unsigned>();
+			}else{
+				return 0u;
+			}
+		}
 	}
 
 	/*
@@ -76,7 +112,7 @@ private:
 	//true if bad field passed to parse
 	bool bad;
 
-	//maps field UID to field it belongs to
+	//maps field ID to field it belongs to
 	std::map<boost::uint64_t, boost::shared_ptr<field> > Field;
 
 	/*
