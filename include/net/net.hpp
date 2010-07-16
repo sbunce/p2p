@@ -2,6 +2,7 @@
 #include "endpoint.hpp"
 #include "listener.hpp"
 #include "ndgram.hpp"
+#include "nrdgram.hpp"
 #include "nstream.hpp"
 #include "protocol.hpp"
 #include "proactor.hpp"

@@ -12,6 +12,7 @@
 #include <string>
 
 namespace slz{
+namespace {
 
 //returns true if string is ASCII
 bool is_ASCII(const std::string str)
@@ -138,5 +139,6 @@ boost::optional<std::pair<boost::uint64_t, bool> > key_split(std::string & buf)
 	return std::make_pair(key >> 1, length_delim);
 }
 
-}//end of namespace slz
+}//end namespace unnamed
+}//end namespace slz
 #endif

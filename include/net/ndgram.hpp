@@ -41,5 +41,5 @@ public:
 	int recv(net::buffer & buf, boost::shared_ptr<endpoint> & E);
 	int send(net::buffer & buf, const endpoint & E);
 };
-}//end of namespace net
+}//end namespace net
 #endif

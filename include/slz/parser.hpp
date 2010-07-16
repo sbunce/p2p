@@ -38,8 +38,9 @@ public:
 	}
 
 	/*
-	Returns number of bytes are missing from field, 0 if complete, or nothing if
-	indeterminant.
+	Returns number of bytes that are missing from the end of a field. Doesn't
+	return anything if indeterminant (only happens if field less than the size of
+	two vints).
 	*/
 	boost::optional<unsigned> missing(const std::string & buf)
 	{
