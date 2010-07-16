@@ -17,7 +17,8 @@ def compile_flags(env):
 			'/Ox'    #max optimization
 		])
 	else:
-		env['CCFLAGS'].append('-O3')   #max optimization
+		env['CCFLAGS'].append('-O0')  #no optimization
+		#env['CCFLAGS'].append('-O3') #all optimization
 
 def system_library_path(env):
 	if platform.system() == 'Windows':
@@ -61,6 +62,12 @@ def system_libraries(env):
 def setup(env):
 	environment.define_keys(env)
 
+	#cache built objects for reuse if hash of source the same
+	env.CacheDir('.cache')
+
+	#don't always rehash stuff like #include <string>
+	env.SetOption('implicit_cache', 1)
+
 	#enable parallel building
 	parallel_build.setup(env)
 
@@ -89,13 +96,3 @@ def setup(env):
 
 	#compile flags
 	compile_flags(env)
-
-#WARNING: this can result in buggy builds (not threadsafe)
-def setup_static(env):
-	environment.define_keys(env)
-	if platform.system() != 'Windows':
-		env['LINKFLAGS'].append([
-			'-static',
-			'-static-libgcc',
-			'`g++ -print-file-name=libstdc++.a`'
-		])

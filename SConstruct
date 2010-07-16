@@ -18,6 +18,7 @@ SConscript([
 	'site_scons/SConscript'
 ])
 
+Clean('.cache','.cache')
 Clean('bin','bin')
 Clean('lib','lib')
 if env_base.GetOption('clean'):
