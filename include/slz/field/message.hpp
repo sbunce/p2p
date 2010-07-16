@@ -30,14 +30,36 @@ public:
 }
 */
 
-//convenience macro to specify ctor/assignment, m_class is derived class name
+/*
+Convenience macro to specify ctor/assignment. The m_class parameter must be set
+to the derived class name. Two functions must be specified (privately) in the
+derived class:
+
+//add_field must be called on all fields
+void add()
+{
+	add_field(field_0);
+	add_field(field_1);
+	...
+	..
+	.
+
+//all fields must be copied
+void copy(const derived_class & rval)
+{
+	field_0 = rval.field_0;
+	field_1 = rval.field_1;
+	...
+	..
+	.
+*/
 #define SLZ_CTOR_ASSIGN(m_class) \
 	m_class(){ add(); } \
 	m_class(const m_class & MC){ add(); copy(MC); } \
 	m_class & operator = (const m_class & rval){ copy(rval); return *this; }
 
 template<boost::uint64_t T_field_ID>
-class message : public field, private boost::noncopyable
+class message : public field
 {
 public:
 	static const boost::uint64_t field_ID = T_field_ID;

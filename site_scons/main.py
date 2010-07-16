@@ -65,9 +65,6 @@ def setup(env):
 	#cache built objects for reuse if hash of source the same
 	env.CacheDir('.cache')
 
-	#don't always rehash stuff like #include <string>
-	#env.SetOption('implicit_cache', 1)
-
 	#enable parallel building
 	parallel_build.setup(env)
 

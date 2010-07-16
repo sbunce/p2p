@@ -10,7 +10,8 @@ const std::string test_str(
 	"PQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
 );
 
-class nested_message : public slz::message<0>
+template<boost::uint64_t field_ID>
+class nested_message : public slz::message<field_ID>
 {
 public:
 	SLZ_CTOR_ASSIGN(nested_message)
@@ -36,12 +37,12 @@ public:
 private:
 	void add()
 	{
-		add_field(ASCII);
-		add_field(boolean);
-		add_field(string);
-		add_field(sint);
-		add_field(uint);
-		add_field(ASCII_list);
+		this->add_field(ASCII);
+		this->add_field(boolean);
+		this->add_field(string);
+		this->add_field(sint);
+		this->add_field(uint);
+		this->add_field(ASCII_list);
 	}
 
 	void copy(const nested_message & rval)
@@ -60,13 +61,13 @@ class message : public slz::message<1>
 public:
 	SLZ_CTOR_ASSIGN(message)
 
-	slz::ASCII<1> ASCII;
-	slz::boolean<2> boolean;
-	slz::string<3> string;
-	slz::sint<4> sint;
-	slz::uint<5> uint;
-	slz::list<slz::ASCII<6> > ASCII_list;
-	slz::list<nested_message> Nested_Message_list;
+	slz::ASCII<0> ASCII;
+	slz::boolean<1> boolean;
+	slz::string<2> string;
+	slz::sint<3> sint;
+	slz::uint<4> uint;
+	slz::list<slz::ASCII<5> > ASCII_list;
+	slz::list<nested_message<6> > Nested_Message_list;
 
 	void set_test_vals()
 	{
@@ -77,7 +78,7 @@ public:
 		sint = -123;
 		ASCII_list->push_back(test_str);
 		ASCII_list->push_back(test_str);
-		nested_message tmp;
+		nested_message<6> tmp;
 		tmp.set_test_vals();
 		Nested_Message_list->push_back(tmp);
 		tmp.uint = 321;
