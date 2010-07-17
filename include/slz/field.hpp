@@ -6,6 +6,7 @@
 
 //include
 #include <boost/cstdint.hpp>
+#include <boost/optional.hpp>
 
 //standard
 #include <set>
@@ -59,6 +60,5 @@ public:
 #include "field/sint.hpp"
 #include "field/string.hpp"
 #include "field/uint.hpp"
-
 
 #endif

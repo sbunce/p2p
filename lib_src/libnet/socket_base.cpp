@@ -1,6 +1,8 @@
 #include "init.hpp"
-#include "system_include.hpp"
 #include <net/net.hpp>
+
+//include
+#include <portable.hpp>
 
 net::socket_base::socket_base():
 	socket_FD(-1)
@@ -17,7 +19,7 @@ net::socket_base::~socket_base()
 void net::socket_base::close()
 {
 	if(socket_FD != -1){
-		if(::close(socket_FD) == -1){
+		if(::close_socket(socket_FD) == -1){
 			LOG << strerror(errno);
 		}
 		socket_FD = -1;

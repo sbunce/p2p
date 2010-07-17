@@ -1,8 +1,8 @@
 #ifndef H_NET_ADDR_IMPL
 #define H_NET_ADDR_IMPL
 
-//custom
-#include "system_include.hpp"
+//include
+#include <portable.hpp>
 
 //standard
 #include <cassert>

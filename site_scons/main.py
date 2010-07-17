@@ -14,7 +14,8 @@ def compile_flags(env):
 		env['CCFLAGS'].append([
 			'/EHsc', #exception support
 			'/w',    #disable warnings
-			'/Ox'    #max optimization
+			'/Od'    #no optimization
+			#'/Ox'   #max optimization
 		])
 	else:
 		env['CCFLAGS'].append('-O0')  #no optimization

@@ -3,6 +3,7 @@
 
 //include
 #include <boost/cstdint.hpp>
+#include <boost/optional.hpp>
 #include <logger.hpp>
 
 //standard

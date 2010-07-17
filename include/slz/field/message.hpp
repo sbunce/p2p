@@ -4,59 +4,35 @@
 namespace slz{
 
 /*
-Base class for predefined AND user defined messages.
-Note: IDs only need to be unique within a message.
+Macros to take care of the boiler-plate associated with specifying messages.
+These take care of the ctor, copy ctor, assignment, and adding fields to the
+base class.
 
-class m_0 : slz::message<0>
-{
-public:
-	m_1()
-	{
-		add_field(test);
-	}
-	slz::uint<0> test;
-}
+A message declaration with these macros looks like this.
 
-//note: The IDs of m_0 and m_1 MUST be different
-class m_1 : slz::message<1>
-{
-public:
-	m_2()
-	{
-		add_field(test);
-	}
-	//note: The IDs of m_0::test and m_1::test can be the same
-	slz::uint<0> test;
-}
+SLZ_MESSAGE_BEGIN(nested_message, 0)
+	SLZ_FIELD(slz::ASCII<0>, name)
+	SLZ_FIELD(slz::list<slz::ASCII<5> >, contact_list)
+SLZ_MESSAGE_END
 */
-
-/*
-Convenience macro to specify ctor/assignment. The m_class parameter must be set
-to the derived class name. Two functions must be specified (privately) in the
-derived class:
-
-//add_field must be called on all fields
-void add()
-{
-	add_field(field_0);
-	add_field(field_1);
-	...
-	..
-	.
-
-//all fields must be copied
-void copy(const derived_class & rval)
-{
-	field_0 = rval.field_0;
-	field_1 = rval.field_1;
-	...
-	..
-	.
-*/
-#define SLZ_CTOR_ASSIGN(m_class) \
-	m_class(){ add(); } \
-	m_class(const m_class & MC){ add(); copy(MC); } \
-	m_class & operator = (const m_class & rval){ copy(rval); return *this; }
+#define SLZ_MESSAGE_BEGIN(m_class, field_ID) \
+	class m_class : public slz::message<field_ID>{ \
+		typedef m_class class_name; \
+	public: \
+		m_class(){ init(NULL); } \
+		m_class(const m_class & MC){ init(&MC); } \
+		m_class & operator = (const m_class & rval){ init(&rval); return *this; } \
+		void init(const m_class * rval){
+#define SLZ_FIELD(field_type, field_name) \
+			init_##field_name (rval); \
+		} \
+		field_type field_name; \
+		void init_##field_name (const class_name * rval){ \
+			this->add_field(field_name); \
+			if(rval != NULL) field_name = rval-> field_name;
+#define SLZ_MESSAGE_END \
+		} \
+	};
 
 template<boost::uint64_t T_field_ID>
 class message : public field
@@ -73,11 +49,7 @@ public:
 	virtual void clear()
 	{
 		//erase unknown elements
-		for(std::map<boost::uint64_t, unknown>::iterator
-			it_cur = Unknown_Field.begin(); it_cur != Unknown_Field.end();)
-		{
-			Unknown_Field.erase(it_cur++);
-		}
+		Unknown_Field.clear();
 		//clear known elements
 		for(std::map<boost::uint64_t, field *>::iterator it_cur = Field.begin(),
 			it_end = Field.end(); it_cur != it_end; ++it_cur)
@@ -150,7 +122,7 @@ public:
 	}
 
 protected:
-	//must be called for all fields in derived
+	//must be called for all fields in derived when derived object instantiated
 	void add_field(field & F)
 	{
 		std::pair<std::map<boost::uint64_t, field *>::iterator, bool >
