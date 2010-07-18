@@ -2,7 +2,7 @@
 #define H_SLZ_MESSAGE
 
 //custom
-#include "base.hpp"
+#include "../field.hpp"
 #include "unknown.hpp"
 
 namespace slz{

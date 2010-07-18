@@ -2,7 +2,7 @@
 #define H_SLZ_FIELD_LIST
 
 //custom
-#include "base.hpp"
+#include "../field.hpp"
 
 namespace slz{
 //list inherits the field_ID from the field_type

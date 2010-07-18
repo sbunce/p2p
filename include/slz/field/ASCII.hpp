@@ -2,7 +2,7 @@
 #define H_SLZ_FIELD_ASCII
 
 //custom
-#include "base.hpp"
+#include "../field.hpp"
 
 namespace slz{
 /*

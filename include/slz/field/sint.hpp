@@ -2,7 +2,7 @@
 #define H_SLZ_FIELD_SINT
 
 //custom
-#include "base.hpp"
+#include "../field.hpp"
 
 namespace slz{
 template<boost::uint64_t T_field_ID>

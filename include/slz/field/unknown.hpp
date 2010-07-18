@@ -2,7 +2,7 @@
 #define H_SLZ_FIELD_UNKNOWN
 
 //custom
-#include "base.hpp"
+#include "../field.hpp"
 
 namespace slz{
 //field we do not understand
