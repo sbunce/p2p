@@ -53,7 +53,6 @@
 //include
 #include <boost/cstdint.hpp>
 #include <logger.hpp>
-#include <net/buffer.hpp>
 
 //standard
 #include <fstream>
@@ -127,12 +126,12 @@ int urandom(unsigned char * buf, int size, void * data = NULL)
 }
 
 //returns random bytes of specified size
-net::buffer urandom(const int size)
+std::string urandom(const int size)
 {
 	assert(size >= 0);
-	net::buffer buf;
+	std::string buf;
 	buf.resize(size);
-	urandom(buf.data(), size);
+	urandom(reinterpret_cast<unsigned char *>(const_cast<char *>(buf.data())), size);
 	return buf;
 }
 

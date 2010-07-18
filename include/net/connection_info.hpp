@@ -2,6 +2,7 @@
 #define H_NET_CONNECTION_INFO
 
 //custom
+#include "buffer.hpp"
 #include "endpoint.hpp"
 #include "protocol.hpp"
 

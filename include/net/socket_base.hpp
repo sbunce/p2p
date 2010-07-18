@@ -2,6 +2,7 @@
 #define H_NET_SOCKET_BASE
 
 //custom
+#include "buffer.hpp"
 #include "endpoint.hpp"
 
 //include
