@@ -1,5 +1,5 @@
-#ifndef H_SLZ_FIELD
-#define H_SLZ_FIELD
+#ifndef H_SLZ_FIELD_BASE
+#define H_SLZ_FIELD_BASE
 
 //custom
 #include "../func.hpp"
@@ -17,9 +17,9 @@ class field
 {
 public:
 	/*
-	Derived must define these two data members for the vector field to work.
-	static const boost::uint64_t field_ID = T_field_ID;
-	static const bool length_delim = false;
+	Derived must define these two data members for the list field to work.
+	static const boost::uint64_t field_ID; //key field_ID
+	static const bool length_delim;        //true if field length delimited
 	*/
 
 	/*
@@ -48,6 +48,10 @@ public:
 	bool operator != (const field & rval)
 	{
 		return !(*this == rval);
+	}
+	bool operator < (const field & rval)
+	{
+		return serialize() < rval.serialize();
 	}
 };
 }//end namespace slz
