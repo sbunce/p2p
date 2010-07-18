@@ -22,15 +22,15 @@ SLZ_MESSAGE_END
 	class m_class : public slz::message<field_ID>{ \
 		typedef m_class class_name; \
 	public: \
-		m_class(){ init(NULL); } \
-		m_class(const m_class & MC){ init(&MC); } \
-		m_class & operator = (const m_class & rval){ init(&rval); return *this; } \
-		void init(const m_class * rval){
+		m_class(){ _init(NULL); } \
+		m_class(const m_class & MC){ _init(&MC); } \
+		m_class & operator = (const m_class & rval){ _init(&rval); return *this; } \
+		void _init(const m_class * rval){
 #define SLZ_FIELD(field_type, field_name) \
-			init_##field_name (rval); \
+			_init_##field_name (rval); \
 		} \
 		field_type field_name; \
-		void init_##field_name (const class_name * rval){ \
+		void _init_##field_name (const class_name * rval){ \
 			this->add_field(field_name); \
 			if(rval != NULL) field_name = rval-> field_name;
 #define SLZ_MESSAGE_END \
