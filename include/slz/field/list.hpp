@@ -1,8 +1,10 @@
 #ifndef H_SLZ_FIELD_LIST
 #define H_SLZ_FIELD_LIST
 
-namespace slz{
+//custom
+#include "base.hpp"
 
+namespace slz{
 //list inherits the field_ID from the field_type
 template<typename field_type>
 class list : public field
@@ -153,6 +155,5 @@ public:
 private:
 	std::list<field_type> val;
 };
-
 }//end namespace slz
 #endif

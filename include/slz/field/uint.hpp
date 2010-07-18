@@ -1,8 +1,10 @@
 #ifndef H_SLZ_FIELD_UINT
 #define H_SLZ_FIELD_UINT
 
-namespace slz{
+//custom
+#include "base.hpp"
 
+namespace slz{
 template<boost::uint64_t T_field_ID>
 class uint : public field
 {
@@ -78,6 +80,5 @@ public:
 private:
 	boost::optional<boost::uint64_t> val;
 };
-
 }//end namespace slz
 #endif

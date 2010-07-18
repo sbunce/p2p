@@ -2,7 +2,7 @@
 #define H_SLZ_FIELD
 
 //custom
-#include "func.hpp"
+#include "../func.hpp"
 
 //include
 #include <boost/cstdint.hpp>
@@ -51,14 +51,4 @@ public:
 	}
 };
 }//end namespace slz
-
-#include "field/unknown.hpp"
-#include "field/ASCII.hpp"
-#include "field/boolean.hpp"
-#include "field/list.hpp"
-#include "field/message.hpp"
-#include "field/sint.hpp"
-#include "field/string.hpp"
-#include "field/uint.hpp"
-
 #endif

@@ -1,8 +1,10 @@
 #ifndef H_SLZ_FIELD_UNKNOWN
 #define H_SLZ_FIELD_UNKNOWN
 
-namespace slz{
+//custom
+#include "base.hpp"
 
+namespace slz{
 //field we do not understand
 class unknown : public field
 {
@@ -43,6 +45,5 @@ private:
 	boost::uint64_t field_ID;
 	std::string key_val;
 };
-
 }//end namespace slz
 #endif

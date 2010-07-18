@@ -1,8 +1,10 @@
 #ifndef H_SLZ_FIELD_SINT
 #define H_SLZ_FIELD_SINT
 
-namespace slz{
+//custom
+#include "base.hpp"
 
+namespace slz{
 template<boost::uint64_t T_field_ID>
 class sint : public field
 {
@@ -90,6 +92,5 @@ private:
 		return (x >> 1) ^ -static_cast<boost::int64_t>(x & 1);
 	}
 };
-
 }//end namespace slz
 #endif

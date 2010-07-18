@@ -1,8 +1,11 @@
 #ifndef H_SLZ_MESSAGE
 #define H_SLZ_MESSAGE
 
-namespace slz{
+//custom
+#include "base.hpp"
+#include "unknown.hpp"
 
+namespace slz{
 /*
 Macros to take care of the boiler-plate associated with specifying messages.
 These take care of the ctor, copy ctor, assignment, and adding fields to the
@@ -192,6 +195,5 @@ private:
 		return tmp_fields;
 	}
 };
-
 }//end of namespace slz
 #endif

@@ -1,8 +1,10 @@
 #ifndef H_SLZ_FIELD_ASCII
 #define H_SLZ_FIELD_ASCII
 
-namespace slz{
+//custom
+#include "base.hpp"
 
+namespace slz{
 /*
 String field which serializes to 7-bit ASCII to save space.
 A 8 byte ASCII string would be 7 bytes serialized.
@@ -162,6 +164,5 @@ private:
 		return res;
 	}
 };
-
 }//end namespace slz
 #endif

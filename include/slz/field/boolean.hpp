@@ -1,8 +1,10 @@
 #ifndef H_SLZ_FIELD_BOOLEAN
 #define H_SLZ_FIELD_BOOLEAN
 
-namespace slz{
+//custom
+#include "base.hpp"
 
+namespace slz{
 template<boost::uint64_t T_field_ID>
 class boolean : public field
 {
@@ -78,6 +80,5 @@ public:
 private:
 	boost::optional<bool> val;
 };
-
 }//end namespace slz
 #endif

@@ -1,8 +1,10 @@
 #ifndef H_SLZ_FIELD_STRING
 #define H_SLZ_FIELD_STRING
 
-namespace slz{
+//custom
+#include "base.hpp"
 
+namespace slz{
 template<boost::uint64_t T_field_ID>
 class string : public field
 {
@@ -92,6 +94,5 @@ public:
 private:
 	std::string val;
 };
-
 }//end namespace slz
 #endif
