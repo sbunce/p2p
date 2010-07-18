@@ -1,4 +1,4 @@
-#include "connection.hpp"
+#include <net/connection.hpp>
 
 net::connection::connection(
 	ID_manager & ID_Manager_in,
@@ -13,7 +13,7 @@ net::connection::connection(
 {
 	N->open_async(ep);
 	socket_FD = N->socket();
-	CI.reset(new proactor::connection_info(connection_ID, ep, outgoing));
+	CI.reset(new connection_info(connection_ID, ep, outgoing));
 }
 
 net::connection::connection(
@@ -30,7 +30,7 @@ net::connection::connection(
 {
 	std::set<endpoint> E = get_endpoint(N->remote_IP(), N->remote_port());
 	assert(!E.empty());
-	CI.reset(new proactor::connection_info(connection_ID, *E.begin(), incoming));
+	CI.reset(new connection_info(connection_ID, *E.begin(), incoming));
 }
 
 net::connection::~connection()

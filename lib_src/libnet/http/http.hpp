@@ -55,7 +55,7 @@ private:
 	disconnect_call_back:
 		Proactor calls back to this when disconnect happens.
 	*/
-	void connect_call_back(net::proactor::connection_info & CI);
-	void disconnect_call_back(net::proactor::connection_info & CI);
+	void connect_call_back(net::connection_info & CI);
+	void disconnect_call_back(net::connection_info & CI);
 };
 #endif

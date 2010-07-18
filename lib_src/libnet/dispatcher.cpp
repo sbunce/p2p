@@ -1,8 +1,8 @@
-#include "dispatcher.hpp"
+#include <net/dispatcher.hpp>
 
 net::dispatcher::dispatcher(
-	const boost::function<void (proactor::connection_info &)> & connect_call_back_in,
-	const boost::function<void (proactor::connection_info &)> & disconnect_call_back_in
+	const boost::function<void (connection_info &)> & connect_call_back_in,
+	const boost::function<void (connection_info &)> & disconnect_call_back_in
 ):
 	connect_call_back(connect_call_back_in),
 	disconnect_call_back(disconnect_call_back_in),
@@ -16,7 +16,7 @@ net::dispatcher::~dispatcher()
 
 }
 
-void net::dispatcher::connect(const boost::shared_ptr<proactor::connection_info> & CI)
+void net::dispatcher::connect(const boost::shared_ptr<connection_info> & CI)
 {
 	{//BEGIN lock scope
 	boost::mutex::scoped_lock lock(Mutex);
@@ -26,7 +26,7 @@ void net::dispatcher::connect(const boost::shared_ptr<proactor::connection_info>
 	dispatch();
 }
 
-void net::dispatcher::disconnect(const boost::shared_ptr<proactor::connection_info> & CI)
+void net::dispatcher::disconnect(const boost::shared_ptr<connection_info> & CI)
 {
 	{//BEGIN lock scope
 	boost::mutex::scoped_lock lock(Mutex);
@@ -55,7 +55,7 @@ void net::dispatcher::dispatch()
 }
 
 void net::dispatcher::connect_call_back_wrapper(
-	boost::shared_ptr<proactor::connection_info> CI)
+	boost::shared_ptr<connection_info> CI)
 {
 	connect_call_back(*CI);
 	{//begin lock scope
@@ -66,7 +66,7 @@ void net::dispatcher::connect_call_back_wrapper(
 }
 
 void net::dispatcher::disconnect_call_back_wrapper(
-	boost::shared_ptr<proactor::connection_info> CI)
+	boost::shared_ptr<connection_info> CI)
 {
 	disconnect_call_back(*CI);
 	{//begin lock scope
@@ -81,7 +81,7 @@ void net::dispatcher::join()
 	Thread_Pool.join();
 }
 
-void net::dispatcher::recv(const boost::shared_ptr<proactor::connection_info> & CI,
+void net::dispatcher::recv(const boost::shared_ptr<connection_info> & CI,
 	const boost::shared_ptr<buffer> & recv_buf)
 {
 	{//BEGIN lock scope
@@ -93,7 +93,7 @@ void net::dispatcher::recv(const boost::shared_ptr<proactor::connection_info> & 
 }
 
 void net::dispatcher::recv_call_back_wrapper(
-	boost::shared_ptr<proactor::connection_info> CI, boost::shared_ptr<buffer> recv_buf)
+	boost::shared_ptr<connection_info> CI, boost::shared_ptr<buffer> recv_buf)
 {
 	if(CI->recv_call_back){
 		CI->recv_buf.append(*recv_buf);
@@ -107,7 +107,7 @@ void net::dispatcher::recv_call_back_wrapper(
 	dispatch();
 }
 
-void net::dispatcher::send(const boost::shared_ptr<proactor::connection_info> & CI,
+void net::dispatcher::send(const boost::shared_ptr<connection_info> & CI,
 	const unsigned latest_send, const unsigned send_buf_size)
 {
 	{//BEGIN lock scope
@@ -118,7 +118,7 @@ void net::dispatcher::send(const boost::shared_ptr<proactor::connection_info> & 
 	dispatch();
 }
 
-void net::dispatcher::send_call_back_wrapper(boost::shared_ptr<proactor::connection_info> CI,
+void net::dispatcher::send_call_back_wrapper(boost::shared_ptr<connection_info> CI,
 	const unsigned latest_send, const int send_buf_size)
 {
 	CI->latest_send = latest_send;

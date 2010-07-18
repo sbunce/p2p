@@ -1,4 +1,4 @@
-#include "ID_manager.hpp"
+#include <net/ID_manager.hpp>
 
 net::ID_manager::ID_manager():
 	highest_allocated(0)

@@ -110,8 +110,8 @@ private:
 		Proactor does call back when new connection failed, or when existing
 		connection closed.
 	*/
-	void connect_call_back(net::proactor::connection_info & CI);
-	void disconnect_call_back(net::proactor::connection_info & CI);
+	void connect_call_back(net::connection_info & CI);
+	void disconnect_call_back(net::connection_info & CI);
 
 	/*
 	connect:

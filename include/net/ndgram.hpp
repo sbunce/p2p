@@ -2,7 +2,6 @@
 #define H_NET_NDGRAM
 
 //custom
-#include "protocol.hpp"
 #include "socket_base.hpp"
 
 namespace net{

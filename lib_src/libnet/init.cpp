@@ -1,7 +1,4 @@
-#include "init.hpp"
-
-//include
-#include <portable.hpp>
+#include <net/init.hpp>
 
 net::init::init()
 {

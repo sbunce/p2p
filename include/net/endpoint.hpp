@@ -2,20 +2,19 @@
 #define H_NET_ENDPOINT
 
 //custom
+#include "init.hpp"
 #include "protocol.hpp"
 
 //include
 #include <boost/optional.hpp>
 #include <convert.hpp>
 #include <logger.hpp>
+#include <portable.hpp>
 
 //standard
 #include <set>
 
 namespace net{
-
-//predecl for PIMPL
-class addr_impl;
 
 //classes which need access to private addrinfo
 class listener;
@@ -61,9 +60,16 @@ public:
 	bool operator != (const endpoint & rval) const;
 
 private:
-	explicit endpoint(const boost::scoped_ptr<addr_impl> & AI_in);
+	explicit endpoint(const addrinfo * ai_in);
 
-	boost::scoped_ptr<addr_impl> AI;
+	addrinfo ai;
+	sockaddr_storage sas;
+
+	/*
+	copy:
+		Used to copy endpoint addrinfo.
+	*/
+	void copy(const addrinfo * ai_in);
 };
 
 /*

@@ -1,8 +1,12 @@
 #ifndef H_NET_SELECT
 #define H_NET_SELECT
 
-//include
-#include <net/net.hpp>
+//custom
+#include "listener.hpp"
+#include "nstream.hpp"
+
+//standard
+#include <set>
 
 namespace net{
 class select

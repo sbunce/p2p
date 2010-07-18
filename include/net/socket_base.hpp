@@ -1,6 +1,9 @@
 #ifndef H_NET_SOCKET_BASE
 #define H_NET_SOCKET_BASE
 
+//custom
+#include "endpoint.hpp"
+
 //include
 #include <boost/utility.hpp>
 

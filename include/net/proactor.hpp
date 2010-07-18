@@ -3,125 +3,128 @@
 
 //custom
 #include "buffer.hpp"
-#include "protocol.hpp"
+#include "connection.hpp"
+#include "connection_info.hpp"
+#include "dispatcher.hpp"
+#include "init.hpp"
+#include "listener.hpp"
+#include "nstream.hpp"
+#include "rate_limit.hpp"
+#include "select.hpp"
 
 //include
 #include <boost/shared_ptr.hpp>
-#include <thread_pool.hpp>
+#include <portable.hpp>
 
 //standard
 #include <map>
+#include <queue>
 
 namespace net{
-
-//predecl for PIMPL
-class proactor_impl;
-
 class proactor : private boost::noncopyable
 {
+	net::init Init;
 public:
-	//info passed to call backs
-	class connection_info : private boost::noncopyable
-	{
-	public:
-		connection_info(
-			const int connection_ID_in,
-			const endpoint & ep_in,
-			const direction_t direction_in
-		);
-
-		const int connection_ID;
-		const endpoint ep;
-		const direction_t direction;
-
-		/*
-		The recv_call_back must be set in the connect call back to recieve incoming
-		data. If the recv_call_back is not set during the connect call back then
-		incoming data will be discarded.
-		*/
-		boost::function<void (connection_info &)> recv_call_back;
-		boost::function<void (connection_info &)> send_call_back;
-
-		/*
-		recv_buf:
-			Received data appended to this buffer.
-		latest_recv:
-			How much data was appended last.
-		latest_send:
-			Size of the latest send. This value will be stale during all but
-			send_call_back.
-		*/
-		buffer recv_buf;
-		unsigned latest_recv;
-		unsigned latest_send;
-
-		/*
-		The size of the send_buf only accessible to the proactor. This value can be
-		really old if checked during the recv_call_back. This value is most up to
-		date when checked during the send_call_back. If the send_call_back is set
-		then a call back will happen whenever this value decreases.
-		*/
-		unsigned send_buf_size;
-	};
-
+	//if listener not specified then listener is not started
 	proactor(
 		const boost::function<void (connection_info &)> & connect_call_back,
 		const boost::function<void (connection_info &)> & disconnect_call_back
 	);
 
-	/* Stop/Start
-	start:
-		Start the proactor and optionally add a listener.
-		Note: The listener added should not be used after it is passed to the
-			proactor.
-	stop:
-		Stop the proactor. Disconnect call back done for all connections.
-		Pending resolve jobs are cancelled.
-	*/
-	void start(boost::shared_ptr<listener> Listener_in = boost::shared_ptr<listener>());
+	//documentation in proactor.hpp
+
+	//stop/start
+	void start(boost::shared_ptr<listener> Listener_in);
 	void stop();
 
-	/* Connect/Disconnect/Send
-	connect:
-		Start async connection to host. Connect call back will happen if connects,
-		or disconnect call back if connection fails.
-	disconnect:
-		Disconnect as soon as possible.
-	disconnect_on_empty:
-		Disconnect when send buffer becomes empty.
-	send:
-		Send data to specified connection if connection still exists.
-	*/
+	//connect/disconnect/send
 	void connect(const endpoint & ep);
 	void disconnect(const int connection_ID);
 	void disconnect_on_empty(const int connection_ID);
 	void send(const int connection_ID, buffer & send_buf);
 
-
-	/* Info
-	download_rate:
-		Returns download rate averaged over a few seconds (B/s).
-	upload_rate:
-		Returns upload rate averaged over a few seconds (B/s).
-	*/
+	//info
 	unsigned download_rate();
 	unsigned upload_rate();
 
-	/* Set Options
-	set_connection_limit:
-		Set connection limit for incoming and outgoing connections.
-		Note: incoming_limit + outgoing_limit <= 1024.
-	set_max_download_rate:
-		Set maximum allowed download rate.
-	set_max_upload_rate:
-		Set maximum allowed upload rate.
-	*/
+	//set options
 	void set_connection_limit(const unsigned incoming_limit, const unsigned outgoing_limit);
 	void set_max_download_rate(const unsigned rate);
 	void set_max_upload_rate(const unsigned rate);
 
 private:
-	boost::shared_ptr<proactor_impl> Proactor_impl;
+	//lock for starting/stopping proactor
+	boost::recursive_mutex start_stop_mutex;
+	bool stopped;
+
+	ID_manager ID_Manager;
+	dispatcher Dispatcher;
+	boost::shared_ptr<listener> Listener;
+	rate_limit Rate_Limit;
+	select Select;
+	std::time_t network_loop_time;                        //used to run tasks once per second
+	std::set<int> read_FDS, write_FDS;                    //sets to monitor with select
+	std::map<int, boost::shared_ptr<connection> > Socket; //socket_FD associated with connection
+	std::map<int, boost::shared_ptr<connection> > ID;     //connection_ID associated with connection
+	unsigned incoming_connection_limit;                   //maximum allowed incoming connections
+	unsigned outgoing_connection_limit;                   //maximum allowed outgoing connections
+	unsigned incoming_connections;                        //current incoming connections
+	unsigned outgoing_connections;                        //current outgoing connections
+
+	/*
+	Function call proxy. A thread adds a function object and network_thread makes
+	the function call. This eliminates a lot of locking.
+	*/
+	boost::mutex relay_job_mutex;
+	std::deque<boost::function<void ()> > relay_job;
+
+	/*
+	adjust_connection_limits:
+		Called via relay_job proxy to adjust connection limits.
+	add_socket:
+		Add socket to be monitored.
+		Note: P.first must be socket_FD.
+	append_send_buf:
+		Proxy-called using relay_job to append data to be sent to
+		send_buf.
+	check_timeouts:
+		Disconnecte connections which have timed out.
+	connect_relay:
+		Start async connect to endpoint.
+	disconnect:
+		Disconnect a connection. If on_empty = true then connection disconnected
+		when connection send_buf is empty.
+	lookup_socket:
+		Lookup connection by socket_FD. If connection not found then shared_ptr
+		will be empty.
+	lookup_ID:
+		Lookup connection by connection_ID. If connection not found then
+		shared_ptr will be empty.
+	handle_async_connection:
+		Called when a async connecting socket becomes writeable.
+		Note: P.first must be socket_FD.
+	network_loop:
+		The network_thread resides in this function.
+	process_relay_job:
+		Called by network_thread to process relay jobs.
+	remote_socket:
+		Removes connection that corresponds to socket_FD.
+	*/
+	void adjust_connection_limits(const unsigned incoming_limit,
+		const unsigned outgoing_limit);
+	void add_socket(std::pair<int, boost::shared_ptr<connection> > P);
+	void append_send_buf(const int connection_ID, boost::shared_ptr<buffer> B);
+	void check_timeouts();
+	void connect_relay(const endpoint ep);
+	void disconnect(const int connection_ID, const bool on_empty);
+	std::pair<int, boost::shared_ptr<connection> > lookup_socket(const int socket_FD);
+	std::pair<int, boost::shared_ptr<connection> > lookup_ID(const int connection_ID);
+	void handle_async_connection(std::pair<int, boost::shared_ptr<connection> > P);
+	void network_loop();
+	void process_relay_job();
+	void remove_socket(const int socket_FD);
+
+	thread_pool_global Thread_Pool;
 };
 }//end namespace net
 #endif

@@ -2,7 +2,7 @@
 
 connection::connection(
 	net::proactor & Proactor_in,
-	net::proactor::connection_info & CI,
+	net::connection_info & CI,
 	const boost::function<void(const net::endpoint & ep, const std::string & hash)> & peer_call_back,
 	const boost::function<void(const int)> & trigger_tick
 ):
@@ -53,7 +53,7 @@ bool connection::empty()
 	return Slot_Manager.empty();
 }
 
-void connection::recv_call_back(net::proactor::connection_info & CI)
+void connection::recv_call_back(net::connection_info & CI)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	Exchange.recv_call_back(CI);
@@ -84,7 +84,7 @@ void connection::remove(const std::string & hash)
 	Slot_Manager.remove(hash);
 }
 
-void connection::send_call_back(net::proactor::connection_info & CI)
+void connection::send_call_back(net::connection_info & CI)
 {
 	boost::mutex::scoped_lock lock(Mutex);
 	Exchange.send_call_back(CI);

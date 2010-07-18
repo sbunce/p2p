@@ -1,15 +1,12 @@
-/*
-This class handles rate limiting and can be used to get access to the average
-upload and download rates. It is also used to set maximum upload/download rates.
-This class is generally accessed through the reactor interface.
-*/
 #ifndef H_NET_RATE_LIMIT
 #define H_NET_RATE_LIMIT
+
+//custom
+#include "speed_calc.hpp"
 
 //include
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
-#include <net/net.hpp>
 
 //standard
 #include <limits>

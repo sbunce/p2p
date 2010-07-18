@@ -12,8 +12,8 @@ boost::mutex test_mutex;
 boost::condition_variable_any test_cond;
 bool test_finished = false;
 
-void connect_call_back(net::proactor::connection_info &);
-void disconnect_call_back(net::proactor::connection_info &);
+void connect_call_back(net::connection_info &);
+void disconnect_call_back(net::connection_info &);
 net::proactor Proactor(
 	&connect_call_back,
 	&disconnect_call_back
@@ -28,7 +28,7 @@ const unsigned test_echo(32);
 atomic_int<unsigned> echo_count(0);
 atomic_int<unsigned> disconnect_count(0);
 
-void recv_call_back(net::proactor::connection_info & CI)
+void recv_call_back(net::connection_info & CI)
 {
 	if(CI.direction == net::incoming){
 		assert(CI.recv_buf.size() == 1);
@@ -43,7 +43,7 @@ void recv_call_back(net::proactor::connection_info & CI)
 	}
 }
 
-void connect_call_back(net::proactor::connection_info & CI)
+void connect_call_back(net::connection_info & CI)
 {
 	CI.recv_call_back = &recv_call_back;
 	if(CI.direction == net::outgoing){
@@ -53,7 +53,7 @@ void connect_call_back(net::proactor::connection_info & CI)
 	}
 }
 
-void disconnect_call_back(net::proactor::connection_info & CI)
+void disconnect_call_back(net::connection_info & CI)
 {
 	++disconnect_count;
 	if(disconnect_count == test_echo * 2){

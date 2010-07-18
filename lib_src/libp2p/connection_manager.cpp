@@ -77,7 +77,7 @@ unsigned connection_manager::connections()
 	return Connection.size();
 }
 
-void connection_manager::connect_call_back(net::proactor::connection_info & CI)
+void connection_manager::connect_call_back(net::connection_info & CI)
 {
 	boost::mutex::scoped_lock lock(Connect_mutex);
 
@@ -114,7 +114,7 @@ unsigned connection_manager::DHT_count()
 	return DHT.count();
 }
 
-void connection_manager::disconnect_call_back(net::proactor::connection_info & CI)
+void connection_manager::disconnect_call_back(net::connection_info & CI)
 {
 	boost::mutex::scoped_lock lock(Connect_mutex);
 	Connection.erase(CI.connection_ID);

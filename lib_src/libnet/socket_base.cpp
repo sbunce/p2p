@@ -1,8 +1,4 @@
-#include "init.hpp"
-#include <net/net.hpp>
-
-//include
-#include <portable.hpp>
+#include <net/socket_base.hpp>
 
 net::socket_base::socket_base():
 	socket_FD(-1)

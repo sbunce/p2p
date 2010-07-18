@@ -2,8 +2,6 @@
 #define H_NET_NSTREAM
 
 //custom
-#include "buffer.hpp"
-#include "endpoint.hpp"
 #include "socket_base.hpp"
 
 namespace net{

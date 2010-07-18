@@ -1,4 +1,4 @@
-#include <net/net.hpp>
+#include <net/buffer.hpp>
 
 //BEGIN iterator
 net::buffer::iterator::iterator(

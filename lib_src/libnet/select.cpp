@@ -1,5 +1,4 @@
-#include "init.hpp"
-#include <net/net.hpp>
+#include <net/select.hpp>
 
 net::select::select()
 {

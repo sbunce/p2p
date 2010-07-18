@@ -1,17 +1,15 @@
-#include "addr_impl.hpp"
-#include "init.hpp"
-#include <net/net.hpp>
+#include <net/endpoint.hpp>
 
-net::endpoint::endpoint(const boost::scoped_ptr<addr_impl> & AI_in):
-	AI(new addr_impl(*AI_in))
+net::endpoint::endpoint(const addrinfo * ai_in)
 {
 	net::init::start();
+	copy(ai_in);
 }
 
-net::endpoint::endpoint(const endpoint & E):
-	AI(new addr_impl(*E.AI))
+net::endpoint::endpoint(const endpoint & E)
 {
 	net::init::start();
+	copy(&E.ai);
 }
 
 net::endpoint::~endpoint()
@@ -19,10 +17,20 @@ net::endpoint::~endpoint()
 	net::init::stop();
 }
 
+void net::endpoint::copy(const addrinfo * ai_in)
+{
+	assert(ai_in != NULL);
+	ai = *ai_in;
+	ai.ai_addr = reinterpret_cast<sockaddr *>(&sas);
+	std::memcpy(ai.ai_addr, ai_in->ai_addr, ai_in->ai_addrlen);
+	ai.ai_canonname = NULL;
+	ai.ai_next = NULL;
+}
+
 std::string net::endpoint::IP() const
 {
 	char buf[INET6_ADDRSTRLEN];
-	if(getnameinfo(AI->ai.ai_addr, AI->ai.ai_addrlen, buf, sizeof(buf), NULL, 0,
+	if(getnameinfo(ai.ai_addr, ai.ai_addrlen, buf, sizeof(buf), NULL, 0,
 		NI_NUMERICHOST) == -1)
 	{
 		return "";
@@ -32,11 +40,11 @@ std::string net::endpoint::IP() const
 
 std::string net::endpoint::IP_bin() const
 {
-	if(AI->ai.ai_addr->sa_family == AF_INET){
-		return convert::int_to_bin(reinterpret_cast<sockaddr_in *>(AI->ai.ai_addr)->sin_addr.s_addr);
-	}else if(AI->ai.ai_addr->sa_family == AF_INET6){
+	if(ai.ai_addr->sa_family == AF_INET){
+		return convert::int_to_bin(reinterpret_cast<sockaddr_in *>(ai.ai_addr)->sin_addr.s_addr);
+	}else if(ai.ai_addr->sa_family == AF_INET6){
 		return std::string(reinterpret_cast<const char *>(
-			reinterpret_cast<sockaddr_in6 *>(AI->ai.ai_addr)->sin6_addr.s6_addr), 16);
+			reinterpret_cast<sockaddr_in6 *>(ai.ai_addr)->sin6_addr.s6_addr), 16);
 	}else{
 		LOG << "unknown address family";
 		exit(1);
@@ -46,7 +54,7 @@ std::string net::endpoint::IP_bin() const
 std::string net::endpoint::port() const
 {
 	char buf[6];
-	if(getnameinfo(AI->ai.ai_addr, AI->ai.ai_addrlen, NULL, 0, buf, sizeof(buf),
+	if(getnameinfo(ai.ai_addr, ai.ai_addrlen, NULL, 0, buf, sizeof(buf),
 		NI_NUMERICSERV) == -1)
 	{
 		return "";
@@ -56,12 +64,12 @@ std::string net::endpoint::port() const
 
 std::string net::endpoint::port_bin() const
 {
-	if(AI->ai.ai_addr->sa_family == AF_INET){
+	if(ai.ai_addr->sa_family == AF_INET){
 		return std::string(reinterpret_cast<const char *>(
-			&reinterpret_cast<sockaddr_in *>(AI->ai.ai_addr)->sin_port), 2);
-	}else if(AI->ai.ai_addr->sa_family == AF_INET6){
+			&reinterpret_cast<sockaddr_in *>(ai.ai_addr)->sin_port), 2);
+	}else if(ai.ai_addr->sa_family == AF_INET6){
 		return std::string(reinterpret_cast<const char *>(
-			&reinterpret_cast<sockaddr_in6 *>(AI->ai.ai_addr)->sin6_port), 2);
+			&reinterpret_cast<sockaddr_in6 *>(ai.ai_addr)->sin6_port), 2);
 	}else{
 		LOG << "unknown address family";
 		exit(1);
@@ -70,7 +78,7 @@ std::string net::endpoint::port_bin() const
 
 net::version_t net::endpoint::version() const
 {
-	if(AI->ai.ai_addr->sa_family == AF_INET){
+	if(ai.ai_addr->sa_family == AF_INET){
 		return IPv4;
 	}else{
 		return IPv6;
@@ -79,7 +87,7 @@ net::version_t net::endpoint::version() const
 
 net::endpoint & net::endpoint::operator = (const endpoint & rval)
 {
-	*AI = *rval.AI;
+	copy(&rval.ai);
 	return *this;
 }
 
@@ -127,8 +135,7 @@ std::set<net::endpoint> net::get_endpoint(const std::string & host,
 		&hints, &result)) == 0)
 	{
 		for(addrinfo * cur = result; cur != NULL; cur = cur->ai_next){
-			boost::scoped_ptr<addr_impl> AI(new addr_impl(cur));
-			E.insert(endpoint(AI));
+			E.insert(endpoint(cur));
 		}
 		freeaddrinfo(result);
 	}else{
@@ -153,17 +160,17 @@ boost::optional<net::endpoint> net::bin_to_endpoint(const std::string & addr,
 	boost::optional<net::endpoint> ep(*ep_set.begin());
 
 	//replace localhost address and port
-	if(ep->AI->ai.ai_addr->sa_family == AF_INET){
+	if(ep->ai.ai_addr->sa_family == AF_INET){
 		assert(addr.size() == 4);
-		reinterpret_cast<sockaddr_in *>(ep->AI->ai.ai_addr)->sin_addr.s_addr
+		reinterpret_cast<sockaddr_in *>(ep->ai.ai_addr)->sin_addr.s_addr
 			= convert::bin_to_int<boost::uint32_t>(addr);
-		std::memcpy(reinterpret_cast<void *>(&reinterpret_cast<sockaddr_in *>(ep->AI->ai.ai_addr)->sin_port),
+		std::memcpy(reinterpret_cast<void *>(&reinterpret_cast<sockaddr_in *>(ep->ai.ai_addr)->sin_port),
 			reinterpret_cast<const void *>(port.data()), 2);
-	}else if(ep->AI->ai.ai_addr->sa_family == AF_INET6){
+	}else if(ep->ai.ai_addr->sa_family == AF_INET6){
 		assert(addr.size() == 16);
-		std::memcpy(reinterpret_cast<sockaddr_in6 *>(ep->AI->ai.ai_addr)->sin6_addr.s6_addr,
+		std::memcpy(reinterpret_cast<sockaddr_in6 *>(ep->ai.ai_addr)->sin6_addr.s6_addr,
 			addr.data(), addr.size());
-		std::memcpy(reinterpret_cast<void *>(&reinterpret_cast<sockaddr_in6 *>(ep->AI->ai.ai_addr)->sin6_port),
+		std::memcpy(reinterpret_cast<void *>(&reinterpret_cast<sockaddr_in6 *>(ep->ai.ai_addr)->sin6_port),
 			reinterpret_cast<const void *>(port.data()), 2);
 	}else{
 		LOG << "unknown address family";

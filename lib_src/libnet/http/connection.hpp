@@ -24,7 +24,7 @@ class connection : private boost::noncopyable
 public:
 	connection(
 		net::proactor & Proactor_in,
-		net::proactor::connection_info & CI,
+		net::connection_info & CI,
 		const std::string & web_root_in
 	);
 
@@ -49,7 +49,7 @@ private:
 	void encode_chars(std::string & str);
 
 	//default call back
-	void recv_call_back(net::proactor::connection_info & CI);
+	void recv_call_back(net::connection_info & CI);
 
 	/* Other Call Backs
 	file_send_call_back:
@@ -57,7 +57,7 @@ private:
 	read_directory:
 		Sends directory listing and disconnect.
 	*/
-	void file_send_call_back(net::proactor::connection_info & CI);
-	void read_directory(net::proactor::connection_info & CI);
+	void file_send_call_back(net::connection_info & CI);
+	void read_directory(net::connection_info & CI);
 };
 #endif

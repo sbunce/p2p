@@ -1,10 +1,13 @@
 #ifndef H_NET_DISPATCHER
 #define H_NET_DISPATCHER
 
+//custom
+#include "connection_info.hpp"
+
 //include
 #include <boost/shared_ptr.hpp>
 #include <boost/utility.hpp>
-#include <net/net.hpp>
+#include <thread_pool.hpp>
 
 //standard
 #include <list>
@@ -14,8 +17,8 @@ class dispatcher : private boost::noncopyable
 {
 public:
 	dispatcher(
-		const boost::function<void (proactor::connection_info &)> & connect_call_back_in,
-		const boost::function<void (proactor::connection_info &)> & disconnect_call_back_in
+		const boost::function<void (connection_info &)> & connect_call_back_in,
+		const boost::function<void (connection_info &)> & disconnect_call_back_in
 	);
 	~dispatcher();
 
@@ -42,19 +45,19 @@ public:
 		Schedule call back for send_buf size decrease.
 		Precondition: The connect call back must have been scheduled.
 	*/
-	void connect(const boost::shared_ptr<proactor::connection_info> & CI);
-	void disconnect(const boost::shared_ptr<proactor::connection_info> & CI);
-	void recv(const boost::shared_ptr<proactor::connection_info> & CI,
+	void connect(const boost::shared_ptr<connection_info> & CI);
+	void disconnect(const boost::shared_ptr<connection_info> & CI);
+	void recv(const boost::shared_ptr<connection_info> & CI,
 		const boost::shared_ptr<buffer> & recv_buf);
-	void send(const boost::shared_ptr<proactor::connection_info> & CI, const unsigned latest_send,
+	void send(const boost::shared_ptr<connection_info> & CI, const unsigned latest_send,
 		const unsigned send_buf_size);
 
 private:
 	//threads to do call backs
 	boost::thread_group workers;
 
-	const boost::function<void (proactor::connection_info &)> connect_call_back;
-	const boost::function<void (proactor::connection_info &)> disconnect_call_back;
+	const boost::function<void (connection_info &)> connect_call_back;
+	const boost::function<void (connection_info &)> disconnect_call_back;
 
 	/*
 	Invariants to the call back system:
@@ -92,11 +95,11 @@ private:
 		necessary to allow send_call_back to be changed while another send call back
 		is being blocked by in dispatch().
 	*/
-	void connect_call_back_wrapper(boost::shared_ptr<proactor::connection_info> CI);
-	void disconnect_call_back_wrapper(boost::shared_ptr<proactor::connection_info> CI);
-	void recv_call_back_wrapper(boost::shared_ptr<proactor::connection_info> CI,
+	void connect_call_back_wrapper(boost::shared_ptr<connection_info> CI);
+	void disconnect_call_back_wrapper(boost::shared_ptr<connection_info> CI);
+	void recv_call_back_wrapper(boost::shared_ptr<connection_info> CI,
 		boost::shared_ptr<buffer> recv_buf);
-	void send_call_back_wrapper(boost::shared_ptr<proactor::connection_info> CI,
+	void send_call_back_wrapper(boost::shared_ptr<connection_info> CI,
 		const unsigned latest_send, const int send_buf_size);
 
 	thread_pool_global Thread_Pool;

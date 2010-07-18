@@ -1,11 +1,6 @@
 #ifndef H_PORTABLE
 #define H_PORTABLE
 
-//include
-#include <boost/cstdint.hpp>
-#include <logger.hpp>
-#include <net/net.hpp>
-
 //system specific
 #ifdef _WIN32
 	//BEGIN winsock stuff
@@ -54,6 +49,11 @@
 	#include <sys/types.h>
 	#include <unistd.h>
 #endif
+
+//include
+#include <boost/cstdint.hpp>
+#include <logger.hpp>
+#include <net/buffer.hpp>
 
 //standard
 #include <fstream>

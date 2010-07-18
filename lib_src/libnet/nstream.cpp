@@ -1,6 +1,4 @@
-#include "init.hpp"
-#include "addr_impl.hpp"
-#include <net/net.hpp>
+#include <net/nstream.hpp>
 
 net::nstream::nstream()
 {
@@ -86,11 +84,11 @@ std::string net::nstream::local_port()
 void net::nstream::open(const endpoint & ep)
 {
 	close();
-	if((socket_FD = ::socket(ep.AI->ai.ai_addr->sa_family, SOCK_STREAM, IPPROTO_TCP)) == -1){
+	if((socket_FD = ::socket(ep.ai.ai_addr->sa_family, SOCK_STREAM, IPPROTO_TCP)) == -1){
 		LOG << strerror(errno);
 		close();
 	}
-	if(::connect(socket_FD, ep.AI->ai.ai_addr, ep.AI->ai.ai_addrlen) != 0){
+	if(::connect(socket_FD, ep.ai.ai_addr, ep.ai.ai_addrlen) != 0){
 		LOG << strerror(errno);
 		close();
 	}
@@ -99,7 +97,7 @@ void net::nstream::open(const endpoint & ep)
 void net::nstream::open_async(const endpoint & ep)
 {
 	close();
-	if((socket_FD = ::socket(ep.AI->ai.ai_addr->sa_family, SOCK_STREAM, IPPROTO_TCP)) == -1){
+	if((socket_FD = ::socket(ep.ai.ai_addr->sa_family, SOCK_STREAM, IPPROTO_TCP)) == -1){
 		LOG << strerror(errno);
 		return;
 	}
@@ -117,7 +115,7 @@ void net::nstream::open_async(const endpoint & ep)
 	Because of the inconsistency above we check for writeability because it
 	works on FreeBSD, Windows, and Linux.
 	*/
-	if(::connect(socket_FD, ep.AI->ai.ai_addr, ep.AI->ai.ai_addrlen) != 0){
+	if(::connect(socket_FD, ep.ai.ai_addr, ep.ai.ai_addrlen) != 0){
 		/*
 		Socket in progress of connecting.
 		Note: Windows will sometimes return SOCKET_ERROR (-1) from connect and

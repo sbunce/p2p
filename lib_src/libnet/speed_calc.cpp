@@ -1,4 +1,4 @@
-#include <net/net.hpp>
+#include <net/speed_calc.hpp>
 
 net::speed_calc::speed_calc(
 	const unsigned average_seconds_in

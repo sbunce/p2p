@@ -2,14 +2,13 @@
 #define H_NET_CONNECTION
 
 //custom
+#include "connection_info.hpp"
+#include "endpoint.hpp"
 #include "ID_manager.hpp"
-
-//include
-#include <net/endpoint.hpp>
-#include <net/nstream.hpp>
-#include <net/proactor.hpp>
+#include "nstream.hpp"
 
 //standard
+#include <ctime>
 #include <set>
 
 namespace net{
@@ -56,7 +55,7 @@ public:
 	thread. Modifying this from the network_thread is not thread safe unless
 	it hasn't yet been passed to dispatcher.
 	*/
-	boost::shared_ptr<proactor::connection_info> CI;
+	boost::shared_ptr<connection_info> CI;
 
 	/*
 	half_open:
