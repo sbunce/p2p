@@ -1,0 +1,22 @@
+def build(bld):
+	bld(
+		features = ['cxx', 'cprogram'],
+		source = bld.path.ant_glob('*.cpp'),
+		target = 'gtkmm',
+		lib = [
+			'boost_system',
+			'boost_filesystem',
+			'boost_regex',
+			'boost_thread',
+			'pthread'
+		],
+		uselib_local = [
+			'local_include',
+			'p2p',
+			'net',
+			'tommath',
+			'sqlite3'
+		],
+		uselib = ['gtkmm'],
+		libpath = ['/usr/local/lib']
+	)

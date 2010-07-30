@@ -1,0 +1,25 @@
+import string
+from waflib.Tools import waf_unit_test
+
+def build(bld):
+	for x in bld.path.ant_glob('*.cpp'):
+		bld(
+			features = 'cxx cprogram test',
+			source = x,
+			target = str(x)[:str(x).rfind('.')] + '.bin',
+			lib = [
+				'boost_system',
+				'boost_filesystem',
+				'boost_regex',
+				'boost_thread',
+				'pthread'
+			],
+			uselib_local = [
+				'local_include',
+				'p2p',
+				'net',
+				'tommath',
+				'sqlite3'
+			],
+			libpath = ['/usr/local/lib']
+		)

@@ -1,9 +1,0 @@
-#site_scons
-import glob
-import unit_test
-
-Import('env_base')
-unit_test.run(env_base)
-
-Clean('.', glob.glob('*.db'))
-Clean('.', glob.glob('*.db-journal'))

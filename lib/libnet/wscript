@@ -1,0 +1,10 @@
+def build(bld):
+	bld.recurse('http')
+	bld.recurse('unit_tests')
+	bld(
+		features = 'cxx cxxstlib', 
+		source = bld.path.ant_glob('*.cpp'),
+		target = 'net',
+		includes = '.',
+		uselib_local = 'local_include'
+	)

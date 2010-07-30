@@ -7,8 +7,6 @@
 namespace net{
 class nstream : public socket_base
 {
-	//max we attempt to send/recv in one go
-	static const int MTU = 8192;
 public:
 	nstream();
 	explicit nstream(const endpoint & E);     //sync connect to endpoint

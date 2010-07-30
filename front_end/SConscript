@@ -1,4 +1,0 @@
-SConscript([
-	'CLI/SConscript',
-	'gtkmm/SConscript'
-])

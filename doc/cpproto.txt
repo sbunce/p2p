@@ -1,0 +1,122 @@
+CPProto
+=======
+
+The serialization format is similar to protocol buffers. However, it is NOT
+compatible.
+http://code.google.com/apis/protocolbuffers/docs/encoding.html#structure
+
+The protocol consists of key/value pairs. The key is a vint (variable length
+unsigned int) which specifies field ID and the wire format of the value.
+
+vint
+====
+All vints are unsigned and little-endian. Each byte in a vint only uses 7 bits
+to store data, the MSB (most sig bit) is used to indicate if there is another
+byte in the vint. Vints can be a maximum of 10 bytes to support 64bit integers.
+
+	+---+---+---+---+---+---+---+---+   +---+---+---+---+---+---+---+---+
+	| 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | + | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
+	+---+---+---+---+---+---+---+---+   +---+---+---+---+---+---+---+---+
+	  7   6   5   4   3   2   1   0       7   6   5   4   3   2   1   0
+                 byte 0                              byte 1
+
+This example shows a vint which stores the number 128. Byte 0 has the MSB set to
+indicate that another byte follows. Byte 1 doesn't have the MSB set to indicate
+it is the last byte. Byte 1 has it's LSB (least sig bit) set which is a data
+bit. Since the 8th data bit is set this vint is equal to 128.
+
+key
+===
+The key is a vint. The LSB of the key is the wire format. The rest of the key is
+the message ID. If the LSB is set to 0 there will be a vint value. If the LSB is
+set to 1 there will be a length delimited value. A length delimited value starts
+with a vint that specifies how many bytes will follow it.
+
+The reason for using the LSB of the key to indicate wire format is that we need
+to be able to parse unknown key/value pairs. This allows updating the protocol
+without breaking old clients.
+
+
+Fields
+======
+
+There are a number of predefined fields. Users can define their own fields but
+it's not trivial to do. It requires understanding of the wire format.
+
+Predefined Fields:
+
+ASCII: Uses 7 bits to store an ASCII character. Saves space.
+
+	value:
+	+---+---+---+---+---+---+
+	|     A     |     B     |
+	+---+---+---+---+---+---+
+	  0  ...  x  x+1 ... x+y
+	A = size of B (vint), B = 7-bit ASCII string
+	Note: If there's a wasted 7-bit group on the end of B it will be set to 0.
+
+
+boolean: true/false
+
+	value:
+	+---+---+---+
+	|     A     |
+	+---+---+---+
+	  0  ...  x
+	A = vint, A == 0 ? false : true;
+
+
+list: A list field saves space by stripping the keys from all pairs in the list
+and only putting one key at the front of the list. A list inherits the field ID
+of whatever field the list contains.
+
+	value:
+	+---+---+---+---+---+---+         +---+---+---+
+	|     A     |     B     | + ... + |     C     |
+	+---+---+---+---+---+---+         +---+---+---+
+	  0  ...  x             y  ... y+n
+	A = size of list (vint), B = first value of list, C = last value of list
+
+
+message: A message encapsulates a group of fields that MUST have unique field
+IDs. These fields can be in any order on the wire. Unrecognized fields are
+preserved and reserialized. Since a message is also a field a message may
+contain another message as a field. A message on the wire must contain at least
+one field.
+
+
+sint: Signed integer. To save space we convert signed integers in to unsigned so
+they can be stored in a vint. This is done by shifting the signed int left by
+one and using the LSB for the sign bit. These are the functions that do this
+conversion.
+
+uint64_t encode_int(const int64_t x){
+	return (x << 1) ^ (x >> 63);
+}
+int64_t decode_int(const uint64_t x){
+	return (x >> 1) ^ -static_cast<int64_t>(x & 1);
+}
+
+
+string: A string of bytes. The string can contain bytes of any values.
+
+	value:
+	+---+---+---+---+---+---+
+	|     A     |     B     |
+	+---+---+---+---+---+---+
+	  0  ...  x  x+1 ... x+y
+	A = size of B (vint), B = string
+
+
+uint: Unsigned integer.
+
+	value:
+	+---+---+---+
+	|     A     |
+	+---+---+---+
+	  0  ...  x
+	A = vint
+
+
+unknown: Unknown field. This is used by the message field to store unknown
+fields. End users most likely won't use this.

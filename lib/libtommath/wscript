@@ -1,0 +1,9 @@
+def build(bld):
+	bld.recurse('unit_tests')
+	bld(
+		features = 'c cxx cxxstlib', 
+		source = bld.path.ant_glob('*.c*'),
+		target = 'tommath',
+		includes = '.',
+		uselib_local = 'local_include'
+	)

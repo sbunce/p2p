@@ -1,0 +1,13 @@
+def build(bld):
+	bld(
+		features = 'c cxx cxxstlib', 
+		source = bld.path.ant_glob('*.c*'),
+		target = 'sqlite3',
+		includes = '.',
+		defines = [
+			'SQLITE_THREADSAFE=2',         #require external locking
+			'SQLITE_OMIT_LOAD_EXTENSION',  #remove libdl dependency
+			'SQLITE_MAX_LENGTH=2147483647' #increase blob size to maximum
+		],
+		uselib_local = 'local_include'
+	)
