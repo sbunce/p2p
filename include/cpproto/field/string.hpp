@@ -35,6 +35,12 @@ public:
 		return *this;
 	}
 
+	string & operator = (const char * rval)
+	{
+		val = rval;
+		return *this;
+	}
+
 	std::string & operator * ()
 	{
 		return val;

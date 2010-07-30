@@ -17,7 +17,8 @@ public:
 	~logger()
 	{
 		boost::mutex::scoped_lock lock(wrap::singleton()->stdout_mutex);
-		std::cout << "[" << file << "][" << func << "][" << line << "] " << buf.str() << "\n";
+		std::cout << "[" << file << "][" << func << "][" << line << "] "
+			<< buf.str() << "\n";
 	}
 
 	static logger create(const std::string & file, const std::string & func,
@@ -61,7 +62,6 @@ private:
 	{
 		friend class singleton_base<wrap>;
 	public:
-		//locks all access to stdout
 		boost::mutex stdout_mutex;
 	};
 };

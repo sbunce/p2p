@@ -11,7 +11,7 @@ class unknown : public field
 public:
 	virtual operator bool () const
 	{
-		return key_val.empty();
+		return !key_val.empty();
 	}
 
 	virtual void clear()
