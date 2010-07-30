@@ -6,7 +6,8 @@ def build(bld):
 		bld(
 			features = 'cxx cprogram test',
 			source = x,
-			target = str(x)[:str(x).rfind('.')] + '.bin'
+			target = str(x)[:str(x).rfind('.')] + '.bin',
+			lib = [
 				'boost_system',
 				'boost_filesystem',
 				'boost_regex',
