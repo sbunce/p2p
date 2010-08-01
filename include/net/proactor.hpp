@@ -25,7 +25,6 @@ class proactor : private boost::noncopyable
 {
 	net::init Init;
 public:
-	//if listener not specified then listener is not started
 	proactor(
 		const boost::function<void (connection_info &)> & connect_call_back,
 		const boost::function<void (connection_info &)> & disconnect_call_back
