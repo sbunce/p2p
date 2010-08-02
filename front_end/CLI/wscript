@@ -3,19 +3,12 @@ def build(bld):
 		features = ['cxx', 'cprogram'],
 		source = bld.path.ant_glob('*.cpp'),
 		target = 'CLI',
-		lib = [
-			'boost_system',
-			'boost_filesystem',
-			'boost_regex',
-			'boost_thread',
-			'pthread'
-		],
+		use = ['platform', 'boost'],
 		uselib_local = [
 			'local_include',
 			'p2p',
 			'net',
 			'tommath',
 			'sqlite3'
-		],
-		libpath = ['/usr/local/lib']
+		]
 	)

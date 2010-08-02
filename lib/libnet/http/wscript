@@ -3,16 +3,9 @@ def build(bld):
 		features = ['cxx', 'cprogram'],
 		source = bld.path.ant_glob('*.cpp'),
 		target = 'http',
-		lib = [
-			'boost_system',
-			'boost_filesystem',
-			'boost_regex',
-			'boost_thread',
-			'pthread'
-		],
+		use = ['platform', 'boost'],
 		uselib_local = [
 			'local_include',
 			'net'
-		],
-		libpath = ['/usr/local/lib']
+		]
 	)

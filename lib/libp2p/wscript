@@ -4,6 +4,6 @@ def build(bld):
 		features = 'cxx cxxstlib', 
 		source = bld.path.ant_glob('*.cpp'),
 		target = 'p2p',
-		includes = '.',
+		use = ['platform', 'boost'],
 		uselib_local = 'local_include'
 	)

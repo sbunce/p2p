@@ -9,5 +9,6 @@ def build(bld):
 			'SQLITE_OMIT_LOAD_EXTENSION',  #remove libdl dependency
 			'SQLITE_MAX_LENGTH=2147483647' #increase blob size to maximum
 		],
+		use = ['platform', 'boost'],
 		uselib_local = 'local_include'
 	)

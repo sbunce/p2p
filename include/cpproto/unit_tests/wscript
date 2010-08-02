@@ -7,11 +7,6 @@ def build(bld):
 			features = 'cxx cprogram test',
 			source = x,
 			target = str(x)[:str(x).rfind('.')] + '.bin',
-			lib = [
-				'boost_system',
-				'boost_thread',
-				'pthread'
-			],
-			uselib_local = ['local_include'],
-			libpath = ['/usr/local/lib']
+			use = ['platform', 'boost'],
+			uselib_local = ['local_include']
 		)
