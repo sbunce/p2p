@@ -7,7 +7,7 @@ def build(bld):
 			features = 'cxx cprogram test',
 			source = x,
 			target = str(x)[:str(x).rfind('.')] + '.bin',
-			use = ['platform', 'boost'],
+			uselib = ['boost', 'platform'],
 			uselib_local = [
 				'local_include',
 				'p2p',

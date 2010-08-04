@@ -1,15 +1,15 @@
 def build(bld):
-	bld(
-		features = ['cxx', 'cprogram'],
-		source = bld.path.ant_glob('*.cpp'),
-		target = 'gtkmm',
-		use = ['platform', 'boost'],
-		uselib = ['gtkmm'],
-		uselib_local = [
-			'local_include',
-			'p2p',
-			'net',
-			'tommath',
-			'sqlite3'
-		]
-	)
+	if bld.env['HAVE_GTKMM']:
+		bld(
+			features = ['cxx', 'cprogram'],
+			source = bld.path.ant_glob('*.cpp'),
+			target = 'gtkmm',
+			uselib = ['boost', 'gtkmm', 'platform'],
+			uselib_local = [
+				'local_include',
+				'p2p',
+				'net',
+				'tommath',
+				'sqlite3'
+			]
+		)

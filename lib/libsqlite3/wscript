@@ -9,6 +9,15 @@ def build(bld):
 			'SQLITE_OMIT_LOAD_EXTENSION',  #remove libdl dependency
 			'SQLITE_MAX_LENGTH=2147483647' #increase blob size to maximum
 		],
-		use = ['platform', 'boost'],
+		uselib = ['boost', 'platform'],
 		uselib_local = 'local_include'
+	)
+	bld(
+		features = 'c cxx cprogram',
+		source = 'shell.c',
+		target = 'sqlite_shell',
+		includes = '.',
+		defines = 'SQLITE_OMIT_LOAD_EXTENSION',
+		uselib = ['boost', 'platform', 'readline'],
+		uselib_local = 'sqlite3'
 	)

@@ -3,7 +3,7 @@ def build(bld):
 		features = ['cxx', 'cprogram'],
 		source = bld.path.ant_glob('*.cpp'),
 		target = 'CLI',
-		use = ['platform', 'boost'],
+		uselib = ['boost', 'platform'],
 		uselib_local = [
 			'local_include',
 			'p2p',

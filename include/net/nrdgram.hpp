@@ -52,18 +52,36 @@ private:
 	the IP/UDP/RUDP header. This first byte is treated as an unsigned integer.
 	This byte specifies what kind of header will follow.
 
-	Unreliable UDP
+	Unreliable Datagram
 	+---+---+---+---+
 	| 0 |    data   |
 	+---+---+---+---+
 	  0   1  ...  n
 
-	Reliable UDP
+	Connect (like TCP SYN)
+	+---+---+---+---+---+---+---+
+	| 1 |  conn_ID  |  seq_num  |
+	+---+---+---+---+---+---+---+
+	  0   1  ...  4   5  ...  8
+
+	Accept Connect (like TCP SYN+ACK)
+	+---+---+---+---+---+---+---+
+	| 1 |  conn_ID  |  seq_num  |
+	+---+---+---+---+---+---+---+
+	  0   1  ...  4   5  ...  8
+	note: conn_ID must equal conn_ID in Connect message
+	note: seq_num must equal seq_num in Connect message
+
+	Stream
 	+---+---+---+---+---+---+
 	| 1 |seq_num|    data   |
 	+---+---+---+---+---+---+
 	  0   1   2   4  ...  n
 
+
+Think about supporting multi-part datagrams which are fragmented and reassembled
+at the ends in the application layer. These packets would use a hash to
+guarantee the contents of the reassembled message.
 	*/
 };
 }//end namespace net

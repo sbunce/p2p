@@ -5,6 +5,6 @@ def build(bld):
 		features = 'cxx cxxstlib', 
 		source = bld.path.ant_glob('*.cpp'),
 		target = 'net',
-		use = ['platform', 'boost'],
+		uselib = ['boost', 'platform'],
 		uselib_local = 'local_include'
 	)
