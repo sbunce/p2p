@@ -33,7 +33,7 @@ def configure(conf):
 	conf.check_cxx(lib='readline', uselib='readline', \
 		define_name='HAVE_READLINE=1', mandatory=False)
 	if sys.platform == 'win32':
-		conf.env.append_value('CXXFLAGS', '/EHsc')
+		conf.env.append_value('CXXFLAGS', ['/EHsc', '/w'])
 		#boost
 		boost_dir = locate_dir('C:\Program Files\\boost', 'boost.*')
 		conf.env.INCLUDES_boost = boost_dir

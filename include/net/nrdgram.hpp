@@ -8,16 +8,10 @@
 #include <map>
 
 namespace net{
-class nrdgram : public socket_base
+class nrdgram
 {
 public:
 	nrdgram()
-	{
-
-	}
-
-	//open for communication to specific endpoint
-	virtual void open(const endpoint & E)
 	{
 
 	}
@@ -39,12 +33,6 @@ private:
 
 	From this we can conclude the maximum amount of data we can send.
 	1500 - (80 + 8) = 1412
-	*/
-
-	/*
-	Have unreliable datagram and reliable datagram. Support messages that are
-	fragmented and reassembled on the ends so it's not necessary for the program
-	to know about MTU unless it wants to.
 	*/
 
 	/* Headers
