@@ -83,6 +83,7 @@ public:
 private:
 	//lock for starting/stopping proactor
 	boost::recursive_mutex start_stop_mutex;
+	boost::thread network_loop_thread;
 	bool stopped;
 
 	ID_manager ID_Manager;
@@ -90,7 +91,6 @@ private:
 	boost::shared_ptr<listener> Listener;
 	rate_limit Rate_Limit;
 	select Select;
-	std::time_t network_loop_time;                        //used to run tasks once per second
 	std::set<int> read_FDS, write_FDS;                    //sets to monitor with select
 	std::map<int, boost::shared_ptr<connection> > Socket; //socket_FD associated with connection
 	std::map<int, boost::shared_ptr<connection> > ID;     //connection_ID associated with connection
@@ -151,8 +151,6 @@ private:
 	void network_loop();
 	void process_relay_job();
 	void remove_socket(const int socket_FD);
-
-	thread_pool_global Thread_Pool;
 };
 }//end namespace net
 #endif

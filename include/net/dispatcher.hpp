@@ -53,9 +53,6 @@ public:
 		const unsigned send_buf_size);
 
 private:
-	//threads to do call backs
-	boost::thread_group workers;
-
 	const boost::function<void (connection_info &)> connect_call_back;
 	const boost::function<void (connection_info &)> disconnect_call_back;
 
@@ -102,7 +99,7 @@ private:
 	void send_call_back_wrapper(boost::shared_ptr<connection_info> CI,
 		const unsigned latest_send, const int send_buf_size);
 
-	thread_pool_global Thread_Pool;
+	thread_pool Thread_Pool;
 };
 }//end of namespace net
 #endif

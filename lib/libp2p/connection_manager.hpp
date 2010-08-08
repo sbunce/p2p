@@ -132,6 +132,6 @@ private:
 	void tick(const int connection_ID);
 	void trigger_tick(const int connection_ID);
 
-	thread_pool_global Thread_Pool;
+	thread_pool Thread_Pool;
 };
 #endif

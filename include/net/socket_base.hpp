@@ -35,7 +35,7 @@ public:
 
 protected:
 	//max we attempt to send/recv in one go
-	static const unsigned MTU = 65536;
+	static const unsigned MTU = 1412;
 
 	//-1 if not connected, or >= 0 if connected
 	int socket_FD;

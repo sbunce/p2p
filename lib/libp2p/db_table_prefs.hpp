@@ -98,7 +98,7 @@ private:
 	private:
 		cache():
 			DBP_Singleton(db::pool::singleton()),
-			Thread_Pool(this)
+			Thread_Pool(1)
 		{}
 
 		//locks access to this object
@@ -136,7 +136,7 @@ private:
 		*/
 		boost::shared_ptr<db::pool> DBP_Singleton;
 
-		thread_pool_global Thread_Pool;
+		thread_pool Thread_Pool;
 	};
 };
 }//end of namespace table

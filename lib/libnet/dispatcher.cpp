@@ -6,7 +6,7 @@ net::dispatcher::dispatcher(
 ):
 	connect_call_back(connect_call_back_in),
 	disconnect_call_back(disconnect_call_back_in),
-	Thread_Pool(this)
+	Thread_Pool(4)
 {
 
 }

@@ -62,6 +62,6 @@ private:
 	void scan(boost::filesystem::recursive_directory_iterator it);
 	void start_scan();
 
-	thread_pool_global Thread_Pool;
+	thread_pool Thread_Pool;
 };
 #endif

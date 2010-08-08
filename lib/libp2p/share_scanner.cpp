@@ -3,7 +3,7 @@
 share_scanner::share_scanner(connection_manager & Connection_Manager_in):
 	Connection_Manager(Connection_Manager_in),
 	started(false),
-	Thread_Pool(this)
+	Thread_Pool(1)
 {
 	//default share
 	shared.push_back(path::share_dir());
@@ -12,8 +12,6 @@ share_scanner::share_scanner(connection_manager & Connection_Manager_in):
 share_scanner::~share_scanner()
 {
 	hash_tree::stop_create();
-	Thread_Pool.stop();
-	Thread_Pool.clear();
 }
 
 void share_scanner::hash_file(boost::filesystem::recursive_directory_iterator it)

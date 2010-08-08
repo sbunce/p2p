@@ -1,15 +1,14 @@
 #include "load_scanner.hpp"
 
 load_scanner::load_scanner():
-	Thread_Pool(this)
+	Thread_Pool(1)
 {
 	Thread_Pool.enqueue(boost::bind(&load_scanner::scan, this));
 }
 
 load_scanner::~load_scanner()
 {
-	Thread_Pool.stop();
-	Thread_Pool.clear();
+
 }
 
 void load_scanner::load(const boost::filesystem::path & load_file)

@@ -4,11 +4,11 @@
 //custom
 #include "ndgram.hpp"
 
-//include
-#include <boost/thread.hpp>
-#include <singleton.hpp>
-
 namespace net{
+/*
+ndgram_stream multiplexes connections on the same port. It handles reassembling
+streams that arrive from multiple hosts.
+*/
 class ndgram_stream : public socket_base
 {
 public:
@@ -74,13 +74,7 @@ private:
 	  0   1   2   4  ...  n
 	*/
 
-	class wrap : public singleton_base<wrap>
-	{
-		friend class singleton_base<wrap>;
-	public:
-		boost::mutex stdout_mutex;
-		ndgram N;
-	};
+	ndgram N;
 };
 }//end namespace net
 #endif

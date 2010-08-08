@@ -24,7 +24,7 @@ connection_manager::connection_manager():
 		boost::bind(&connection_manager::connect_call_back, this, _1),
 		boost::bind(&connection_manager::disconnect_call_back, this, _1)
 	),
-	Thread_Pool(this)
+	Thread_Pool(1)
 {
 
 }

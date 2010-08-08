@@ -6,14 +6,12 @@ net::proactor::proactor(
 ):
 	stopped(true),
 	Dispatcher(connect_call_back, disconnect_call_back),
-	network_loop_time(std::time(NULL)),
 	incoming_connection_limit(512),
 	outgoing_connection_limit(512),
 	incoming_connections(0),
-	outgoing_connections(0),
-	Thread_Pool(this)
+	outgoing_connections(0)
 {
-	Thread_Pool.stop();
+
 }
 
 void net::proactor::add_socket(std::pair<int, boost::shared_ptr<connection> > P)
@@ -233,104 +231,104 @@ std::pair<int, boost::shared_ptr<net::connection> >
 
 void net::proactor::network_loop()
 {
-	if(network_loop_time != std::time(NULL)){
-		//stuff to run only once per second
-		check_timeouts();
-		network_loop_time = std::time(NULL);
-	}
-	process_relay_job();
-
-	//only check for reads and writes when there is available download/upload
-	std::set<int> tmp_read_FDS, tmp_write_FDS;
-	if(Rate_Limit.available_download() > 0){
-		tmp_read_FDS = read_FDS;
-	}
-	if(Rate_Limit.available_upload() > 0){
-		tmp_write_FDS = write_FDS;
-	}
-
-/* DEBUG
-When network test harness is created there will be a 'fake' Select here which
-doesn't block.
-*/
-	Select(tmp_read_FDS, tmp_write_FDS, 10);
-
-	if(Listener && Listener->is_open() &&
-		tmp_read_FDS.find(Listener->socket()) != tmp_read_FDS.end())
-	{
-		//handle incoming connections
-		while(boost::shared_ptr<nstream> N = Listener->accept()){
-			std::pair<int, boost::shared_ptr<connection> > P(N->socket(),
-				boost::shared_ptr<connection>(new connection(ID_Manager, N)));
-			if(incoming_connections < incoming_connection_limit){
-				++incoming_connections;
-				add_socket(P);
-				Dispatcher.connect(P.second->CI);
-			}else{
-				Dispatcher.disconnect(P.second->CI);
-			}
+	//used to run tasks once per second
+	std::time_t network_loop_time(std::time(NULL));
+	while(true){
+		boost::this_thread::interruption_point();
+		if(network_loop_time != std::time(NULL)){
+			//stuff to run only once per second
+			check_timeouts();
+			network_loop_time = std::time(NULL);
 		}
-		tmp_read_FDS.erase(Listener->socket());
-	}
+		process_relay_job();
 
-	//handle all writes
-	while(!tmp_write_FDS.empty()){
-		std::pair<int, boost::shared_ptr<connection> > P = lookup_socket(*tmp_write_FDS.begin());
-		P.second->touch();
-		if(P.second->half_open()){
-			handle_async_connection(P);
-		}else{
-			//n_bytes initially set to max send, then set to how much sent
-			int n_bytes = Rate_Limit.available_upload(tmp_write_FDS.size());
-			if(n_bytes != 0){
-				n_bytes = P.second->N->send(P.second->send_buf, n_bytes);
+		//only check for reads and writes when there is available download/upload
+		std::set<int> tmp_read_FDS, tmp_write_FDS;
+		if(Rate_Limit.available_download() > 0){
+			tmp_read_FDS = read_FDS;
+		}
+		if(Rate_Limit.available_upload() > 0){
+			tmp_write_FDS = write_FDS;
+		}
+
+		Select(tmp_read_FDS, tmp_write_FDS, 10);
+
+		if(Listener && Listener->is_open() &&
+			tmp_read_FDS.find(Listener->socket()) != tmp_read_FDS.end())
+		{
+			//handle incoming connections
+			while(boost::shared_ptr<nstream> N = Listener->accept()){
+				std::pair<int, boost::shared_ptr<connection> > P(N->socket(),
+					boost::shared_ptr<connection>(new connection(ID_Manager, N)));
+				if(incoming_connections < incoming_connection_limit){
+					++incoming_connections;
+					add_socket(P);
+					Dispatcher.connect(P.second->CI);
+				}else{
+					Dispatcher.disconnect(P.second->CI);
+				}
+			}
+			tmp_read_FDS.erase(Listener->socket());
+		}
+
+		//handle all writes
+		while(!tmp_write_FDS.empty()){
+			std::pair<int, boost::shared_ptr<connection> > P = lookup_socket(*tmp_write_FDS.begin());
+			P.second->touch();
+			if(P.second->half_open()){
+				handle_async_connection(P);
+			}else{
+				//n_bytes initially set to max send, then set to how much sent
+				int n_bytes = Rate_Limit.available_upload(tmp_write_FDS.size());
+				if(n_bytes != 0){
+					n_bytes = P.second->N->send(P.second->send_buf, n_bytes);
+					if(n_bytes == -1 || n_bytes == 0){
+						remove_socket(P.first);
+						Dispatcher.disconnect(P.second->CI);
+					}else{
+						Rate_Limit.add_upload(n_bytes);
+						if(P.second->send_buf.empty()){
+							if(P.second->disc_on_empty){
+								remove_socket(P.first);
+								Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
+								Dispatcher.disconnect(P.second->CI);
+							}else{
+								write_FDS.erase(P.first);
+								Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
+							}
+						}else{
+							Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
+						}
+					}
+				}
+			}
+			tmp_write_FDS.erase(tmp_write_FDS.begin());
+		}
+
+		//handle all reads
+		while(!tmp_read_FDS.empty()){
+			std::pair<int, boost::shared_ptr<connection> > P = lookup_socket(*tmp_read_FDS.begin());
+			if(P.second){
+				P.second->touch();
+				//n_bytes initially set to max read, then set to how much read
+				int n_bytes = Rate_Limit.available_download(tmp_read_FDS.size());
+				if(n_bytes == 0){
+					//maxed out what can be read
+					break;
+				}
+				boost::shared_ptr<buffer> recv_buf(new buffer());
+				n_bytes = P.second->N->recv(*recv_buf, n_bytes);
 				if(n_bytes == -1 || n_bytes == 0){
 					remove_socket(P.first);
 					Dispatcher.disconnect(P.second->CI);
 				}else{
-					Rate_Limit.add_upload(n_bytes);
-					if(P.second->send_buf.empty()){
-						if(P.second->disc_on_empty){
-							remove_socket(P.first);
-							Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
-							Dispatcher.disconnect(P.second->CI);
-						}else{
-							write_FDS.erase(P.first);
-							Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
-						}
-					}else{
-						Dispatcher.send(P.second->CI, n_bytes, P.second->send_buf.size());
-					}
+					Rate_Limit.add_download(n_bytes);
+					Dispatcher.recv(P.second->CI, recv_buf);
 				}
 			}
+			tmp_read_FDS.erase(tmp_read_FDS.begin());
 		}
-		tmp_write_FDS.erase(tmp_write_FDS.begin());
 	}
-
-	//handle all reads
-	while(!tmp_read_FDS.empty()){
-		std::pair<int, boost::shared_ptr<connection> > P = lookup_socket(*tmp_read_FDS.begin());
-		if(P.second){
-			P.second->touch();
-			//n_bytes initially set to max read, then set to how much read
-			int n_bytes = Rate_Limit.available_download(tmp_read_FDS.size());
-			if(n_bytes == 0){
-				//maxed out what can be read
-				break;
-			}
-			boost::shared_ptr<buffer> recv_buf(new buffer());
-			n_bytes = P.second->N->recv(*recv_buf, n_bytes);
-			if(n_bytes == -1 || n_bytes == 0){
-				remove_socket(P.first);
-				Dispatcher.disconnect(P.second->CI);
-			}else{
-				Rate_Limit.add_download(n_bytes);
-				Dispatcher.recv(P.second->CI, recv_buf);
-			}
-		}
-		tmp_read_FDS.erase(tmp_read_FDS.begin());
-	}
-	Thread_Pool.enqueue(boost::bind(&net::proactor::network_loop, this));
 }
 
 void net::proactor::process_relay_job()
@@ -414,8 +412,7 @@ void net::proactor::start(boost::shared_ptr<listener> Listener_in)
 		}
 		add_socket(std::make_pair(Listener->socket(), boost::shared_ptr<connection>()));
 	}
-	Thread_Pool.start();
-	Thread_Pool.enqueue(boost::bind(&proactor::network_loop, this));
+	network_loop_thread = boost::thread(boost::bind(&proactor::network_loop, this));
 }
 
 void net::proactor::stop()
@@ -428,9 +425,9 @@ void net::proactor::stop()
 	stopped = true;
 
 	//stop networking thread
-	Thread_Pool.stop();
+	network_loop_thread.interrupt();
 	Select.interrupt();
-	Thread_Pool.join();
+	network_loop_thread.join();
 
 	//note: At this point we can modify private data since network thread stopped
 
