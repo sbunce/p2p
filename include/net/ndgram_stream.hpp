@@ -4,20 +4,21 @@
 //custom
 #include "ndgram.hpp"
 
-//standard
-#include <map>
+//include
+#include <boost/thread.hpp>
+#include <singleton.hpp>
 
 namespace net{
-class nrdgram
+class ndgram_stream : public socket_base
 {
 public:
-	nrdgram()
+	ndgram_stream()
 	{
 
 	}
 
 private:
-	/* Max Safe UDP/IPv4 MTU
+	/* Max IPv4/UDP MTU
 	RFC 791 (IP) specifies that all hosts must be able to accept packets of 576
 	bytes. RFC 768 (UDP) specifies the UDP header is 8 bytes. RFC 791 specifies
 	the max IP header size is 60 bytes.
@@ -26,13 +27,19 @@ private:
 	576 - (60 + 8) = 508 bytes
 	*/
 
-	/* Max Safe UDP/IPv6 MTU
+	/* Max IPv6/UDP MTU
 	RFC 2460 (IPv6) specifies that all hosts must be able to accept packets of
 	1500 bytes. RFC 768 (UDP) specifies the UDP header is 8 bytes. RFC 2460
 	spepcifies the max IPv6 header size is 80 bytes.
 
 	From this we can conclude the maximum amount of data we can send.
 	1500 - (80 + 8) = 1412
+	*/
+
+	/* Timeout
+	RFC 4787 specifies the current best practice is to timeout NAT mappings after
+	2 minutes if there is no activity. A keep-alive should be sent such that it
+	arrives before this timeout.
 	*/
 
 	/* Headers
@@ -65,12 +72,15 @@ private:
 	| 1 |seq_num|    data   |
 	+---+---+---+---+---+---+
 	  0   1   2   4  ...  n
-
-
-Think about supporting multi-part datagrams which are fragmented and reassembled
-at the ends in the application layer. These packets would use a hash to
-guarantee the contents of the reassembled message.
 	*/
+
+	class wrap : public singleton_base<wrap>
+	{
+		friend class singleton_base<wrap>;
+	public:
+		boost::mutex stdout_mutex;
+		ndgram N;
+	};
 };
 }//end namespace net
 #endif

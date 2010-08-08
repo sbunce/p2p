@@ -35,7 +35,7 @@ public:
 	std::string local_IP();
 	std::string local_port();
 	virtual void open(const endpoint & E);
-	int recv(net::buffer & buf, boost::shared_ptr<endpoint> & E);
+	int recv(net::buffer & buf, boost::optional<endpoint> & E);
 	int send(net::buffer & buf, const endpoint & E);
 };
 }//end namespace net

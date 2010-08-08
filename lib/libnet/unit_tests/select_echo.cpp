@@ -29,7 +29,7 @@ int main()
 		{
 			if(recv){
 				net::buffer buf;
-				boost::shared_ptr<net::endpoint> from;
+				boost::optional<net::endpoint> from;
 				N.recv(buf, from);
 				assert(buf.size() == 1);
 				assert(buf == "x");

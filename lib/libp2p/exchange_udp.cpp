@@ -93,7 +93,7 @@ void exchange_udp::tick()
 	}
 
 	//recv message
-	boost::shared_ptr<net::endpoint> from;
+	boost::optional<net::endpoint> from;
 	net::buffer recv_buf;
 	int n_bytes = ndgram.recv(recv_buf, from);
 	if(n_bytes > 0){

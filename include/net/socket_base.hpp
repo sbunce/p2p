@@ -6,6 +6,7 @@
 #include "endpoint.hpp"
 
 //include
+#include <boost/optional.hpp>
 #include <boost/utility.hpp>
 
 namespace net{

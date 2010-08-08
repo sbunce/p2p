@@ -23,11 +23,7 @@ bool net::nstream::is_open_async()
 		reinterpret_cast<char *>(&opt_val), &opt_len) == 0)
 	{
 		//we got option
-		if(opt_val == 0){
-			return true;
-		}else{
-			return false;
-		}
+		return opt_val == 0;
 	}else{
 		//error getting option
 		LOG << strerror(errno);
