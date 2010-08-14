@@ -10,9 +10,6 @@ def build(bld):
 			uselib = ['boost', 'platform'],
 			uselib_local = [
 				'local_include',
-				'p2p',
-				'net',
-				'tommath',
-				'sqlite3'
+				'tommath'
 			]
 		)

@@ -1,5 +1,5 @@
 def build(bld):
 	bld.recurse('libnet')
-	bld.recurse('libp2p')
+	#bld.recurse('libp2p')
 	bld.recurse('libsqlite3')
 	bld.recurse('libtommath')

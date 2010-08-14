@@ -45,8 +45,7 @@ void net::dispatcher::dispatch()
 	{
 		std::pair<std::set<int>::iterator, bool> ret = Memoize.insert(it_cur->first);
 		if(ret.second){
-			bool scheduled = Thread_Pool.enqueue(it_cur->second);
-			assert(scheduled);
+			Thread_Pool.enqueue(it_cur->second);
 			it_cur = Jobs.erase(it_cur);
 		}else{
 			++it_cur;

@@ -1,12 +1,12 @@
 #include <cpproto/cpproto.hpp>
 #include <logger.hpp>
 
-CPPROTO_MESSAGE_BEGIN(message, 1)
-	CPPROTO_FIELD(cpproto::ASCII<1>, ASCII)
-	CPPROTO_FIELD(cpproto::boolean<2>, boolean)
-	CPPROTO_FIELD(cpproto::string<3>, string)
-	CPPROTO_FIELD(cpproto::sint<4>, sint)
-	CPPROTO_FIELD(cpproto::uint<5>, uint)
+CPPROTO_MESSAGE_BEGIN(message, 0)
+	CPPROTO_FIELD(cpproto::ASCII<0>, ASCII)
+	CPPROTO_FIELD(cpproto::boolean<1>, boolean)
+	CPPROTO_FIELD(cpproto::string<2>, string)
+	CPPROTO_FIELD(cpproto::sint<3>, sint)
+	CPPROTO_FIELD(cpproto::uint<4>, uint)
 CPPROTO_MESSAGE_END
 
 const std::string test_str(

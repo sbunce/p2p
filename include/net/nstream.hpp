@@ -44,11 +44,15 @@ public:
 		host disconnected. The sent bytes are erased from the buffer.
 	*/
 	bool is_open_async();
+
+//DEBUG, replace this with local_ep()
 	std::string local_IP();
 	std::string local_port();
 	virtual void open(const endpoint & E);
 	void open_async(const endpoint & E);
 	int recv(buffer & buf, const int max_transfer = MTU);
+
+//DEBUG, replace this with remote_ep()
 	std::string remote_IP();
 	std::string remote_port();
 	int send(buffer & buf, int max_transfer = MTU);

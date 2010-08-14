@@ -10,7 +10,7 @@ out = 'build_dir'
 def build(bld):
 	bld.recurse('include')
 	bld.recurse('lib')
-	bld.recurse('front_end')
+	#bld.recurse('front_end')
 	bld(
 		uselib = '',
 		export_incdirs = 'include',

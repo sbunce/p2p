@@ -13,6 +13,9 @@ namespace net{
 class socket_base : private boost::noncopyable
 {
 public:
+	//max to attempt to send/recv in one go
+	static const unsigned MTU = 1412; //IPv6 guaranteed MTU
+
 	socket_base();
 	virtual ~socket_base();
 
@@ -34,9 +37,6 @@ public:
 	virtual int socket();
 
 protected:
-	//max we attempt to send/recv in one go
-	static const unsigned MTU = 1412;
-
 	//-1 if not connected, or >= 0 if connected
 	int socket_FD;
 };

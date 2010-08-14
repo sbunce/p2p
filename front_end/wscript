@@ -1,3 +1,4 @@
 def build(bld):
+	pass
 	bld.recurse('CLI')
 	bld.recurse('gtkmm')

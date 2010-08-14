@@ -14,13 +14,14 @@
 
 class thread_pool : private boost::noncopyable
 {
-	//accuracy of timer, may be up to this many ms off
-	static const unsigned timer_accuracy_ms = 10;
-
 public:
-	thread_pool(const unsigned threads = boost::thread::hardware_concurrency()):
+	//0 max_buf is unlimited job queue size
+	thread_pool(
+		const unsigned threads = boost::thread::hardware_concurrency(),
+		const unsigned max_buf_in = 0
+	):
 		stopped(false),
-		timeout_ms(0),
+		max_buf(max_buf_in),
 		job_cnt(0)
 	{
 		for(unsigned x=0; x<threads; ++x){
@@ -32,8 +33,6 @@ public:
 	{
 		stop();
 		join();
-		timeout_thread.interrupt();
-		timeout_thread.join();
 		workers.interrupt_all();
 		workers.join_all();
 	}
@@ -44,44 +43,24 @@ public:
 		boost::mutex::scoped_lock lock(mutex);
 		job_cnt -= job_queue.size();
 		job_queue.clear();
-		job_cnt -= timeout_jobs.size();
-		timeout_jobs.clear();
-		join_cond.notify_all();
+		empty_cond.notify_all();
 	}
 
-	//enqueue job
+	//enqueue job, blocks if max_buf reached
 	bool enqueue(const boost::function<void ()> & func)
 	{
 		boost::mutex::scoped_lock lock(mutex);
 		if(stopped){
 			return false;
 		}else{
+			if(max_buf != 0){
+				while(job_queue.size() >= max_buf){
+					consumer_cond.wait(mutex);
+				}
+			}
 			job_queue.push_back(func);
 			++job_cnt;
-			job_cond.notify_one();
-			return true;
-		}
-	}
-
-	//enqueue job after specified delay (ms)
-	bool enqueue(const boost::function<void ()> & func, const unsigned delay_ms)
-	{
-		boost::mutex::scoped_lock lock(mutex);
-		if(stopped){
-			return false;
-		}else{
-			if(timeout_thread.get_id() == boost::thread::id()){
-				//lazy start timeout_thread
-				timeout_thread = boost::thread(boost::bind(&thread_pool::timeout_dispatcher, this));
-			}
-			if(delay_ms == 0){
-				job_queue.push_back(func);
-				job_cond.notify_one();
-			}else{
-				timeout_jobs.insert(std::make_pair(timeout_ms + delay_ms, func));
-			}
-			++job_cnt;
-			return true;
+			producer_cond.notify_one();
 		}
 	}
 
@@ -90,41 +69,36 @@ public:
 	{
 		boost::mutex::scoped_lock lock(mutex);
 		while(job_cnt > 0){
-			join_cond.wait(mutex);
+			empty_cond.wait(mutex);
 		}
 	}
 
-	//enable enqueue
-	void start()
-	{
-		boost::mutex::scoped_lock lock(mutex);
-		stopped = false;
-	}
-
-	//disable enqueue
+	//stops new jobs from being enqueued
 	void stop()
 	{
 		boost::mutex::scoped_lock lock(mutex);
 		stopped = true;
 	}
 
+	//allows new jobs to be enqueued
+	void start()
+	{
+		boost::mutex::scoped_lock lock(mutex);
+		stopped = false;
+	}
+
 private:
-	boost::mutex mutex;                      //locks everyting (object is a monitor)
-	boost::thread_group workers;             //dispatcher() threads
-	boost::thread timeout_thread;            //timout_dispatcher() thread
-	boost::condition_variable_any job_cond;  //notified when job added
-	boost::condition_variable_any join_cond; //notified when job added or job finished
-	bool stopped;                            //when true no jobs can be added
-	boost::uint64_t timeout_ms;              //incremented by timeout_thread
+	boost::mutex mutex;                             //locks everything
+	bool stopped;                                   //if true new jobs not allowed to be enqueued
+	boost::thread_group workers;                    //all dispatcher threads
+	boost::condition_variable_any consumer_cond;    //notify_one when job taken from job_queue
+	boost::condition_variable_any producer_cond;    //notify_one when job added to job_queue
+	boost::condition_variable_any empty_cond;       //notify_all when no jobs scheduled or running
+	std::list<boost::function<void ()> > job_queue; //enqueue on back, pop from front
+	unsigned max_buf;                               //max_allowed job_queue size
+	unsigned job_cnt;                               //cnt of queue'd + running jobs
 
-	//new jobs pushed on back, jobs on front processed
-	std::list<boost::function<void ()> > job_queue;
-	//jobs enqueued after timeout, when timeout_ms >= key
-	std::multimap<boost::uint64_t, boost::function<void ()> > timeout_jobs;
-	//incremented when job added, decremented when job finished
-	unsigned job_cnt;
-
-	//consumes enqueued jobs, does call backs
+	//threads which consume jobs reside here
 	void dispatcher()
 	{
 		while(true){
@@ -132,7 +106,7 @@ private:
 			{//BEGIN lock scope
 			boost::mutex::scoped_lock lock(mutex);
 			while(job_queue.empty()){
-				job_cond.wait(mutex);
+				producer_cond.wait(mutex);
 			}
 			tmp = job_queue.front();
 			job_queue.pop_front();
@@ -141,25 +115,11 @@ private:
 			{//BEGIN lock scope
 			boost::mutex::scoped_lock lock(mutex);
 			--job_cnt;
-			}//END lock scope
-			join_cond.notify_all();
-		}
-	}
-
-	//enqueues jobs after a timeout (ms)
-	void timeout_dispatcher()
-	{
-		while(true){
-			boost::this_thread::sleep(boost::posix_time::milliseconds(timer_accuracy_ms));
-			{//BEGIN lock scope
-			boost::mutex::scoped_lock lock(mutex);
-			timeout_ms += timer_accuracy_ms;
-			while(!timeout_jobs.empty() && timeout_ms >= timeout_jobs.begin()->first){
-				job_queue.push_back(timeout_jobs.begin()->second);
-				job_cond.notify_one();
-				timeout_jobs.erase(timeout_jobs.begin());
+			if(job_cnt == 0){
+				empty_cond.notify_all();
 			}
 			}//END lock scope
+			consumer_cond.notify_one();
 		}
 	}
 };

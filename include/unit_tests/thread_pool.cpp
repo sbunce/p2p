@@ -16,12 +16,12 @@ int main()
 	unit_test::timeout();
 	thread_pool TP;
 	atomic_int<unsigned> cnt(0);
-	for(unsigned x=0; x<1024; ++x){
+	for(unsigned x=0; x<32; ++x){
 		TP.enqueue(boost::bind(&inc, boost::ref(cnt)));
 	}
 	TP.join();
-	if(cnt != 1024){
-		++fail; LOG;
+	if(cnt != 32){
+		LOG; ++fail;
 	}
 	return fail;
 }

@@ -2,11 +2,12 @@
 #define H_CHANNEL
 
 //include
+#include <boost/optional.hpp>
 #include <boost/thread.hpp>
 #include <logger.hpp>
 
 //std
-#include <queue>
+#include <list>
 #include <set>
 
 namespace channel{
@@ -22,15 +23,24 @@ public:
 		W->buf_size = buf_size_in;
 	}
 
+	//clear channel, return number of messages erased
+	unsigned clear()
+	{
+		boost::mutex::scoped_lock lock(W->mutex);
+		unsigned cnt = W->queue.size();
+		W->queue.clear();
+		return cnt;
+	}
+
 	T recv() const
 	{
 		boost::mutex::scoped_lock lock(W->mutex);
 		while(W->queue.empty()){
-			W->send_cond.wait(W->mutex);
+			W->producer_cond.wait(W->mutex);
 		}
 		T tmp = W->queue.front();
-		W->queue.pop();
-		W->recv_cond.notify_one();
+		W->queue.pop_front();
+		W->consumer_cond.notify_one();
 		if(W->source_call_back){
 			W->source_call_back();
 			W->source_call_back.clear();
@@ -43,11 +53,11 @@ public:
 		boost::mutex::scoped_lock lock(W->mutex);
 		if(W->buf_size != 0){
 			while(W->queue.size() >= W->buf_size){
-				W->recv_cond.wait(W->mutex);
+				W->consumer_cond.wait(W->mutex);
 			}
 		}
-		W->queue.push(t);
-		W->send_cond.notify_one();
+		W->queue.push_back(t);
+		W->producer_cond.notify_one();
 		if(W->sink_call_back){
 			W->sink_call_back();
 			W->sink_call_back.clear();
@@ -87,9 +97,9 @@ private:
 	public:
 		boost::mutex mutex;
 		unsigned buf_size;
-		boost::condition_variable_any recv_cond;
-		boost::condition_variable_any send_cond;
-		typename std::queue<T> queue;
+		boost::condition_variable_any consumer_cond;
+		boost::condition_variable_any producer_cond;
+		typename std::list<T> queue;
 		boost::function<void ()> source_call_back;
 		boost::function<void ()> sink_call_back;
 	};
@@ -101,7 +111,7 @@ template<typename T>
 class sink
 {
 public:
-	explicit sink(primitive<T> ch_in):
+	explicit sink(primitive<T> ch_in = primitive<T>(1)):
 		ch(ch_in)
 	{}
 
@@ -130,7 +140,7 @@ template<typename T>
 class source
 {
 public:
-	source(primitive<T> ch_in):
+	explicit source(primitive<T> ch_in = primitive<T>(1)):
 		ch(ch_in)
 	{}
 
@@ -231,7 +241,7 @@ std::pair<source<T>, sink<T> > make_chan(const unsigned buf_size = 0)
 	primitive<T> tmp(buf_size);
 	return std::make_pair(source<T>(tmp), sink<T>(tmp));
 }
-}//end unnamed namespace
 
+}//end unnamed namespace
 }//end namespace channel
 #endif
