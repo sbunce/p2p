@@ -22,13 +22,24 @@ void primitive()
 	}
 }
 
-void chan()
+void source_sink()
 {
 	typedef int chan_type;
 	std::pair<channel::source<chan_type>, channel::sink<chan_type> >
 		p = channel::make_chan<chan_type>();
 	p.first.send(1);
 	if(p.second.recv() != 1){
+		LOG; ++fail;
+	}
+}
+
+void future_promise()
+{
+	typedef int chan_type;
+	std::pair<channel::promise<chan_type>, channel::future<chan_type> >
+		p = channel::make_future<chan_type>();
+	p.first = 1;
+	if(*p.second != 1){
 		LOG; ++fail;
 	}
 }
@@ -68,7 +79,8 @@ int main()
 {
 	unit_test::timeout();
 	primitive();
-	chan();
+	source_sink();
+	future_promise();
 	select();
 	return fail;
 }

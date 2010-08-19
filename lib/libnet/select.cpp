@@ -14,7 +14,8 @@ net::select::select()
 	assert(L.is_open());
 
 	//connect read_only socket
-	E = net::get_endpoint("localhost", L.port());
+	assert(L.local_ep());
+	E = net::get_endpoint("localhost", L.local_ep()->port());
 	assert(!E.empty());
 	sp_read.reset(new nstream(*E.begin()));
 	assert(sp_read->is_open());

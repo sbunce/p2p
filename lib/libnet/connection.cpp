@@ -28,9 +28,9 @@ net::connection::connection(
 	N(N_in),
 	connection_ID(ID_Manager.allocate())
 {
-	std::set<endpoint> E = get_endpoint(N->remote_IP(), N->remote_port());
-	assert(!E.empty());
-	CI.reset(new connection_info(connection_ID, *E.begin(), incoming));
+	boost::optional<endpoint> ep = N->remote_ep();
+	assert(ep);
+	CI.reset(new connection_info(connection_ID, *ep, incoming));
 }
 
 net::connection::~connection()

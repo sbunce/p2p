@@ -13,7 +13,7 @@ int main()
 	assert(L.is_open());
 
 	//connect
-	E = net::get_endpoint("localhost", L.port());
+	E = net::get_endpoint("localhost", L.local_ep()->port());
 	assert(!E.empty());
 	net::nstream N_client(*E.begin());
 	assert(N_client.is_open());

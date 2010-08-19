@@ -89,7 +89,7 @@ int main(int argc, char ** argv)
 		std::cout << "failed to open listener\n";
 		return 1;
 	}
-	std::cout << "listening on " << Listener->port() << "\n";
+	std::cout << "listening on " << Listener->local_ep()->port() << "\n";
 
 	//drop priviledges before allowing incoming connections
 	if(gid){

@@ -7,21 +7,29 @@
 #include <logger.hpp>
 
 //std
+#include <cassert>
 #include <list>
 #include <set>
 
 namespace channel{
+
+//predecls for friend'ing
+template<typename T> class future;
+template<typename T> class promise;
+template<typename T> class select;
+template<typename T> class sink;
+template<typename T> class source;
+
 //channel primitive, generally this should not be used directly
 template<typename T>
 class primitive
 {
+	template<typename U> friend class select;
 public:
 	//0 buf_size means unbounded buffer size
-	explicit primitive(const unsigned buf_size_in = 0):
-		W(new wrap())
-	{
-		W->buf_size = buf_size_in;
-	}
+	explicit primitive(const unsigned buf_size = 0):
+		W(new wrap(buf_size))
+	{}
 
 	//clear channel, return number of messages erased
 	unsigned clear()
@@ -64,6 +72,29 @@ public:
 		}
 	}
 
+	bool operator < (const primitive & rval) const
+	{
+		return W < rval.W;
+	}
+
+private:
+	class wrap
+	{
+	public:
+		explicit wrap(const unsigned buf_size_in):
+			buf_size(buf_size_in)
+		{}
+		boost::mutex mutex;
+		unsigned buf_size;
+		boost::condition_variable_any consumer_cond;
+		boost::condition_variable_any producer_cond;
+		typename std::list<T> queue;
+		boost::function<void ()> source_call_back;
+		boost::function<void ()> sink_call_back;
+	};
+	boost::shared_ptr<wrap> W;
+
+	//call back when ready to recv
 	void select_sink(boost::function<void ()> call_back) const
 	{
 		boost::mutex::scoped_lock lock(W->mutex);
@@ -75,6 +106,7 @@ public:
 		}
 	}
 
+	//call back when ready to send
 	void select_source(boost::function<void ()> call_back) const
 	{
 		boost::mutex::scoped_lock lock(W->mutex);
@@ -85,82 +117,132 @@ public:
 			call_back();
 		}
 	}
-
-	bool operator < (const primitive & rval) const
-	{
-		return W < rval.W;
-	}
-
-private:
-	class wrap
-	{
-	public:
-		boost::mutex mutex;
-		unsigned buf_size;
-		boost::condition_variable_any consumer_cond;
-		boost::condition_variable_any producer_cond;
-		typename std::list<T> queue;
-		boost::function<void ()> source_call_back;
-		boost::function<void ()> sink_call_back;
-	};
-	boost::shared_ptr<wrap> W;
 };
 
 //decorator for primitive, only allows recv
 template<typename T>
 class sink
 {
+	template<typename U> friend class select;
+	template<typename U> friend std::pair<source<U>, sink<U> >
+		make_chan(const unsigned buf_size);
 public:
-	explicit sink(primitive<T> ch_in = primitive<T>(1)):
-		ch(ch_in)
-	{}
-
 	T recv() const
 	{
-		return ch.recv();
-	}
-
-	//call back when ready to read
-	void select(boost::function<void ()> call_back) const
-	{
-		ch.select_sink(call_back);
+		return chan.recv();
 	}
 
 	bool operator < (const sink & rval) const
 	{
-		return ch < rval.ch;
+		return chan < rval.chan;
 	}
 
 private:
-	primitive<T> ch;
+	explicit sink(primitive<T> chan_in):
+		chan(chan_in)
+	{}
+
+	primitive<T> chan;
 };
 
 //decorator for primitive, only allows send
 template<typename T>
 class source
 {
+	template<typename U> friend class select;
+	template<typename U> friend std::pair<source<U>, sink<U> >
+		make_chan(const unsigned buf_size);
 public:
-	explicit source(primitive<T> ch_in = primitive<T>(1)):
-		ch(ch_in)
-	{}
-
 	void send(T t) const
 	{
-		ch.send(t);
-	}
-
-	void select(boost::function<void ()> call_back) const
-	{
-		ch.select_source(call_back);
+		chan.send(t);
 	}
 
 	bool operator < (const source & rval) const
 	{
-		return ch < rval.ch;
+		return chan < rval.chan;
 	}
 
 private:
-	primitive<T> ch;
+	explicit source(primitive<T> chan_in):
+		chan(chan_in)
+	{}
+
+	primitive<T> chan;
+};
+
+/*
+A future value that has yet to be computed. Dereferencing this object will block
+until the value has been computed.
+*/
+template<typename T>
+class future
+{
+	template<typename U> friend class select;
+	template<typename U> friend std::pair<promise<U>, future<U> > make_future();
+public:
+	//recv value from promise, or return cached value if already recv'd
+	T operator * () const
+	{
+		boost::mutex::scoped_lock lock(W->mutex);
+		if(W->val){
+			return *W->val;
+		}else{
+			W->val = W->Sink.recv();
+			return *W->val;
+		}
+	}
+
+private:
+	explicit future(sink<T> & Sink):
+		W(new wrap(Sink))
+	{}
+
+	class wrap
+	{
+	public:
+		explicit wrap(sink<T> & Sink_in):
+			Sink(Sink_in)
+		{}
+		boost::mutex mutex;
+		sink<T> Sink;
+		boost::optional<T> val;
+	};
+	boost::shared_ptr<wrap> W;
+};
+
+//a promise to compute a value, very similar to a source
+template<typename T>
+class promise
+{
+	template<typename U> friend class select;
+	template<typename U> friend std::pair<promise<U>, future<U> > make_future();
+public:
+	void operator = (const T & rval)
+	{
+		boost::mutex::scoped_lock lock(W->mutex);
+		assert(!W->fulfilled);
+		W->fulfilled = true;
+		W->Source.send(rval);
+	}
+
+private:
+	explicit promise(source<T> & Source):
+		W(new wrap(Source))
+	{}
+
+	class wrap
+	{
+	public:
+		explicit wrap(source<T> & Source_in):
+			Source(Source_in),
+			fulfilled(false)
+		{}
+		boost::mutex mutex;
+		source<T> Source;
+		bool fulfilled;
+	};
+	boost::shared_ptr<wrap> W;
 };
 
 /*
@@ -194,12 +276,12 @@ public:
 		for(typename std::set<source<T> >::iterator it_cur = source_set_in.begin(),
 			it_end = source_set_in.end(); it_cur != it_end; ++it_cur)
 		{
-			it_cur->select(boost::bind(&select::source_call_back, this, *it_cur));
+			it_cur->chan.select_source(boost::bind(&select::source_call_back, this, *it_cur));
 		}
 		for(typename std::set<sink<T> >::iterator it_cur = sink_set_in.begin(),
 			it_end = sink_set_in.end(); it_cur != it_end; ++it_cur)
 		{
-			it_cur->select(boost::bind(&select::sink_call_back, this, *it_cur));
+			it_cur->chan.select_sink(boost::bind(&select::sink_call_back, this, *it_cur));
 		}
 		{//BEGIN lock scope
 		boost::mutex::scoped_lock lock(mutex);
@@ -234,14 +316,19 @@ private:
 	}
 };
 
-namespace {
 template<typename T>
-std::pair<source<T>, sink<T> > make_chan(const unsigned buf_size = 0)
+static std::pair<source<T>, sink<T> > make_chan(const unsigned buf_size = 0)
 {
 	primitive<T> tmp(buf_size);
 	return std::make_pair(source<T>(tmp), sink<T>(tmp));
 }
 
-}//end unnamed namespace
+template<typename T>
+static std::pair<promise<T>, future<T> > make_future()
+{
+	std::pair<source<T>, sink<T> > chan_pair = make_chan<T>();
+	return std::make_pair(promise<T>(chan_pair.first), future<T>(chan_pair.second));
+}
+
 }//end namespace channel
 #endif

@@ -11,42 +11,104 @@
 
 //include
 #include <boost/shared_ptr.hpp>
+#include <channel.hpp>
 #include <portable.hpp>
 #include <thread_pool.hpp>
 
 //standard
 #include <map>
 #include <queue>
+#include <string>
 
 namespace net{
 //DEBUG, rename to proactor when ready to replace current proactor
 class nstream_proactor : private boost::noncopyable
 {
 	static const unsigned connect_timeout = 60;
-	static const unsigned idle_timeout = 600;
+	static const unsigned idle_timeout = 120;
 	net::init Init;
 public:
 
+	//direction
 	enum dir_t{
-		incoming, //remote host initiated connection
-		outgoing  //we initiated connection
+		incoming_dir, //remote host initiated connection
+		outgoing_dir  //we initiated connection
 	};
 
-	struct connect_event{
+	//errors for disconnect call back
+	enum error_t{
+		no_error,               //used when we close connection
+		connect_error,          //failed to connect to remote host
+		connection_reset_error, //remote end closed connection
+		timeout_error,          //connection timed out
+		listen_error            //failed to start listener
+	};
+
+	//transport type (what type of connection)
+	enum tran_t{
+		nstream_tran,        //TCP (nstream)
+		nstream_listen_tran, //listener for incoming TCP (nstream)
+		ndgram_tran          //UDP (ndgram)
+	};
+
+	//information to describe the connection, included with each event
+	class conn_info
+	{
+	public:
+		conn_info(
+			const boost::uint64_t conn_ID_in,
+			const dir_t dir_in,
+			const tran_t tran_in,
+			const boost::optional<endpoint> & local_ep_in = boost::optional<endpoint>(),
+			const boost::optional<endpoint> & remote_ep_in = boost::optional<endpoint>()
+		);
 		boost::uint64_t conn_ID;
 		dir_t dir;
-		endpoint ep;
+		tran_t tran;
+		boost::optional<endpoint> local_ep;
+		boost::optional<endpoint> remote_ep;
 	};
-	struct disconnect_event{
-		boost::uint64_t conn_ID;
+
+	class connect_event
+	{
+	public:
+		connect_event(const boost::shared_ptr<const conn_info> & info_in);
+		boost::shared_ptr<const conn_info> info;
 	};
-	struct recv_event{
-		boost::uint64_t conn_ID;
+
+	class disconnect_event
+	{
+	public:
+		disconnect_event(
+			const boost::shared_ptr<const conn_info> & info_in,
+			const error_t error_in
+		);
+		boost::shared_ptr<const conn_info> info;
+		error_t error;
+	};
+
+	class recv_event
+	{
+	public:
+		recv_event(
+			const boost::shared_ptr<const conn_info> & info_in,
+			const buffer & buf_in
+		);
+		boost::shared_ptr<const conn_info> info;
 		buffer buf;
 	};
-	struct send_event{
-		boost::uint64_t conn_ID;
-		unsigned send_buf_size;	
+
+	class send_event
+	{
+	public:
+		send_event(
+			const boost::shared_ptr<const conn_info> & info_in,
+			const unsigned last_send_in,
+			const unsigned send_buf_size_in
+		);
+		boost::shared_ptr<const conn_info> info;
+		unsigned last_send;     //bytes sent in last send
+		unsigned send_buf_size; //size of send_buf
 	};
 
 	nstream_proactor(
@@ -56,11 +118,23 @@ public:
 		const boost::function<void (send_event)> & send_call_back_in
 	);
 
-	/*
+	/* All of these functions are asynchronous.
+	connect:
+		Connect to specified endpoint.
+	disconnect:
+		Disconnect a connection.
 	listen:
-		Start listener on local endpoint.
+		Start listener on local endpoint. If listener fails a disconnect call back
+		will be done with a listener error. Returns port we're listening on.
+	send:
+		Send buf to specified connection. If close_on_empty is true the
+		connection will be closed when the send_buf becomes empty.
 	*/
-	void listen(const endpoint & ep);
+	void connect(const endpoint & ep);
+	void disconnect(const boost::uint64_t conn_ID);
+	channel::future<std::string> listen(const endpoint & ep);
+	void send(const boost::uint64_t conn_ID, const buffer & buf,
+		const bool close_on_empty = false);
 
 private:
 	/* Call Back Dispatcher
@@ -72,7 +146,7 @@ private:
 	class dispatcher
 	{
 		static const unsigned threads = 4;
-		static const unsigned max_buf = 1024;
+		static const unsigned max_buf = 8192;
 	public:
 		dispatcher(
 			const boost::function<void (connect_event)> & connect_call_back_in,
@@ -112,6 +186,7 @@ private:
 		boost::condition_variable_any producer_cond; //notify_one when job added to queue
 		boost::condition_variable_any empty_cond;    //notify_all when no jobs scheduled or running
 		std::set<boost::uint64_t> memoize;           //memoize for conn_IDs
+		boost::uint64_t producer_cnt;                //number of jobs produced
 		unsigned job_cnt;                            //queued + running jobs
 		std::list<std::pair<boost::uint64_t, boost::function<void()> > > Job;
 
@@ -122,10 +197,14 @@ private:
 		void dispatch();
 	};
 
+	/*
+	Base class for different types of connections. This allows us to easily add
+	new types of connections to the proactor.
+	*/
 	class conn : private boost::noncopyable
 	{
 	public:
-		virtual ~conn(){}
+		virtual ~conn();
 		/*
 		ID:
 			Returns connection ID.
@@ -142,16 +221,21 @@ private:
 		*/
 		virtual boost::uint64_t ID() = 0;
 		virtual void read() = 0;
+		virtual void schedule_send(const buffer & buf, const bool close_on_empty);
 		virtual int socket() = 0;
-		virtual bool timed_out(){ return false; }
-		virtual void write(){}
+		virtual bool timed_out();
+		virtual void write();
 	};
 
+	/*
+	Holds all connections. Contains functions to add/remove connections. The
+	connections tell this container when they're ready to read or write. This
+	container allocates conn_IDs.
+	*/
 	class conn_container
 	{
 	public:
 		conn_container();
-
 		/*
 		add:
 			Add connection.
@@ -184,9 +268,11 @@ private:
 		std::set<int> read_set();
 		void monitor_read(const int socket_FD);
 		void monitor_write(const int socket_FD);
-		void perform_reads(std::set<int> read_set_in);
-		void perform_writes(std::set<int> write_set_in);
+		void perform_reads(const std::set<int> & read_set_in);
+		void perform_writes(const std::set<int> & write_set_in);
 		void remove(const boost::uint64_t conn_ID);
+		void schedule_send(const boost::uint64_t conn_ID, const buffer & buf,
+			const bool close_on_empty);
 		void unmonitor_read(const int socket_FD);
 		void unmonitor_write(const int socket_FD);
 		std::set<int> write_set();
@@ -200,31 +286,45 @@ private:
 		std::map<int, boost::shared_ptr<conn> > Socket;
 	};
 
+	//wraps nstream
 	class conn_nstream : public conn
 	{
 	public:
-		//ctor for incoming connection
+		//ctor for outgoing connection
+		conn_nstream(
+			dispatcher & Dispatcher_in,
+			conn_container & Conn_Container_in,
+			const endpoint & ep
+		);
+		//ctor for incoming connection (used by conn_listener)
 		conn_nstream(
 			dispatcher & Dispatcher_in,
 			conn_container & Conn_Container_in,
 			boost::shared_ptr<nstream> N_in
 		);
-
-		//documentation in base class
+		virtual ~conn_nstream();
 		virtual boost::uint64_t ID();
 		virtual void read();
+		virtual void schedule_send(const buffer & buf, const bool close_on_empty_in);
 		virtual int socket();
 		virtual bool timed_out();
 		virtual void write();
-
 	private:
 		dispatcher & Dispatcher;
 		conn_container & Conn_Container;
-		boost::uint64_t conn_ID;
-		int socket_FD;
 		boost::shared_ptr<nstream> N;
+		boost::uint64_t conn_ID;         //unique ID for connection
+		int socket_FD;                   //keep copy so we know this after nstream close
+		buffer send_buf;                 //stores bytes that need to be sent
+		bool close_on_empty;             //when true close when send_buf becomes empty
+		bool half_open;                  //if true async connect in progress
+		std::time_t timeout;             //time at which this conn times out
+		error_t error;                   //holds error for disconnect
+		//info passed to call backs
+		boost::shared_ptr<const conn_info> info;
 	};
 
+	//wraps listener for nstreams, adds conn_nstreams to conn_container
 	class conn_listener : public conn
 	{
 	public:
@@ -233,41 +333,42 @@ private:
 			conn_container & Conn_Container_in,
 			const endpoint & ep
 		);
-
-		//documentation in base class
+		virtual ~conn_listener();
 		virtual boost::uint64_t ID();
 		virtual void read();
 		virtual int socket();
-
+		/*
+		ep:
+			Returns endpoint for listener or nothing if not listening.
+		*/
+		boost::optional<net::endpoint> ep();
 	private:
 		dispatcher & Dispatcher;
 		conn_container & Conn_Container;
-		boost::uint64_t conn_ID;
-		int socket_FD;
 		listener Listener;
+		boost::uint64_t conn_ID;         //unique ID for connection
+		int socket_FD;                   //keep copy so we know this after listener close
+		error_t error;                   //holds error for disconnect
+		//info passed to call backs
+		boost::shared_ptr<const conn_info> info;
 	};
 
-	select Select;
-	conn_container Conn_Container;
+	//relay functions called by Internal_TP
+	void connect_relay(const endpoint & ep);
+	void disconnect_relay(const boost::uint64_t conn_ID);
+	void listen_relay(const endpoint ep, channel::promise<std::string> promise);
+	void send_relay(const boost::uint64_t conn_ID, const buffer buf,
+		const bool close_on_empty);
 
 	/*
-	listen_relay:
-		Start listener.
 	main_loop:
 		Main network processing loop.
 	*/
-	void listen_relay(const endpoint ep);
 	void main_loop();
 
-	//does call backs, destroyed after Internal_TP to insure we don't lose jobs
+	select Select;
 	dispatcher Dispatcher;
-
-	/*
-	This thread_pool contains 1 thread. This thread can access any data member
-	of the proactor. The main_loop continually schedules itself with this TP.
-	Also, public functions can schedule the calling of private functions with
-	this TP to be thread safe.
-	*/
+	conn_container Conn_Container;
 	thread_pool Internal_TP;
 };
 }//end namespace net

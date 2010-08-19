@@ -117,7 +117,11 @@ void net::proactor::check_timeouts()
 		it_cur = timed_out.begin(), it_end = timed_out.end();
 		it_cur != it_end; ++it_cur)
 	{
-		LOG << "timed out " << it_cur->second->N->remote_IP();
+		if(boost::optional<endpoint> remote_ep = it_cur->second->N->remote_ep()){
+			LOG << "timed out " << remote_ep->IP() << " " << remote_ep->port();
+		}else{
+			LOG << "error getting remote ep";
+		}
 		remove_socket(it_cur->first);
 		Dispatcher.disconnect(it_cur->second->CI);
 	}

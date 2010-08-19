@@ -84,7 +84,7 @@ int main()
 	Proactor.stop();
 	Proactor.start(Listener);
 
-	E = net::get_endpoint("localhost", Listener->port());
+	E = net::get_endpoint("localhost", Listener->local_ep()->port());
 	assert(!E.empty());
 
 	for(int x=0; x<test_echo; ++x){
