@@ -13,12 +13,12 @@ class listener : public socket_base
 {
 public:
 	listener();
-	listener(const endpoint & ep); //open listener on local endpoint
+	listener(const endpoint & ep);
 
 	/*
 	accept:
-		Blocks until connection can be accepted. Returns shared_ptr to nstream or
-		empty shared_ptr if error. If the socket is non-blocking then an emtpy
+		Block until connection can be accepted. Return shared_ptr to nstream or
+		empty shared_ptr if error. If the socket is non-blocking then emtpy
 		shared_ptr is returned if there are no more incoming connections.
 		Precondition: is_open() = true.
 	open:
@@ -28,9 +28,9 @@ public:
 		Precondition: E must be tcp endpoint.
 		Example:
 		Only accept connections from localhost. Choose random port to listen on.
-			net::get_endpoint("localhost", "0", net::tcp);
+			net::get_endpoint("localhost", "0");
 		Accept connections on all interfaces. Use port 1234.
-			net::get_endpoint("", "1234", net::tcp);
+			net::get_endpoint("", "1234");
 	local_ep:
 		Returns endpoint listening on, or endpoint we attempted to listen on.
 	*/
@@ -50,7 +50,6 @@ private:
 	local_port:
 		Return local port listening on or emtpy string if not listening.
 	*/
-
 	void set_local_ep();
 	std::string local_IP();
 	std::string local_port();

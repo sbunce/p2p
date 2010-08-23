@@ -6,7 +6,7 @@
 #include <csignal>
 
 int fail(0);
-const unsigned echo(2);
+const unsigned echo(32);
 unsigned echo_cnt(0);
 boost::shared_ptr<net::nstream_proactor> Proactor;
 boost::mutex mutex;

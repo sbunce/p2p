@@ -46,13 +46,12 @@ void future_promise()
 
 void producer(channel::source<int> ch)
 {
-	channel::select<int> Select;
 	std::set<channel::source<int> > source_set;
 	source_set.insert(ch);
-	Select(source_set);
+	channel::select(source_set);
 	assert(source_set.size() == 1);
 	source_set.begin()->send(0);
-	Select(source_set);
+	channel::select(source_set);
 	assert(source_set.size() == 1);
 	source_set.begin()->send(0);
 }
@@ -63,13 +62,12 @@ void select()
 	std::pair<channel::source<chan_type>, channel::sink<chan_type> >
 		p = channel::make_chan<chan_type>(1);
 	boost::thread worker(boost::bind(&producer, p.first));
-	channel::select<chan_type> Select;
 	std::set<channel::sink<chan_type> > sink_set;
 	sink_set.insert(p.second);
-	Select(sink_set);
+	channel::select(sink_set);
 	assert(sink_set.size() == 1);
 	sink_set.begin()->recv();
-	Select(sink_set);
+	channel::select(sink_set);
 	assert(sink_set.size() == 1);
 	sink_set.begin()->recv();
 	worker.join();
@@ -82,5 +80,6 @@ int main()
 	source_sink();
 	future_promise();
 	select();
+
 	return fail;
 }

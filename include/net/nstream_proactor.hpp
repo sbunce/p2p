@@ -124,8 +124,9 @@ public:
 	disconnect:
 		Disconnect a connection.
 	listen:
-		Start listener on local endpoint. If listener fails a disconnect call back
-		will be done with a listener error. Returns port we're listening on.
+		Start listener on local endpoint. Returns port listening on or empty
+		string if cannot start listener. If cannot start listener disconnect call
+		back will be done.
 	send:
 		Send buf to specified connection. If close_on_empty is true the
 		connection will be closed when the send_buf becomes empty.
