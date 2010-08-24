@@ -24,10 +24,12 @@ public:
 		Note: endpoints returned for current or latest connection.
 	open:
 		Opens connection. Blocks until connection established.
+		Postcondition: local_ep() will return endpoint if no error.
 	open_async:
 		Start async connection. The socket must be monitored by select. When it
 		becomes writeable is_open_async() should be called to determine if the
 		socket connected, or failed to connect.
+		Postcondition: local_ep() will return endpoint if no error.
 	recv:
 		Read bytes in to buffer. Returns the number of bytes read, 0 if the host
 		disconnected, or -1 on error.

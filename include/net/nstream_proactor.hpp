@@ -21,7 +21,6 @@
 #include <string>
 
 namespace net{
-//DEBUG, rename to proactor when ready to replace current proactor
 class nstream_proactor : private boost::noncopyable
 {
 	static const unsigned connect_timeout = 60;
@@ -41,7 +40,8 @@ public:
 		connect_error,          //failed to connect to remote host
 		connection_reset_error, //remote end closed connection
 		timeout_error,          //connection timed out
-		listen_error            //failed to start listener
+		listen_error,           //failed to start listener
+		limit_error             //conn closed because it would exceed conn limit
 	};
 
 	//transport type (what type of connection)
@@ -209,9 +209,13 @@ private:
 		/*
 		ID:
 			Returns connection ID.
+		info:
+			Return conn_info.
 		read:
 			Perform read operation.
 			Precondition: select must say socket needs read.
+		set_error:
+			Set error to be passed to disconnect call back.
 		socket:
 			Returns socket file descriptor.
 		timed_out:
@@ -220,9 +224,10 @@ private:
 			Perform write operation.
 			Precondition: select must say socket can write.
 		*/
-		virtual boost::uint64_t ID() = 0;
+		virtual boost::shared_ptr<const conn_info> info() = 0;
 		virtual void read() = 0;
 		virtual void schedule_send(const buffer & buf, const bool close_on_empty);
+		virtual void set_error(const error_t error_in) = 0;
 		virtual int socket() = 0;
 		virtual bool timed_out();
 		virtual void write();
@@ -285,6 +290,10 @@ private:
 		std::set<int> _write_set;
 		std::map<boost::uint64_t, boost::shared_ptr<conn> > ID;
 		std::map<int, boost::shared_ptr<conn> > Socket;
+		unsigned incoming_conn_limit;
+		unsigned outgoing_conn_limit;
+		unsigned incoming_conns;
+		unsigned outgoing_conns;
 	};
 
 	//wraps nstream
@@ -304,25 +313,41 @@ private:
 			boost::shared_ptr<nstream> N_in
 		);
 		virtual ~conn_nstream();
-		virtual boost::uint64_t ID();
+		virtual boost::shared_ptr<const conn_info> info();
 		virtual void read();
 		virtual void schedule_send(const buffer & buf, const bool close_on_empty_in);
+		virtual void set_error(const error_t error_in);
 		virtual int socket();
+
+//rename timed_out to tick(), have it return void
 		virtual bool timed_out();
 		virtual void write();
 	private:
 		dispatcher & Dispatcher;
+
+//DEBUG, bad design, conns should not have access to container they're in
 		conn_container & Conn_Container;
+
+//refs to sets in conn_container
+		//std::set<int> & read_set;
+		//std::set<int> & write_set;
+
+//this can be used to schedule remove
+		//std::set<boost::uint64_t> & remove
+
 		boost::shared_ptr<nstream> N;
-		boost::uint64_t conn_ID;         //unique ID for connection
 		int socket_FD;                   //keep copy so we know this after nstream close
 		buffer send_buf;                 //stores bytes that need to be sent
 		bool close_on_empty;             //when true close when send_buf becomes empty
 		bool half_open;                  //if true async connect in progress
 		std::time_t timeout;             //time at which this conn times out
 		error_t error;                   //holds error for disconnect
-		//info passed to call backs
-		boost::shared_ptr<const conn_info> info;
+		boost::shared_ptr<const conn_info> _info; //info passed to call backs
+		/*
+		touch:
+			Updates timeout timer.
+		*/
+		void touch();
 	};
 
 	//wraps listener for nstreams, adds conn_nstreams to conn_container
@@ -335,8 +360,9 @@ private:
 			const endpoint & ep
 		);
 		virtual ~conn_listener();
-		virtual boost::uint64_t ID();
+		virtual boost::shared_ptr<const conn_info> info();
 		virtual void read();
+		virtual void set_error(const error_t error_in);
 		virtual int socket();
 		/*
 		ep:
@@ -347,11 +373,9 @@ private:
 		dispatcher & Dispatcher;
 		conn_container & Conn_Container;
 		listener Listener;
-		boost::uint64_t conn_ID;         //unique ID for connection
-		int socket_FD;                   //keep copy so we know this after listener close
-		error_t error;                   //holds error for disconnect
-		//info passed to call backs
-		boost::shared_ptr<const conn_info> info;
+		int socket_FD;                            //keep copy so we know this after listener close
+		error_t error;                            //holds error for disconnect
+		boost::shared_ptr<const conn_info> _info; //info passed to call backs
 	};
 
 	//relay functions called by Internal_TP

@@ -47,15 +47,6 @@ public:
 		}
 	}
 
-	//clear channel, return number of messages erased
-	unsigned clear() const
-	{
-		boost::mutex::scoped_lock lock(Wrap->mutex);
-		unsigned cnt = Wrap->queue.size();
-		Wrap->queue.clear();
-		return cnt;
-	}
-
 	T recv() const
 	{
 		boost::mutex::scoped_lock lock(Wrap->mutex);

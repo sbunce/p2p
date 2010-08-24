@@ -25,12 +25,7 @@ bool net::nstream::is_open_async()
 		reinterpret_cast<char *>(&opt_val), &opt_len) == 0)
 	{
 		//we got option
-		if(opt_val == 0){
-			set_local_ep();
-			return true;
-		}else{
-			return false;
-		}
+		return opt_val == 0;
 	}else{
 		//error getting option
 		LOG << strerror(errno);
@@ -139,6 +134,7 @@ void net::nstream::open_async(const endpoint & ep)
 			exit(1);
 		}
 	}
+	set_local_ep();
 }
 
 int net::nstream::recv(buffer & buf, const int max_transfer)

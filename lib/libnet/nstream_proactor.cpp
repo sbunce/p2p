@@ -84,7 +84,11 @@ void net::nstream_proactor::conn::write()
 //BEGIN conn_container
 net::nstream_proactor::conn_container::conn_container():
 	unused_conn_ID(0),
-	last_time(std::time(NULL))
+	last_time(std::time(NULL)),
+	incoming_conn_limit(0),
+	outgoing_conn_limit(0),
+	incoming_conns(0),
+	outgoing_conns(0)
 {
 
 }
@@ -92,7 +96,7 @@ net::nstream_proactor::conn_container::conn_container():
 void net::nstream_proactor::conn_container::add(const boost::shared_ptr<conn> & C)
 {
 	Socket.insert(std::make_pair(C->socket(), C));
-	ID.insert(std::make_pair(C->ID(), C));
+	ID.insert(std::make_pair(C->info()->conn_ID, C));
 }
 
 void net::nstream_proactor::conn_container::check_timeouts()
@@ -104,7 +108,8 @@ void net::nstream_proactor::conn_container::check_timeouts()
 			it_cur = ID.begin(), it_end = ID.end(); it_cur != it_end; ++it_cur)
 		{
 			if(it_cur->second->timed_out()){
-				timed_out.push_back(it_cur->second->ID());
+				timed_out.push_back(it_cur->second->info()->conn_ID);
+				it_cur->second->set_error(timeout_error);
 			}
 		}
 		for(std::list<boost::uint64_t>::iterator it_cur = timed_out.begin(),
@@ -171,7 +176,7 @@ void net::nstream_proactor::conn_container::remove(const boost::uint64_t conn_ID
 		_read_set.erase(it->second->socket());
 		_write_set.erase(it->second->socket());
 		Socket.erase(it->second->socket());
-		ID.erase(it->second->ID());
+		ID.erase(it->second->info()->conn_ID);
 	}
 }
 
@@ -210,7 +215,6 @@ net::nstream_proactor::conn_nstream::conn_nstream(
 	Dispatcher(Dispatcher_in),
 	Conn_Container(Conn_Container_in),
 	N(new nstream()),
-	conn_ID(Conn_Container.new_conn_ID()),
 	close_on_empty(false),
 	half_open(true),
 	timeout(std::time(NULL) + connect_timeout),
@@ -218,7 +222,13 @@ net::nstream_proactor::conn_nstream::conn_nstream(
 {
 	N->open_async(ep);
 	socket_FD = N->socket();
-	//socket either connected or failed to connect when writeable
+	_info.reset(new conn_info(
+		Conn_Container.new_conn_ID(),
+		outgoing_dir,
+		nstream_tran,
+		N->local_ep(),
+		N->remote_ep()
+	));
 	Conn_Container.monitor_write(socket_FD);
 }
 
@@ -230,7 +240,6 @@ net::nstream_proactor::conn_nstream::conn_nstream(
 	Dispatcher(Dispatcher_in),
 	Conn_Container(Conn_Container_in),
 	N(N_in),
-	conn_ID(Conn_Container.new_conn_ID()),
 	close_on_empty(false),
 	half_open(false),
 	timeout(std::time(NULL) + idle_timeout),
@@ -238,37 +247,39 @@ net::nstream_proactor::conn_nstream::conn_nstream(
 {
 	socket_FD = N->socket();
 	assert(N->is_open());
-	info.reset(new conn_info(
-		conn_ID,
+	_info.reset(new conn_info(
+		Conn_Container.new_conn_ID(),
 		incoming_dir,
 		nstream_tran,
 		N->local_ep(),
 		N->remote_ep()
 	));
-	Dispatcher.connect(connect_event(info));
+	Dispatcher.connect(connect_event(_info));
 	Conn_Container.monitor_read(socket_FD);
 }
 
 net::nstream_proactor::conn_nstream::~conn_nstream()
 {
-	Dispatcher.disconnect(disconnect_event(info, error));
+	Dispatcher.disconnect(disconnect_event(_info, error));
 }
 
-boost::uint64_t net::nstream_proactor::conn_nstream::ID()
+boost::shared_ptr<const net::nstream_proactor::conn_info>
+	net::nstream_proactor::conn_nstream::info()
 {
-	return conn_ID;
+	return _info;
 }
 
 void net::nstream_proactor::conn_nstream::read()
 {
+	touch();
 	buffer buf;
 	int n_bytes = N->recv(buf);
 	if(n_bytes <= 0){
 		//assume connection reset (may not be)
 		error = connection_reset_error;
-		Conn_Container.remove(conn_ID);
+		Conn_Container.remove(_info->conn_ID);
 	}else{
-		Dispatcher.recv(recv_event(info, buf));
+		Dispatcher.recv(recv_event(_info, buf));
 	}
 }
 
@@ -280,10 +291,15 @@ void net::nstream_proactor::conn_nstream::schedule_send(const buffer & buf,
 	}
 	send_buf.append(buf);
 	if(send_buf.empty() && close_on_empty){
-		Conn_Container.remove(conn_ID);
+		Conn_Container.remove(_info->conn_ID);
 	}else{
 		Conn_Container.monitor_write(socket_FD);
 	}
+}
+
+void net::nstream_proactor::conn_nstream::set_error(const error_t error_in)
+{
+	error = error_in;
 }
 
 int net::nstream_proactor::conn_nstream::socket()
@@ -293,28 +309,27 @@ int net::nstream_proactor::conn_nstream::socket()
 
 bool net::nstream_proactor::conn_nstream::timed_out()
 {
-	return false;
+	return timeout > std::time(NULL);
+}
+
+void net::nstream_proactor::conn_nstream::touch()
+{
+	timeout = std::time(NULL) + idle_timeout;
 }
 
 void net::nstream_proactor::conn_nstream::write()
 {
+	touch();
 	if(half_open){
-		info.reset(new conn_info(
-			conn_ID,
-			outgoing_dir,
-			nstream_tran,
-			N->local_ep(),
-			N->remote_ep()
-		));
 		if(N->is_open_async()){
 			half_open = false;
-			Dispatcher.connect(connect_event(info));
+			Dispatcher.connect(connect_event(_info));
 			//send_buf always empty after connect
 			Conn_Container.unmonitor_write(socket_FD);
 			Conn_Container.monitor_read(socket_FD);
 		}else{
 			error = connect_error;
-			Conn_Container.remove(conn_ID);
+			Conn_Container.remove(_info->conn_ID);
 		}
 	}else{
 		int n_bytes = N->send(send_buf);
@@ -323,11 +338,11 @@ void net::nstream_proactor::conn_nstream::write()
 		}
 		if(n_bytes <= 0){
 			error = connection_reset_error;
-			Conn_Container.remove(conn_ID);
+			Conn_Container.remove(_info->conn_ID);
 		}else if(close_on_empty && send_buf.empty()){
-			Conn_Container.remove(conn_ID);
+			Conn_Container.remove(_info->conn_ID);
 		}else{
-			Dispatcher.send(send_event(info, n_bytes, send_buf.size()));
+			Dispatcher.send(send_event(_info, n_bytes, send_buf.size()));
 		}
 	}
 };
@@ -341,20 +356,19 @@ net::nstream_proactor::conn_listener::conn_listener(
 ):
 	Dispatcher(Dispatcher_in),
 	Conn_Container(Conn_Container_in),
-	conn_ID(Conn_Container.new_conn_ID()),
 	error(no_error)
 {
 	Listener.open(ep);
 	Listener.set_non_blocking(true);
 	socket_FD = Listener.socket();
-	info.reset(new conn_info(
-		conn_ID,
+	_info.reset(new conn_info(
+		Conn_Container.new_conn_ID(),
 		outgoing_dir,
 		nstream_listen_tran,
 		ep
 	));
 	if(Listener.is_open()){
-		Dispatcher.connect(connect_event(info));
+		Dispatcher.connect(connect_event(_info));
 		Conn_Container.monitor_read(socket_FD);
 	}else{
 		error = listen_error;
@@ -363,12 +377,13 @@ net::nstream_proactor::conn_listener::conn_listener(
 
 net::nstream_proactor::conn_listener::~conn_listener()
 {
-	Dispatcher.disconnect(disconnect_event(info, error));
+	Dispatcher.disconnect(disconnect_event(_info, error));
 }
 
-boost::uint64_t net::nstream_proactor::conn_listener::ID()
+boost::shared_ptr<const net::nstream_proactor::conn_info>
+	net::nstream_proactor::conn_listener::info()
 {
-	return conn_ID;
+	return _info;
 }
 
 boost::optional<net::endpoint> net::nstream_proactor::conn_listener::ep()
@@ -383,6 +398,11 @@ void net::nstream_proactor::conn_listener::read()
 			Conn_Container, N));
 		Conn_Container.add(CN);
 	}
+}
+
+void net::nstream_proactor::conn_listener::set_error(const error_t error_in)
+{
+	error = error_in;
 }
 
 int net::nstream_proactor::conn_listener::socket()
