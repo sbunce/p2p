@@ -1,6 +1,9 @@
 #include <cpproto/cpproto.hpp>
 #include <logger.hpp>
 
+int fail_cnt(0);
+int call_back_cnt(0);
+
 CPPROTO_MESSAGE_BEGIN(message, 0)
 	CPPROTO_FIELD(cpproto::ASCII<0>, ASCII)
 	CPPROTO_FIELD(cpproto::boolean<1>, boolean)
@@ -8,46 +11,44 @@ CPPROTO_MESSAGE_BEGIN(message, 0)
 	CPPROTO_FIELD(cpproto::sint<3>, sint)
 	CPPROTO_FIELD(cpproto::uint<4>, uint)
 CPPROTO_MESSAGE_END
+message M1, M2;
 
-const std::string test_str(
-	" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNO"
-	"PQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
-);
-
-void message_set_test_vals(message & M)
+void call_back(message & M)
 {
-	M.ASCII = test_str;
-	M.boolean = true;
-	M.string = test_str;
-	M.sint = -123;
-	M.uint = 123;
+	if(!(M == M1 || M == M2)){
+		LOG; ++fail_cnt;
+	}
+	++call_back_cnt;
 }
 
 int main()
 {
-	int fail_cnt = 0;
 	cpproto::parser Parser;
-	Parser.add_field<message>();
-	message field;
-	message_set_test_vals(field);
+	Parser.reg_handler<message>(&call_back);
+
+	M1.ASCII = "ABC";
+	M1.boolean = true;
+	M1.string = "123";
+	M1.sint = -123;
+	M1.uint = 123;
+
+	M2.ASCII = "CBA";
+	M2.boolean = false;
+	M2.string = "321";
+	M2.sint = -321;
+	M2.uint = 321;
+
 	std::string buf;
-	buf += field.serialize();
-	buf += field.serialize();
-	unsigned test_parsed = 0;
-	while(boost::shared_ptr<cpproto::field> M = Parser.parse(buf)){
-		if(typeid(*M) == typeid(message)){
-			message * parsed_field = (message *)M.get();
-			if(field != *parsed_field){
-				LOG; ++fail_cnt;
-			}
-			++test_parsed;
-		}
-	}
-	if(test_parsed != 2){
+	buf = M1.serialize() + M2.serialize();
+	Parser.parse(buf);
+
+	if(Parser.bad()){
 		LOG; ++fail_cnt;
 	}
-	if(Parser.bad_stream()){
+
+	if(call_back_cnt != 2){
 		LOG; ++fail_cnt;
 	}
+
 	return fail_cnt;
 }

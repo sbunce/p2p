@@ -41,16 +41,17 @@ public:
 	virtual bool parse(std::string buf) = 0;
 	virtual std::string serialize() const = 0;
 
-	//operators
-	bool operator == (const field & rval)
+	bool operator == (const field & rval) const
 	{
 		return serialize() == rval.serialize();
 	}
-	bool operator != (const field & rval)
+
+	bool operator != (const field & rval) const
 	{
 		return !(*this == rval);
 	}
-	bool operator < (const field & rval)
+
+	bool operator < (const field & rval) const
 	{
 		return serialize() < rval.serialize();
 	}

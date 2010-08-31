@@ -14,73 +14,89 @@ class parser
 {
 public:
 	parser():
-		bad(false)
+		_bad(false)
 	{}
 
-	/*
-	Add field parser will understand. T must be a field.
-	Precondition: This must not have been called for T before.
-	Postcondition: Field cleared.
-	*/
+	//register handler for field
 	template<typename T>
-	void add_field()
+	void reg_handler(boost::function<void (T &)> func)
 	{
 		boost::shared_ptr<T> new_field(new T());
-		std::pair<std::map<boost::uint64_t, boost::shared_ptr<field> >::iterator, bool>
-			p = Field.insert(std::make_pair(new_field->ID(), new_field));
+		std::pair<std::map<boost::uint64_t, field_element>::iterator, bool>
+			p = Field.insert(std::make_pair(new_field->ID(), field_element(
+			new_field, boost::bind(func, boost::ref(*new_field)))));
 		if(!p.second){
-			LOG << "error, field ID " << new_field->ID() << " not unique";
+			LOG << "non-unique field ID " << new_field->ID();
 			exit(1);
 		}
+
 	}
 
-	//returns true if field in buf was malformed
-	bool bad_stream() const
+	//returns true if buf passed to parse was malformed
+	bool bad() const
 	{
-		return bad;
+		return _bad;
 	}
 
 	/*
-	Parse fields in buf. Fields must have length prefixed. Returns empty
-	shared_ptr if incomplete field in buf.
+	Parse fields in buf.
 	Postcondition: Parsed field removed from buf.
 	*/
-	boost::shared_ptr<field> parse(std::string & buf)
+	void parse(std::string & buf)
 	{
-		std::string f_buf = field_split(buf);
-		if(f_buf.empty()){
-			return boost::shared_ptr<field>();
-		}
-		boost::optional<std::pair<boost::uint64_t, bool> > key = key_parse(f_buf);
-		if(!key){
-			bad = true;
-			return boost::shared_ptr<field>();
-		}
-		std::map<boost::uint64_t, boost::shared_ptr<field> >::iterator
-			it = Field.find(key->first);
-		if(it == Field.end()){
-			boost::shared_ptr<field> Unknown(new unknown());
-			if(Unknown->parse(f_buf)){
-				return Unknown;
-			}else{
-				return boost::shared_ptr<field>();
+		while(true){
+			std::string f_buf = field_split(buf);
+			if(f_buf.empty()){
+				break;
 			}
-		}else{
-			if(it->second->parse(f_buf)){
-				return it->second;
+			boost::optional<std::pair<boost::uint64_t, bool> > key = key_parse(f_buf);
+			if(!key){
+				_bad = true;
+				break;
+			}
+			std::map<boost::uint64_t, field_element>::iterator
+				it = Field.find(key->first);
+			if(it == Field.end()){
+
+				/* Figure out what to do with this.
+				boost::shared_ptr<field> Unknown(new unknown());
+				if(Unknown->parse(f_buf)){
+					return Unknown;
+				}else{
+					return boost::shared_ptr<field>();
+				}
+				*/
 			}else{
-				bad = true;
-				return boost::shared_ptr<field>();
+				if(it->second.Field->parse(f_buf)){
+					it->second.call_back();
+				}else{
+					_bad = true;
+					break;
+				}
 			}
 		}
 	}
 
 private:
 	//true if bad field passed to parse
-	bool bad;
+	bool _bad;
 
-	//maps field ID to field it belongs to
-	std::map<boost::uint64_t, boost::shared_ptr<field> > Field;
+	class field_element
+	{
+	public:
+		field_element(
+			const boost::shared_ptr<field> & Field_in,
+			const boost::function<void ()> & call_back_in
+		):
+			Field(Field_in),
+			call_back(call_back_in)
+		{}
+		boost::shared_ptr<field> Field;
+		boost::function<void ()> call_back;
+	};
+
+	//maps field ID to field
+	std::map<boost::uint64_t, field_element> Field;
 
 	/*
 	Return field from front of buf, empty string if incomplete field.

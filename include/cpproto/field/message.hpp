@@ -25,16 +25,16 @@ CPPROTO_MESSAGE_END
 	class m_class : public cpproto::message<field_ID>{ \
 		typedef m_class class_name; \
 	public: \
-		m_class(){ _init(NULL); } \
-		m_class(const m_class & MC){ _init(&MC); } \
-		m_class & operator = (const m_class & rval){ _init(&rval); return *this; } \
-		void _init(const m_class * rval){
+		m_class(){ _init(NULL, true); } \
+		m_class(const m_class & MC){ _init(&MC, true); } \
+		m_class & operator = (const m_class & rval){ _init(&rval, false); return *this; } \
+		void _init(const m_class * rval, const bool check_unique){
 #define CPPROTO_FIELD(field_type, field_name) \
-			_init_##field_name (rval); \
+			_init_##field_name (rval, check_unique); \
 		} \
 		field_type field_name; \
-		void _init_##field_name (const class_name * rval){ \
-			this->add_field(field_name); \
+		void _init_##field_name (const class_name * rval, const bool check_unique){ \
+			this->_add_field(field_name, check_unique); \
 			if(rval != NULL) field_name = rval-> field_name;
 #define CPPROTO_MESSAGE_END \
 		} \
@@ -128,12 +128,13 @@ public:
 
 protected:
 	//must be called for all fields in derived when derived object instantiated
-	void add_field(field & F)
+	void _add_field(field & F, const bool check_unique)
 	{
 		std::pair<std::map<boost::uint64_t, field *>::iterator, bool >
 			p = Field.insert(std::make_pair(F.ID(), &F));
-		if(!p.second){
-			p.second = &F;
+		if(check_unique && !p.second){
+			LOG << "non-unique field ID " << F.ID();
+			exit(1);
 		}
 	}
 

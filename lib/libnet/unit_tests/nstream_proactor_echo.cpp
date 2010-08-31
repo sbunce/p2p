@@ -63,12 +63,12 @@ int main()
 	));
 	std::set<net::endpoint> E = net::get_endpoint("127.0.0.1", "0");
 	assert(!E.empty());
-	std::string port = *Proactor->listen(*E.begin());
-	assert(!port.empty());
-	E = net::get_endpoint("127.0.0.1", port);
-	assert(!E.empty());
+	boost::optional<net::endpoint> ep = *Proactor->listen(*E.begin());
+	if(!ep){
+		LOG; exit(1);
+	}
 	for(int x=0; x<echo; ++x){
-		Proactor->connect(*E.begin());
+		Proactor->connect(*ep);
 	}
 	{//BEGIN lock scope
 	boost::mutex::scoped_lock lock(mutex);

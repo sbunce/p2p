@@ -2,14 +2,7 @@
 
 net::ndgram::ndgram()
 {
-/*
-	std::set<endpoint> ep = get_endpoint("", "0");
-	assert(!ep.empty());
-	if((socket_FD = ::socket(ep.begin()->ai.ai_addr->sa_family, SOCK_DGRAM, IPPROTO_UDP)) == -1){
-		LOG << strerror(errno);
-		close();
-	}
-*/
+
 }
 
 net::ndgram::ndgram(const endpoint & ep)

@@ -124,16 +124,15 @@ public:
 	disconnect:
 		Disconnect a connection.
 	listen:
-		Start listener on local endpoint. Returns port listening on or empty
-		string if cannot start listener. If cannot start listener disconnect call
-		back will be done.
+		Start listener on local endpoint. Returns endpoint listening on or nothing
+		if listen failed.
 	send:
 		Send buf to specified connection. If close_on_empty is true the
 		connection will be closed when the send_buf becomes empty.
 	*/
 	void connect(const endpoint & ep);
 	void disconnect(const boost::uint64_t conn_ID);
-	channel::future<std::string> listen(const endpoint & ep);
+	channel::future<boost::optional<endpoint> > listen(const endpoint & ep);
 	void send(const boost::uint64_t conn_ID, const buffer & buf,
 		const bool close_on_empty = false);
 
@@ -259,6 +258,8 @@ private:
 			Perform read on all sockets in set.
 		perform_write:
 			Perform write on all sockets in set.
+		process_sched_remove:
+			Remove connections that want themselves removed.
 		remove:
 			Remove connection that corresponds to conn_ID.
 		unmonitor_read:
@@ -276,6 +277,7 @@ private:
 		void monitor_write(const int socket_FD);
 		void perform_reads(const std::set<int> & read_set_in);
 		void perform_writes(const std::set<int> & write_set_in);
+		void process_sched_remove();
 		void remove(const boost::uint64_t conn_ID);
 		void schedule_send(const boost::uint64_t conn_ID, const buffer & buf,
 			const bool close_on_empty);
@@ -285,9 +287,14 @@ private:
 
 	private:
 		boost::uint64_t unused_conn_ID;
-		std::time_t last_time;
-		std::set<int> _read_set;
-		std::set<int> _write_set;
+		std::time_t last_time;             //used to check timeouts once per second
+
+//DEBUG, these sets should be moved outside this class, they should be passed
+//to each connection object.
+//There should be separate container for listeners and nstreams.
+//Also the nstream class should have access to these.
+		std::set<int> _read_set;           //read set for select
+		std::set<int> _write_set;          //write set for select
 		std::map<boost::uint64_t, boost::shared_ptr<conn> > ID;
 		std::map<int, boost::shared_ptr<conn> > Socket;
 		unsigned incoming_conn_limit;
@@ -318,23 +325,11 @@ private:
 		virtual void schedule_send(const buffer & buf, const bool close_on_empty_in);
 		virtual void set_error(const error_t error_in);
 		virtual int socket();
-
-//rename timed_out to tick(), have it return void
 		virtual bool timed_out();
 		virtual void write();
 	private:
 		dispatcher & Dispatcher;
-
-//DEBUG, bad design, conns should not have access to container they're in
 		conn_container & Conn_Container;
-
-//refs to sets in conn_container
-		//std::set<int> & read_set;
-		//std::set<int> & write_set;
-
-//this can be used to schedule remove
-		//std::set<boost::uint64_t> & remove
-
 		boost::shared_ptr<nstream> N;
 		int socket_FD;                   //keep copy so we know this after nstream close
 		buffer send_buf;                 //stores bytes that need to be sent
@@ -381,7 +376,8 @@ private:
 	//relay functions called by Internal_TP
 	void connect_relay(const endpoint & ep);
 	void disconnect_relay(const boost::uint64_t conn_ID);
-	void listen_relay(const endpoint ep, channel::promise<std::string> promise);
+	void listen_relay(const endpoint ep,
+		channel::promise<boost::optional<endpoint> > promise);
 	void send_relay(const boost::uint64_t conn_ID, const buffer buf,
 		const bool close_on_empty);
 

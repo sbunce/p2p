@@ -13,7 +13,15 @@
 
 namespace channel{
 
-//channel primitive, generally this should not be used directly
+//predeclarations for friend'ing
+template<typename T> class source;
+template<typename T> class promise;
+
+/*
+Channel primitive. Generally this should not be used directly because everyone
+who has a copy can send and receive. However, this might be desired in some
+situations.
+*/
 template<typename T>
 class primitive
 {
@@ -24,26 +32,28 @@ public:
 	{}
 
 	//call back when ready to recv
-	void call_back_recv(const boost::function<void ()> & func) const
+	bool call_back_recv(const boost::function<void ()> & func) const
 	{
 		boost::mutex::scoped_lock lock(Wrap->mutex);
 		assert(!Wrap->recv_call_back);
 		if(Wrap->queue.empty()){
 			Wrap->recv_call_back = func;
+			return false;
 		}else{
-			func();
+			return true;
 		}
 	}
 
 	//call back when ready to send
-	void call_back_send(const boost::function<void ()> & func) const
+	bool call_back_send(const boost::function<void ()> & func) const
 	{
 		boost::mutex::scoped_lock lock(Wrap->mutex);
 		assert(!Wrap->send_call_back);
 		if(Wrap->queue.size() >= Wrap->buf_size){
 			Wrap->send_call_back = func;
+			return false;
 		}else{
-			func();
+			return true;
 		}
 	}
 
@@ -106,14 +116,12 @@ private:
 template<typename T>
 class sink
 {
+	friend class source<T>;
 public:
-	explicit sink(primitive<T> chan_in):
-		chan(chan_in)
-	{}
-
-	void call_back(const boost::function<void ()> & func) const
+	//see documentation for channel::primitive::call_back_recv
+	bool call_back(const boost::function<void ()> & func) const
 	{
-		chan.call_back_recv(func);
+		return chan.call_back_recv(func);
 	}
 
 	T recv() const
@@ -127,6 +135,10 @@ public:
 	}
 
 private:
+	explicit sink(primitive<T> chan_in):
+		chan(chan_in)
+	{}
+
 	primitive<T> chan;
 };
 
@@ -135,13 +147,19 @@ template<typename T>
 class source
 {
 public:
-	explicit source(primitive<T> chan_in):
-		chan(chan_in)
+	explicit source(const unsigned buf_size = 0):
+		chan(primitive<T>(buf_size))
 	{}
 
-	void call_back(const boost::function<void ()> & func) const
+	//see documentation for channel::primitive::call_back_send
+	bool call_back(const boost::function<void ()> & func) const
 	{
-		chan.call_back_send(func);
+		return chan.call_back_send(func);
+	}
+
+	sink<T> get_sink() const
+	{
+		return sink<T>(chan);
 	}
 
 	void send(T t) const
@@ -165,14 +183,12 @@ until the value has been computed.
 template<typename T>
 class future
 {
+	friend class promise<T>;
 public:
-	explicit future(sink<T> & Sink):
-		Wrap(new wrap(Sink))
-	{}
-
-	void call_back(const boost::function<void ()> & func) const
+	//see documentation for channel::primitive::call_back_recv
+	bool call_back(const boost::function<void ()> & func) const
 	{
-		Wrap->Sink.call_back_recv(func);
+		return Wrap->Sink.call_back_recv(func);
 	}
 
 	//recv value from promise, or return cached value if already recv'd
@@ -193,6 +209,10 @@ public:
 	}
 
 private:
+	explicit future(sink<T> Sink):
+		Wrap(new wrap(Sink))
+	{}
+
 	class wrap
 	{
 	public:
@@ -211,13 +231,19 @@ template<typename T>
 class promise
 {
 public:
-	explicit promise(source<T> & Source):
-		Wrap(new wrap(Source))
+	promise():
+		Wrap(new wrap())
 	{}
 
-	void call_back(const boost::function<void ()> & func) const
+	//see documentation for channel::primitive::call_back_send
+	bool call_back(const boost::function<void ()> & func) const
 	{
-		Wrap->Source.call_back_send(func);
+		return Wrap->Source.call_back_send(func);
+	}
+
+	future<T> get_future() const
+	{
+		return future<T>(Wrap->Source.get_sink());
 	}
 
 	void operator = (const T & rval) const
@@ -232,8 +258,8 @@ private:
 	class wrap
 	{
 	public:
-		explicit wrap(source<T> & Source_in):
-			Source(Source_in),
+		explicit wrap():
+			Source(source<T>(0)),
 			fulfilled(false)
 		{}
 		boost::mutex mutex;
@@ -243,20 +269,6 @@ private:
 	boost::shared_ptr<wrap> Wrap;
 };
 
-template<typename T>
-static std::pair<source<T>, sink<T> > make_chan(const unsigned buf_size = 0)
-{
-	primitive<T> tmp(buf_size);
-	return std::make_pair(source<T>(tmp), sink<T>(tmp));
-}
-
-template<typename T>
-static std::pair<promise<T>, future<T> > make_future()
-{
-	std::pair<source<T>, sink<T> > chan_pair = make_chan<T>();
-	return std::make_pair(promise<T>(chan_pair.first), future<T>(chan_pair.second));
-}
-
 class select_proxy
 {
 public:
@@ -265,9 +277,9 @@ public:
 	{}
 
 	template<typename T>
-	select_proxy operator () (std::set<T> & chan_set)
+	select_proxy operator () (const std::set<T> & complete, std::set<T> & ready)
 	{
-		boost::shared_ptr<chan_set_wrap<T> > CSW(new chan_set_wrap<T>(chan_set));
+		boost::shared_ptr<chan_set_wrap<T> > CSW(new chan_set_wrap<T>(complete, ready));
 		CSW->monitor(CSW, Wrap->RC);
 		Wrap->Sets.push_back(CSW);
 		return *this;
@@ -313,8 +325,12 @@ private:
 	class chan_set_wrap : public chan_set_wrap_base
 	{
 	public:
-		chan_set_wrap(std::set<T> & chan_set_in):
-			chan_set(chan_set_in),
+		chan_set_wrap(
+			const std::set<T> & complete_in,
+			std::set<T> & ready_in
+		):
+			complete(complete_in),
+			ready(ready_in),
 			finalized(false)
 		{}
 
@@ -322,43 +338,47 @@ private:
 		void monitor(const boost::shared_ptr<chan_set_wrap<T> > & CSW,
 			boost::shared_ptr<ready_cond> RC)
 		{
-			boost::recursive_mutex::scoped_lock lock(mutex);
-			for(typename std::set<T>::iterator it_cur = chan_set.begin(),
-				it_end = chan_set.end(); it_cur != it_end; ++it_cur)
+			boost::mutex::scoped_lock lock(mutex);
+			for(typename std::set<T>::const_iterator it_cur = complete.begin(),
+				it_end = complete.end(); it_cur != it_end; ++it_cur)
 			{
-				it_cur->call_back(boost::bind(&chan_set_wrap::ready_call_back, this,
-					CSW, RC, *it_cur));
+				if(it_cur->call_back(boost::bind(&chan_set_wrap::ready_call_back,
+					this, CSW, RC, *it_cur)))
+				{
+					//channel ready immediately
+					tmp_ready.insert(*it_cur);
+					RC->notify();
+				}
 			}
 		}
 
-		/*
-		Copy ready_chan_set to chan_set. Make it so chan_set can no longer be
-		modified.
-		*/
+		//stop monitoring channels
 		virtual void finalize()
 		{
-			boost::recursive_mutex::scoped_lock lock(mutex);
+			boost::mutex::scoped_lock lock(mutex);
 			assert(!finalized);
 			finalized = true;
-			chan_set = ready_chan_set;
+			ready = tmp_ready;
 		}
 
 	private:
-		boost::recursive_mutex mutex; //locks access to chan_set_ready
-		std::set<T> & chan_set;       //channel set to select on
-		std::set<T> ready_chan_set;
-		bool finalized;
+		const std::set<T> & complete;
+		std::set<T> & ready;
+
+		boost::mutex mutex;    //locks access to everything in this section
+		std::set<T> tmp_ready; //call back adds ready chans to this
+		bool finalized;        //chans may only be added when this is false
 
 		/*
 		Channels call back to this function when ready. The shared_ptr makes it so
 		chan_set_wrap object not deleted before channel calls back.
 		*/
 		void ready_call_back(boost::shared_ptr<chan_set_wrap<T> > CSW,
-			boost::shared_ptr<ready_cond> RC, T ready_chan)
+			boost::shared_ptr<ready_cond> RC, T chan)
 		{
-			boost::recursive_mutex::scoped_lock lock(mutex);
+			boost::mutex::scoped_lock lock(mutex);
 			if(!finalized){
-				ready_chan_set.insert(ready_chan);
+				tmp_ready.insert(chan);
 				RC->notify();
 			}
 		}
@@ -369,7 +389,7 @@ private:
 	{
 	public:
 		wrap():
-			RC(new ready_cond)
+			RC(new ready_cond())
 		{}
 
 		~wrap()
@@ -390,16 +410,14 @@ private:
 };
 
 /*
-The select() function acts like the BSD sockets select() function. It takes a
-set of channels and when it returns only ready channels are left in the set.
-Note: The select_proxy allows chaining.
-Example: channel::select(source_set)(sink_set)
+Select on channels in complete set. Ready channels are put in ready_set. This is
+functionally similar to the BSD sockets select() function.
 */
 template<typename T>
-static select_proxy select(std::set<T> & chan_set)
+static select_proxy select(const std::set<T> & complete, std::set<T> & ready)
 {
 	select_proxy SP;
-	return SP(chan_set);
+	return SP(complete, ready);
 }
 
 }//end namespace channel

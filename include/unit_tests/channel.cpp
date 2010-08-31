@@ -24,52 +24,49 @@ void primitive()
 
 void source_sink()
 {
-	typedef int chan_type;
-	std::pair<channel::source<chan_type>, channel::sink<chan_type> >
-		p = channel::make_chan<chan_type>();
-	p.first.send(1);
-	if(p.second.recv() != 1){
+	channel::source<int> Source;
+	channel::sink<int> Sink(Source.get_sink());
+	Source.send(1);
+	if(Sink.recv() != 1){
 		LOG; ++fail;
 	}
 }
 
 void future_promise()
 {
-	typedef int chan_type;
-	std::pair<channel::promise<chan_type>, channel::future<chan_type> >
-		p = channel::make_future<chan_type>();
-	p.first = 1;
-	if(*p.second != 1){
+	channel::promise<int> Promise;
+	channel::future<int> Future(Promise.get_future());
+	Promise = 1;
+	if(*Future != 1){
 		LOG; ++fail;
 	}
 }
 
-void producer(channel::source<int> ch)
+void producer(channel::source<int> Source)
 {
-	std::set<channel::source<int> > source_set;
-	source_set.insert(ch);
-	channel::select(source_set);
-	assert(source_set.size() == 1);
-	source_set.begin()->send(0);
-	channel::select(source_set);
-	assert(source_set.size() == 1);
-	source_set.begin()->send(0);
+	std::set<channel::source<int> > complete_set, ready_set;
+	complete_set.insert(Source);
+	channel::select(complete_set, ready_set);
+	assert(ready_set.size() == 1);
+	complete_set.begin()->send(0);
+	channel::select(complete_set, ready_set);
+	assert(ready_set.size() == 1);
+	complete_set.begin()->send(0);
 }
 
 void select()
 {
-	typedef int chan_type;
-	std::pair<channel::source<chan_type>, channel::sink<chan_type> >
-		p = channel::make_chan<chan_type>(1);
-	boost::thread worker(boost::bind(&producer, p.first));
-	std::set<channel::sink<chan_type> > sink_set;
-	sink_set.insert(p.second);
-	channel::select(sink_set);
-	assert(sink_set.size() == 1);
-	sink_set.begin()->recv();
-	channel::select(sink_set);
-	assert(sink_set.size() == 1);
-	sink_set.begin()->recv();
+	channel::source<int> Source(1);
+	channel::sink<int> Sink(Source.get_sink());
+	boost::thread worker(boost::bind(&producer, Source));
+	std::set<channel::sink<int> > complete_set, ready_set;
+	complete_set.insert(Sink);
+	channel::select(complete_set, ready_set);
+	assert(ready_set.size() == 1);
+	ready_set.begin()->recv();
+	channel::select(complete_set, ready_set);
+	assert(ready_set.size() == 1);
+	ready_set.begin()->recv();
 	worker.join();
 }
 
@@ -80,6 +77,5 @@ int main()
 	source_sink();
 	future_promise();
 	select();
-
 	return fail;
 }

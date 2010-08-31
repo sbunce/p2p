@@ -580,25 +580,24 @@ void net::nstream_proactor::disconnect_relay(const boost::uint64_t conn_ID)
 	Conn_Container.remove(conn_ID);
 }
 
-channel::future<std::string> net::nstream_proactor::listen(const endpoint & ep)
+channel::future<boost::optional<net::endpoint> > net::nstream_proactor::listen(
+	const endpoint & ep)
 {
-	std::pair<channel::promise<std::string>, channel::future<std::string> >
-		p = channel::make_future<std::string>();
-	Internal_TP.enqueue(boost::bind(&nstream_proactor::listen_relay, this, ep,
-		p.first));
+	channel::promise<boost::optional<net::endpoint> > promise;
+	Internal_TP.enqueue(boost::bind(&nstream_proactor::listen_relay, this, ep, promise));
 	Select.interrupt();
-	return p.second;
+	return promise.get_future();
 }
 
 void net::nstream_proactor::listen_relay(const endpoint ep,
-	channel::promise<std::string> promise)
+	channel::promise<boost::optional<net::endpoint> > promise)
 {
 	boost::shared_ptr<conn_listener> CL(new conn_listener(Dispatcher,
 		Conn_Container, ep));
 	if(CL->socket() != -1){
 		Conn_Container.add(CL);
 	}
-	promise = (CL->ep() ? CL->ep()->port() : "");
+	promise = CL->ep();
 }
 
 void net::nstream_proactor::main_loop()
