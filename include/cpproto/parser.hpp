@@ -17,7 +17,7 @@ public:
 		_bad(false)
 	{}
 
-	//register handler for field
+	//register call back to be used when field is parsed
 	template<typename T>
 	void reg_handler(boost::function<void (T &)> func)
 	{
@@ -29,7 +29,16 @@ public:
 			LOG << "non-unique field ID " << new_field->ID();
 			exit(1);
 		}
+	}
 
+	//register call back for unknown fields, otherwise they're ignored
+	void reg_unknown_handler(boost::function<void (unknown &)> unknown_call_back_in)
+	{
+		if(unknown_call_back){
+			LOG << "tried to register unknown handler twice";
+			exit(1);
+		}
+		unknown_call_back = unknown_call_back_in;
 	}
 
 	//returns true if buf passed to parse was malformed
@@ -57,15 +66,14 @@ public:
 			std::map<boost::uint64_t, field_element>::iterator
 				it = Field.find(key->first);
 			if(it == Field.end()){
-
-				/* Figure out what to do with this.
-				boost::shared_ptr<field> Unknown(new unknown());
-				if(Unknown->parse(f_buf)){
-					return Unknown;
-				}else{
-					return boost::shared_ptr<field>();
+				if(unknown_call_back){
+					unknown Unknown;
+					if(Unknown.parse(f_buf)){
+						unknown_call_back(Unknown);
+					}else{
+						break;
+					}
 				}
-				*/
 			}else{
 				if(it->second.Field->parse(f_buf)){
 					it->second.call_back();
@@ -97,6 +105,9 @@ private:
 
 	//maps field ID to field
 	std::map<boost::uint64_t, field_element> Field;
+
+	//call back for unknown fields (used if not empty)
+	boost::function<void (unknown &)> unknown_call_back;
 
 	/*
 	Return field from front of buf, empty string if incomplete field.

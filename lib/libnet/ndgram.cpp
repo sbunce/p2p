@@ -10,52 +10,6 @@ net::ndgram::ndgram(const endpoint & ep)
 	open(ep);
 }
 
-std::string net::ndgram::local_IP()
-{
-	if(socket_FD == -1){
-		return "";
-	}
-	sockaddr_storage addr;
-	socklen_t addrlen = sizeof(addr);
-	if(getsockname(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
-		LOG << strerror(errno);
-		close();
-		return "";
-	}
-	char buf[INET6_ADDRSTRLEN];
-	if(getnameinfo(reinterpret_cast<sockaddr *>(&addr), addrlen, buf,
-		sizeof(buf), NULL, 0, NI_NUMERICHOST) == -1)
-	{
-		LOG << strerror(errno);
-		close();
-		return "";
-	}
-	return buf;
-}
-
-std::string net::ndgram::local_port()
-{
-	if(socket_FD == -1){
-		return "";
-	}
-	sockaddr_storage addr;
-	socklen_t addrlen = sizeof(addr);
-	if(getsockname(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
-		LOG << strerror(errno);
-		close();
-		return "";
-	}
-	char buf[6];
-	if(getnameinfo(reinterpret_cast<sockaddr *>(&addr), addrlen, NULL, 0, buf,
-		sizeof(buf), NI_NUMERICSERV) == -1)
-	{
-		LOG << strerror(errno);
-		close();
-		return "";
-	}
-	return buf;
-}
-
 void net::ndgram::open(const endpoint & ep)
 {
 	close();

@@ -15,7 +15,8 @@ int main()
 	assert(N_client.is_open());
 
 	//send character from client to server
-	E = net::get_endpoint("localhost", N_serv.local_port());
+	assert(N_serv.local_ep());
+	E = net::get_endpoint("localhost", N_serv.local_ep()->port());
 	assert(!E.empty());
 	net::buffer buf("x");
 	N_client.send(buf, *E.begin());

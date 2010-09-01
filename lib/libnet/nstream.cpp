@@ -13,8 +13,6 @@ net::nstream::nstream(const endpoint & ep)
 net::nstream::nstream(const int socket_FD_in)
 {
 	socket_FD = socket_FD_in;
-	set_local_ep();
-	set_remote_ep();
 }
 
 bool net::nstream::is_open_async()
@@ -33,61 +31,8 @@ bool net::nstream::is_open_async()
 	}
 }
 
-boost::optional<net::endpoint> net::nstream::local_ep()
-{
-	return _local_ep;
-}
-
-std::string net::nstream::local_IP()
-{
-	if(socket_FD == -1){
-		return "";
-	}
-	sockaddr_storage addr;
-	socklen_t addrlen = sizeof(addr);
-	if(getsockname(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
-		LOG << strerror(errno);
-		close();
-		return "";
-	}
-	char buf[INET6_ADDRSTRLEN];
-	if(getnameinfo(reinterpret_cast<sockaddr *>(&addr), addrlen, buf,
-		sizeof(buf), NULL, 0, NI_NUMERICHOST) == -1)
-	{
-		LOG << strerror(errno);
-		close();
-		return "";
-	}
-	return buf;
-}
-
-std::string net::nstream::local_port()
-{
-	if(socket_FD == -1){
-		return "";
-	}
-	sockaddr_storage addr;
-	socklen_t addrlen = sizeof(addr);
-	if(getsockname(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
-		LOG << strerror(errno);
-		close();
-		return "";
-	}
-	char buf[6];
-	if(getnameinfo(reinterpret_cast<sockaddr *>(&addr), addrlen, NULL, 0, buf,
-		sizeof(buf), NI_NUMERICSERV) == -1)
-	{
-		LOG << strerror(errno);
-		close();
-		return "";
-	}
-	return buf;
-}
-
 void net::nstream::open(const endpoint & ep)
 {
-	_local_ep.reset();
-	_remote_ep = ep;
 	close();
 	if((socket_FD = ::socket(ep.ai.ai_addr->sa_family, SOCK_STREAM, IPPROTO_TCP)) == -1){
 		LOG << strerror(errno);
@@ -97,13 +42,10 @@ void net::nstream::open(const endpoint & ep)
 		LOG << strerror(errno);
 		close();
 	}
-	set_local_ep();
 }
 
 void net::nstream::open_async(const endpoint & ep)
 {
-	_local_ep.reset();
-	_remote_ep = ep;
 	close();
 	if((socket_FD = ::socket(ep.ai.ai_addr->sa_family, SOCK_STREAM, IPPROTO_TCP)) == -1){
 		LOG << strerror(errno);
@@ -134,7 +76,6 @@ void net::nstream::open_async(const endpoint & ep)
 			exit(1);
 		}
 	}
-	set_local_ep();
 }
 
 int net::nstream::recv(buffer & buf, const int max_transfer)
@@ -164,51 +105,6 @@ int net::nstream::recv(buffer & buf, const int max_transfer)
 	}
 }
 
-boost::optional<net::endpoint> net::nstream::remote_ep()
-{
-	return _remote_ep;
-}
-
-std::string net::nstream::remote_IP()
-{
-	sockaddr_storage addr;
-	socklen_t addrlen = sizeof(addr);
-	if(getpeername(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
-		LOG << strerror(errno);
-		close();
-		return "";
-	}
-	char buf[INET6_ADDRSTRLEN];
-	if(getnameinfo(reinterpret_cast<sockaddr *>(&addr), addrlen, buf,
-		sizeof(buf), NULL, 0, NI_NUMERICHOST) == -1)
-	{
-		LOG << strerror(errno);
-		close();
-		return "";
-	}
-	return buf;
-}
-
-std::string net::nstream::remote_port()
-{
-	sockaddr_storage addr;
-	socklen_t addrlen = sizeof(addr);
-	if(getpeername(socket_FD, reinterpret_cast<sockaddr *>(&addr), &addrlen) == -1){
-		LOG << strerror(errno);
-		close();
-		return "";
-	}
-	char buf[6];
-	if(getnameinfo(reinterpret_cast<sockaddr *>(&addr), addrlen, NULL, 0, buf,
-		sizeof(buf), NI_NUMERICSERV) == -1)
-	{
-		LOG << strerror(errno);
-		close();
-		return "";
-	}
-	return buf;
-}
-
 int net::nstream::send(buffer & buf, int max_transfer)
 {
 	assert(max_transfer > 0);
@@ -234,44 +130,4 @@ int net::nstream::send(buffer & buf, int max_transfer)
 		}
 		return n_bytes;
 	}
-}
-
-void net::nstream::set_local_ep()
-{
-	//local endpoint
-	std::string IP = local_IP();
-	if(IP.empty()){
-		return;
-	}
-	std::string port = local_port();
-	if(port.empty()){
-		return;
-	}
-	std::set<endpoint> E = get_endpoint(IP, port);
-	if(E.empty()){
-		LOG << strerror(errno);
-		close();
-		return;
-	}
-	_local_ep = *E.begin();
-}
-
-void net::nstream::set_remote_ep()
-{
-	//remote endpoint
-	std::string IP = remote_IP();
-	if(IP.empty()){
-		return;
-	}
-	std::string port = remote_port();
-	if(port.empty()){
-		return;
-	}
-	std::set<endpoint> E = get_endpoint(IP, port);
-	if(E.empty()){
-		LOG << strerror(errno);
-		close();
-		return;
-	}
-	_remote_ep = *E.begin();
 }

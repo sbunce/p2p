@@ -10,7 +10,8 @@ int main()
 	assert(!E.empty());
 	net::ndgram N(*E.begin());
 	assert(N.is_open());
-	E = net::get_endpoint("localhost", N.local_port());
+	assert(N.local_ep());
+	E = net::get_endpoint("localhost", N.local_ep()->port());
 	assert(!E.empty());
 
 	std::set<int> read, tmp_read, write, tmp_write;

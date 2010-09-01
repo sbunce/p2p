@@ -31,28 +31,9 @@ public:
 			net::get_endpoint("localhost", "0");
 		Accept connections on all interfaces. Use port 1234.
 			net::get_endpoint("", "1234");
-	local_ep:
-		Returns endpoint listening on, or endpoint we attempted to listen on.
 	*/
 	boost::shared_ptr<nstream> accept();
 	virtual void open(const endpoint & ep);
-	boost::optional<endpoint> local_ep();
-
-private:
-	boost::optional<endpoint> _local_ep;
-
-	/*
-	set_local_ep:
-		Set _local_ep to endpoint we're listening on, or don't set if if listen
-		failed.
-	local_IP:
-		Return local IP listening on or empty string if not listening.
-	local_port:
-		Return local port listening on or emtpy string if not listening.
-	*/
-	void set_local_ep();
-	std::string local_IP();
-	std::string local_port();
 };
 }//end of namespace net
 #endif

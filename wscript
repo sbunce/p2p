@@ -18,14 +18,6 @@ def build(bld):
 	)
 	bld.add_post_fun(waf_unit_test.summary)
 
-def locate_dir(search_dir, pattern):
-	regex = re.compile(pattern)
-	for root, dirs, files in os.walk(search_dir):
-		for dir in dirs:
-			if regex.match(dir):
-				return os.path.join(root, dir)
-		break #do not recurse to subdir
-
 def configure(conf):
 	conf.check_tool('compiler_cc')
 	conf.check_tool('compiler_cxx')
@@ -35,6 +27,13 @@ def configure(conf):
 	if sys.platform == 'win32':
 		conf.env.append_value('CXXFLAGS', ['/EHsc', '/w'])
 		#boost
+		def locate_dir(search_dir, pattern):
+			regex = re.compile(pattern)
+			for root, dirs, files in os.walk(search_dir):
+				for dir in dirs:
+					if regex.match(dir):
+						return os.path.join(root, dir)
+				break #do not recurse to subdir
 		boost_dir = locate_dir('C:\Program Files\\boost', 'boost.*')
 		conf.env.INCLUDES_boost = boost_dir
 		conf.env.LIBPATH_boost = boost_dir + '\lib'

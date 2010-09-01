@@ -8,18 +8,13 @@ namespace net{
 class ndgram : public socket_base
 {
 public:
-	ndgram();                   //open but don't bind (used for send only)
-	ndgram(const endpoint & E); //open and bind (used for send/recv)
+	ndgram();                   //don't bind to local port (used for send only)
+	ndgram(const endpoint & E); //open and bind to local port (used for send/recv)
 
 	/*
-	local_IP:
-		Returns local port, or empty string if error.
-		Postcondition: If error then close() called.
-	local_port:
-		Returns local port, or empty string if error.
-		Postcondition: If error then close() called.
 	open:
-		Open for sending/receiving, endpoint is local. Example:
+		Open for sending/receiving, endpoint is local.
+		Examples:
 		Accept only from localhost. Choose random port to listen on.
 			net::get_endpoint("localhost", "0", net::udp);
 		Accept connections on all interfaces. Use port 1234.
@@ -32,8 +27,6 @@ public:
 		Writes bytes from buffer. Returns the number of bytes sent or 0 if the
 		host disconnected. The sent bytes are erased from the buffer.
 	*/
-	std::string local_IP();
-	std::string local_port();
 	virtual void open(const endpoint & E);
 	int recv(net::buffer & buf, boost::optional<endpoint> & E);
 	int send(net::buffer & buf, const endpoint & E);
