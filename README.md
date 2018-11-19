@@ -1,4 +1,4 @@
-P2P Project (defunct)
+P2P Project
 ===
 
 #### History
